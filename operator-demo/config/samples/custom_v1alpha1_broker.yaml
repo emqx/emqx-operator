@@ -1,0 +1,10 @@
+apiVersion: custom.emqx.io/v1alpha1
+kind: Broker
+metadata:
+  name: broker-sample
+spec:
+  # Add fields here
+  serviceAccountName: "emqx"
+  image: emqx/emqx-ee:build-alpine-amd64
+  replicas: 1
+  secret: the context for secret
