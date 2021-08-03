@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-emqx-log-dir
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nas
+  volumeMode: Filesystem
+  volumeName: pvc-emqx-log-dir
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-emqx-data-dir
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nas
+  volumeMode: Filesystem
+  volumeName: pvc-emqx-log-dir

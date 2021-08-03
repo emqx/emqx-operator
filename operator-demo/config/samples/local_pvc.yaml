@@ -1,0 +1,23 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-emqx-log-dir
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: hostpath
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-emqx-data-dir
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: hostpath
