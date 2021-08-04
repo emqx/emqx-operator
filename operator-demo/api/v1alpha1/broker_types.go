@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,20 +31,27 @@ type BrokerSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Broker. Edit broker_types.go to remove/update
-	Replicas           *int32             `json:"replicas,omitempty"`
-	Image              string             `json:"image,omitempty"`
-	ServiceAccountName string             `json:"serviceAccountName,omitempty"`
-	Secret             string             `json:"secret,omitempty"`
-	Ports              []v1.ContainerPort `json:"ports,omitempty"`
-	Env                string             `json:"env,omitempty"`
-	Modules            string             `json:"modules,omitempty"`
-	Pvc                []string           `json:"pvc,omitempty"`
+	Replicas           *int32  `json:"replicas,omitempty"`
+	Image              string  `json:"image,omitempty"`
+	ServiceAccountName string  `json:"serviceAccountName,omitempty"`
+	License            string  `json:"license,omitempty"`
+	Env                string  `json:"env,omitempty"`
+	Modules            string  `json:"modules,omitempty"`
+	Storage            Storage `json:"storage,omitempty"`
 }
 
 // type EnvItem struct {
 // 	Key   string `json:"key"`
 // 	Value string `json:"value"`
 // }
+
+type Storage struct {
+	AccessModes []v1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
+	Capacity    resource.Quantity               `json:"capacity,omitempty"`
+	VolumeMode  *v1.PersistentVolumeMode        `json:"volumeMode,omitempty" protobuf:"bytes,8,opt,name=volumeMode,casttype=PersistentVolumeMode"`
+	Driver      string                          `json:"driver" protobuf:"bytes,1,opt,name=driver"`
+	Server      string                          `json:"server,omitempty"`
+}
 
 // BrokerStatus defines the observed state of Broker
 type BrokerStatus struct {

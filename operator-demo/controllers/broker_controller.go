@@ -62,6 +62,12 @@ const (
 	serviceWssPort = 8084
 )
 
+type StorageList map[StorageKey]StorageValue
+
+type StorageKey string
+
+type StorageValue string
+
 // BrokerReconciler reconciles a Broker object
 type BrokerReconciler struct {
 	client.Client
@@ -93,9 +99,26 @@ func (r *BrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 
-	// your logic here
+	// create pv and pvc
+	storageList := map[StorageKey]StorageValue{
+		emqxlogName:  "/opt/emqx-log",
+		emqxdataName: "/opt/emqx-data",
+	}
+	for k, v := range storageList {
+		pv := makePvFromSpec(instance, k, v)
+		err = r.createOrUpdate(pv.Name, pv.Namespace, pv)
+		if err != nil && errors.IsAlreadyExists(err) == false {
+			return reconcile.Result{}, pkgerr.Wrap(err, "creating pv failed")
+		}
+
+		pvc := makePvcFromSpec(instance, k)
+		err = r.createOrUpdate(pvc.Name, pvc.Namespace, pvc)
+		if err != nil && errors.IsAlreadyExists(err) == false {
+			return reconcile.Result{}, pkgerr.Wrap(err, "creating pvc failed")
+		}
+	}
 	// create secret
-	log.Log.Info("Start create secret config")
+	log.Log.Info("Start create license config")
 	configSecret := makeSecretConfigFromSpec(instance)
 
 	err = r.createOrUpdate(configSecret.Name, configSecret.Namespace, configSecret)
@@ -117,13 +140,6 @@ func (r *BrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if err != nil && errors.IsAlreadyExists(err) == false {
 		return reconcile.Result{}, pkgerr.Wrap(err, "creating  env configmap failed")
 	}
-
-	// create pvc demo use local-storage
-	// pvc := makePvcFromSpec(instance)
-	// err = r.createOrUpdate(pvc.Name, pvc.Namespace, pvc)
-	// if err != nil && errors.IsAlreadyExists(err) == false {
-	// 	return reconcile.Result{}, pkgerr.Wrap(err, "creating  config Secret failed")
-	// }
 
 	// create service
 	log.Log.Info("start create service")

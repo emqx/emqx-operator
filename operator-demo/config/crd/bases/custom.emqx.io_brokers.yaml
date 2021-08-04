@@ -40,56 +40,40 @@ spec:
                 type: string
               image:
                 type: string
+              license:
+                type: string
               modules:
                 type: string
-              ports:
-                items:
-                  description: ContainerPort represents a network port in a single
-                    container.
-                  properties:
-                    containerPort:
-                      description: Number of port to expose on the pod's IP address.
-                        This must be a valid port number, 0 < x < 65536.
-                      format: int32
-                      type: integer
-                    hostIP:
-                      description: What host IP to bind the external port to.
-                      type: string
-                    hostPort:
-                      description: Number of port to expose on the host. If specified,
-                        this must be a valid port number, 0 < x < 65536. If HostNetwork
-                        is specified, this must match ContainerPort. Most containers
-                        do not need this.
-                      format: int32
-                      type: integer
-                    name:
-                      description: If specified, this must be an IANA_SVC_NAME and
-                        unique within the pod. Each named port in a pod must have
-                        a unique name. Name for the port that can be referred to by
-                        services.
-                      type: string
-                    protocol:
-                      default: TCP
-                      description: Protocol for port. Must be UDP, TCP, or SCTP. Defaults
-                        to "TCP".
-                      type: string
-                  required:
-                  - containerPort
-                  type: object
-                type: array
-              pvc:
-                items:
-                  type: string
-                type: array
               replicas:
                 description: Foo is an example field of Broker. Edit broker_types.go
                   to remove/update
                 format: int32
                 type: integer
-              secret:
-                type: string
               serviceAccountName:
                 type: string
+              storage:
+                properties:
+                  accessModes:
+                    items:
+                      type: string
+                    type: array
+                  capacity:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  driver:
+                    type: string
+                  server:
+                    type: string
+                  volumeMode:
+                    description: PersistentVolumeMode describes how a volume is intended
+                      to be consumed, either Block or Filesystem.
+                    type: string
+                required:
+                - driver
+                type: object
             type: object
           status:
             description: BrokerStatus defines the observed state of Broker

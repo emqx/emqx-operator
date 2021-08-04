@@ -8,7 +8,7 @@ import (
 )
 
 func makeSecretConfigFromSpec(instance *v1alpha1.Broker) *v1.Secret {
-	config := instance.Spec.Secret
+	config := instance.Spec.License
 	configSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: emqxlicName,
