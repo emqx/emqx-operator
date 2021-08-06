@@ -22,8 +22,8 @@ $ kubectl create -f config/samples/crd_custom.emqx.io_brokers.yaml
 1. 部署 `operator deployment` 运行
 编译及制作镜像，并推送到镜像仓库
 ```
-$ make docker build IMG=
-$ make docker push IMG=
+$ IMG=xxx make docker-build
+$ IMG=xxx make docker-push
 ```
 * 创建 `operator manager controller` 相关组件服务
 ```
