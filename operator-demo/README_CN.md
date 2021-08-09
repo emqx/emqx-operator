@@ -22,7 +22,7 @@ $ kubectl create -f config/samples/crd_custom.emqx.io_brokers.yaml
 1. 部署 `operator deployment` 运行
 编译及制作镜像，并推送到镜像仓库
 ```
-$ IMG=xxx make docker-build
+$ IMG=emqx/emqx-operator:0.1.0 make docker-build
 $ IMG=xxx make docker-push
 ```
 *此处的 `IMG` 镜像名称对应 `config/samples/operator/operator_deployment.yaml` 中 `spec.template.spec.containers[0].image`字段
@@ -101,4 +101,3 @@ tar -zvxf kubebuilder-tools
 sudo mv kubebuilder/ /usr/local/kubebuilder
 ```
   
-
