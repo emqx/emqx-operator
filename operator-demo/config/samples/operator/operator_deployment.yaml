@@ -22,7 +22,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: xxx
+        image: emqx/emqx-operator:0.1.0
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
