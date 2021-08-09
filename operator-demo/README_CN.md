@@ -25,6 +25,7 @@ $ kubectl create -f config/samples/crd_custom.emqx.io_brokers.yaml
 $ IMG=xxx make docker-build
 $ IMG=xxx make docker-push
 ```
+*此处的 `IMG` 镜像名称对应 `config/samples/operator/operator_deployment.yaml` 中 `spec.template.spec.containers[0].image`字段
 * 创建 `operator manager controller` 相关组件服务
 ```
 $ kubectl create -f config/samples/operator/operator_namespace.yaml
@@ -72,7 +73,7 @@ Start mqtt:ssl:external listener on 0.0.0.0:8883 successfully.
 Start mqtt:wss:external listener on 0.0.0.0:8084 successfully.
 EMQ X Enterprise 4.3.1 is running now!
 ```
-2. 集群外运行本地工程项目
+1. 集群外运行本地工程项目
 * 将 `kubernetes` 集群的配置文件 `.kube/config` 复制到本地 `$HOME/.kube/config`
 * 运行 `main.go` 文件
 * 创建 `cr` 关联的 `RBAC` 及 `cr`
