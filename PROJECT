@@ -1,0 +1,16 @@
+domain: emqx.io
+layout:
+- go.kubebuilder.io/v3
+projectName: operator-emqx
+repo: github.com/emqx/emqx-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: emqx.io
+  group: apps
+  kind: Emqx
+  path: github.com/emqx/emqx-operator/api/v1alpha1
+  version: v1alpha1
+version: "3"
