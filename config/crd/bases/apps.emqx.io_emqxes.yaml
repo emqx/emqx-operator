@@ -201,68 +201,10 @@ spec:
                     type: string
                 type: object
               listener:
-                properties:
-                  listener:
-                    properties:
-                      tco_internal:
-                        properties:
-                          acceptors:
-                            default: 8
-                            format: int64
-                            type: integer
-                          active_n:
-                            default: 100
-                            type: integer
-                          backlog:
-                            default: 1024
-                            format: int32
-                            type: integer
-                          buffer:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: http://erlang.org/doc/man/inet.html
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          max_conn_rate:
-                            default: 1000
-                            format: int64
-                            type: integer
-                          max_connections:
-                            default: 1024000
-                            format: int64
-                            type: integer
-                          nodelay:
-                            default: "True"
-                            enum:
-                            - "True"
-                            - "False"
-                            type: boolean
-                          rate_limite:
-                            description: TODO
-                            type: string
-                          rec_buf:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: http://erlang.org/doc/man/inet.html
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                          reuseaddr:
-                            default: "True"
-                            enum:
-                            - "True"
-                            - "False"
-                            type: boolean
-                          snd_buf:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: http://erlang.org/doc/man/inet.html
-                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                            x-kubernetes-int-or-string: true
-                        type: object
-                      tcp_external:
+                items:
+                  properties:
+                    listener:
+                      items:
                         properties:
                           acceptors:
                             default: 8
@@ -294,6 +236,8 @@ spec:
                             default: 1024000
                             format: int64
                             type: integer
+                          name:
+                            type: string
                           nodelay:
                             default: "True"
                             enum:
@@ -320,6 +264,9 @@ spec:
                             type: string
                           proxy_protocol:
                             description: TODO default miss
+                            enum:
+                            - "on"
+                            - "off"
                             type: string
                           proxy_protocol_timeout:
                             description: TODO default miss
@@ -348,466 +295,562 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                         type: object
-                    type: object
-                  ssl:
-                    properties:
-                      acceptors:
-                        default: 8
-                        format: int64
-                        type: integer
-                      access:
-                        type: string
-                      active_n:
-                        default: 100
-                        type: integer
-                      backlog:
-                        default: 1024
-                        format: int32
-                        type: integer
-                      buffer:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      cacertfile:
-                        default: etc/certs/cacert.pem
-                        type: string
-                      certfile:
-                        default: etc/certs/cert.pem
-                        type: string
-                      ciphers:
-                        default: ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-ECDSA-AES256-SHA384,ECDHE-RSA-AES256-SHA384,ECDHE-ECDSA-DES-CBC3-SHA,ECDH-ECDSA-AES256-GCM-SHA384,ECDH-RSA-AES256-GCM-SHA384,ECDH-ECDSA-AES256-SHA384,ECDH-RSA-AES256-SHA384,DHE-DSS-AES256-GCM-SHA384,DHE-DSS-AES256-SHA256,AES256-GCM-SHA384,AES256-SHA256,ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES128-SHA256,ECDHE-RSA-AES128-SHA256,ECDH-ECDSA-AES128-GCM-SHA256,ECDH-RSA-AES128-GCM-SHA256,ECDH-ECDSA-AES128-SHA256,ECDH-RSA-AES128-SHA256,DHE-DSS-AES128-GCM-SHA256,DHE-DSS-AES128-SHA256,AES128-GCM-SHA256,AES128-SHA256,ECDHE-ECDSA-AES256-SHA,ECDHE-RSA-AES256-SHA,DHE-DSS-AES256-SHA,ECDH-ECDSA-AES256-SHA,ECDH-RSA-AES256-SHA,AES256-SHA,ECDHE-ECDSA-AES128-SHA,ECDHE-RSA-AES128-SHA,DHE-DSS-AES128-SHA,ECDH-ECDSA-AES128-SHA,ECDH-RSA-AES128-SHA,AES128-SHA
-                        type: string
-                      depth:
-                        allOf:
-                        - default: 10
-                        - default: 10
-                        type: integer
-                      dhfile:
-                        default: etc/certs/dh-params.pem
-                        type: string
-                      fail_if_no_peer_cert:
-                        default: "False"
-                        enum:
-                        - "False"
-                        - "True"
-                        type: boolean
-                      handshake_timeout:
-                        default: 15s
-                        type: string
-                      honor_cipher_order:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      key_password:
-                        type: string
-                      keyfile:
-                        allOf:
-                        - default: etc/certs/key.pem
-                        - default: etc/certs/key.pem
-                        type: string
-                      max_conn_rate:
-                        default: 1000
-                        format: int64
-                        type: integer
-                      max_connections:
-                        default: 1024000
-                        format: int64
-                        type: integer
-                      nodelay:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      peer_cert_as_clientid:
-                        default: cn
-                        enum:
-                        - cn
-                        - dn
-                        - crt
-                        - pem
-                        - md5
-                        type: string
-                      peer_cert_as_username:
-                        default: cn
-                        enum:
-                        - cn
-                        - dn
-                        - crt
-                        - pem
-                        - md5
-                        type: string
-                      proxy_protocol:
-                        description: TODO default miss
-                        type: string
-                      proxy_protocol_timeout:
-                        description: TODO default miss
-                        type: string
-                      psk_ciphers:
-                        default: PSK-AES128-CBC-SHA,PSK-AES256-CBC-SHA,PSK-3DES-EDE-CBC-SHA,PSK-RC4-SHA
-                        type: string
-                      rate_limite:
-                        description: TODO
-                        type: string
-                      rec_buf:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      reuse_sessions:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      reuseaddr:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      secure_renegotiate:
-                        default: "off"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      snd_buf:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      tls_versions:
-                        default: tlsv1.3,tlsv1.2,tlsv1.1,tlsv1
-                        type: string
-                      verify:
-                        default: verify_peer
-                        enum:
-                        - verify_peer
-                        - verify_none
-                        type: string
-                    type: object
-                  ws:
-                    properties:
-                      acceptors:
-                        default: 8
-                        format: int64
-                        type: integer
-                      access:
-                        type: string
-                      active_n:
-                        default: 100
-                        type: integer
-                      backlog:
-                        default: 1024
-                        format: int32
-                        type: integer
-                      buffer:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      client_context_takeover:
-                        type: string
-                      client_max_window_bits:
-                        type: integer
-                      compress:
-                        default: "False"
-                        enum:
-                        - "True"
-                        - Flase
-                        type: boolean
-                      depth:
-                        default: 10
-                        type: integer
-                      fail_if_no_subprotocol:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      idle_timeout:
-                        default: 15s
-                        type: string
-                      key_password:
-                        type: string
-                      keyfile:
-                        default: etc/certs/key.pem
-                        type: string
-                      level:
-                        default: default
-                        enum:
-                        - none
-                        - default
-                        - best_compression
-                        - best_speed
-                        type: string
-                      max_conn_rate:
-                        default: 1000
-                        format: int64
-                        type: integer
-                      max_connections:
-                        default: 1024000
-                        format: int64
-                        type: integer
-                      max_frame_size:
-                        format: int32
-                        type: integer
-                      mem_level:
-                        description: "\t//+kubebuilder:validation:Enum:=1;2;3;4;5;6;7;8;9"
-                        type: integer
-                      mqtt_path:
-                        default: /mqtt
-                        type: string
-                      nodelay:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      proxy_address_header:
-                        type: string
-                      proxy_port_header:
-                        type: string
-                      proxy_protocol:
-                        description: TODO default miss
-                        type: string
-                      proxy_protocol_timeout:
-                        description: TODO default miss
-                        type: string
-                      rate_limite:
-                        description: TODO
-                        type: string
-                      rec_buf:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      server_context_takeover:
-                        enum:
-                        - takeover
-                        - no_takeover
-                        type: string
-                      server_max_window_bits:
-                        type: integer
-                      snd_buf:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      strategy:
-                        enum:
-                        - default
-                        - filtered
-                        - huffman_only
-                        - rle
-                        type: string
-                      supported_protocols:
-                        default: mqtt, mqtt-v3, mqtt-v3.1.1, mqtt-v5
-                        type: string
-                    type: object
-                  wss:
-                    properties:
-                      acceptors:
-                        default: 8
-                        format: int64
-                        type: integer
-                      access:
-                        type: string
-                      active_n:
-                        default: 100
-                        type: integer
-                      backlog:
-                        default: 1024
-                        format: int32
-                        type: integer
-                      buffer:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      cacertfile:
-                        default: etc/certs/cacert.pem
-                        type: string
-                      certfile:
-                        default: etc/certs/cert.pem
-                        type: string
-                      client_context_takeover:
-                        type: string
-                      client_max_window_bits:
-                        type: integer
-                      compress:
-                        default: "False"
-                        enum:
-                        - "True"
-                        - Flase
-                        type: boolean
-                      depth:
-                        default: 10
-                        type: integer
-                      dhfile:
-                        default: etc/certs/dh-params.pem
-                        type: string
-                      fail_if_no_peer_cert:
-                        default: "False"
-                        enum:
-                        - "False"
-                        - "True"
-                        type: boolean
-                      fail_if_no_subprotocol:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      honor_cipher_order:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      idle_timeout:
-                        default: 15s
-                        type: string
-                      key_password:
-                        type: string
-                      keyfile:
-                        default: etc/certs/key.pem
-                        type: string
-                      level:
-                        default: default
-                        enum:
-                        - none
-                        - default
-                        - best_compression
-                        - best_speed
-                        type: string
-                      max_conn_rate:
-                        default: 1000
-                        format: int64
-                        type: integer
-                      max_connections:
-                        default: 1024000
-                        format: int64
-                        type: integer
-                      max_frame_size:
-                        format: int32
-                        type: integer
-                      mem_level:
-                        description: "\t//+kubebuilder:validation:Enum:=1;2;3;4;5;6;7;8;9"
-                        type: integer
-                      mqtt_path:
-                        default: /mqtt
-                        type: string
-                      nodelay:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      peer_cert_as_clientid:
-                        default: cn
-                        enum:
-                        - cn
-                        - dn
-                        - crt
-                        - pem
-                        - md5
-                        type: string
-                      peer_cert_as_username:
-                        default: cn
-                        enum:
-                        - cn
-                        - dn
-                        - crt
-                        - pem
-                        - md5
-                        type: string
-                      proxy_address_header:
-                        type: string
-                      proxy_protocol:
-                        description: TODO default miss
-                        type: string
-                      proxy_protocol_timeout:
-                        description: TODO default miss
-                        type: string
-                      psk_ciphers:
-                        default: PSK-AES128-CBC-SHA,PSK-AES256-CBC-SHA,PSK-3DES-EDE-CBC-SHA,PSK-RC4-SHA
-                        type: string
-                      rate_limite:
-                        description: TODO
-                        type: string
-                      rec_buf:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      reuse_sessions:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      secure_renegotiate:
-                        default: "off"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      server_context_takeover:
-                        enum:
-                        - takeover
-                        - no_takeover
-                        type: string
-                      server_max_window_bits:
-                        type: integer
-                      snd_buf:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: http://erlang.org/doc/man/inet.html
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      strategy:
-                        enum:
-                        - default
-                        - filtered
-                        - huffman_only
-                        - rle
-                        type: string
-                      supported_protocols:
-                        default: mqtt, mqtt-v3, mqtt-v3.1.1, mqtt-v5
-                        type: string
-                      tls_versions:
-                        default: tlsv1.3,tlsv1.2,tlsv1.1,tlsv1
-                        type: string
-                      verify:
-                        default: verify_peer
-                        enum:
-                        - verify_peer
-                        - verify_none
-                        type: string
-                    type: object
-                type: object
+                      type: array
+                    ssl:
+                      items:
+                        properties:
+                          acceptors:
+                            default: 8
+                            format: int64
+                            type: integer
+                          access:
+                            default: allow all
+                            description: Example "192.168.0.0/24 192.178.0.0/24"
+                            type: string
+                          active_n:
+                            default: 100
+                            type: integer
+                          backlog:
+                            default: 1024
+                            format: int32
+                            type: integer
+                          buffer:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          cacertfile:
+                            default: etc/certs/cacert.pem
+                            type: string
+                          certfile:
+                            default: etc/certs/cert.pem
+                            type: string
+                          ciphers:
+                            default: ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-ECDSA-AES256-SHA384,ECDHE-RSA-AES256-SHA384,ECDHE-ECDSA-DES-CBC3-SHA,ECDH-ECDSA-AES256-GCM-SHA384,ECDH-RSA-AES256-GCM-SHA384,ECDH-ECDSA-AES256-SHA384,ECDH-RSA-AES256-SHA384,DHE-DSS-AES256-GCM-SHA384,DHE-DSS-AES256-SHA256,AES256-GCM-SHA384,AES256-SHA256,ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES128-SHA256,ECDHE-RSA-AES128-SHA256,ECDH-ECDSA-AES128-GCM-SHA256,ECDH-RSA-AES128-GCM-SHA256,ECDH-ECDSA-AES128-SHA256,ECDH-RSA-AES128-SHA256,DHE-DSS-AES128-GCM-SHA256,DHE-DSS-AES128-SHA256,AES128-GCM-SHA256,AES128-SHA256,ECDHE-ECDSA-AES256-SHA,ECDHE-RSA-AES256-SHA,DHE-DSS-AES256-SHA,ECDH-ECDSA-AES256-SHA,ECDH-RSA-AES256-SHA,AES256-SHA,ECDHE-ECDSA-AES128-SHA,ECDHE-RSA-AES128-SHA,DHE-DSS-AES128-SHA,ECDH-ECDSA-AES128-SHA,ECDH-RSA-AES128-SHA,AES128-SHA
+                            type: string
+                          depth:
+                            default: 10
+                            type: integer
+                          dhfile:
+                            default: etc/certs/dh-params.pem
+                            type: string
+                          fail_if_no_peer_cert:
+                            default: "False"
+                            enum:
+                            - "False"
+                            - "True"
+                            type: boolean
+                          handshake_timeout:
+                            default: 15s
+                            type: string
+                          honor_cipher_order:
+                            default: "on"
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          key_password:
+                            type: string
+                          keyfile:
+                            default: etc/certs/key.pem
+                            type: string
+                          max_conn_rate:
+                            default: 1000
+                            format: int64
+                            type: integer
+                          max_connections:
+                            default: 1024000
+                            format: int64
+                            type: integer
+                          name:
+                            type: string
+                          nodelay:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
+                          peer_cert_as_clientid:
+                            default: cn
+                            enum:
+                            - cn
+                            - dn
+                            - crt
+                            - pem
+                            - md5
+                            type: string
+                          peer_cert_as_username:
+                            default: cn
+                            enum:
+                            - cn
+                            - dn
+                            - crt
+                            - pem
+                            - md5
+                            type: string
+                          proxy_protocol:
+                            description: TODO default miss
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          proxy_protocol_timeout:
+                            description: TODO default miss
+                            type: string
+                          psk_ciphers:
+                            default: PSK-AES128-CBC-SHA,PSK-AES256-CBC-SHA,PSK-3DES-EDE-CBC-SHA,PSK-RC4-SHA
+                            type: string
+                          rate_limite:
+                            description: TODO
+                            type: string
+                          rec_buf:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          reuse_sessions:
+                            default: "on"
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          reuseaddr:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
+                          secure_renegotiate:
+                            default: "off"
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          snd_buf:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          tls_versions:
+                            default: tlsv1.3,tlsv1.2,tlsv1.1,tlsv1
+                            type: string
+                          verify:
+                            default: verify_peer
+                            enum:
+                            - verify_peer
+                            - verify_none
+                            type: string
+                        type: object
+                      type: array
+                    ws:
+                      items:
+                        properties:
+                          acceptors:
+                            default: 8
+                            format: int64
+                            type: integer
+                          access:
+                            default: allow all
+                            description: Example "192.168.0.0/24 192.178.0.0/24"
+                            type: string
+                          active_n:
+                            default: 100
+                            type: integer
+                          backlog:
+                            default: 1024
+                            format: int32
+                            type: integer
+                          buffer:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          client_context_takeover:
+                            enum:
+                            - takeover
+                            - no_takeover
+                            type: string
+                          client_max_window_bits:
+                            enum:
+                            - 8
+                            - 9
+                            - 10
+                            - 11
+                            - 12
+                            - 13
+                            - 14
+                            - 15
+                            type: integer
+                          compress:
+                            default: "False"
+                            enum:
+                            - "True"
+                            - Flase
+                            type: boolean
+                          fail_if_no_subprotocol:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
+                          idle_timeout:
+                            default: 15s
+                            type: string
+                          level:
+                            default: default
+                            enum:
+                            - none
+                            - default
+                            - best_compression
+                            - best_speed
+                            type: string
+                          max_conn_rate:
+                            default: 1000
+                            format: int64
+                            type: integer
+                          max_connections:
+                            default: 1024000
+                            format: int64
+                            type: integer
+                          max_frame_size:
+                            format: int32
+                            type: integer
+                          mem_level:
+                            description: "\t//+kubebuilder:validation:Enum:=1;2;3;4;5;6;7;8;9"
+                            type: integer
+                          mqtt_path:
+                            default: /mqtt
+                            type: string
+                          name:
+                            type: string
+                          nodelay:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
+                          peer_cert_as_clientid:
+                            default: cn
+                            enum:
+                            - cn
+                            - dn
+                            - crt
+                            - pem
+                            - md5
+                            type: string
+                          peer_cert_as_username:
+                            default: cn
+                            enum:
+                            - cn
+                            - dn
+                            - crt
+                            - pem
+                            - md5
+                            type: string
+                          proxy_address_header:
+                            type: string
+                          proxy_port_header:
+                            type: string
+                          proxy_protocol:
+                            description: TODO default miss
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          proxy_protocol_timeout:
+                            description: TODO default miss
+                            type: string
+                          rate_limite:
+                            description: TODO
+                            type: string
+                          rec_buf:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          reuseaddr:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
+                          server_context_takeover:
+                            enum:
+                            - takeover
+                            - no_takeover
+                            type: string
+                          server_max_window_bits:
+                            enum:
+                            - 8
+                            - 9
+                            - 10
+                            - 11
+                            - 12
+                            - 13
+                            - 14
+                            - 15
+                            type: integer
+                          snd_buf:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          strategy:
+                            enum:
+                            - default
+                            - filtered
+                            - huffman_only
+                            - rle
+                            type: string
+                          supported_protocols:
+                            default: mqtt, mqtt-v3, mqtt-v3.1.1, mqtt-v5
+                            type: string
+                        type: object
+                      type: array
+                    wss:
+                      items:
+                        properties:
+                          acceptors:
+                            default: 8
+                            format: int64
+                            type: integer
+                          access:
+                            default: allow all
+                            description: Example "192.168.0.0/24 192.178.0.0/24"
+                            type: string
+                          active_n:
+                            default: 100
+                            type: integer
+                          backlog:
+                            default: 1024
+                            format: int32
+                            type: integer
+                          buffer:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          cacertfile:
+                            default: etc/certs/cacert.pem
+                            type: string
+                          certfile:
+                            default: etc/certs/cert.pem
+                            type: string
+                          ciphers:
+                            default: ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-ECDSA-AES256-SHA384,ECDHE-RSA-AES256-SHA384,ECDHE-ECDSA-DES-CBC3-SHA,ECDH-ECDSA-AES256-GCM-SHA384,ECDH-RSA-AES256-GCM-SHA384,ECDH-ECDSA-AES256-SHA384,ECDH-RSA-AES256-SHA384,DHE-DSS-AES256-GCM-SHA384,DHE-DSS-AES256-SHA256,AES256-GCM-SHA384,AES256-SHA256,ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES128-SHA256,ECDHE-RSA-AES128-SHA256,ECDH-ECDSA-AES128-GCM-SHA256,ECDH-RSA-AES128-GCM-SHA256,ECDH-ECDSA-AES128-SHA256,ECDH-RSA-AES128-SHA256,DHE-DSS-AES128-GCM-SHA256,DHE-DSS-AES128-SHA256,AES128-GCM-SHA256,AES128-SHA256,ECDHE-ECDSA-AES256-SHA,ECDHE-RSA-AES256-SHA,DHE-DSS-AES256-SHA,ECDH-ECDSA-AES256-SHA,ECDH-RSA-AES256-SHA,AES256-SHA,ECDHE-ECDSA-AES128-SHA,ECDHE-RSA-AES128-SHA,DHE-DSS-AES128-SHA,ECDH-ECDSA-AES128-SHA,ECDH-RSA-AES128-SHA,AES128-SHA
+                            type: string
+                          client_context_takeover:
+                            enum:
+                            - takeover
+                            - no_takeover
+                            type: string
+                          client_max_window_bits:
+                            enum:
+                            - 8
+                            - 9
+                            - 10
+                            - 11
+                            - 12
+                            - 13
+                            - 14
+                            - 15
+                            type: integer
+                          compress:
+                            default: "False"
+                            enum:
+                            - "True"
+                            - Flase
+                            type: boolean
+                          depth:
+                            default: 10
+                            type: integer
+                          dhfile:
+                            default: etc/certs/dh-params.pem
+                            type: string
+                          fail_if_no_peer_cert:
+                            default: "False"
+                            enum:
+                            - "False"
+                            - "True"
+                            type: boolean
+                          fail_if_no_subprotocol:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
+                          handshake_timeout:
+                            default: 15s
+                            type: string
+                          honor_cipher_order:
+                            default: "on"
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          idle_timeout:
+                            default: 15s
+                            type: string
+                          key_password:
+                            type: string
+                          keyfile:
+                            default: etc/certs/key.pem
+                            type: string
+                          level:
+                            default: default
+                            enum:
+                            - none
+                            - default
+                            - best_compression
+                            - best_speed
+                            type: string
+                          max_conn_rate:
+                            default: 1000
+                            format: int64
+                            type: integer
+                          max_connections:
+                            default: 1024000
+                            format: int64
+                            type: integer
+                          max_frame_size:
+                            format: int32
+                            type: integer
+                          mem_level:
+                            description: "\t//+kubebuilder:validation:Enum:=1;2;3;4;5;6;7;8;9"
+                            type: integer
+                          mqtt_path:
+                            default: /mqtt
+                            type: string
+                          name:
+                            type: string
+                          nodelay:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
+                          peer_cert_as_clientid:
+                            default: cn
+                            enum:
+                            - cn
+                            - dn
+                            - crt
+                            - pem
+                            - md5
+                            type: string
+                          peer_cert_as_username:
+                            default: cn
+                            enum:
+                            - cn
+                            - dn
+                            - crt
+                            - pem
+                            - md5
+                            type: string
+                          proxy_address_header:
+                            type: string
+                          proxy_port_header:
+                            type: string
+                          proxy_protocol:
+                            description: TODO default miss
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          proxy_protocol_timeout:
+                            description: TODO default miss
+                            type: string
+                          psk_ciphers:
+                            default: PSK-AES128-CBC-SHA,PSK-AES256-CBC-SHA,PSK-3DES-EDE-CBC-SHA,PSK-RC4-SHA
+                            type: string
+                          rate_limite:
+                            description: TODO
+                            type: string
+                          rec_buf:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          reuse_sessions:
+                            default: "on"
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          reuseaddr:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
+                          secure_renegotiate:
+                            default: "off"
+                            enum:
+                            - "on"
+                            - "off"
+                            type: string
+                          server_context_takeover:
+                            enum:
+                            - takeover
+                            - no_takeover
+                            type: string
+                          server_max_window_bits:
+                            enum:
+                            - 8
+                            - 9
+                            - 10
+                            - 11
+                            - 12
+                            - 13
+                            - 14
+                            - 15
+                            type: integer
+                          snd_buf:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: http://erlang.org/doc/man/inet.html
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          strategy:
+                            enum:
+                            - default
+                            - filtered
+                            - huffman_only
+                            - rle
+                            type: string
+                          supported_protocols:
+                            default: mqtt, mqtt-v3, mqtt-v3.1.1, mqtt-v5
+                            type: string
+                          tls_versions:
+                            default: tlsv1.3,tlsv1.2,tlsv1.1,tlsv1
+                            type: string
+                          verify:
+                            default: verify_peer
+                            enum:
+                            - verify_peer
+                            - verify_none
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                type: array
               log:
                 properties:
                   chars_limit:
@@ -1156,252 +1199,176 @@ spec:
                     type: integer
                 type: object
               zone:
-                properties:
-                  external:
-                    properties:
-                      acl_deny_action:
-                        default: ignore
-                        enum:
-                        - ignore
-                        - disconnect
-                        type: string
-                      await_rel_timeout:
-                        default: 300s
-                        type: string
-                      enable_acl:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      enable_ban:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      enable_flapping_detect:
-                        default: "off"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      enable_stats:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      force_gc_policy:
-                        default: 16000|16MB
-                        description: TODO
-                        type: string
-                      force_shutdown_policy:
-                        description: TODO
-                        type: string
-                      idle_timeout:
-                        default: 15s
-                        type: string
-                      ignore_loop_deliver:
-                        default: "False"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      keepalive_backoff:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        default: "0.75"
-                        description: https://github.com/kubernetes-sigs/controller-tools/issues/245
-                          TODO
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      max_awaiting_rel:
-                        default: 100
-                        format: int64
-                        type: integer
-                      max_clientid_len:
-                        description: TODO
-                        format: int64
-                        type: integer
-                      max_inflight:
-                        default: 32
-                        format: int64
-                        type: integer
-                      max_mqueue_len:
-                        default: 1000
-                        format: int64
-                        type: integer
-                      max_packet_size:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: TODO
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      max_qos_allowed:
-                        description: TODO
-                        enum:
-                        - 0
-                        - 1
-                        - 2
-                        type: integer
-                      max_subscriptions:
-                        default: 0
-                        format: int64
-                        type: integer
-                      max_topic_alias:
-                        description: TODO
-                        format: int64
-                        type: integer
-                      max_topic_levels:
-                        description: TODO
-                        format: int32
-                        type: integer
-                      mount_point:
-                        description: TODO
-                        type: string
-                      mqueue_default_priority:
-                        default: highest
-                        type: string
-                      mqueue_priorities:
-                        default: none
-                        type: string
-                      mqueue_store_qos0:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      retain_available:
-                        description: TODO
-                        type: boolean
-                      retry_interval:
-                        default: 15s
-                        type: string
-                      server_keepalive:
-                        description: TODO
-                        format: int64
-                        type: integer
-                      session_expiry_interval:
-                        default: 2h
-                        type: string
-                      shared_subscription:
-                        description: TODO
-                        type: boolean
-                      strict_mode:
-                        default: "False"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      upgrade_qos:
-                        default: "off"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      use_username_as_clientid:
-                        default: "False"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      wildcard_subscription:
-                        description: TODO
-                        type: boolean
-                    type: object
-                  internal:
-                    properties:
-                      acl_deny_action:
-                        default: ignore
-                        enum:
-                        - ignore
-                        - disconnect
-                        type: string
-                      allow_anonymous:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      bypass_auth_plugins:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      enable_acl:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      enable_flapping_detect:
-                        default: "off"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      enable_stats:
-                        default: "on"
-                        enum:
-                        - "on"
-                        - "off"
-                        type: string
-                      force_gc_policy:
-                        default: 16000|16MB
-                        description: TODO
-                        type: string
-                      force_shutdown_policy:
-                        description: TODO
-                        type: string
-                      ignore_loop_deliver:
-                        default: "False"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      max_awaiting_rel:
-                        default: 100
-                        format: int64
-                        type: integer
-                      max_inflight:
-                        default: 32
-                        format: int64
-                        type: integer
-                      max_mqueue_len:
-                        default: 1000
-                        format: int64
-                        type: integer
-                      max_subscriptions:
-                        default: 0
-                        format: int64
-                        type: integer
-                      mount_point:
-                        description: TODO
-                        type: string
-                      mqueue_store_qos0:
-                        default: "True"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      shared_subscription:
-                        description: TODO
-                        type: boolean
-                      strict_mode:
-                        default: "False"
-                        enum:
-                        - "True"
-                        - "False"
-                        type: boolean
-                      wildcard_subscription:
-                        description: TODO
-                        type: boolean
-                    type: object
-                type: object
+                items:
+                  properties:
+                    acl_deny_action:
+                      default: ignore
+                      enum:
+                      - ignore
+                      - disconnect
+                      type: string
+                    allow_anonymous:
+                      default: "True"
+                      enum:
+                      - "True"
+                      - "False"
+                      type: boolean
+                    await_rel_timeout:
+                      default: 300s
+                      type: string
+                    bypass_auth_plugins:
+                      default: "True"
+                      enum:
+                      - "True"
+                      - "False"
+                      type: boolean
+                    enable_acl:
+                      default: "on"
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    enable_ban:
+                      default: "on"
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    enable_flapping_detect:
+                      default: "off"
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    enable_stats:
+                      default: "on"
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    force_gc_policy:
+                      default: 16000|16MB
+                      description: TODO
+                      type: string
+                    force_shutdown_policy:
+                      description: TODO
+                      type: string
+                    idle_timeout:
+                      default: 15s
+                      type: string
+                    ignore_loop_deliver:
+                      default: "False"
+                      enum:
+                      - "True"
+                      - "False"
+                      type: boolean
+                    keepalive_backoff:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      default: "0.75"
+                      description: https://github.com/kubernetes-sigs/controller-tools/issues/245
+                        TODO
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    max_awaiting_rel:
+                      default: 100
+                      format: int64
+                      type: integer
+                    max_clientid_len:
+                      description: TODO
+                      format: int64
+                      type: integer
+                    max_inflight:
+                      default: 32
+                      format: int64
+                      type: integer
+                    max_mqueue_len:
+                      default: 1000
+                      format: int64
+                      type: integer
+                    max_packet_size:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: TODO
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    max_qos_allowed:
+                      description: TODO
+                      enum:
+                      - 0
+                      - 1
+                      - 2
+                      type: integer
+                    max_subscriptions:
+                      default: 0
+                      format: int64
+                      type: integer
+                    max_topic_alias:
+                      description: TODO
+                      format: int64
+                      type: integer
+                    max_topic_levels:
+                      description: TODO
+                      format: int32
+                      type: integer
+                    mount_point:
+                      description: TODO
+                      type: string
+                    mqueue_default_priority:
+                      default: highest
+                      type: string
+                    mqueue_priorities:
+                      default: none
+                      type: string
+                    mqueue_store_qos0:
+                      default: "True"
+                      enum:
+                      - "True"
+                      - "False"
+                      type: boolean
+                    name:
+                      type: string
+                    retain_available:
+                      description: TODO
+                      type: boolean
+                    retry_interval:
+                      default: 15s
+                      type: string
+                    server_keepalive:
+                      description: TODO
+                      format: int64
+                      type: integer
+                    session_expiry_interval:
+                      default: 2h
+                      type: string
+                    shared_subscription:
+                      description: TODO
+                      type: boolean
+                    strict_mode:
+                      default: "False"
+                      enum:
+                      - "True"
+                      - "False"
+                      type: boolean
+                    upgrade_qos:
+                      default: "off"
+                      enum:
+                      - "on"
+                      - "off"
+                      type: string
+                    use_username_as_clientid:
+                      default: "False"
+                      enum:
+                      - "True"
+                      - "False"
+                      type: boolean
+                    wildcard_subscription:
+                      description: TODO
+                      type: boolean
+                  type: object
+                type: array
             type: object
           status:
             description: EmqxStatus defines the observed state of Emqx

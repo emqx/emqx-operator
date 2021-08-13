@@ -48,10 +48,10 @@ type EmqxSpec struct {
 	Mqtt Mqtt `json:"mqtt,omitempty"`
 
 	//+kubebuilder:validation:Optional
-	Zone Zone `json:"zone,omitempty"`
+	Zone []Zone `json:"zone,omitempty"`
 
 	//+kubebuilder:validation:Optional
-	Listener Listener `json:"listener,omitempty"`
+	Listener []Listener `json:"listener,omitempty"`
 
 	//+kubebuilder:validation:Optional
 	Plugins Plugins `json:"plugins,omitempty"`
