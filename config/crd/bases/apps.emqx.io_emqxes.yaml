@@ -228,6 +228,13 @@ spec:
                             description: http://erlang.org/doc/man/inet.html
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
+                          high_watermark:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            default: 1MB
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
                           max_conn_rate:
                             default: 1000
                             format: int64
@@ -345,6 +352,13 @@ spec:
                           handshake_timeout:
                             default: 15s
                             type: string
+                          high_watermark:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            default: 1MB
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
                           honor_cipher_order:
                             default: "on"
                             enum:
@@ -462,6 +476,12 @@ spec:
                           active_n:
                             default: 100
                             type: integer
+                          allow_origin_absence:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
                           backlog:
                             default: 1024
                             format: int32
@@ -473,6 +493,11 @@ spec:
                             description: http://erlang.org/doc/man/inet.html
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
+                          check_origin_enable:
+                            default: "False"
+                            type: boolean
+                          check_origins:
+                            type: string
                           client_context_takeover:
                             enum:
                             - takeover
@@ -529,6 +554,12 @@ spec:
                           mqtt_path:
                             default: /mqtt
                             type: string
+                          mqtt_piggyback:
+                            default: multiple
+                            enum:
+                            - single
+                            - multiple
+                            type: string
                           name:
                             type: string
                           nodelay:
@@ -578,12 +609,6 @@ spec:
                             description: http://erlang.org/doc/man/inet.html
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
-                          reuseaddr:
-                            default: "True"
-                            enum:
-                            - "True"
-                            - "False"
-                            type: boolean
                           server_context_takeover:
                             enum:
                             - takeover
@@ -633,6 +658,12 @@ spec:
                           active_n:
                             default: 100
                             type: integer
+                          allow_origin_absence:
+                            default: "True"
+                            enum:
+                            - "True"
+                            - "False"
+                            type: boolean
                           backlog:
                             default: 1024
                             format: int32
@@ -649,6 +680,11 @@ spec:
                             type: string
                           certfile:
                             default: etc/certs/cert.pem
+                            type: string
+                          check_origin_enable:
+                            default: "False"
+                            type: boolean
+                          check_origins:
                             type: string
                           ciphers:
                             default: ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-ECDSA-AES256-SHA384,ECDHE-RSA-AES256-SHA384,ECDHE-ECDSA-DES-CBC3-SHA,ECDH-ECDSA-AES256-GCM-SHA384,ECDH-RSA-AES256-GCM-SHA384,ECDH-ECDSA-AES256-SHA384,ECDH-RSA-AES256-SHA384,DHE-DSS-AES256-GCM-SHA384,DHE-DSS-AES256-SHA256,AES256-GCM-SHA384,AES256-SHA256,ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES128-SHA256,ECDHE-RSA-AES128-SHA256,ECDH-ECDSA-AES128-GCM-SHA256,ECDH-RSA-AES128-GCM-SHA256,ECDH-ECDSA-AES128-SHA256,ECDH-RSA-AES128-SHA256,DHE-DSS-AES128-GCM-SHA256,DHE-DSS-AES128-SHA256,AES128-GCM-SHA256,AES128-SHA256,ECDHE-ECDSA-AES256-SHA,ECDHE-RSA-AES256-SHA,DHE-DSS-AES256-SHA,ECDH-ECDSA-AES256-SHA,ECDH-RSA-AES256-SHA,AES256-SHA,ECDHE-ECDSA-AES128-SHA,ECDHE-RSA-AES128-SHA,DHE-DSS-AES128-SHA,ECDH-ECDSA-AES128-SHA,ECDH-RSA-AES128-SHA,AES128-SHA
@@ -735,6 +771,12 @@ spec:
                           mqtt_path:
                             default: /mqtt
                             type: string
+                          mqtt_piggyback:
+                            default: multiple
+                            enum:
+                            - single
+                            - multiple
+                            type: string
                           name:
                             type: string
                           nodelay:
@@ -793,12 +835,6 @@ spec:
                             - "on"
                             - "off"
                             type: string
-                          reuseaddr:
-                            default: "True"
-                            enum:
-                            - "True"
-                            - "False"
-                            type: boolean
                           secure_renegotiate:
                             default: "off"
                             enum:
