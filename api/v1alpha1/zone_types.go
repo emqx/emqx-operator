@@ -7,12 +7,62 @@ import (
 
 //+kubebuilder:validation:Optional
 type Zone struct {
-	ZoneExternal ZoneExternal `json:"external,omitempty"`
-	ZoneInternal ZoneInternal `json:"internal,omitempty"`
-}
+	Name string `json:"name,omitempty"`
+	//+kubebuilder:default:=on
+	//+kubebuilder:validation:Enum:=on;off
+	EnableAcl EnableAcl `json:"enable_acl,omitempty"`
 
-type ZoneExternal struct {
-	ZoneCommon ZoneCommon `json:",omitempty"`
+	//+kubebuilder:default:=on
+	//+kubebuilder:validation:Enum:=on;off
+	EnableStats EnableStats `json:"enable_stats,omitempty"`
+
+	//+kubebuilder:default:=ignore
+	//+kubebuilder:validation:Enum:=ignore;disconnect
+	AclDenyAction AclDenyAction `json:"acl_deny_action,omitempty"`
+
+	//+kubebuilder:default:="16000|16MB"
+	// TODO
+	ForceGCPolicy ForceGCPolicy `json:"force_gc_policy,omitempty"`
+
+	// TODO
+	ForceShutdownPolicy ForceShutdownPolicy `json:"force_shutdown_policy,omitempty"`
+
+	// TODO
+	WildcardSubscription WildcardSubscription `json:"wildcard_subscription,omitempty"`
+
+	// TODO
+	SharedSubscription SharedSubscription `json:"shared_subscription,omitempty"`
+
+	//+kubebuilder:default:=0
+	MaxSubscriptions MaxSubscriptions `json:"max_subscriptions,omitempty"`
+
+	//+kubebuilder:default:=32
+	MaxInflight MaxInflight `json:"max_inflight,omitempty"`
+
+	//+kubebuilder:default:=100
+	MaxAwaitingRel MaxAwaitingRel `json:"max_awaiting_rel,omitempty"`
+
+	//+kubebuilder:default:=1000
+	MaxMqueueLen MaxMqueueLen `json:"max_mqueue_len,omitempty"`
+
+	//+kubebuilder:default:=True
+	//+kubebuilder:validation:Enum:=True;False
+	MqueueStoreQos0 MqueueStoreQos0 `json:"mqueue_store_qos0,omitempty"`
+
+	//+kubebuilder:default:=off
+	//+kubebuilder:validation:Enum:=on;off
+	EnableFlappingDetect EnableFlappingDetect `json:"enable_flapping_detect,omitempty"`
+
+	// TODO
+	MountPoint MountPoint `json:"mount_point,omitempty"`
+
+	//+kubebuilder:default:=False
+	//+kubebuilder:validation:Enum:=True;False
+	IgnoreLoopDeliver IgnoreLoopDeliver `json:"ignore_loop_deliver,omitempty"`
+
+	//+kubebuilder:default:=False
+	//+kubebuilder:validation:Enum:=True;False
+	StrictMode StrictMode `json:"strict_mode,omitempty"`
 
 	//+kubebuilder:default:="15s"
 	IdleTimeout metav1.Duration `json:"idle_timeout,omitempty"`
@@ -70,10 +120,6 @@ type ZoneExternal struct {
 	//+kubebuilder:default:=False
 	//+kubebuilder:validation:Enum:=True;False
 	UseUsernameAsClientid bool `json:"use_username_as_clientid,omitempty"`
-}
-
-type ZoneInternal struct {
-	ZoneCommon ZoneCommon `json:",omitempty"`
 
 	//+kubebuilder:default:=True
 	//+kubebuilder:validation:Enum:=True;False
@@ -82,65 +128,6 @@ type ZoneInternal struct {
 	//+kubebuilder:default:=True
 	//+kubebuilder:validation:Enum:=True;False
 	BypassAuthPlugins bool `json:"bypass_auth_plugins,omitempty"`
-}
-
-type ZoneCommon struct {
-
-	//+kubebuilder:default:=on
-	//+kubebuilder:validation:Enum:=on;off
-	EnableAcl EnableAcl `json:"enable_acl,omitempty"`
-
-	//+kubebuilder:default:=on
-	//+kubebuilder:validation:Enum:=on;off
-	EnableStats EnableStats `json:"enable_stats,omitempty"`
-
-	//+kubebuilder:default:=ignore
-	//+kubebuilder:validation:Enum:=ignore;disconnect
-	AclDenyAction AclDenyAction `json:"acl_deny_action,omitempty"`
-
-	//+kubebuilder:default:="16000|16MB"
-	// TODO
-	ForceGCPolicy ForceGCPolicy `json:"force_gc_policy,omitempty"`
-
-	// TODO
-	ForceShutdownPolicy ForceShutdownPolicy `json:"force_shutdown_policy,omitempty"`
-
-	// TODO
-	WildcardSubscription WildcardSubscription `json:"wildcard_subscription,omitempty"`
-
-	// TODO
-	SharedSubscription SharedSubscription `json:"shared_subscription,omitempty"`
-
-	//+kubebuilder:default:=0
-	MaxSubscriptions MaxSubscriptions `json:"max_subscriptions,omitempty"`
-
-	//+kubebuilder:default:=32
-	MaxInflight MaxInflight `json:"max_inflight,omitempty"`
-
-	//+kubebuilder:default:=100
-	MaxAwaitingRel MaxAwaitingRel `json:"max_awaiting_rel,omitempty"`
-
-	//+kubebuilder:default:=1000
-	MaxMqueueLen MaxMqueueLen `json:"max_mqueue_len,omitempty"`
-
-	//+kubebuilder:default:=True
-	//+kubebuilder:validation:Enum:=True;False
-	MqueueStoreQos0 MqueueStoreQos0 `json:"mqueue_store_qos0,omitempty"`
-
-	//+kubebuilder:default:=off
-	//+kubebuilder:validation:Enum:=on;off
-	EnableFlappingDetect EnableFlappingDetect `json:"enable_flapping_detect,omitempty"`
-
-	// TODO
-	MountPoint MountPoint `json:"mount_point,omitempty"`
-
-	//+kubebuilder:default:=False
-	//+kubebuilder:validation:Enum:=True;False
-	IgnoreLoopDeliver IgnoreLoopDeliver `json:"ignore_loop_deliver,omitempty"`
-
-	//+kubebuilder:default:=False
-	//+kubebuilder:validation:Enum:=True;False
-	StrictMode StrictMode `json:"strict_mode,omitempty"`
 }
 
 type UpgradeQos string

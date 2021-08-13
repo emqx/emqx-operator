@@ -7,16 +7,18 @@ import (
 
 //+kubebuilder:validation:Optional
 type Listener struct {
-	TCP TCP `json:"listener,omitempty"`
+	TCP []TCP `json:"listener,omitempty"`
 
-	SSL SSL `json:"ssl,omitempty"`
+	SSL []SSL `json:"ssl,omitempty"`
 
-	WS WS `json:"ws,omitempty"`
+	WS []WS `json:"ws,omitempty"`
 
-	WSS WSS `json:"wss,omitempty"`
+	WSS []WSS `json:"wss,omitempty"`
 }
 
 type ListenerCommon struct {
+	Name string `json:"name,omitempty"`
+
 	//+kubebuilder:default:=8
 	Acceptors Acceptors `json:"acceptors,omitempty"`
 
@@ -47,31 +49,17 @@ type ListenerCommon struct {
 	//+kubebuilder:default:=True
 	//+kubebuilder:validation:Enum:=True;False
 	NodeDelay NodeDelay `json:"nodelay,omitempty"`
-}
-
-type TCP struct {
-	TcpListenerExternal TcpListenerExternal `json:"tcp_external,omitempty"`
-
-	TcpListenerInternal TcpListenerInternal `json:"tco_internal,omitempty"`
-}
-
-type TcpListenerCommon struct {
-	ListenerCommon ListenerCommon `json:",omitempty"`
 
 	//+kubebuilder:default:=True
 	//+kubebuilder:validation:Enum=True;False
 	ReuseAddr ReuseAddr `json:"reuseaddr,omitempty"`
-}
-
-type TcpListenerExternal struct {
-	TcpListenerCommon TcpListenerCommon `json:",omitempty"`
 
 	//+kubebuilder:default:="allow all"
 	// Example "192.168.0.0/24 192.178.0.0/24"
 	Access string `json:"access,omitempty"`
 
 	// TODO default miss
-	//+kubebuilder:validaation:Enum:=on,off
+	//+kubebuilder:validation:Enum:=on;off
 	ProxyProtocol ProxyProtocol `json:"proxy_protocol,omitempty"`
 
 	// TODO default miss
@@ -86,24 +74,12 @@ type TcpListenerExternal struct {
 	PeerCertAsClientid PeerCertAsClientid `json:"peer_cert_as_clientid,omitempty"`
 }
 
-type TcpListenerInternal struct {
-	TcpListenerCommon TcpListenerCommon `json:",omitempty"`
+type TCP struct {
+	ListenerCommon ListenerCommon `json:",omitempty"`
 }
 
 type SSL struct {
-	SwlCommon SwlCommon `json:",omitempty"`
-
-	//+kubebuilder:default:=cn
-	//+kubebuilder:validation:Enum:=cn;dn;crt;pem;md5
-	PeerCertAsUsername PeerCertAsUsername `json:"peer_cert_as_username,omitempty"`
-
-	//+kubebuilder:default:=cn
-	//+kubebuilder:validation:Enum:=cn;dn;crt;pem;md5
-	PeerCertAsClientid PeerCertAsClientid `json:"peer_cert_as_clientid,omitempty"`
-
-	//+kubebuilder:default:=True
-	//+kubebuilder:validation:Enum=True;False
-	ReuseAddr ReuseAddr `json:"reuseaddr,omitempty"`
+	ListenerCommon ListenerCommon `json:",omitempty"`
 
 	//+kubebuilder:default:="tlsv1.3,tlsv1.2,tlsv1.1,tlsv1"
 	TlsVersions TlsVersions `json:"tls_versions,omitempty"`
@@ -156,7 +132,7 @@ type SSL struct {
 }
 
 type WS struct {
-	SwlCommon SwlCommon `json:",omitempty"`
+	ListenerCommon ListenerCommon `json:",omitempty"`
 
 	//+kubebuilder:default:="/mqtt"
 	MqttPath MqttPath `json:"mqtt_path,omitempty"`
@@ -185,18 +161,21 @@ type WS struct {
 }
 
 type WSS struct {
-	SwlCommon SwlCommon `json:",omitempty"`
-
-	//+kubebuilder:default:=cn
-	//+kubebuilder:validation:Enum:=cn;dn;crt;pem;md5
-	PeerCertAsUsername PeerCertAsUsername `json:"peer_cert_as_username,omitempty"`
-
-	//+kubebuilder:default:=cn
-	//+kubebuilder:validation:Enum:=cn;dn;crt;pem;md5
-	PeerCertAsClientid PeerCertAsClientid `json:"peer_cert_as_clientid,omitempty"`
+	ListenerCommon ListenerCommon `json:",omitempty"`
 
 	//+kubebuilder:default:="tlsv1.3,tlsv1.2,tlsv1.1,tlsv1"
 	TlsVersions TlsVersions `json:"tls_versions,omitempty"`
+
+	//+kubebuilder:default:="15s"
+	HandShakeTimeout HandShakeTimeout `json:"handshake_timeout,omitempty"`
+
+	//+kubebuilder:default:=10
+	Depth Depth `json:"depth,omitempty"`
+
+	KeyPassword KeyPassword `json:"key_password,omitempty"`
+
+	//+kubebuilder:default:="etc/certs/key.pem"
+	KeyFile KeyFile `json:"keyfile,omitempty"`
 
 	//+kubebuilder:default:="etc/certs/cert.pem"
 	CertFile CertFile `json:"certfile,omitempty"`
@@ -214,6 +193,9 @@ type WSS struct {
 	//+kubebuilder:default:=False
 	//+kubebuilder:validation:Enum:=False;True
 	FailIfNoPeerCert FailIfNoPeerCert `json:"fail_if_no_peer_cert,omitempty"`
+
+	//+kubebuilder:default:="ECDHE-ECDSA-AES256-GCM-SHA384,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-ECDSA-AES256-SHA384,ECDHE-RSA-AES256-SHA384,ECDHE-ECDSA-DES-CBC3-SHA,ECDH-ECDSA-AES256-GCM-SHA384,ECDH-RSA-AES256-GCM-SHA384,ECDH-ECDSA-AES256-SHA384,ECDH-RSA-AES256-SHA384,DHE-DSS-AES256-GCM-SHA384,DHE-DSS-AES256-SHA256,AES256-GCM-SHA384,AES256-SHA256,ECDHE-ECDSA-AES128-GCM-SHA256,ECDHE-RSA-AES128-GCM-SHA256,ECDHE-ECDSA-AES128-SHA256,ECDHE-RSA-AES128-SHA256,ECDH-ECDSA-AES128-GCM-SHA256,ECDH-RSA-AES128-GCM-SHA256,ECDH-ECDSA-AES128-SHA256,ECDH-RSA-AES128-SHA256,DHE-DSS-AES128-GCM-SHA256,DHE-DSS-AES128-SHA256,AES128-GCM-SHA256,AES128-SHA256,ECDHE-ECDSA-AES256-SHA,ECDHE-RSA-AES256-SHA,DHE-DSS-AES256-SHA,ECDH-ECDSA-AES256-SHA,ECDH-RSA-AES256-SHA,AES256-SHA,ECDHE-ECDSA-AES128-SHA,ECDHE-RSA-AES128-SHA,DHE-DSS-AES128-SHA,ECDH-ECDSA-AES128-SHA,ECDH-RSA-AES128-SHA,AES128-SHA"
+	Ciphers string `json:"ciphers,omitempty"`
 
 	//+kubebuilder:default:="PSK-AES128-CBC-SHA,PSK-AES256-CBC-SHA,PSK-3DES-EDE-CBC-SHA,PSK-RC4-SHA"
 	PskCiphers PskCiphers `json:"psk_ciphers,omitempty"`
@@ -242,6 +224,8 @@ type WSS struct {
 
 	ProxyAddressHeader ProxyAddressHeader `json:"proxy_address_header,omitempty"`
 
+	ProxyPortHeader ProxyPortHeader `json:"proxy_port_header,omitempty"`
+
 	//+kubebuilder:default:=False
 	//+kubebuilder:validation:Enum:=True;Flase
 	Compress Compress `json:"compress,omitempty"`
@@ -252,27 +236,6 @@ type WSS struct {
 	IdleTimeout metav1.Duration `json:"idle_timeout,omitempty"`
 
 	MaxFrameSize MaxFrameSize `json:"max_frame_size,omitempty"`
-}
-
-type SwlCommon struct {
-	ListenerCommon ListenerCommon `json:",omitempty"`
-
-	Access string `json:"access,omitempty"`
-
-	// TODO default miss
-	//+kubebuilder:validaation:Enum:=on,off
-	ProxyProtocol ProxyProtocol `json:"proxy_protocol,omitempty"`
-
-	// TODO default miss
-	ProxyProtocolTimeout metav1.Duration `json:"proxy_protocol_timeout,omitempty"`
-
-	//+kubebuilder:default:=10
-	Depth Depth `json:"depth,omitempty"`
-
-	KeyPassword KeyPassword `json:"key_password,omitempty"`
-
-	//+kubebuilder:default:="etc/certs/key.pem"
-	KeyFile KeyFile `json:"keyfile,omitempty"`
 }
 
 type DeflateOpts struct {
@@ -290,13 +253,13 @@ type DeflateOpts struct {
 	//+kubebuilder:validation:Enum:=takeover;no_takeover
 	ServerContextTakeover ServerContextTakeover `json:"server_context_takeover,omitempty"`
 
-	//+kubebuilder:validaation:Enum:=takeover;no_takeover
+	//+kubebuilder:validation:Enum:=takeover;no_takeover
 	ClientContextTakeover ClientContextTakeover `json:"client_context_takeover,omitempty"`
 
-	//+kubebuilder:validaation:Enum:=8;9;10;11;12;13;14;15
+	//+kubebuilder:validation:Enum:=8;9;10;11;12;13;14;15
 	ServerMaxWindowBits ServerMaxWindowBits `json:"server_max_window_bits,omitempty"`
 
-	//+kubebuilder:validaation:Enum:=8;9;10;11;12;13;14;15
+	//+kubebuilder:validation:Enum:=8;9;10;11;12;13;14;15
 	ClientMaxWindowBits ClientMaxWindowBits `json:"client_max_window_bits,omitempty"`
 }
 
