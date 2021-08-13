@@ -50,10 +50,6 @@ type ListenerCommon struct {
 	//+kubebuilder:validation:Enum:=True;False
 	NodeDelay NodeDelay `json:"nodelay,omitempty"`
 
-	//+kubebuilder:default:=True
-	//+kubebuilder:validation:Enum=True;False
-	ReuseAddr ReuseAddr `json:"reuseaddr,omitempty"`
-
 	//+kubebuilder:default:="allow all"
 	// Example "192.168.0.0/24 192.178.0.0/24"
 	Access string `json:"access,omitempty"`
@@ -76,6 +72,13 @@ type ListenerCommon struct {
 
 type TCP struct {
 	ListenerCommon ListenerCommon `json:",omitempty"`
+
+	//+kubebuilder:default:=True
+	//+kubebuilder:validation:Enum=True;False
+	ReuseAddr ReuseAddr `json:"reuseaddr,omitempty"`
+
+	//+kubebuilder:default:="1MB"
+	HighWaterMark resource.Quantity `json:"high_watermark,omitempty"`
 }
 
 type SSL struct {
@@ -129,6 +132,13 @@ type SSL struct {
 	//+kubebuilder:default:=on
 	//+kubebuilder:validation:Enum:=on;off
 	HonorCipherOrder HonorCipherOrder `json:"honor_cipher_order,omitempty"`
+
+	//+kubebuilder:default:="1MB"
+	HighWaterMark resource.Quantity `json:"high_watermark,omitempty"`
+
+	//+kubebuilder:default:=True
+	//+kubebuilder:validation:Enum=True;False
+	ReuseAddr ReuseAddr `json:"reuseaddr,omitempty"`
 }
 
 type WS struct {
@@ -158,6 +168,19 @@ type WS struct {
 	IdleTimeout metav1.Duration `json:"idle_timeout,omitempty"`
 
 	MaxFrameSize MaxFrameSize `json:"max_frame_size,omitempty"`
+
+	//+kubebuilder:default:=multiple
+	//+kubebuilder:validation:Enum:=single;multiple
+	MqttPiggyback MqttPiggyback `json:"mqtt_piggyback,omitempty"`
+
+	//+kubebuilder:default:=False
+	CheckOriginEnable bool `json:"check_origin_enable,omitempty"`
+
+	//+kubebuilder:default:=True
+	//+kubebuilder:validation:Enum:=True;False
+	AllowOriginAbsence bool `json:"allow_origin_absence,omitempty"`
+
+	CheckOrigins string `json:"check_origins,omitempty"`
 }
 
 type WSS struct {
@@ -236,6 +259,19 @@ type WSS struct {
 	IdleTimeout metav1.Duration `json:"idle_timeout,omitempty"`
 
 	MaxFrameSize MaxFrameSize `json:"max_frame_size,omitempty"`
+
+	//+kubebuilder:default:=multiple
+	//+kubebuilder:validation:Enum:=single;multiple
+	MqttPiggyback MqttPiggyback `json:"mqtt_piggyback,omitempty"`
+
+	//+kubebuilder:default:=False
+	CheckOriginEnable bool `json:"check_origin_enable,omitempty"`
+
+	//+kubebuilder:default:=True
+	//+kubebuilder:validation:Enum:=True;False
+	AllowOriginAbsence bool `json:"allow_origin_absence,omitempty"`
+
+	CheckOrigins string `json:"check_origins,omitempty"`
 }
 
 type DeflateOpts struct {
@@ -333,4 +369,11 @@ const (
 	CLIENT_MAX_WINDOW_BITS_13 ClientMaxWindowBits = 13
 	CLIENT_MAX_WINDOW_BITS_14 ClientMaxWindowBits = 14
 	CLIENT_MAX_WINDOW_BITS_15 ClientMaxWindowBits = 15
+)
+
+type MqttPiggyback string
+
+const (
+	MQTT_PIGGYBACK_SINGLE   MqttPiggyback = "single"
+	MQTT_PIGGYBACK_MULTIPLE MqttPiggyback = "multiple"
 )
