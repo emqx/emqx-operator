@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,38 +30,52 @@ type EmqxSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The fields of Broker.
+	//The replicas of emqx broker
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	//The image name of the emqx
+	Image string `json:"image,omitempty"`
+
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	License string `json:"license,omitempty"`
+
+	Storage Storage `json:"storage,omitempty"`
+
 	//+kubebuilder:validation:Optional
 	Cluster Cluster `json:"cluster,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	Node Node `json:"node,omitempty"`
+	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	RPC RPC `json:"rpc,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// Node Node `json:"node,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	Log Log `json:"log,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// RPC RPC `json:"rpc,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	AuthAcl AuthAcl `json:"authacl,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// Log Log `json:"log,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	Mqtt Mqtt `json:"mqtt,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// AuthAcl AuthAcl `json:"authacl,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	Zone []Zone `json:"zone,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// Mqtt Mqtt `json:"mqtt,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	Listener []Listener `json:"listener,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// Zone []Zone `json:"zone,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	Plugins Plugins `json:"plugins,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// Listener []Listener `json:"listener,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	Broker Broker `json:"broker,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// Plugins Plugins `json:"plugins,omitempty"`
 
-	//+kubebuilder:validation:Optional
-	Monitor Monitor `json:"monitor,omitempty"`
+	// //+kubebuilder:validation:Optional
+	// Broker Broker `json:"broker,omitempty"`
+
+	// //+kubebuilder:validation:Optional
+	// Monitor Monitor `json:"monitor,omitempty"`
 }
 
 // EmqxStatus defines the observed state of Emqx
