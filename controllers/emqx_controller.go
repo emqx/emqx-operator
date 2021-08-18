@@ -18,13 +18,19 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	appsv1alpha1 "github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/emqx/emqx-operator/api/v1alpha1"
+	pkgerr "github.com/pkg/errors"
 )
 
 // EmqxReconciler reconciles a Emqx object
@@ -47,9 +53,54 @@ type EmqxReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	// your logic here
+	log.Info("Reconcile start")
+
+	instance := &v1alpha1.Emqx{}
+
+	err := r.Get(context.TODO(), req.NamespacedName, instance)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+	}
+
+	// create pvc
+	storageList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
+
+	for _, item := range storageList {
+		pvc := makePvcFromSpec(instance, item)
+		err = r.createOrUpdate(pvc.Name, pvc.Namespace, pvc)
+		if err != nil && errors.IsAlreadyExists(err) == false {
+			return reconcile.Result{}, pkgerr.Wrap(err, "creating pvc failed")
+		}
+	}
+
+	// create secret
+	log.Info("Start create license config")
+	configSecret := makeSecretConfigFromSpec(instance)
+
+	err = r.createOrUpdate(configSecret.Name, configSecret.Namespace, configSecret)
+	if err != nil && errors.IsAlreadyExists(err) == false {
+		return reconcile.Result{}, pkgerr.Wrap(err, "creating  config Secret failed")
+	}
+
+	// create service
+	log.Info("start create service")
+	service := makeServiceFromSpec(instance)
+	err = r.createOrUpdate(service.Name, service.Namespace, service)
+	if err != nil && errors.IsAlreadyExists(err) == false {
+		return reconcile.Result{}, pkgerr.Wrap(err, "creating  service failed")
+	}
+
+	// create  statefulset
+	log.Info("start create statefulset")
+	statefulset, _ := makeStatefulSet(instance)
+	err = r.createOrUpdate(statefulset.Name, statefulset.Namespace, statefulset)
+	if err != nil && errors.IsAlreadyExists(err) == false {
+		return reconcile.Result{}, pkgerr.Wrap(err, "creating  statefulset failed")
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -57,6 +108,39 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // SetupWithManager sets up the controller with the Manager.
 func (r *EmqxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv1alpha1.Emqx{}).
+		For(&v1alpha1.Emqx{}).
 		Complete(r)
+}
+
+func (r *EmqxReconciler) createOrUpdate(name string, namespace string, object client.Object) error {
+	found := object.DeepCopyObject()
+	key := types.NamespacedName{Name: name, Namespace: namespace}
+	err := r.Client.Get(context.TODO(), key, object)
+	if err != nil && errors.IsNotFound(err) {
+		// define a new resource
+		err = r.Client.Create(context.TODO(), object)
+		if err != nil {
+			return pkgerr.Wrap(err, "failed to create object")
+		}
+		log.Log.Info("created", "object", reflect.TypeOf(object))
+		return nil
+	} else if err != nil {
+		return pkgerr.Wrap(err, "failed to retrieve object")
+	} else {
+		a := meta.NewAccessor()
+		resourceVersion, err := a.ResourceVersion(found)
+		if err != nil {
+			return pkgerr.Wrap(err, "coudln't extract resource version of object")
+		}
+		err = a.SetResourceVersion(object, resourceVersion)
+		if err != nil {
+			return pkgerr.Wrap(err, "coudln't set resource version on object")
+		}
+		err = r.Client.Update(context.TODO(), object)
+		if err != nil {
+			return pkgerr.Wrap(err, "failed to update object")
+		}
+		log.Log.Info("updated", "object", reflect.TypeOf(object))
+		return nil
+	}
 }
