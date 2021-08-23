@@ -2,20 +2,13 @@ package controllers
 
 import (
 	"github.com/emqx/emqx-operator/api/v1alpha1"
-	pkgerr "github.com/pkg/errors"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func makeStatefulSet(instance *v1alpha1.Emqx) (*v1.StatefulSet, error) {
-	spec, err := makeStatefulSetSpec(instance)
+func makeStatefulOwnerReference(instance *v1alpha1.Emqx) (*v1.StatefulSet, error) {
 
-	if err != nil {
-		return nil, pkgerr.Wrap(err, "make StatefulSet spec")
-	}
-
-	boolTrue := true
 	statefulset := &v1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        instance.Name,
@@ -23,22 +16,20 @@ func makeStatefulSet(instance *v1alpha1.Emqx) (*v1.StatefulSet, error) {
 			Annotations: instance.ObjectMeta.Annotations,
 			OwnerReferences: []metav1.OwnerReference{
 				{
-					APIVersion:         instance.APIVersion,
-					BlockOwnerDeletion: &boolTrue,
-					Controller:         &boolTrue,
-					Kind:               instance.Kind,
-					Name:               instance.Name,
-					UID:                instance.UID,
+					APIVersion: instance.APIVersion,
+					Kind:       instance.Kind,
+					Name:       instance.Name,
+					UID:        instance.UID,
 				},
 			},
 		},
-		Spec: *spec,
+		// Spec: *spec,
 	}
 	return statefulset, nil
 
 }
 
-func makeStatefulSetSpec(instance *v1alpha1.Emqx) (*v1.StatefulSetSpec, error) {
+func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
 
 	ports := generateContainerPorts()
 
@@ -92,7 +83,7 @@ func makeStatefulSetSpec(instance *v1alpha1.Emqx) (*v1.StatefulSetSpec, error) {
 				Volumes:            volumes,
 			},
 		},
-	}, nil
+	}
 }
 
 func generateContainerPorts() []corev1.ContainerPort {

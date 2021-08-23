@@ -18,19 +18,15 @@ package controllers
 
 import (
 	"context"
-	"reflect"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/emqx/emqx-operator/api/v1alpha1"
-	pkgerr "github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // EmqxReconciler reconciles a Emqx object
@@ -70,36 +66,55 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	storageList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
 
 	for _, item := range storageList {
-		pvc := makePvcFromSpec(instance, item)
-		err = r.createOrUpdate(pvc.Name, pvc.Namespace, pvc)
-		if err != nil && errors.IsAlreadyExists(err) == false {
-			return reconcile.Result{}, pkgerr.Wrap(err, "creating pvc failed")
+		pvc := makePvcOwnerReference(instance, item)
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
+			pvc.Spec = makePvcSpec(instance, item)
+			return nil
+		})
+		if err != nil {
+			log.Error(err, "Pvc reconcile failed")
+		} else {
+			log.Info("Pvc successfully reconciled", "operation", op)
 		}
 	}
 
 	// create secret
 	log.Info("Start create license config")
-	configSecret := makeSecretConfigFromSpec(instance)
-
-	err = r.createOrUpdate(configSecret.Name, configSecret.Namespace, configSecret)
-	if err != nil && errors.IsAlreadyExists(err) == false {
-		return reconcile.Result{}, pkgerr.Wrap(err, "creating  config Secret failed")
+	secret := *makeSecretOwnerReference(instance)
+	secretOp, err := controllerutil.CreateOrUpdate(ctx, r.Client, &secret, func() error {
+		secret.StringData = makeSecretSpec(instance)
+		return nil
+	})
+	if err != nil {
+		log.Error(err, "Secret reconcile failed")
+	} else {
+		log.Info("Secret successfully reconciled", "operation", secretOp)
 	}
 
 	// create service
 	log.Info("start create service")
-	service := makeServiceFromSpec(instance)
-	err = r.createOrUpdate(service.Name, service.Namespace, service)
-	if err != nil && errors.IsAlreadyExists(err) == false {
-		return reconcile.Result{}, pkgerr.Wrap(err, "creating  service failed")
+	service := *makeServiceOwnerReference(instance)
+	serviceOp, err := controllerutil.CreateOrUpdate(ctx, r.Client, &service, func() error {
+		service.Spec = makeServiceSpec(instance)
+		return nil
+	})
+	if err != nil {
+		log.Error(err, "ServiceOp reconcile failed")
+	} else {
+		log.Info("ServiceOp successfully reconciled", "operation", serviceOp)
 	}
 
 	// create  statefulset
 	log.Info("start create statefulset")
-	statefulset, _ := makeStatefulSet(instance)
-	err = r.createOrUpdate(statefulset.Name, statefulset.Namespace, statefulset)
-	if err != nil && errors.IsAlreadyExists(err) == false {
-		return reconcile.Result{}, pkgerr.Wrap(err, "creating  statefulset failed")
+	statefulset, _ := makeStatefulOwnerReference(instance)
+	statefulsetOp, err := controllerutil.CreateOrUpdate(ctx, r.Client, statefulset, func() error {
+		statefulset.Spec = *makeStatefulSetSpec(instance)
+		return nil
+	})
+	if err != nil {
+		log.Error(err, "ServiceOp reconcile failed")
+	} else {
+		log.Info("ServiceOp successfully reconciled", "operation", statefulsetOp)
 	}
 
 	return ctrl.Result{}, nil
@@ -110,37 +125,4 @@ func (r *EmqxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Emqx{}).
 		Complete(r)
-}
-
-func (r *EmqxReconciler) createOrUpdate(name string, namespace string, object client.Object) error {
-	found := object.DeepCopyObject()
-	key := types.NamespacedName{Name: name, Namespace: namespace}
-	err := r.Client.Get(context.TODO(), key, object)
-	if err != nil && errors.IsNotFound(err) {
-		// define a new resource
-		err = r.Client.Create(context.TODO(), object)
-		if err != nil {
-			return pkgerr.Wrap(err, "failed to create object")
-		}
-		log.Log.Info("created", "object", reflect.TypeOf(object))
-		return nil
-	} else if err != nil {
-		return pkgerr.Wrap(err, "failed to retrieve object")
-	} else {
-		a := meta.NewAccessor()
-		resourceVersion, err := a.ResourceVersion(found)
-		if err != nil {
-			return pkgerr.Wrap(err, "coudln't extract resource version of object")
-		}
-		err = a.SetResourceVersion(object, resourceVersion)
-		if err != nil {
-			return pkgerr.Wrap(err, "coudln't set resource version on object")
-		}
-		err = r.Client.Update(context.TODO(), object)
-		if err != nil {
-			return pkgerr.Wrap(err, "failed to update object")
-		}
-		log.Log.Info("updated", "object", reflect.TypeOf(object))
-		return nil
-	}
 }
