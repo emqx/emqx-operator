@@ -28,7 +28,7 @@ func getStorageCommonValue(instance *v1alpha1.Emqx) StorageCommonValue {
 	return storageCommonValue
 }
 
-func makePvcFromSpec(instance *v1alpha1.Emqx, item string) *v1.PersistentVolumeClaim {
+func makePvcOwnerReference(instance *v1alpha1.Emqx, item string) *v1.PersistentVolumeClaim {
 	pvc := &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", "pvc", item),
@@ -41,7 +41,6 @@ func makePvcFromSpec(instance *v1alpha1.Emqx, item string) *v1.PersistentVolumeC
 				},
 			},
 		},
-		Spec: makePvcSpec(instance, item),
 	}
 	pvc.Namespace = instance.Namespace
 	return pvc

@@ -6,8 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func makeSecretConfigFromSpec(instance *v1alpha1.Emqx) *v1.Secret {
-	config := instance.Spec.License
+func makeSecretOwnerReference(instance *v1alpha1.Emqx) *v1.Secret {
 	configSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: EMQX_LIC_NAME,
@@ -20,9 +19,14 @@ func makeSecretConfigFromSpec(instance *v1alpha1.Emqx) *v1.Secret {
 				},
 			},
 		},
-		Type:       "Opaque",
-		StringData: map[string]string{"emqx.lic": config},
+		Type: "Opaque",
 	}
 	configSecret.Namespace = instance.Namespace
 	return configSecret
+}
+
+func makeSecretSpec(instance *v1alpha1.Emqx) map[string]string {
+	license := instance.Spec.License
+	stringData := map[string]string{"emqx.lic": license}
+	return stringData
 }

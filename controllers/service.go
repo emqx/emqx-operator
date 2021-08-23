@@ -7,7 +7,7 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func makeServiceFromSpec(instance *v1alpha1.Emqx) *v1.Service {
+func makeServiceOwnerReference(instance *v1alpha1.Emqx) *v1.Service {
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			OwnerReferences: []metav1.OwnerReference{
@@ -19,7 +19,6 @@ func makeServiceFromSpec(instance *v1alpha1.Emqx) *v1.Service {
 				},
 			},
 		},
-		Spec: makeServiceSpec(instance),
 	}
 	svc.Name = instance.Name
 	svc.Namespace = instance.Namespace
