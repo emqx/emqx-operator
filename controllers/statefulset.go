@@ -23,7 +23,6 @@ func makeStatefulOwnerReference(instance *v1alpha1.Emqx) (*v1.StatefulSet, error
 				},
 			},
 		},
-		// Spec: *spec,
 	}
 	return statefulset, nil
 
@@ -47,6 +46,7 @@ func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
 			},
 		},
 	}
+	env := mergeClusterConfigToEnv(instance)
 	// var value int64 = 0
 	// var privileged bool = true
 	// securityContext := &corev1.SecurityContext{
@@ -71,7 +71,7 @@ func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
 					{
 						Name:      EMQX_NAME,
 						Image:     instance.Spec.Image,
-						Env:       instance.Spec.Env,
+						Env:       env,
 						Lifecycle: lifecycle,
 						Ports:     ports,
 
@@ -167,4 +167,11 @@ func generatePodLabels(instance *v1alpha1.Emqx) map[string]string {
 		"app":     EMQX_NAME,
 		EMQX_NAME: instance.Name,
 	}
+}
+
+func mergeClusterConfigToEnv(instance *v1alpha1.Emqx) []corev1.EnvVar {
+	envVar := instance.Spec.Env
+	clusterConfig := instance.Spec.Cluster
+	envVar = append(envVar, clusterConfig.ConvertToEnv()...)
+	return envVar
 }

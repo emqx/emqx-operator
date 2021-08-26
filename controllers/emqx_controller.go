@@ -33,6 +33,7 @@ import (
 type EmqxReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	// Log    logr.Logger
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxes,verbs=get;list;watch;create;update;patch;delete
