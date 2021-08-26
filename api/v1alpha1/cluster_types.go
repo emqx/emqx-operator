@@ -1,6 +1,11 @@
 package v1alpha1
 
 import (
+	"fmt"
+	"reflect"
+	"strings"
+
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,7 +68,6 @@ const (
 )
 
 type DNS struct {
-	//+kubebuilder:validation:Pattern:=*.*
 	// Example "mycluster.com"
 	Name string `json:"name,omitempty"`
 	// Example "emqx"
@@ -94,8 +98,40 @@ type K8S struct {
 
 type AddressType string
 
+const ENV_CULSTER_PREFIX = "emqx_cluster"
+
 const (
 	ADDRESS_TYPE_IP       AddressType = "ip"
 	ADDRESS_TYPE_DNS      AddressType = "dns"
 	ADDRESS_TYPE_HOSTNAME AddressType = "hostname"
 )
+
+func (c Cluster) ConvertToEnv() []corev1.EnvVar {
+	var envVar []corev1.EnvVar
+	var clusterMap = make(map[string]string)
+	t := reflect.TypeOf(c)
+	v := reflect.ValueOf(c)
+	m := structToEnvHelper(0, ENV_CULSTER_PREFIX, t, v, clusterMap)
+	for k, v := range m {
+		// aim to skip the v is null
+		if len(v) != 0 {
+			envVar = append(envVar, corev1.EnvVar{
+				Name:  k,
+				Value: v,
+			})
+		}
+	}
+	return envVar
+}
+
+func structToEnvHelper(i int, k string, t reflect.Type, v reflect.Value, m map[string]string) map[string]string {
+	if v.Kind() != reflect.Struct {
+		m[strings.ToUpper(k)] = fmt.Sprintf("%v", v)
+		return m
+	}
+	for i := 0; i < t.NumField(); i++ {
+		key := fmt.Sprintf("%s__%s", k, strings.Split(t.Field(i).Tag.Get("json"), ",")[0])
+		structToEnvHelper(i, key, v.Field(i).Type(), v.Field(i), m)
+	}
+	return m
+}

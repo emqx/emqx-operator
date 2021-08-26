@@ -67,7 +67,6 @@ spec:
                         type: string
                       name:
                         description: Example "mycluster.com"
-                        pattern: '*.*'
                         type: string
                     type: object
                   k8s:
