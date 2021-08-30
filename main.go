@@ -81,6 +81,7 @@ func main() {
 	if err = (&controllers.EmqxReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Log:    ctrl.Log.WithName("emqx-oerpator").WithName("EMQX"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Emqx")
 		os.Exit(1)

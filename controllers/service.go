@@ -3,27 +3,8 @@ package controllers
 import (
 	"github.com/emqx/emqx-operator/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
-
-func makeServiceOwnerReference(instance *v1alpha1.Emqx) *v1.Service {
-	svc := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: instance.APIVersion,
-					Kind:       instance.Kind,
-					Name:       instance.Name,
-					UID:        instance.UID,
-				},
-			},
-		},
-	}
-	svc.Name = instance.Name
-	svc.Namespace = instance.Namespace
-	return svc
-}
 
 func makeServiceSpec(instance *v1alpha1.Emqx) v1.ServiceSpec {
 
@@ -83,4 +64,13 @@ func makeServiceSpec(instance *v1alpha1.Emqx) v1.ServiceSpec {
 		},
 	}
 	return serviceSpec
+}
+
+func makeService(instance *v1alpha1.Emqx) *v1.Service {
+	svc := &v1.Service{
+		Spec: makeServiceSpec(instance),
+	}
+	svc.Name = instance.Name
+	svc.Namespace = instance.Namespace
+	return svc
 }
