@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //+kubebuilder:validation:Optional
@@ -35,7 +34,7 @@ type Cluster struct {
 	// Defines how long to remove the stub-node from cluster
 	//+kubebuilder:default:="5m"
 	// TODO
-	Autoclean metav1.Duration `json:"autoclean,omitempty"`
+	// Autoclean metav1.Duration `json:"autoclean,omitempty"`
 
 	// Only applies to the mode of cluster discovery is DNS
 	DNS DNS `json:"dns,omitempty"`

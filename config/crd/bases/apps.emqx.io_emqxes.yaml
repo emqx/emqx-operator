@@ -39,11 +39,6 @@ spec:
               cluster:
                 description: Cluster defines the desired state of Cluster
                 properties:
-                  autoclean:
-                    default: 5m
-                    description: Defines how long to remove the stub-node from cluster
-                      TODO
-                    type: string
                   autoheal:
                     default: "on"
                     description: The mechanism about turning on/off of TODO
@@ -59,6 +54,7 @@ spec:
                     - k8s
                     type: string
                   dns:
+                    default: 5m
                     description: Only applies to the mode of cluster discovery is
                       DNS
                     properties:

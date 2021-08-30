@@ -18,13 +18,17 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -33,7 +37,7 @@ import (
 type EmqxReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	// Log    logr.Logger
+	Log    logr.Logger
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxes,verbs=get;list;watch;create;update;patch;delete
@@ -50,75 +54,42 @@ type EmqxReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-
-	log.Info("Reconcile start")
+	log := r.Log.WithValues("emqx", req.NamespacedName)
 
 	instance := &v1alpha1.Emqx{}
 
 	err := r.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			log.Info("the instance  is not found")
 			return ctrl.Result{}, nil
 		}
+
+	}
+	if err := createOrUpdatePvc(ctx, r, instance, req); err != nil {
+		log.Error(err, "Create or update pvc error")
+		return ctrl.Result{}, nil
 	}
 
-	// create pvc
-	storageList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
-
-	for _, item := range storageList {
-		pvc := makePvcOwnerReference(instance, item)
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
-			pvc.Spec = makePvcSpec(instance, item)
-			return nil
-		})
-		if err != nil {
-			log.Error(err, "Pvc reconcile failed")
-		} else {
-			log.Info("Pvc successfully reconciled", "operation", op)
-		}
+	if err := createOrUpdateSecret(ctx, r, instance, req); err != nil {
+		log.Error(err, "Create or update secret error")
+		return ctrl.Result{}, nil
 	}
 
-	// create secret
-	log.Info("Start create license config")
-	secret := *makeSecretOwnerReference(instance)
-	secretOp, err := controllerutil.CreateOrUpdate(ctx, r.Client, &secret, func() error {
-		secret.StringData = makeSecretSpec(instance)
-		return nil
-	})
-	if err != nil {
-		log.Error(err, "Secret reconcile failed")
-	} else {
-		log.Info("Secret successfully reconciled", "operation", secretOp)
+	if err := createOrUpdateService(ctx, r, instance, req); err != nil {
+		log.Error(err, "Create or update service error")
+		return ctrl.Result{}, nil
 	}
 
-	// create service
-	log.Info("start create service")
-	service := *makeServiceOwnerReference(instance)
-	serviceOp, err := controllerutil.CreateOrUpdate(ctx, r.Client, &service, func() error {
-		service.Spec = makeServiceSpec(instance)
-		return nil
-	})
-	if err != nil {
-		log.Error(err, "ServiceOp reconcile failed")
-	} else {
-		log.Info("ServiceOp successfully reconciled", "operation", serviceOp)
+	if err := createOrUpdateStatefulset(ctx, r, instance, req); err != nil {
+		log.Error(err, "Create or update statefulset error")
+		return ctrl.Result{}, nil
 	}
 
-	// create  statefulset
-	log.Info("start create statefulset")
-	statefulset, _ := makeStatefulOwnerReference(instance)
-	statefulsetOp, err := controllerutil.CreateOrUpdate(ctx, r.Client, statefulset, func() error {
-		statefulset.Spec = *makeStatefulSetSpec(instance)
-		return nil
-	})
-	if err != nil {
-		log.Error(err, "ServiceOp reconcile failed")
-	} else {
-		log.Info("ServiceOp successfully reconciled", "operation", statefulsetOp)
-	}
+	log.Info("Emqx :" + instance.String() + "reconciled successfully")
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, err
+
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -126,4 +97,164 @@ func (r *EmqxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Emqx{}).
 		Complete(r)
+}
+
+func createOrUpdatePvc(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
+	log := r.Log.WithValues("function", "reconcile pvc")
+
+	storageList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
+
+	for _, item := range storageList {
+		pvc := &v1.PersistentVolumeClaim{}
+
+		pvcName := fmt.Sprintf("%s-%s", "pvc", item)
+		pvcNamespacedName := resloveNameSpacedName(req, pvcName)
+
+		err := r.Get(ctx, pvcNamespacedName, pvc)
+
+		if err == nil {
+			log.Info("Pvc exists")
+			return nil
+		}
+
+		if !errors.IsNotFound(err) {
+			log.Error(err, "Query pvc error")
+			return err
+		}
+
+		pvc = makePvc(instance, item)
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
+			log.Info("Set pvc reference")
+			if err := controllerutil.SetControllerReference(instance, pvc, r.Scheme); err != nil {
+				log.Error(err, "Set pvc reference error")
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			log.Error(err, "Pvc reconcile failed")
+			return err
+		} else {
+			log.Info("Pvc reconciled successfully", "operation", op)
+		}
+	}
+	return nil
+}
+
+func createOrUpdateSecret(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
+	log := r.Log.WithValues("function", "reconcile secret")
+
+	secret := &v1.Secret{}
+
+	secretNamespacedName := resloveNameSpacedName(req, EMQX_LIC_NAME)
+
+	err := r.Get(ctx, secretNamespacedName, secret)
+
+	if err == nil {
+		log.Info("Secret exists")
+		return nil
+	}
+
+	if !errors.IsNotFound(err) {
+		log.Error(err, "Query secret error")
+		return err
+	}
+
+	secret = makeSecret(instance)
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+		log.Info("Set secret reference")
+		if err := controllerutil.SetControllerReference(instance, secret, r.Scheme); err != nil {
+			log.Error(err, "Set secret reference error")
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Error(err, "Secret reconcile failed")
+		return err
+	} else {
+		log.Info("Secret reconciled successfully", "operation", op)
+	}
+	return nil
+}
+
+func createOrUpdateService(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
+	log := r.Log.WithValues("function", "reconcile service")
+
+	svc := &v1.Service{}
+
+	serviceNamespaced := resloveNameSpacedName(req, instance.Name)
+
+	err := r.Get(ctx, serviceNamespaced, svc)
+
+	if err == nil {
+		log.Info("Service exists")
+		return nil
+	}
+
+	if !errors.IsNotFound(err) {
+		log.Error(err, "Query service error")
+		return err
+	}
+	svc = makeService(instance)
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
+		log.Info("Set service reference")
+		if err := controllerutil.SetControllerReference(instance, svc, r.Scheme); err != nil {
+			log.Error(err, "Set service reference error")
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Error(err, "Service reconcile failed")
+		return err
+	} else {
+		log.Info("Service reconciled successfully", "operation", op)
+	}
+	return nil
+
+}
+
+func createOrUpdateStatefulset(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
+	log := r.Log.WithValues("function", "reconcile statefulset")
+
+	statefulset := &appsv1.StatefulSet{}
+
+	err := r.Get(ctx, req.NamespacedName, statefulset)
+
+	if err == nil {
+		log.Info("Statefulset exists")
+		return nil
+	}
+
+	if !errors.IsNotFound(err) {
+		log.Error(err, "Query statefulset error")
+		return err
+	}
+
+	statefulset = makeStatefulSet(instance)
+
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, statefulset, func() error {
+		log.Info("Set statefulset reference")
+		if err := controllerutil.SetControllerReference(instance, statefulset, r.Scheme); err != nil {
+			log.Error(err, "Set statefulset reference error")
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Error(err, "Statefulset reconcile failed")
+		return err
+	} else {
+		log.Info("Statefulset reconciled successfully", "operation", op)
+	}
+	return nil
+}
+
+// reslove the namespacedname to correct scope
+func resloveNameSpacedName(req ctrl.Request, s string) types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: req.Namespace,
+		Name:      s,
+	}
 }

@@ -7,28 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func makeStatefulOwnerReference(instance *v1alpha1.Emqx) (*v1.StatefulSet, error) {
-
-	statefulset := &v1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.Name,
-			Namespace:   instance.Namespace,
-			Annotations: instance.ObjectMeta.Annotations,
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: instance.APIVersion,
-					Kind:       instance.Kind,
-					Name:       instance.Name,
-					UID:        instance.UID,
-				},
-			},
-		},
-	}
-	return statefulset, nil
-
-}
-
-func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
+func makeStatefulSet(instance *v1alpha1.Emqx) *v1.StatefulSet {
 
 	ports := generateContainerPorts()
 
@@ -56,34 +35,39 @@ func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
 	// 	Privileged: &privileged,
 	// }
 
-	return &v1.StatefulSetSpec{
-		ServiceName: instance.Name,
-		Replicas:    instance.Spec.Replicas,
-		Selector: &metav1.LabelSelector{
-			MatchLabels: podLabels,
-		},
-		Template: corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: podLabels,
+	statefulset := &v1.StatefulSet{
+		Spec: v1.StatefulSetSpec{
+			ServiceName: instance.Name,
+			Replicas:    instance.Spec.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: podLabels,
 			},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name:      EMQX_NAME,
-						Image:     instance.Spec.Image,
-						Env:       env,
-						Lifecycle: lifecycle,
-						Ports:     ports,
-
-						VolumeMounts: volumeMounts,
-						// SecurityContext: securityContext,
-					},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: podLabels,
 				},
-				ServiceAccountName: instance.Spec.ServiceAccountName,
-				Volumes:            volumes,
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:      EMQX_NAME,
+							Image:     instance.Spec.Image,
+							Env:       env,
+							Lifecycle: lifecycle,
+							Ports:     ports,
+
+							VolumeMounts: volumeMounts,
+							// SecurityContext: securityContext,
+						},
+					},
+					ServiceAccountName: instance.Spec.ServiceAccountName,
+					Volumes:            volumes,
+				},
 			},
 		},
 	}
+	statefulset.Name = instance.Name
+	statefulset.Namespace = instance.Namespace
+	return statefulset
 }
 
 func generateContainerPorts() []corev1.ContainerPort {

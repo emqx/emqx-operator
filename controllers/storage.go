@@ -46,16 +46,24 @@ func makePvcOwnerReference(instance *v1alpha1.Emqx, item string) *v1.PersistentV
 	return pvc
 }
 
-func makePvcSpec(instance *v1alpha1.Emqx, item string) v1.PersistentVolumeClaimSpec {
+func makePvc(instance *v1alpha1.Emqx, item string) *v1.PersistentVolumeClaim {
 	storageCommonValue := getStorageCommonValue(instance)
-	pvcSpec := v1.PersistentVolumeClaimSpec{
-		AccessModes: storageCommonValue.AccessModes,
-		Resources: v1.ResourceRequirements{
-			Requests: storageCommonValue.Capacity,
+
+	pvc := &v1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: instance.Namespace,
+			Name:      fmt.Sprintf("%s-%s", "pvc", item),
 		},
-		StorageClassName: &storageCommonValue.StorageClassName,
-		VolumeMode:       &storageCommonValue.VolumeMode,
-		VolumeName:       fmt.Sprintf("%s-%s", "pv", item),
+		Spec: v1.PersistentVolumeClaimSpec{
+			AccessModes: storageCommonValue.AccessModes,
+			Resources: v1.ResourceRequirements{
+				Requests: storageCommonValue.Capacity,
+			},
+			StorageClassName: &storageCommonValue.StorageClassName,
+			VolumeMode:       &storageCommonValue.VolumeMode,
+			VolumeName:       fmt.Sprintf("%s-%s", "pv", item),
+		},
 	}
-	return pvcSpec
+	return pvc
+
 }
