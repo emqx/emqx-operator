@@ -112,30 +112,29 @@ func createOrUpdatePvc(ctx context.Context, r *EmqxReconciler, instance *v1alpha
 
 		err := r.Get(ctx, pvcNamespacedName, pvc)
 
-		if err == nil {
-			log.Info("Pvc exists")
-			return nil
-		}
-
-		if !errors.IsNotFound(err) {
-			log.Error(err, "Query pvc error")
-			return err
-		}
-
-		pvc = makePvc(instance, item)
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
+		if err == nil || errors.IsNotFound(err) {
 			log.Info("Set pvc reference")
+			pvc.Namespace = instance.Namespace
+			pvc.Name = pvcName
 			if err := controllerutil.SetControllerReference(instance, pvc, r.Scheme); err != nil {
 				log.Error(err, "Set pvc reference error")
 				return err
 			}
-			return nil
-		})
-		if err != nil {
-			log.Error(err, "Pvc reconcile failed")
+			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
+				pvc.Spec = makePvcSpec(instance, item)
+				return nil
+			})
+			if err != nil {
+				log.Error(err, "Pvc reconcile failed")
+				return err
+			} else {
+				log.Info("Pvc reconciled successfully", "operation", op)
+			}
+		}
+
+		if err != nil && !errors.IsNotFound(err) {
+			log.Error(err, "Query pvc error")
 			return err
-		} else {
-			log.Info("Pvc reconciled successfully", "operation", op)
 		}
 	}
 	return nil
@@ -150,30 +149,33 @@ func createOrUpdateSecret(ctx context.Context, r *EmqxReconciler, instance *v1al
 
 	err := r.Get(ctx, secretNamespacedName, secret)
 
-	if err == nil {
-		log.Info("Secret exists")
-		return nil
-	}
-
-	if !errors.IsNotFound(err) {
-		log.Error(err, "Query secret error")
-		return err
-	}
-
-	secret = makeSecret(instance)
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+	if err == nil || errors.IsNotFound(err) {
 		log.Info("Set secret reference")
+		secret.Namespace = instance.Namespace
+		secret.Name = EMQX_LIC_NAME
 		if err := controllerutil.SetControllerReference(instance, secret, r.Scheme); err != nil {
 			log.Error(err, "Set secret reference error")
 			return err
 		}
+
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+
+			secret.Type = "Opaque"
+			secret.StringData = makeSecretStringData(instance)
+			return nil
+		})
+		if err != nil {
+			log.Error(err, "Secret reconcile failed")
+			return err
+		} else {
+			log.Info("Secret reconciled successfully", "operation", op)
+		}
 		return nil
-	})
-	if err != nil {
-		log.Error(err, "Secret reconcile failed")
+	}
+
+	if err != nil && !errors.IsNotFound(err) {
+		log.Error(err, "Query secret error")
 		return err
-	} else {
-		log.Info("Secret reconciled successfully", "operation", op)
 	}
 	return nil
 }
@@ -181,38 +183,69 @@ func createOrUpdateSecret(ctx context.Context, r *EmqxReconciler, instance *v1al
 func createOrUpdateService(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
 	log := r.Log.WithValues("function", "reconcile service")
 
-	svc := &v1.Service{}
+	svcName := []string{"svc", "headless"}
+	svcSpecMap := makeServiceSpec(instance)
+	for _, v := range svcName {
+		svc := &v1.Service{}
 
-	serviceNamespaced := resloveNameSpacedName(req, instance.Name)
+		serviceNamespaced := resloveNameSpacedName(req, fmt.Sprintf("%s-%s", instance.Name, v))
 
-	err := r.Get(ctx, serviceNamespaced, svc)
+		err := r.Get(ctx, serviceNamespaced, svc)
 
-	if err == nil {
-		log.Info("Service exists")
-		return nil
-	}
-
-	if !errors.IsNotFound(err) {
-		log.Error(err, "Query service error")
-		return err
-	}
-	svc = makeService(instance)
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
-		log.Info("Set service reference")
-		if err := controllerutil.SetControllerReference(instance, svc, r.Scheme); err != nil {
-			log.Error(err, "Set service reference error")
+		// update svc phase:
+		// 1. delete primary svc
+		// 2. create the new svc
+		if err == nil {
+			log.Info("Delete the old service")
+			err := r.Delete(ctx, svc)
+			if err != nil {
+				log.Error(err, "Delelet service error ")
+				return err
+			}
+			// ensure the resourceVersion to be the correct version
+			svc = &v1.Service{}
+			log.Info("Set service reference")
+			svc.Namespace = instance.Namespace
+			svc.Name = fmt.Sprintf("%s-%s", instance.Name, v)
+			if err := controllerutil.SetControllerReference(instance, svc, r.Scheme); err != nil {
+				log.Error(err, "Set service reference error")
+				return err
+			}
+			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
+				svc.Spec = *svcSpecMap[v]
+				return nil
+			})
+			if err != nil {
+				log.Error(err, "Service reconcile failed")
+				return err
+			} else {
+				log.Info("Service reconciled successfully", "operation", op)
+			}
+		} else if errors.IsNotFound(err) {
+			log.Info("Set service reference")
+			svc.Namespace = instance.Namespace
+			svc.Name = fmt.Sprintf("%s-%s", instance.Name, v)
+			if err := controllerutil.SetControllerReference(instance, svc, r.Scheme); err != nil {
+				log.Error(err, "Set service reference error")
+				return err
+			}
+			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
+				svc.Spec = *svcSpecMap[v]
+				return nil
+			})
+			if err != nil {
+				log.Error(err, "Service reconcile failed")
+				return err
+			} else {
+				log.Info("Service reconciled successfully", "operation", op)
+			}
+		}
+		if err != nil && !errors.IsNotFound(err) {
+			log.Error(err, "Query service error")
 			return err
 		}
-		return nil
-	})
-	if err != nil {
-		log.Error(err, "Service reconcile failed")
-		return err
-	} else {
-		log.Info("Service reconciled successfully", "operation", op)
 	}
 	return nil
-
 }
 
 func createOrUpdateStatefulset(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
@@ -222,32 +255,32 @@ func createOrUpdateStatefulset(ctx context.Context, r *EmqxReconciler, instance 
 
 	err := r.Get(ctx, req.NamespacedName, statefulset)
 
-	if err == nil {
-		log.Info("Statefulset exists")
-		return nil
-	}
-
-	if !errors.IsNotFound(err) {
-		log.Error(err, "Query statefulset error")
-		return err
-	}
-
-	statefulset = makeStatefulSet(instance)
-
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, statefulset, func() error {
+	if err == nil || errors.IsNotFound(err) {
+		statefulset.Name = instance.Name
+		statefulset.Namespace = instance.Namespace
 		log.Info("Set statefulset reference")
 		if err := controllerutil.SetControllerReference(instance, statefulset, r.Scheme); err != nil {
 			log.Error(err, "Set statefulset reference error")
 			return err
 		}
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, statefulset, func() error {
+			statefulset.Spec = *makeStatefulSetSpec(instance)
+			return nil
+		})
+		if err != nil {
+			log.Error(err, "Statefulset reconcile failed")
+			return err
+		} else {
+			log.Info("Statefulset reconciled successfully", "operation", op)
+		}
 		return nil
-	})
-	if err != nil {
-		log.Error(err, "Statefulset reconcile failed")
-		return err
-	} else {
-		log.Info("Statefulset reconciled successfully", "operation", op)
 	}
+
+	if err != nil && !errors.IsNotFound(err) {
+		log.Error(err, "Query statefulset error")
+		return err
+	}
+
 	return nil
 }
 

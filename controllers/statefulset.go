@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func makeStatefulSet(instance *v1alpha1.Emqx) *v1.StatefulSet {
+func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
 
 	ports := generateContainerPorts()
 
@@ -35,39 +35,34 @@ func makeStatefulSet(instance *v1alpha1.Emqx) *v1.StatefulSet {
 	// 	Privileged: &privileged,
 	// }
 
-	statefulset := &v1.StatefulSet{
-		Spec: v1.StatefulSetSpec{
-			ServiceName: instance.Name,
-			Replicas:    instance.Spec.Replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: podLabels,
+	return &v1.StatefulSetSpec{
+		ServiceName: instance.Name,
+		Replicas:    instance.Spec.Replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: podLabels,
+		},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: podLabels,
 			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: podLabels,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:      EMQX_NAME,
-							Image:     instance.Spec.Image,
-							Env:       env,
-							Lifecycle: lifecycle,
-							Ports:     ports,
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:      EMQX_NAME,
+						Image:     instance.Spec.Image,
+						Env:       env,
+						Lifecycle: lifecycle,
+						Ports:     ports,
 
-							VolumeMounts: volumeMounts,
-							// SecurityContext: securityContext,
-						},
+						VolumeMounts: volumeMounts,
+						// SecurityContext: securityContext,
 					},
-					ServiceAccountName: instance.Spec.ServiceAccountName,
-					Volumes:            volumes,
 				},
+				ServiceAccountName: instance.Spec.ServiceAccountName,
+				Volumes:            volumes,
 			},
 		},
 	}
-	statefulset.Name = instance.Name
-	statefulset.Namespace = instance.Namespace
-	return statefulset
 }
 
 func generateContainerPorts() []corev1.ContainerPort {
