@@ -6,7 +6,6 @@ import (
 	"github.com/emqx/emqx-operator/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type StorageCommonValue struct {
@@ -28,42 +27,16 @@ func getStorageCommonValue(instance *v1alpha1.Emqx) StorageCommonValue {
 	return storageCommonValue
 }
 
-func makePvcOwnerReference(instance *v1alpha1.Emqx, item string) *v1.PersistentVolumeClaim {
-	pvc := &v1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s", "pvc", item),
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: instance.APIVersion,
-					Kind:       instance.Kind,
-					Name:       instance.Name,
-					UID:        instance.UID,
-				},
-			},
-		},
-	}
-	pvc.Namespace = instance.Namespace
-	return pvc
-}
-
-func makePvc(instance *v1alpha1.Emqx, item string) *v1.PersistentVolumeClaim {
+func makePvcSpec(instance *v1alpha1.Emqx, item string) v1.PersistentVolumeClaimSpec {
 	storageCommonValue := getStorageCommonValue(instance)
 
-	pvc := &v1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: instance.Namespace,
-			Name:      fmt.Sprintf("%s-%s", "pvc", item),
+	return v1.PersistentVolumeClaimSpec{
+		AccessModes: storageCommonValue.AccessModes,
+		Resources: v1.ResourceRequirements{
+			Requests: storageCommonValue.Capacity,
 		},
-		Spec: v1.PersistentVolumeClaimSpec{
-			AccessModes: storageCommonValue.AccessModes,
-			Resources: v1.ResourceRequirements{
-				Requests: storageCommonValue.Capacity,
-			},
-			StorageClassName: &storageCommonValue.StorageClassName,
-			VolumeMode:       &storageCommonValue.VolumeMode,
-			VolumeName:       fmt.Sprintf("%s-%s", "pv", item),
-		},
+		StorageClassName: &storageCommonValue.StorageClassName,
+		VolumeMode:       &storageCommonValue.VolumeMode,
+		VolumeName:       fmt.Sprintf("%s-%s", "pv", item),
 	}
-	return pvc
-
 }
