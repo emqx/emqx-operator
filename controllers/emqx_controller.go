@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -83,6 +84,11 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	if err := createOrUpdateStatefulset(ctx, r, instance, req); err != nil {
 		log.Error(err, "Create or update statefulset error")
+		return ctrl.Result{}, nil
+	}
+
+	if err := updateStatus(ctx, r, instance, req); err != nil {
+		log.Error(err, "Update status error")
 		return ctrl.Result{}, nil
 	}
 
@@ -281,6 +287,28 @@ func createOrUpdateStatefulset(ctx context.Context, r *EmqxReconciler, instance 
 		return err
 	}
 
+	return nil
+}
+
+func updateStatus(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
+	log := r.Log.WithValues("func", "update status")
+
+	svc := &v1.Service{}
+	serviceNamespaced := resloveNameSpacedName(req, fmt.Sprintf("%s-%s", instance.Name, "svc"))
+
+	for svc.Status.LoadBalancer.Ingress == nil {
+		err := r.Get(ctx, serviceNamespaced, svc)
+		if err != nil {
+			log.Error(err, "Get svc status error")
+			return err
+		}
+		continue
+	}
+	instance.Status.DashboardUrl = svc.Status.LoadBalancer.Ingress[0].IP + ":" + strconv.Itoa(SERVICE_DASHBOARD_PORT)
+	if err := r.Status().Update(ctx, instance); err != nil {
+		log.Error(err, "Update status error")
+	}
+	log.Info("Update the status successfully")
 	return nil
 }
 

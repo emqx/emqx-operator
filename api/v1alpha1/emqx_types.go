@@ -84,6 +84,8 @@ type EmqxSpec struct {
 type EmqxStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	DashboardUrl string `json:"dashboard_url,omitempty"`
 }
 
 //+kubebuilder:object:root=true
