@@ -39,6 +39,10 @@ spec:
               cluster:
                 description: Cluster defines the desired state of Cluster
                 properties:
+                  autoclean:
+                    default: 5m
+                    description: Defines how long to remove the stub-node from cluster
+                    type: string
                   autoheal:
                     default: "on"
                     description: The mechanism about turning on/off of TODO
@@ -53,24 +57,14 @@ spec:
                     - dns
                     - k8s
                     type: string
-                  dns:
-                    default: 5m
-                    description: Only applies to the mode of cluster discovery is
-                      DNS
-                    properties:
-                      app:
-                        description: Example "emqx"
-                        type: string
-                      name:
-                        description: Example "mycluster.com"
-                        type: string
-                    type: object
                   k8s:
                     description: Only applies to the mode of cluster discovery is
                       K8S
                     properties:
                       address_type:
-                        default: ip
+                        default: hostname
+                        description: 'The address type is used to extract host from
+                          k8s service. Note: Hostname is only supported after v4.0-rc.2'
                         enum:
                         - ip
                         - dns
@@ -238,6 +232,8 @@ spec:
                       to be consumed, either Block or Filesystem.
                     type: string
                 type: object
+            required:
+            - cluster
             type: object
           status:
             description: EmqxStatus defines the observed state of Emqx

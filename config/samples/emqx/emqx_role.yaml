@@ -4,6 +4,12 @@ metadata:
   creationTimestamp: null
   name: emqx
 rules:
+- apiGroups: 
+  - ""
+  resources:
+  - endpoints
+  verbs:
+    - "*"
 - apiGroups:
   - apps.emqx.io
   resources:
