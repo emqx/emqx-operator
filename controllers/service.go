@@ -6,7 +6,7 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func makeServiceSpec(instance *v1alpha1.Emqx) map[string]*v1.ServiceSpec {
+func makeServiceSpec(instance *v1alpha1.Emqx) v1.ServiceSpec {
 
 	servicePort := []v1.ServicePort{
 		{
@@ -55,14 +55,6 @@ func makeServiceSpec(instance *v1alpha1.Emqx) map[string]*v1.ServiceSpec {
 			},
 		},
 	}
-	serviceSpec := v1.ServiceSpec{
-		Type:  v1.ServiceTypeLoadBalancer,
-		Ports: servicePort,
-		Selector: map[string]string{
-			"app":     EMQX_NAME,
-			EMQX_NAME: instance.Name,
-		},
-	}
 
 	headlessServiceSpec := v1.ServiceSpec{
 		Type:      v1.ServiceTypeClusterIP,
@@ -73,8 +65,6 @@ func makeServiceSpec(instance *v1alpha1.Emqx) map[string]*v1.ServiceSpec {
 			EMQX_NAME: instance.Name,
 		},
 	}
-	svcSpecMap := make(map[string]*v1.ServiceSpec)
-	svcSpecMap["svc"] = &serviceSpec
-	svcSpecMap["headless"] = &headlessServiceSpec
-	return svcSpecMap
+
+	return headlessServiceSpec
 }

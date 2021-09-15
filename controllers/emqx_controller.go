@@ -65,8 +65,13 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			log.Info("the instance  is not found")
 			return ctrl.Result{}, nil
 		}
-
 	}
+
+	if err := instance.Validate(); err != nil {
+		log.Error(err, "validate the emqx yaml error")
+		return ctrl.Result{}, err
+	}
+
 	if err := createOrUpdatePvc(ctx, r, instance, req); err != nil {
 		log.Error(err, "Create or update pvc error")
 		return ctrl.Result{}, nil
@@ -87,10 +92,10 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	if err := updateStatus(ctx, r, instance, req); err != nil {
-		log.Error(err, "Update status error")
-		return ctrl.Result{}, nil
-	}
+	// if err := updateStatus(ctx, r, instance, req); err != nil {
+	// 	log.Error(err, "Update status error")
+	// 	return ctrl.Result{}, nil
+	// }
 
 	log.Info("Emqx :" + instance.String() + "reconciled successfully")
 
@@ -188,68 +193,32 @@ func createOrUpdateSecret(ctx context.Context, r *EmqxReconciler, instance *v1al
 
 func createOrUpdateService(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
 	log := r.Log.WithValues("function", "reconcile service")
-
-	svcName := []string{"svc", "headless"}
-	svcSpecMap := makeServiceSpec(instance)
-	for _, v := range svcName {
-		svc := &v1.Service{}
-
-		serviceNamespaced := resloveNameSpacedName(req, fmt.Sprintf("%s-%s", instance.Name, v))
-
-		err := r.Get(ctx, serviceNamespaced, svc)
-
-		// update svc phase:
-		// 1. delete primary svc
-		// 2. create the new svc
-		if err == nil {
-			log.Info("Delete the old service")
-			err := r.Delete(ctx, svc)
-			if err != nil {
-				log.Error(err, "Delelet service error ")
-				return err
-			}
-			// ensure the resourceVersion to be the correct version
-			svc = &v1.Service{}
-			log.Info("Set service reference")
-			svc.Namespace = instance.Namespace
-			svc.Name = fmt.Sprintf("%s-%s", instance.Name, v)
-			if err := controllerutil.SetControllerReference(instance, svc, r.Scheme); err != nil {
-				log.Error(err, "Set service reference error")
-				return err
-			}
-			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
-				svc.Spec = *svcSpecMap[v]
-				return nil
-			})
-			if err != nil {
-				log.Error(err, "Service reconcile failed")
-				return err
-			} else {
-				log.Info("Service reconciled successfully", "operation", op)
-			}
-		} else if errors.IsNotFound(err) {
-			log.Info("Set service reference")
-			svc.Namespace = instance.Namespace
-			svc.Name = fmt.Sprintf("%s-%s", instance.Name, v)
-			if err := controllerutil.SetControllerReference(instance, svc, r.Scheme); err != nil {
-				log.Error(err, "Set service reference error")
-				return err
-			}
-			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
-				svc.Spec = *svcSpecMap[v]
-				return nil
-			})
-			if err != nil {
-				log.Error(err, "Service reconcile failed")
-				return err
-			} else {
-				log.Info("Service reconciled successfully", "operation", op)
-			}
-		}
-		if err != nil && !errors.IsNotFound(err) {
-			log.Error(err, "Query service error")
-			return err
-		}
+	svc := &v1.Service{}
+	svc.Namespace = instance.Namespace
+	svc.Name = instance.Name
+	if err := controllerutil.SetControllerReference(instance, svc, r.Scheme); err != nil {
+		log.Error(err, "Set service reference error")
+		return err
+	}
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
+		svc.Spec = makeServiceSpec(instance)
+		return nil
+	})
+	if err != nil {
+		log.Error(err, "Service reconcile failed")
+		return err
+	} else {
+		log.Info("Service reconciled successfully", "operation", op)
+	}
+	if err != nil {
+		log.Error(err, "Service reconcile failed")
+		return err
+	} else {
+		log.Info("Service reconciled successfully", "operation", op)
+	}
+	if err != nil && !errors.IsNotFound(err) {
+		log.Error(err, "Query service error")
+		return err
 	}
 	return nil
 }

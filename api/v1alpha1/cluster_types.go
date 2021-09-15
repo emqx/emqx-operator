@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //+kubebuilder:validation:Optional
@@ -33,11 +34,7 @@ type Cluster struct {
 
 	// Defines how long to remove the stub-node from cluster
 	//+kubebuilder:default:="5m"
-	// TODO
-	// Autoclean metav1.Duration `json:"autoclean,omitempty"`
-
-	// Only applies to the mode of cluster discovery is DNS
-	DNS DNS `json:"dns,omitempty"`
+	Autoclean metav1.Duration `json:"autoclean,omitempty"`
 
 	// Only applies to the mode of cluster discovery is K8S
 	K8S K8S `json:"k8s,omitempty"`
@@ -81,7 +78,9 @@ type K8S struct {
 	// Example "emqx"
 	ServiceName string `json:"service_name,omitempty"`
 
-	//+kubebuilder:default:=ip
+	// The address type is used to extract host from k8s service.
+	// Note: Hostname is only supported after v4.0-rc.2
+	//+kubebuilder:default:=hostname
 	//+kubebuilder:validation:Enum=ip;dns;hostname
 	AddressType AddressType `json:"address_type,omitempty"`
 

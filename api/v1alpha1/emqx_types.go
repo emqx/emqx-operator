@@ -44,40 +44,10 @@ type EmqxSpec struct {
 
 	Storage Storage `json:"storage,omitempty"`
 
-	//+kubebuilder:validation:Optional
+	//+kubebuilder:validation:Required
 	Cluster Cluster `json:"cluster,omitempty"`
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// Node Node `json:"node,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// RPC RPC `json:"rpc,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// Log Log `json:"log,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// AuthAcl AuthAcl `json:"authacl,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// Mqtt Mqtt `json:"mqtt,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// Zone []Zone `json:"zone,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// Listener []Listener `json:"listener,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// Plugins Plugins `json:"plugins,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// Broker Broker `json:"broker,omitempty"`
-
-	// //+kubebuilder:validation:Optional
-	// Monitor Monitor `json:"monitor,omitempty"`
 }
 
 // EmqxStatus defines the observed state of Emqx
