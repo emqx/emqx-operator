@@ -202,8 +202,12 @@ spec:
                   type: object
                 type: array
               image:
-                description: The image name of the emqx
                 type: string
+              labels:
+                additionalProperties:
+                  type: string
+                description: The labels configure must be specified.
+                type: object
               license:
                 type: string
               replicas:
@@ -211,6 +215,8 @@ spec:
                 format: int32
                 type: integer
               serviceAccountName:
+                description: The service account name which is being binded with the
+                  service account of the crd instance.
                 type: string
               storage:
                 properties:
@@ -232,8 +238,6 @@ spec:
                       to be consumed, either Block or Filesystem.
                     type: string
                 type: object
-            required:
-            - cluster
             type: object
           status:
             description: EmqxStatus defines the observed state of Emqx

@@ -5,8 +5,7 @@ metadata:
   namespace: default
 spec:
   selector:
-     app: emqx
-     emqx: emqx-sample
+     cluster: emqx
   ports:
     - name: tcp
       port: 1883

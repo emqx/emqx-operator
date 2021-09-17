@@ -60,10 +60,7 @@ func makeServiceSpec(instance *v1alpha1.Emqx) v1.ServiceSpec {
 		Type:      v1.ServiceTypeClusterIP,
 		Ports:     servicePort,
 		ClusterIP: "None",
-		Selector: map[string]string{
-			"app":     EMQX_NAME,
-			EMQX_NAME: instance.Name,
-		},
+		Selector:  instance.Spec.Labels,
 	}
 
 	return headlessServiceSpec
