@@ -14,7 +14,6 @@ func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
 	volumes := generateVolumes(instance)
 
 	volumeMounts := generateVolumeMounts(instance)
-	podLabels := generatePodLabels(instance)
 
 	postStartCommand := []string{"sudo", "/bin/sh", "-c", "chown -R 1000:1000 /opt/emqx/log /opt/emqx/data/mnesia"}
 
@@ -39,11 +38,11 @@ func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
 		ServiceName: instance.Name,
 		Replicas:    instance.Spec.Replicas,
 		Selector: &metav1.LabelSelector{
-			MatchLabels: podLabels,
+			MatchLabels: instance.Spec.Labels,
 		},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: podLabels,
+				Labels: instance.Spec.Labels,
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -139,13 +138,6 @@ func generateVolumeMounts(instance *v1alpha1.Emqx) []corev1.VolumeMount {
 		},
 	}
 	return volumeMounts
-}
-
-func generatePodLabels(instance *v1alpha1.Emqx) map[string]string {
-	return map[string]string{
-		"app":     EMQX_NAME,
-		EMQX_NAME: instance.Name,
-	}
 }
 
 func mergeClusterConfigToEnv(instance *v1alpha1.Emqx) []corev1.EnvVar {

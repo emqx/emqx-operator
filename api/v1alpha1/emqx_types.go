@@ -35,14 +35,20 @@ type EmqxSpec struct {
 	//The replicas of emqx broker
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	//The image name of the emqx
 	Image string `json:"image,omitempty"`
 
+	// The service account name which is being binded with the service
+	// account of the crd instance.
+	//+kubebuilder:validation:Required
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
 	License string `json:"license,omitempty"`
 
 	Storage Storage `json:"storage,omitempty"`
+
+	// The labels configure must be specified.
+	//+kubebuilder:validation:Required
+	Labels map[string]string `json:"labels,omitempty"`
 
 	//+kubebuilder:validation:Required
 	Cluster Cluster `json:"cluster,omitempty"`
