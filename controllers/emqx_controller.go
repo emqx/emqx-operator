@@ -72,11 +72,6 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	if err := createOrUpdatePvc(ctx, r, instance, req); err != nil {
-		log.Error(err, "Create or update pvc error")
-		return ctrl.Result{}, nil
-	}
-
 	if err := createOrUpdateSecret(ctx, r, instance, req); err != nil {
 		log.Error(err, "Create or update secret error")
 		return ctrl.Result{}, nil
@@ -108,47 +103,6 @@ func (r *EmqxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Emqx{}).
 		Complete(r)
-}
-
-func createOrUpdatePvc(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
-	log := r.Log.WithValues("function", "reconcile pvc")
-
-	storageList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
-
-	for _, item := range storageList {
-		pvc := &v1.PersistentVolumeClaim{}
-
-		pvcName := fmt.Sprintf("%s-%s", "pvc", item)
-		pvcNamespacedName := resloveNameSpacedName(req, pvcName)
-
-		err := r.Get(ctx, pvcNamespacedName, pvc)
-
-		if err == nil || errors.IsNotFound(err) {
-			log.Info("Set pvc reference")
-			pvc.Namespace = instance.Namespace
-			pvc.Name = pvcName
-			if err := controllerutil.SetControllerReference(instance, pvc, r.Scheme); err != nil {
-				log.Error(err, "Set pvc reference error")
-				return err
-			}
-			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
-				pvc.Spec = makePvcSpec(instance, item)
-				return nil
-			})
-			if err != nil {
-				log.Error(err, "Pvc reconcile failed")
-				return err
-			} else {
-				log.Info("Pvc reconciled successfully", "operation", op)
-			}
-		}
-
-		if err != nil && !errors.IsNotFound(err) {
-			log.Error(err, "Query pvc error")
-			return err
-		}
-	}
-	return nil
 }
 
 func createOrUpdateSecret(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
