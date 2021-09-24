@@ -14,7 +14,7 @@
 cluster:
     name: emqx
     k8s:   
-      apiserver: https://10.0.29.113:6443
+      apiserver: https://xxxxxxxx
       service_name: emqx
       address_type: dns
       suffix: pod.cluster.local
