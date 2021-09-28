@@ -2,34 +2,34 @@
 
 A Kubernetes Operator for EMQ X Broker
 
-**Project status: *alpha*** Not all planed features are completed. The API, sepc, status and other user facing objects may chage, but in a backward compatible way.
+**Project status: *alpha*** Not all planned features are completed. The API, sepc, status and other user facing objects may chage, but in a backward compatible way.
 
 Note: Project was previously known as emqx/emqx-operator.
 
 ## Overview
 
-The Emqx Operator provieds [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQ X](https://www.emqx.io/). The purpose of this project is to simplify and automate the configuration of emqx broker for Emqx cluster.
+The EMQ X Operator provieds [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQ X](https://www.emqx.io/). The purpose of this project is to simplify and automate the configuration of EMQ X Broker for EMQ X cluster.
 
-The Emqx operator includes, but is not limited to, the following features:
+The EMQ X Operator includes, but is not limited to, the following features:
 
-* **Kubernetes Custom Resource**: Use Kubernetes custom resource to deploy and manage Emqx Broker
+* **Kubernetes Custom Resource**: Use Kubernetes custom resource to deploy and manage EMQ X Broker.
 
-* **Simplified Deployment Configuration**: Configure the fundamentals of Emqx like persistence, conf, license from a native Kubernetes resource.
+* **Simplified Deployment Configuration**: Configure the fundamentals of EMQ X like persistence, conf, license from a native Kubernetes resource.
 
-For an introduction to the Prometheus Operator, see the [getting started](docs/user-guides/getting-started.md) guide.
+For an introduction to the EMQ X Operator, see the [getting started](docs/user-guides/getting-started.md) guide.
 
 ## Prerequisites
 
-The Emqx Operator requires a Kubernetes cluster of version `>=1.20.0`.If you are just starting out with the Emqx Operator, it is highly recommended to use the `version:v1.12.0`.
+The EMQ X Operator requires a Kubernetes cluster of version `>=1.20.0`.If you are just starting out with the Emqx Operator, it is highly recommended to use the `version:v1.20.0`.
 
 ## CustomResourceDefinitions
 
-A core feature of the Emqx Operator is to monitor the Kubernetes API server for changes to specific objects and ensuer that the current Emqx deployments match thes objects.
+A core feature of the EMQ X Operator is to monitor the Kubernetes API server for changes to specific objects and ensuer that the current Emqx deployments match thes objects.
 The Operator acts on the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):
 
-* **`Emqx`**, which defines a desired Emqx Broker Cluster deployment.
+* **`Emqx`**, which defines a desired EMQ X Broker Cluster deployment.
 
-The Emqx operator automatically detects changes in the Kubernetes API server to any of the above objects, and ensures that matching deployments and configurations are kept in sync.
+The EMQ X Operator automatically detects changes in the Kubernetes API server to any of the above objects, and ensures that matching deployments and configurations are kept in sync.
 
 ## Quickstart
 

@@ -1,13 +1,13 @@
-**Note**: Emqx Operator requires use of Kubernetes v1.20.0 and up.
+**Note**: EMQ X Operator requires use of Kubernetes v1.20.0 and up.
 
 ## Quickstart
 
 ### Deployment
 
-* Deploy the operaotr in the Kubernetes cluster
+* Deploy the operator in the Kubernetes cluster
 * Run the project out of the Kubernetes cluster
 
->Example: Run the operator in the ACK service in ALiCloud, the LV and Persistence Volume should prepared before deploying.
+>Example: Run the Operator in the ACK service in ALiCloud, the LV and Persistence Volume should prepared before deploying.
 
 * Register the CustomResourceDefinitions into the Kubernetes Resources.
 
@@ -107,7 +107,7 @@ spec:
   type: LoadBalancer
 ```
 
-* Enable RBAC rules for Emqx operator pods
+* Enable RBAC rules for EMQ X Operator pods
 
 ```bash
 kubectl create -f config/samples/operator/operator_namespace.yaml
@@ -117,7 +117,7 @@ kubectl create -f config/samples/operator/operator_role_binding.yaml
 kubectl create -f config/samples/operator_deployment.yaml
 ```
 
-* Enable RBAC rule for Emqx pods
+* Enable RBAC rule for EMQ X pods
 
 ```bash
 kubectl create -f config/samples/emqx/emqx_serviceaccount.yaml
@@ -164,7 +164,7 @@ spec:
 > * [Details for *cluster* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
 > * [Details for *env* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
   
-* Verify the emqx pods running
+* Verify the EMQ X pods running
 
 ```bash
 kubectl get pods               
@@ -222,7 +222,7 @@ kubectl create -f config/samples/emqx/broker_role_binding.yaml
 kubectl create -f config/samples/emqx/custom_v1alpha1_broker.yaml
 ```
 
-* Verify the  `emqx pod` running successfully
+* Verify the  `EMQ X pods` running successfully
 
 ### Scaling the cluster
 
