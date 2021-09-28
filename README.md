@@ -27,7 +27,7 @@ The EMQ X Operator requires a Kubernetes cluster of version `>=1.20.0`.If you ar
 A core feature of the EMQ X Operator is to monitor the Kubernetes API server for changes to specific objects and ensuer that the current Emqx deployments match thes objects.
 The Operator acts on the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):
 
-* **`Emqx`**, which defines a desired EMQ X Broker Cluster deployment.
+* **`Cluster`**, which defines a desired EMQ X Broker Cluster deployment.
 
 The EMQ X Operator automatically detects changes in the Kubernetes API server to any of the above objects, and ensures that matching deployments and configurations are kept in sync.
 
