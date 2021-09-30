@@ -1,4 +1,4 @@
-**Note**: EMQ X Operator requires use of Kubernetes v1.20.0 and up.
+**Note**: EMQ X Operator requires Kubernetes v1.20.0 and up.
 
 ## Quickstart
 
@@ -7,7 +7,7 @@
 * Deploy the operator in the Kubernetes cluster
 * Run the project out of the Kubernetes cluster
 
->Example: Run the Operator in the ACK service in ALiCloud, the LV and Persistence Volume should prepared before deploying.
+>Example: Run the Operator in the ACK service in ALiCloud, the LB and Persistence Volume should prepared before deploying.
 
 * Register the CustomResourceDefinitions into the Kubernetes Resources.
 
@@ -164,7 +164,7 @@ spec:
 > * [Details for *cluster* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
 > * [Details for *env* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
   
-* Verify the EMQ X pods running
+* Make sure the EMQ X pods running as expected
 
 ```bash
 kubectl get pods               
@@ -211,9 +211,9 @@ EMQ X Broker 4.3.8 is running now
 
 > Prerequirements: LB, Persistence Volume, CRD
 
-* Scp the `./kube/config` of Kubernetes cluster to local `$HOME/.kube/config`
+* Make sure kube config is configured properly
 * Run `main.go`
-* Enable the RBAC related to CR and deploy the CR
+* Create RBAC objects from manifest file
 
 ```bash
 kubectl create -f config/samples/emqx/broker_serviceaccount.yaml
