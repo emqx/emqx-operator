@@ -1,16 +1,17 @@
-# Emqx 集群扩容
+# Scaling EMQ X Cluster
 
-> [emqx分布式集群简介](https://docs.emqx.cn/enterprise/v4.3/getting-started/cluster.html)
+> [Introduction to EMQ X cluster](https://docs.emqx.io/en/broker/v4.3/advanced/cluster.html)
 
-**`Operator`目前仅支持基于`k8s`节点发现与自动集群**
+**Note**: Now only supports the strategy of node discovery"*k8s*".
 
-## 配置明细
+## Configuration Details
 
-[`cluster` 配置明细](https://docs.emqx.cn/enterprise/v4.3/configuration/configuration.html#cluster)
+[`cluster` details](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
 
-## `Operator cluster yaml` 配置示例
+## Example for `Operator cluster yaml`
 
 ```yaml
+...
 cluster:
     name: emqx
     k8s:   
@@ -20,9 +21,10 @@ cluster:
       suffix: pod.cluster.local
       app_name: emqx
       namespace: default
+...
 ```
 
-## 配置依赖简述
+## Dependency details
 
 <table>
     <tr>
@@ -43,7 +45,6 @@ cluster:
     </tr>
     <tr>
         <td>ip</td>
-        <td>空</td>
     </tr>
     <tr>
         <td>dns</td>

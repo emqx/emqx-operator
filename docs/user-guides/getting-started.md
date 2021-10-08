@@ -1,33 +1,30 @@
-# emqx-operator
+**Note**: EMQ X Operator requires Kubernetes v1.20.0 and up.
 
-EMQ X Broker Operator
+## Quickstart
 
-## 快速指导
+### Deployment
 
-### 部署
+* Deploy the operator in the Kubernetes cluster
+* Run the project out of the Kubernetes cluster
 
-* 有两种方式运行 `operator`:
-  * 在 `kubernetes` 集群中以`Deployment`部署`operator`
-  * 在集群外作为`Go`工程项目运行
+>Example: Run the Operator in the ACK service in ALiCloud, the LB and Persistence Volume should prepared before deploying.
 
-> 示例为在阿里云`ACK`容器服务运行，`lb`及`pv`做为依赖资源，需提前准备
-
-* *在运行 `operator` 之前，首先得将 `CRD` 注册到 `kubernetes apiserver`中*
+* Register the CustomResourceDefinitions into the Kubernetes Resources.
 
 ```bash
-kubectl create -f config/samples/apps.emqx.io_emqxes.yaml
+kubectl create -f config/samples/operator/apps.emqx.io_emqxes.yaml
 ```
 
-1. 编译及制作镜像，并推送到镜像仓库部署 `operator deployment`
+1. Build the container image and push to the image repo
 
 ```bash
 IMG=emqx/emqx-operator:0.1.0 make docker-build
 IMG=emqx/emqx-operator:0.1.0 make docker-push
 ```
 
-*此处的 `IMG` 镜像名称对应 `config/samples/operator/operator_deployment.yaml` 中 `spec.template.spec.containers[0].image`字段*
+**The `IMG` is related to the `spec.template.spec.containers[0].image` in `config/samples/operator/operator_deployment.yaml`**
 
-* 创建 `pv` 的 `yaml` 示例文件
+* pv.yaml:
 
 ```yaml
 apiVersion: v1
@@ -46,7 +43,7 @@ spec:
     driver: nasplugin.csi.alibabacloud.com
     volumeAttributes:
       path: /opt/emqx-log
-      server: # 持久化 server 配置 
+      server: # to be completed 
       vers: "3"
     volumeHandle: pv-emqx-log-dir-emqx
   persistentVolumeReclaimPolicy: Retain
@@ -68,14 +65,14 @@ spec:
     driver: nasplugin.csi.alibabacloud.com
     volumeAttributes:
       path: /opt/emqx-data
-      server: # 持久化 server 配置
+      server: # to be completed
       vers: "3"
     volumeHandle: pv-emqx-data-dir-emqx
   persistentVolumeReclaimPolicy: Retain
   storageClassName: nas
 ```
 
-* 创建 `lb` 的示例`yaml`文件：
+* lb.yaml:
 
 ```yaml
 apiVersion: v1
@@ -110,7 +107,7 @@ spec:
   type: LoadBalancer
 ```
 
-* 创建 `operator manager controller` 相关组件服务
+* Enable RBAC rules for EMQ X Operator pods
 
 ```bash
 kubectl create -f config/samples/operator/operator_namespace.yaml
@@ -120,7 +117,7 @@ kubectl create -f config/samples/operator/operator_role_binding.yaml
 kubectl create -f config/samples/operator_deployment.yaml
 ```
 
-* 创建 `cr` 关联的 `RBAC` 及 `cr`
+* Enable RBAC rule for EMQ X pods
 
 ```bash
 kubectl create -f config/samples/emqx/emqx_serviceaccount.yaml
@@ -128,7 +125,7 @@ kubectl create -f config/samples/emqx/emqx_role.yaml
 kubectl create -f config/samples/emqx/emqx_role_binding.yaml
 ```
 
-* `emqx_cr.yaml` 示例文件
+* emqx_cr.yaml
 
 ```yaml
 apiVersion: apps.emqx.io/v1alpha1
@@ -164,10 +161,10 @@ spec:
       value: emqx
 ```
 
-> * `cluster` 配置，明细请参考[`cluster`参数配置](https://docs.emqx.cn/enterprise/v4.3/configuration/configuration.html#cluster)
-> * `env` 配置，明细清参考[参数配置](https://docs.emqx.cn/enterprise/v4.3/configuration/configuration.html)
-
-* 确认 `emqx pod` 正常运行
+> * [Details for *cluster* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
+> * [Details for *env* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
+  
+* Make sure the EMQ X pods running as expected
 
 ```bash
 kubectl get pods               
@@ -210,14 +207,13 @@ Start mqtt:wss:external listener on 0.0.0.0:8084 successfully.
 EMQ X Broker 4.3.8 is running now
 ```
 
-2. 集群外运行本地工程项目
+2. Running project out of the cluster.
 
-> `lb` 及持久化前置依赖资源同上，需提前规划准备部署
-> 注册`crd`资源，同上
+> Prerequirements: LB, Persistence Volume, CRD
 
-* 将 `kubernetes` 集群的配置文件 `.kube/config` 复制到本地 `$HOME/.kube/config`
-* 运行 `main.go` 文件
-* 创建 `cr` 关联的 `RBAC` 及 `cr`
+* Make sure kube config is configured properly
+* Run `main.go`
+* Create RBAC objects from manifest file
 
 ```bash
 kubectl create -f config/samples/emqx/broker_serviceaccount.yaml
@@ -226,27 +222,8 @@ kubectl create -f config/samples/emqx/broker_role_binding.yaml
 kubectl create -f config/samples/emqx/custom_v1alpha1_broker.yaml
 ```
 
-* 确认 `emqx pod` 成功运行
+* Verify the  `EMQ X pods` running successfully
 
-### 集群扩容
+### Scaling the cluster
 
-![集群扩容](docs/cluster-scal-cn.md)
-
-## Q&A
-
-1. 在本地执行 `make docker build` 时出现如下报错：
-
-```bash
-Unexpected error: msg: "failed to start the controlplane. retried 5 times: fork/exec /usr/local/kubebuilder/bin/etcd: no such file or directory"
-```
-
-[解决方法参考](https://github.com/kubernetes-sigs/kubebuilder/issues/1599)
-执行如下脚本
-
-```bash
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m | sed 's/x86_64/amd64/')
-curl -fsL "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.16.4-${OS}-${ARCH}.tar.gz" -o kubebuilder-tools
-tar -zvxf kubebuilder-tools
-sudo mv kubebuilder/ /usr/local/kubebuilder
-```
+[cluster-expansion](docs/cluster-expansion.md)
