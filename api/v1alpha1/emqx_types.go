@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -61,7 +62,7 @@ type EmqxStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	DashboardUrl string `json:"dashboard_url,omitempty"`
+	Status appsv1.StatefulSetStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
