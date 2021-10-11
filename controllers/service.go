@@ -57,10 +57,11 @@ func makeServiceSpec(instance *v1alpha1.Emqx) v1.ServiceSpec {
 	}
 
 	headlessServiceSpec := v1.ServiceSpec{
-		Type:      v1.ServiceTypeClusterIP,
-		Ports:     servicePort,
-		ClusterIP: "None",
-		Selector:  instance.Spec.Labels,
+		Type:                     v1.ServiceTypeClusterIP,
+		Ports:                    servicePort,
+		ClusterIP:                "None",
+		Selector:                 instance.Spec.Labels,
+		PublishNotReadyAddresses: true,
 	}
 
 	return headlessServiceSpec
