@@ -42,6 +42,7 @@ func makeStatefulSetSpec(instance *v1alpha1.Emqx) *v1.StatefulSetSpec {
 		Selector: &metav1.LabelSelector{
 			MatchLabels: instance.Spec.Labels,
 		},
+		PodManagementPolicy: v1.ParallelPodManagement,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: instance.Spec.Labels,
