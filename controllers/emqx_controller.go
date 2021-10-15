@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -73,6 +74,12 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err := createOrUpdateSecret(ctx, r, instance, req); err != nil {
 		log.Error(err, "Create or update secret error")
 		return ctrl.Result{}, nil
+	}
+	if exitsForConfigMap(instance) {
+		if err := createOrUpdateConfigMap(ctx, r, instance, req); err != nil {
+			log.Error(err, "Create or update config error")
+			return ctrl.Result{}, nil
+		}
 	}
 
 	if err := createOrUpdateService(ctx, r, instance, req); err != nil {
@@ -139,6 +146,41 @@ func createOrUpdateSecret(ctx context.Context, r *EmqxReconciler, instance *v1al
 	if err != nil && !errors.IsNotFound(err) {
 		log.Error(err, "Query secret error")
 		return err
+	}
+	return nil
+}
+
+func createOrUpdateConfigMap(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
+	log := r.Log.WithValues("function", "reconcile configmap")
+	confData := makeConfigMap(instance)
+	fmt.Println(confData)
+	for _, item := range confData {
+		cm := &v1.ConfigMap{}
+		cmNamespacedName := resloveNameSpacedName(req, item.Name)
+		err := r.Get(ctx, cmNamespacedName, cm)
+		if err == nil || errors.IsNotFound(err) {
+			log.Info("Set configmap reference ")
+			cm.Namespace = instance.Namespace
+			cm.Name = item.Name
+			if err := controllerutil.SetControllerReference(instance, cm, r.Scheme); err != nil {
+				log.Error(err, "Set controller reference error")
+				return err
+			}
+			op, err := controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
+				cm.Data = item.Data
+				return nil
+			})
+			if err != nil {
+				log.Error(err, "ConfigMap reconcile failed ")
+				return err
+			} else {
+				log.Info("ConfigMap reconcile successfully", "operation", op)
+			}
+		}
+		if err != nil && !errors.IsNotFound(err) {
+			log.Error(err, "Query configmap error ")
+			return err
+		}
 	}
 	return nil
 }
@@ -243,4 +285,11 @@ func resloveNameSpacedName(req ctrl.Request, s string) types.NamespacedName {
 		Namespace: req.Namespace,
 		Name:      s,
 	}
+}
+
+func exitsForConfigMap(instance *v1alpha1.Emqx) bool {
+	if instance.Spec.AclConf != "" || instance.Spec.LoadedModulesConf != "" || instance.Spec.LoadedPluginConf != "" {
+		return true
+	}
+	return false
 }

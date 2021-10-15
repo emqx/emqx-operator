@@ -36,6 +36,8 @@ spec:
           spec:
             description: EmqxSpec defines the desired state of Emqx
             properties:
+              aclConf:
+                type: string
               cluster:
                 description: Cluster defines the desired state of Cluster
                 properties:
@@ -209,6 +211,10 @@ spec:
                 description: The labels configure must be specified.
                 type: object
               license:
+                type: string
+              loadedModulesConf:
+                type: string
+              loadedPluginConf:
                 type: string
               replicas:
                 description: The fields of Broker. The replicas of emqx broker
