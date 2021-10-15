@@ -55,6 +55,12 @@ type EmqxSpec struct {
 	Cluster Cluster `json:"cluster,omitempty"`
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	AclConf string `json:"aclConf,omitempty"`
+
+	LoadedPluginConf string `json:"loadedPluginConf,omitempty"`
+
+	LoadedModulesConf string `json:"loadedModulesConf,omitempty"`
 }
 
 // EmqxStatus defines the observed state of Emqx

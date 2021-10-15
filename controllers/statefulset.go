@@ -132,6 +132,63 @@ func generateVolumes(instance *v1alpha1.Emqx) []corev1.Volume {
 			},
 		},
 	}
+	if instance.Spec.AclConf != "" {
+		volumes = append(volumes,
+			corev1.Volume{
+				Name: instance.Name + "-" + EMQX_ACL_CONF_NAME,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Name + "-" + EMQX_ACL_CONF_NAME,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "acl.conf",
+								Path: "acl.conf",
+							},
+						},
+					},
+				},
+			})
+	}
+	if instance.Spec.LoadedPluginConf != "" {
+		volumes = append(volumes,
+			corev1.Volume{
+				Name: instance.Name + "-" + EMQX_LOADED_MODULES_NAME,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Name + "-" + EMQX_LOADED_MODULES_NAME,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "loaded_modules",
+								Path: "loaded_modules",
+							},
+						},
+					},
+				},
+			})
+	}
+	if instance.Spec.LoadedModulesConf != "" {
+		volumes = append(volumes,
+			corev1.Volume{
+				Name: instance.Name + "-" + EMQX_LOADED_PLUGINS_NAME,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: instance.Name + "-" + EMQX_LOADED_PLUGINS_NAME,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "loaded_plugins",
+								Path: "loaded_plugins",
+							},
+						},
+					},
+				},
+			})
+	}
 	return volumes
 }
 
@@ -143,6 +200,33 @@ func generateVolumeMounts(instance *v1alpha1.Emqx) []corev1.VolumeMount {
 			SubPath:   EMQX_LIC_SUBPATH,
 			ReadOnly:  true,
 		},
+	}
+	if instance.Spec.AclConf != "" {
+		volumeMounts = append(volumeMounts,
+			corev1.VolumeMount{
+				Name:      instance.Name + "-" + EMQX_ACL_CONF_NAME,
+				MountPath: EMQX_ACL_CONF_DIR,
+				SubPath:   EMQX_ACL_CONF_SUBPATH,
+			},
+		)
+	}
+	if instance.Spec.LoadedModulesConf != "" {
+		volumeMounts = append(volumeMounts,
+			corev1.VolumeMount{
+				Name:      instance.Name + "-" + EMQX_LOADED_MODULES_NAME,
+				MountPath: EMQX_LOADED_MODULES_DIR,
+				SubPath:   EMQX_LOADED_MODULES_SUBPATH,
+			},
+		)
+	}
+	if instance.Spec.LoadedPluginConf != "" {
+		volumeMounts = append(volumeMounts,
+			corev1.VolumeMount{
+				Name:      instance.Name + "-" + EMQX_LOADED_PLUGINS_NAME,
+				MountPath: EMQX_LOADED_PLUGINS_DIR,
+				SubPath:   EMQX_LOADED_PLUGINS_SUBPATH,
+			},
+		)
 	}
 	return volumeMounts
 }
