@@ -76,6 +76,12 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Error(err, "Create or update secret error")
 		return ctrl.Result{}, nil
 	}
+	if exitsForConfigMap(instance) {
+		if err := createOrUpdateConfigMap(ctx, r, instance, req); err != nil {
+			log.Error(err, "Create or update config error")
+			return ctrl.Result{}, nil
+		}
+	}
 
 	if exitsForConfigMap(instance) {
 		if err := createOrUpdateConfigMap(ctx, r, instance, req); err != nil {
