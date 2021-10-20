@@ -16,7 +16,11 @@ spec:
     singular: emqx
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.nodeCount
+      name: NodeCount
+      type: integer
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Emqx is the Schema for the emqxes API
@@ -491,6 +495,9 @@ spec:
           status:
             description: EmqxStatus defines the observed state of Emqx
             properties:
+              nodeCount:
+                format: int32
+                type: integer
               status:
                 description: StatefulSetStatus represents the current state of a StatefulSet.
                 properties:
@@ -571,11 +578,17 @@ spec:
                 required:
                 - replicas
                 type: object
+            required:
+            - nodeCount
             type: object
         type: object
     served: true
     storage: true
     subresources:
+      scale:
+        labelSelectorPath: .status.selector
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
       status: {}
 status:
   acceptedNames:
