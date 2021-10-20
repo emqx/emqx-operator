@@ -18,11 +18,11 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -36,8 +36,9 @@ import (
 // EmqxReconciler reconciles a Emqx object
 type EmqxReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	Scheme   *runtime.Scheme
+	Log      logr.Logger
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxes,verbs=get;list;watch;create;update;patch;delete
@@ -75,6 +76,7 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Error(err, "Create or update secret error")
 		return ctrl.Result{}, nil
 	}
+
 	if exitsForConfigMap(instance) {
 		if err := createOrUpdateConfigMap(ctx, r, instance, req); err != nil {
 			log.Error(err, "Create or update config error")
@@ -112,6 +114,7 @@ func (r *EmqxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func createOrUpdateSecret(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
 	log := r.Log.WithValues("function", "reconcile secret")
+	r.Recorder.Eventf(instance, v1.EventTypeNormal, "Reconcile for Secret: ", "%s", instance.Name)
 
 	secret := &v1.Secret{}
 
@@ -153,8 +156,8 @@ func createOrUpdateSecret(ctx context.Context, r *EmqxReconciler, instance *v1al
 func createOrUpdateConfigMap(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
 	log := r.Log.WithValues("function", "reconcile configmap")
 	confData := makeConfigMap(instance)
-	fmt.Println(confData)
 	for _, item := range confData {
+		r.Recorder.Eventf(instance, v1.EventTypeNormal, "Reconcile for configmap: ", "%s", item.Name)
 		cm := &v1.ConfigMap{}
 		cmNamespacedName := resloveNameSpacedName(req, item.Name)
 		err := r.Get(ctx, cmNamespacedName, cm)
@@ -187,6 +190,7 @@ func createOrUpdateConfigMap(ctx context.Context, r *EmqxReconciler, instance *v
 
 func createOrUpdateService(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
 	log := r.Log.WithValues("function", "reconcile service")
+	r.Recorder.Eventf(instance, v1.EventTypeNormal, "Reconcile for svc: ", "%s", instance.Name)
 	svc := &v1.Service{}
 	svc.Namespace = instance.Namespace
 	svc.Name = instance.Name
@@ -219,6 +223,7 @@ func createOrUpdateService(ctx context.Context, r *EmqxReconciler, instance *v1a
 
 func createOrUpdateStatefulset(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
 	log := r.Log.WithValues("function", "reconcile statefulset")
+	r.Recorder.Eventf(instance, v1.EventTypeNormal, "Reconcile for statefulset: ", "%s", instance.Name)
 
 	statefulset := &appsv1.StatefulSet{}
 
@@ -233,7 +238,14 @@ func createOrUpdateStatefulset(ctx context.Context, r *EmqxReconciler, instance 
 			return err
 		}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Client, statefulset, func() error {
-			statefulset.Spec = *makeStatefulSetSpec(instance)
+			if errors.IsNotFound(err) {
+				statefulset.Spec = *makeStatefulSetSpec(instance)
+			} else {
+				if statefulset.Spec.Replicas != instance.Spec.Replicas {
+					statefulset.Spec.Replicas = instance.Spec.Replicas
+				}
+			}
+
 			return nil
 		})
 		if err != nil {
@@ -255,7 +267,7 @@ func createOrUpdateStatefulset(ctx context.Context, r *EmqxReconciler, instance 
 
 func updateStatus(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emqx, req ctrl.Request) error {
 	log := r.Log.WithValues("func", "update status")
-
+	r.Recorder.Eventf(instance, v1.EventTypeNormal, "Update status for: ", "%s", instance.Name)
 	sts := &appsv1.StatefulSet{}
 
 	for sts.Status.ObservedGeneration == 0 {
@@ -267,7 +279,9 @@ func updateStatus(ctx context.Context, r *EmqxReconciler, instance *v1alpha1.Emq
 
 		curVersion := sts.Status.UpdateRevision
 		if oldVersion != curVersion {
+
 			instance.Status.Status = sts.Status
+			instance.Status.NodeCount = sts.Status.CurrentReplicas
 
 			if err := r.Status().Update(ctx, instance); err != nil {
 				log.Error(err, "Update status error")
