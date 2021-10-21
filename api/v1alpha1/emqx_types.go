@@ -69,11 +69,14 @@ type EmqxStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Status appsv1.StatefulSetStatus `json:"status,omitempty"`
+
+	NodeCount int32 `json:"nodeCount"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-
+//+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
+//+kubebuilder:printcolumn:JSONPath=".status.nodeCount",name=NodeCount,type=integer
 // Emqx is the Schema for the emqxes API
 type Emqx struct {
 	metav1.TypeMeta   `json:",inline"`
