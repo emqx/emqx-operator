@@ -18,8 +18,8 @@ kubectl create -f config/samples/operator/apps.emqx.io_emqxes.yaml
 1. Build the container image and push to the image repo
 
 ```bash
-IMG=emqx/emqx-operator:0.1.0 make docker-build
-IMG=emqx/emqx-operator:0.1.0 make docker-push
+IMG=emqx/emqx-operator-controller:0.1.0 make docker-build
+IMG=emqx/emqx-operator-controller:0.1.0 make docker-push
 ```
 
 **The `IMG` is related to the `spec.template.spec.containers[0].image` in `config/samples/operator/operator_deployment.yaml`**
@@ -43,11 +43,11 @@ spec:
     driver: nasplugin.csi.alibabacloud.com
     volumeAttributes:
       path: /opt/emqx-log
-      server: # to be completed 
+      server: # to be completed
       vers: "3"
     volumeHandle: pv-emqx-log-dir-emqx
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: nas
+  storageClassName: standard
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -69,7 +69,7 @@ spec:
       vers: "3"
     volumeHandle: pv-emqx-data-dir-emqx
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: nas
+  storageClassName: standard
 ```
 
 * lb.yaml:
@@ -77,7 +77,7 @@ spec:
 ```yaml
 apiVersion: v1
 kind: Service
-metadata: 
+metadata:
   name: emqx-lb
   namespace: default
 spec:
@@ -104,7 +104,7 @@ spec:
       port: 18083
       protocol: TCP
       targetPort: 18083
-  type: LoadBalancer
+  type: NodePort
 ```
 
 * Enable RBAC rules for EMQ X Operator pods
@@ -114,7 +114,7 @@ kubectl create -f config/samples/operator/operator_namespace.yaml
 kubectl create -f config/samples/operator/operator_service_account.yaml
 kubectl create -f config/samples/operator/operator_role.yaml
 kubectl create -f config/samples/operator/operator_role_binding.yaml
-kubectl create -f config/samples/operator_deployment.yaml
+kubectl create -f config/samples/operator/operator_deployment.yaml
 ```
 
 * Enable RBAC rule for EMQ X pods
@@ -141,16 +141,16 @@ spec:
   storage:
     volumeClaimTemplate:
       spec:
-        storageClassName: nas
+        storageClassName: standard
         resources:
           requests:
-            storage: 1Gi
+            storage: 64Mi
         accessModes:
         - ReadWriteMany
   cluster:
     name: emqx
-    k8s:   
-      apiserver: # k8s apiserver address
+    k8s:
+      apiserver: "https://kubernetes.default.svc:443"
       service_name: emqx
       address_type: dns
       suffix: pod.cluster.local
@@ -163,11 +163,11 @@ spec:
 
 > * [Details for *cluster* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
 > * [Details for *env* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
-  
+
 * Make sure the EMQ X pods running as expected
 
 ```bash
-kubectl get pods               
+kubectl get pods
 NAME              READY   STATUS    RESTARTS   AGE
 emqx-0   1/1     Running   0          22m
 $ kubectl logs -f emqx-0

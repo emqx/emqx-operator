@@ -22,7 +22,8 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: emqx/emqx-operator-controller:0.1.0
+        image: emqx/emqx-operator-controller:latest
+        imagePullPolicy: IfNotPresent
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
