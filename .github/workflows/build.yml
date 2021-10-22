@@ -17,7 +17,7 @@ jobs:
       - uses: docker/metadata-action@v3
         id: meta
         with:
-          images: ${{ github.repository }}
+          images: ${{ github.repository_owner }}/emqx-operator-controller
           tags: |
             type=ref,event=branch
             type=ref,event=pr
