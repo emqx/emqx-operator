@@ -22,7 +22,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: registry-vpc.cn-hangzhou.aliyuncs.com/native/emqx-operator:v0.1.1
+        image: emqx/emqx-operator-controller:0.1.0
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
