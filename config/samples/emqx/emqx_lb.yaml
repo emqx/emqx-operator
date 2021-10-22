@@ -1,6 +1,6 @@
 apiVersion: v1
 kind: Service
-metadata: 
+metadata:
   name: emqx-lb
   namespace: default
 spec:
@@ -27,4 +27,4 @@ spec:
       port: 18083
       protocol: TCP
       targetPort: 18083
-  type: LoadBalancer
+  type: NodePort
