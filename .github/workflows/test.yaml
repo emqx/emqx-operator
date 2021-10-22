@@ -53,7 +53,7 @@ jobs:
               echo "waiting operator controller pod running"
               sleep 1
             done
-        - name: Deployment operator crd 
+        - name: Deployment operator crd
           timeout-minutes: 5
           run: |
             kubectl create -f config/samples/emqx
@@ -71,7 +71,3 @@ jobs:
             while kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+7 Running.*'; do
               echo "waiting scale emqx to 3"
             done
-
-
-
-
