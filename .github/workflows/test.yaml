@@ -34,7 +34,7 @@ jobs:
             platforms: linux/amd64
             push: false
             tags: emqx/emqx-operator-controller
-            output: |
+            outputs: |
               type=oci,dest=operator.tgz
         - name: Start minikube
           run: |
