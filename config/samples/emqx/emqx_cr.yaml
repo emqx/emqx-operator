@@ -1,0 +1,32 @@
+apiVersion: apps.emqx.io/v1alpha1
+kind: Emqx
+metadata:
+  name: emqx
+spec:
+  serviceAccountName: "emqx"
+  image: emqx/emqx:4.3.8
+  replicas: 3
+  labels:
+    cluster: emqx
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+        - ReadWriteMany
+  cluster:
+    name: emqx
+    k8s:   
+      apiserver: "https://kubernetes.default.svc:443"
+      service_name: emqx
+      address_type: dns
+      suffix: pod.cluster.local
+      app_name: emqx
+      namespace: default
+  env:
+    - name: EMQX_NAME
+      value: emqx
+
