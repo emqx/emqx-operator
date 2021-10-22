@@ -24,50 +24,51 @@ jobs:
       - run: make test
 
   deployment:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
-        - uses: docker/setup-qemu-action@v1
-        - uses: docker/build-push-action@v2
-          with:
-            context: .
-            platforms: linux/amd64
-            push: false
-            tags: emqx/emqx-operator-controller
-            outputs: |
-              type=oci,dest=operator.tgz
-        - name: Start minikube
-          run: |
-            minikube start
-            minikube image load operator.tgz
-        - name: Deployment operator controller
-          timeout-minutes: 5
-          run: |
-            kubectl create -f config/samples/operator/apps.emqx.io_emqxes.yaml
-            kubectl create -f config/samples/operator/operator_namespace.yaml
-            kubectl create -f config/samples/operator/operator_role.yaml
-            kubectl create -f config/samples/operator/operator_role_binding.yaml
-            kubectl create -f config/samples/operator/operator_service_account.yaml
-            kubectl create -f config/samples/operator/operator_deployment.yaml
-            while kubectl describe pods -l "control-plane=controller-manager" -n system | grep -qE 'Status:[ \t]+Running?'; do
-              echo "waiting operator controller pod running"
-              sleep 1
-            done
-        - name: Deployment operator crd
-          timeout-minutes: 5
-          run: |
-            kubectl create -f config/samples/emqx
-            while kubectl describe pods emqx-0 | grep -qE 'Status:[ \t]+Running?'; do
-              echo "waiting emqx pod running"
-              sleep 1
-            done
-            while kubectl exec -it emqx-0 -- emqx_ctl status emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
-              echo "waiting emqx broker running"
-            done
-        - name: Scale emqx replicas
-          timeout-minutes: 5
-          run: |
-            kubectl scale --replicas=3 Emqx/emqx
-            while kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+7 Running.*'; do
-              echo "waiting scale emqx to 3"
-            done
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker/setup-qemu-action@v1
+      - uses: docker/setup-buildx-action@v1
+      - uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          tags: emqx/emqx-operator-controller
+          outputs: |
+            type=oci,dest=operator.tgz
+      - name: Start minikube
+        run: |
+          minikube start
+          minikube image load operator.tgz
+      - name: Deployment operator controller
+        timeout-minutes: 5
+        run: |
+          kubectl create -f config/samples/operator/apps.emqx.io_emqxes.yaml
+          kubectl create -f config/samples/operator/operator_namespace.yaml
+          kubectl create -f config/samples/operator/operator_role.yaml
+          kubectl create -f config/samples/operator/operator_role_binding.yaml
+          kubectl create -f config/samples/operator/operator_service_account.yaml
+          kubectl create -f config/samples/operator/operator_deployment.yaml
+          while kubectl describe pods -l "control-plane=controller-manager" -n system | grep -qE 'Status:[ \t]+Running?'; do
+            echo "waiting operator controller pod running"
+            sleep 1
+          done
+      - name: Deployment operator crd
+        timeout-minutes: 5
+        run: |
+          kubectl create -f config/samples/emqx
+          while kubectl describe pods emqx-0 | grep -qE 'Status:[ \t]+Running?'; do
+            echo "waiting emqx pod running"
+            sleep 1
+          done
+          while kubectl exec -it emqx-0 -- emqx_ctl status emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+            echo "waiting emqx broker running"
+          done
+      - name: Scale emqx replicas
+        timeout-minutes: 5
+        run: |
+          kubectl scale --replicas=3 Emqx/emqx
+          while kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+7 Running.*'; do
+            echo "waiting scale emqx to 3"
+          done
