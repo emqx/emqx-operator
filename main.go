@@ -85,14 +85,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.EmqxReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		// Handler: ctrl.Log.WithName("emqx-operator").WithName("EMQX"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Emqx")
-		os.Exit(1)
-	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
