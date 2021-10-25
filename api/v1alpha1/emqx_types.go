@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"fmt"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -63,20 +62,9 @@ type EmqxSpec struct {
 	LoadedModulesConf string `json:"loadedModulesConf,omitempty"`
 }
 
-// EmqxStatus defines the observed state of Emqx
-type EmqxStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	Status appsv1.StatefulSetStatus `json:"status,omitempty"`
-
-	NodeCount int32 `json:"nodeCount"`
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
-//+kubebuilder:printcolumn:JSONPath=".status.nodeCount",name=NodeCount,type=integer
+//+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
 // Emqx is the Schema for the emqxes API
 type Emqx struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -87,7 +75,6 @@ type Emqx struct {
 }
 
 //+kubebuilder:object:root=true
-
 // EmqxList contains a list of Emqx
 type EmqxList struct {
 	metav1.TypeMeta `json:",inline"`
