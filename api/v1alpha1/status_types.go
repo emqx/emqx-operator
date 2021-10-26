@@ -10,7 +10,7 @@ import (
 // Phase of the RF status
 type Phase string
 
-// Condition saves the state information of the redis cluster
+// Condition saves the state information of the EMQ X cluster
 type Condition struct {
 	// Status of cluster condition.
 	Type ConditionType `json:"type"`

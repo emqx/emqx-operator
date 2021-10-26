@@ -33,9 +33,6 @@ func (e *Emqx) Validate() error {
 	// 	r.Spec.Config = make(map[string]string)
 	// }
 
-	// https://github.com/ucloud/redis-operator/issues/6
-	// r.Spec.Config["slave-priority"] = defaultSlavePriority
-
 	// if !e.Spec.DisablePersistence {
 	// 	enablePersistence(r.Spec.Config)
 	// } else {

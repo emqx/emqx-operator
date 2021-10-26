@@ -17,7 +17,7 @@ type EmqxClusterCheck interface {
 // EmqxClusterChecker is our implementation of EmqxClusterCheck intercace
 type EmqxClusterChecker struct {
 	k8sService k8s.Services
-	// client     redis.Client
+	// client     emqx.Client
 	logger logr.Logger
 }
 

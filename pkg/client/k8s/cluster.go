@@ -8,9 +8,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Cluster the client that knows how to interact with kubernetes to manage RedisCluster
+// Cluster the client that knows how to interact with kubernetes to manage EMQ X Cluster
 type Cluster interface {
-	// UpdateCluster update the RedisCluster
+	// UpdateCluster update the EMQ X Cluster
 	UpdateCluster(namespace string, cluster *v1alpha1.Emqx) error
 }
 

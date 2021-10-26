@@ -76,7 +76,7 @@ func (e *EventOption) EnsureCluster(object runtime.Object) {
 
 // CheckCluster implement the Event.Interface
 func (e *EventOption) CheckCluster(object runtime.Object) {
-	e.eventsCli.Event(object, v1.EventTypeNormal, "CheckAndHeal", "Check and heal the redis cluster problems")
+	e.eventsCli.Event(object, v1.EventTypeNormal, "CheckAndHeal", "Check and heal the emqx cluster problems")
 }
 
 // FailedCluster implement the Event.Interface

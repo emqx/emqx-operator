@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/emqx/emqx-operator/api/v1alpha1"
-	redisv1beta1 "github.com/emqx/emqx-operator/api/v1alpha1"
 )
 
 type StateType string
@@ -88,15 +87,15 @@ func (c *MetaMap) Update(meta *Meta, new *v1alpha1.Emqx) {
 	meta.Status = v1alpha1.ClusterConditionUpdating
 	meta.Message = "Updating emqx config"
 	if isImagesChanged(old, new) {
-		meta.Status = redisv1beta1.ClusterConditionUpgrading
+		meta.Status = v1alpha1.ClusterConditionUpgrading
 		meta.Message = fmt.Sprintf("Upgrading to %s", new.Spec.Image)
 	}
 	if isScalingDown(old, new) {
-		meta.Status = redisv1beta1.ClusterConditionScalingDown
+		meta.Status = v1alpha1.ClusterConditionScalingDown
 		meta.Message = fmt.Sprintf("Scaling down form: %d to: %d", meta.Size, new.Spec.Replicas)
 	}
 	if isScalingUp(old, new) {
-		meta.Status = redisv1beta1.ClusterConditionScaling
+		meta.Status = v1alpha1.ClusterConditionScaling
 		meta.Message = fmt.Sprintf("Scaling up form: %d to: %d", meta.Size, new.Spec.Replicas)
 	}
 	// if isResourcesChange(old, new) {

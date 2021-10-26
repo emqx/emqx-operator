@@ -99,7 +99,7 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling EMQ X Cluster")
 
-	// Fetch the RedisCluster instance
+	// Fetch the EMQ X Cluster instance
 	instance := &v1alpha1.Emqx{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {

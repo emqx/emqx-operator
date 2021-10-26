@@ -77,7 +77,7 @@ func (ech *EmqxClusterHandler) Do(e *v1alpha1.Emqx) error {
 	// 	status := e.Status.Conditions
 	// 	if len(status) > 0 && status[0].Type == v1alpha1.ClusterConditionHealthy {
 	// 		ech.eventsCli.CreateCluster(e)
-	// 		ech.Status.SetCreateCondition("redis server or sentinel server be removed by user, restart")
+	// 		ech.Status.SetCreateCondition("emqx server be removed by user, restart")
 	// 		ech.k8sServices.UpdateCluster(e.Namespace, e)
 	// 	}
 	// 	return err
