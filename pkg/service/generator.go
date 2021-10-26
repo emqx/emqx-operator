@@ -14,6 +14,23 @@ import (
 
 // }
 
+func newSecretForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
+	stringData := map[string]string{"emqx.lic": emqx.Spec.License}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:          labels,
+			Name:            util.GetEmqxSecret(emqx),
+			Namespace:       emqx.Namespace,
+			OwnerReferences: ownerRefs,
+		},
+		StringData: stringData,
+	}
+
+	return secret
+
+}
+
 func newHeadLessSvcForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	emqxPorts := []corev1.ServicePort{
 		{

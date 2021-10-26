@@ -8,6 +8,7 @@ import (
 
 // Service is the kubernetes service entrypoint.
 type Services interface {
+	Secret
 	ConfigMap
 	Pod
 	Service
@@ -17,6 +18,7 @@ type Services interface {
 }
 
 type services struct {
+	Secret
 	ConfigMap
 	Pod
 	Service
@@ -28,6 +30,7 @@ type services struct {
 // New returns a new Kubernetes client set.
 func New(kubecli client.Client, logger logr.Logger) Services {
 	return &services{
+		Secret:      NewSecret(kubecli, logger),
 		ConfigMap:   NewConfigMap(kubecli, logger),
 		Pod:         NewPod(kubecli, logger),
 		Service:     NewService(kubecli, logger),

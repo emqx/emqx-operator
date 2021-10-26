@@ -23,3 +23,7 @@ func GetEmqxName(emqx *v1alpha1.Emqx) string {
 func GetEmqxHeadlessSvc(emqx *v1alpha1.Emqx) string {
 	return GenerateName("-headless-svc", emqx.Name)
 }
+
+func GetEmqxSecret(emqx *v1alpha1.Emqx) string {
+	return GenerateName("-secret", emqx.Name)
+}

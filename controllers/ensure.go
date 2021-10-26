@@ -10,6 +10,9 @@ func (ech *EmqxClusterHandler) Ensure(e *v1alpha1.Emqx, labels map[string]string
 	if err := ech.eService.EnsureEmqxHeadlessService(e, labels, or); err != nil {
 		return err
 	}
+	if err := ech.eService.EnsureEmqxSecret(e, labels, or); err != nil {
+		return err
+	}
 
 	return nil
 }
