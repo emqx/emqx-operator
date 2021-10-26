@@ -39,16 +39,19 @@ type EmqxSpec struct {
 
 	// The service account name which is being binded with the service
 	// account of the crd instance.
-	//+kubebuilder:validation:Required
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	License   string                      `json:"license,omitempty"`
 
-	License string `json:"license,omitempty"`
-
-	Storage *Storage `json:"storage,omitempty"`
+	Storage Storage `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
 	//+kubebuilder:validation:Required
 	Labels map[string]string `json:"labels,omitempty"`
+
+	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
+	ImagePullPolicy corev1.PullPolicy   `json:"imagePullPolicy,omitempty"`
 
 	//+kubebuilder:validation:Required
 	Cluster Cluster `json:"cluster,omitempty"`
