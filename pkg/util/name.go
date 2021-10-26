@@ -27,3 +27,11 @@ func GetEmqxHeadlessSvc(emqx *v1alpha1.Emqx) string {
 func GetEmqxSecret(emqx *v1alpha1.Emqx) string {
 	return GenerateName("-secret", emqx.Name)
 }
+
+func GetEmqxConfigMapForLM(emqx *v1alpha1.Emqx) string {
+	return GenerateName("-configmap-loaded-modules", emqx.Name)
+}
+
+func GetEmqxConfigMapForPG(emqx *v1alpha1.Emqx) string {
+	return GenerateName("-configmap-loaded-plugins", emqx.Name)
+}

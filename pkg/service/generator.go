@@ -24,6 +24,7 @@ func newSecretForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []m
 			Namespace:       emqx.Namespace,
 			OwnerReferences: ownerRefs,
 		},
+		Type:       corev1.SecretTypeOpaque,
 		StringData: stringData,
 	}
 
@@ -96,4 +97,34 @@ func newHeadLessSvcForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRef
 	}
 
 	return svc
+}
+
+func newConfigMapForLoadedMoudles(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+	data := map[string]string{"loaded_modules": emqx.Spec.LoadedModulesConf}
+	cmForPM := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:          labels,
+			Name:            util.GetEmqxConfigMapForLM(emqx),
+			Namespace:       emqx.Namespace,
+			OwnerReferences: ownerRefs,
+		},
+		Data: data,
+	}
+
+	return cmForPM
+}
+
+func newConfigMapForLoadedPlugins(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+	data := map[string]string{"loaded_plugins": emqx.Spec.LoadedPluginConf}
+	cmForPG := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:          labels,
+			Name:            util.GetEmqxConfigMapForPG(emqx),
+			Namespace:       emqx.Namespace,
+			OwnerReferences: ownerRefs,
+		},
+		Data: data,
+	}
+
+	return cmForPG
 }

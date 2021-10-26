@@ -7,10 +7,19 @@ import (
 
 // Ensure the EMQ X Cluster's components are correct.
 func (ech *EmqxClusterHandler) Ensure(e *v1alpha1.Emqx, labels map[string]string, or []metav1.OwnerReference) error {
+	if err := ech.eService.EnsureEmqxSecret(e, labels, or); err != nil {
+		return err
+	}
+
 	if err := ech.eService.EnsureEmqxHeadlessService(e, labels, or); err != nil {
 		return err
 	}
-	if err := ech.eService.EnsureEmqxSecret(e, labels, or); err != nil {
+
+	if err := ech.eService.EnsureEmqxConfigMapForLoadedModules(e, labels, or); err != nil {
+		return err
+	}
+
+	if err := ech.eService.EnsureEmqxConfigMapForLoadedPlugins(e, labels, or); err != nil {
 		return err
 	}
 
