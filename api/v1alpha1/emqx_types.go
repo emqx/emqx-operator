@@ -42,7 +42,7 @@ type EmqxSpec struct {
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	License   string                      `json:"license,omitempty"`
 
-	Storage Storage `json:"storage,omitempty"`
+	Storage *Storage `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
 	//+kubebuilder:validation:Required

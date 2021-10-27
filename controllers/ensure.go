@@ -16,11 +16,19 @@ func (ech *EmqxClusterHandler) Ensure(e *v1alpha1.Emqx, labels map[string]string
 		return err
 	}
 
+	if err := ech.eService.EnsureEmqxConfigMapForAcl(e, labels, or); err != nil {
+		return err
+	}
+
 	if err := ech.eService.EnsureEmqxConfigMapForLoadedModules(e, labels, or); err != nil {
 		return err
 	}
 
 	if err := ech.eService.EnsureEmqxConfigMapForLoadedPlugins(e, labels, or); err != nil {
+		return err
+	}
+
+	if err := ech.eService.EnsureEmqxStatefulSet(e, labels, or); err != nil {
 		return err
 	}
 

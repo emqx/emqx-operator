@@ -15,9 +15,10 @@ import (
 type EmqxClusterClient interface {
 	EnsureEmqxSecret(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxHeadlessService(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxConfigMapForAcl(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxConfigMapForLoadedModules(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxConfigMapForLoadedPlugins(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	// EnsureEmqxStatefulSet(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxStatefulSet(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 }
 
 // EmqxClusterKubeClient implements the required methods to talk with kubernetes
@@ -50,6 +51,11 @@ func (r *EmqxClusterKubeClient) EnsureEmqxHeadlessService(e *v1alpha1.Emqx, labe
 	return r.K8sService.CreateIfNotExistsService(e.Namespace, svc)
 }
 
+func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(e *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	configmapForAcl := newConfigMapForAcl(e, labels, ownerRefs)
+	return r.K8sService.CreateIfNotExistsConfigMap(e.Namespace, configmapForAcl)
+}
+
 // EnsureEmqxConfigMapForLoadedModules make sure the EMQ X configmap for loaded modules exists
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(e *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	configmapForLM := newConfigMapForLoadedMoudles(e, labels, ownerRefs)
@@ -62,7 +68,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(e *v1alpha1.
 	return r.K8sService.CreateIfNotExistsConfigMap(e.Namespace, configmapForPG)
 }
 
-// EnsureEmqxStatfulSet makes sure the emqx statefulset exists in the desired state
+// EnsureEmqxStatefulSet makes sure the emqx statefulset exists in the desired state
 func (r *EmqxClusterKubeClient) EnsureEmqxStatefulSet(e *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	// TODO PDB
 	oldSts, err := r.K8sService.GetStatefulSet(e.Namespace, util.GetEmqxName(e))
