@@ -45,11 +45,9 @@ jobs:
         timeout-minutes: 5
         run: |
           kubectl create -f config/samples/operator/apps.emqx.io_emqxes.yaml
-          kubectl create -f config/samples/operator/operator_namespace.yaml
-          kubectl create -f config/samples/operator/operator_role.yaml
-          kubectl create -f config/samples/operator/operator_role_binding.yaml
-          kubectl create -f config/samples/operator/operator_service_account.yaml
-          kubectl create -f config/samples/operator/operator_deployment.yaml
+          kubectl create -f config/samples/operator/namespace.yaml
+          kubectl create -f config/samples/operator/rbac.yaml
+          kubectl create -f config/samples/operator/controller.yaml
           while kubectl describe pods -l "control-plane=controller-manager" -n system | grep -qE 'Status:[ \t]+Running?'; do
             echo "waiting operator controller pod running"
             sleep 1

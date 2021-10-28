@@ -7,6 +7,10 @@ spec:
   selector:
      cluster: emqx
   ports:
+    - name: mgmt
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
     - name: tcp
       port: 1883
       protocol: TCP
@@ -27,4 +31,4 @@ spec:
       port: 18083
       protocol: TCP
       targetPort: 18083
-  type: NodePort
+  type: LoadBalancer

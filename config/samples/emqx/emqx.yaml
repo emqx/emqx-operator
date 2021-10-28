@@ -22,8 +22,8 @@ spec:
     k8s:   
       apiserver: "https://kubernetes.default.svc:443"
       service_name: emqx
-      address_type: dns
-      suffix: pod.cluster.local
+      address_type: hostname
+      suffix: svc.cluster.local
       app_name: emqx
       namespace: default
   env:
