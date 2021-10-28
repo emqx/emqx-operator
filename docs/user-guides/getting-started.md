@@ -8,7 +8,7 @@ This article was deployed using minikube v1.20.0
 
 This project can be run inside a kubernetes cluster or outside of it, by taking either of the following two steps
 
-#### Deploy the operator in the Kubernetes cluster
+### Deploy the operator in the Kubernetes cluster
 
 1. Build the container image and push to the image repo
 
@@ -50,7 +50,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
    controller-manager-7f946dc6b4-l9vd2   1/1     Running   3          4h34m
    ```
 
-#### Deploy the operator out the Kubernetes cluster
+### Deploy the operator out the Kubernetes cluster
 
 > Prerequirements: Storage Class, Custom Resource Definition
 
@@ -169,4 +169,4 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 
 ### Scaling the cluster
 
-[cluster-expansion](docs/cluster-expansion.md)
+[cluster-expansion](../cluster-expansion.md)
