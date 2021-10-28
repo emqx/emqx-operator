@@ -1,0 +1,23 @@
+name: Check Markdown
+
+on: [pull_request]
+
+jobs:
+  check-docs-markdown:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@main
+  
+    - name: Install markdownlint
+      run: sudo npm install -g markdownlint-cli
+
+    - name: Markdown lint
+      run: markdownlint -c .github/workflows/markdownlint.json ./
+
+    - name: Markdown link check
+      uses: gaurav-nelson/github-action-markdown-link-check@v1
+      with:
+        use-quiet-mode: 'yes'
+        check-modified-files-only: 'yes'
+        base-branch: 'main'
