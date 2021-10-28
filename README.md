@@ -29,7 +29,7 @@ The EMQ X Operator automatically detects changes on any of the above custom reso
 
 ## Quickstart
 
-For more information on quickstart, see the [user guide](docs/user-guides/getting-started-cn.md)
+For more information on quickstart, see the [user guide](docs/user-guides/getting-started.md)
 
 ## Development
 
