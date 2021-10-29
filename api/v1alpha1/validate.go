@@ -2,17 +2,34 @@ package v1alpha1
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
-
-	"github.com/cloudflare/cfssl/log"
 )
 
-//The discovery mechanism of emqx cluster only be one of the dns or k8s.
+const (
+	maxNameLength = 48
+
+	defaultEmqxNumber = 3
+)
+
+// Validate set the values by default if not defined and checks if the values given are valid
 func (e *Emqx) Validate() error {
+	if len(e.Name) > maxNameLength {
+		return fmt.Errorf("name length can't be higher than %d", maxNameLength)
+	}
+
+	if *e.Spec.Replicas == 0 {
+		*e.Spec.Replicas = defaultEmqxNumber
+	} else if *e.Spec.Replicas < defaultEmqxNumber {
+		return errors.New("number of emqx in spec is less than the minimum")
+	}
+
+	if e.Spec.Image == "" {
+		return errors.New("image must be specified")
+	}
 
 	//Validate the cluster config
 	if e.Spec.Cluster.Discovery == "k8s" && e.Spec.Cluster.K8S.IsEmpty() {
-		log.Error("cluster discovery mechanism must be completed")
 		return errors.New("cluster mechanism validated error")
 	}
 	return nil

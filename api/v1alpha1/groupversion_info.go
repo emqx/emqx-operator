@@ -24,6 +24,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
+const (
+	Kind = "Emqx"
+)
+
 var (
 	// GroupVersion is group version used to register these objects
 	GroupVersion = schema.GroupVersion{Group: "apps.emqx.io", Version: "v1alpha1"}
@@ -34,3 +38,7 @@ var (
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
 )
+
+func VersionKind(kind string) schema.GroupVersionKind {
+	return GroupVersion.WithKind(kind)
+}

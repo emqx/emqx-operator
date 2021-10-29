@@ -1,4 +1,4 @@
-package controllers
+package service
 
 const (
 	EMQX_NAME                = "emqx"
@@ -24,8 +24,6 @@ const (
 
 	EMQX_LOADED_PLUGINS_DIR     = "/opt/emqx/data/loaded_plugins"
 	EMQX_LOADED_PLUGINS_SUBPATH = "loaded_plugins"
-
-	// emqxloadmodulesSubpath = "loaded_modules"
 
 	SERVICE_TCP_NAME = "tcp"
 	SERVICE_TCP_PORT = 1883
