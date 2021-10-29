@@ -44,7 +44,7 @@ jobs:
       - name: Deployment operator controller
         timeout-minutes: 5
         run: |
-          kubectl create -f config/samples/operator/apps.emqx.io_emqxes.yaml
+          kubectl create -f config/crd/bases/apps.emqx.io_emqxes.yaml
           kubectl create -f config/samples/operator/namespace.yaml
           kubectl create -f config/samples/operator/rbac.yaml
           kubectl create -f config/samples/operator/controller.yaml
@@ -60,7 +60,7 @@ jobs:
             echo "waiting emqx pod running"
             sleep 1
           done
-          while kubectl exec -it emqx-0 -- emqx_ctl status emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+          while kubectl exec -it emqx-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
             echo "waiting emqx broker running"
           done
       - name: Scale emqx replicas
