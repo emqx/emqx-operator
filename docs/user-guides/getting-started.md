@@ -22,7 +22,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 2. Register the CustomResourceDefinitions into the Kubernetes Resources.
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/apps.emqx.io_emqxes.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/crd/bases/apps.emqx.io_emqxes.yaml
 
    $ kubectl get crd
    NAME                  CREATED AT
