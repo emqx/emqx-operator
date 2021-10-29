@@ -35,6 +35,7 @@ type EmqxSpec struct {
 	//The replicas of emqx broker
 	Replicas *int32 `json:"replicas,omitempty"`
 
+	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
 
 	// The service account name which is being binded with the service

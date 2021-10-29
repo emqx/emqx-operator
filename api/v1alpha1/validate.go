@@ -9,8 +9,7 @@ import (
 const (
 	maxNameLength = 48
 
-	defaultEmqxNumber = 1
-	defaultEmqxImage  = "emqx-ee:4.3.8"
+	defaultEmqxNumber = 3
 )
 
 // Validate set the values by default if not defined and checks if the values given are valid
@@ -26,18 +25,8 @@ func (e *Emqx) Validate() error {
 	}
 
 	if e.Spec.Image == "" {
-		e.Spec.Image = defaultEmqxImage
+		return errors.New("image must be specified")
 	}
-
-	// if r.Spec.Config == nil {
-	// 	r.Spec.Config = make(map[string]string)
-	// }
-
-	// if !e.Spec.DisablePersistence {
-	// 	enablePersistence(r.Spec.Config)
-	// } else {
-	// 	disablePersistence(r.Spec.Config)
-	// }
 
 	//Validate the cluster config
 	if e.Spec.Cluster.Discovery == "k8s" && e.Spec.Cluster.K8S.IsEmpty() {

@@ -9,12 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// func generateEmqxConfigMap(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-// 	name := util.GetEmqxName(emqx)
-// 	namespace := emqx.Namespace
-
-// }
-
 func newSecretForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
 	stringData := map[string]string{"emqx.lic": emqx.Spec.License}
 
