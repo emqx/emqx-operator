@@ -31,9 +31,14 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '1.16'
-      - run: eval $(minikube docker-env) && docker build -t emqx/emqx-operator-controller:latest .
+      - name: Build controller image
+        env:
+          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
+        run: eval $(minikube docker-env) && docker build -t $IMG .
       - run: make install
-      - run: make deploy
+      - env:
+          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
+        run: make deploy
       - name: Check operator
         timeout-minutes: 1
         run: |
@@ -45,11 +50,11 @@ jobs:
       - name: Check emqx
         timeout-minutes: 1
         run: |
-          while ! kubectl describe pods emqx-0 | grep -qE 'Status:[ \t]+Running?'; do
+          while ! kubectl describe pods -l "cluster=emqx" | grep -qE 'Status:[ \t]+Running?'; do
             echo "waiting emqx pod running"
             sleep 1
           done
-          while ! kubectl exec -it emqx-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+          while ! kubectl exec -it emqx-cluster-emqx-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
             echo "waiting emqx broker running"
           done
       - run: kubectl scale --replicas=5 Emqx/emqx
@@ -59,8 +64,8 @@ jobs:
           while kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
             echo "waiting scale emqx to 5"
           done
-          while [ $(kubectl exec -it emqx-0 -- curl --basic -u admin:public -X GET "http://localhost:8081/api/v4/brokers" | jq '.data|length') != 5]; do
+          while [ $(kubectl exec -it emqx-cluster-emqx-0 -- curl --basic -u admin:public -X GET "http://localhost:8081/api/v4/brokers" | jq '.data|length') != 5]; do
             echo "waiting emqx cluster scale"
           done
-      - run: kubectl describe sts emqx
+      - run: kubectl describe sts emqx-cluster-emqx
         if: failure()
