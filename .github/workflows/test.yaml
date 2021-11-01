@@ -35,7 +35,7 @@ jobs:
       - run: make install
       - run: make deploy
       - name: Check operator
-        timeout-minutes: 5
+        timeout-minutes: 1
         run: |
           while ! kubectl describe pods -l "control-plane=controller-manager" -n operator-emqx-system | grep -qE 'Status:[ \t]+Running?'; do
             echo "waiting operator controller pod running"
@@ -43,7 +43,7 @@ jobs:
           done
       - run: kubectl create -f config/samples/emqx
       - name: Check emqx
-        timeout-minutes: 5
+        timeout-minutes: 1
         run: |
           while ! kubectl describe pods emqx-0 | grep -qE 'Status:[ \t]+Running?'; do
             echo "waiting emqx pod running"
@@ -54,7 +54,7 @@ jobs:
           done
       - run: kubectl scale --replicas=5 Emqx/emqx
       - name: Check scale
-        timeout-minutes: 5
+        timeout-minutes: 1
         run: |
           while kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
             echo "waiting scale emqx to 5"
