@@ -38,6 +38,9 @@ type EmqxSpec struct {
 	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
 
+	//+kubebuilder:validation:Required
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
 	// The service account name which is being binded with the service
 	// account of the crd instance.
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`

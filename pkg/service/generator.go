@@ -203,6 +203,7 @@ func newEmqxStatefulSet(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs
 
 					// TODO
 					// Affinity: getAffinity(rc.Spec.Affinity, labels),
+					ServiceAccountName: emqx.Spec.ServiceAccountName,
 					Tolerations:  emqx.Spec.ToleRations,
 					NodeSelector: emqx.Spec.NodeSelector,
 					Containers: []corev1.Container{
