@@ -16,20 +16,20 @@ var (
 	defaultLabels = map[string]string{}
 )
 
-// EmqxClusterHandler is the EMQ X Cluster handler. This handler will create the required
+// EmqxBrokerClusterHandler is the EMQ X Cluster handler. This handler will create the required
 // resources that a EMQ X Cluster needs.
-type EmqxClusterHandler struct {
+type EmqxBrokerClusterHandler struct {
 	k8sServices k8s.Services
-	eService    service.EmqxClusterClient
+	eService    service.EmqxBrokerClusterClient
 	// TODO
-	// eChecker    service.EmqxClusterCheck
+	// eChecker    service.EmqxBrokerClusterCheck
 	eventsCli k8s.Event
 	logger    logr.Logger
 	metaCache *cache.MetaMap
 }
 
 // Do will ensure the EMQ X Cluster is in the expected state and update the EMQ X Cluster status.
-func (ech *EmqxClusterHandler) Do(e *v1alpha1.Emqx) error {
+func (ech *EmqxBrokerClusterHandler) Do(e *v1alpha1.EmqxBroker) error {
 	ech.logger.WithValues("namespace", e.Namespace, "name", e.Name).Info("handler doing")
 	if err := e.Validate(); err != nil {
 		// TODO
@@ -93,7 +93,7 @@ func (ech *EmqxClusterHandler) Do(e *v1alpha1.Emqx) error {
 	return nil
 }
 
-func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) {
+func (ech *EmqxBrokerClusterHandler) updateStatus(meta *cache.Meta) {
 	e := meta.Obj
 
 	if meta.State != cache.Check {
@@ -119,12 +119,12 @@ func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) {
 }
 
 // getLabels merges all the labels (dynamic and operator static ones).
-func (ech *EmqxClusterHandler) getLabels(e *v1alpha1.Emqx) map[string]string {
+func (ech *EmqxBrokerClusterHandler) getLabels(e *v1alpha1.EmqxBroker) map[string]string {
 	dynLabels := map[string]string{}
 	return util.MergeLabels(defaultLabels, dynLabels, e.Labels)
 }
 
-func (ech *EmqxClusterHandler) createOwnerReferences(e *v1alpha1.Emqx) []metav1.OwnerReference {
+func (ech *EmqxBrokerClusterHandler) createOwnerReferences(e *v1alpha1.EmqxBroker) []metav1.OwnerReference {
 	egvk := v1alpha1.VersionKind(v1alpha1.Kind)
 	return []metav1.OwnerReference{
 		*metav1.NewControllerRef(e, egvk),

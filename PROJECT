@@ -10,7 +10,7 @@ resources:
   controller: true
   domain: emqx.io
   group: apps
-  kind: Emqx
+  kind: EmqxBroker
   path: github.com/emqx/emqx-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

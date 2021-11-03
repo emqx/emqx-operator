@@ -26,8 +26,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// EmqxSpec defines the desired state of Emqx
-type EmqxSpec struct {
+// EmqxBrokerSpec defines the desired state of EmqxBroker
+type EmqxBrokerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -72,30 +72,30 @@ type EmqxSpec struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
-// Emqx is the Schema for the emqxes API
-type Emqx struct {
+// EmqxBroker is the Schema for the emqxbrokers API
+type EmqxBroker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxSpec   `json:"spec,omitempty"`
-	Status EmqxStatus `json:"status,omitempty"`
+	Spec   EmqxBrokerSpec   `json:"spec,omitempty"`
+	Status EmqxBrokerStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
-// EmqxList contains a list of Emqx
-type EmqxList struct {
+// EmqxBrokerList contains a list of EmqxBroker
+type EmqxBrokerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Emqx `json:"items"`
+	Items           []EmqxBroker `json:"items"`
 }
 
-func (emqx *Emqx) String() string {
-	return fmt.Sprintf("Emqx instance [%s],Image [%s]",
+func (emqx *EmqxBroker) String() string {
+	return fmt.Sprintf("EmqxBroker instance [%s],Image [%s]",
 		emqx.ObjectMeta.Name,
 		emqx.Spec.Image,
 	)
 }
 
 func init() {
-	SchemeBuilder.Register(&Emqx{}, &EmqxList{})
+	SchemeBuilder.Register(&EmqxBroker{}, &EmqxBrokerList{})
 }

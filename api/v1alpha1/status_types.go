@@ -44,60 +44,60 @@ const (
 	ClusterConditionFailed      ConditionType = "Failed"
 )
 
-// EmqxClusterStatus defines the observed state of EMQ X Cluster
-type EmqxStatus struct {
+// EmqxBrokerClusterStatus defines the observed state of EMQ X Cluster
+type EmqxBrokerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 	Conditions []Condition `json:"conditions,omitempty"`
 }
 
-func (ecs *EmqxStatus) DescConditionsByTime() {
+func (ecs *EmqxBrokerStatus) DescConditionsByTime() {
 	sort.Slice(ecs.Conditions, func(i, j int) bool {
 		// return ecs.Conditions[i].LastUpdateAt.After(ecs.Conditions[j].LastUpdateAt)
 		return ecs.Conditions[j].LastUpdateAt.Before(&ecs.Conditions[i].LastUpdateAt)
 	})
 }
 
-func (ecs *EmqxStatus) SetScalingUpCondition(message string) {
+func (ecs *EmqxBrokerStatus) SetScalingUpCondition(message string) {
 	c := newClusterCondition(ClusterConditionScaling, corev1.ConditionTrue, "Scaling up", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxStatus) SetCreateCondition(message string) {
+func (ecs *EmqxBrokerStatus) SetCreateCondition(message string) {
 	c := newClusterCondition(ClusterConditionCreating, corev1.ConditionTrue, "Creating", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxStatus) SetScalingDownCondition(message string) {
+func (ecs *EmqxBrokerStatus) SetScalingDownCondition(message string) {
 	c := newClusterCondition(ClusterConditionScaling, corev1.ConditionTrue, "Scaling down", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxStatus) SetUpgradingCondition(message string) {
+func (ecs *EmqxBrokerStatus) SetUpgradingCondition(message string) {
 	c := newClusterCondition(ClusterConditionUpgrading, corev1.ConditionTrue,
 		"Cluster upgrading", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxStatus) SetUpdatingCondition(message string) {
+func (ecs *EmqxBrokerStatus) SetUpdatingCondition(message string) {
 	c := newClusterCondition(ClusterConditionUpdating, corev1.ConditionTrue,
 		"Cluster updating", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxStatus) SetReadyCondition(message string) {
+func (ecs *EmqxBrokerStatus) SetReadyCondition(message string) {
 	c := newClusterCondition(ClusterConditionHealthy, corev1.ConditionTrue, "Cluster available", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxStatus) SetFailedCondition(message string) {
+func (ecs *EmqxBrokerStatus) SetFailedCondition(message string) {
 	c := newClusterCondition(ClusterConditionFailed, corev1.ConditionTrue,
 		"Cluster failed", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxStatus) ClearCondition(t ConditionType) {
+func (ecs *EmqxBrokerStatus) ClearCondition(t ConditionType) {
 	pos, _ := getClusterCondition(ecs, t)
 	if pos == -1 {
 		return
@@ -105,7 +105,7 @@ func (ecs *EmqxStatus) ClearCondition(t ConditionType) {
 	ecs.Conditions = append(ecs.Conditions[:pos], ecs.Conditions[pos+1:]...)
 }
 
-func (ecs *EmqxStatus) setClusterCondition(c Condition) {
+func (ecs *EmqxBrokerStatus) setClusterCondition(c Condition) {
 	pos, cp := getClusterCondition(ecs, c.Type)
 	if cp != nil &&
 		cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
@@ -123,7 +123,7 @@ func (ecs *EmqxStatus) setClusterCondition(c Condition) {
 	}
 }
 
-func getClusterCondition(status *EmqxStatus, t ConditionType) (int, *Condition) {
+func getClusterCondition(status *EmqxBrokerStatus, t ConditionType) (int, *Condition) {
 	for i, c := range status.Conditions {
 		if t == c.Type {
 			return i, &c

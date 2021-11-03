@@ -1,5 +1,5 @@
 apiVersion: apps.emqx.io/v1alpha1
-kind: Emqx
+kind: EmqxBroker
 metadata:
   name: emqx
 spec:

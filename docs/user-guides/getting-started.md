@@ -22,18 +22,18 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 2. Register the CustomResourceDefinitions into the Kubernetes Resources.
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/crd/bases/apps.emqx.io_emqxes.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/crd/bases/apps.emqx.io_emqxbrokers.yaml
 
    $ kubectl get crd
    NAME                  CREATED AT
-   emqxes.apps.emqx.io   2021-10-27T08:02:45Z
+   emqxbrokers.apps.emqx.io   2021-10-27T08:02:45Z
    ```
 
 
 3. Enable RBAC rules for EMQ X Operator pods
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/operator_namespace.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/namespace.yaml
    $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/rbac.yaml
    ```
 
@@ -84,7 +84,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
    $ cat https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/emqx/emqx.yaml
 
    apiVersion: apps.emqx.io/v1alpha1
-   kind: Emqx
+   kind: EmqxBroker
    metadata:
      name: emqx
    spec:

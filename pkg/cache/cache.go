@@ -21,7 +21,7 @@ type Meta struct {
 	Name      string
 	State     StateType
 	Size      int32
-	Obj       *v1alpha1.Emqx
+	Obj       *v1alpha1.EmqxBroker
 
 	Status  v1alpha1.ConditionType
 	Message string
@@ -29,7 +29,7 @@ type Meta struct {
 	Config map[string]string
 }
 
-func newCluster(e *v1alpha1.Emqx) *Meta {
+func newCluster(e *v1alpha1.EmqxBroker) *Meta {
 	return &Meta{
 		Status: v1alpha1.ClusterConditionCreating,
 		// Config:    e.Spec.Config,
@@ -47,7 +47,7 @@ type MetaMap struct {
 	sync.Map
 }
 
-func (c *MetaMap) Cache(obj *v1alpha1.Emqx) *Meta {
+func (c *MetaMap) Cache(obj *v1alpha1.EmqxBroker) *Meta {
 	meta, ok := c.Load(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 	if !ok {
 		c.Add(obj)
@@ -57,20 +57,20 @@ func (c *MetaMap) Cache(obj *v1alpha1.Emqx) *Meta {
 	return c.Get(obj)
 }
 
-func (c *MetaMap) Get(obj *v1alpha1.Emqx) *Meta {
+func (c *MetaMap) Get(obj *v1alpha1.EmqxBroker) *Meta {
 	meta, _ := c.Load(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 	return meta.(*Meta)
 }
 
-func (c *MetaMap) Add(obj *v1alpha1.Emqx) {
+func (c *MetaMap) Add(obj *v1alpha1.EmqxBroker) {
 	c.Store(getNamespacedName(obj.GetNamespace(), obj.GetName()), newCluster(obj))
 }
 
-func (c *MetaMap) Del(obj *v1alpha1.Emqx) {
+func (c *MetaMap) Del(obj *v1alpha1.EmqxBroker) {
 	c.Delete(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 }
 
-func (c *MetaMap) Update(meta *Meta, new *v1alpha1.Emqx) {
+func (c *MetaMap) Update(meta *Meta, new *v1alpha1.EmqxBroker) {
 	if meta.Obj.GetGeneration() == new.GetGeneration() {
 		meta.State = Check
 		return
@@ -103,19 +103,19 @@ func (c *MetaMap) Update(meta *Meta, new *v1alpha1.Emqx) {
 	// }
 }
 
-func isImagesChanged(old, new *v1alpha1.Emqx) bool {
+func isImagesChanged(old, new *v1alpha1.EmqxBroker) bool {
 	return old.Spec.Image == new.Spec.Image
 }
 
-func isScalingDown(old, new *v1alpha1.Emqx) bool {
+func isScalingDown(old, new *v1alpha1.EmqxBroker) bool {
 	return *old.Spec.Replicas > *new.Spec.Replicas
 }
 
-func isScalingUp(old, new *v1alpha1.Emqx) bool {
+func isScalingUp(old, new *v1alpha1.EmqxBroker) bool {
 	return *old.Spec.Replicas < *new.Spec.Replicas
 }
 
-// func isResourcesChange(old, new *v1alpha1.Emqx) bool {
+// func isResourcesChange(old, new *v1alpha1.EmqxBroker) bool {
 // 	return old.Spec.Resources.Limits.Memory().Size() != new.Spec.Resources.Limits.Memory().Size() ||
 // 		old.Spec.Resources.Limits.Cpu().Size() != new.Spec.Resources.Limits.Cpu().Size()
 // }

@@ -9,21 +9,21 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// EmqxClusterCheck defines the intercace able to check the correct status of a emq x cluster
-type EmqxClusterCheck interface {
-	CheckEmqxReadyReplicas(emqx *v1alpha1.Emqx) error
+// EmqxBrokerClusterCheck defines the intercace able to check the correct status of a emq x cluster
+type EmqxBrokerClusterCheck interface {
+	CheckEmqxBrokerReadyReplicas(emqx *v1alpha1.EmqxBroker) error
 }
 
-// EmqxClusterChecker is our implementation of EmqxClusterCheck intercace
-type EmqxClusterChecker struct {
+// EmqxBrokerClusterChecker is our implementation of EmqxBrokerClusterCheck intercace
+type EmqxBrokerClusterChecker struct {
 	k8sService k8s.Services
 	// client     emqx.Client
 	logger logr.Logger
 }
 
-// CheckEmqxReadyReplicas controls that the number of deployed emqx ready pod is the same than the requested on the spec
-func (ec *EmqxClusterChecker) CheckEmqxReadyReplicas(e *v1alpha1.Emqx) error {
-	d, err := ec.k8sService.GetStatefulSet(e.Namespace, util.GetEmqxName(e))
+// CheckEmqxBrokerReadyReplicas controls that the number of deployed emqx ready pod is the same than the requested on the spec
+func (ec *EmqxBrokerClusterChecker) CheckEmqxBrokerReadyReplicas(e *v1alpha1.EmqxBroker) error {
+	d, err := ec.k8sService.GetStatefulSet(e.Namespace, util.GetEmqxBrokerName(e))
 	if err != nil {
 		return err
 	}

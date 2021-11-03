@@ -6,29 +6,29 @@ import (
 )
 
 // Ensure the EMQ X Cluster's components are correct.
-func (ech *EmqxClusterHandler) Ensure(e *v1alpha1.Emqx, labels map[string]string, or []metav1.OwnerReference) error {
+func (ech *EmqxBrokerClusterHandler) Ensure(e *v1alpha1.EmqxBroker, labels map[string]string, or []metav1.OwnerReference) error {
 
-	if err := ech.eService.EnsureEmqxSecret(e, labels, or); err != nil {
+	if err := ech.eService.EnsureEmqxBrokerSecret(e, labels, or); err != nil {
 		return err
 	}
 
-	if err := ech.eService.EnsureEmqxHeadlessService(e, labels, or); err != nil {
+	if err := ech.eService.EnsureEmqxBrokerHeadlessService(e, labels, or); err != nil {
 		return err
 	}
 
-	if err := ech.eService.EnsureEmqxConfigMapForAcl(e, labels, or); err != nil {
+	if err := ech.eService.EnsureEmqxBrokerConfigMapForAcl(e, labels, or); err != nil {
 		return err
 	}
 
-	if err := ech.eService.EnsureEmqxConfigMapForLoadedModules(e, labels, or); err != nil {
+	if err := ech.eService.EnsureEmqxBrokerConfigMapForLoadedModules(e, labels, or); err != nil {
 		return err
 	}
 
-	if err := ech.eService.EnsureEmqxConfigMapForLoadedPlugins(e, labels, or); err != nil {
+	if err := ech.eService.EnsureEmqxBrokerConfigMapForLoadedPlugins(e, labels, or); err != nil {
 		return err
 	}
 
-	if err := ech.eService.EnsureEmqxStatefulSet(e, labels, or); err != nil {
+	if err := ech.eService.EnsureEmqxBrokerStatefulSet(e, labels, or); err != nil {
 		return err
 	}
 

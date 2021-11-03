@@ -9,13 +9,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func newSecretForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
+func newSecretForCR(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
 	stringData := map[string]string{"emqx.lic": emqx.Spec.License}
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            util.GetEmqxSecret(emqx),
+			Name:            util.GetEmqxBrokerSecret(emqx),
 			Namespace:       emqx.Namespace,
 			OwnerReferences: ownerRefs,
 		},
@@ -27,7 +27,7 @@ func newSecretForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []m
 
 }
 
-func newHeadLessSvcForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
+func newHeadLessSvcForCR(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	emqxPorts := []corev1.ServicePort{
 		{
 			Name:     SERVICE_TCP_NAME,
@@ -80,7 +80,7 @@ func newHeadLessSvcForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRef
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            util.GetEmqxHeadlessSvc(emqx),
+			Name:            util.GetEmqxBrokerHeadlessSvc(emqx),
 			Namespace:       emqx.Namespace,
 			OwnerReferences: ownerRefs,
 		},
@@ -94,12 +94,12 @@ func newHeadLessSvcForCR(emqx *v1alpha1.Emqx, labels map[string]string, ownerRef
 	return svc
 }
 
-func newConfigMapForAcl(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func newConfigMapForAcl(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"acl.conf": emqx.Spec.LoadedModulesConf}
 	cmForAcl := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            util.GetEmqxConfigMapForAcl(emqx),
+			Name:            util.GetEmqxBrokerConfigMapForAcl(emqx),
 			Namespace:       emqx.Namespace,
 			OwnerReferences: ownerRefs,
 		},
@@ -109,12 +109,12 @@ func newConfigMapForAcl(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs
 	return cmForAcl
 }
 
-func newConfigMapForLoadedMoudles(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func newConfigMapForLoadedMoudles(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"loaded_modules": emqx.Spec.LoadedModulesConf}
 	cmForPM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            util.GetEmqxConfigMapForLM(emqx),
+			Name:            util.GetEmqxBrokerConfigMapForLM(emqx),
 			Namespace:       emqx.Namespace,
 			OwnerReferences: ownerRefs,
 		},
@@ -124,12 +124,12 @@ func newConfigMapForLoadedMoudles(emqx *v1alpha1.Emqx, labels map[string]string,
 	return cmForPM
 }
 
-func newConfigMapForLoadedPlugins(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func newConfigMapForLoadedPlugins(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"loaded_plugins": emqx.Spec.LoadedPluginConf}
 	cmForPG := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            util.GetEmqxConfigMapForPG(emqx),
+			Name:            util.GetEmqxBrokerConfigMapForPG(emqx),
 			Namespace:       emqx.Namespace,
 			OwnerReferences: ownerRefs,
 		},
@@ -139,8 +139,8 @@ func newConfigMapForLoadedPlugins(emqx *v1alpha1.Emqx, labels map[string]string,
 	return cmForPG
 }
 
-func newEmqxStatefulSet(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
-	name := util.GetEmqxName(emqx)
+func newEmqxBrokerStatefulSet(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
+	name := util.GetEmqxBrokerName(emqx)
 	namespace := emqx.Namespace
 
 	ports := getContainerPorts()
@@ -169,8 +169,8 @@ func newEmqxStatefulSet(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs
 	// TODO
 	labels = map[string]string{}
 
-	volumeMounts := getEmqxVolumeMounts(emqx)
-	volumes := getEmqxVolumes(emqx)
+	volumeMounts := getEmqxBrokerVolumeMounts(emqx)
+	volumes := getEmqxBrokerVolumes(emqx)
 
 	storageSpec := emqx.Spec.Storage
 	// volumeClaimTemplates := getVolumeClaimTemplates(storageSpec.VolumeClaimTemplates, emqx, ownerRefs)
@@ -183,7 +183,7 @@ func newEmqxStatefulSet(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs
 			OwnerReferences: ownerRefs,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: util.GetEmqxHeadlessSvc(emqx),
+			ServiceName: util.GetEmqxBrokerHeadlessSvc(emqx),
 			Replicas:    emqx.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: emqx.Spec.Labels,
@@ -204,8 +204,8 @@ func newEmqxStatefulSet(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs
 					// TODO
 					// Affinity: getAffinity(rc.Spec.Affinity, labels),
 					ServiceAccountName: emqx.Spec.ServiceAccountName,
-					Tolerations:  emqx.Spec.ToleRations,
-					NodeSelector: emqx.Spec.NodeSelector,
+					Tolerations:        emqx.Spec.ToleRations,
+					NodeSelector:       emqx.Spec.NodeSelector,
 					Containers: []corev1.Container{
 						{
 							Name:            EMQX_NAME,
@@ -243,12 +243,12 @@ func newEmqxStatefulSet(emqx *v1alpha1.Emqx, labels map[string]string, ownerRefs
 	return sts
 }
 
-func getEmqxVolumeMounts(emqx *v1alpha1.Emqx) []corev1.VolumeMount {
+func getEmqxBrokerVolumeMounts(emqx *v1alpha1.EmqxBroker) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{}
 	if emqx.Spec.License != "" {
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
-				Name:      util.GetEmqxSecret(emqx),
+				Name:      util.GetEmqxBrokerSecret(emqx),
 				MountPath: EMQX_LIC_DIR,
 				SubPath:   EMQX_LIC_SUBPATH,
 				ReadOnly:  true,
@@ -258,7 +258,7 @@ func getEmqxVolumeMounts(emqx *v1alpha1.Emqx) []corev1.VolumeMount {
 	if emqx.Spec.AclConf != "" {
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
-				Name:      util.GetEmqxConfigMapForAcl(emqx),
+				Name:      util.GetEmqxBrokerConfigMapForAcl(emqx),
 				MountPath: EMQX_ACL_CONF_DIR,
 				SubPath:   EMQX_ACL_CONF_SUBPATH,
 			},
@@ -267,7 +267,7 @@ func getEmqxVolumeMounts(emqx *v1alpha1.Emqx) []corev1.VolumeMount {
 	if emqx.Spec.LoadedModulesConf != "" {
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
-				Name:      util.GetEmqxConfigMapForLM(emqx),
+				Name:      util.GetEmqxBrokerConfigMapForLM(emqx),
 				MountPath: EMQX_LOADED_MODULES_DIR,
 				SubPath:   EMQX_LOADED_MODULES_SUBPATH,
 			},
@@ -276,7 +276,7 @@ func getEmqxVolumeMounts(emqx *v1alpha1.Emqx) []corev1.VolumeMount {
 	if emqx.Spec.LoadedPluginConf != "" {
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
-				Name:      util.GetEmqxConfigMapForPG(emqx),
+				Name:      util.GetEmqxBrokerConfigMapForPG(emqx),
 				MountPath: EMQX_LOADED_PLUGINS_DIR,
 				SubPath:   EMQX_LOADED_PLUGINS_SUBPATH,
 			},
@@ -285,15 +285,15 @@ func getEmqxVolumeMounts(emqx *v1alpha1.Emqx) []corev1.VolumeMount {
 	return volumeMounts
 }
 
-func getEmqxVolumes(emqx *v1alpha1.Emqx) []corev1.Volume {
+func getEmqxBrokerVolumes(emqx *v1alpha1.EmqxBroker) []corev1.Volume {
 	volumes := []corev1.Volume{}
 	if emqx.Spec.License != "" {
 		volumes = append(volumes,
 			corev1.Volume{
-				Name: util.GetEmqxSecret(emqx),
+				Name: util.GetEmqxBrokerSecret(emqx),
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: util.GetEmqxSecret(emqx),
+						SecretName: util.GetEmqxBrokerSecret(emqx),
 						Items: []corev1.KeyToPath{
 							{
 								Key:  "emqx.lic",
@@ -308,11 +308,11 @@ func getEmqxVolumes(emqx *v1alpha1.Emqx) []corev1.Volume {
 	if emqx.Spec.AclConf != "" {
 		volumes = append(volumes,
 			corev1.Volume{
-				Name: util.GetEmqxConfigMapForAcl(emqx),
+				Name: util.GetEmqxBrokerConfigMapForAcl(emqx),
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: util.GetEmqxConfigMapForAcl(emqx),
+							Name: util.GetEmqxBrokerConfigMapForAcl(emqx),
 						},
 						Items: []corev1.KeyToPath{
 							{
@@ -327,11 +327,11 @@ func getEmqxVolumes(emqx *v1alpha1.Emqx) []corev1.Volume {
 	if emqx.Spec.LoadedPluginConf != "" {
 		volumes = append(volumes,
 			corev1.Volume{
-				Name: util.GetEmqxConfigMapForPG(emqx),
+				Name: util.GetEmqxBrokerConfigMapForPG(emqx),
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: util.GetEmqxConfigMapForPG(emqx),
+							Name: util.GetEmqxBrokerConfigMapForPG(emqx),
 						},
 						Items: []corev1.KeyToPath{
 							{
@@ -346,11 +346,11 @@ func getEmqxVolumes(emqx *v1alpha1.Emqx) []corev1.Volume {
 	if emqx.Spec.LoadedModulesConf != "" {
 		volumes = append(volumes,
 			corev1.Volume{
-				Name: util.GetEmqxConfigMapForLM(emqx),
+				Name: util.GetEmqxBrokerConfigMapForLM(emqx),
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: util.GetEmqxConfigMapForLM(emqx),
+							Name: util.GetEmqxBrokerConfigMapForLM(emqx),
 						},
 						Items: []corev1.KeyToPath{
 							{
@@ -366,7 +366,7 @@ func getEmqxVolumes(emqx *v1alpha1.Emqx) []corev1.Volume {
 
 }
 
-func mergeClusterConfigToEnv(emqx *v1alpha1.Emqx) []corev1.EnvVar {
+func mergeClusterConfigToEnv(emqx *v1alpha1.EmqxBroker) []corev1.EnvVar {
 	envVar := emqx.Spec.Env
 	clusterConfig := emqx.Spec.Cluster
 	envVar = append(envVar, clusterConfig.ConvertToEnv()...)
@@ -423,7 +423,7 @@ func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 	return specPolicy
 }
 
-// func getVolumeClaimTemplates(e v1alpha1.EmbeddedPersistentVolumeClaim, emqx *v1alpha1.Emqx, ownerRefs []metav1.OwnerReference) []corev1.PersistentVolumeClaim {
+// func getVolumeClaimTemplates(e v1alpha1.EmbeddedPersistentVolumeClaim, emqx *v1alpha1.EmqxBroker, ownerRefs []metav1.OwnerReference) []corev1.PersistentVolumeClaim {
 // 	pvcList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
 // 	for _, pvc := range pvcList {
 // 		pvcTemplate := getVolumeClaimTemplate(emqx.Spec.Storage.VolumeClaimTemplates, emqx, ownerRefs)
@@ -442,7 +442,7 @@ func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 // 	return pvcs
 // }
 
-// func getVolumeClaimTemplate(e v1alpha1.EmbeddedPersistentVolumeClaim, emqx *v1alpha1.Emqx, ownerRefs []metav1.OwnerReference) *corev1.PersistentVolumeClaim {
+// func getVolumeClaimTemplate(e v1alpha1.EmbeddedPersistentVolumeClaim, emqx *v1alpha1.EmqxBroker, ownerRefs []metav1.OwnerReference) *corev1.PersistentVolumeClaim {
 // 	pvc := corev1.PersistentVolumeClaim{
 // 		TypeMeta: metav1.TypeMeta{
 // 			APIVersion: e.APIVersion,
@@ -460,7 +460,7 @@ func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 // 	return &pvc
 // }
 
-func MakeVolumeClaimTemplate(e v1alpha1.EmbeddedPersistentVolumeClaim, instance *v1alpha1.Emqx) *corev1.PersistentVolumeClaim {
+func MakeVolumeClaimTemplate(e v1alpha1.EmbeddedPersistentVolumeClaim, instance *v1alpha1.EmqxBroker) *corev1.PersistentVolumeClaim {
 	boolTrue := true
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{

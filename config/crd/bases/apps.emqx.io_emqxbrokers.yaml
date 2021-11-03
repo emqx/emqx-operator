@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.1
   creationTimestamp: null
-  name: emqxes.apps.emqx.io
+  name: emqxbrokers.apps.emqx.io
 spec:
   group: apps.emqx.io
   names:
-    kind: Emqx
-    listKind: EmqxList
-    plural: emqxes
-    singular: emqx
+    kind: EmqxBroker
+    listKind: EmqxBrokerList
+    plural: emqxbrokers
+    singular: emqxbroker
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Emqx is the Schema for the emqxes API
+        description: EmqxBroker is the Schema for the emqxbrokers API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,7 +34,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: EmqxSpec defines the desired state of Emqx
+            description: EmqxBrokerSpec defines the desired state of EmqxBroker
             properties:
               aclConf:
                 type: string
@@ -1386,7 +1386,8 @@ spec:
                 type: array
             type: object
           status:
-            description: EmqxClusterStatus defines the observed state of EMQ X Cluster
+            description: EmqxBrokerClusterStatus defines the observed state of EMQ
+              X Cluster
             properties:
               conditions:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state

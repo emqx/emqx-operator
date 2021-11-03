@@ -48,17 +48,17 @@ var (
 	reconcileTime int
 )
 
-var _ reconcile.Reconciler = &EmqxReconciler{}
+var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
-// EmqxReconciler reconciles a Emqx object
-type EmqxReconciler struct {
+// EmqxBrokerReconciler reconciles a EmqxBroker object
+type EmqxBrokerReconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
 
-	Handler *EmqxClusterHandler
+	Handler *EmqxBrokerClusterHandler
 }
 
-func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
+func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
 	// Create kubernetes service.
 	k8sService := k8s.New(mgr.GetClient(), log)
 
@@ -66,12 +66,12 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 	// TODO
 
 	// Create internal services.
-	eService := service.NewEmqxClusterKubeClient(k8sService, log)
+	eService := service.NewEmqxBrokerClusterKubeClient(k8sService, log)
 	// TODO eChecker
 
 	// TODO eHealer
 
-	handler := &EmqxClusterHandler{
+	handler := &EmqxBrokerClusterHandler{
 		k8sServices: k8sService,
 		eService:    eService,
 		metaCache:   new(cache.MetaMap),
@@ -79,7 +79,7 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 		logger:      log,
 	}
 
-	return &EmqxReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme(), Handler: handler}
+	return &EmqxBrokerReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme(), Handler: handler}
 }
 
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -91,25 +91,25 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxes/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxes/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the Emqx object against the actual cluster state, and then
+// the EmqxBroker object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
-func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling EMQ X Cluster")
 
 	// Fetch the EMQ X Cluster instance
-	instance := &v1alpha1.Emqx{}
+	instance := &v1alpha1.EmqxBroker{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -137,7 +137,7 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// TODO
-	// if err = r.handler.eChecker.CheckEmqxReadyReplicas(instance); err != nil {
+	// if err = r.handler.eChecker.CheckEmqxBrokerReadyReplicas(instance); err != nil {
 	// 	reqLogger.Info(err.Error())
 	// 	return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 	// }
@@ -146,9 +146,9 @@ func (r *EmqxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *EmqxReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *EmqxBrokerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.Emqx{}).
+		For(&v1alpha1.EmqxBroker{}).
 		Complete(r)
 }
 
@@ -160,7 +160,7 @@ func resloveNameSpacedName(req ctrl.Request, s string) types.NamespacedName {
 	}
 }
 
-func exitsForConfigMap(instance *v1alpha1.Emqx) bool {
+func exitsForConfigMap(instance *v1alpha1.EmqxBroker) bool {
 	if instance.Spec.AclConf != "" || instance.Spec.LoadedModulesConf != "" || instance.Spec.LoadedPluginConf != "" {
 		return true
 	}

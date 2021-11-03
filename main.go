@@ -78,9 +78,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	newEmqxReconciler := controllers.NewEmqxReconciler(mgr)
+	newEmqxBrokerReconciler := controllers.NewEmqxBrokerReconciler(mgr)
 
-	if err := newEmqxReconciler.SetupWithManager(mgr); err != nil {
+	if err := newEmqxBrokerReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
