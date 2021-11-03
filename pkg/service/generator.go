@@ -77,6 +77,7 @@ func newHeadLessSvcForCR(emqx *v1alpha1.EmqxBroker, labels map[string]string, ow
 	}
 	// labels = util.MergeLabels(labels, generateSelectorLabels(util.SentinelRoleName, cluster.Name))
 	labels = map[string]string{}
+
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
@@ -86,7 +87,7 @@ func newHeadLessSvcForCR(emqx *v1alpha1.EmqxBroker, labels map[string]string, ow
 		},
 		Spec: corev1.ServiceSpec{
 			Ports:     emqxPorts,
-			Selector:  labels,
+			Selector:  emqx.Spec.Labels,
 			ClusterIP: corev1.ClusterIPNone,
 		},
 	}
