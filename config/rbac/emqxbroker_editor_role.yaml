@@ -1,20 +1,24 @@
-# permissions for end users to view emqxes.
+# permissions for end users to edit emqxbrokers.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: emqx-viewer-role
+  name: emqx-editor-role
 rules:
 - apiGroups:
   - apps.emqx.io
   resources:
-  - emqxes
+  - emqxbrokers
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - apps.emqx.io
   resources:
-  - emqxes/status
+  - emqxbrokers/status
   verbs:
   - get

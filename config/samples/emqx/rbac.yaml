@@ -19,7 +19,7 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
-  - emqxes
+  - emqxbrokers
   verbs:
   - create
   - delete
@@ -31,13 +31,13 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
-  - emqxes/finalizers
+  - emqxbrokers/finalizers
   verbs:
   - update
 - apiGroups:
   - apps.emqx.io
   resources:
-  - emqxes/status
+  - emqxbrokers/status
   verbs:
   - get
   - patch

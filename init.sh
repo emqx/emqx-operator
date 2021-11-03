@@ -1,4 +1,4 @@
-export CRD=Emqx
+export CRD=EmqxBroker
 export group=apps
 export version=v1alpha1
 

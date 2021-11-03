@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	Kind = "Emqx"
+	Kind = "EmqxBroker"
 )
 
 var (

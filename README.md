@@ -16,7 +16,7 @@ For an introduction to the EMQ X Operator, see the [getting started](docs/user-g
 
 ## Prerequisites
 
-The EMQ X Operator requires a Kubernetes cluster of version `>=1.20.0`.If you are just starting out with the Emqx Operator, it is highly recommended to use the `version:v1.20.0`.
+The EMQ X Operator requires a Kubernetes cluster of version `>=1.20.0`.If you are just starting out with the EmqxBroker Operator, it is highly recommended to use the `version:v1.20.0`.
 
 ## CustomResourceDefinitions
 
