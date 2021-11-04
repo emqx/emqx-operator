@@ -40,34 +40,38 @@ jobs:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
         run: make deploy
       - name: Check operator
-        timeout-minutes: 1
+        timeout-minutes: 5
         run: |
-          set -x -euo pipefail
+          set -euo pipefail
           while ! kubectl describe pods -l "control-plane=controller-manager" -n operator-emqx-system | grep -qE 'Status:[ \t]+Running?'; do
             echo "waiting operator controller pod running"
             sleep 1
           done
       - run: kubectl create -f config/samples/emqx
       - name: Check emqx pods
-        timeout-minutes: 1
+        timeout-minutes: 5
         run: |
-          set -x -euo pipefail
-          while ! kubectl describe pods -l "cluster=emqx" | grep -qE 'Status:[ \t]+Running?'; do
+          set -euo pipefail
+          while ! kubectl describe sts emqx-cluster-emqx | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
             echo "waiting emqx pod running"
             sleep 1
           done
+      - if: failure()
+        run: kubectl describe sts emqx-cluster-emqx
       - name: Check emqx broker
-        timeout-minutes: 1
+        timeout-minutes: 5
         run: |
-          set -x -euo pipefail
+          set -euo pipefail
           while ! kubectl exec -i emqx-cluster-emqx-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
             echo "waiting emqx broker running"
             sleep 1
           done
+      - if: failure()
+        run: kubectl exec -i emqx-cluster-emqx-0 -- emqx_ctl status
       - name: Check emqx cluster
-        timeout-minutes: 1
+        timeout-minutes: 5
         run: |
-          set -x -euo pipefail
+          set -euo pipefail
           while
             nodes="$(kubectl exec -i emqx-cluster-emqx-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
             [ "$nodes" != "3" ];
@@ -75,27 +79,33 @@ jobs:
             echo "waiting emqx cluster scale"
             sleep 1
           done
+      - if: failure()
+        run: kubectl exec -i emqx-cluster-emqx-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
       - run: kubectl scale --replicas=5 EmqxBroker/emqx
       - name: Check scale
-        timeout-minutes: 1
+        timeout-minutes: 5
         run: |
-          set -x -euo pipefail
-          while kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
+          set -euo pipefail
+          while ! kubectl describe sts emqx-cluster-emqx | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
             echo "waiting scale emqx to 5"
             sleep 1
           done
+      - if: failure()
+        run: kubectl describe sts emqx-cluster-emqx
       - name: Check emqx broker
-        timeout-minutes: 1
+        timeout-minutes: 5
         run: |
-          set -x -euo pipefail
+          set -euo pipefail
           while ! kubectl exec -i emqx-cluster-emqx-4 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
             echo "waiting emqx broker running"
             sleep 1
           done
+      - if: failure()
+        run: kubectl exec -i emqx-cluster-emqx-4 -- emqx_ctl status
       - name: Check emqx cluster
-        timeout-minutes: 1
+        timeout-minutes: 5
         run: |
-          set -x -euo pipefail
+          set -euo pipefail
           while
             nodes="$(kubectl exec -i emqx-cluster-emqx-4 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
             [ "$nodes" != "5" ];
@@ -103,5 +113,5 @@ jobs:
             echo "waiting emqx cluster scale"
             sleep 1
           done
-      - run: kubectl describe sts emqx-cluster-emqx
-        if: failure()
+      - if: failure()
+        run: kubectl exec -i emqx-cluster-emqx-4 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
