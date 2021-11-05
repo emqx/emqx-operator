@@ -57,9 +57,6 @@ type EmqxBrokerSpec struct {
 	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
 	ImagePullPolicy corev1.PullPolicy   `json:"imagePullPolicy,omitempty"`
 
-	//+kubebuilder:validation:Required
-	Cluster Cluster `json:"cluster,omitempty"`
-
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	AclConf string `json:"aclConf,omitempty"`
