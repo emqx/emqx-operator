@@ -863,69 +863,6 @@ spec:
                         type: array
                     type: object
                 type: object
-              cluster:
-                description: Cluster defines the desired state of Cluster
-                properties:
-                  autoclean:
-                    default: 5m
-                    description: Defines how long to remove the stub-node from cluster
-                    type: string
-                  autoheal:
-                    default: "on"
-                    description: The mechanism about turning on/off of TODO
-                    enum:
-                    - "on"
-                    - "off"
-                    type: string
-                  discovery:
-                    default: k8s
-                    description: The mode of cluster discovery
-                    enum:
-                    - dns
-                    - k8s
-                    type: string
-                  k8s:
-                    description: Only applies to the mode of cluster discovery is
-                      K8S
-                    properties:
-                      address_type:
-                        default: hostname
-                        description: 'The address type is used to extract host from
-                          k8s service. Note: Hostname is only supported after v4.0-rc.2'
-                        enum:
-                        - ip
-                        - dns
-                        - hostname
-                        type: string
-                      apiserver:
-                        description: TODO validation Example "http://10.110.111.204:8080"
-                        type: string
-                      app_name:
-                        description: Example "emqx"
-                        type: string
-                      namespace:
-                        description: Example "default"
-                        type: string
-                      service_name:
-                        description: Example "emqx"
-                        type: string
-                      suffix:
-                        description: Example "pod.cluster.local"
-                        type: string
-                    type: object
-                  name:
-                    default: emqxcl
-                    description: The name of cluster
-                    type: string
-                  proto_dist:
-                    default: inet_tcp
-                    description: The protocl of cluster about erlang
-                    enum:
-                    - inet_tcp
-                    - inet6_tcp
-                    - inet_tls
-                    type: string
-                type: object
               env:
                 items:
                   description: EnvVar represents an environment variable present in

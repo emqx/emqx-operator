@@ -165,7 +165,7 @@ func newEmqxBrokerStatefulSet(emqx *v1alpha1.EmqxBroker, labels map[string]strin
 	// 	Privileged: &privileged,
 	// }
 
-	env := mergeClusterConfigToEnv(emqx)
+	env := mergeDefaultEnv(emqx)
 
 	// TODO
 	labels = map[string]string{}
@@ -367,11 +367,44 @@ func getEmqxBrokerVolumes(emqx *v1alpha1.EmqxBroker) []corev1.Volume {
 
 }
 
-func mergeClusterConfigToEnv(emqx *v1alpha1.EmqxBroker) []corev1.EnvVar {
-	envVar := emqx.Spec.Env
-	clusterConfig := emqx.Spec.Cluster
-	envVar = append(envVar, clusterConfig.ConvertToEnv()...)
-	return envVar
+func mergeDefaultEnv(emqx *v1alpha1.EmqxBroker) []corev1.EnvVar {
+	defaultEnv := []corev1.EnvVar{
+		{
+			Name:  "EMQX_NAME",
+			Value: util.GetEmqxBrokerName(emqx),
+		},
+		{
+			Name:  "EMQX_CLUSTER__DISCOVERY",
+			Value: "k8s",
+		},
+		{
+			Name:  "EMQX_CLUSTER__K8S__APP_NAME",
+			Value: util.GetEmqxBrokerName(emqx),
+		},
+		{
+			Name:  "EMQX_CLUSTER__K8S__SERVICE_NAME",
+			Value: util.GetEmqxBrokerHeadlessSvc(emqx),
+		},
+		{
+			Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
+			Value: emqx.ObjectMeta.Namespace,
+		},
+		{
+			Name:  "EMQX_CLUSTER__K8S__APISERVER",
+			Value: "https://kubernetes.default.svc:443",
+		},
+		{
+			Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
+			Value: "hostname",
+		},
+		{
+			Name:  "EMQX_CLUSTER__K8S__SUFFIX",
+			Value: "svc.cluster.local",
+		},
+	}
+
+	// return append(emqx.Spec.Env, defaultEnv...)
+	return append(defaultEnv, emqx.Spec.Env...)
 }
 
 func getContainerPorts() []corev1.ContainerPort {

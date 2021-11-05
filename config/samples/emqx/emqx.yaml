@@ -17,16 +17,3 @@ spec:
             storage: 20Mi
         accessModes:
         - ReadWriteMany
-  cluster:
-    name: emqx
-    k8s:   
-      apiserver: "https://kubernetes.default.svc:443"
-      service_name: emqx-headless-svc-emqx
-      address_type: hostname
-      suffix: svc.cluster.local
-      app_name: emqx
-      namespace: default
-  env:
-    - name: EMQX_NAME
-      value: emqx
-

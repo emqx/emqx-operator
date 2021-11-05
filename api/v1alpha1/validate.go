@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	"errors"
 	"fmt"
-	"reflect"
 )
 
 const (
@@ -28,13 +27,5 @@ func (e *EmqxBroker) Validate() error {
 		return errors.New("image must be specified")
 	}
 
-	//Validate the cluster config
-	if e.Spec.Cluster.Discovery == "k8s" && e.Spec.Cluster.K8S.IsEmpty() {
-		return errors.New("cluster mechanism validated error")
-	}
 	return nil
-}
-
-func (k K8S) IsEmpty() bool {
-	return reflect.DeepEqual(k, K8S{})
 }
