@@ -165,7 +165,7 @@ func newEmqxBrokerStatefulSet(emqx *v1alpha2.EmqxBroker, labels map[string]strin
 	// 	Privileged: &privileged,
 	// }
 
-	env := mergeDefaultEnv(emqx)
+	env := append(getDefaultClusterConfig(emqx), emqx.Spec.Env...)
 
 	// TODO
 	labels = map[string]string{}
@@ -367,8 +367,8 @@ func getEmqxBrokerVolumes(emqx *v1alpha2.EmqxBroker) []corev1.Volume {
 
 }
 
-func mergeDefaultEnv(emqx *v1alpha2.EmqxBroker) []corev1.EnvVar {
-	defaultEnv := []corev1.EnvVar{
+func getDefaultClusterConfig(emqx *v1alpha2.EmqxBroker) []corev1.EnvVar {
+	return []corev1.EnvVar{
 		{
 			Name:  "EMQX_NAME",
 			Value: util.GetEmqxBrokerName(emqx),
@@ -402,9 +402,6 @@ func mergeDefaultEnv(emqx *v1alpha2.EmqxBroker) []corev1.EnvVar {
 			Value: "svc.cluster.local",
 		},
 	}
-
-	// return append(emqx.Spec.Env, defaultEnv...)
-	return append(defaultEnv, emqx.Spec.Env...)
 }
 
 func getContainerPorts() []corev1.ContainerPort {
