@@ -3,7 +3,7 @@ package service
 import (
 	"errors"
 
-	"github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -11,7 +11,7 @@ import (
 
 // EmqxBrokerClusterCheck defines the intercace able to check the correct status of a emq x cluster
 type EmqxBrokerClusterCheck interface {
-	CheckEmqxBrokerReadyReplicas(emqx *v1alpha1.EmqxBroker) error
+	CheckEmqxBrokerReadyReplicas(emqx *v1alpha2.EmqxBroker) error
 }
 
 // EmqxBrokerClusterChecker is our implementation of EmqxBrokerClusterCheck intercace
@@ -22,7 +22,7 @@ type EmqxBrokerClusterChecker struct {
 }
 
 // CheckEmqxBrokerReadyReplicas controls that the number of deployed emqx ready pod is the same than the requested on the spec
-func (ec *EmqxBrokerClusterChecker) CheckEmqxBrokerReadyReplicas(e *v1alpha1.EmqxBroker) error {
+func (ec *EmqxBrokerClusterChecker) CheckEmqxBrokerReadyReplicas(e *v1alpha2.EmqxBroker) error {
 	d, err := ec.k8sService.GetStatefulSet(e.Namespace, util.GetEmqxBrokerName(e))
 	if err != nil {
 		return err

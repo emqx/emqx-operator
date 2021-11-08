@@ -1,12 +1,12 @@
 package controllers
 
 import (
-	"github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Ensure the EMQ X Cluster's components are correct.
-func (ech *EmqxBrokerClusterHandler) Ensure(e *v1alpha1.EmqxBroker, labels map[string]string, or []metav1.OwnerReference) error {
+func (ech *EmqxBrokerClusterHandler) Ensure(e *v1alpha2.EmqxBroker, labels map[string]string, or []metav1.OwnerReference) error {
 
 	if err := ech.eService.EnsureEmqxBrokerSecret(e, labels, or); err != nil {
 		return err

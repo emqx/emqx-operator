@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 )
 
 type StateType string
@@ -21,17 +21,17 @@ type Meta struct {
 	Name      string
 	State     StateType
 	Size      int32
-	Obj       *v1alpha1.EmqxBroker
+	Obj       *v1alpha2.EmqxBroker
 
-	Status  v1alpha1.ConditionType
+	Status  v1alpha2.ConditionType
 	Message string
 
 	Config map[string]string
 }
 
-func newCluster(e *v1alpha1.EmqxBroker) *Meta {
+func newCluster(e *v1alpha2.EmqxBroker) *Meta {
 	return &Meta{
-		Status: v1alpha1.ClusterConditionCreating,
+		Status: v1alpha2.ClusterConditionCreating,
 		// Config:    e.Spec.Config,
 		Obj:       e,
 		Size:      *e.Spec.Replicas,
@@ -47,7 +47,7 @@ type MetaMap struct {
 	sync.Map
 }
 
-func (c *MetaMap) Cache(obj *v1alpha1.EmqxBroker) *Meta {
+func (c *MetaMap) Cache(obj *v1alpha2.EmqxBroker) *Meta {
 	meta, ok := c.Load(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 	if !ok {
 		c.Add(obj)
@@ -57,20 +57,20 @@ func (c *MetaMap) Cache(obj *v1alpha1.EmqxBroker) *Meta {
 	return c.Get(obj)
 }
 
-func (c *MetaMap) Get(obj *v1alpha1.EmqxBroker) *Meta {
+func (c *MetaMap) Get(obj *v1alpha2.EmqxBroker) *Meta {
 	meta, _ := c.Load(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 	return meta.(*Meta)
 }
 
-func (c *MetaMap) Add(obj *v1alpha1.EmqxBroker) {
+func (c *MetaMap) Add(obj *v1alpha2.EmqxBroker) {
 	c.Store(getNamespacedName(obj.GetNamespace(), obj.GetName()), newCluster(obj))
 }
 
-func (c *MetaMap) Del(obj *v1alpha1.EmqxBroker) {
+func (c *MetaMap) Del(obj *v1alpha2.EmqxBroker) {
 	c.Delete(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 }
 
-func (c *MetaMap) Update(meta *Meta, new *v1alpha1.EmqxBroker) {
+func (c *MetaMap) Update(meta *Meta, new *v1alpha2.EmqxBroker) {
 	if meta.Obj.GetGeneration() == new.GetGeneration() {
 		meta.State = Check
 		return
@@ -84,18 +84,18 @@ func (c *MetaMap) Update(meta *Meta, new *v1alpha1.EmqxBroker) {
 	// meta.Auth.Password = old.Spec.Password
 	meta.Obj = new
 
-	meta.Status = v1alpha1.ClusterConditionUpdating
+	meta.Status = v1alpha2.ClusterConditionUpdating
 	meta.Message = "Updating emqx config"
 	if isImagesChanged(old, new) {
-		meta.Status = v1alpha1.ClusterConditionUpgrading
+		meta.Status = v1alpha2.ClusterConditionUpgrading
 		meta.Message = fmt.Sprintf("Upgrading to %s", new.Spec.Image)
 	}
 	if isScalingDown(old, new) {
-		meta.Status = v1alpha1.ClusterConditionScalingDown
+		meta.Status = v1alpha2.ClusterConditionScalingDown
 		meta.Message = fmt.Sprintf("Scaling down form: %d to: %d", meta.Size, new.Spec.Replicas)
 	}
 	if isScalingUp(old, new) {
-		meta.Status = v1alpha1.ClusterConditionScaling
+		meta.Status = v1alpha2.ClusterConditionScaling
 		meta.Message = fmt.Sprintf("Scaling up form: %d to: %d", meta.Size, new.Spec.Replicas)
 	}
 	// if isResourcesChange(old, new) {
@@ -103,19 +103,19 @@ func (c *MetaMap) Update(meta *Meta, new *v1alpha1.EmqxBroker) {
 	// }
 }
 
-func isImagesChanged(old, new *v1alpha1.EmqxBroker) bool {
+func isImagesChanged(old, new *v1alpha2.EmqxBroker) bool {
 	return old.Spec.Image == new.Spec.Image
 }
 
-func isScalingDown(old, new *v1alpha1.EmqxBroker) bool {
+func isScalingDown(old, new *v1alpha2.EmqxBroker) bool {
 	return *old.Spec.Replicas > *new.Spec.Replicas
 }
 
-func isScalingUp(old, new *v1alpha1.EmqxBroker) bool {
+func isScalingUp(old, new *v1alpha2.EmqxBroker) bool {
 	return *old.Spec.Replicas < *new.Spec.Replicas
 }
 
-// func isResourcesChange(old, new *v1alpha1.EmqxBroker) bool {
+// func isResourcesChange(old, new *v1alpha2.EmqxBroker) bool {
 // 	return old.Spec.Resources.Limits.Memory().Size() != new.Spec.Resources.Limits.Memory().Size() ||
 // 		old.Spec.Resources.Limits.Cpu().Size() != new.Spec.Resources.Limits.Cpu().Size()
 // }

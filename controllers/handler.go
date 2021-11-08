@@ -3,7 +3,7 @@ package controllers
 import (
 	"fmt"
 
-	"github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/cache"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/service"
@@ -29,7 +29,7 @@ type EmqxBrokerClusterHandler struct {
 }
 
 // Do will ensure the EMQ X Cluster is in the expected state and update the EMQ X Cluster status.
-func (ech *EmqxBrokerClusterHandler) Do(e *v1alpha1.EmqxBroker) error {
+func (ech *EmqxBrokerClusterHandler) Do(e *v1alpha2.EmqxBroker) error {
 	ech.logger.WithValues("namespace", e.Namespace, "name", e.Name).Info("handler doing")
 	if err := e.Validate(); err != nil {
 		// TODO
@@ -75,7 +75,7 @@ func (ech *EmqxBrokerClusterHandler) Do(e *v1alpha1.EmqxBroker) error {
 	// 	}
 	// 	// if user delete statefulset or deployment, set status
 	// 	status := e.Status.Conditions
-	// 	if len(status) > 0 && status[0].Type == v1alpha1.ClusterConditionHealthy {
+	// 	if len(status) > 0 && status[0].Type == v1alpha2.ClusterConditionHealthy {
 	// 		ech.eventsCli.CreateCluster(e)
 	// 		ech.Status.SetCreateCondition("emqx server be removed by user, restart")
 	// 		ech.k8sServices.UpdateCluster(e.Namespace, e)
@@ -98,16 +98,16 @@ func (ech *EmqxBrokerClusterHandler) updateStatus(meta *cache.Meta) {
 
 	if meta.State != cache.Check {
 		switch meta.Status {
-		case v1alpha1.ClusterConditionCreating:
+		case v1alpha2.ClusterConditionCreating:
 			ech.eventsCli.CreateCluster(e)
 			e.Status.SetCreateCondition(meta.Message)
-		case v1alpha1.ClusterConditionScaling:
+		case v1alpha2.ClusterConditionScaling:
 			ech.eventsCli.NewNodeAdd(e, meta.Message)
 			e.Status.SetScalingUpCondition(meta.Message)
-		case v1alpha1.ClusterConditionScalingDown:
+		case v1alpha2.ClusterConditionScalingDown:
 			ech.eventsCli.NodeRemove(e, meta.Message)
 			e.Status.SetScalingDownCondition(meta.Message)
-		case v1alpha1.ClusterConditionUpgrading:
+		case v1alpha2.ClusterConditionUpgrading:
 			ech.eventsCli.UpdateCluster(e, meta.Message)
 			e.Status.SetUpgradingCondition(meta.Message)
 		default:
@@ -119,13 +119,13 @@ func (ech *EmqxBrokerClusterHandler) updateStatus(meta *cache.Meta) {
 }
 
 // getLabels merges all the labels (dynamic and operator static ones).
-func (ech *EmqxBrokerClusterHandler) getLabels(e *v1alpha1.EmqxBroker) map[string]string {
+func (ech *EmqxBrokerClusterHandler) getLabels(e *v1alpha2.EmqxBroker) map[string]string {
 	dynLabels := map[string]string{}
 	return util.MergeLabels(defaultLabels, dynLabels, e.Labels)
 }
 
-func (ech *EmqxBrokerClusterHandler) createOwnerReferences(e *v1alpha1.EmqxBroker) []metav1.OwnerReference {
-	egvk := v1alpha1.VersionKind(v1alpha1.Kind)
+func (ech *EmqxBrokerClusterHandler) createOwnerReferences(e *v1alpha2.EmqxBroker) []metav1.OwnerReference {
+	egvk := v1alpha2.VersionKind(v1alpha2.Kind)
 	return []metav1.OwnerReference{
 		*metav1.NewControllerRef(e, egvk),
 	}

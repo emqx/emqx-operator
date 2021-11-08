@@ -83,7 +83,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
    ```shell
    $ cat https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/emqx/emqx.yaml
 
-   apiVersion: apps.emqx.io/v1alpha1
+   apiVersion: apps.emqx.io/v1alpha2
    kind: EmqxBroker
    metadata:
      name: emqx

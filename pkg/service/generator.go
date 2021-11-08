@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func newSecretForCR(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
+func newSecretForCR(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
 	stringData := map[string]string{"emqx.lic": emqx.Spec.License}
 
 	secret := &corev1.Secret{
@@ -27,7 +27,7 @@ func newSecretForCR(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRe
 
 }
 
-func newHeadLessSvcForCR(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
+func newHeadLessSvcForCR(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	emqxPorts := []corev1.ServicePort{
 		{
 			Name:     SERVICE_TCP_NAME,
@@ -95,7 +95,7 @@ func newHeadLessSvcForCR(emqx *v1alpha1.EmqxBroker, labels map[string]string, ow
 	return svc
 }
 
-func newConfigMapForAcl(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func newConfigMapForAcl(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"acl.conf": emqx.Spec.LoadedModulesConf}
 	cmForAcl := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -110,7 +110,7 @@ func newConfigMapForAcl(emqx *v1alpha1.EmqxBroker, labels map[string]string, own
 	return cmForAcl
 }
 
-func newConfigMapForLoadedMoudles(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func newConfigMapForLoadedMoudles(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"loaded_modules": emqx.Spec.LoadedModulesConf}
 	cmForPM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -125,7 +125,7 @@ func newConfigMapForLoadedMoudles(emqx *v1alpha1.EmqxBroker, labels map[string]s
 	return cmForPM
 }
 
-func newConfigMapForLoadedPlugins(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func newConfigMapForLoadedPlugins(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"loaded_plugins": emqx.Spec.LoadedPluginConf}
 	cmForPG := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -140,7 +140,7 @@ func newConfigMapForLoadedPlugins(emqx *v1alpha1.EmqxBroker, labels map[string]s
 	return cmForPG
 }
 
-func newEmqxBrokerStatefulSet(emqx *v1alpha1.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
+func newEmqxBrokerStatefulSet(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
 	name := util.GetEmqxBrokerName(emqx)
 	namespace := emqx.Namespace
 
@@ -244,7 +244,7 @@ func newEmqxBrokerStatefulSet(emqx *v1alpha1.EmqxBroker, labels map[string]strin
 	return sts
 }
 
-func getEmqxBrokerVolumeMounts(emqx *v1alpha1.EmqxBroker) []corev1.VolumeMount {
+func getEmqxBrokerVolumeMounts(emqx *v1alpha2.EmqxBroker) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{}
 	if emqx.Spec.License != "" {
 		volumeMounts = append(volumeMounts,
@@ -286,7 +286,7 @@ func getEmqxBrokerVolumeMounts(emqx *v1alpha1.EmqxBroker) []corev1.VolumeMount {
 	return volumeMounts
 }
 
-func getEmqxBrokerVolumes(emqx *v1alpha1.EmqxBroker) []corev1.Volume {
+func getEmqxBrokerVolumes(emqx *v1alpha2.EmqxBroker) []corev1.Volume {
 	volumes := []corev1.Volume{}
 	if emqx.Spec.License != "" {
 		volumes = append(volumes,
@@ -367,7 +367,7 @@ func getEmqxBrokerVolumes(emqx *v1alpha1.EmqxBroker) []corev1.Volume {
 
 }
 
-func mergeDefaultEnv(emqx *v1alpha1.EmqxBroker) []corev1.EnvVar {
+func mergeDefaultEnv(emqx *v1alpha2.EmqxBroker) []corev1.EnvVar {
 	defaultEnv := []corev1.EnvVar{
 		{
 			Name:  "EMQX_NAME",
@@ -457,7 +457,7 @@ func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 	return specPolicy
 }
 
-// func getVolumeClaimTemplates(e v1alpha1.EmbeddedPersistentVolumeClaim, emqx *v1alpha1.EmqxBroker, ownerRefs []metav1.OwnerReference) []corev1.PersistentVolumeClaim {
+// func getVolumeClaimTemplates(e v1alpha2.EmbeddedPersistentVolumeClaim, emqx *v1alpha2.EmqxBroker, ownerRefs []metav1.OwnerReference) []corev1.PersistentVolumeClaim {
 // 	pvcList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
 // 	for _, pvc := range pvcList {
 // 		pvcTemplate := getVolumeClaimTemplate(emqx.Spec.Storage.VolumeClaimTemplates, emqx, ownerRefs)
@@ -476,7 +476,7 @@ func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 // 	return pvcs
 // }
 
-// func getVolumeClaimTemplate(e v1alpha1.EmbeddedPersistentVolumeClaim, emqx *v1alpha1.EmqxBroker, ownerRefs []metav1.OwnerReference) *corev1.PersistentVolumeClaim {
+// func getVolumeClaimTemplate(e v1alpha2.EmbeddedPersistentVolumeClaim, emqx *v1alpha2.EmqxBroker, ownerRefs []metav1.OwnerReference) *corev1.PersistentVolumeClaim {
 // 	pvc := corev1.PersistentVolumeClaim{
 // 		TypeMeta: metav1.TypeMeta{
 // 			APIVersion: e.APIVersion,
@@ -494,7 +494,7 @@ func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 // 	return &pvc
 // }
 
-func MakeVolumeClaimTemplate(e v1alpha1.EmbeddedPersistentVolumeClaim, instance *v1alpha1.EmqxBroker) *corev1.PersistentVolumeClaim {
+func MakeVolumeClaimTemplate(e v1alpha2.EmbeddedPersistentVolumeClaim, instance *v1alpha2.EmqxBroker) *corev1.PersistentVolumeClaim {
 	boolTrue := true
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
