@@ -165,7 +165,7 @@ func newEmqxBrokerStatefulSet(emqx *v1alpha2.EmqxBroker, labels map[string]strin
 	// 	Privileged: &privileged,
 	// }
 
-	env := append(getDefaultClusterConfig(emqx), emqx.Spec.Env...)
+	env := mergeEnv(emqx)
 
 	// TODO
 	labels = map[string]string{}
@@ -365,6 +365,28 @@ func getEmqxBrokerVolumes(emqx *v1alpha2.EmqxBroker) []corev1.Volume {
 	}
 	return volumes
 
+}
+
+func Contains(Env []corev1.EnvVar, Name string) int {
+	for index, value := range Env {
+		if value.Name == Name {
+			return index
+		}
+	}
+	return -1
+}
+
+func mergeEnv(emqx *v1alpha2.EmqxBroker) []corev1.EnvVar {
+	env := emqx.Spec.Env
+	clusterEnv := getDefaultClusterConfig(emqx)
+	for index, value := range clusterEnv {
+		r := Contains(env, value.Name)
+		if r == -1 {
+			env = append(env, clusterEnv[index])
+		}
+	}
+
+	return env
 }
 
 func getDefaultClusterConfig(emqx *v1alpha2.EmqxBroker) []corev1.EnvVar {
