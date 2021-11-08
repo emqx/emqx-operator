@@ -11,6 +11,6 @@ resources:
   domain: emqx.io
   group: apps
   kind: EmqxBroker
-  path: github.com/emqx/emqx-operator/api/v1alpha1
-  version: v1alpha1
+  path: github.com/emqx/emqx-operator/api/v1alpha2
+  version: v1alpha2
 version: "3"

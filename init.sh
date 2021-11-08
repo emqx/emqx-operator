@@ -1,6 +1,6 @@
 export CRD=EmqxBroker
 export group=apps
-export version=v1alpha1
+export version=v1alpha2
 
 kubebuilder init --domain emqx.io
 

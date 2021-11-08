@@ -3,7 +3,7 @@ package k8s
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -11,7 +11,7 @@ import (
 // Cluster the client that knows how to interact with kubernetes to manage EMQ X Cluster
 type Cluster interface {
 	// UpdateCluster update the EMQ X Cluster
-	UpdateCluster(namespace string, cluster *v1alpha1.EmqxBroker) error
+	UpdateCluster(namespace string, cluster *v1alpha2.EmqxBroker) error
 }
 
 // ClusterOption is the EMQ X Cluster client that using API calls to kubernetes.
@@ -30,7 +30,7 @@ func NewCluster(kubeClient client.Client, logger logr.Logger) Cluster {
 }
 
 // UpdateCluster implement the  Cluster.Interface
-func (c *ClusterOption) UpdateCluster(namespace string, e *v1alpha1.EmqxBroker) error {
+func (c *ClusterOption) UpdateCluster(namespace string, e *v1alpha2.EmqxBroker) error {
 	e.Status.DescConditionsByTime()
 	err := c.client.Status().Update(context.TODO(), e)
 	if err != nil {

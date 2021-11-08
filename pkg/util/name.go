@@ -3,7 +3,7 @@ package util
 import (
 	"fmt"
 
-	"github.com/emqx/emqx-operator/api/v1alpha1"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 )
 
 const (
@@ -16,27 +16,27 @@ func GenerateName(typeName, metaName string) string {
 }
 
 // GetEmqxBrokerName returns the name for EmqxBroker resources
-func GetEmqxBrokerName(emqx *v1alpha1.EmqxBroker) string {
+func GetEmqxBrokerName(emqx *v1alpha2.EmqxBroker) string {
 	return GenerateName(EMQX_NAME, emqx.Name)
 }
 
-func GetEmqxBrokerSecret(emqx *v1alpha1.EmqxBroker) string {
+func GetEmqxBrokerSecret(emqx *v1alpha2.EmqxBroker) string {
 	return GenerateName("-secret", emqx.Name)
 }
 
-func GetEmqxBrokerHeadlessSvc(emqx *v1alpha1.EmqxBroker) string {
+func GetEmqxBrokerHeadlessSvc(emqx *v1alpha2.EmqxBroker) string {
 	return GenerateName("-headless-svc", emqx.Name)
 }
 
-func GetEmqxBrokerConfigMapForAcl(emqx *v1alpha1.EmqxBroker) string {
+func GetEmqxBrokerConfigMapForAcl(emqx *v1alpha2.EmqxBroker) string {
 	return GenerateName("-configmap-acl", emqx.Name)
 }
 
-func GetEmqxBrokerConfigMapForLM(emqx *v1alpha1.EmqxBroker) string {
+func GetEmqxBrokerConfigMapForLM(emqx *v1alpha2.EmqxBroker) string {
 	return GenerateName("-configmap-loaded-modules", emqx.Name)
 }
 
-func GetEmqxBrokerConfigMapForPG(emqx *v1alpha1.EmqxBroker) string {
+func GetEmqxBrokerConfigMapForPG(emqx *v1alpha2.EmqxBroker) string {
 	return GenerateName("-configmap-loaded-plugins", emqx.Name)
 }
 
