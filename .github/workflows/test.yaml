@@ -56,8 +56,6 @@ jobs:
             echo "waiting emqx pod running"
             sleep 1
           done
-      - if: failure()
-        run: kubectl describe sts emqx-cluster-emqx
       - name: Check emqx broker
         timeout-minutes: 5
         run: |
@@ -66,8 +64,6 @@ jobs:
             echo "waiting emqx broker running"
             sleep 1
           done
-      - if: failure()
-        run: kubectl exec -i emqx-cluster-emqx-0 -- emqx_ctl status
       - name: Check emqx cluster
         timeout-minutes: 5
         run: |
@@ -79,10 +75,6 @@ jobs:
             echo "waiting emqx cluster scale"
             sleep 1
           done
-      - if: failure()
-        run: kubectl exec -i emqx-cluster-emqx-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
-      - if: failure()
-        run: kubectl logs -l "cluster=emqx"
       - run: kubectl scale --replicas=5 EmqxBroker/emqx
       - name: Check scale
         timeout-minutes: 5
@@ -92,8 +84,6 @@ jobs:
             echo "waiting scale emqx to 5"
             sleep 1
           done
-      - if: failure()
-        run: kubectl describe sts emqx-cluster-emqx
       - name: Check emqx broker
         timeout-minutes: 5
         run: |
@@ -102,8 +92,6 @@ jobs:
             echo "waiting emqx broker running"
             sleep 1
           done
-      - if: failure()
-        run: kubectl exec -i emqx-cluster-emqx-4 -- emqx_ctl status
       - name: Check emqx cluster
         timeout-minutes: 5
         run: |
@@ -115,9 +103,16 @@ jobs:
             echo "waiting emqx cluster scale"
             sleep 1
           done
-      - if: failure()
-        run: kubectl exec -i emqx-cluster-emqx-4 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
-      - if: failure()
-        run: kubectl logs -l "cluster=emqx"
-      - if: failure()
-        run: kubectl logs -l "control-plane=controller-manager" -n operator-emqx-system -c manager
+      - name: Get controller status
+        if: failure()
+        run: |
+          set -x
+          kubectl describe sts emqx-cluster-emqx
+          kubectl logs -l "control-plane=controller-manager" -n operator-emqx-system -c manager
+      - name: Get emqx status
+        if: failure()
+        run: |
+          set -x
+          kubectl describe sts emqx-cluster-emqx
+          kubectl exec -i emqx-cluster-emqx-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
+          kubectl logs -l "cluster=emqx"
