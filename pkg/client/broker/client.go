@@ -3,14 +3,16 @@ package broker
 import (
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 const (
-	APISERVER           = "http://localhost:8081"
-	AUTHORIZATION_KEY   = "authorization"
-	AuTHORIZATION_VALUE = "Basic YWRtaW46cHVibGlj"
+	APISERVER_HOST      = "http://localhost:"
+	APISERVER_PORT      = "EMQX_MANAGEMENT__LISTENER__HTTP"
+	AUTHORIZATION_KEY   = "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID"
+	AUTHORIZATION_VALUE = "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET"
 
-	HandlerGET string = "GET"
+	HANDLER_GET string = "GET"
 )
 
 // Client defines the functions necessary to connect to emqx brokers get or set what we need
@@ -24,13 +26,13 @@ type client struct {
 
 // new request function
 func newRequest(action, uri string) (*http.Request, error) {
-	url := APISERVER + uri
+	url := APISERVER_HOST + os.Getenv(APISERVER_PORT) + uri
 	req, err := http.NewRequest(action, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add(AUTHORIZATION_KEY, AuTHORIZATION_VALUE)
 
+	req.SetBasicAuth(os.Getenv(AUTHORIZATION_KEY), os.Getenv(AUTHORIZATION_VALUE))
 	return req, err
 }
 
@@ -41,7 +43,7 @@ func New() Client {
 }
 
 func (c *client) GetEmqxBrokerClusterStats(action, uri string) ([]byte, error) {
-	req, err := newRequest(HandlerGET, uri)
+	req, err := newRequest(HANDLER_GET, uri)
 	if err != nil {
 		return nil, err
 	}
