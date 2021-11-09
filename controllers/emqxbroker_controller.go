@@ -29,6 +29,7 @@ import (
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/cache"
+	"github.com/emqx/emqx-operator/pkg/client/broker"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/service"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,17 +64,18 @@ func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
 	k8sService := k8s.New(mgr.GetClient(), log)
 
 	// Create the emqx clients
-	// TODO
+	emqxBrokerClient := broker.New()
 
 	// Create internal services.
 	eService := service.NewEmqxBrokerClusterKubeClient(k8sService, log)
-	// TODO eChecker
+	eChecker := service.NewEmqxBrokerClusterChecker(k8sService, emqxBrokerClient, log)
 
 	// TODO eHealer
 
 	handler := &EmqxBrokerClusterHandler{
 		k8sServices: k8sService,
 		eService:    eService,
+		eChecker:    eChecker,
 		metaCache:   new(cache.MetaMap),
 		eventsCli:   k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
 		logger:      log,
@@ -136,11 +138,10 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return reconcile.Result{}, err
 	}
 
-	// TODO
-	// if err = r.handler.eChecker.CheckEmqxBrokerReadyReplicas(instance); err != nil {
-	// 	reqLogger.Info(err.Error())
-	// 	return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
-	// }
+	if err = r.Handler.eChecker.CheckEmqxBrokerReadyReplicas(instance); err != nil {
+		reqLogger.Info(err.Error())
+		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
+	}
 
 	return reconcile.Result{RequeueAfter: time.Duration(reconcileTime) * time.Second}, nil
 }
