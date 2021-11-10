@@ -29,7 +29,6 @@ import (
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/cache"
-	"github.com/emqx/emqx-operator/pkg/client/broker"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/service"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,12 +62,15 @@ func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
 	// Create kubernetes service.
 	k8sService := k8s.New(mgr.GetClient(), log)
 
+	// TODO
 	// Create the emqx clients
-	emqxBrokerClient := broker.New()
+	// emqxBrokerClient := broker.New()
 
 	// Create internal services.
 	eService := service.NewEmqxBrokerClusterKubeClient(k8sService, log)
-	eChecker := service.NewEmqxBrokerClusterChecker(k8sService, emqxBrokerClient, log)
+	// TODO
+	// eChecker := service.NewEmqxBrokerClusterChecker(k8sService, emqxBrokerClient, log)
+	eChecker := service.NewEmqxBrokerClusterChecker(k8sService, log)
 
 	// TODO eHealer
 
