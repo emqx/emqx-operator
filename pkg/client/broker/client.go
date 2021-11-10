@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	APISERVER_HOST      = "http://localhost:"
 	APISERVER_PORT      = "EMQX_MANAGEMENT__LISTENER__HTTP"
 	AUTHORIZATION_KEY   = "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID"
 	AUTHORIZATION_VALUE = "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET"
@@ -17,7 +16,7 @@ const (
 
 // Client defines the functions necessary to connect to emqx brokers get or set what we need
 type Client interface {
-	GetEmqxBrokerClusterStats(uri, action string) ([]byte, error)
+	GetEmqxBrokerClusterStats(uri, action, ip string) ([]byte, error)
 }
 
 type client struct {
@@ -25,8 +24,8 @@ type client struct {
 }
 
 // new request function
-func newRequest(action, uri string) (*http.Request, error) {
-	url := APISERVER_HOST + os.Getenv(APISERVER_PORT) + uri
+func newRequest(action, uri, ip string) (*http.Request, error) {
+	url := "http://" + ip + ":" + os.Getenv(APISERVER_PORT) + uri
 	req, err := http.NewRequest(action, url, nil)
 	if err != nil {
 		return nil, err
@@ -42,8 +41,8 @@ func New() Client {
 
 }
 
-func (c *client) GetEmqxBrokerClusterStats(action, uri string) ([]byte, error) {
-	req, err := newRequest(HANDLER_GET, uri)
+func (c *client) GetEmqxBrokerClusterStats(action, uri, ip string) ([]byte, error) {
+	req, err := newRequest(HANDLER_GET, uri, ip)
 	if err != nil {
 		return nil, err
 	}

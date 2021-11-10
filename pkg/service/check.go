@@ -8,6 +8,7 @@ import (
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/util"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // EmqxBrokerClusterCheck defines the intercace able to check the correct status of a emq x cluster
@@ -41,4 +42,19 @@ func (ec *EmqxBrokerClusterChecker) CheckEmqxBrokerReadyReplicas(e *v1alpha2.Emq
 		return errors.New("waiting all of emqx broker pods become ready")
 	}
 	return nil
+}
+
+// GetEmqxBrokerClusterIPs return the IPS of brokers
+func (ec *EmqxBrokerClusterChecker) GetEmqxBrokerClusterIPs(e *v1alpha2.EmqxBroker) ([]string, error) {
+	ips := []string{}
+	stsps, err := ec.k8sService.GetStatefulSetPods(e.Namespace, util.GetEmqxBrokerName(e))
+	if err != nil {
+		return nil, err
+	}
+	for _, stsp := range stsps.Items {
+		if stsp.Status.Phase == corev1.PodRunning {
+			ips = append(ips, stsp.Status.PodIP)
+		}
+	}
+	return ips, nil
 }
