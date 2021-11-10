@@ -196,7 +196,7 @@ func newEmqxBrokerStatefulSet(emqx *v1alpha2.EmqxBroker, labels map[string]strin
 					// TODO merge labels
 					Labels: emqx.Spec.Labels,
 					// TODO
-					// Annotations: rc.Spec.Sentinel.Annotations,
+					// Annotations:
 				},
 				Spec: corev1.PodSpec{
 					// TODO initContainers

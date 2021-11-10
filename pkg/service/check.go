@@ -17,8 +17,20 @@ type EmqxBrokerClusterCheck interface {
 // EmqxBrokerClusterChecker is our implementation of EmqxBrokerClusterCheck intercace
 type EmqxBrokerClusterChecker struct {
 	k8sService k8s.Services
-	// client     emqx.Client
+	// TODO httpClient
+	// emqxBrokerClient broker.Client
 	logger logr.Logger
+}
+
+// NewEmqxBrokerClusterChecker creates an object of the emqxBrokerClusterChecker struct
+// func NewEmqxBrokerClusterChecker(k8sService k8s.Services, emqxBrokerClient broker.Client, logger logr.Logger) *EmqxBrokerClusterChecker {
+func NewEmqxBrokerClusterChecker(k8sService k8s.Services, logger logr.Logger) *EmqxBrokerClusterChecker {
+	return &EmqxBrokerClusterChecker{
+		k8sService: k8sService,
+		// TODO
+		// emqxBrokerClient: emqxBrokerClient,
+		logger: logger,
+	}
 }
 
 // CheckEmqxBrokerReadyReplicas controls that the number of deployed emqx ready pod is the same than the requested on the spec
@@ -28,7 +40,23 @@ func (ec *EmqxBrokerClusterChecker) CheckEmqxBrokerReadyReplicas(e *v1alpha2.Emq
 		return err
 	}
 	if *e.Spec.Replicas != d.Status.ReadyReplicas {
-		return errors.New("waiting all of emqx pods become ready")
+		return errors.New("waiting all of emqx broker pods become ready")
 	}
 	return nil
 }
+
+// TODO
+// GetEmqxBrokerClusterIPs return the IPS of brokers
+// func (ec *EmqxBrokerClusterChecker) GetEmqxBrokerClusterIPs(e *v1alpha2.EmqxBroker) ([]string, error) {
+// 	ips := []string{}
+// 	stsps, err := ec.k8sService.GetStatefulSetPods(e.Namespace, util.GetEmqxBrokerName(e))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	for _, stsp := range stsps.Items {
+// 		if stsp.Status.Phase == corev1.PodRunning {
+// 			ips = append(ips, stsp.Status.PodIP)
+// 		}
+// 	}
+// 	return ips, nil
+// }

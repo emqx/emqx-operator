@@ -62,18 +62,22 @@ func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
 	// Create kubernetes service.
 	k8sService := k8s.New(mgr.GetClient(), log)
 
-	// Create the emqx clients
 	// TODO
+	// Create the emqx clients
+	// emqxBrokerClient := broker.New()
 
 	// Create internal services.
 	eService := service.NewEmqxBrokerClusterKubeClient(k8sService, log)
-	// TODO eChecker
+	// TODO
+	// eChecker := service.NewEmqxBrokerClusterChecker(k8sService, emqxBrokerClient, log)
+	eChecker := service.NewEmqxBrokerClusterChecker(k8sService, log)
 
 	// TODO eHealer
 
 	handler := &EmqxBrokerClusterHandler{
 		k8sServices: k8sService,
 		eService:    eService,
+		eChecker:    eChecker,
 		metaCache:   new(cache.MetaMap),
 		eventsCli:   k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
 		logger:      log,
@@ -136,11 +140,10 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return reconcile.Result{}, err
 	}
 
-	// TODO
-	// if err = r.handler.eChecker.CheckEmqxBrokerReadyReplicas(instance); err != nil {
-	// 	reqLogger.Info(err.Error())
-	// 	return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
-	// }
+	if err = r.Handler.eChecker.CheckEmqxBrokerReadyReplicas(instance); err != nil {
+		reqLogger.Info(err.Error())
+		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
+	}
 
 	return reconcile.Result{RequeueAfter: time.Duration(reconcileTime) * time.Second}, nil
 }

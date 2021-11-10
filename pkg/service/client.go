@@ -35,10 +35,6 @@ func NewEmqxBrokerClusterKubeClient(k8sService k8s.Services, logger logr.Logger)
 	}
 }
 
-func generateSelectorLabels(component, name string) map[string]string {
-	return map[string]string{}
-}
-
 // EnsureEmqxBrokerSecret make sure the EMQ X secret exists
 func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerSecret(e *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	secret := newSecretForCR(e, labels, ownerRefs)

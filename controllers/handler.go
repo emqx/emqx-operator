@@ -21,11 +21,10 @@ var (
 type EmqxBrokerClusterHandler struct {
 	k8sServices k8s.Services
 	eService    service.EmqxBrokerClusterClient
-	// TODO
-	// eChecker    service.EmqxBrokerClusterCheck
-	eventsCli k8s.Event
-	logger    logr.Logger
-	metaCache *cache.MetaMap
+	eChecker    service.EmqxBrokerClusterCheck
+	eventsCli   k8s.Event
+	logger      logr.Logger
+	metaCache   *cache.MetaMap
 }
 
 // Do will ensure the EMQ X Cluster is in the expected state and update the EMQ X Cluster status.
