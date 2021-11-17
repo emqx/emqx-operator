@@ -80,18 +80,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	var emqxBrokerReconciler controllers.EmqxBrokerReconciler
-	emqxBrokerReconciler.New(mgr)
+	newEmqxBrokerReconciler := controllers.NewEmqxBrokerReconciler(mgr)
 
-	if err := emqxBrokerReconciler.SetupWithManager(mgr); err != nil {
+	if err := newEmqxBrokerReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	var emqxEnterpriseReconciler controllers.EmqxEnterpriseReconciler
-	emqxEnterpriseReconciler.New(mgr)
+	newEmqxEnterpriseReconciler := controllers.NewEmqxEnterpriseReconciler(mgr)
 
-	if err = emqxEnterpriseReconciler.SetupWithManager(mgr); err != nil {
+	if err = newEmqxEnterpriseReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxEnterprise")
 		os.Exit(1)
 	}

@@ -43,7 +43,7 @@ type EmqxEnterpriseReconciler struct {
 	Handler *EmqxBrokerClusterHandler
 }
 
-func (*EmqxEnterpriseReconciler) New(mgr manager.Manager) *EmqxEnterpriseReconciler {
+func NewEmqxEnterpriseReconciler(mgr manager.Manager) *EmqxEnterpriseReconciler {
 	// Create kubernetes service.
 	k8sService := k8s.New(mgr.GetClient(), log)
 
