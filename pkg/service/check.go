@@ -38,8 +38,8 @@ func (ec *EmqxBrokerClusterChecker) CheckEmqxBrokerReadyReplicas(emqx v1alpha2.E
 	if err != nil {
 		return err
 	}
-	if *e.Spec.Replicas != d.Status.ReadyReplicas {
-		return errors.New("waiting all of emqx broker pods become ready")
+	if *emqx.GetReplicas() != d.Status.ReadyReplicas {
+		return errors.New("waiting all of emqx pods become ready")
 	}
 	return nil
 }

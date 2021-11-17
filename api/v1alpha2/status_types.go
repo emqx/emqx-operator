@@ -44,6 +44,7 @@ const (
 	ClusterConditionFailed      ConditionType = "Failed"
 )
 
+//+kubebuilder:object:generate=false
 type EmqxStatus interface {
 	DescConditionsByTime()
 	GetConditions() []Condition

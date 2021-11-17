@@ -77,7 +77,7 @@ func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerStatefulSet(emqx v1alpha2.
 	}
 
 	if shouldUpdateEmqxBroker(emqx.GetResource(), oldSts.Spec.Template.Spec.Containers[0].Resources,
-		e.Spec.Replicas, oldSts.Spec.Replicas) {
+		emqx.GetReplicas(), oldSts.Spec.Replicas) {
 		es := newEmqxBrokerStatefulSet(emqx, labels, ownerRefs)
 		return r.K8sService.UpdateStatefulSet(emqx.GetNamespace(), es)
 	}

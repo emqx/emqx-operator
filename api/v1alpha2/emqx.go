@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+//+kubebuilder:object:generate=false
 type EmqxSpec interface {
 	GetReplicas() *int32
 	SetReplicas(replcas int32)
@@ -75,6 +76,7 @@ type EmqxSpec interface {
 	GetLoadedModulesConfName() string
 }
 
+//+kubebuilder:object:generate=false
 type Emqx interface {
 	v1.Type
 	v1.Object
