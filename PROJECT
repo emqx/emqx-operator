@@ -13,4 +13,13 @@ resources:
   kind: EmqxBroker
   path: github.com/emqx/emqx-operator/api/v1alpha2
   version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: emqx.io
+  group: apps
+  kind: EmqxEnterprise
+  path: github.com/emqx/emqx-operator/api/v1alpha2
+  version: v1alpha2
 version: "3"

@@ -80,13 +80,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	newEmqxBrokerReconciler := controllers.NewEmqxBrokerReconciler(mgr)
+	var emqxBrokerReconciler controllers.EmqxBrokerReconciler
+	emqxBrokerReconciler.New(mgr)
 
-	if err := newEmqxBrokerReconciler.SetupWithManager(mgr); err != nil {
+	if err := emqxBrokerReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
+	var emqxEnterpriseReconciler controllers.EmqxEnterpriseReconciler
+	emqxEnterpriseReconciler.New(mgr)
+
+	if err = emqxEnterpriseReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EmqxEnterprise")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

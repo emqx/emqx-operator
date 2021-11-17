@@ -11,7 +11,7 @@ import (
 // Cluster the client that knows how to interact with kubernetes to manage EMQ X Cluster
 type Cluster interface {
 	// UpdateCluster update the EMQ X Cluster
-	UpdateCluster(namespace string, cluster *v1alpha2.EmqxBroker) error
+	UpdateCluster(namespace string, cluster v1alpha2.Emqx) error
 }
 
 // ClusterOption is the EMQ X Cluster client that using API calls to kubernetes.
@@ -30,15 +30,15 @@ func NewCluster(kubeClient client.Client, logger logr.Logger) Cluster {
 }
 
 // UpdateCluster implement the  Cluster.Interface
-func (c *ClusterOption) UpdateCluster(namespace string, e *v1alpha2.EmqxBroker) error {
-	e.Status.DescConditionsByTime()
-	err := c.client.Status().Update(context.TODO(), e)
+func (c *ClusterOption) UpdateCluster(namespace string, emqx v1alpha2.Emqx) error {
+	emqx.DescConditionsByTime()
+	err := c.client.Status().Update(context.TODO(), emqx)
 	if err != nil {
-		c.logger.WithValues("namespace", namespace, "cluster", e.Name, "conditions", e.Status.Conditions).
+		c.logger.WithValues("namespace", namespace, "cluster", emqx.GetName(), "conditions", emqx.GetConditions()).
 			Error(err, "emqxClusterStatus")
 		return err
 	}
-	c.logger.WithValues("namespace", namespace, "cluster", e.Name, "conditions", e.Status.Conditions).
+	c.logger.WithValues("namespace", namespace, "cluster", emqx.GetName(), "conditions", emqx.GetConditions()).
 		V(3).Info("emqxClusterStatus updated")
 	return nil
 }

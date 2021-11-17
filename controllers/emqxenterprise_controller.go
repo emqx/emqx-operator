@@ -22,98 +22,70 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
+	appsv1alpha2 "github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/cache"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/service"
-	"k8s.io/apimachinery/pkg/runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const (
-	checkInterval  = 5 * time.Second
-	timeOut        = 30 * time.Second
-	needRequeueMsg = "need requeue"
-)
-
-var (
-	log = logf.Log.WithName("emqx-controller")
-	// reconcileTime is the delay between reconciliations. Defaults to 60s.
-	reconcileTime int
-)
-
-var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
-
-// EmqxBrokerReconciler reconciles a EmqxBroker object
-type EmqxBrokerReconciler struct {
+// EmqxEnterpriseReconciler reconciles a EmqxEnterprise object
+type EmqxEnterpriseReconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
 
 	Handler *EmqxBrokerClusterHandler
 }
 
-func (*EmqxBrokerReconciler) New(mgr manager.Manager) *EmqxBrokerReconciler {
+func (*EmqxEnterpriseReconciler) New(mgr manager.Manager) *EmqxEnterpriseReconciler {
 	// Create kubernetes service.
 	k8sService := k8s.New(mgr.GetClient(), log)
 
-	// TODO
 	// Create the emqx clients
-	// emqxBrokerClient := broker.New()
+	// TODO
 
 	// Create internal services.
 	eService := service.NewEmqxBrokerClusterKubeClient(k8sService, log)
-	// TODO
-	// eChecker := service.NewEmqxBrokerClusterChecker(k8sService, emqxBrokerClient, log)
-	eChecker := service.NewEmqxBrokerClusterChecker(k8sService, log)
+	// TODO eChecker
 
 	// TODO eHealer
 
 	handler := &EmqxBrokerClusterHandler{
 		k8sServices: k8sService,
 		eService:    eService,
-		eChecker:    eChecker,
 		metaCache:   new(cache.MetaMap),
 		eventsCli:   k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
 		logger:      log,
 	}
 
-	return &EmqxBrokerReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme(), Handler: handler}
+	return &EmqxEnterpriseReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme(), Handler: handler}
 }
 
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=pods,verbs=sget;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the EmqxBroker object against the actual cluster state, and then
+// the EmqxEnterprise object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
-func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
+func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	reqLogger.Info("Reconciling EMQ X Cluster")
 
 	// Fetch the EMQ X Cluster instance
-	// var instance v1alpha2.Emqx
-	instance := &v1alpha2.EmqxBroker{}
+	instance := &v1alpha2.EmqxEnterprise{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -140,17 +112,18 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return reconcile.Result{}, err
 	}
 
-	if err = r.Handler.eChecker.CheckEmqxBrokerReadyReplicas(instance); err != nil {
-		reqLogger.Info(err.Error())
-		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
-	}
+	// TODO
+	// if err = r.handler.eChecker.CheckEmqxBrokerReadyReplicas(instance); err != nil {
+	// 	reqLogger.Info(err.Error())
+	// 	return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
+	// }
 
 	return reconcile.Result{RequeueAfter: time.Duration(reconcileTime) * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *EmqxBrokerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *EmqxEnterpriseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha2.EmqxBroker{}).
+		For(&appsv1alpha2.EmqxEnterprise{}).
 		Complete(r)
 }

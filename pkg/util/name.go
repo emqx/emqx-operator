@@ -17,7 +17,7 @@ func GenerateName(typeName, metaName string) string {
 
 // GetEmqxBrokerName returns the name for EmqxBroker resources
 func GetEmqxBrokerName(emqx *v1alpha2.EmqxBroker) string {
-	return GenerateName(EMQX_NAME, emqx.Name)
+	return GenerateName(EMQX_NAME, emqx.GetName())
 }
 
 func GetEmqxBrokerSecret(emqx *v1alpha2.EmqxBroker) string {
