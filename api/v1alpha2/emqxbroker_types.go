@@ -71,11 +71,13 @@ type EmqxBrokerSpec struct {
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
 // EmqxBroker is the Schema for the emqxbrokers API
 type EmqxBroker struct {
+	metav1.Type `json:"-"`
+
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxBrokerSpec   `json:"spec,omitempty"`
-	Status EmqxBrokerStatus `json:"status,omitempty"`
+	Spec   EmqxBrokerSpec `json:"spec,omitempty"`
+	Status `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -95,4 +97,83 @@ func (emqx *EmqxBroker) String() string {
 
 func init() {
 	SchemeBuilder.Register(&EmqxBroker{}, &EmqxBrokerList{})
+}
+
+func (emqx *EmqxBroker) GetReplicas() *int32        { return emqx.Spec.Replicas }
+func (emqx *EmqxBroker) SetReplicas(replicas int32) { emqx.Spec.Replicas = &replicas }
+
+func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.Image }
+func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.Image = image }
+
+func (emqx *EmqxBroker) GetServiceAccountName() string { return emqx.Spec.ServiceAccountName }
+func (emqx *EmqxBroker) SetServiceAccountName(serviceAccountName string) {
+	emqx.Spec.ServiceAccountName = serviceAccountName
+}
+
+func (emqx *EmqxBroker) GetResource() corev1.ResourceRequirements { return emqx.Spec.Resources }
+func (emqx *EmqxBroker) SetResource(resource corev1.ResourceRequirements) {
+	emqx.Spec.Resources = resource
+}
+
+func (emqx *EmqxBroker) GetLicense() string        { return emqx.Spec.License }
+func (emqx *EmqxBroker) SetLicense(license string) { emqx.Spec.License = license }
+
+func (emqx *EmqxBroker) GetStorage() *Storage        { return emqx.Spec.Storage }
+func (emqx *EmqxBroker) SetStorage(stroage *Storage) { emqx.Spec.Storage = stroage }
+
+func (emqx *EmqxBroker) GetLabels() map[string]string       { return emqx.Spec.Labels }
+func (emqx *EmqxBroker) SetLabels(labels map[string]string) { emqx.Spec.Labels = labels }
+
+func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
+func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
+
+func (emqx *EmqxBroker) GetToleRations() []corev1.Toleration { return emqx.Spec.ToleRations }
+func (emqx *EmqxBroker) SetToleRations(tolerations []corev1.Toleration) {
+	emqx.Spec.ToleRations = tolerations
+}
+
+func (emqx *EmqxBroker) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
+func (emqx *EmqxBroker) SetNodeSelector(nodeSelector map[string]string) {
+	emqx.Spec.NodeSelector = nodeSelector
+}
+
+func (emqx *EmqxBroker) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
+func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
+	emqx.Spec.ImagePullPolicy = pullPolicy
+}
+
+func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar    { return emqx.Spec.Env }
+func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) { emqx.Spec.Env = env }
+
+func (emqx *EmqxBroker) GetAclConf() string        { return emqx.Spec.AclConf }
+func (emqx *EmqxBroker) SetAclConf(aclConf string) { emqx.Spec.AclConf = aclConf }
+
+func (emqx *EmqxBroker) GetLoadedPluginConf() string { return emqx.Spec.LoadedPluginConf }
+func (emqx *EmqxBroker) SetLoadedPluginConf(loadedPluginConf string) {
+	emqx.Spec.LoadedPluginConf = loadedPluginConf
+}
+
+func (emqx *EmqxBroker) GetLoadedModulesConf() string { return emqx.Spec.LoadedModulesConf }
+func (emqx *EmqxBroker) SetLoadedModulesConf(loadedModulesConf string) {
+	emqx.Spec.LoadedModulesConf = loadedModulesConf
+}
+
+func (emqx *EmqxBroker) GetSecretName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
+}
+
+func (emqx *EmqxBroker) GetHeadlessServiceName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "-headless")
+}
+
+func (emqx *EmqxBroker) GetAclConfName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "-acl")
+}
+
+func (emqx *EmqxBroker) GetLoadedPluginConfName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "-loaded-plugins")
+}
+
+func (emqx *EmqxBroker) GetLoadedModulesConfName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "-loaded-modules")
 }

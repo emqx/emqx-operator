@@ -44,68 +44,78 @@ const (
 	ClusterConditionFailed      ConditionType = "Failed"
 )
 
+type EmqxStatus interface {
+	DescConditionsByTime()
+	GetConditions() []Condition
+	SetScalingUpCondition(message string)
+	SetCreateCondition(message string)
+	SetScalingDownCondition(message string)
+	SetUpgradingCondition(message string)
+	SetUpdatingCondition(message string)
+	SetReadyCondition(message string)
+	SetFailedCondition(message string)
+	setClusterCondition(c Condition)
+	ClearCondition(t ConditionType)
+}
+
 // EmqxBrokerClusterStatus defines the observed state of EMQ X Cluster
-type EmqxBrokerStatus struct {
+type Status struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 	Conditions []Condition `json:"conditions,omitempty"`
 }
 
-func (ecs *EmqxBrokerStatus) DescConditionsByTime() {
+func (ecs *Status) DescConditionsByTime() {
 	sort.Slice(ecs.Conditions, func(i, j int) bool {
 		// return ecs.Conditions[i].LastUpdateAt.After(ecs.Conditions[j].LastUpdateAt)
 		return ecs.Conditions[j].LastUpdateAt.Before(&ecs.Conditions[i].LastUpdateAt)
 	})
 }
 
-func (ecs *EmqxBrokerStatus) SetScalingUpCondition(message string) {
+func (ecs *Status) GetConditions() []Condition {
+	return ecs.Conditions
+}
+
+func (ecs *Status) SetScalingUpCondition(message string) {
 	c := newClusterCondition(ClusterConditionScaling, corev1.ConditionTrue, "Scaling up", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxBrokerStatus) SetCreateCondition(message string) {
+func (ecs *Status) SetCreateCondition(message string) {
 	c := newClusterCondition(ClusterConditionCreating, corev1.ConditionTrue, "Creating", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxBrokerStatus) SetScalingDownCondition(message string) {
+func (ecs *Status) SetScalingDownCondition(message string) {
 	c := newClusterCondition(ClusterConditionScaling, corev1.ConditionTrue, "Scaling down", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxBrokerStatus) SetUpgradingCondition(message string) {
+func (ecs *Status) SetUpgradingCondition(message string) {
 	c := newClusterCondition(ClusterConditionUpgrading, corev1.ConditionTrue,
 		"Cluster upgrading", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxBrokerStatus) SetUpdatingCondition(message string) {
+func (ecs *Status) SetUpdatingCondition(message string) {
 	c := newClusterCondition(ClusterConditionUpdating, corev1.ConditionTrue,
 		"Cluster updating", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxBrokerStatus) SetReadyCondition(message string) {
+func (ecs *Status) SetReadyCondition(message string) {
 	c := newClusterCondition(ClusterConditionHealthy, corev1.ConditionTrue, "Cluster available", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxBrokerStatus) SetFailedCondition(message string) {
+func (ecs *Status) SetFailedCondition(message string) {
 	c := newClusterCondition(ClusterConditionFailed, corev1.ConditionTrue,
 		"Cluster failed", message)
 	ecs.setClusterCondition(*c)
 }
 
-func (ecs *EmqxBrokerStatus) ClearCondition(t ConditionType) {
-	pos, _ := getClusterCondition(ecs, t)
-	if pos == -1 {
-		return
-	}
-	ecs.Conditions = append(ecs.Conditions[:pos], ecs.Conditions[pos+1:]...)
-}
-
-func (ecs *EmqxBrokerStatus) setClusterCondition(c Condition) {
+func (ecs *Status) setClusterCondition(c Condition) {
 	pos, cp := getClusterCondition(ecs, c.Type)
 	if cp != nil &&
 		cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
@@ -123,7 +133,15 @@ func (ecs *EmqxBrokerStatus) setClusterCondition(c Condition) {
 	}
 }
 
-func getClusterCondition(status *EmqxBrokerStatus, t ConditionType) (int, *Condition) {
+func (ecs *Status) ClearCondition(t ConditionType) {
+	pos, _ := getClusterCondition(ecs, t)
+	if pos == -1 {
+		return
+	}
+	ecs.Conditions = append(ecs.Conditions[:pos], ecs.Conditions[pos+1:]...)
+}
+
+func getClusterCondition(status *Status, t ConditionType) (int, *Condition) {
 	for i, c := range status.Conditions {
 		if t == c.Type {
 			return i, &c

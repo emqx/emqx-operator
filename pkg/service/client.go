@@ -3,7 +3,6 @@ package service
 import (
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
-	"github.com/emqx/emqx-operator/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -13,12 +12,12 @@ import (
 // EmqxBrokerClusterClient has the minimumm methods that a EMQ X Cluster controller needs to satisfy
 // in order to talk with K8s
 type EmqxBrokerClusterClient interface {
-	EnsureEmqxBrokerSecret(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxBrokerHeadlessService(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxBrokerConfigMapForAcl(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxBrokerConfigMapForLoadedModules(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxBrokerConfigMapForLoadedPlugins(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxBrokerStatefulSet(emqx *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxBrokerSecret(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxBrokerHeadlessService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxBrokerConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxBrokerConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxBrokerConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 }
 
 // EmqxBrokerClusterKubeClient implements the required methods to talk with kubernetes
@@ -36,51 +35,51 @@ func NewEmqxBrokerClusterKubeClient(k8sService k8s.Services, logger logr.Logger)
 }
 
 // EnsureEmqxBrokerSecret make sure the EMQ X secret exists
-func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerSecret(e *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	secret := newSecretForCR(e, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsSecret(e.Namespace, secret)
+func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerSecret(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	secret := newSecretForCR(emqx, labels, ownerRefs)
+	return r.K8sService.CreateIfNotExistsSecret(emqx.GetNamespace(), secret)
 }
 
 // EnsureEmqxBrokerHeadlessService makes sure the EMQ X headless service exists
-func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerHeadlessService(e *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	svc := newHeadLessSvcForCR(e, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsService(e.Namespace, svc)
+func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerHeadlessService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	svc := newHeadLessSvcForCR(emqx, labels, ownerRefs)
+	return r.K8sService.CreateIfNotExistsService(emqx.GetNamespace(), svc)
 }
 
-func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForAcl(e *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForAcl := newConfigMapForAcl(e, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsConfigMap(e.Namespace, configmapForAcl)
+func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	configmapForAcl := newConfigMapForAcl(emqx, labels, ownerRefs)
+	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForAcl)
 }
 
 // EnsureEmqxBrokerConfigMapForLoadedModules make sure the EMQ X configmap for loaded modules exists
-func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForLoadedModules(e *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForLM := newConfigMapForLoadedMoudles(e, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsConfigMap(e.Namespace, configmapForLM)
+func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	configmapForLM := newConfigMapForLoadedMoudles(emqx, labels, ownerRefs)
+	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForLM)
 }
 
 // EnsureEmqxBrokerConfigMapForLoadedPlugins make sure the EMQ X configmap for loaded plugins exists
-func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForLoadedPlugins(e *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForPG := newConfigMapForLoadedPlugins(e, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsConfigMap(e.Namespace, configmapForPG)
+func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	configmapForPG := newConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
+	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForPG)
 }
 
 // EnsureEmqxBrokerStatefulSet makes sure the emqx statefulset exists in the desired state
-func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerStatefulSet(e *v1alpha2.EmqxBroker, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	// TODO PDB
-	oldSts, err := r.K8sService.GetStatefulSet(e.Namespace, util.GetEmqxBrokerName(e))
+	oldSts, err := r.K8sService.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
 		// If no resource we need to create.
 		if errors.IsNotFound(err) {
-			sts := newEmqxBrokerStatefulSet(e, labels, ownerRefs)
-			return r.K8sService.CreateStatefulSet(e.Namespace, sts)
+			sts := newEmqxBrokerStatefulSet(emqx, labels, ownerRefs)
+			return r.K8sService.CreateStatefulSet(emqx.GetNamespace(), sts)
 		}
 		return err
 	}
 
-	if shouldUpdateEmqxBroker(e.Spec.Resources, oldSts.Spec.Template.Spec.Containers[0].Resources,
+	if shouldUpdateEmqxBroker(emqx.GetResource(), oldSts.Spec.Template.Spec.Containers[0].Resources,
 		e.Spec.Replicas, oldSts.Spec.Replicas) {
-		es := newEmqxBrokerStatefulSet(e, labels, ownerRefs)
-		return r.K8sService.UpdateStatefulSet(e.Namespace, es)
+		es := newEmqxBrokerStatefulSet(emqx, labels, ownerRefs)
+		return r.K8sService.UpdateStatefulSet(emqx.GetNamespace(), es)
 	}
 
 	return nil

@@ -1,0 +1,20 @@
+# permissions for end users to view emqxenterprises.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: emqxenterprise-viewer-role
+rules:
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxenterprises
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxenterprises/status
+  verbs:
+  - get
