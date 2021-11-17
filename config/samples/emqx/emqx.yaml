@@ -1,6 +1,6 @@
 apiVersion: apps.emqx.io/v1alpha2
-## kind: EmqxBroker
-kind: EmqxEnterprise
+kind: EmqxBroker
+## kind: EmqxEnterprise
 metadata:
   name: emqx
 spec:

@@ -71,8 +71,6 @@ type EmqxBrokerSpec struct {
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
 // EmqxBroker is the Schema for the emqxbrokers API
 type EmqxBroker struct {
-	metav1.Type `json:"-"`
-
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -98,6 +96,11 @@ func (emqx *EmqxBroker) String() string {
 func init() {
 	SchemeBuilder.Register(&EmqxBroker{}, &EmqxBrokerList{})
 }
+
+func (emqx *EmqxBroker) GetAPIVersion() string        { return emqx.APIVersion }
+func (emqx *EmqxBroker) SetAPIVersion(version string) { emqx.APIVersion = version }
+func (emqx *EmqxBroker) GetKind() string              { return emqx.Kind }
+func (emqx *EmqxBroker) SetKind(kind string)          { emqx.Kind = kind }
 
 func (emqx *EmqxBroker) GetReplicas() *int32        { return emqx.Spec.Replicas }
 func (emqx *EmqxBroker) SetReplicas(replicas int32) { emqx.Spec.Replicas = &replicas }
