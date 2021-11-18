@@ -112,7 +112,6 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	reqLogger.Info("Reconciling EMQ X Cluster")
 
 	// Fetch the EMQ X Cluster instance
-	// var instance v1alpha2.Emqx
 	instance := &v1alpha2.EmqxBroker{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
