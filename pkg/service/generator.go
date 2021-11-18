@@ -2,7 +2,6 @@ package service
 
 import (
 	"github.com/emqx/emqx-operator/api/v1alpha2"
-	"github.com/emqx/emqx-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -225,11 +224,13 @@ func newEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, owne
 		},
 	}
 
-	pvcList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
-	for _, item := range pvcList {
+	for _, item := range []string{"data", "log"} {
 		pvcTemplate := MakeVolumeClaimTemplate(storageSpec.VolumeClaimTemplate, emqx)
-		if pvcTemplate.Name == "" {
-			pvcTemplate.Name = util.GetPvcName(item)
+		switch item {
+		case "data":
+			pvcTemplate.Name = emqx.GetDataVolumeName()
+		case "log":
+			pvcTemplate.Name = emqx.GetLogVolumeName()
 		}
 		if storageSpec.VolumeClaimTemplate.Spec.AccessModes == nil {
 			pvcTemplate.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}

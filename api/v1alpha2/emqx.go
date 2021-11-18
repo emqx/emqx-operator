@@ -74,6 +74,8 @@ type EmqxSpec interface {
 	GetAclConfName() string
 	GetLoadedPluginConfName() string
 	GetLoadedModulesConfName() string
+	GetDataVolumeName() string
+	GetLogVolumeName() string
 }
 
 // +kubebuilder:object:generate=false
