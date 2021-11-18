@@ -167,17 +167,17 @@ func (emqx *EmqxBroker) GetSecretName() string {
 }
 
 func (emqx *EmqxBroker) GetHeadlessServiceName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "-headless")
+	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }
 
 func (emqx *EmqxBroker) GetAclConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "-acl")
+	return fmt.Sprintf("%s-%s", emqx.Name, "acl")
 }
 
 func (emqx *EmqxBroker) GetLoadedPluginConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "-loaded-plugins")
+	return fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins")
 }
 
 func (emqx *EmqxBroker) GetLoadedModulesConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "-loaded-modules")
+	return fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules")
 }
