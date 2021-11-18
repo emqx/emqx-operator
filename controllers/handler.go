@@ -29,7 +29,7 @@ type EmqxBrokerClusterHandler struct {
 
 // Do will ensure the EMQ X Cluster is in the expected state and update the EMQ X Cluster status.
 func (ech *EmqxBrokerClusterHandler) Do(emqx v1alpha2.Emqx) error {
-	ech.logger.WithValues("namespace", emqx.GetNamespace, "name", emqx.GetName()).Info("handler doing")
+	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).Info("handler doing")
 	if err := emqx.Validate(); err != nil {
 		// TODO
 		// metrics.ClusterMetrics.SetClusterError(emqx.GetNamespace(), emqx.GetName())
