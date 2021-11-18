@@ -1,14 +1,9 @@
 package service
 
 const (
-	EMQX_NAME                = "emqx"
-	EMQX_LIC_NAME            = "emqx-lic"
-	EMQX_LOG_NAME            = "emqx-log-dir"
-	EMQX_DATA_NAME           = "emqx-data-dir"
-	EMQX_ACL_CONF_NAME       = "emqx-acl"
-	EMQX_LOADED_MODULES_NAME = "emqx-loaded-modules"
-	EMQX_LOADED_PLUGINS_NAME = "emqx-loaded-plugins"
-	// emqxenvName            = "cloud-env"
+	EMQX_NAME = "emqx"
+
+	EMQX_LIC_NAME    = "emqx-lic"
 	EMQX_LIC_DIR     = "/opt/emqx/etc/emqx.lic"
 	EMQX_LIC_SUBPATH = "emqx.lic"
 

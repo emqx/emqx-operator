@@ -181,3 +181,11 @@ func (emqx *EmqxBroker) GetLoadedPluginConfName() string {
 func (emqx *EmqxBroker) GetLoadedModulesConfName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules")
 }
+
+func (emqx *EmqxBroker) GetDataVolumeName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "data")
+}
+
+func (emqx *EmqxBroker) GetLogVolumeName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "log")
+}
