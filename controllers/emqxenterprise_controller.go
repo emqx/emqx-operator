@@ -40,7 +40,7 @@ type EmqxEnterpriseReconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
 
-	Handler *EmqxBrokerClusterHandler
+	Handler *EmqxClusterHandler
 }
 
 func NewEmqxEnterpriseReconciler(mgr manager.Manager) *EmqxEnterpriseReconciler {
@@ -56,7 +56,7 @@ func NewEmqxEnterpriseReconciler(mgr manager.Manager) *EmqxEnterpriseReconciler 
 
 	// TODO eHealer
 
-	handler := &EmqxBrokerClusterHandler{
+	handler := &EmqxClusterHandler{
 		k8sServices: k8sService,
 		eService:    eService,
 		metaCache:   new(cache.MetaMap),
