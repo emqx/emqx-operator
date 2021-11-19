@@ -31,48 +31,57 @@ func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []me
 func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	emqxPorts := []corev1.ServicePort{
 		{
-			Name:     SERVICE_TCP_NAME,
-			Port:     SERVICE_TCP_PORT,
+			Name:     EMQX_MQTT_NAME,
+			Port:     EMQX_MQTT_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: SERVICE_TCP_PORT,
+				IntVal: EMQX_MQTT_PORT,
 			},
 		},
 		{
-			Name:     SERVICE_TCPS_NAME,
-			Port:     SERVICE_TCPS_PORT,
+			Name:     EMQX_MQTTS_NAME,
+			Port:     EMQX_MQTTS_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: SERVICE_TCPS_PORT,
+				IntVal: EMQX_MQTTS_PORT,
 			},
 		},
 		{
-			Name:     SERVICE_WS_NAME,
-			Port:     SERVICE_WS_PORT,
+			Name:     EMQX_WS_NAME,
+			Port:     EMQX_WS_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: SERVICE_WS_PORT,
+				IntVal: EMQX_WS_PORT,
 			},
 		},
 		{
-			Name:     SERVICE_WSS_NAME,
-			Port:     SERVICE_WSS_PORT,
+			Name:     EMQX_WSS_NAME,
+			Port:     EMQX_WSS_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: SERVICE_WSS_PORT,
+				IntVal: EMQX_WSS_PORT,
 			},
 		},
 		{
-			Name:     SERVICE_DASHBOARD_NAME,
-			Port:     SERVICE_DASHBOARD_PORT,
+			Name:     EMQX_DASHBOARD_NAME,
+			Port:     EMQX_DASHBOARD_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: SERVICE_DASHBOARD_PORT,
+				IntVal: EMQX_DASHBOARD_PORT,
+			},
+		},
+		{
+			Name:     EMQX_API_NAME,
+			Port:     EMQX_API_PORT,
+			Protocol: "TCP",
+			TargetPort: intstr.IntOrString{
+				Type:   0,
+				IntVal: EMQX_API_PORT,
 			},
 		},
 	}
@@ -141,7 +150,7 @@ func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, 
 	return cmForPG
 }
 
-func NewEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
+func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
 	name := emqx.GetName()
 	namespace := emqx.GetNamespace()
 
@@ -204,10 +213,10 @@ func NewEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, owne
 							Resources:       emqx.GetResource(),
 							Env:             env,
 							Ports:           ports,
-							VolumeMounts:    getEmqxBrokerVolumeMounts(emqx),
+							VolumeMounts:    getEmqxVolumeMounts(emqx),
 						},
 					},
-					Volumes: getEmqxBrokerVolumes(emqx),
+					Volumes: getEmqxVolumes(emqx),
 				},
 			},
 		},
@@ -228,7 +237,7 @@ func getVolumeClaimTemplates(emqx v1alpha2.Emqx) []corev1.PersistentVolumeClaim 
 	}
 }
 
-func getEmqxBrokerVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
+func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{}
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
@@ -282,7 +291,7 @@ func getEmqxBrokerVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 	return volumeMounts
 }
 
-func getEmqxBrokerVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
+func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 	volumes := []corev1.Volume{}
 	storageSpec := emqx.GetStorage()
 	if reflect.ValueOf(storageSpec).IsNil() {

@@ -20,8 +20,8 @@ var (
 // resources that a EMQ X Cluster needs.
 type EmqxClusterHandler struct {
 	k8sServices k8s.Services
-	eService    service.EmqxBrokerClusterClient
-	eChecker    service.EmqxBrokerClusterCheck
+	eService    service.EmqxClusterClient
+	eChecker    service.EmqxClusterCheck
 	eventsCli   k8s.Event
 	logger      logr.Logger
 	metaCache   *cache.MetaMap

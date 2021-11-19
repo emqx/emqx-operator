@@ -51,7 +51,7 @@ func NewEmqxEnterpriseReconciler(mgr manager.Manager) *EmqxEnterpriseReconciler 
 	// TODO
 
 	// Create internal services.
-	eService := service.NewEmqxBrokerClusterKubeClient(k8sService, log)
+	eService := service.NewEmqxClusterKubeClient(k8sService, log)
 	// TODO eChecker
 
 	// TODO eHealer

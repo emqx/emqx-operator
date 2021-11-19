@@ -8,32 +8,32 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// EmqxBrokerClusterCheck defines the intercace able to check the correct status of a emq x cluster
-type EmqxBrokerClusterCheck interface {
-	CheckEmqxBrokerReadyReplicas(emqx v1alpha2.Emqx) error
+// EmqxClusterCheck defines the intercace able to check the correct status of a emq x cluster
+type EmqxClusterCheck interface {
+	CheckEmqxReadyReplicas(emqx v1alpha2.Emqx) error
 }
 
-// EmqxBrokerClusterChecker is our implementation of EmqxBrokerClusterCheck intercace
-type EmqxBrokerClusterChecker struct {
+// EmqxClusterChecker is our implementation of EmqxClusterCheck intercace
+type EmqxClusterChecker struct {
 	k8sService k8s.Services
 	// TODO httpClient
-	// emqxBrokerClient broker.Client
+	// EmqxClient broker.Client
 	logger logr.Logger
 }
 
-// NewEmqxBrokerClusterChecker creates an object of the emqxBrokerClusterChecker struct
-// func NewEmqxBrokerClusterChecker(k8sService k8s.Services, emqxBrokerClient broker.Client, logger logr.Logger) *EmqxBrokerClusterChecker {
-func NewEmqxBrokerClusterChecker(k8sService k8s.Services, logger logr.Logger) *EmqxBrokerClusterChecker {
-	return &EmqxBrokerClusterChecker{
+// NewEmqxClusterChecker creates an object of the EmqxClusterChecker struct
+// func NewEmqxClusterChecker(k8sService k8s.Services, EmqxClient broker.Client, logger logr.Logger) *EmqxClusterChecker {
+func NewEmqxClusterChecker(k8sService k8s.Services, logger logr.Logger) *EmqxClusterChecker {
+	return &EmqxClusterChecker{
 		k8sService: k8sService,
 		// TODO
-		// emqxBrokerClient: emqxBrokerClient,
+		// EmqxClient: EmqxClient,
 		logger: logger,
 	}
 }
 
-// CheckEmqxBrokerReadyReplicas controls that the number of deployed emqx ready pod is the same than the requested on the spec
-func (ec *EmqxBrokerClusterChecker) CheckEmqxBrokerReadyReplicas(emqx v1alpha2.Emqx) error {
+// CheckEmqxReadyReplicas controls that the number of deployed emqx ready pod is the same than the requested on the spec
+func (ec *EmqxClusterChecker) CheckEmqxReadyReplicas(emqx v1alpha2.Emqx) error {
 	d, err := ec.k8sService.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
 		return err
@@ -45,10 +45,10 @@ func (ec *EmqxBrokerClusterChecker) CheckEmqxBrokerReadyReplicas(emqx v1alpha2.E
 }
 
 // TODO
-// GetEmqxBrokerClusterIPs return the IPS of brokers
-// func (ec *EmqxBrokerClusterChecker) GetEmqxBrokerClusterIPs(e *v1alpha2.EmqxBroker) ([]string, error) {
+// GetEmqxClusterIPs return the IPS of brokers
+// func (ec *EmqxClusterChecker) GetEmqxClusterIPs(e *v1alpha2.Emqx) ([]string, error) {
 // 	ips := []string{}
-// 	stsps, err := ec.k8sService.GetStatefulSetPods(e.Namespace, util.GetEmqxBrokerName(e))
+// 	stsps, err := ec.k8sService.GetStatefulSetPods(e.Namespace, util.GetEmqxName(e))
 // 	if err != nil {
 // 		return nil, err
 // 	}
