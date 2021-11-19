@@ -1,6 +1,19 @@
+## slim example
+# apiVersion: apps.emqx.io/v1alpha2
+# kind: EmqxEnterprise
+# metadata:
+#   name: emqx
+# spec:
+#   serviceAccountName: "emqx"
+#   image: emqx/emqx-ee:4.3.5
+#   replicas: 3
+#   labels:
+#     cluster: emqx
+
+## ---
+## full example
 apiVersion: apps.emqx.io/v1alpha2
 kind: EmqxBroker
-## kind: EmqxEnterprise
 metadata:
   name: emqx
 spec:
@@ -18,3 +31,23 @@ spec:
             storage: 20Mi
         accessModes:
         - ReadWriteMany
+  aclConf: >
+    {allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
+    {allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
+    {deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
+    {allow, all}.
+  loadedPluginConf: >
+    {emqx_management, true}.
+    {emqx_recon, true}.
+    {emqx_retainer, true}.
+    {emqx_dashboard, true}.
+    {emqx_telemetry, true}.
+    {emqx_rule_engine, true}.
+    {emqx_bridge_mqtt, false}.
+  loadedModulesConf: >
+    {emqx_mod_acl_internal, true}.
+    {emqx_mod_presence, true}.
+    {emqx_mod_delayed, false}.
+    {emqx_mod_rewrite, false}.
+    {emqx_mod_subscription, false}.
+    {emqx_mod_topic_metrics, false}.
