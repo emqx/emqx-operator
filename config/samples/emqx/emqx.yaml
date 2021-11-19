@@ -5,7 +5,7 @@ metadata:
   name: emqx
 spec:
   serviceAccountName: "emqx"
-  image: emqx/emqx:4.3.8
+  image: emqx/emqx:4.3.10
   replicas: 3
   labels:
     cluster: emqx

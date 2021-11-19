@@ -1,6 +1,8 @@
 package service
 
 import (
+	"reflect"
+
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -169,12 +171,6 @@ func newEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, owne
 	// TODO
 	labels = map[string]string{}
 
-	volumeMounts := getEmqxBrokerVolumeMounts(emqx)
-	volumes := getEmqxBrokerVolumes(emqx)
-
-	storageSpec := emqx.GetStorage()
-	// volumeClaimTemplates := getVolumeClaimTemplates(storageSpec.VolumeClaimTemplates, emqx, ownerRefs)
-
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
@@ -188,8 +184,8 @@ func newEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, owne
 			Selector: &metav1.LabelSelector{
 				MatchLabels: emqx.GetLabels(),
 			},
-			PodManagementPolicy: appsv1.ParallelPodManagement,
-			// VolumeClaimTemplates: volumeClaimTemplates,
+			PodManagementPolicy:  appsv1.ParallelPodManagement,
+			VolumeClaimTemplates: getVolumeClaimTemplates(emqx),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					// TODO merge labels
@@ -215,38 +211,44 @@ func newEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, owne
 							Env:             env,
 							Lifecycle:       lifecycle,
 							Ports:           ports,
-							VolumeMounts:    volumeMounts,
+							VolumeMounts:    getEmqxBrokerVolumeMounts(emqx),
 						},
 					},
-					Volumes: volumes,
+					Volumes: getEmqxBrokerVolumes(emqx),
 				},
 			},
 		},
 	}
 
-	for _, item := range []string{"data", "log"} {
-		pvcTemplate := MakeVolumeClaimTemplate(storageSpec.VolumeClaimTemplate, emqx)
-		switch item {
-		case "data":
-			pvcTemplate.Name = emqx.GetDataVolumeName()
-		case "log":
-			pvcTemplate.Name = emqx.GetLogVolumeName()
-		}
-		if storageSpec.VolumeClaimTemplate.Spec.AccessModes == nil {
-			pvcTemplate.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
-		} else {
-			pvcTemplate.Spec.AccessModes = storageSpec.VolumeClaimTemplate.Spec.AccessModes
-		}
-		pvcTemplate.Spec.Resources = storageSpec.VolumeClaimTemplate.Spec.Resources
-		pvcTemplate.Spec.Selector = storageSpec.VolumeClaimTemplate.Spec.Selector
-		sts.Spec.VolumeClaimTemplates = append(sts.Spec.VolumeClaimTemplates, *pvcTemplate)
-	}
-
 	return sts
+}
+
+func getVolumeClaimTemplates(emqx v1alpha2.Emqx) []corev1.PersistentVolumeClaim {
+	storageSpec := emqx.GetStorage()
+	if reflect.ValueOf(storageSpec).IsNil() {
+		return []corev1.PersistentVolumeClaim{}
+	} else {
+		return []corev1.PersistentVolumeClaim{
+			genVolumeClaimTemplate(emqx, emqx.GetDataVolumeName()),
+			genVolumeClaimTemplate(emqx, emqx.GetLogVolumeName()),
+		}
+	}
 }
 
 func getEmqxBrokerVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{}
+	volumeMounts = append(volumeMounts,
+		corev1.VolumeMount{
+			Name:      emqx.GetDataVolumeName(),
+			MountPath: EMQX_DATA_DIR,
+		},
+	)
+	volumeMounts = append(volumeMounts,
+		corev1.VolumeMount{
+			Name:      emqx.GetLogVolumeName(),
+			MountPath: EMQX_LOG_DIR,
+		},
+	)
 	if emqx.GetLicense() != "" {
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
@@ -289,6 +291,25 @@ func getEmqxBrokerVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 
 func getEmqxBrokerVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 	volumes := []corev1.Volume{}
+	storageSpec := emqx.GetStorage()
+	if reflect.ValueOf(storageSpec).IsNil() {
+		volumes = append(volumes,
+			corev1.Volume{
+				Name: emqx.GetDataVolumeName(),
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		)
+		volumes = append(volumes,
+			corev1.Volume{
+				Name: emqx.GetLogVolumeName(),
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		)
+	}
 	if emqx.GetLicense() != "" {
 		volumes = append(volumes,
 			corev1.Volume{
@@ -304,7 +325,8 @@ func getEmqxBrokerVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 						},
 					},
 				},
-			})
+			},
+		)
 	}
 
 	if emqx.GetAclConf() != "" {
@@ -477,52 +499,16 @@ func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 	return specPolicy
 }
 
-// func getVolumeClaimTemplates(e v1alpha2.EmbeddedPersistentVolumeClaim, emqx *v1alpha2.EmqxBroker, ownerRefs []metav1.OwnerReference) []corev1.PersistentVolumeClaim {
-// 	pvcList := []string{EMQX_LOG_NAME, EMQX_DATA_NAME}
-// 	for _, pvc := range pvcList {
-// 		pvcTemplate := getVolumeClaimTemplate(emqx.Spec.Storage.VolumeClaimTemplates, emqx, ownerRefs)
-// 		if pvcTemplate.Name == "" {
-// 			pvcTemplate.Name = util.GetPvcName(pvc)
-// 		}
-// 		if emqx.Spec.Storage..VolumeClaimTemplate.Spec.AccessModes == nil {
-// 			pvcTemplate.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
-// 		} else {
-// 			pvcTemplate.Spec.AccessModes = storageSpec.VolumeClaimTemplate.Spec.AccessModes
-// 		}
-// 		pvcTemplate.Spec.Resources = storageSpec.VolumeClaimTemplate.Spec.Resources
-// 		pvcTemplate.Spec.Selector = storageSpec.VolumeClaimTemplate.Spec.Selector
-// 		statefulsetSpec.VolumeClaimTemplates = append(statefulsetSpec.VolumeClaimTemplates, *pvcTemplate)
-// 	}
-// 	return pvcs
-// }
-
-// func getVolumeClaimTemplate(e v1alpha2.EmbeddedPersistentVolumeClaim, emqx *v1alpha2.EmqxBroker, ownerRefs []metav1.OwnerReference) *corev1.PersistentVolumeClaim {
-// 	pvc := corev1.PersistentVolumeClaim{
-// 		TypeMeta: metav1.TypeMeta{
-// 			APIVersion: e.APIVersion,
-// 			Kind:       e.Kind,
-// 		},
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:            e.Name,
-// 			Namespace:       emqx.Namespace,
-// 			Annotations:     emqx.ObjectMeta.Annotations,
-// 			OwnerReferences: ownerRefs,
-// 		},
-// 		Spec:   e.Spec,
-// 		Status: e.Status,
-// 	}
-// 	return &pvc
-// }
-
-func MakeVolumeClaimTemplate(e v1alpha2.EmbeddedPersistentVolumeClaim, emqx v1alpha2.Emqx) *corev1.PersistentVolumeClaim {
+func genVolumeClaimTemplate(emqx v1alpha2.Emqx, Name string) corev1.PersistentVolumeClaim {
+	template := emqx.GetStorage().VolumeClaimTemplate
 	boolTrue := true
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: e.APIVersion,
-			Kind:       e.Kind,
+			APIVersion: template.APIVersion,
+			Kind:       template.Kind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        e.Name,
+			Name:        Name,
 			Namespace:   emqx.GetNamespace(),
 			Annotations: emqx.GetAnnotations(),
 			OwnerReferences: []metav1.OwnerReference{
@@ -536,8 +522,11 @@ func MakeVolumeClaimTemplate(e v1alpha2.EmbeddedPersistentVolumeClaim, emqx v1al
 				},
 			},
 		},
-		Spec:   e.Spec,
-		Status: e.Status,
+		Spec:   template.Spec,
+		Status: template.Status,
 	}
-	return &pvc
+	if pvc.Spec.AccessModes == nil {
+		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+	}
+	return pvc
 }

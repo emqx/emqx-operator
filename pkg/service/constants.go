@@ -7,9 +7,8 @@ const (
 	EMQX_LIC_DIR     = "/opt/emqx/etc/emqx.lic"
 	EMQX_LIC_SUBPATH = "emqx.lic"
 
-	EMQX_DATA_DIR = "/opt/emqx/data/mnesia"
-
-	EMQX_LOG_DIR = "/opt/emqx/log"
+	EMQX_DATA_DIR = "/opt/emqx/data"
+	EMQX_LOG_DIR  = "/opt/emqx/log"
 
 	EMQX_ACL_CONF_DIR     = "/opt/emqx/etc/acl.conf"
 	EMQX_ACL_CONF_SUBPATH = "acl.conf"
