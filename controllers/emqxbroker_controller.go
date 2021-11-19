@@ -54,7 +54,7 @@ type EmqxBrokerReconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
 
-	Handler *EmqxBrokerClusterHandler
+	Handler *EmqxClusterHandler
 }
 
 func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
@@ -66,14 +66,14 @@ func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
 	// emqxBrokerClient := broker.New()
 
 	// Create internal services.
-	eService := service.NewEmqxBrokerClusterKubeClient(k8sService, log)
+	eService := service.NewEmqxClusterKubeClient(k8sService, log)
 	// TODO
 	// eChecker := service.NewEmqxBrokerClusterChecker(k8sService, emqxBrokerClient, log)
 	eChecker := service.NewEmqxBrokerClusterChecker(k8sService, log)
 
 	// TODO eHealer
 
-	handler := &EmqxBrokerClusterHandler{
+	handler := &EmqxClusterHandler{
 		k8sServices: k8sService,
 		eService:    eService,
 		eChecker:    eChecker,

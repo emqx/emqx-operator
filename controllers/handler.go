@@ -16,9 +16,9 @@ var (
 	defaultLabels = map[string]string{}
 )
 
-// EmqxBrokerClusterHandler is the EMQ X Cluster handler. This handler will create the required
+// EmqxClusterHandler is the EMQ X Cluster handler. This handler will create the required
 // resources that a EMQ X Cluster needs.
-type EmqxBrokerClusterHandler struct {
+type EmqxClusterHandler struct {
 	k8sServices k8s.Services
 	eService    service.EmqxBrokerClusterClient
 	eChecker    service.EmqxBrokerClusterCheck
@@ -28,7 +28,7 @@ type EmqxBrokerClusterHandler struct {
 }
 
 // Do will ensure the EMQ X Cluster is in the expected state and update the EMQ X Cluster status.
-func (ech *EmqxBrokerClusterHandler) Do(emqx v1alpha2.Emqx) error {
+func (ech *EmqxClusterHandler) Do(emqx v1alpha2.Emqx) error {
 	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).Info("handler doing")
 	if err := emqx.Validate(); err != nil {
 		// TODO
@@ -92,7 +92,7 @@ func (ech *EmqxBrokerClusterHandler) Do(emqx v1alpha2.Emqx) error {
 	return nil
 }
 
-func (ech *EmqxBrokerClusterHandler) updateStatus(meta *cache.Meta) {
+func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) {
 	emqx := meta.Obj
 
 	if meta.State != cache.Check {
@@ -118,12 +118,12 @@ func (ech *EmqxBrokerClusterHandler) updateStatus(meta *cache.Meta) {
 }
 
 // getLabels merges all the labels (dynamic and operator static ones).
-func (ech *EmqxBrokerClusterHandler) getLabels(emqx v1alpha2.Emqx) map[string]string {
+func (ech *EmqxClusterHandler) getLabels(emqx v1alpha2.Emqx) map[string]string {
 	dynLabels := map[string]string{}
 	return util.MergeLabels(defaultLabels, dynLabels, emqx.GetLabels())
 }
 
-func (ech *EmqxBrokerClusterHandler) createOwnerReferences(emqx v1alpha2.Emqx) []metav1.OwnerReference {
+func (ech *EmqxClusterHandler) createOwnerReferences(emqx v1alpha2.Emqx) []metav1.OwnerReference {
 	emqxGroupVersionKind := v1alpha2.VersionKind(emqx.GetKind())
 	return []metav1.OwnerReference{
 		*metav1.NewControllerRef(emqx, emqxGroupVersionKind),
