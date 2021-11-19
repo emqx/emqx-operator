@@ -24,10 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
-const (
-	Kind = "EmqxBroker"
-)
-
 var (
 	// GroupVersion is group version used to register these objects
 	GroupVersion = schema.GroupVersion{Group: "apps.emqx.io", Version: "v1alpha2"}

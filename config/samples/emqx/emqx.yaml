@@ -1,16 +1,3 @@
-## slim example
-# apiVersion: apps.emqx.io/v1alpha2
-# kind: EmqxEnterprise
-# metadata:
-#   name: emqx
-# spec:
-#   serviceAccountName: "emqx"
-#   image: emqx/emqx-ee:4.3.5
-#   replicas: 3
-#   labels:
-#     cluster: emqx
-
-## ---
 ## full example
 apiVersion: apps.emqx.io/v1alpha2
 kind: EmqxBroker

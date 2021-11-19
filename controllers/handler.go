@@ -124,8 +124,8 @@ func (ech *EmqxBrokerClusterHandler) getLabels(emqx v1alpha2.Emqx) map[string]st
 }
 
 func (ech *EmqxBrokerClusterHandler) createOwnerReferences(emqx v1alpha2.Emqx) []metav1.OwnerReference {
-	egvk := v1alpha2.VersionKind(v1alpha2.Kind)
+	emqxGroupVersionKind := v1alpha2.VersionKind(emqx.GetKind())
 	return []metav1.OwnerReference{
-		*metav1.NewControllerRef(emqx, egvk),
+		*metav1.NewControllerRef(emqx, emqxGroupVersionKind),
 	}
 }
