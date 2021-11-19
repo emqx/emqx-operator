@@ -147,29 +147,22 @@ func newEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, owne
 
 	ports := getContainerPorts()
 
-	postStartCommand := []string{"sudo", "/bin/sh", "-c", "chown -R 1000:1000 /opt/emqx/log /opt/emqx/data/mnesia"}
-
-	lifecycle := &corev1.Lifecycle{
-		PostStart: &corev1.Handler{
-			Exec: &corev1.ExecAction{
-				Command: postStartCommand,
-			},
-		},
-	}
-
-	// var value int64 = 0
-	// var privileged bool = true
-	// securityContext := &corev1.SecurityContext{
-	// 	RunAsUser: &value,
-	// 	// RunAsGroup: &value,
-	// 	// FSGroup:    &value,
-	// 	Privileged: &privileged,
-	// }
-
 	env := mergeEnv(emqx)
 
 	// TODO
 	labels = map[string]string{}
+
+	var emqxUserGroup int64 = 1000
+	var runAsNonRoot bool = true
+	var fsGroupChangeAlways corev1.PodFSGroupChangePolicy = "Always"
+
+	securityContext := &corev1.PodSecurityContext{
+		FSGroup:             &emqxUserGroup,
+		FSGroupChangePolicy: &fsGroupChangeAlways,
+		RunAsNonRoot:        &runAsNonRoot,
+		RunAsUser:           &emqxUserGroup,
+		SupplementalGroups:  []int64{emqxUserGroup},
+	}
 
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -200,6 +193,7 @@ func newEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, owne
 					// TODO
 					// Affinity: getAffinity(rc.Spec.Affinity, labels),
 					ServiceAccountName: emqx.GetServiceAccountName(),
+					SecurityContext:    securityContext,
 					Tolerations:        emqx.GetToleRations(),
 					NodeSelector:       emqx.GetNodeSelector(),
 					Containers: []corev1.Container{
@@ -209,7 +203,6 @@ func newEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, owne
 							ImagePullPolicy: getPullPolicy(emqx.GetImagePullPolicy()),
 							Resources:       emqx.GetResource(),
 							Env:             env,
-							Lifecycle:       lifecycle,
 							Ports:           ports,
 							VolumeMounts:    getEmqxBrokerVolumeMounts(emqx),
 						},
