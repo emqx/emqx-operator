@@ -57,7 +57,7 @@ jobs:
         run: |
           kubectl create -f config/samples/emqx/rbac.yaml
           kubectl create -f config/samples/emqx/service.yaml
-          kubectl create -f config/samples/emqx/${{ matrix.kind }}
+          kubectl create -f config/samples/emqx/${{ matrix.kind }}.yaml
       - name: Check emqx pods
         timeout-minutes: 5
         run: |

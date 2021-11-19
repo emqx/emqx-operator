@@ -68,8 +68,7 @@ func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
 	// Create internal services.
 	eService := service.NewEmqxClusterKubeClient(k8sService, log)
 	// TODO
-	// eChecker := service.NewEmqxBrokerClusterChecker(k8sService, emqxBrokerClient, log)
-	eChecker := service.NewEmqxBrokerClusterChecker(k8sService, log)
+	eChecker := service.NewEmqxClusterChecker(k8sService, log)
 
 	// TODO eHealer
 
@@ -139,7 +138,7 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return reconcile.Result{}, err
 	}
 
-	if err = r.Handler.eChecker.CheckEmqxBrokerReadyReplicas(instance); err != nil {
+	if err = r.Handler.eChecker.CheckEmqxReadyReplicas(instance); err != nil {
 		reqLogger.Info(err.Error())
 		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 	}
