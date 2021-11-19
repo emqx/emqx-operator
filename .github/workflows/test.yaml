@@ -25,6 +25,12 @@ jobs:
 
   deployment:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kind:
+          - emqx
+          - emqx-ee
     steps:
       - run: minikube start
       - uses: actions/checkout@v2
@@ -47,7 +53,11 @@ jobs:
             echo "waiting operator controller pod running"
             sleep 1
           done
-      - run: kubectl create -f config/samples/emqx
+      - name: Deploy ${{ matrix.kind }}
+        run: |
+          kubectl create -f config/samples/emqx/rbac.yaml
+          kubectl create -f config/samples/emqx/service.yaml
+          kubectl create -f config/samples/emqx/${{ matrix.kind }}
       - name: Check emqx pods
         timeout-minutes: 5
         run: |
@@ -56,63 +66,63 @@ jobs:
             echo "waiting emqx pod running"
             sleep 1
           done
-      - name: Check emqx broker
+      - name: Check ${{ matrix.kind}} broker
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          while ! kubectl exec -i emqx-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
-            echo "waiting emqx broker running"
+          while ! kubectl exec -i ${{ matrix.kind}}-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+            echo "waiting ${{ matrix.kind}} broker running"
             sleep 1
           done
-      - name: Check emqx cluster
+      - name: Check ${{ matrix.kind}} cluster
         timeout-minutes: 5
         run: |
           set -euo pipefail
           while
-            nodes="$(kubectl exec -i emqx-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
+            nodes="$(kubectl exec -i ${{ matrix.kind}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
             [ "$nodes" != "3" ];
           do
-            echo "waiting emqx cluster scale"
+            echo "waiting ${{ matrix.kind}} cluster scale"
             sleep 1
           done
-      - run: kubectl scale --replicas=5 EmqxBroker/emqx
+      - run: kubectl scale --replicas=5 ${{ matrix.kind }}/${{ matrix.kind }}
       - name: Check scale
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          while ! kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
-            echo "waiting scale emqx to 5"
+          while ! kubectl describe sts ${{ matrix.kind}} | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
+            echo "waiting scale ${{ matrix.kind}} to 5"
             sleep 1
           done
-      - name: Check emqx broker
+      - name: Check ${{ matrix.kind}}
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          while ! kubectl exec -i emqx-4 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
-            echo "waiting emqx broker running"
+          while ! kubectl exec -i ${{ matrix.kind}}-4 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+            echo "waiting ${{ matrix.kind}} broker running"
             sleep 1
           done
-      - name: Check emqx cluster
+      - name: Check ${{ matrix.kind}} cluster
         timeout-minutes: 5
         run: |
           set -euo pipefail
           while
-            nodes="$(kubectl exec -i emqx-4 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
+            nodes="$(kubectl exec -i ${{ matrix.kind}}-4 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
             [ "$nodes" != "5" ];
           do
-            echo "waiting emqx cluster scale"
+            echo "waiting ${{ matrix.kind}} cluster scale"
             sleep 1
           done
       - name: Get controller status
         if: failure()
         run: |
           set -x
-          kubectl describe sts emqx
+          kubectl describe sts ${{ matrix.kind}}
           kubectl logs -l "control-plane=controller-manager" -n operator-emqx-system -c manager
-      - name: Get emqx status
+      - name: Get ${{ matrix.kind}} status
         if: failure()
         run: |
           set -x
-          kubectl describe sts emqx
-          kubectl exec -i emqx-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
+          kubectl describe sts ${{ matrix.kind}}
+          kubectl exec -i ${{ matrix.kind}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
           kubectl logs -l "cluster=emqx"
