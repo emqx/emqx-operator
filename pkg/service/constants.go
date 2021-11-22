@@ -10,15 +10,6 @@ const (
 	EMQX_DATA_DIR = "/opt/emqx/data"
 	EMQX_LOG_DIR  = "/opt/emqx/log"
 
-	EMQX_ACL_CONF_DIR     = "/opt/emqx/etc/acl.conf"
-	EMQX_ACL_CONF_SUBPATH = "acl.conf"
-
-	EMQX_LOADED_MODULES_DIR     = "/opt/emqx/data/loaded_modules"
-	EMQX_LOADED_MODULES_SUBPATH = "loaded_modules"
-
-	EMQX_LOADED_PLUGINS_DIR     = "/opt/emqx/data/loaded_plugins"
-	EMQX_LOADED_PLUGINS_SUBPATH = "loaded_plugins"
-
 	EMQX_MQTT_NAME = "mqtt"
 	EMQX_MQTT_PORT = 1883
 

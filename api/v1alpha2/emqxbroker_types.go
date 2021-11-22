@@ -170,16 +170,65 @@ func (emqx *EmqxBroker) GetHeadlessServiceName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }
 
-func (emqx *EmqxBroker) GetAclConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "acl")
+func (emqx *EmqxBroker) GetAcl() map[string]string {
+	var config string
+	if emqx.Spec.AclConf != "" {
+		config = emqx.Spec.AclConf
+	} else {
+		config = `
+{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
+{allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
+{deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
+{allow, all}.
+`
+	}
+	return map[string]string{
+		"name":      emqx.Name,
+		"mountPath": "/opt/emqx/etc/acl.conf",
+		"subPath":   "acl.conf",
+		"conf":      config,
+	}
+
 }
 
-func (emqx *EmqxBroker) GetLoadedPluginConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins")
+func (emqx *EmqxBroker) GetLoadedPlugins() map[string]string {
+	var config string
+	if emqx.Spec.LoadedPluginConf != "" {
+		config = emqx.Spec.LoadedPluginConf
+	} else {
+		config = `
+{emqx_management, true}.
+{emqx_recon, true}.
+{emqx_retainer, true}.
+{emqx_dashboard, true}.
+{emqx_telemetry, true}.
+{emqx_rule_engine, true}.
+`
+	}
+	return map[string]string{
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
+		"mountPath": "/opt/emqx/data/loaded_plugins",
+		"subPath":   "loaded_plugins",
+		"conf":      config,
+	}
 }
 
-func (emqx *EmqxBroker) GetLoadedModulesConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules")
+func (emqx *EmqxBroker) GetLoadedModules() map[string]string {
+	var config string
+	if emqx.Spec.LoadedModulesConf != "" {
+		config = emqx.Spec.LoadedModulesConf
+	} else {
+		config = `
+{emqx_mod_acl_internal, true}.
+{emqx_mod_presence, true}.
+`
+	}
+	return map[string]string{
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
+		"mountPath": "/opt/emqx/data/loaded_modules",
+		"subPath":   "loaded_modules",
+		"conf":      config,
+	}
 }
 
 func (emqx *EmqxBroker) GetDataVolumeName() string {

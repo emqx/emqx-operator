@@ -62,8 +62,8 @@ jobs:
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          while ! kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
-            echo "waiting emqx pod running"
+          while ! kubectl describe sts ${{ matrix.kind}} | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
+            echo "waiting ${{ matrix.kind}} pod running"
             sleep 1
           done
       - name: Check ${{ matrix.kind}} broker

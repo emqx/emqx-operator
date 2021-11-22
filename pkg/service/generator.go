@@ -106,45 +106,45 @@ func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 }
 
 func NewConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-	data := map[string]string{"acl.conf": emqx.GetAclConf()}
+	acl := emqx.GetAcl()
 	cmForAcl := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            emqx.GetAclConfName(),
+			Name:            acl["name"],
 			Namespace:       emqx.GetNamespace(),
 			OwnerReferences: ownerRefs,
 		},
-		Data: data,
+		Data: map[string]string{"acl.conf": acl["conf"]},
 	}
 
 	return cmForAcl
 }
 
 func NewConfigMapForLoadedMoudles(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-	data := map[string]string{"loaded_modules": emqx.GetLoadedModulesConf()}
+	modules := emqx.GetLoadedModules()
 	cmForPM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            emqx.GetLoadedModulesConfName(),
+			Name:            modules["name"],
 			Namespace:       emqx.GetNamespace(),
 			OwnerReferences: ownerRefs,
 		},
-		Data: data,
+		Data: map[string]string{"loaded_modules": modules["conf"]},
 	}
 
 	return cmForPM
 }
 
 func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-	data := map[string]string{"loaded_plugins": emqx.GetLoadedPluginConf()}
+	plugins := emqx.GetLoadedPlugins()
 	cmForPG := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            emqx.GetLoadedPluginConfName(),
+			Name:            plugins["name"],
 			Namespace:       emqx.GetNamespace(),
 			OwnerReferences: ownerRefs,
 		},
-		Data: data,
+		Data: map[string]string{"loaded_plugins": plugins["conf"]},
 	}
 
 	return cmForPG
@@ -261,33 +261,30 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 			},
 		)
 	}
-	if emqx.GetAclConf() != "" {
-		volumeMounts = append(volumeMounts,
-			corev1.VolumeMount{
-				Name:      emqx.GetAclConfName(),
-				MountPath: EMQX_ACL_CONF_DIR,
-				SubPath:   EMQX_ACL_CONF_SUBPATH,
-			},
-		)
-	}
-	if emqx.GetLoadedModulesConf() != "" {
-		volumeMounts = append(volumeMounts,
-			corev1.VolumeMount{
-				Name:      emqx.GetLoadedModulesConfName(),
-				MountPath: EMQX_LOADED_MODULES_DIR,
-				SubPath:   EMQX_LOADED_MODULES_SUBPATH,
-			},
-		)
-	}
-	if emqx.GetLoadedPluginConf() != "" {
-		volumeMounts = append(volumeMounts,
-			corev1.VolumeMount{
-				Name:      emqx.GetLoadedPluginConfName(),
-				MountPath: EMQX_LOADED_PLUGINS_DIR,
-				SubPath:   EMQX_LOADED_PLUGINS_SUBPATH,
-			},
-		)
-	}
+	acl := emqx.GetAcl()
+	volumeMounts = append(volumeMounts,
+		corev1.VolumeMount{
+			Name:      acl["name"],
+			MountPath: acl["mountPath"],
+			SubPath:   acl["subPath"],
+		},
+	)
+	modules := emqx.GetLoadedModules()
+	volumeMounts = append(volumeMounts,
+		corev1.VolumeMount{
+			Name:      modules["name"],
+			MountPath: modules["mountPath"],
+			SubPath:   modules["subPath"],
+		},
+	)
+	plugins := emqx.GetLoadedPlugins()
+	volumeMounts = append(volumeMounts,
+		corev1.VolumeMount{
+			Name:      plugins["name"],
+			MountPath: plugins["mountPath"],
+			SubPath:   plugins["subPath"],
+		},
+	)
 	return volumeMounts
 }
 
@@ -331,63 +328,65 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 		)
 	}
 
-	if emqx.GetAclConf() != "" {
-		volumes = append(volumes,
-			corev1.Volume{
-				Name: emqx.GetAclConfName(),
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: emqx.GetAclConfName(),
-						},
-						Items: []corev1.KeyToPath{
-							{
-								Key:  "acl.conf",
-								Path: "acl.conf",
-							},
+	acl := emqx.GetAcl()
+	volumes = append(volumes,
+		corev1.Volume{
+			Name: acl["name"],
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: acl["name"],
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  acl["subPath"],
+							Path: acl["subPath"],
 						},
 					},
 				},
-			})
-	}
-	if emqx.GetLoadedPluginConf() != "" {
-		volumes = append(volumes,
-			corev1.Volume{
-				Name: emqx.GetLoadedPluginConfName(),
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: emqx.GetLoadedPluginConfName(),
-						},
-						Items: []corev1.KeyToPath{
-							{
-								Key:  "loaded_plugins",
-								Path: "loaded_plugins",
-							},
+			},
+		},
+	)
+
+	plugins := emqx.GetLoadedPlugins()
+	volumes = append(volumes,
+		corev1.Volume{
+			Name: plugins["name"],
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: plugins["name"],
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  plugins["subPath"],
+							Path: plugins["subPath"],
 						},
 					},
 				},
-			})
-	}
-	if emqx.GetLoadedModulesConf() != "" {
-		volumes = append(volumes,
-			corev1.Volume{
-				Name: emqx.GetLoadedModulesConfName(),
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: emqx.GetLoadedModulesConfName(),
-						},
-						Items: []corev1.KeyToPath{
-							{
-								Key:  "loaded_modules",
-								Path: "loaded_modules",
-							},
+			},
+		},
+	)
+
+	modules := emqx.GetLoadedModules()
+	volumes = append(volumes,
+		corev1.Volume{
+			Name: modules["name"],
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: modules["name"],
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  modules["subPath"],
+							Path: modules["subPath"],
 						},
 					},
 				},
-			})
-	}
+			},
+		},
+	)
 	return volumes
 
 }
