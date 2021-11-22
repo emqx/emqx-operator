@@ -19,13 +19,13 @@ var (
 			Image:              "emqx/emqx:4.3.10",
 			ServiceAccountName: "emqx",
 			// Storage: &{},
-			// AclConf:
+			// ACL:
 			// 	"{allow, {user, \"dashboard\"}, subscribe, [\"$SYS/#\"]}.
 			// 	{allow, {ipaddr, \"127.0.0.1\"}, pubsub, [\"$SYS/#\", \"#\"]}.
 			// 	{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.
 			// 	{allow, all}."
-			// LoadedPluginConf: {},
-			// LoadedModulesConf: {},
+			// LoadedPlugins: {},
+			// LoadedModules: {},
 		},
 	}
 )

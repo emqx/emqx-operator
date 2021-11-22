@@ -109,19 +109,6 @@ func (emqx *EmqxEnterprise) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
 func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar    { return emqx.Spec.Env }
 func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) { emqx.Spec.Env = env }
 
-func (emqx *EmqxEnterprise) GetAclConf() string        { return emqx.Spec.AclConf }
-func (emqx *EmqxEnterprise) SetAclConf(aclConf string) { emqx.Spec.AclConf = aclConf }
-
-func (emqx *EmqxEnterprise) GetLoadedPluginConf() string { return emqx.Spec.LoadedPluginConf }
-func (emqx *EmqxEnterprise) SetLoadedPluginConf(loadedPluginConf string) {
-	emqx.Spec.LoadedPluginConf = loadedPluginConf
-}
-
-func (emqx *EmqxEnterprise) GetLoadedModulesConf() string { return emqx.Spec.LoadedModulesConf }
-func (emqx *EmqxEnterprise) SetLoadedModulesConf(loadedModulesConf string) {
-	emqx.Spec.LoadedModulesConf = loadedModulesConf
-}
-
 func (emqx *EmqxEnterprise) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
 }
@@ -132,8 +119,8 @@ func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
 
 func (emqx *EmqxEnterprise) GetAcl() map[string]string {
 	var config string
-	if emqx.Spec.AclConf != "" {
-		config = emqx.Spec.AclConf
+	if emqx.Spec.ACL != "" {
+		config = emqx.Spec.ACL
 	} else {
 		config = `
 {allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
@@ -153,8 +140,8 @@ func (emqx *EmqxEnterprise) GetAcl() map[string]string {
 
 func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
 	var config string
-	if emqx.Spec.LoadedPluginConf != "" {
-		config = emqx.Spec.LoadedPluginConf
+	if emqx.Spec.LoadedPlugins != "" {
+		config = emqx.Spec.LoadedPlugins
 	} else {
 		config = `
 {emqx_management, true}.
@@ -175,8 +162,8 @@ func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
 
 func (emqx *EmqxEnterprise) GetLoadedModules() map[string]string {
 	var config string
-	if emqx.Spec.LoadedModulesConf != "" {
-		config = emqx.Spec.LoadedModulesConf
+	if emqx.Spec.LoadedModules != "" {
+		config = emqx.Spec.LoadedModules
 	} else {
 		config = `
 [{
