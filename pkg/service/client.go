@@ -36,30 +36,30 @@ func NewEmqxBrokerClusterKubeClient(k8sService k8s.Services, logger logr.Logger)
 
 // EnsureEmqxBrokerSecret make sure the EMQ X secret exists
 func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerSecret(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	secret := newSecretForCR(emqx, labels, ownerRefs)
+	secret := NewSecretForCR(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsSecret(emqx.GetNamespace(), secret)
 }
 
 // EnsureEmqxBrokerHeadlessService makes sure the EMQ X headless service exists
 func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerHeadlessService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	svc := newHeadLessSvcForCR(emqx, labels, ownerRefs)
+	svc := NewHeadLessSvcForCR(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsService(emqx.GetNamespace(), svc)
 }
 
 func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForAcl := newConfigMapForAcl(emqx, labels, ownerRefs)
+	configmapForAcl := NewConfigMapForAcl(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForAcl)
 }
 
 // EnsureEmqxBrokerConfigMapForLoadedModules make sure the EMQ X configmap for loaded modules exists
 func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForLM := newConfigMapForLoadedMoudles(emqx, labels, ownerRefs)
+	configmapForLM := NewConfigMapForLoadedMoudles(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForLM)
 }
 
 // EnsureEmqxBrokerConfigMapForLoadedPlugins make sure the EMQ X configmap for loaded plugins exists
 func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForPG := newConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
+	configmapForPG := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForPG)
 }
 
@@ -70,7 +70,7 @@ func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerStatefulSet(emqx v1alpha2.
 	if err != nil {
 		// If no resource we need to create.
 		if errors.IsNotFound(err) {
-			sts := newEmqxBrokerStatefulSet(emqx, labels, ownerRefs)
+			sts := NewEmqxBrokerStatefulSet(emqx, labels, ownerRefs)
 			return r.K8sService.CreateStatefulSet(emqx.GetNamespace(), sts)
 		}
 		return err
@@ -78,7 +78,7 @@ func (r *EmqxBrokerClusterKubeClient) EnsureEmqxBrokerStatefulSet(emqx v1alpha2.
 
 	if shouldUpdateEmqxBroker(emqx.GetResource(), oldSts.Spec.Template.Spec.Containers[0].Resources,
 		emqx.GetReplicas(), oldSts.Spec.Replicas) {
-		es := newEmqxBrokerStatefulSet(emqx, labels, ownerRefs)
+		es := NewEmqxBrokerStatefulSet(emqx, labels, ownerRefs)
 		return r.K8sService.UpdateStatefulSet(emqx.GetNamespace(), es)
 	}
 

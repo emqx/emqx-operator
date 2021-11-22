@@ -32,11 +32,10 @@ var (
 
 // TODO
 // unit test for newConfigMapForAcl
-func TestnewConfigMapForAcl(t *testing.T) {
+func TestNewConfigMapForAcl(t *testing.T) {
 
 	// type args struct {
 	// 	t    *v1alpha2.Emqx
-	// 	data map[string]string
 	// }
 
 	// TODO

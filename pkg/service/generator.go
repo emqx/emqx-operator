@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func newSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
+func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
 	stringData := map[string]string{"emqx.lic": emqx.GetLicense()}
 
 	secret := &corev1.Secret{
@@ -28,7 +28,7 @@ func newSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []me
 
 }
 
-func newHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
+func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	emqxPorts := []corev1.ServicePort{
 		{
 			Name:     SERVICE_TCP_NAME,
@@ -77,7 +77,7 @@ func newHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 		},
 	}
 	// labels = util.MergeLabels(labels, generateSelectorLabels(util.SentinelRoleName, cluster.Name))
-	labels = map[string]string{}
+	// labels = map[string]string{}
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -96,7 +96,7 @@ func newHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 	return svc
 }
 
-func newConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func NewConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"acl.conf": emqx.GetAclConf()}
 	cmForAcl := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -111,7 +111,7 @@ func newConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 	return cmForAcl
 }
 
-func newConfigMapForLoadedMoudles(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func NewConfigMapForLoadedMoudles(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"loaded_modules": emqx.GetLoadedModulesConf()}
 	cmForPM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -126,7 +126,7 @@ func newConfigMapForLoadedMoudles(emqx v1alpha2.Emqx, labels map[string]string, 
 	return cmForPM
 }
 
-func newConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	data := map[string]string{"loaded_plugins": emqx.GetLoadedPluginConf()}
 	cmForPG := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -141,7 +141,7 @@ func newConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, 
 	return cmForPG
 }
 
-func newEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
+func NewEmqxBrokerStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
 	name := emqx.GetName()
 	namespace := emqx.GetNamespace()
 
