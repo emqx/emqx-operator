@@ -59,11 +59,11 @@ type EmqxBrokerSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	AclConf string `json:"aclConf,omitempty"`
+	ACL string `json:"acl,omitempty"`
 
-	LoadedPluginConf string `json:"loadedPluginConf,omitempty"`
+	LoadedPlugins string `json:"loadedPlugins,omitempty"`
 
-	LoadedModulesConf string `json:"loadedModulesConf,omitempty"`
+	LoadedModules string `json:"loadedModules,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -149,19 +149,6 @@ func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
 func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar    { return emqx.Spec.Env }
 func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) { emqx.Spec.Env = env }
 
-func (emqx *EmqxBroker) GetAclConf() string        { return emqx.Spec.AclConf }
-func (emqx *EmqxBroker) SetAclConf(aclConf string) { emqx.Spec.AclConf = aclConf }
-
-func (emqx *EmqxBroker) GetLoadedPluginConf() string { return emqx.Spec.LoadedPluginConf }
-func (emqx *EmqxBroker) SetLoadedPluginConf(loadedPluginConf string) {
-	emqx.Spec.LoadedPluginConf = loadedPluginConf
-}
-
-func (emqx *EmqxBroker) GetLoadedModulesConf() string { return emqx.Spec.LoadedModulesConf }
-func (emqx *EmqxBroker) SetLoadedModulesConf(loadedModulesConf string) {
-	emqx.Spec.LoadedModulesConf = loadedModulesConf
-}
-
 func (emqx *EmqxBroker) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
 }
@@ -172,8 +159,8 @@ func (emqx *EmqxBroker) GetHeadlessServiceName() string {
 
 func (emqx *EmqxBroker) GetAcl() map[string]string {
 	var config string
-	if emqx.Spec.AclConf != "" {
-		config = emqx.Spec.AclConf
+	if emqx.Spec.ACL != "" {
+		config = emqx.Spec.ACL
 	} else {
 		config = `
 {allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
@@ -193,8 +180,8 @@ func (emqx *EmqxBroker) GetAcl() map[string]string {
 
 func (emqx *EmqxBroker) GetLoadedPlugins() map[string]string {
 	var config string
-	if emqx.Spec.LoadedPluginConf != "" {
-		config = emqx.Spec.LoadedPluginConf
+	if emqx.Spec.LoadedPlugins != "" {
+		config = emqx.Spec.LoadedPlugins
 	} else {
 		config = `
 {emqx_management, true}.
@@ -215,8 +202,8 @@ func (emqx *EmqxBroker) GetLoadedPlugins() map[string]string {
 
 func (emqx *EmqxBroker) GetLoadedModules() map[string]string {
 	var config string
-	if emqx.Spec.LoadedModulesConf != "" {
-		config = emqx.Spec.LoadedModulesConf
+	if emqx.Spec.LoadedModules != "" {
+		config = emqx.Spec.LoadedModules
 	} else {
 		config = `
 {emqx_mod_acl_internal, true}.

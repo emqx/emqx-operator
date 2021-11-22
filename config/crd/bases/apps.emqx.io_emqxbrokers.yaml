@@ -980,9 +980,9 @@ spec:
                 type: object
               license:
                 type: string
-              loadedModulesConf:
+              loadedModules:
                 type: string
-              loadedPluginConf:
+              loadedPlugins:
                 type: string
               nodeSelector:
                 additionalProperties:

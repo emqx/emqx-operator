@@ -18,12 +18,12 @@ spec:
             storage: 20Mi
         accessModes:
         - ReadWriteMany
-  aclConf: >
+  acl: >
     {allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
     {allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
     {deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
     {allow, all}.
-  loadedPluginConf: >
+  loadedPlugins: >
     {emqx_management, true}.
     {emqx_recon, true}.
     {emqx_retainer, true}.
@@ -31,7 +31,7 @@ spec:
     {emqx_telemetry, true}.
     {emqx_rule_engine, true}.
     {emqx_bridge_mqtt, false}.
-  loadedModulesConf: >
+  loadedModules: >
     {emqx_mod_acl_internal, true}.
     {emqx_mod_presence, true}.
     {emqx_mod_delayed, false}.
