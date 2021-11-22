@@ -60,20 +60,12 @@ type EmqxSpec interface {
 	GetEnv() []corev1.EnvVar
 	SetEnv(env []corev1.EnvVar)
 
-	GetAclConf() string
-	SetAclConf(aclConf string)
-
-	GetLoadedPluginConf() string
-	SetLoadedPluginConf(loadedPluginConf string)
-
-	GetLoadedModulesConf() string
-	SetLoadedModulesConf(loadedModulesConf string)
+	GetAcl() map[string]string
+	GetLoadedPlugins() map[string]string
+	GetLoadedModules() map[string]string
 
 	GetSecretName() string
 	GetHeadlessServiceName() string
-	GetAclConfName() string
-	GetLoadedPluginConfName() string
-	GetLoadedModulesConfName() string
 	GetDataVolumeName() string
 	GetLogVolumeName() string
 }

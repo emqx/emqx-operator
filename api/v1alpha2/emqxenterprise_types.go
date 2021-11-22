@@ -130,16 +130,88 @@ func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }
 
-func (emqx *EmqxEnterprise) GetAclConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "acl")
+func (emqx *EmqxEnterprise) GetAcl() map[string]string {
+	var config string
+	if emqx.Spec.AclConf != "" {
+		config = emqx.Spec.AclConf
+	} else {
+		config = `
+{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
+{allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
+{deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
+{allow, all}.
+`
+	}
+	return map[string]string{
+		"name":      emqx.Name,
+		"mountPath": "/opt/emqx/etc/acl.conf",
+		"subPath":   "acl.conf",
+		"conf":      config,
+	}
+
 }
 
-func (emqx *EmqxEnterprise) GetLoadedPluginConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins")
+func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
+	var config string
+	if emqx.Spec.LoadedPluginConf != "" {
+		config = emqx.Spec.LoadedPluginConf
+	} else {
+		config = `
+{emqx_management, true}.
+{emqx_recon, true}.
+{emqx_retainer, true}.
+{emqx_dashboard, true}.
+{emqx_telemetry, true}.
+{emqx_rule_engine, true}.
+`
+	}
+	return map[string]string{
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
+		"mountPath": "/opt/emqx/data/loaded_plugins",
+		"subPath":   "loaded_plugins",
+		"conf":      config,
+	}
 }
 
-func (emqx *EmqxEnterprise) GetLoadedModulesConfName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules")
+func (emqx *EmqxEnterprise) GetLoadedModules() map[string]string {
+	var config string
+	if emqx.Spec.LoadedModulesConf != "" {
+		config = emqx.Spec.LoadedModulesConf
+	} else {
+		config = `
+[{
+	"name": "internal_acl",
+	"enable": true,
+	"configs": {"acl_rule_file": "etc/acl.conf"}
+},
+{
+	"name": "presence",
+	"enable": true,
+	"configs": {"qos": 0}
+},
+{
+	"name": "recon",
+	"enable": true,
+	"configs": {}
+},
+{
+	"name": "retainer",
+	"enable": true,
+	"configs": {
+		"expiry_interval": 0,
+		"max_payload_size": "1MB",
+		"max_retained_messages": 0,
+		"storage_type": "ram"
+	}
+}]
+`
+	}
+	return map[string]string{
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
+		"mountPath": "/opt/emqx/data/loaded_modules",
+		"subPath":   "loaded_modules",
+		"conf":      config,
+	}
 }
 
 func (emqx *EmqxEnterprise) GetDataVolumeName() string {
