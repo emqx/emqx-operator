@@ -117,7 +117,7 @@ jobs:
         if: failure()
         run: |
           set -x
-          kubectl describe sts ${{ matrix.kind}}
+          # kubectl describe sts ${{ matrix.kind}}
           kubectl logs -l "control-plane=controller-manager" -n operator-emqx-system -c manager
       - name: Get ${{ matrix.kind}} status
         if: failure()
