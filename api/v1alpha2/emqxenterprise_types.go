@@ -88,6 +88,9 @@ func (emqx *EmqxEnterprise) SetStorage(stroage *Storage) { emqx.Spec.Storage = s
 func (emqx *EmqxEnterprise) GetLabels() map[string]string       { return emqx.Spec.Labels }
 func (emqx *EmqxEnterprise) SetLabels(labels map[string]string) { emqx.Spec.Labels = labels }
 
+func (emqx *EmqxEnterprise) GetListener() *Listener        { return emqx.Spec.Listener }
+func (emqx *EmqxEnterprise) SetListener(listener Listener) { emqx.Spec.Listener = &listener }
+
 func (emqx *EmqxEnterprise) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxEnterprise) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
 

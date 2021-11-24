@@ -18,6 +18,7 @@ type EmqxClusterClient interface {
 	EnsureEmqxConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxListenerService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 }
 
 // EmqxClusterKubeClient implements the required methods to talk with kubernetes
@@ -63,7 +64,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(emqx v1alpha
 	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForPG)
 }
 
-// EnsureEmqxStatefulSet makes sure the emqx statefulset exists in the desired state
+// EnsureEmqxStatefulSet makes sure the EMQ X statefulset exists in the desired state
 func (r *EmqxClusterKubeClient) EnsureEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	// TODO PDB
 	oldSts, err := r.K8sService.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
@@ -83,6 +84,12 @@ func (r *EmqxClusterKubeClient) EnsureEmqxStatefulSet(emqx v1alpha2.Emqx, labels
 	}
 
 	return nil
+}
+
+// EnsureEmqxListenerService make sure the EMQ X service for ingress exists
+func (r *EmqxClusterKubeClient) EnsureEmqxListenerService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	listenerSvc := NewListenerSvcForCR(emqx, labels, ownerRefs)
+	return r.K8sService.CreateIfNotExistsService(emqx.GetNamespace(), listenerSvc)
 }
 
 func shouldUpdateEmqx(expectResource, containterResource corev1.ResourceRequirements, expectSize, replicas *int32) bool {

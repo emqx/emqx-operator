@@ -45,6 +45,8 @@ type EmqxSpec interface {
 	GetLabels() map[string]string
 	SetLabels(labels map[string]string)
 
+	GetListener() *Listener
+
 	GetAffinity() *corev1.Affinity
 	SetAffinity(affinity *corev1.Affinity)
 
