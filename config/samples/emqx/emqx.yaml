@@ -24,11 +24,30 @@ spec:
       - name: mqtts
         protocol: TCP
         port: 8884
-  acl: >
-    {allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
-    {allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
-    {deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
-    {allow, all}.
+  acl:
+    - permission: allow
+      username: "dashboard"
+      action: subscribe
+      topics:
+        filter:
+          - "$SYS/#"
+          - "#"
+    - permission: allow
+      ipaddress: "127.0.0.1"
+      action: all
+      topics:
+        filter:
+          - "$SYS/#"
+        equal:
+          - "#"
+    - permission: deny
+      action: subscribe
+      topics:
+        filter:
+          - "$SYS/#"
+        equal:
+          - "#"
+    - permission: allow
   plugins:
     - name: emqx_management
       enable: true
