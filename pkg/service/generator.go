@@ -446,9 +446,14 @@ func getDefaultClusterConfig(emqx v1alpha2.Emqx) []corev1.EnvVar {
 }
 
 func getContainerPorts(emqx v1alpha2.Emqx) []corev1.ContainerPort {
+	var ports []corev1.ServicePort
 	containerPorts := []corev1.ContainerPort{}
-	listener := emqx.GetListener()
-	ports := mergeServicePorts(listener.Ports)
+	if emqx.GetListener() != nil {
+		listener := emqx.GetListener()
+		ports = mergeServicePorts(listener.Ports)
+	} else {
+		ports = convertPorts(generateDefaultServicePorts())
+	}
 	for _, port := range ports {
 		containerPorts = append(containerPorts,
 			corev1.ContainerPort{
