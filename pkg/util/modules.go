@@ -49,7 +49,7 @@ func GenEmqxEnterpriseLoadedModules(modules []EmqxEnterpriseModules) string {
 		modules = defaultEmqxEnterpriseModules()
 	}
 	data, _ := json.Marshal(modules)
-	return fmt.Sprintln(string(data))
+	return fmt.Sprintf(string(data))
 }
 
 func defaultEmqxEnterpriseModules() []EmqxEnterpriseModules {

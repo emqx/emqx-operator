@@ -38,7 +38,7 @@ func TestGenEmqxEnterpriseLoadedModules(t *testing.T) {
 	m := util.GenEmqxEnterpriseLoadedModules(modules)
 
 	fmt.Printf("%+v", m)
-	// if m != `[{"name":"fake","enable":true,"configs":{"foo":"bar"}}]` {
-	// 	t.Errorf("unexpected data: %s", m)
-	// }
+	if m != `[{"name":"fake","enable":true,"configs":{"foo":"bar"}}]` {
+		t.Errorf("unexpected data: %s", m)
+	}
 }
