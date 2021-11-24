@@ -61,7 +61,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	opts := zap.Options{
 		Development: true,
-		Level:       zapcore.InfoLevel,
+		Level:       zapcore.WarnLevel,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()

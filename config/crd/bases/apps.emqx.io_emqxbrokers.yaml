@@ -1052,14 +1052,28 @@ spec:
                     - ClusterIP
                     type: string
                 type: object
-              loadedModules:
-                type: string
-              loadedPlugins:
-                type: string
+              modules:
+                items:
+                  properties:
+                    enable:
+                      type: boolean
+                    name:
+                      type: string
+                  type: object
+                type: array
               nodeSelector:
                 additionalProperties:
                   type: string
                 type: object
+              plugins:
+                items:
+                  properties:
+                    enable:
+                      type: boolean
+                    name:
+                      type: string
+                  type: object
+                type: array
               replicas:
                 description: The fields of Broker. The replicas of emqx broker
                 format: int32

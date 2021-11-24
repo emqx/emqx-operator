@@ -19,6 +19,7 @@ package v1alpha2
 import (
 	"fmt"
 
+	"github.com/emqx/emqx-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -63,9 +64,9 @@ type EmqxBrokerSpec struct {
 
 	ACL string `json:"acl,omitempty"`
 
-	LoadedPlugins string `json:"loadedPlugins,omitempty"`
+	Plugins []util.Plugin `json:"plugins,omitempty"`
 
-	LoadedModules string `json:"loadedModules,omitempty"`
+	Modules []util.EmqxBrokerModules `json:"modules,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -172,7 +173,7 @@ func (emqx *EmqxBroker) GetAcl() map[string]string {
 {allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
 {deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
 {allow, all}.
-`
+%t`
 	}
 	return map[string]string{
 		"name":      emqx.Name,
@@ -180,46 +181,23 @@ func (emqx *EmqxBroker) GetAcl() map[string]string {
 		"subPath":   "acl.conf",
 		"conf":      config,
 	}
-
 }
 
 func (emqx *EmqxBroker) GetLoadedPlugins() map[string]string {
-	var config string
-	if emqx.Spec.LoadedPlugins != "" {
-		config = emqx.Spec.LoadedPlugins
-	} else {
-		config = `
-{emqx_management, true}.
-{emqx_recon, true}.
-{emqx_retainer, true}.
-{emqx_dashboard, true}.
-{emqx_telemetry, true}.
-{emqx_rule_engine, true}.
-`
-	}
 	return map[string]string{
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
 		"mountPath": "/opt/emqx/data/loaded_plugins",
 		"subPath":   "loaded_plugins",
-		"conf":      config,
+		"conf":      util.GenLoadedPlugins(emqx.Spec.Plugins),
 	}
 }
 
 func (emqx *EmqxBroker) GetLoadedModules() map[string]string {
-	var config string
-	if emqx.Spec.LoadedModules != "" {
-		config = emqx.Spec.LoadedModules
-	} else {
-		config = `
-{emqx_mod_acl_internal, true}.
-{emqx_mod_presence, true}.
-`
-	}
 	return map[string]string{
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
 		"mountPath": "/opt/emqx/data/loaded_modules",
 		"subPath":   "loaded_modules",
-		"conf":      config,
+		"conf":      util.GenEmqxBrokerLoadedModules(emqx.Spec.Modules),
 	}
 }
 

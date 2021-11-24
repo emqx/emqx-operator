@@ -19,12 +19,53 @@ package v1alpha2
 import (
 	"fmt"
 
+	"github.com/emqx/emqx-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
+type EmqxEnterpriseSpec struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+
+	// The fields of Broker.
+	//The replicas of emqx broker
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	//+kubebuilder:validation:Required
+	Image string `json:"image,omitempty"`
+
+	//+kubebuilder:validation:Required
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// The service account name which is being binded with the service
+	// account of the crd instance.
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	License   string                      `json:"license,omitempty"`
+
+	Storage *Storage `json:"storage,omitempty"`
+
+	// The labels configure must be specified.
+	//+kubebuilder:validation:Required
+	Labels map[string]string `json:"labels,omitempty"`
+
+	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
+	ImagePullPolicy corev1.PullPolicy   `json:"imagePullPolicy,omitempty"`
+
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	ACL string `json:"acl,omitempty"`
+
+	Plugins []util.Plugin `json:"plugins,omitempty"`
+
+	Modules []util.EmqxEnterpriseModules `json:"modules,omitempty"`
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=emqx-ee
@@ -35,7 +76,7 @@ type EmqxEnterprise struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxBrokerSpec `json:"spec,omitempty"`
+	Spec   EmqxEnterpriseSpec `json:"spec,omitempty"`
 	Status `json:"status,omitempty"`
 }
 
@@ -142,65 +183,20 @@ func (emqx *EmqxEnterprise) GetAcl() map[string]string {
 }
 
 func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
-	var config string
-	if emqx.Spec.LoadedPlugins != "" {
-		config = emqx.Spec.LoadedPlugins
-	} else {
-		config = `
-{emqx_management, true}.
-{emqx_recon, true}.
-{emqx_retainer, true}.
-{emqx_dashboard, true}.
-{emqx_telemetry, true}.
-{emqx_rule_engine, true}.
-`
-	}
 	return map[string]string{
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
 		"mountPath": "/opt/emqx/data/loaded_plugins",
 		"subPath":   "loaded_plugins",
-		"conf":      config,
+		"conf":      util.GenLoadedPlugins(emqx.Spec.Plugins),
 	}
 }
 
 func (emqx *EmqxEnterprise) GetLoadedModules() map[string]string {
-	var config string
-	if emqx.Spec.LoadedModules != "" {
-		config = emqx.Spec.LoadedModules
-	} else {
-		config = `
-[{
-	"name": "internal_acl",
-	"enable": true,
-	"configs": {"acl_rule_file": "etc/acl.conf"}
-},
-{
-	"name": "presence",
-	"enable": true,
-	"configs": {"qos": 0}
-},
-{
-	"name": "recon",
-	"enable": true,
-	"configs": {}
-},
-{
-	"name": "retainer",
-	"enable": true,
-	"configs": {
-		"expiry_interval": 0,
-		"max_payload_size": "1MB",
-		"max_retained_messages": 0,
-		"storage_type": "ram"
-	}
-}]
-`
-	}
 	return map[string]string{
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
 		"mountPath": "/opt/emqx/data/loaded_modules",
 		"subPath":   "loaded_modules",
-		"conf":      config,
+		"conf":      util.GenEmqxEnterpriseLoadedModules(emqx.Spec.Modules),
 	}
 }
 
