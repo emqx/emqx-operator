@@ -52,6 +52,8 @@ type EmqxBrokerSpec struct {
 	//+kubebuilder:validation:Required
 	Labels map[string]string `json:"labels,omitempty"`
 
+	Listener *Listener `json:"listener,omitempty"`
+
 	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
 	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
@@ -128,6 +130,9 @@ func (emqx *EmqxBroker) SetStorage(stroage *Storage) { emqx.Spec.Storage = stroa
 func (emqx *EmqxBroker) GetLabels() map[string]string       { return emqx.Spec.Labels }
 func (emqx *EmqxBroker) SetLabels(labels map[string]string) { emqx.Spec.Labels = labels }
 
+func (emqx *EmqxBroker) GetListener() *Listener        { return emqx.Spec.Listener }
+func (emqx *EmqxBroker) SetListener(listener Listener) { emqx.Spec.Listener = &listener }
+
 func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
 
@@ -155,6 +160,10 @@ func (emqx *EmqxBroker) GetSecretName() string {
 
 func (emqx *EmqxBroker) GetHeadlessServiceName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
+}
+
+func (emqx *EmqxBroker) GetListenerServiceName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "listener-svc")
 }
 
 func (emqx *EmqxBroker) GetAcl() map[string]string {
