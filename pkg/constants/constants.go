@@ -1,4 +1,4 @@
-package service
+package constants
 
 const (
 	EMQX_NAME = "emqx"

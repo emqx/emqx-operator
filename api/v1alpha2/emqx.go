@@ -68,7 +68,6 @@ type EmqxSpec interface {
 
 	GetSecretName() string
 	GetHeadlessServiceName() string
-	GetListenerServiceName() string
 	GetDataVolumeName() string
 	GetLogVolumeName() string
 }

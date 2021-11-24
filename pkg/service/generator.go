@@ -4,10 +4,11 @@ import (
 	"reflect"
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/pkg/constants"
+	"github.com/emqx/emqx-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var (
@@ -42,10 +43,10 @@ func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []me
 func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	var emqxPorts []corev1.ServicePort
 	if emqx.GetListener() == nil {
-		emqxPorts = convertPorts(generateDefaultServicePorts())
+		emqxPorts = util.ConvertPorts(util.GenerateDefaultServicePorts())
 	} else {
 		listener := emqx.GetListener()
-		emqxPorts = mergeServicePorts(listener.Ports)
+		emqxPorts = util.MergeServicePorts(listener.Ports)
 	}
 
 	// labels = util.MergeLabels(labels, generateSelectorLabels(util.SentinelRoleName, cluster.Name))
@@ -64,18 +65,17 @@ func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 			ClusterIP: corev1.ClusterIPNone,
 		},
 	}
-
 	return svc
 }
 
 func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	listener := emqx.GetListener()
-	listenerSvcPorts := mergeServicePorts(listener.Ports)
+	listenerSvcPorts := util.MergeServicePorts(listener.Ports)
 
 	listenerSvc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            emqx.GetListenerServiceName(),
+			Name:            emqx.GetName(),
 			Namespace:       emqx.GetNamespace(),
 			OwnerReferences: ownerRefs,
 		},
@@ -190,7 +190,7 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 					NodeSelector:       emqx.GetNodeSelector(),
 					Containers: []corev1.Container{
 						{
-							Name:            EMQX_NAME,
+							Name:            constants.EMQX_NAME,
 							Image:           emqx.GetImage(),
 							ImagePullPolicy: getPullPolicy(emqx.GetImagePullPolicy()),
 							Resources:       emqx.GetResource(),
@@ -225,21 +225,21 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
 			Name:      emqx.GetDataVolumeName(),
-			MountPath: EMQX_DATA_DIR,
+			MountPath: constants.EMQX_DATA_DIR,
 		},
 	)
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
 			Name:      emqx.GetLogVolumeName(),
-			MountPath: EMQX_LOG_DIR,
+			MountPath: constants.EMQX_LOG_DIR,
 		},
 	)
 	if emqx.GetLicense() != "" {
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
 				Name:      emqx.GetSecretName(),
-				MountPath: EMQX_LIC_DIR,
-				SubPath:   EMQX_LIC_SUBPATH,
+				MountPath: constants.EMQX_LIC_DIR,
+				SubPath:   constants.EMQX_LIC_SUBPATH,
 				ReadOnly:  true,
 			},
 		)
@@ -371,7 +371,6 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 		},
 	)
 	return volumes
-
 }
 
 func Contains(Env []corev1.EnvVar, Name string) int {
@@ -385,7 +384,7 @@ func Contains(Env []corev1.EnvVar, Name string) int {
 
 func mergeEnv(emqx v1alpha2.Emqx) []corev1.EnvVar {
 	env := emqx.GetEnv()
-	clusterEnv := getDefaultClusterConfig(emqx)
+	clusterEnv := util.GenerateDefaultClusterConfig(emqx)
 	for index, value := range clusterEnv {
 		r := Contains(env, value.Name)
 		if r == -1 {
@@ -394,7 +393,7 @@ func mergeEnv(emqx v1alpha2.Emqx) []corev1.EnvVar {
 	}
 	if emqx.GetListener() != nil {
 		listener := emqx.GetListener()
-		ports := mergeServicePorts(listener.Ports)
+		ports := util.MergeServicePorts(listener.Ports)
 		for _, port := range ports {
 			env = append(env,
 				corev1.EnvVar{
@@ -404,45 +403,7 @@ func mergeEnv(emqx v1alpha2.Emqx) []corev1.EnvVar {
 				})
 		}
 	}
-
 	return env
-}
-
-func getDefaultClusterConfig(emqx v1alpha2.Emqx) []corev1.EnvVar {
-	return []corev1.EnvVar{
-		{
-			Name:  "EMQX_NAME",
-			Value: emqx.GetName(),
-		},
-		{
-			Name:  "EMQX_CLUSTER__DISCOVERY",
-			Value: "k8s",
-		},
-		{
-			Name:  "EMQX_CLUSTER__K8S__APP_NAME",
-			Value: emqx.GetName(),
-		},
-		{
-			Name:  "EMQX_CLUSTER__K8S__SERVICE_NAME",
-			Value: emqx.GetHeadlessServiceName(),
-		},
-		{
-			Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
-			Value: emqx.GetNamespace(),
-		},
-		{
-			Name:  "EMQX_CLUSTER__K8S__APISERVER",
-			Value: "https://kubernetes.default.svc:443",
-		},
-		{
-			Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
-			Value: "hostname",
-		},
-		{
-			Name:  "EMQX_CLUSTER__K8S__SUFFIX",
-			Value: "svc.cluster.local",
-		},
-	}
 }
 
 func getContainerPorts(emqx v1alpha2.Emqx) []corev1.ContainerPort {
@@ -450,9 +411,9 @@ func getContainerPorts(emqx v1alpha2.Emqx) []corev1.ContainerPort {
 	containerPorts := []corev1.ContainerPort{}
 	if emqx.GetListener() != nil {
 		listener := emqx.GetListener()
-		ports = mergeServicePorts(listener.Ports)
+		ports = util.MergeServicePorts(listener.Ports)
 	} else {
-		ports = convertPorts(generateDefaultServicePorts())
+		ports = util.ConvertPorts(util.GenerateDefaultServicePorts())
 	}
 	for _, port := range ports {
 		containerPorts = append(containerPorts,
@@ -461,23 +422,6 @@ func getContainerPorts(emqx v1alpha2.Emqx) []corev1.ContainerPort {
 			})
 	}
 	return containerPorts
-	// return []corev1.ContainerPort{
-	// 	{
-	// 		ContainerPort: 1883,
-	// 	},
-	// 	{
-	// 		ContainerPort: 8883,
-	// 	},
-	// 	{
-	// 		ContainerPort: 8081,
-	// 	},
-	// 	{
-	// 		ContainerPort: 8083,
-	// 	},
-	// 	{
-	// 		ContainerPort: 8084,
-	// 	},
-	// }
 }
 
 // TODO
@@ -540,96 +484,4 @@ func genVolumeClaimTemplate(emqx v1alpha2.Emqx, Name string) corev1.PersistentVo
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 	}
 	return pvc
-}
-
-func mergeServicePorts(ports []corev1.ServicePort) []corev1.ServicePort {
-
-	mergePorts := func(port corev1.ServicePort, ports []*corev1.ServicePort) []*corev1.ServicePort {
-		for _, item := range ports {
-			if item.Name == port.Name {
-				item.Port = port.Port
-				item.Protocol = port.Protocol
-				item.TargetPort = intstr.IntOrString{
-					Type:   0,
-					IntVal: port.TargetPort.IntVal,
-				}
-			}
-		}
-		// TODO Bug to fix
-		return ports
-	}
-
-	servicePorts := generateDefaultServicePorts()
-	for _, port := range ports {
-		mergePorts(port, servicePorts)
-	}
-	return convertPorts(servicePorts)
-}
-
-func generateDefaultServicePorts() []*corev1.ServicePort {
-	defaultPorts := []*corev1.ServicePort{
-		{
-			Name:     EMQX_LISTENERS__TCP__DEFAULT_NAME,
-			Port:     EMQX_LISTENERS__TCP__DEFAULT_PORT,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: EMQX_LISTENERS__TCP__DEFAULT_PORT,
-			},
-		},
-		{
-			Name:     EMQX_LISTENERS__SSL__DEFAULT_NAME,
-			Port:     EMQX_LISTENERS__SSL__DEFAULT_PORT,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: EMQX_LISTENERS__SSL__DEFAULT_PORT,
-			},
-		},
-		{
-			Name:     EMQX_LISTENERS__WS__DEFAULT_NAME,
-			Port:     EMQX_LISTENERS__WS__DEFAULT_PORT,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: EMQX_LISTENERS__WS__DEFAULT_PORT,
-			},
-		},
-		{
-			Name:     EMQX_LISTENERS__WSS__DEFAULT_NAME,
-			Port:     EMQX_LISTENERS__WSS__DEFAULT_PORT,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: EMQX_LISTENERS__WSS__DEFAULT_PORT,
-			},
-		},
-		{
-			Name:     EMQX_DASHBOARD__LISTENER__HTTP_NAME,
-			Port:     EMQX_DASHBOARD__LISTENER__HTTP_PORT,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: EMQX_DASHBOARD__LISTENER__HTTP_PORT,
-			},
-		},
-		{
-			Name:     EMQX_MANAGEMENT__LISTENER__HTTP_NAME,
-			Port:     EMQX_MANAGEMENT__LISTENER__HTTP_PORT,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: EMQX_MANAGEMENT__LISTENER__HTTP_PORT,
-			},
-		},
-	}
-	return defaultPorts
-}
-
-func convertPorts(ports []*corev1.ServicePort) []corev1.ServicePort {
-	var res []corev1.ServicePort
-	for _, port := range ports {
-		res = append(res, *port)
-	}
-	return res
 }

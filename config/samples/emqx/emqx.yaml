@@ -12,12 +12,18 @@ spec:
   storage:
     volumeClaimTemplate:
       spec:
-        storageClassName: standard
+        storageClassName: hostpath
         resources:
           requests:
             storage: 20Mi
         accessModes:
         - ReadWriteMany
+  listener: 
+    type: LoadBalancer
+    ports:
+      - name: api
+        protocol: TCP
+        port: 8082
   acl: >
     {allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
     {allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.

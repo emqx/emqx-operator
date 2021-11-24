@@ -162,10 +162,6 @@ func (emqx *EmqxBroker) GetHeadlessServiceName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }
 
-func (emqx *EmqxBroker) GetListenerServiceName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "listener-svc")
-}
-
 func (emqx *EmqxBroker) GetAcl() map[string]string {
 	var config string
 	if emqx.Spec.ACL != "" {
