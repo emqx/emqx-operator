@@ -9,39 +9,39 @@ import (
 func GenerateDefaultServicePorts() []*corev1.ServicePort {
 	defaultPorts := []*corev1.ServicePort{
 		{
-			Name:     constants.EMQX_LISTENERS__TCP__DEFAULT_NAME,
-			Port:     constants.EMQX_LISTENERS__TCP__DEFAULT_PORT,
+			Name:     constants.EMQX_LISTENERS__TCP__EXTERNAL_NAME,
+			Port:     constants.EMQX_LISTENERS__TCP__EXTERNAL_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: constants.EMQX_LISTENERS__TCP__DEFAULT_PORT,
+				IntVal: constants.EMQX_LISTENERS__TCP__EXTERNAL_PORT,
 			},
 		},
 		{
-			Name:     constants.EMQX_LISTENERS__SSL__DEFAULT_NAME,
-			Port:     constants.EMQX_LISTENERS__SSL__DEFAULT_PORT,
+			Name:     constants.EMQX_LISTENERS__SSL__EXTERNAL_NAME,
+			Port:     constants.EMQX_LISTENERS__SSL__EXTERNAL_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: constants.EMQX_LISTENERS__SSL__DEFAULT_PORT,
+				IntVal: constants.EMQX_LISTENERS__SSL__EXTERNAL_PORT,
 			},
 		},
 		{
-			Name:     constants.EMQX_LISTENERS__WS__DEFAULT_NAME,
-			Port:     constants.EMQX_LISTENERS__WS__DEFAULT_PORT,
+			Name:     constants.EMQX_LISTENERS__WS__EXTERNAL_NAME,
+			Port:     constants.EMQX_LISTENERS__WS__EXTERNAL_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: constants.EMQX_LISTENERS__WS__DEFAULT_PORT,
+				IntVal: constants.EMQX_LISTENERS__WS__EXTERNAL_PORT,
 			},
 		},
 		{
-			Name:     constants.EMQX_LISTENERS__WSS__DEFAULT_NAME,
-			Port:     constants.EMQX_LISTENERS__WSS__DEFAULT_PORT,
+			Name:     constants.EMQX_LISTENERS__WSS__EXTERNAL_NAME,
+			Port:     constants.EMQX_LISTENERS__WSS__EXTERNAL_PORT,
 			Protocol: "TCP",
 			TargetPort: intstr.IntOrString{
 				Type:   0,
-				IntVal: constants.EMQX_LISTENERS__WSS__DEFAULT_PORT,
+				IntVal: constants.EMQX_LISTENERS__WSS__EXTERNAL_PORT,
 			},
 		},
 		{

@@ -2,6 +2,8 @@ package service
 
 import (
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/constants"
@@ -13,10 +15,10 @@ import (
 
 var (
 	EMQX_LISTENER_DEFAULT = map[string]string{
-		"mqtt":      "EMQX_LISTENERS__TCP__DEFAULT",
-		"mqtts":     "EMQX_LISTENERS__SSL__DEFAULT_NAME",
-		"ws":        "EMQX_LISTENERS__WS__DEFAULT_NAME",
-		"wss":       "EMQX_LISTENERS__WSS__DEFAULT_NAME",
+		"mqtt":      "EMQX_LISTENERS__TCP__EXTERNAL_NAME",
+		"mqtts":     "EMQX_LISTENERS__SSL__EXTERNAL_NAME",
+		"ws":        "EMQX_LISTENERS__WS__EXTERNAL_NAME",
+		"wss":       "EMQX_LISTENERS__WSS__EXTERNAL_NAME",
 		"dashboard": "EMQX_DASHBOARD__LISTENER__HTTP_NAME",
 		"api":       "EMQX_MANAGEMENT__LISTENER__HTTP_NAME",
 	}
@@ -398,8 +400,8 @@ func mergeEnv(emqx v1alpha2.Emqx) []corev1.EnvVar {
 			env = append(env,
 				corev1.EnvVar{
 
-					Name:  EMQX_LISTENER_DEFAULT[port.Name],
-					Value: string(port.Port),
+					Name:  strings.Split(EMQX_LISTENER_DEFAULT[port.Name], "_NAME")[0],
+					Value: strconv.Itoa(int(port.Port)),
 				})
 		}
 	}
