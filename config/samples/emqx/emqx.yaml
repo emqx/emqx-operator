@@ -21,9 +21,9 @@ spec:
   listener: 
     type: LoadBalancer
     ports:
-      - name: api
+      - name: mqtts
         protocol: TCP
-        port: 8082
+        port: 8884
   acl: >
     {allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
     {allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
