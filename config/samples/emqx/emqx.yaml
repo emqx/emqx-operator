@@ -12,7 +12,7 @@ spec:
   storage:
     volumeClaimTemplate:
       spec:
-        storageClassName: hostpath
+        storageClassName: standard
         resources:
           requests:
             storage: 20Mi
