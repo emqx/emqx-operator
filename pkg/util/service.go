@@ -67,7 +67,6 @@ func GenerateDefaultServicePorts() []*corev1.ServicePort {
 }
 
 func MergeServicePorts(ports []corev1.ServicePort) []corev1.ServicePort {
-
 	mergePorts := func(port corev1.ServicePort, ports []*corev1.ServicePort) []*corev1.ServicePort {
 		for _, item := range ports {
 			if item.Name == port.Name {

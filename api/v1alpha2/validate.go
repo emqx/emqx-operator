@@ -64,12 +64,10 @@ func (emqx EmqxEnterprise) Validate() error {
 	if emqx.GetImage() == "" {
 		return errors.New("image must be specified")
 	}
-
 	return nil
 }
 
 func validatePortName(emqx EmqxBroker) bool {
-
 	for _, port := range emqx.GetListener().Ports {
 		if _, ok := defaultPortNames[port.Name]; !ok {
 			return false

@@ -71,8 +71,16 @@ func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 }
 
 func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
-	listener := emqx.GetListener()
-	listenerSvcPorts := util.MergeServicePorts(listener.Ports)
+	var serviceType corev1.ServiceType
+	var listenerSvcPorts []corev1.ServicePort
+	if emqx.GetListener() != nil {
+		listener := emqx.GetListener()
+		serviceType = listener.Type
+		listenerSvcPorts = util.MergeServicePorts(listener.Ports)
+	} else {
+		serviceType = corev1.ServiceTypeClusterIP
+		listenerSvcPorts = util.ConvertPorts(util.GenerateDefaultServicePorts())
+	}
 
 	listenerSvc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -82,7 +90,7 @@ func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 			OwnerReferences: ownerRefs,
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     listener.Type,
+			Type:     serviceType,
 			Ports:    listenerSvcPorts,
 			Selector: emqx.GetLabels(),
 		},
@@ -399,7 +407,6 @@ func mergeEnv(emqx v1alpha2.Emqx) []corev1.EnvVar {
 		for _, port := range ports {
 			env = append(env,
 				corev1.EnvVar{
-
 					Name:  strings.Split(EMQX_LISTENER_DEFAULT[port.Name], "_NAME")[0],
 					Value: strconv.Itoa(int(port.Port)),
 				})

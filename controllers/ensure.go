@@ -31,11 +31,8 @@ func (ech *EmqxClusterHandler) Ensure(emqx v1alpha2.Emqx, labels map[string]stri
 		return err
 	}
 
-	if emqx.GetListener() != nil {
-		if err := ech.eService.EnsureEmqxListenerService(emqx, labels, ownerRefs); err != nil {
-			return err
-		}
+	if err := ech.eService.EnsureEmqxListenerService(emqx, labels, ownerRefs); err != nil {
+		return err
 	}
-
 	return nil
 }
