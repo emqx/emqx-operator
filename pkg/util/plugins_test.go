@@ -6,7 +6,7 @@ import (
 	"github.com/emqx/emqx-operator/pkg/util"
 )
 
-func TestGenLoadedPlugins(t *testing.T) {
+func TestGenerateLoadedPlugins(t *testing.T) {
 	plugins := []util.Plugin{
 		{
 			Name:   "foo",
@@ -18,7 +18,7 @@ func TestGenLoadedPlugins(t *testing.T) {
 		},
 	}
 
-	p := util.GenLoadedPlugins(plugins)
+	p := util.GenerateLoadedPlugins(plugins)
 	if p != "{foo, true}.\n{bar, false}.\n" {
 		t.Errorf("unexpected data: %s", p)
 	}

@@ -187,7 +187,7 @@ func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
 		"mountPath": "/opt/emqx/data/loaded_plugins",
 		"subPath":   "loaded_plugins",
-		"conf":      util.GenLoadedPlugins(emqx.Spec.Plugins),
+		"conf":      util.GenerateLoadedPlugins(emqx.Spec.Plugins),
 	}
 }
 
@@ -196,7 +196,7 @@ func (emqx *EmqxEnterprise) GetLoadedModules() map[string]string {
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
 		"mountPath": "/opt/emqx/data/loaded_modules",
 		"subPath":   "loaded_modules",
-		"conf":      util.GenEmqxEnterpriseLoadedModules(emqx.Spec.Modules),
+		"conf":      util.GenerateEmqxEnterpriseLoadedModules(emqx.Spec.Modules),
 	}
 }
 

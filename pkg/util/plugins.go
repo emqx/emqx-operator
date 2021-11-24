@@ -4,12 +4,13 @@ import (
 	"fmt"
 )
 
+//+kubebuilder:object:generate=true
 type Plugin struct {
 	Name   string `json:"name,omitempty"`
 	Enable bool   `json:"enable,omitempty"`
 }
 
-func GenLoadedPlugins(plugins []Plugin) string {
+func GenerateLoadedPlugins(plugins []Plugin) string {
 	if plugins == nil {
 		plugins = defaultLoadedPlugins()
 	}

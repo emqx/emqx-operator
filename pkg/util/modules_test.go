@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func TestGenEmqxBrokerLoadedModules(t *testing.T) {
+func TestGenerateEmqxBrokerLoadedModules(t *testing.T) {
 	modules := []util.EmqxBrokerModules{
 		{
 			Name:   "foo",
@@ -20,13 +20,13 @@ func TestGenEmqxBrokerLoadedModules(t *testing.T) {
 		},
 	}
 
-	m := util.GenEmqxBrokerLoadedModules(modules)
+	m := util.GenerateEmqxBrokerLoadedModules(modules)
 	if m != "{foo, true}.\n{bar, false}.\n" {
 		t.Errorf("unexpected data: %s", m)
 	}
 }
 
-func TestGenEmqxEnterpriseLoadedModules(t *testing.T) {
+func TestGenerateEmqxEnterpriseLoadedModules(t *testing.T) {
 	modules := []util.EmqxEnterpriseModules{
 		{
 			Name:    "fake",
@@ -35,7 +35,7 @@ func TestGenEmqxEnterpriseLoadedModules(t *testing.T) {
 		},
 	}
 
-	m := util.GenEmqxEnterpriseLoadedModules(modules)
+	m := util.GenerateEmqxEnterpriseLoadedModules(modules)
 
 	fmt.Printf("%+v", m)
 	if m != `[{"name":"fake","enable":true,"configs":{"foo":"bar"}}]` {
