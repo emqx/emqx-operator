@@ -51,8 +51,8 @@ func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 		emqxPorts = util.MergeServicePorts(listener.Ports)
 	}
 
+	// TODO extension for merge labels
 	// labels = util.MergeLabels(labels, generateSelectorLabels(util.SentinelRoleName, cluster.Name))
-	// labels = map[string]string{}
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -63,8 +63,8 @@ func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 		},
 		Spec: corev1.ServiceSpec{
 			Ports:     emqxPorts,
-			Selector:  emqx.GetLabels(),
 			ClusterIP: corev1.ClusterIPNone,
+			Selector:  labels,
 		},
 	}
 	return svc
@@ -92,7 +92,7 @@ func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 		Spec: corev1.ServiceSpec{
 			Type:     serviceType,
 			Ports:    listenerSvcPorts,
-			Selector: emqx.GetLabels(),
+			Selector: labels,
 		},
 	}
 	return listenerSvc
@@ -144,20 +144,14 @@ func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, 
 }
 
 func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
-	name := emqx.GetName()
-	namespace := emqx.GetNamespace()
-
-	ports := getContainerPorts(emqx)
-
-	env := mergeEnv(emqx)
-
-	// TODO
-	labels = map[string]string{}
-
 	var emqxUserGroup int64 = 1000
 	var runAsNonRoot bool = true
 	var fsGroupChangeAlways corev1.PodFSGroupChangePolicy = "Always"
 
+	name := emqx.GetName()
+	namespace := emqx.GetNamespace()
+	ports := getContainerPorts(emqx)
+	env := mergeEnv(emqx)
 	securityContext := &corev1.PodSecurityContext{
 		FSGroup:             &emqxUserGroup,
 		FSGroupChangePolicy: &fsGroupChangeAlways,
@@ -165,7 +159,6 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 		RunAsUser:           &emqxUserGroup,
 		SupplementalGroups:  []int64{emqxUserGroup},
 	}
-
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
@@ -177,14 +170,14 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 			ServiceName: emqx.GetHeadlessServiceName(),
 			Replicas:    emqx.GetReplicas(),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: emqx.GetLabels(),
+				MatchLabels: labels,
 			},
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
 			VolumeClaimTemplates: getVolumeClaimTemplates(emqx),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					// TODO merge labels
-					Labels: emqx.GetLabels(),
+					Labels: labels,
 					// TODO
 					// Annotations:
 				},

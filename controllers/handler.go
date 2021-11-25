@@ -6,6 +6,7 @@ import (
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/cache"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
+	"github.com/emqx/emqx-operator/pkg/constants"
 	"github.com/emqx/emqx-operator/pkg/service"
 	"github.com/emqx/emqx-operator/pkg/util"
 	"github.com/go-logr/logr"
@@ -13,7 +14,9 @@ import (
 )
 
 var (
-	defaultLabels = map[string]string{}
+	defaultLabels = map[string]string{
+		constants.LABEL_MANAGED_BY_KEY: constants.OPERATOR_NAME,
+	}
 )
 
 // EmqxClusterHandler is the EMQ X Cluster handler. This handler will create the required
@@ -119,7 +122,9 @@ func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) {
 
 // getLabels merges all the labels (dynamic and operator static ones).
 func (ech *EmqxClusterHandler) getLabels(emqx v1alpha2.Emqx) map[string]string {
-	dynLabels := map[string]string{}
+	dynLabels := map[string]string{
+		constants.LABEL_NAME_KEY: fmt.Sprintf("%s%c%s", emqx.GetNamespace(), '_', emqx.GetName()),
+	}
 	return util.MergeLabels(defaultLabels, dynLabels, emqx.GetLabels())
 }
 
