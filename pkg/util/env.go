@@ -1,15 +1,37 @@
 package util
 
 import (
-	"github.com/emqx/emqx-operator/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 )
 
-func GenerateDefaultClusterConfig(emqx v1alpha2.Emqx) []corev1.EnvVar {
+func GenerateEnv(name, namespace string, env []corev1.EnvVar) []corev1.EnvVar {
+	return MergeEnv(env, defaultEnv(name, namespace))
+}
+
+func MergeEnv(env1, env2 []corev1.EnvVar) []corev1.EnvVar {
+	for index, value := range env2 {
+		r := contains(env1, value.Name)
+		if r == -1 {
+			env1 = append(env1, env2[index])
+		}
+	}
+	return env1
+}
+
+func contains(Env []corev1.EnvVar, Name string) int {
+	for index, value := range Env {
+		if value.Name == Name {
+			return index
+		}
+	}
+	return -1
+}
+
+func defaultEnv(name, namespace string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "EMQX_NAME",
-			Value: emqx.GetName(),
+			Value: name,
 		},
 		{
 			Name:  "EMQX_CLUSTER__DISCOVERY",
@@ -17,15 +39,15 @@ func GenerateDefaultClusterConfig(emqx v1alpha2.Emqx) []corev1.EnvVar {
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__APP_NAME",
-			Value: emqx.GetName(),
+			Value: name,
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__SERVICE_NAME",
-			Value: emqx.GetHeadlessServiceName(),
+			Value: GenerateHeadelssServiceName(name),
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
-			Value: emqx.GetNamespace(),
+			Value: namespace,
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__APISERVER",

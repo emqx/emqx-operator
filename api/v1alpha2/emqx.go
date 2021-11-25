@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"github.com/emqx/emqx-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,7 +46,7 @@ type EmqxSpec interface {
 	GetLabels() map[string]string
 	SetLabels(labels map[string]string)
 
-	GetListener() *Listener
+	GetListener() util.Listener
 
 	GetAffinity() *corev1.Affinity
 	SetAffinity(affinity *corev1.Affinity)
@@ -60,14 +61,12 @@ type EmqxSpec interface {
 	SetImagePullPolicy(pullPolicy corev1.PullPolicy)
 
 	GetEnv() []corev1.EnvVar
-	SetEnv(env []corev1.EnvVar)
 
 	GetAcl() map[string]string
 	GetLoadedPlugins() map[string]string
 	GetLoadedModules() map[string]string
 
 	GetSecretName() string
-	GetHeadlessServiceName() string
 	GetDataVolumeName() string
 	GetLogVolumeName() string
 }

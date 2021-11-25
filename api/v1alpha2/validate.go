@@ -11,20 +11,6 @@ const (
 	defaultEmqxBrokerNumber = 3
 )
 
-type void struct{}
-
-var (
-	voidValue        void
-	defaultPortNames = map[string]void{
-		"mqtt":      voidValue,
-		"mqtts":     voidValue,
-		"ws":        voidValue,
-		"wss":       voidValue,
-		"dashboard": voidValue,
-		"api":       voidValue,
-	}
-)
-
 // Validate set the values by default if not defined and checks if the values given are valid
 func (emqx EmqxBroker) Validate() error {
 	if len(emqx.GetName()) > maxNameLength {
@@ -41,11 +27,6 @@ func (emqx EmqxBroker) Validate() error {
 		return errors.New("image must be specified")
 	}
 
-	if emqx.GetListener() != nil {
-		if !validatePortName(emqx) {
-			return errors.New("port name must be specified as mqtt, mqtts, ws, wss, dashboard, api ")
-		}
-	}
 	return nil
 }
 
@@ -65,13 +46,4 @@ func (emqx EmqxEnterprise) Validate() error {
 		return errors.New("image must be specified")
 	}
 	return nil
-}
-
-func validatePortName(emqx EmqxBroker) bool {
-	for _, port := range emqx.GetListener().Ports {
-		if _, ok := defaultPortNames[port.Name]; !ok {
-			return false
-		}
-	}
-	return true
 }

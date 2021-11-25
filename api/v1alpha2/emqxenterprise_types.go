@@ -53,7 +53,7 @@ type EmqxEnterpriseSpec struct {
 	//+kubebuilder:validation:Required
 	Labels map[string]string `json:"labels,omitempty"`
 
-	Listener *Listener `json:"listener,omitempty"`
+	Listener util.Listener `json:"listener,omitempty"`
 
 	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
@@ -131,9 +131,6 @@ func (emqx *EmqxEnterprise) SetStorage(stroage *Storage) { emqx.Spec.Storage = s
 func (emqx *EmqxEnterprise) GetLabels() map[string]string       { return emqx.Spec.Labels }
 func (emqx *EmqxEnterprise) SetLabels(labels map[string]string) { emqx.Spec.Labels = labels }
 
-func (emqx *EmqxEnterprise) GetListener() *Listener        { return emqx.Spec.Listener }
-func (emqx *EmqxEnterprise) SetListener(listener Listener) { emqx.Spec.Listener = &listener }
-
 func (emqx *EmqxEnterprise) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxEnterprise) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
 
@@ -152,15 +149,16 @@ func (emqx *EmqxEnterprise) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
 	emqx.Spec.ImagePullPolicy = pullPolicy
 }
 
-func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar    { return emqx.Spec.Env }
-func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) { emqx.Spec.Env = env }
-
 func (emqx *EmqxEnterprise) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
 }
 
-func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
+func (emqx *EmqxEnterprise) GetListener() util.Listener {
+	return util.GenerateListener(emqx.Spec.Listener)
+}
+
+func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar {
+	return util.GenerateEnv(emqx.Name, emqx.Namespace, emqx.Spec.Env)
 }
 
 func (emqx *EmqxEnterprise) GetAcl() map[string]string {

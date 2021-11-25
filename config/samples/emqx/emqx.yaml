@@ -18,12 +18,15 @@ spec:
             storage: 20Mi
         accessModes:
         - ReadWriteMany
-  listener: 
-    type: LoadBalancer
+  listener:
+    type: ClusterIP
     ports:
-      - name: mqtts
-        protocol: TCP
-        port: 8884
+      mqtt: 1883
+      mqtts: 8883
+      ws: 8083
+      wss: 8084
+      dashboard: 18083
+      api: 8081
   acl:
     - permission: allow
       username: "dashboard"
