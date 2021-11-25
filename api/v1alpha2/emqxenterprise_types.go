@@ -53,6 +53,8 @@ type EmqxEnterpriseSpec struct {
 	//+kubebuilder:validation:Required
 	Labels map[string]string `json:"labels,omitempty"`
 
+	Listener *Listener `json:"listener,omitempty"`
+
 	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
 	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
@@ -60,7 +62,7 @@ type EmqxEnterpriseSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	ACL string `json:"acl,omitempty"`
+	ACL []util.ACL `json:"acl,omitempty"`
 
 	Plugins []util.Plugin `json:"plugins,omitempty"`
 
@@ -162,22 +164,11 @@ func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
 }
 
 func (emqx *EmqxEnterprise) GetAcl() map[string]string {
-	var config string
-	if emqx.Spec.ACL != "" {
-		config = emqx.Spec.ACL
-	} else {
-		config = `
-{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
-{allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
-{deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
-{allow, all}.
-`
-	}
 	return map[string]string{
 		"name":      emqx.Name,
 		"mountPath": "/opt/emqx/etc/acl.conf",
 		"subPath":   "acl.conf",
-		"conf":      config,
+		"conf":      util.GenerateACL(emqx.Spec.ACL),
 	}
 
 }
