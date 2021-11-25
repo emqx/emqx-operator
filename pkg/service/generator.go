@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
@@ -417,7 +418,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 	if !util.IsNil(listener.Ports.MQTT) {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_LISTENER__TCP__EXTERNAL",
-			Value: string(listener.Ports.MQTT),
+			Value: fmt.Sprint(listener.Ports.MQTT),
 		})
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			Name:          "mqtt",
@@ -436,7 +437,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 	if !util.IsNil(listener.Ports.MQTTS) {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_LISTENER__SSL__EXTERNAL",
-			Value: string(listener.Ports.MQTTS),
+			Value: fmt.Sprint(listener.Ports.MQTTS),
 		})
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			Name:          "mqtts",
@@ -455,7 +456,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 	if !util.IsNil(listener.Ports.WS) {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_LISTENER__WS__EXTERNAL",
-			Value: string(listener.Ports.WS),
+			Value: fmt.Sprint(listener.Ports.WS),
 		})
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			Name:          "ws",
@@ -474,7 +475,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 	if !util.IsNil(listener.Ports.WSS) {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_LISTENER__WSS__EXTERNAL",
-			Value: string(listener.Ports.WSS),
+			Value: fmt.Sprint(listener.Ports.WSS),
 		})
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			Name:          "wss",
@@ -493,7 +494,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 	if !util.IsNil(listener.Ports.Dashboard) {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_DASHBOARD__LISTENER__HTTP",
-			Value: string(listener.Ports.Dashboard),
+			Value: fmt.Sprint(listener.Ports.Dashboard),
 		})
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			Name:          "dashboard",
@@ -512,7 +513,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 	if !util.IsNil(listener.Ports.API) {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_MANAGEMENT__LISTENER__HTTP",
-			Value: string(listener.Ports.API),
+			Value: fmt.Sprint(listener.Ports.API),
 		})
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			Name:          "api",

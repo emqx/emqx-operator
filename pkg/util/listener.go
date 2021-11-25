@@ -47,7 +47,7 @@ func defaultListener() Listener {
 			WS:        8083,
 			WSS:       8084,
 			Dashboard: 18083,
-			API:       8083,
+			API:       8081,
 		},
 	}
 

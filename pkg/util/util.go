@@ -6,7 +6,7 @@ import (
 )
 
 func IsNil(i interface{}) bool {
-	return reflect.ValueOf(i).IsNil()
+	return reflect.ValueOf(i).IsZero()
 }
 
 func GenerateHeadelssServiceName(name string) string {

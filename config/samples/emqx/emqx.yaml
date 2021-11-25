@@ -37,7 +37,6 @@ spec:
           - "#"
     - permission: allow
       ipaddress: "127.0.0.1"
-      action: all
       topics:
         filter:
           - "$SYS/#"
