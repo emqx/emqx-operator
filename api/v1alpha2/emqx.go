@@ -25,7 +25,7 @@ import (
 //+kubebuilder:object:generate=false
 type EmqxSpec interface {
 	GetReplicas() *int32
-	SetReplicas(replcas int32)
+	SetReplicas(replicas int32)
 
 	GetImage() string
 	SetImage(image string)
@@ -40,12 +40,9 @@ type EmqxSpec interface {
 	SetLicense(license string)
 
 	GetStorage() *Storage
-	SetStorage(stroage *Storage)
+	SetStorage(storage *Storage)
 
-	GetLabels() map[string]string
-	SetLabels(labels map[string]string)
-
-	GetListener() *Listener
+	GetListener() Listener
 
 	GetAffinity() *corev1.Affinity
 	SetAffinity(affinity *corev1.Affinity)
@@ -60,16 +57,16 @@ type EmqxSpec interface {
 	SetImagePullPolicy(pullPolicy corev1.PullPolicy)
 
 	GetEnv() []corev1.EnvVar
-	SetEnv(env []corev1.EnvVar)
 
-	GetAcl() map[string]string
+	GetLabels() map[string]string
+	GetACL() map[string]string
 	GetLoadedPlugins() map[string]string
 	GetLoadedModules() map[string]string
 
 	GetSecretName() string
-	GetHeadlessServiceName() string
 	GetDataVolumeName() string
 	GetLogVolumeName() string
+	GetHeadlessServiceName() string
 }
 
 // +kubebuilder:object:generate=false

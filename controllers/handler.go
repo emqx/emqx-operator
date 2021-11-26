@@ -6,17 +6,9 @@ import (
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/cache"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
-	"github.com/emqx/emqx-operator/pkg/constants"
 	"github.com/emqx/emqx-operator/pkg/service"
-	"github.com/emqx/emqx-operator/pkg/util"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-var (
-	defaultLabels = map[string]string{
-		constants.LABEL_MANAGED_BY_KEY: constants.OPERATOR_NAME,
-	}
 )
 
 // EmqxClusterHandler is the EMQ X Cluster handler. This handler will create the required
@@ -50,7 +42,7 @@ func (ech *EmqxClusterHandler) Do(emqx v1alpha2.Emqx) error {
 	oRefs := ech.createOwnerReferences(emqx)
 
 	// Create the labels every object derived from this need to have.
-	labels := ech.getLabels(emqx)
+	labels := emqx.GetLabels()
 
 	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("Ensure...")
 	ech.eventsCli.EnsureCluster(emqx)
@@ -118,14 +110,6 @@ func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) {
 		}
 		ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
 	}
-}
-
-// getLabels merges all the labels (dynamic and operator static ones).
-func (ech *EmqxClusterHandler) getLabels(emqx v1alpha2.Emqx) map[string]string {
-	dynLabels := map[string]string{
-		constants.LABEL_NAME_KEY: fmt.Sprintf("%s%c%s", emqx.GetNamespace(), '_', emqx.GetName()),
-	}
-	return util.MergeLabels(defaultLabels, dynLabels, emqx.GetLabels())
 }
 
 func (ech *EmqxClusterHandler) createOwnerReferences(emqx v1alpha2.Emqx) []metav1.OwnerReference {

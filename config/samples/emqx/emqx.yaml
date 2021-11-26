@@ -18,29 +18,55 @@ spec:
             storage: 20Mi
         accessModes:
         - ReadWriteMany
-  listener: 
-    type: LoadBalancer
+  listener:
+    type: ClusterIP
     ports:
-      - name: mqtts
-        protocol: TCP
-        port: 8884
-  acl: >
-    {allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
-    {allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
-    {deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
-    {allow, all}.
-  loadedPlugins: >
-    {emqx_management, true}.
-    {emqx_recon, true}.
-    {emqx_retainer, true}.
-    {emqx_dashboard, true}.
-    {emqx_telemetry, true}.
-    {emqx_rule_engine, true}.
-    {emqx_bridge_mqtt, false}.
-  loadedModules: >
-    {emqx_mod_acl_internal, true}.
-    {emqx_mod_presence, true}.
-    {emqx_mod_delayed, false}.
-    {emqx_mod_rewrite, false}.
-    {emqx_mod_subscription, false}.
-    {emqx_mod_topic_metrics, false}.
+      mqtt: 1883
+      mqtts: 8883
+      ws: 8083
+      wss: 8084
+      dashboard: 18083
+      api: 8081
+  acl:
+    - permission: allow
+      username: "dashboard"
+      action: subscribe
+      topics:
+        filter:
+          - "$SYS/#"
+          - "#"
+    - permission: allow
+      ipaddress: "127.0.0.1"
+      topics:
+        filter:
+          - "$SYS/#"
+        equal:
+          - "#"
+    - permission: deny
+      action: subscribe
+      topics:
+        filter:
+          - "$SYS/#"
+        equal:
+          - "#"
+    - permission: allow
+  plugins:
+    - name: emqx_management
+      enable: true
+    - name: emqx_recon
+      enable: true
+    - name: emqx_retainer
+      enable: true
+    - name: emqx_dashboard
+      enable: true
+    - name: emqx_telemetry
+      enable: true
+    - name: emqx_rule_engine
+      enable: true
+    - name: emqx_bridge_mqtt
+      enable: false
+  modules:
+    - name: emqx_mod_acl_internal
+      enable: true
+    - name: emqx_mod_presence
+      enable: true

@@ -1,27 +1,15 @@
 package service
 
 import (
+	"fmt"
 	"reflect"
-	"strconv"
-	"strings"
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/constants"
-	"github.com/emqx/emqx-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-var (
-	EMQX_LISTENER_DEFAULT = map[string]string{
-		"mqtt":      "EMQX_LISTENERS__TCP__EXTERNAL_NAME",
-		"mqtts":     "EMQX_LISTENERS__SSL__EXTERNAL_NAME",
-		"ws":        "EMQX_LISTENERS__WS__EXTERNAL_NAME",
-		"wss":       "EMQX_LISTENERS__WSS__EXTERNAL_NAME",
-		"dashboard": "EMQX_DASHBOARD__LISTENER__HTTP_NAME",
-		"api":       "EMQX_MANAGEMENT__LISTENER__HTTP_NAME",
-	}
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
@@ -39,22 +27,12 @@ func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []me
 	}
 
 	return secret
-
 }
 
 func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
-	var emqxPorts []corev1.ServicePort
-	if emqx.GetListener() == nil {
-		emqxPorts = util.ConvertPorts(util.GenerateDefaultServicePorts())
-	} else {
-		listener := emqx.GetListener()
-		emqxPorts = util.MergeServicePorts(listener.Ports)
-	}
+	ports, _, _ := generatePorts(emqx)
 
-	// TODO extension for merge labels
-	// labels = util.MergeLabels(labels, generateSelectorLabels(util.SentinelRoleName, cluster.Name))
-
-	svc := &corev1.Service{
+	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
 			Name:            emqx.GetHeadlessServiceName(),
@@ -62,25 +40,16 @@ func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 			OwnerReferences: ownerRefs,
 		},
 		Spec: corev1.ServiceSpec{
-			Ports:     emqxPorts,
-			ClusterIP: corev1.ClusterIPNone,
+			Ports:     ports,
 			Selector:  labels,
+			ClusterIP: corev1.ClusterIPNone,
 		},
 	}
-	return svc
 }
 
 func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
-	var serviceType corev1.ServiceType
-	var listenerSvcPorts []corev1.ServicePort
-	if emqx.GetListener() != nil {
-		listener := emqx.GetListener()
-		serviceType = listener.Type
-		listenerSvcPorts = util.MergeServicePorts(listener.Ports)
-	} else {
-		serviceType = corev1.ServiceTypeClusterIP
-		listenerSvcPorts = util.ConvertPorts(util.GenerateDefaultServicePorts())
-	}
+	listener := emqx.GetListener()
+	ports, _, _ := generatePorts(emqx)
 
 	listenerSvc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -90,16 +59,19 @@ func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 			OwnerReferences: ownerRefs,
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     serviceType,
-			Ports:    listenerSvcPorts,
-			Selector: labels,
+			Type:                     listener.Type,
+			LoadBalancerIP:           listener.LoadBalancerIP,
+			LoadBalancerSourceRanges: listener.LoadBalancerSourceRanges,
+			ExternalIPs:              listener.ExternalIPs,
+			Ports:                    ports,
+			Selector:                 labels,
 		},
 	}
 	return listenerSvc
 }
 
 func NewConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-	acl := emqx.GetAcl()
+	acl := emqx.GetACL()
 	cmForAcl := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
@@ -113,7 +85,7 @@ func NewConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 	return cmForAcl
 }
 
-func NewConfigMapForLoadedMoudles(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func NewConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	modules := emqx.GetLoadedModules()
 	cmForPM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -144,14 +116,12 @@ func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, 
 }
 
 func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
+	_, ports, env := generatePorts(emqx)
+
 	var emqxUserGroup int64 = 1000
 	var runAsNonRoot bool = true
 	var fsGroupChangeAlways corev1.PodFSGroupChangePolicy = "Always"
 
-	name := emqx.GetName()
-	namespace := emqx.GetNamespace()
-	ports := getContainerPorts(emqx)
-	env := mergeEnv(emqx)
 	securityContext := &corev1.PodSecurityContext{
 		FSGroup:             &emqxUserGroup,
 		FSGroupChangePolicy: &fsGroupChangeAlways,
@@ -161,8 +131,8 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 	}
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            name,
-			Namespace:       namespace,
+			Name:            emqx.GetName(),
+			Namespace:       emqx.GetNamespace(),
 			Labels:          labels,
 			OwnerReferences: ownerRefs,
 		},
@@ -193,11 +163,11 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 					NodeSelector:       emqx.GetNodeSelector(),
 					Containers: []corev1.Container{
 						{
-							Name:            constants.EMQX_NAME,
+							Name:            emqx.GetName(),
 							Image:           emqx.GetImage(),
 							ImagePullPolicy: getPullPolicy(emqx.GetImagePullPolicy()),
 							Resources:       emqx.GetResource(),
-							Env:             env,
+							Env:             mergeEnv(env, emqx.GetEnv()),
 							Ports:           ports,
 							VolumeMounts:    getEmqxVolumeMounts(emqx),
 						},
@@ -247,7 +217,7 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 			},
 		)
 	}
-	acl := emqx.GetAcl()
+	acl := emqx.GetACL()
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
 			Name:      acl["name"],
@@ -314,7 +284,7 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 		)
 	}
 
-	acl := emqx.GetAcl()
+	acl := emqx.GetACL()
 	volumes = append(volumes,
 		corev1.Volume{
 			Name: acl["name"],
@@ -374,56 +344,6 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 		},
 	)
 	return volumes
-}
-
-func Contains(Env []corev1.EnvVar, Name string) int {
-	for index, value := range Env {
-		if value.Name == Name {
-			return index
-		}
-	}
-	return -1
-}
-
-func mergeEnv(emqx v1alpha2.Emqx) []corev1.EnvVar {
-	env := emqx.GetEnv()
-	clusterEnv := util.GenerateDefaultClusterConfig(emqx)
-	for index, value := range clusterEnv {
-		r := Contains(env, value.Name)
-		if r == -1 {
-			env = append(env, clusterEnv[index])
-		}
-	}
-	if emqx.GetListener() != nil {
-		listener := emqx.GetListener()
-		ports := util.MergeServicePorts(listener.Ports)
-		for _, port := range ports {
-			env = append(env,
-				corev1.EnvVar{
-					Name:  strings.Split(EMQX_LISTENER_DEFAULT[port.Name], "_NAME")[0],
-					Value: strconv.Itoa(int(port.Port)),
-				})
-		}
-	}
-	return env
-}
-
-func getContainerPorts(emqx v1alpha2.Emqx) []corev1.ContainerPort {
-	var ports []corev1.ServicePort
-	containerPorts := []corev1.ContainerPort{}
-	if emqx.GetListener() != nil {
-		listener := emqx.GetListener()
-		ports = util.MergeServicePorts(listener.Ports)
-	} else {
-		ports = util.ConvertPorts(util.GenerateDefaultServicePorts())
-	}
-	for _, port := range ports {
-		containerPorts = append(containerPorts,
-			corev1.ContainerPort{
-				ContainerPort: port.Port,
-			})
-	}
-	return containerPorts
 }
 
 // TODO
@@ -486,4 +406,145 @@ func genVolumeClaimTemplate(emqx v1alpha2.Emqx, Name string) corev1.PersistentVo
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 	}
 	return pvc
+}
+
+func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.ContainerPort, []corev1.EnvVar) {
+	var servicePorts []corev1.ServicePort
+	var containerPorts []corev1.ContainerPort
+	var env []corev1.EnvVar
+	listener := emqx.GetListener()
+	if !reflect.ValueOf(listener.Ports.MQTT).IsZero() {
+		env = append(env, corev1.EnvVar{
+			Name:  "EMQX_LISTENER__TCP__EXTERNAL",
+			Value: fmt.Sprint(listener.Ports.MQTT),
+		})
+		containerPorts = append(containerPorts, corev1.ContainerPort{
+			Name:          "mqtt",
+			ContainerPort: listener.Ports.MQTT,
+		})
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:     "mqtt",
+			Port:     listener.Ports.MQTT,
+			Protocol: "TCP",
+			TargetPort: intstr.IntOrString{
+				Type:   0,
+				IntVal: listener.Ports.MQTT,
+			},
+		})
+	}
+	if !reflect.ValueOf(listener.Ports.MQTTS).IsZero() {
+		env = append(env, corev1.EnvVar{
+			Name:  "EMQX_LISTENER__SSL__EXTERNAL",
+			Value: fmt.Sprint(listener.Ports.MQTTS),
+		})
+		containerPorts = append(containerPorts, corev1.ContainerPort{
+			Name:          "mqtts",
+			ContainerPort: listener.Ports.MQTTS,
+		})
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:     "mqtts",
+			Port:     listener.Ports.MQTTS,
+			Protocol: "TCP",
+			TargetPort: intstr.IntOrString{
+				Type:   0,
+				IntVal: listener.Ports.MQTTS,
+			},
+		})
+	}
+	if !reflect.ValueOf(listener.Ports.WS).IsZero() {
+		env = append(env, corev1.EnvVar{
+			Name:  "EMQX_LISTENER__WS__EXTERNAL",
+			Value: fmt.Sprint(listener.Ports.WS),
+		})
+		containerPorts = append(containerPorts, corev1.ContainerPort{
+			Name:          "ws",
+			ContainerPort: listener.Ports.WS,
+		})
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:     "ws",
+			Port:     listener.Ports.WS,
+			Protocol: "TCP",
+			TargetPort: intstr.IntOrString{
+				Type:   0,
+				IntVal: listener.Ports.WS,
+			},
+		})
+	}
+	if !reflect.ValueOf(listener.Ports.WSS).IsZero() {
+		env = append(env, corev1.EnvVar{
+			Name:  "EMQX_LISTENER__WSS__EXTERNAL",
+			Value: fmt.Sprint(listener.Ports.WSS),
+		})
+		containerPorts = append(containerPorts, corev1.ContainerPort{
+			Name:          "wss",
+			ContainerPort: listener.Ports.WSS,
+		})
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:     "wss",
+			Port:     listener.Ports.WSS,
+			Protocol: "TCP",
+			TargetPort: intstr.IntOrString{
+				Type:   0,
+				IntVal: listener.Ports.WSS,
+			},
+		})
+	}
+	if !reflect.ValueOf(listener.Ports.Dashboard).IsZero() {
+		env = append(env, corev1.EnvVar{
+			Name:  "EMQX_DASHBOARD__LISTENER__HTTP",
+			Value: fmt.Sprint(listener.Ports.Dashboard),
+		})
+		containerPorts = append(containerPorts, corev1.ContainerPort{
+			Name:          "dashboard",
+			ContainerPort: listener.Ports.Dashboard,
+		})
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:     "dashboard",
+			Port:     listener.Ports.Dashboard,
+			Protocol: "TCP",
+			TargetPort: intstr.IntOrString{
+				Type:   0,
+				IntVal: listener.Ports.Dashboard,
+			},
+		})
+	}
+	if !reflect.ValueOf(listener.Ports.API).IsZero() {
+		env = append(env, corev1.EnvVar{
+			Name:  "EMQX_MANAGEMENT__LISTENER__HTTP",
+			Value: fmt.Sprint(listener.Ports.API),
+		})
+		containerPorts = append(containerPorts, corev1.ContainerPort{
+			Name:          "api",
+			ContainerPort: listener.Ports.API,
+		})
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:     "api",
+			Port:     listener.Ports.API,
+			Protocol: "TCP",
+			TargetPort: intstr.IntOrString{
+				Type:   0,
+				IntVal: listener.Ports.API,
+			},
+		})
+	}
+	return servicePorts, containerPorts, env
+}
+
+func contains(Env []corev1.EnvVar, Name string) int {
+	for index, value := range Env {
+		if value.Name == Name {
+			return index
+		}
+	}
+	return -1
+}
+
+func mergeEnv(env1, env2 []corev1.EnvVar) []corev1.EnvVar {
+	for _, value := range env2 {
+		r := contains(env1, value.Name)
+		if r == -1 {
+			env1 = append(env1, value)
+		}
+	}
+	return env1
 }

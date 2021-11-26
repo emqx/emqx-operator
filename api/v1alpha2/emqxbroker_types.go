@@ -41,7 +41,7 @@ type EmqxBrokerSpec struct {
 	//+kubebuilder:validation:Required
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// The service account name which is being binded with the service
+	// The service account name which is being bind with the service
 	// account of the crd instance.
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	License   string                      `json:"license,omitempty"`
@@ -49,10 +49,9 @@ type EmqxBrokerSpec struct {
 	Storage *Storage `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
-	//+kubebuilder:validation:Required
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitempty"`
 
-	Listener *Listener `json:"listener,omitempty"`
+	Listener Listener `json:"listener,omitempty"`
 
 	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
@@ -61,11 +60,11 @@ type EmqxBrokerSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	ACL string `json:"acl,omitempty"`
+	ACL []ACL `json:"acl,omitempty"`
 
-	LoadedPlugins string `json:"loadedPlugins,omitempty"`
+	Plugins []Plugin `json:"plugins,omitempty"`
 
-	LoadedModules string `json:"loadedModules,omitempty"`
+	Modules []EmqxBrokerModules `json:"modules,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -125,13 +124,7 @@ func (emqx *EmqxBroker) GetLicense() string        { return emqx.Spec.License }
 func (emqx *EmqxBroker) SetLicense(license string) { emqx.Spec.License = license }
 
 func (emqx *EmqxBroker) GetStorage() *Storage        { return emqx.Spec.Storage }
-func (emqx *EmqxBroker) SetStorage(stroage *Storage) { emqx.Spec.Storage = stroage }
-
-func (emqx *EmqxBroker) GetLabels() map[string]string       { return emqx.Spec.Labels }
-func (emqx *EmqxBroker) SetLabels(labels map[string]string) { emqx.Spec.Labels = labels }
-
-func (emqx *EmqxBroker) GetListener() *Listener        { return emqx.Spec.Listener }
-func (emqx *EmqxBroker) SetListener(listener Listener) { emqx.Spec.Listener = &listener }
+func (emqx *EmqxBroker) SetStorage(storage *Storage) { emqx.Spec.Storage = storage }
 
 func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
@@ -151,76 +144,8 @@ func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
 	emqx.Spec.ImagePullPolicy = pullPolicy
 }
 
-func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar    { return emqx.Spec.Env }
-func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) { emqx.Spec.Env = env }
-
 func (emqx *EmqxBroker) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
-}
-
-func (emqx *EmqxBroker) GetHeadlessServiceName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
-}
-
-func (emqx *EmqxBroker) GetAcl() map[string]string {
-	var config string
-	if emqx.Spec.ACL != "" {
-		config = emqx.Spec.ACL
-	} else {
-		config = `
-{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.
-{allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.
-{deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.
-{allow, all}.
-`
-	}
-	return map[string]string{
-		"name":      emqx.Name,
-		"mountPath": "/opt/emqx/etc/acl.conf",
-		"subPath":   "acl.conf",
-		"conf":      config,
-	}
-
-}
-
-func (emqx *EmqxBroker) GetLoadedPlugins() map[string]string {
-	var config string
-	if emqx.Spec.LoadedPlugins != "" {
-		config = emqx.Spec.LoadedPlugins
-	} else {
-		config = `
-{emqx_management, true}.
-{emqx_recon, true}.
-{emqx_retainer, true}.
-{emqx_dashboard, true}.
-{emqx_telemetry, true}.
-{emqx_rule_engine, true}.
-`
-	}
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
-		"mountPath": "/opt/emqx/data/loaded_plugins",
-		"subPath":   "loaded_plugins",
-		"conf":      config,
-	}
-}
-
-func (emqx *EmqxBroker) GetLoadedModules() map[string]string {
-	var config string
-	if emqx.Spec.LoadedModules != "" {
-		config = emqx.Spec.LoadedModules
-	} else {
-		config = `
-{emqx_mod_acl_internal, true}.
-{emqx_mod_presence, true}.
-`
-	}
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
-		"mountPath": "/opt/emqx/data/loaded_modules",
-		"subPath":   "loaded_modules",
-		"conf":      config,
-	}
 }
 
 func (emqx *EmqxBroker) GetDataVolumeName() string {
@@ -229,4 +154,8 @@ func (emqx *EmqxBroker) GetDataVolumeName() string {
 
 func (emqx *EmqxBroker) GetLogVolumeName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "log")
+}
+
+func (emqx *EmqxBroker) GetHeadlessServiceName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }

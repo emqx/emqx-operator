@@ -1,11 +1,39 @@
-package util
+package v1alpha2
 
 import (
-	"github.com/emqx/emqx-operator/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 )
 
-func GenerateDefaultClusterConfig(emqx v1alpha2.Emqx) []corev1.EnvVar {
+func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar {
+	return generateEnv(emqx, emqx.Spec.Env)
+}
+
+func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar {
+	return generateEnv(emqx, emqx.Spec.Env)
+}
+
+func generateEnv(emqx Emqx, env []corev1.EnvVar) []corev1.EnvVar {
+	e := defaultEnv(emqx)
+	for _, value := range e {
+		r := contains(env, value.Name)
+		if r == -1 {
+			env = append(env, value)
+		}
+	}
+	return env
+
+}
+
+func contains(Env []corev1.EnvVar, Name string) int {
+	for index, value := range Env {
+		if value.Name == Name {
+			return index
+		}
+	}
+	return -1
+}
+
+func defaultEnv(emqx Emqx) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "EMQX_NAME",

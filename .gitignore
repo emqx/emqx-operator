@@ -15,4 +15,5 @@
 # vendor/
 bin/
 
+cspell.config.yaml
 .vscode/
