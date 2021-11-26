@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"github.com/emqx/emqx-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,7 +25,7 @@ import (
 //+kubebuilder:object:generate=false
 type EmqxSpec interface {
 	GetReplicas() *int32
-	SetReplicas(replcas int32)
+	SetReplicas(replicas int32)
 
 	GetImage() string
 	SetImage(image string)
@@ -41,12 +40,9 @@ type EmqxSpec interface {
 	SetLicense(license string)
 
 	GetStorage() *Storage
-	SetStorage(stroage *Storage)
+	SetStorage(storage *Storage)
 
-	GetLabels() map[string]string
-	SetLabels(labels map[string]string)
-
-	GetListener() util.Listener
+	GetListener() Listener
 
 	GetAffinity() *corev1.Affinity
 	SetAffinity(affinity *corev1.Affinity)
@@ -62,6 +58,7 @@ type EmqxSpec interface {
 
 	GetEnv() []corev1.EnvVar
 
+	GetLabels() map[string]string
 	GetAcl() map[string]string
 	GetLoadedPlugins() map[string]string
 	GetLoadedModules() map[string]string
@@ -69,6 +66,7 @@ type EmqxSpec interface {
 	GetSecretName() string
 	GetDataVolumeName() string
 	GetLogVolumeName() string
+	GetHeadlessServiceName() string
 }
 
 // +kubebuilder:object:generate=false

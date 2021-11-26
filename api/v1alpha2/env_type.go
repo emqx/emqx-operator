@@ -1,6 +1,8 @@
-package util
+package v1alpha2
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -43,7 +45,7 @@ func defaultEnv(name, namespace string) []corev1.EnvVar {
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__SERVICE_NAME",
-			Value: GenerateHeadelssServiceName(name),
+			Value: fmt.Sprintf("%s-%s", name, "headless"),
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__NAMESPACE",

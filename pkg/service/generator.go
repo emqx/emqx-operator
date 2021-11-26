@@ -6,7 +6,6 @@ import (
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/constants"
-	"github.com/emqx/emqx-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +35,7 @@ func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            util.GenerateHeadelssServiceName((emqx.GetName())),
+			Name:            emqx.GetHeadlessServiceName(),
 			Namespace:       emqx.GetNamespace(),
 			OwnerReferences: ownerRefs,
 		},
@@ -86,7 +85,7 @@ func NewConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 	return cmForAcl
 }
 
-func NewConfigMapForLoadedMoudles(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func NewConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	modules := emqx.GetLoadedModules()
 	cmForPM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -118,7 +117,7 @@ func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, 
 
 func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
 	_, ports, env := generatePorts(emqx)
-	env = util.MergeEnv(env, emqx.GetEnv())
+	env = v1alpha2.MergeEnv(env, emqx.GetEnv())
 
 	var emqxUserGroup int64 = 1000
 	var runAsNonRoot bool = true
@@ -139,7 +138,7 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 			OwnerReferences: ownerRefs,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: util.GenerateHeadelssServiceName((emqx.GetName())),
+			ServiceName: emqx.GetHeadlessServiceName(),
 			Replicas:    emqx.GetReplicas(),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
@@ -165,7 +164,7 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 					NodeSelector:       emqx.GetNodeSelector(),
 					Containers: []corev1.Container{
 						{
-							Name:            constants.EMQX_NAME,
+							Name:            emqx.GetName(),
 							Image:           emqx.GetImage(),
 							ImagePullPolicy: getPullPolicy(emqx.GetImagePullPolicy()),
 							Resources:       emqx.GetResource(),
@@ -415,7 +414,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 	var containerPorts []corev1.ContainerPort
 	var env []corev1.EnvVar
 	listener := emqx.GetListener()
-	if !util.IsNil(listener.Ports.MQTT) {
+	if !reflect.ValueOf(listener.Ports.MQTT).IsZero() {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_LISTENER__TCP__EXTERNAL",
 			Value: fmt.Sprint(listener.Ports.MQTT),
@@ -434,7 +433,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 			},
 		})
 	}
-	if !util.IsNil(listener.Ports.MQTTS) {
+	if !reflect.ValueOf(listener.Ports.MQTTS).IsZero() {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_LISTENER__SSL__EXTERNAL",
 			Value: fmt.Sprint(listener.Ports.MQTTS),
@@ -453,7 +452,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 			},
 		})
 	}
-	if !util.IsNil(listener.Ports.WS) {
+	if !reflect.ValueOf(listener.Ports.WS).IsZero() {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_LISTENER__WS__EXTERNAL",
 			Value: fmt.Sprint(listener.Ports.WS),
@@ -472,7 +471,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 			},
 		})
 	}
-	if !util.IsNil(listener.Ports.WSS) {
+	if !reflect.ValueOf(listener.Ports.WSS).IsZero() {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_LISTENER__WSS__EXTERNAL",
 			Value: fmt.Sprint(listener.Ports.WSS),
@@ -491,7 +490,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 			},
 		})
 	}
-	if !util.IsNil(listener.Ports.Dashboard) {
+	if !reflect.ValueOf(listener.Ports.Dashboard).IsZero() {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_DASHBOARD__LISTENER__HTTP",
 			Value: fmt.Sprint(listener.Ports.Dashboard),
@@ -510,7 +509,7 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 			},
 		})
 	}
-	if !util.IsNil(listener.Ports.API) {
+	if !reflect.ValueOf(listener.Ports.API).IsZero() {
 		env = append(env, corev1.EnvVar{
 			Name:  "EMQX_MANAGEMENT__LISTENER__HTTP",
 			Value: fmt.Sprint(listener.Ports.API),

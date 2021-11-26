@@ -1,9 +1,9 @@
-package util_test
+package v1alpha2_test
 
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/pkg/util"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -25,7 +25,7 @@ func TestGenerateEnv(t *testing.T) {
 
 	matched := 0
 
-	for _, e := range util.GenerateEnv("emqx", "default", env) {
+	for _, e := range v1alpha2.GenerateEnv("emqx", "default", env) {
 		if e.Name == "EMQX_NAME" {
 			if e.Value == "foo" {
 				matched += 1

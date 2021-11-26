@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	"fmt"
 
-	"github.com/emqx/emqx-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -42,7 +41,7 @@ type EmqxEnterpriseSpec struct {
 	//+kubebuilder:validation:Required
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// The service account name which is being binded with the service
+	// The service account name which is being bind with the service
 	// account of the crd instance.
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	License   string                      `json:"license,omitempty"`
@@ -50,10 +49,9 @@ type EmqxEnterpriseSpec struct {
 	Storage *Storage `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
-	//+kubebuilder:validation:Required
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitempty"`
 
-	Listener util.Listener `json:"listener,omitempty"`
+	Listener Listener `json:"listener,omitempty"`
 
 	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
@@ -62,11 +60,11 @@ type EmqxEnterpriseSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	ACL []util.ACL `json:"acl,omitempty"`
+	ACL []ACL `json:"acl,omitempty"`
 
-	Plugins []util.Plugin `json:"plugins,omitempty"`
+	Plugins []Plugin `json:"plugins,omitempty"`
 
-	Modules []util.EmqxEnterpriseModules `json:"modules,omitempty"`
+	Modules []EmqxEnterpriseModules `json:"modules,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -126,10 +124,7 @@ func (emqx *EmqxEnterprise) GetLicense() string        { return emqx.Spec.Licens
 func (emqx *EmqxEnterprise) SetLicense(license string) { emqx.Spec.License = license }
 
 func (emqx *EmqxEnterprise) GetStorage() *Storage        { return emqx.Spec.Storage }
-func (emqx *EmqxEnterprise) SetStorage(stroage *Storage) { emqx.Spec.Storage = stroage }
-
-func (emqx *EmqxEnterprise) GetLabels() map[string]string       { return emqx.Spec.Labels }
-func (emqx *EmqxEnterprise) SetLabels(labels map[string]string) { emqx.Spec.Labels = labels }
+func (emqx *EmqxEnterprise) SetStorage(storage *Storage) { emqx.Spec.Storage = storage }
 
 func (emqx *EmqxEnterprise) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxEnterprise) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
@@ -153,12 +148,16 @@ func (emqx *EmqxEnterprise) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
 }
 
-func (emqx *EmqxEnterprise) GetListener() util.Listener {
-	return util.GenerateListener(emqx.Spec.Listener)
+func (emqx *EmqxEnterprise) GetListener() Listener {
+	return GenerateListener(emqx.Spec.Listener)
+}
+
+func (emqx *EmqxEnterprise) GetLabels() map[string]string {
+	return GenerateLabels(emqx.Name, emqx.Spec.Labels)
 }
 
 func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar {
-	return util.GenerateEnv(emqx.Name, emqx.Namespace, emqx.Spec.Env)
+	return GenerateEnv(emqx.Name, emqx.Namespace, emqx.Spec.Env)
 }
 
 func (emqx *EmqxEnterprise) GetAcl() map[string]string {
@@ -166,7 +165,7 @@ func (emqx *EmqxEnterprise) GetAcl() map[string]string {
 		"name":      emqx.Name,
 		"mountPath": "/opt/emqx/etc/acl.conf",
 		"subPath":   "acl.conf",
-		"conf":      util.GenerateACL(emqx.Spec.ACL),
+		"conf":      GenerateACL(emqx.Spec.ACL),
 	}
 
 }
@@ -176,7 +175,7 @@ func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
 		"mountPath": "/opt/emqx/data/loaded_plugins",
 		"subPath":   "loaded_plugins",
-		"conf":      util.GenerateLoadedPlugins(emqx.Spec.Plugins),
+		"conf":      GenerateLoadedPlugins(emqx.Spec.Plugins),
 	}
 }
 
@@ -185,7 +184,7 @@ func (emqx *EmqxEnterprise) GetLoadedModules() map[string]string {
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
 		"mountPath": "/opt/emqx/data/loaded_modules",
 		"subPath":   "loaded_modules",
-		"conf":      util.GenerateEmqxEnterpriseLoadedModules(emqx.Spec.Modules),
+		"conf":      GenerateEmqxEnterpriseLoadedModules(emqx.Spec.Modules),
 	}
 }
 
@@ -195,4 +194,8 @@ func (emqx *EmqxEnterprise) GetDataVolumeName() string {
 
 func (emqx *EmqxEnterprise) GetLogVolumeName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "log")
+}
+
+func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }

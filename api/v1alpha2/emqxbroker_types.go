@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	"fmt"
 
-	"github.com/emqx/emqx-operator/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -42,7 +41,7 @@ type EmqxBrokerSpec struct {
 	//+kubebuilder:validation:Required
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// The service account name which is being binded with the service
+	// The service account name which is being bind with the service
 	// account of the crd instance.
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	License   string                      `json:"license,omitempty"`
@@ -50,10 +49,9 @@ type EmqxBrokerSpec struct {
 	Storage *Storage `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
-	//+kubebuilder:validation:Required
-	Labels map[string]string `json:"labels,omitempty"`
+	Labels Labels `json:"labels,omitempty"`
 
-	Listener util.Listener `json:"listener,omitempty"`
+	Listener Listener `json:"listener,omitempty"`
 
 	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
@@ -62,11 +60,11 @@ type EmqxBrokerSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	ACL []util.ACL `json:"acl,omitempty"`
+	ACL []ACL `json:"acl,omitempty"`
 
-	Plugins []util.Plugin `json:"plugins,omitempty"`
+	Plugins []Plugin `json:"plugins,omitempty"`
 
-	Modules []util.EmqxBrokerModules `json:"modules,omitempty"`
+	Modules []EmqxBrokerModules `json:"modules,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -126,10 +124,7 @@ func (emqx *EmqxBroker) GetLicense() string        { return emqx.Spec.License }
 func (emqx *EmqxBroker) SetLicense(license string) { emqx.Spec.License = license }
 
 func (emqx *EmqxBroker) GetStorage() *Storage        { return emqx.Spec.Storage }
-func (emqx *EmqxBroker) SetStorage(stroage *Storage) { emqx.Spec.Storage = stroage }
-
-func (emqx *EmqxBroker) GetLabels() map[string]string       { return emqx.Spec.Labels }
-func (emqx *EmqxBroker) SetLabels(labels map[string]string) { emqx.Spec.Labels = labels }
+func (emqx *EmqxBroker) SetStorage(storage *Storage) { emqx.Spec.Storage = storage }
 
 func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
@@ -153,12 +148,16 @@ func (emqx *EmqxBroker) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
 }
 
-func (emqx *EmqxBroker) GetListener() util.Listener {
-	return util.GenerateListener(emqx.Spec.Listener)
+func (emqx *EmqxBroker) GetListener() Listener {
+	return GenerateListener(emqx.Spec.Listener)
+}
+
+func (emqx *EmqxBroker) GetLabels() map[string]string {
+	return GenerateLabels(emqx.Name, emqx.Spec.Labels)
 }
 
 func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar {
-	return util.GenerateEnv(emqx.Name, emqx.Namespace, emqx.Spec.Env)
+	return GenerateEnv(emqx.Name, emqx.Namespace, emqx.Spec.Env)
 }
 
 func (emqx *EmqxBroker) GetAcl() map[string]string {
@@ -166,7 +165,7 @@ func (emqx *EmqxBroker) GetAcl() map[string]string {
 		"name":      emqx.Name,
 		"mountPath": "/opt/emqx/etc/acl.conf",
 		"subPath":   "acl.conf",
-		"conf":      util.GenerateACL(emqx.Spec.ACL),
+		"conf":      GenerateACL(emqx.Spec.ACL),
 	}
 }
 
@@ -175,7 +174,7 @@ func (emqx *EmqxBroker) GetLoadedPlugins() map[string]string {
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
 		"mountPath": "/opt/emqx/data/loaded_plugins",
 		"subPath":   "loaded_plugins",
-		"conf":      util.GenerateLoadedPlugins(emqx.Spec.Plugins),
+		"conf":      GenerateLoadedPlugins(emqx.Spec.Plugins),
 	}
 }
 
@@ -184,7 +183,7 @@ func (emqx *EmqxBroker) GetLoadedModules() map[string]string {
 		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
 		"mountPath": "/opt/emqx/data/loaded_modules",
 		"subPath":   "loaded_modules",
-		"conf":      util.GenerateEmqxBrokerLoadedModules(emqx.Spec.Modules),
+		"conf":      GenerateEmqxBrokerLoadedModules(emqx.Spec.Modules),
 	}
 }
 
@@ -194,4 +193,8 @@ func (emqx *EmqxBroker) GetDataVolumeName() string {
 
 func (emqx *EmqxBroker) GetLogVolumeName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "log")
+}
+
+func (emqx *EmqxBroker) GetHeadlessServiceName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }

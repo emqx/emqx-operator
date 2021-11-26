@@ -1,0 +1,28 @@
+package v1alpha2
+
+type Labels map[string]string
+
+func GenerateLabels(name string, labels Labels) Labels {
+	return mergeLabels(labels, defaultLabels(name))
+}
+
+func mergeLabels(allLabels ...Labels) Labels {
+	res := map[string]string{}
+
+	for _, labels := range allLabels {
+		if labels != nil {
+			for k, v := range labels {
+				res[k] = v
+			}
+		}
+	}
+	return res
+}
+
+func defaultLabels(name string) Labels {
+	return map[string]string{
+		"apps.emqx.io/managed-by": "emqx-operator",
+		"apps.emqx.io/version":    "v1alpha2",
+		"apps.emqx.io/instance":   name,
+	}
+}

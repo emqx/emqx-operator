@@ -1102,7 +1102,7 @@ spec:
                 format: int32
                 type: integer
               resources:
-                description: The service account name which is being binded with the
+                description: The service account name which is being bind with the
                   service account of the crd instance.
                 properties:
                   limits:

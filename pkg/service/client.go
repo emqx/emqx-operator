@@ -54,7 +54,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1alpha2.Emqx, la
 
 // EnsureEmqxConfigMapForLoadedModules make sure the EMQ X configmap for loaded modules exists
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForLM := NewConfigMapForLoadedMoudles(emqx, labels, ownerRefs)
+	configmapForLM := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForLM)
 }
 

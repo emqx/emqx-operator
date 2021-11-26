@@ -1,37 +1,45 @@
-package util
+package v1alpha2
 
 import (
+	"reflect"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
 //+kubebuilder:object:generate=true
 type Listener struct {
-	//+kubebuilder:validation:Enum:=NodePort;LoadBalancer;ClusterIP
+	//+kubebuilder:validation:Enum=NodePort;LoadBalancer;ClusterIP
 	Type                     corev1.ServiceType `json:"type,omitempty"`
 	LoadBalancerIP           string             `json:"loadBalancerIP,omitempty" protobuf:"bytes,8,opt,name=loadBalancerIP"`
 	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty" protobuf:"bytes,9,opt,name=loadBalancerSourceRanges"`
 	ExternalIPs              []string           `json:"externalIPs,omitempty" protobuf:"bytes,5,rep,name=externalIPs"`
-	Ports                    ports              `json:"ports,omitempty"`
-	NodePorts                ports              `json:"nodePorts,omitempty"`
+	Ports                    Ports              `json:"ports,omitempty"`
+	NodePorts                Ports              `json:"nodePorts,omitempty"`
 }
 
-type ports struct {
-	MQTT      int32 `json:"mqtt,omitempty"`
-	MQTTS     int32 `json:"mqtts,omitempty"`
-	WS        int32 `json:"ws,omitempty"`
-	WSS       int32 `json:"wss,omitempty"`
+type Ports struct {
+	//+kubebuilder:validation:Maximum=65535
+	MQTT int32 `json:"mqtt,omitempty"`
+	//+kubebuilder:validation:Maximum=65535
+	MQTTS int32 `json:"mqtts,omitempty"`
+	//+kubebuilder:validation:Maximum=65535
+	WS int32 `json:"ws,omitempty"`
+	//+kubebuilder:validation:Maximum=65535
+	WSS int32 `json:"wss,omitempty"`
+	//+kubebuilder:validation:Maximum=65535
 	Dashboard int32 `json:"dashboard,omitempty"`
-	API       int32 `json:"api,omitempty"`
+	//+kubebuilder:validation:Maximum=65535
+	API int32 `json:"api,omitempty"`
 }
 
 func GenerateListener(listener Listener) Listener {
-	if IsNil(listener) {
+	if reflect.ValueOf(listener).IsZero() {
 		return defaultListener()
 	} else {
-		if IsNil(listener.Type) {
+		if reflect.ValueOf(listener.Type).IsZero() {
 			listener.Type = defaultListener().Type
 		}
-		if IsNil(listener.Ports) {
+		if reflect.ValueOf(listener.Ports).IsZero() {
 			listener.Ports = defaultListener().Ports
 		}
 		return listener
@@ -41,7 +49,7 @@ func GenerateListener(listener Listener) Listener {
 func defaultListener() Listener {
 	return Listener{
 		Type: "ClusterIP",
-		Ports: ports{
+		Ports: Ports{
 			MQTT:      1883,
 			MQTTS:     8883,
 			WS:        8083,

@@ -27,6 +27,7 @@ spec:
       wss: 8084
       dashboard: 18083
       api: 8081
+      mqttx: 65535
   acl:
     - permission: allow
       username: "dashboard"

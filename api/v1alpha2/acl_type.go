@@ -1,4 +1,4 @@
-package util
+package v1alpha2
 
 import (
 	"fmt"
@@ -40,30 +40,30 @@ func GenerateACL(acls []ACL) string {
 }
 
 func getWho(acl ACL) string {
-	var whos []string
+	var who []string
 
 	if acl.Username == "" && acl.ClientID == "" && acl.IPAddress == "" {
 		return "all"
 	}
 	if acl.Username != "" {
 		username := fmt.Sprintf("{user, \"%s\"}", acl.Username)
-		whos = append(whos, username)
+		who = append(who, username)
 	}
 	if acl.ClientID != "" {
 		clientid := fmt.Sprintf("{client, \"%s\"}", acl.ClientID)
-		whos = append(whos, clientid)
+		who = append(who, clientid)
 	}
 	if acl.IPAddress != "" {
 		ipaddress := fmt.Sprintf("{ipaddr, \"%s\"}", acl.IPAddress)
-		whos = append(whos, ipaddress)
+		who = append(who, ipaddress)
 	}
 
-	if len(whos) == 0 {
+	if len(who) == 0 {
 		return "all"
-	} else if len(whos) == 1 {
-		return whos[0]
+	} else if len(who) == 1 {
+		return who[0]
 	} else {
-		return fmt.Sprintf("{'and', [%s]}", strings.Join(whos, ", "))
+		return fmt.Sprintf("{'and', [%s]}", strings.Join(who, ", "))
 	}
 }
 

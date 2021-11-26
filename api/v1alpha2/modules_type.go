@@ -1,4 +1,4 @@
-package util
+package v1alpha2
 
 import (
 	"encoding/json"

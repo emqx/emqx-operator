@@ -1,13 +1,13 @@
-package util_test
+package v1alpha2_test
 
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/pkg/util"
+	"github.com/emqx/emqx-operator/api/v1alpha2"
 )
 
 func TestGenerateLoadedPlugins(t *testing.T) {
-	plugins := []util.Plugin{
+	plugins := []v1alpha2.Plugin{
 		{
 			Name:   "foo",
 			Enable: true,
@@ -18,7 +18,7 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 		},
 	}
 
-	p := util.GenerateLoadedPlugins(plugins)
+	p := v1alpha2.GenerateLoadedPlugins(plugins)
 	if p != "{foo, true}.\n{bar, false}.\n" {
 		t.Errorf("unexpected data: %s", p)
 	}
