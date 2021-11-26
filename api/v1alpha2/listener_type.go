@@ -32,7 +32,15 @@ type Ports struct {
 	API int32 `json:"api,omitempty"`
 }
 
-func GenerateListener(listener Listener) Listener {
+func (emqx *EmqxBroker) GetListener() Listener {
+	return generateListener(emqx.Spec.Listener)
+}
+
+func (emqx *EmqxEnterprise) GetListener() Listener {
+	return generateListener(emqx.Spec.Listener)
+}
+
+func generateListener(listener Listener) Listener {
 	if reflect.ValueOf(listener).IsZero() {
 		return defaultListener()
 	} else {

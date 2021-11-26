@@ -23,9 +23,15 @@ func TestGenerateEnv(t *testing.T) {
 		},
 	}
 
+	emqxBroker := v1alpha2.EmqxBroker{
+		Spec: v1alpha2.EmqxBrokerSpec{
+			Env: env,
+		},
+	}
+
 	matched := 0
 
-	for _, e := range v1alpha2.GenerateEnv("emqx", "default", env) {
+	for _, e := range emqxBroker.GetEnv() {
 		if e.Name == "EMQX_NAME" {
 			if e.Value == "foo" {
 				matched += 1

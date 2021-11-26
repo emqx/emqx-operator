@@ -1,7 +1,6 @@
 package v1alpha2_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/emqx/emqx-operator/api/v1alpha2"
@@ -20,7 +19,13 @@ func TestGenerateEmqxBrokerLoadedModules(t *testing.T) {
 		},
 	}
 
-	m := v1alpha2.GenerateEmqxBrokerLoadedModules(modules)
+	emqxBroker := v1alpha2.EmqxBroker{
+		Spec: v1alpha2.EmqxBrokerSpec{
+			Modules: modules,
+		},
+	}
+
+	m := emqxBroker.GetLoadedModules()["conf"]
 	if m != "{foo, true}.\n{bar, false}.\n" {
 		t.Errorf("unexpected data: %s", m)
 	}
@@ -35,9 +40,14 @@ func TestGenerateEmqxEnterpriseLoadedModules(t *testing.T) {
 		},
 	}
 
-	m := v1alpha2.GenerateEmqxEnterpriseLoadedModules(modules)
+	emqxEnterprise := v1alpha2.EmqxEnterprise{
+		Spec: v1alpha2.EmqxEnterpriseSpec{
+			Modules: modules,
+		},
+	}
 
-	fmt.Printf("%+v", m)
+	m := emqxEnterprise.GetLoadedModules()["conf"]
+
 	if m != `[{"name":"fake","enable":true,"configs":{"foo":"bar"}}]` {
 		t.Errorf("unexpected data: %s", m)
 	}

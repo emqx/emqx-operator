@@ -2,7 +2,15 @@ package v1alpha2
 
 type Labels map[string]string
 
-func GenerateLabels(name string, labels Labels) Labels {
+func (emqx *EmqxBroker) GetLabels() map[string]string {
+	return generateLabels(emqx.Name, emqx.Spec.Labels)
+}
+
+func (emqx *EmqxEnterprise) GetLabels() map[string]string {
+	return generateLabels(emqx.Name, emqx.Spec.Labels)
+}
+
+func generateLabels(name string, labels Labels) Labels {
 	return mergeLabels(labels, defaultLabels(name))
 }
 

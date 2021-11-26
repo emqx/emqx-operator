@@ -1,23 +1,27 @@
 package v1alpha2
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 )
 
-func GenerateEnv(name, namespace string, env []corev1.EnvVar) []corev1.EnvVar {
-	return MergeEnv(env, defaultEnv(name, namespace))
+func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar {
+	return generateEnv(emqx, emqx.Spec.Env)
 }
 
-func MergeEnv(env1, env2 []corev1.EnvVar) []corev1.EnvVar {
-	for index, value := range env2 {
-		r := contains(env1, value.Name)
+func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar {
+	return generateEnv(emqx, emqx.Spec.Env)
+}
+
+func generateEnv(emqx Emqx, env []corev1.EnvVar) []corev1.EnvVar {
+	e := defaultEnv(emqx)
+	for _, value := range e {
+		r := contains(env, value.Name)
 		if r == -1 {
-			env1 = append(env1, env2[index])
+			env = append(env, value)
 		}
 	}
-	return env1
+	return env
+
 }
 
 func contains(Env []corev1.EnvVar, Name string) int {
@@ -29,11 +33,11 @@ func contains(Env []corev1.EnvVar, Name string) int {
 	return -1
 }
 
-func defaultEnv(name, namespace string) []corev1.EnvVar {
+func defaultEnv(emqx Emqx) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "EMQX_NAME",
-			Value: name,
+			Value: emqx.GetName(),
 		},
 		{
 			Name:  "EMQX_CLUSTER__DISCOVERY",
@@ -41,15 +45,15 @@ func defaultEnv(name, namespace string) []corev1.EnvVar {
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__APP_NAME",
-			Value: name,
+			Value: emqx.GetName(),
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__SERVICE_NAME",
-			Value: fmt.Sprintf("%s-%s", name, "headless"),
+			Value: emqx.GetHeadlessServiceName(),
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
-			Value: namespace,
+			Value: emqx.GetNamespace(),
 		},
 		{
 			Name:  "EMQX_CLUSTER__K8S__APISERVER",

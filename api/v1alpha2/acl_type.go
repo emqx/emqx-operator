@@ -24,7 +24,25 @@ type ACL struct {
 	Topics Topics `json:"topics,omitempty"`
 }
 
-func GenerateACL(acls []ACL) string {
+func (emqx *EmqxBroker) GetACL() map[string]string {
+	return map[string]string{
+		"name":      emqx.Name,
+		"mountPath": "/opt/emqx/etc/acl.conf",
+		"subPath":   "acl.conf",
+		"conf":      generateACL(emqx.Spec.ACL),
+	}
+}
+
+func (emqx *EmqxEnterprise) GetACL() map[string]string {
+	return map[string]string{
+		"name":      emqx.Name,
+		"mountPath": "/opt/emqx/etc/acl.conf",
+		"subPath":   "acl.conf",
+		"conf":      generateACL(emqx.Spec.ACL),
+	}
+}
+
+func generateACL(acls []ACL) string {
 	var s string
 	if acls == nil {
 		acls = defaultACL()

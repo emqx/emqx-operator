@@ -1028,42 +1028,54 @@ spec:
                     properties:
                       api:
                         format: int32
+                        maximum: 65535
                         type: integer
                       dashboard:
                         format: int32
+                        maximum: 65535
                         type: integer
                       mqtt:
                         format: int32
+                        maximum: 65535
                         type: integer
                       mqtts:
                         format: int32
+                        maximum: 65535
                         type: integer
                       ws:
                         format: int32
+                        maximum: 65535
                         type: integer
                       wss:
                         format: int32
+                        maximum: 65535
                         type: integer
                     type: object
                   ports:
                     properties:
                       api:
                         format: int32
+                        maximum: 65535
                         type: integer
                       dashboard:
                         format: int32
+                        maximum: 65535
                         type: integer
                       mqtt:
                         format: int32
+                        maximum: 65535
                         type: integer
                       mqtts:
                         format: int32
+                        maximum: 65535
                         type: integer
                       ws:
                         format: int32
+                        maximum: 65535
                         type: integer
                       wss:
                         format: int32
+                        maximum: 65535
                         type: integer
                     type: object
                   type:

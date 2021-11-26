@@ -59,7 +59,7 @@ type EmqxSpec interface {
 	GetEnv() []corev1.EnvVar
 
 	GetLabels() map[string]string
-	GetAcl() map[string]string
+	GetACL() map[string]string
 	GetLoadedPlugins() map[string]string
 	GetLoadedModules() map[string]string
 

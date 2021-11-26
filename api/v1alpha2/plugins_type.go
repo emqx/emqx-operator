@@ -10,7 +10,25 @@ type Plugin struct {
 	Enable bool   `json:"enable,omitempty"`
 }
 
-func GenerateLoadedPlugins(plugins []Plugin) string {
+func (emqx *EmqxBroker) GetLoadedPlugins() map[string]string {
+	return map[string]string{
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
+		"mountPath": "/opt/emqx/data/loaded_plugins",
+		"subPath":   "loaded_plugins",
+		"conf":      generateLoadedPlugins(emqx.Spec.Plugins),
+	}
+}
+
+func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
+	return map[string]string{
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
+		"mountPath": "/opt/emqx/data/loaded_plugins",
+		"subPath":   "loaded_plugins",
+		"conf":      generateLoadedPlugins(emqx.Spec.Plugins),
+	}
+}
+
+func generateLoadedPlugins(plugins []Plugin) string {
 	if plugins == nil {
 		plugins = defaultLoadedPlugins()
 	}

@@ -71,7 +71,7 @@ func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 }
 
 func NewConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-	acl := emqx.GetAcl()
+	acl := emqx.GetACL()
 	cmForAcl := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
@@ -117,7 +117,6 @@ func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, 
 
 func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
 	_, ports, env := generatePorts(emqx)
-	env = v1alpha2.MergeEnv(env, emqx.GetEnv())
 
 	var emqxUserGroup int64 = 1000
 	var runAsNonRoot bool = true
@@ -168,7 +167,7 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 							Image:           emqx.GetImage(),
 							ImagePullPolicy: getPullPolicy(emqx.GetImagePullPolicy()),
 							Resources:       emqx.GetResource(),
-							Env:             env,
+							Env:             mergeEnv(env, emqx.GetEnv()),
 							Ports:           ports,
 							VolumeMounts:    getEmqxVolumeMounts(emqx),
 						},
@@ -218,7 +217,7 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 			},
 		)
 	}
-	acl := emqx.GetAcl()
+	acl := emqx.GetACL()
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
 			Name:      acl["name"],
@@ -285,7 +284,7 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 		)
 	}
 
-	acl := emqx.GetAcl()
+	acl := emqx.GetACL()
 	volumes = append(volumes,
 		corev1.Volume{
 			Name: acl["name"],
@@ -529,4 +528,23 @@ func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.Container
 		})
 	}
 	return servicePorts, containerPorts, env
+}
+
+func contains(Env []corev1.EnvVar, Name string) int {
+	for index, value := range Env {
+		if value.Name == Name {
+			return index
+		}
+	}
+	return -1
+}
+
+func mergeEnv(env1, env2 []corev1.EnvVar) []corev1.EnvVar {
+	for _, value := range env2 {
+		r := contains(env1, value.Name)
+		if r == -1 {
+			env1 = append(env1, value)
+		}
+	}
+	return env1
 }

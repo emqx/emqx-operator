@@ -18,7 +18,13 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 		},
 	}
 
-	p := v1alpha2.GenerateLoadedPlugins(plugins)
+	emqxBroker := v1alpha2.EmqxBroker{
+		Spec: v1alpha2.EmqxBrokerSpec{
+			Plugins: plugins,
+		},
+	}
+
+	p := emqxBroker.GetLoadedPlugins()["conf"]
 	if p != "{foo, true}.\n{bar, false}.\n" {
 		t.Errorf("unexpected data: %s", p)
 	}

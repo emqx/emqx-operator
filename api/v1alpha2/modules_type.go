@@ -13,7 +13,16 @@ type EmqxBrokerModules struct {
 	Enable bool   `json:"enable,omitempty"`
 }
 
-func GenerateEmqxBrokerLoadedModules(modules []EmqxBrokerModules) string {
+func (emqx *EmqxBroker) GetLoadedModules() map[string]string {
+	return map[string]string{
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
+		"mountPath": "/opt/emqx/data/loaded_modules",
+		"subPath":   "loaded_modules",
+		"conf":      generateEmqxBrokerLoadedModules(emqx.Spec.Modules),
+	}
+}
+
+func generateEmqxBrokerLoadedModules(modules []EmqxBrokerModules) string {
 	if modules == nil {
 		modules = defaultEmqxBrokerModules()
 	}
@@ -45,7 +54,16 @@ type EmqxEnterpriseModules struct {
 	Configs runtime.RawExtension `json:"configs,omitempty"`
 }
 
-func GenerateEmqxEnterpriseLoadedModules(modules []EmqxEnterpriseModules) string {
+func (emqx *EmqxEnterprise) GetLoadedModules() map[string]string {
+	return map[string]string{
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
+		"mountPath": "/opt/emqx/data/loaded_modules",
+		"subPath":   "loaded_modules",
+		"conf":      generateEmqxEnterpriseLoadedModules(emqx.Spec.Modules),
+	}
+}
+
+func generateEmqxEnterpriseLoadedModules(modules []EmqxEnterpriseModules) string {
 	if modules == nil {
 		modules = defaultEmqxEnterpriseModules()
 	}

@@ -7,11 +7,21 @@ import (
 )
 
 func TestGenerateACL(t *testing.T) {
+	var emqxBroker v1alpha2.EmqxBroker
+	var emqxEneterprise v1alpha2.EmqxEnterprise
 	var acl v1alpha2.ACL
 	var s string
 
 	acl = v1alpha2.ACL{Permission: "allow"}
-	s = v1alpha2.GenerateACL([]v1alpha2.ACL{acl})
+	emqxBroker = v1alpha2.EmqxBroker{
+		Spec: v1alpha2.EmqxBrokerSpec{
+			ACL: []v1alpha2.ACL{
+				acl,
+			},
+		},
+	}
+
+	s = emqxBroker.GetACL()["conf"]
 	if s != "{allow, all, pubsub, [\"#\"]}.\n" {
 		t.Errorf("unexpected data: %s", s)
 	}
@@ -24,7 +34,14 @@ func TestGenerateACL(t *testing.T) {
 			Equal:  []string{"#"},
 		},
 	}
-	s = v1alpha2.GenerateACL([]v1alpha2.ACL{acl})
+	emqxBroker = v1alpha2.EmqxBroker{
+		Spec: v1alpha2.EmqxBrokerSpec{
+			ACL: []v1alpha2.ACL{
+				acl,
+			},
+		},
+	}
+	s = emqxBroker.GetACL()["conf"]
 	if s != "{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n" {
 		t.Errorf("unexpected data: %s", s)
 	}
@@ -41,7 +58,14 @@ func TestGenerateACL(t *testing.T) {
 			},
 		},
 	}
-	s = v1alpha2.GenerateACL([]v1alpha2.ACL{acl})
+	emqxEneterprise = v1alpha2.EmqxEnterprise{
+		Spec: v1alpha2.EmqxEnterpriseSpec{
+			ACL: []v1alpha2.ACL{
+				acl,
+			},
+		},
+	}
+	s = emqxEneterprise.GetACL()["conf"]
 	if s != "{allow, {'and', [{user, \"admin\"}, {client, \"emqx\"}, {ipaddr, \"127.0.0.1\"}]}, pubsub, [\"$SYS/#\", \"#\"]}.\n" {
 		t.Errorf("unexpected data: %s", s)
 	}

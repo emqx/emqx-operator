@@ -148,46 +148,6 @@ func (emqx *EmqxEnterprise) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
 }
 
-func (emqx *EmqxEnterprise) GetListener() Listener {
-	return GenerateListener(emqx.Spec.Listener)
-}
-
-func (emqx *EmqxEnterprise) GetLabels() map[string]string {
-	return GenerateLabels(emqx.Name, emqx.Spec.Labels)
-}
-
-func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar {
-	return GenerateEnv(emqx.Name, emqx.Namespace, emqx.Spec.Env)
-}
-
-func (emqx *EmqxEnterprise) GetAcl() map[string]string {
-	return map[string]string{
-		"name":      emqx.Name,
-		"mountPath": "/opt/emqx/etc/acl.conf",
-		"subPath":   "acl.conf",
-		"conf":      GenerateACL(emqx.Spec.ACL),
-	}
-
-}
-
-func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
-		"mountPath": "/opt/emqx/data/loaded_plugins",
-		"subPath":   "loaded_plugins",
-		"conf":      GenerateLoadedPlugins(emqx.Spec.Plugins),
-	}
-}
-
-func (emqx *EmqxEnterprise) GetLoadedModules() map[string]string {
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
-		"mountPath": "/opt/emqx/data/loaded_modules",
-		"subPath":   "loaded_modules",
-		"conf":      GenerateEmqxEnterpriseLoadedModules(emqx.Spec.Modules),
-	}
-}
-
 func (emqx *EmqxEnterprise) GetDataVolumeName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "data")
 }
