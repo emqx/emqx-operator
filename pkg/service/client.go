@@ -37,8 +37,26 @@ func NewEmqxClusterKubeClient(k8sService k8s.Services, logger logr.Logger) *Emqx
 
 // EnsureEmqxSecret make sure the EMQ X secret exists
 func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	secret := NewSecretForCR(emqx, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsSecret(emqx.GetNamespace(), secret)
+	// oldSecret, err := r.K8sService.GetSecret(emqx.GetNamespace(), emqx.GetName())
+	_, err := r.K8sService.GetSecret(emqx.GetNamespace(), emqx.GetName())
+
+	if err != nil {
+		// If no secret exists we need to create.
+		if errors.IsNotFound(err) {
+			secret := NewSecretForCR(emqx, labels, ownerRefs)
+			return r.K8sService.CreateSecret(emqx.GetNamespace(), secret)
+		}
+		return err
+	}
+
+	if shouldUpdateEmqxs(emqx, emqx)["shouldUpdatesecret"] {
+		secret := NewSecretForCR(emqx, labels, ownerRefs)
+		return r.K8sService.UpdateSecret(emqx.GetNamespace(), secret)
+	}
+
+	return nil
+
+	// return r.K8sService.CreateIfNotExistsSecret(emqx.GetNamespace(), secret)
 }
 
 // EnsureEmqxHeadlessService makes sure the EMQ X headless service exists
@@ -109,4 +127,63 @@ func shouldUpdateEmqx(expectResource, containterResource corev1.ResourceRequirem
 		return true
 	}
 	return false
+}
+
+// func shouldUpdateResources(oldEmqx, newEmqx v1alpha2.Emqx) []bool {
+
+// }
+
+// shouldUpdateEmqxs make sure to update secret, headless svc, acl configmap, lm configmap, lp configmap, statefulset, linstener svc
+func shouldUpdateEmqxs(oldEmqx, newEmqx v1alpha2.Emqx) map[string]bool {
+
+	res := map[string]bool{}
+
+	fnShouldUpdateSecret := func(oldEmqx, newEmqx v1alpha2.Emqx) bool {
+		return oldEmqx.GetLicense() != newEmqx.GetLicense()
+	}
+
+	res["shouldUpdatesecret"] = fnShouldUpdateSecret(oldEmqx, newEmqx)
+
+	fnShouldUpdateSvc := func(oldEmqx, newEmqx v1alpha2.Emqx) bool {
+		// TODO
+		return false
+	}
+
+	res["shouldUpdateHeadlessSvc"] = fnShouldUpdateSvc(oldEmqx, newEmqx)
+
+	fnShouldUpdateCMForAcl := func(oldEmqx, newEmqx v1alpha2.Emqx) bool {
+		// TODO
+		return false
+	}
+	res["shouldUpdateCMForAcl"] = fnShouldUpdateCMForAcl(oldEmqx, newEmqx)
+
+	fnShouldUpdateCMForLM := func(oldEmqx, newEmqx v1alpha2.Emqx) bool {
+		// TODO
+		return false
+	}
+	res["shouldUpdateCMForLM"] = fnShouldUpdateCMForLM(oldEmqx, newEmqx)
+
+	fnShouldUpdateCMForLP := func(oldEmqx, newEmq v1alpha2.Emqx) bool {
+		// TODO
+		return false
+	}
+
+	res["shouldUpdateCMForLP"] = fnShouldUpdateCMForLP(oldEmqx, newEmqx)
+
+	fnShouldUpdateSts := func(oldEmqx, newEmqx v1alpha2.Emqx) bool {
+		// TODO
+		return false
+	}
+
+	res["shouldUpdateSts"] = fnShouldUpdateSts(oldEmqx, newEmqx)
+
+	fnShouldUpdateListenerSvc := func(oldEmqx, newEmqx v1alpha2.Emqx) bool {
+		// TODO
+		return false
+	}
+
+	res["shouldUpdateListenerSvc"] = fnShouldUpdateListenerSvc(oldEmqx, newEmqx)
+
+	return res
+
 }
