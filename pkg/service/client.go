@@ -38,7 +38,7 @@ func NewEmqxClusterKubeClient(k8sService k8s.Services, logger logr.Logger) *Emqx
 // EnsureEmqxSecret make sure the EMQ X secret exists
 func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	// oldSecret, err := r.K8sService.GetSecret(emqx.GetNamespace(), emqx.GetName())
-	_, err := r.K8sService.GetSecret(emqx.GetNamespace(), emqx.GetName())
+	oldSecret, err := r.K8sService.GetSecret(emqx.GetNamespace(), emqx.GetSecretName())
 
 	if err != nil {
 		// If no secret exists we need to create.
@@ -49,7 +49,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[
 		return err
 	}
 
-	if shouldUpdateEmqxs(emqx, emqx)["shouldUpdatesecret"] {
+	if shouldUpdateSecret(emqx.GetLicense(), string(oldSecret.Data["emqx.lic"])) {
 		secret := NewSecretForCR(emqx, labels, ownerRefs)
 		return r.K8sService.UpdateSecret(emqx.GetNamespace(), secret)
 	}
@@ -65,7 +65,20 @@ func (r *EmqxClusterKubeClient) EnsureEmqxHeadlessService(emqx v1alpha2.Emqx, la
 	return r.K8sService.CreateIfNotExistsService(emqx.GetNamespace(), svc)
 }
 
+//  EnsureEmqxConfigMapForACL make sure the EMQ X configmap for acl exists
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	oldConfigMapForAcl, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetName())
+
+	if err != nil {
+		// If no configmap for acl we need to create.
+		if errors.IsNotFound(err) {
+			cm := NewConfigMapForAcl(emqx, labels, ownerRefs)
+			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
+		}
+		return err
+	}
+
+	// if shouldUpdateEmqxConfigMapForAcl(emqx.GetACL(), old)
 	configmapForAcl := NewConfigMapForAcl(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForAcl)
 }
@@ -129,9 +142,14 @@ func shouldUpdateEmqx(expectResource, containterResource corev1.ResourceRequirem
 	return false
 }
 
-// func shouldUpdateResources(oldEmqx, newEmqx v1alpha2.Emqx) []bool {
+func shouldUpdateSecret(expectLiscence, emqxLiscence string) bool {
+	return expectLiscence != emqxLiscence
+}
 
-// }
+func shouldUpdateEmqxConfigMapForAcl(expectEmqxACL, oldEmqxAcl v1alpha2.ACL) bool {
+	// TODO
+	return false
+}
 
 // shouldUpdateEmqxs make sure to update secret, headless svc, acl configmap, lm configmap, lp configmap, statefulset, linstener svc
 func shouldUpdateEmqxs(oldEmqx, newEmqx v1alpha2.Emqx) map[string]bool {
