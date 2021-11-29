@@ -31,8 +31,7 @@ type Meta struct {
 
 func newCluster(emqx v1alpha2.Emqx) *Meta {
 	return &Meta{
-		Status: v1alpha2.ClusterConditionCreating,
-		// Config:    e.Spec.Config,
+		Status:    v1alpha2.ClusterConditionCreating,
 		Obj:       emqx,
 		Size:      *emqx.GetReplicas(),
 		State:     Create,
