@@ -13,20 +13,22 @@ import (
 )
 
 func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
-	stringData := map[string]string{"emqx.lic": emqx.GetLicense()}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:          labels,
-			Name:            emqx.GetSecretName(),
-			Namespace:       emqx.GetNamespace(),
-			OwnerReferences: ownerRefs,
-		},
-		Type:       corev1.SecretTypeOpaque,
-		StringData: stringData,
+	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
+	if ok == true && emqxEnterprise.GetLicense() != "" {
+		stringData := map[string]string{"emqx.lic": emqxEnterprise.GetLicense()}
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels:          labels,
+				Name:            emqx.GetSecretName(),
+				Namespace:       emqx.GetNamespace(),
+				OwnerReferences: ownerRefs,
+			},
+			Type:       corev1.SecretTypeOpaque,
+			StringData: stringData,
+		}
+	} else {
+		return nil
 	}
-
-	return secret
 }
 
 func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
@@ -118,17 +120,6 @@ func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, 
 func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
 	_, ports, env := generatePorts(emqx)
 
-	var emqxUserGroup int64 = 1000
-	var runAsNonRoot bool = true
-	var fsGroupChangeAlways corev1.PodFSGroupChangePolicy = "Always"
-
-	securityContext := &corev1.PodSecurityContext{
-		FSGroup:             &emqxUserGroup,
-		FSGroupChangePolicy: &fsGroupChangeAlways,
-		RunAsNonRoot:        &runAsNonRoot,
-		RunAsUser:           &emqxUserGroup,
-		SupplementalGroups:  []int64{emqxUserGroup},
-	}
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            emqx.GetName(),
@@ -158,7 +149,7 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 					// TODO
 					// Affinity: getAffinity(rc.Spec.Affinity, labels),
 					ServiceAccountName: emqx.GetServiceAccountName(),
-					SecurityContext:    securityContext,
+					SecurityContext:    getSecurityContext(),
 					Tolerations:        emqx.GetToleRations(),
 					NodeSelector:       emqx.GetNodeSelector(),
 					Containers: []corev1.Container{
@@ -179,6 +170,20 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 	}
 
 	return sts
+}
+
+func getSecurityContext() *corev1.PodSecurityContext {
+	emqxUserGroup := int64(1000)
+	runAsNonRoot := true
+	fsGroupChangeAlways := corev1.FSGroupChangeAlways
+
+	return &corev1.PodSecurityContext{
+		FSGroup:             &emqxUserGroup,
+		FSGroupChangePolicy: &fsGroupChangeAlways,
+		RunAsNonRoot:        &runAsNonRoot,
+		RunAsUser:           &emqxUserGroup,
+		SupplementalGroups:  []int64{emqxUserGroup},
+	}
 }
 
 func getVolumeClaimTemplates(emqx v1alpha2.Emqx) []corev1.PersistentVolumeClaim {
@@ -207,16 +212,6 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 			MountPath: constants.EMQX_LOG_DIR,
 		},
 	)
-	if emqx.GetLicense() != "" {
-		volumeMounts = append(volumeMounts,
-			corev1.VolumeMount{
-				Name:      emqx.GetSecretName(),
-				MountPath: constants.EMQX_LIC_DIR,
-				SubPath:   constants.EMQX_LIC_SUBPATH,
-				ReadOnly:  true,
-			},
-		)
-	}
 	acl := emqx.GetACL()
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
@@ -241,6 +236,17 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 			SubPath:   plugins["subPath"],
 		},
 	)
+	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
+	if ok == true && emqxEnterprise.GetLicense() != "" {
+		volumeMounts = append(volumeMounts,
+			corev1.VolumeMount{
+				Name:      emqx.GetSecretName(),
+				MountPath: constants.EMQX_LIC_DIR,
+				SubPath:   constants.EMQX_LIC_SUBPATH,
+				ReadOnly:  true,
+			},
+		)
+	}
 	return volumeMounts
 }
 
@@ -261,24 +267,6 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 				Name: emqx.GetLogVolumeName(),
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
-		)
-	}
-	if emqx.GetLicense() != "" {
-		volumes = append(volumes,
-			corev1.Volume{
-				Name: emqx.GetSecretName(),
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: emqx.GetSecretName(),
-						Items: []corev1.KeyToPath{
-							{
-								Key:  "emqx.lic",
-								Path: "emqx.lic",
-							},
-						},
-					},
 				},
 			},
 		)
@@ -343,6 +331,25 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 			},
 		},
 	)
+	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
+	if ok == true && emqxEnterprise.GetLicense() != "" {
+		volumes = append(volumes,
+			corev1.Volume{
+				Name: emqx.GetSecretName(),
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: emqx.GetSecretName(),
+						Items: []corev1.KeyToPath{
+							{
+								Key:  "emqx.lic",
+								Path: "emqx.lic",
+							},
+						},
+					},
+				},
+			},
+		)
+	}
 	return volumes
 }
 
