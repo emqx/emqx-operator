@@ -137,7 +137,6 @@ func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 			VolumeClaimTemplates: getVolumeClaimTemplates(emqx),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					// TODO merge labels
 					Labels: labels,
 					// TODO
 					// Annotations:
