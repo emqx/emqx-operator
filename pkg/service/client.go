@@ -186,7 +186,3 @@ func shouldUpdateEmqxConfigMapForLM(expectEmqxLM, oldEmqxLM string) bool {
 func shouldUpdateEmqxConfigMapForLP(expectEmqxLP, oldEmqxLP string) bool {
 	return expectEmqxLP != oldEmqxLP
 }
-
-// func shouldUpdateListenerSvc() bool {
-// 	return false
-// }
