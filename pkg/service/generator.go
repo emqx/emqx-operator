@@ -237,7 +237,7 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 		},
 	)
 	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
-	if ok == true && emqxEnterprise.GetLicense() != "" {
+	if ok && emqxEnterprise.GetLicense() != "" {
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
 				Name:      emqx.GetSecretName(),
@@ -332,7 +332,7 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 		},
 	)
 	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
-	if ok == true && emqxEnterprise.GetLicense() != "" {
+	if ok && emqxEnterprise.GetLicense() != "" {
 		volumes = append(volumes,
 			corev1.Volume{
 				Name: emqx.GetSecretName(),
