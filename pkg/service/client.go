@@ -1,6 +1,8 @@
 package service
 
 import (
+	"reflect"
+
 	"github.com/emqx/emqx-operator/api/v1alpha2"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/go-logr/logr"
@@ -38,7 +40,11 @@ func NewEmqxClusterKubeClient(k8sService k8s.Services, logger logr.Logger) *Emqx
 // EnsureEmqxSecret make sure the EMQ X secret exists
 func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	secret := NewSecretForCR(emqx, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsSecret(emqx.GetNamespace(), secret)
+	if reflect.ValueOf(secret).IsNil() {
+		return nil
+	} else {
+		return r.K8sService.CreateIfNotExistsSecret(emqx.GetNamespace(), secret)
+	}
 }
 
 // EnsureEmqxHeadlessService makes sure the EMQ X headless service exists

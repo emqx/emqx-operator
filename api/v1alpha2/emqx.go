@@ -36,9 +36,6 @@ type EmqxSpec interface {
 	GetResource() corev1.ResourceRequirements
 	SetResource(resource corev1.ResourceRequirements)
 
-	GetLicense() string
-	SetLicense(license string)
-
 	GetStorage() *Storage
 	SetStorage(storage *Storage)
 

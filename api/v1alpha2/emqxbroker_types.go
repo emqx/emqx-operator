@@ -44,7 +44,6 @@ type EmqxBrokerSpec struct {
 	// The service account name which is being bind with the service
 	// account of the crd instance.
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-	License   string                      `json:"license,omitempty"`
 
 	Storage *Storage `json:"storage,omitempty"`
 
@@ -119,9 +118,6 @@ func (emqx *EmqxBroker) GetResource() corev1.ResourceRequirements { return emqx.
 func (emqx *EmqxBroker) SetResource(resource corev1.ResourceRequirements) {
 	emqx.Spec.Resources = resource
 }
-
-func (emqx *EmqxBroker) GetLicense() string        { return emqx.Spec.License }
-func (emqx *EmqxBroker) SetLicense(license string) { emqx.Spec.License = license }
 
 func (emqx *EmqxBroker) GetStorage() *Storage        { return emqx.Spec.Storage }
 func (emqx *EmqxBroker) SetStorage(storage *Storage) { emqx.Spec.Storage = storage }

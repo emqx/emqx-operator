@@ -1010,8 +1010,6 @@ spec:
                   type: string
                 description: The labels configure must be specified.
                 type: object
-              license:
-                type: string
               listener:
                 properties:
                   externalIPs:
