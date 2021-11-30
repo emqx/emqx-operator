@@ -14,7 +14,7 @@ import (
 
 func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
 	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
-	if ok == true && emqxEnterprise.GetLicense() != "" {
+	if ok && emqxEnterprise.GetLicense() != "" {
 		stringData := map[string]string{"emqx.lic": emqxEnterprise.GetLicense()}
 		return &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

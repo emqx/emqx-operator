@@ -43,7 +43,23 @@ func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[
 	if reflect.ValueOf(secret).IsNil() {
 		return nil
 	} else {
-		return r.K8sService.CreateIfNotExistsSecret(emqx.GetNamespace(), secret)
+
+		oldSecret, err := r.K8sService.GetSecret(emqx.GetNamespace(), emqx.GetSecretName())
+
+		if err != nil {
+			// If no secret exists we need to create.
+			if errors.IsNotFound(err) {
+				return r.K8sService.CreateSecret(emqx.GetNamespace(), secret)
+			}
+			return err
+		}
+
+		// The instance already known as emqx enterprise
+		emqxEnterprise, _ := emqx.(*v1alpha2.EmqxEnterprise)
+		if shouldUpdateSecret(emqxEnterprise.GetLicense(), oldSecret.StringData["emqx.lic"]) {
+			return r.K8sService.UpdateSecret(emqx.GetNamespace(), secret)
+		}
+		return nil
 	}
 }
 
@@ -54,20 +70,63 @@ func (r *EmqxClusterKubeClient) EnsureEmqxHeadlessService(emqx v1alpha2.Emqx, la
 }
 
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForAcl := NewConfigMapForAcl(emqx, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForAcl)
+	oldConfigMapForAcl, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetName())
+
+	if err != nil {
+		// If no configmap for acl we need to create.
+		if errors.IsNotFound(err) {
+			cm := NewConfigMapForAcl(emqx, labels, ownerRefs)
+			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
+		}
+		return err
+	}
+
+	if shouldUpdateEmqxConfigMapForAcl(emqx.GetACL()["conf"], oldConfigMapForAcl.Data["acl.conf"]) {
+		cm := NewConfigMapForAcl(emqx, labels, ownerRefs)
+		return r.K8sService.UpdateConfigMap(emqx.GetNamespace(), cm)
+	}
+
+	return nil
 }
 
 // EnsureEmqxConfigMapForLoadedModules make sure the EMQ X configmap for loaded modules exists
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForLM := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForLM)
+	oldConfigMapForLM, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetLoadedModules()["name"])
+	if err != nil {
+		// If no configmap for acl we need to create.
+		if errors.IsNotFound(err) {
+			cm := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
+			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
+		}
+		return err
+	}
+
+	if shouldUpdateEmqxConfigMapForLM(emqx.GetLoadedModules()["conf"], oldConfigMapForLM.Data["loaded_modules"]) {
+		cm := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
+		return r.K8sService.UpdateConfigMap(emqx.GetNamespace(), cm)
+	}
+
+	return nil
 }
 
 // EnsureEmqxConfigMapForLoadedPlugins make sure the EMQ X configmap for loaded plugins exists
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	configmapForPG := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsConfigMap(emqx.GetNamespace(), configmapForPG)
+	oldConfigMapForLP, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetLoadedPlugins()["name"])
+	if err != nil {
+		// If no configmap for acl we need to create.
+		if errors.IsNotFound(err) {
+			cm := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
+			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
+		}
+		return err
+	}
+
+	if shouldUpdateEmqxConfigMapForLP(emqx.GetLoadedPlugins()["conf"], oldConfigMapForLP.Data["loaded_plugins"]) {
+		cm := NewConfigMapForAcl(emqx, labels, ownerRefs)
+		return r.K8sService.UpdateConfigMap(emqx.GetNamespace(), cm)
+	}
+
+	return nil
 }
 
 // EnsureEmqxStatefulSet makes sure the EMQ X statefulset exists in the desired state
@@ -115,4 +174,20 @@ func shouldUpdateEmqx(expectResource, containterResource corev1.ResourceRequirem
 		return true
 	}
 	return false
+}
+
+func shouldUpdateSecret(expectLiscence, emqxLiscence string) bool {
+	return expectLiscence != emqxLiscence
+}
+
+func shouldUpdateEmqxConfigMapForAcl(expectEmqxACL, oldEmqxAcl string) bool {
+	return expectEmqxACL != oldEmqxAcl
+}
+
+func shouldUpdateEmqxConfigMapForLM(expectEmqxLM, oldEmqxLM string) bool {
+	return expectEmqxLM != oldEmqxLM
+}
+
+func shouldUpdateEmqxConfigMapForLP(expectEmqxLP, oldEmqxLP string) bool {
+	return expectEmqxLP != oldEmqxLP
 }
