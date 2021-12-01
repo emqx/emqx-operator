@@ -122,7 +122,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(emqx v1alpha
 	}
 
 	if shouldUpdateEmqxConfigMapForLP(emqx.GetLoadedPlugins()["conf"], oldConfigMapForLP.Data["loaded_plugins"]) {
-		cm := NewConfigMapForAcl(emqx, labels, ownerRefs)
+		cm := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
 		return r.K8sService.UpdateConfigMap(emqx.GetNamespace(), cm)
 	}
 
