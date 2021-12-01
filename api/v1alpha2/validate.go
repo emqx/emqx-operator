@@ -1,8 +1,8 @@
 package v1alpha2
 
 import (
-	"errors"
 	"fmt"
+	"reflect"
 )
 
 const (
@@ -17,14 +17,8 @@ func (emqx EmqxBroker) Validate() error {
 		return fmt.Errorf("name length can't be higher than %d", maxNameLength)
 	}
 
-	if *emqx.GetReplicas() == 0 {
+	if reflect.ValueOf(emqx.GetReplicas()).IsZero() {
 		emqx.SetReplicas(defaultEmqxBrokerNumber)
-	} else if *emqx.GetReplicas() < defaultEmqxBrokerNumber {
-		return errors.New("number of emqx in spec is less than the minimum")
-	}
-
-	if emqx.GetImage() == "" {
-		return errors.New("image must be specified")
 	}
 
 	return nil
@@ -36,14 +30,9 @@ func (emqx EmqxEnterprise) Validate() error {
 		return fmt.Errorf("name length can't be higher than %d", maxNameLength)
 	}
 
-	if *emqx.GetReplicas() == 0 {
+	if reflect.ValueOf(emqx.GetReplicas()).IsZero() {
 		emqx.SetReplicas(defaultEmqxBrokerNumber)
-	} else if *emqx.GetReplicas() < defaultEmqxBrokerNumber {
-		return errors.New("number of emqx in spec is less than the minimum")
 	}
 
-	if emqx.GetImage() == "" {
-		return errors.New("image must be specified")
-	}
 	return nil
 }
