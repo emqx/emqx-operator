@@ -1,57 +1,33 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  namespace: default
   name: emqx
-
 ---
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: emqx
 rules:
-- apiGroups: 
+- apiGroups:
   - ""
   resources:
   - endpoints
   verbs:
-    - "*"
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxbrokers
-  verbs:
-  - create
-  - delete
   - get
-  - list
-  - patch
-  - update
   - watch
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxbrokers/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxbrokers/status
-  verbs:
-  - get
-  - patch
-  - update
+  - list
 
 ---
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: emqx-rolebinding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
   name: emqx
 subjects:
-- kind: ServiceAccount
+  - kind: ServiceAccount
+    name: emqx
+    namespace: default
+roleRef:
+  kind: ClusterRole
   name: emqx
-  namespace: default
+  apiGroup: rbac.authorization.k8s.io

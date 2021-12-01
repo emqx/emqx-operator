@@ -1115,6 +1115,7 @@ spec:
               replicas:
                 description: The fields of Broker. The replicas of emqx broker
                 format: int32
+                minimum: 3
                 type: integer
               resources:
                 description: The service account name which is being bind with the
