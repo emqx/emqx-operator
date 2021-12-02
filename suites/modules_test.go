@@ -71,10 +71,7 @@ var _ = Describe("", func() {
 						Namespace: broker.GetNamespace(),
 					}, cm,
 				)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, Timeout, Interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
@@ -125,10 +122,7 @@ var _ = Describe("", func() {
 						Namespace: enterprise.GetNamespace(),
 					}, cm,
 				)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, Timeout, Interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{

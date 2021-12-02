@@ -53,10 +53,7 @@ var _ = Describe("", func() {
 			svc := &corev1.Service{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: broker.GetHeadlessServiceName(), Namespace: broker.GetNamespace()}, svc)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, Timeout, Interval).Should(BeTrue())
 
 			Expect(svc.Spec.Type).Should(Equal(corev1.ServiceTypeClusterIP))
@@ -131,10 +128,7 @@ var _ = Describe("", func() {
 					},
 					svc,
 				)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, Timeout, Interval).Should(BeTrue())
 
 			Expect(svc.Spec.Ports).Should(ContainElements(corev1.ServicePort{

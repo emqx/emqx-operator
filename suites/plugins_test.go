@@ -56,10 +56,7 @@ var _ = Describe("", func() {
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: broker.GetLoadedPlugins()["name"], Namespace: broker.GetNamespace()}, cm)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, Timeout, Interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
