@@ -30,19 +30,13 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
    emqxenterprises.apps.emqx.io                2021-12-01T03:15:58Z
    ```
 
-3. Enable RBAC rules for EMQ X Operator pods
-
-   ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/rbac.yaml
-   ```
-
-4. Deploy operator controller
+3. Deploy operator controller
 
    ```shell
    $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator
    ```
 
-5. Check operator controller status
+4. Check operator controller status
 
    ```shell
    $ kubectl get deployments controller-manager -n system
@@ -54,7 +48,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
    controller-manager-7f946dc6b4-l9vd2   1/1     Running   3          4h34m
    ```
 
-6. Monitor the metrics about the EMQ X with [**Prometheus**](https://prometheus.io/)
+5. Monitor the metrics about the EMQ X with [**Prometheus**](https://prometheus.io/)
    
   ```yaml
 
