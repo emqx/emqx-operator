@@ -9,3 +9,4 @@ spec:
   replicas: 3
   labels:
     cluster: emqx
+# license:  the license for EMQ X Enterprise should be completed

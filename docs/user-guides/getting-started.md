@@ -13,8 +13,8 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 1. Build the container image and push to the image repo
 
   ```bash
-  $IMG=emqx/emqx-operator-controller:0.1.0 make docker-build
-  $IMG=emqx/emqx-operator-controller:0.1.0 make docker-push
+  $ IMG=emqx/emqx-operator-controller:0.1.0 make docker-build
+  $ IMG=emqx/emqx-operator-controller:0.1.0 make docker-push
   ```
 
   **The `IMG` is related to the `spec.template.spec.containers[0].image` in `https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/controller.yaml`**
