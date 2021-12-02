@@ -3,7 +3,7 @@ name: Run gitlint
 on: [pull_request]
 
 jobs:
-  run_gitlint:
+  gitlint:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout source code

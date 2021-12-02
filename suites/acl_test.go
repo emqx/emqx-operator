@@ -56,10 +56,7 @@ var _ = Describe("", func() {
 
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: broker.GetACL()["name"], Namespace: broker.GetNamespace()}, cm)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, Timeout, Interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
