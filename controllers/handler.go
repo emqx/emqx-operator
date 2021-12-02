@@ -35,7 +35,9 @@ func (ech *EmqxClusterHandler) Do(emqx v1alpha2.Emqx) error {
 	meta := ech.metaCache.Cache(emqx)
 	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(3).
 		Info(fmt.Sprintf("meta status:%s, mes:%s, state:%s", meta.Status, meta.Message, meta.State))
-	ech.updateStatus(meta)
+	if err := ech.updateStatus(meta); err != nil {
+		return err
+	}
 
 	// Create owner refs so the objects manager by this handler have ownership to the
 	// received rc.
@@ -49,7 +51,7 @@ func (ech *EmqxClusterHandler) Do(emqx v1alpha2.Emqx) error {
 	if err := ech.Ensure(meta.Obj, labels, oRefs); err != nil {
 		ech.eventsCli.FailedCluster(emqx, err.Error())
 		emqx.SetFailedCondition(err.Error())
-		ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+		_ = ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
 		// TODO
 		// metrics.ClusterMetrics.SetClusterError(emqx.GetNamespace(), emqx.GetName())
 		return err
@@ -80,14 +82,17 @@ func (ech *EmqxClusterHandler) Do(emqx v1alpha2.Emqx) error {
 	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("SetReadyCondition...")
 	ech.eventsCli.HealthCluster(emqx)
 	emqx.SetReadyCondition("Cluster ok")
-	ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+	err := ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+	if err != nil {
+		return err
+	}
 	// TODO
 	// metrics.ClusterMetrics.SetClusterOK(emqx.GetNamespace(), emqx.GetName())
 
 	return nil
 }
 
-func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) {
+func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) error {
 	emqx := meta.Obj
 
 	if meta.State != cache.Check {
@@ -108,8 +113,9 @@ func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) {
 			ech.eventsCli.UpdateCluster(emqx, meta.Message)
 			emqx.SetUpdatingCondition(meta.Message)
 		}
-		ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+		return ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
 	}
+	return nil
 }
 
 func (ech *EmqxClusterHandler) createOwnerReferences(emqx v1alpha2.Emqx) []metav1.OwnerReference {
