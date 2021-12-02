@@ -1,23 +1,44 @@
-name: Check Markdown
+name: Check file
 
 on: [pull_request]
 
 jobs:
+  check-manifests-and-generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.3'
+      - name: Check manifests
+        run: |
+          make manifests
+          if ! git diff --quiet; then
+            echo "Need run make manifests"
+            exit 1
+          fi
+      - name: Check generate
+        run: |
+          make generate
+          if ! git diff --quiet; then
+            echo "Need run make generate"
+            exit 1
+          fi
+
+
+
   check-docs-markdown:
     runs-on: ubuntu-latest
     steps:
-    - name: Check out code
-      uses: actions/checkout@main
-  
-    - name: Install markdownlint
-      run: sudo npm install -g markdownlint-cli
-
-    - name: Markdown lint
-      run: markdownlint -c .github/workflows/markdownlint.json ./
-
-    - name: Markdown link check
-      uses: gaurav-nelson/github-action-markdown-link-check@v1
-      with:
-        use-quiet-mode: 'yes'
-        check-modified-files-only: 'yes'
-        base-branch: 'main'
+      - name: Check out code
+        uses: actions/checkout@main
+      - name: Install markdownlint
+        run: sudo npm install -g markdownlint-cli
+      - name: Markdown lint
+        run: markdownlint -c .github/workflows/markdownlint.json ./
+      - name: Markdown link check
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          check-modified-files-only: 'yes'
+          base-branch: 'main'
