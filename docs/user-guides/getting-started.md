@@ -33,7 +33,9 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 3. Deploy operator controller
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/namespace.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/rbac.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/controller.yaml
    ```
 
 4. Check operator controller status
