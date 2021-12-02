@@ -33,14 +33,13 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 3. Enable RBAC rules for EMQ X Operator pods
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/namespace.yaml
    $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/rbac.yaml
    ```
 
 4. Deploy operator controller
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/controller.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator
    ```
 
 5. Check operator controller status
@@ -89,8 +88,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 3. Create RBAC objects from manifest file
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/operator_namespace.yaml
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/rbac.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator
    ```
 
 ## Deploy the EMQ X Broker
@@ -192,7 +190,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
    NAME              READY   STATUS    RESTARTS   AGE
    emqx-0   1/1     Running   0          22m
    emqx-1   1/1     Running   0          22m
-   emqx-3   1/1     Running   0          22m
+   emqx-2   1/1     Running   0          22m
 
    $ kubectl exec -it emqx-0 -- emqx_ctl status
    Node 'emqx@emqx-0.emqx.default.svc.cluster.local' 4.3.8 is started
