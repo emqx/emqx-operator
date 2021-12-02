@@ -35,12 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const (
-	checkInterval  = 5 * time.Second
-	timeOut        = 30 * time.Second
-	needRequeueMsg = "need requeue"
-)
-
 var (
 	log = logf.Log.WithName("emqx-controller")
 	// reconcileTime is the delay between reconciliations. Defaults to 60s.
@@ -131,7 +125,7 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	reqLogger.V(5).Info(fmt.Sprintf("EMQ X Cluster Spec:\n %+v", instance))
 
 	if err = r.Handler.Do(instance); err != nil {
-		if err.Error() == needRequeueMsg {
+		if err.Error() == "need requeue" {
 			return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 		}
 		reqLogger.Error(err, "Reconcile handler")

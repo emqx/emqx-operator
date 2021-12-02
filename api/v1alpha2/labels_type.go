@@ -18,10 +18,8 @@ func mergeLabels(allLabels ...Labels) Labels {
 	res := map[string]string{}
 
 	for _, labels := range allLabels {
-		if labels != nil {
-			for k, v := range labels {
-				res[k] = v
-			}
+		for k, v := range labels {
+			res[k] = v
 		}
 	}
 	return res

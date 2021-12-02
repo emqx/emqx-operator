@@ -115,7 +115,7 @@ func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	reqLogger.V(5).Info(fmt.Sprintf("EMQ X Cluster Spec:\n %+v", instance))
 
 	if err = r.Handler.Do(instance); err != nil {
-		if err.Error() == needRequeueMsg {
+		if err.Error() == "need requeue" {
 			return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 		}
 		reqLogger.Error(err, "Reconcile handler")
