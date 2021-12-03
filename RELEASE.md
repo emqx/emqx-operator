@@ -19,4 +19,4 @@
 
 - Bump APIversion to `apps.emqx.io/v1beta1`
 - Add the `CRD` of `EMQ X Enterprise`
-- Remove configurations:`cluster`, `loadedPluginConf`,`loadedModulesConf`,`aclConf` ,support readability configuration about `acl`，`modules` and `plugins` in `YAML`
+- Remove configurations:`cluster`, `loadedPluginConf`,`loadedModulesConf`,`aclConf`
