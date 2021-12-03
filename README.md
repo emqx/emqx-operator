@@ -12,7 +12,7 @@ The EMQ X Operator includes, but is not limited to, the following features:
 
 * **Simplified Deployment Configuration**: Configure the fundamentals of EMQ X Cluster, including persistence, configuration, license and etc, in a Kubernetes-native way.
 
-For an introduction to the EMQ X Operator, see the [getting started](docs/user-guides/getting-started.md) guide.
+For an introduction to the EMQ X Operator, see the [get started](docs/user-guides/get-started.md) guide.
 
 ## Prerequisites
 
@@ -27,9 +27,9 @@ The example of EMQ X Broker see the [emqx.yaml](config/samples/emqx/emqx.yaml) a
 
 The EMQ X Operator automatically detects changes on any of the above custom resource objects, and ensures that running deployments are kept in sync with the changes.
 
-## Quick Start
+## Getting Start
 
-For more information on quick start, see the [user guide](docs/user-guides/getting-started.md)
+For more information on get started, see the [user guide](docs/user-guides/get-started.md)
 
 ## Development
 

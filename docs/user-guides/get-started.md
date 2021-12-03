@@ -13,16 +13,17 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 1. Build the container image and push to the image repo
 
   ```bash
-  $ IMG=emqx/emqx-operator-controller:0.1.0 make docker-build
-  $ IMG=emqx/emqx-operator-controller:0.1.0 make docker-push
+  $ IMG=emqx/emqx-operator-controller:1.0.0 make docker-build
+  $ IMG=emqx/emqx-operator-controller:1.0.0 make docker-push
   ```
 
-  **The `IMG` is related to the `spec.template.spec.containers[0].image` in `https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/controller.yaml`**
+  **The `IMG` is related to the `spec.template.spec.containers[0].image` in `https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/operator/controller.yaml`**
 
 2. Register the CustomResourceDefinitions into the Kubernetes Resources.
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/crd/bases
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/crd/bases/apps.emqx.io_emqxbrokers.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/crd/bases/apps.emqx.io_emqxenterprises.yaml
 
    $ kubectl get crd
    NAME                  CREATED AT
@@ -33,7 +34,9 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 3. Deploy operator controller
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/operator/namespace.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/operator/rbac.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/operator/controller.yaml
    ```
 
 4. Check operator controller status
@@ -82,7 +85,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 3. Create RBAC objects from manifest file
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/operator/rbac.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/operator/rbac.yaml
    ```
 
 ## Deploy the EMQ X Broker
@@ -90,13 +93,13 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 1. Enable RBAC rule for EMQ X pods
 
    ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/emqx/rbac.yaml
+   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/emqx/rbac.yaml
    ```
 
 2. Create EMQ X Custom Resource file like this
 
    ```shell
-   $ cat https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/emqx/emqx.yaml
+   $ cat https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/emqx/emqx.yaml
 
    apiVersion: apps.emqx.io/v1beta1
    kind: EmqxBroker
@@ -177,7 +180,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 3. Deploy EMQ X Custom Resource and check EMQ X status
 
    ```shell
-   $ kubectl create https://raw.githubusercontent.com/emqx/emqx-operator/main/config/samples/emqx/emqx.yaml
+   $ kubectl create https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/emqx/emqx.yaml
    emqx.apps.emqx.io/emqx created
 
    $ kubectl get pods
