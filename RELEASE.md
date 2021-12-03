@@ -5,7 +5,7 @@
 ### Features 🌈
 
 - Custom Resource Definition for **EMQ X Broker** and **EMQ X Enterprise**
-- Support EMQ X Broker 4.3.x version and EMQ X Enterprise 4.3.x
+- Support EMQ X Broker 4.3.x version and EMQ X Enterprise 4.3.x version
 - Readability configuration about `acl`，`modules` and `plugins` in `YAML`
 - Support persistence for data and logs in EMQ X Cluster
 - Support the strategy of node discovery `k8s`
