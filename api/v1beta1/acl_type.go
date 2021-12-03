@@ -14,7 +14,7 @@ type Topics struct {
 //+kubebuilder:object:generate=true
 type ACL struct {
 	//+kubebuilder:validation:Enum=allow;deny
-	//+kubebuilder:validation:
+	//+kubebuilder:validation:Required
 	Permission string `json:"permission"`
 	Username   string `json:"username,omitempty"`
 	ClientID   string `json:"clientid,omitempty"`
@@ -26,7 +26,7 @@ type ACL struct {
 
 func (emqx *EmqxBroker) GetACL() map[string]string {
 	return map[string]string{
-		"name":      emqx.Name,
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "acl"),
 		"mountPath": "/opt/emqx/etc/acl.conf",
 		"subPath":   "acl.conf",
 		"conf":      generateACL(emqx.Spec.ACL),
@@ -35,7 +35,7 @@ func (emqx *EmqxBroker) GetACL() map[string]string {
 
 func (emqx *EmqxEnterprise) GetACL() map[string]string {
 	return map[string]string{
-		"name":      emqx.Name,
+		"name":      fmt.Sprintf("%s-%s", emqx.Name, "acl"),
 		"mountPath": "/opt/emqx/etc/acl.conf",
 		"subPath":   "acl.conf",
 		"conf":      generateACL(emqx.Spec.ACL),

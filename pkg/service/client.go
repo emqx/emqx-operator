@@ -70,7 +70,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxHeadlessService(emqx v1beta1.Emqx, lab
 }
 
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	oldConfigMapForAcl, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetName())
+	oldConfigMapForAcl, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetACL()["name"])
 
 	if err != nil {
 		// If no configmap for acl we need to create.
@@ -93,7 +93,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, lab
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	oldConfigMapForLM, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetLoadedModules()["name"])
 	if err != nil {
-		// If no configmap for acl we need to create.
+		// If no configmap for modules we need to create.
 		if errors.IsNotFound(err) {
 			cm := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
 			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
@@ -113,7 +113,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1
 func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	oldConfigMapForLP, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetLoadedPlugins()["name"])
 	if err != nil {
-		// If no configmap for acl we need to create.
+		// If no configmap for plugins we need to create.
 		if errors.IsNotFound(err) {
 			cm := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
 			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
