@@ -18,7 +18,7 @@ spec:
     singular: emqxbroker
   scope: Namespaced
   versions:
-  - name: v1alpha2
+  - name: v1beta1
     schema:
       openAPIV3Schema:
         description: EmqxBroker is the Schema for the emqxbrokers API

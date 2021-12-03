@@ -11,8 +11,8 @@ resources:
   domain: emqx.io
   group: apps
   kind: EmqxBroker
-  path: github.com/emqx/emqx-operator/api/v1alpha2
-  version: v1alpha2
+  path: github.com/emqx/emqx-operator/api/v1beta1
+  version: v1beta1
 - api:
     crdVersion: v1
     namespaced: true
@@ -20,6 +20,6 @@ resources:
   domain: emqx.io
   group: apps
   kind: EmqxEnterprise
-  path: github.com/emqx/emqx-operator/api/v1alpha2
-  version: v1alpha2
+  path: github.com/emqx/emqx-operator/api/v1beta1
+  version: v1beta1
 version: "3"

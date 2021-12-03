@@ -27,9 +27,9 @@ The example of EMQ X Broker see the [emqx.yaml](config/samples/emqx/emqx.yaml) a
 
 The EMQ X Operator automatically detects changes on any of the above custom resource objects, and ensures that running deployments are kept in sync with the changes.
 
-## Quickstart
+## Quick Start
 
-For more information on quickstart, see the [user guide](docs/user-guides/getting-started.md)
+For more information on quick start, see the [user guide](docs/user-guides/getting-started.md)
 
 ## Development
 

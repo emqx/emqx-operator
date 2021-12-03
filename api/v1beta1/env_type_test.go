@@ -1,9 +1,9 @@
-package v1alpha2_test
+package v1beta1_test
 
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -23,8 +23,8 @@ func TestGenerateEnv(t *testing.T) {
 		},
 	}
 
-	emqxBroker := v1alpha2.EmqxBroker{
-		Spec: v1alpha2.EmqxBrokerSpec{
+	emqxBroker := v1beta1.EmqxBroker{
+		Spec: v1beta1.EmqxBrokerSpec{
 			Env: env,
 		},
 	}

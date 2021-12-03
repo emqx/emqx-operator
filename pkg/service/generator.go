@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,8 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
-	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
+func NewSecretForCR(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
+	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
 	if ok && emqxEnterprise.GetLicense() != "" {
 		stringData := map[string]string{"emqx.lic": emqxEnterprise.GetLicense()}
 		return &corev1.Secret{
@@ -31,7 +31,7 @@ func NewSecretForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []me
 	}
 }
 
-func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
+func NewHeadLessSvcForCR(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	ports, _, _ := generatePorts(emqx)
 
 	return &corev1.Service{
@@ -49,7 +49,7 @@ func NewHeadLessSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 	}
 }
 
-func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
+func NewListenerSvcForCR(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Service {
 	listener := emqx.GetListener()
 	ports, _, _ := generatePorts(emqx)
 
@@ -72,7 +72,7 @@ func NewListenerSvcForCR(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs
 	return listenerSvc
 }
 
-func NewConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func NewConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	acl := emqx.GetACL()
 	cmForAcl := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -87,7 +87,7 @@ func NewConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs 
 	return cmForAcl
 }
 
-func NewConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func NewConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	modules := emqx.GetLoadedModules()
 	cmForPM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +102,7 @@ func NewConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, 
 	return cmForPM
 }
 
-func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
+func NewConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
 	plugins := emqx.GetLoadedPlugins()
 	cmForPG := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -117,7 +117,7 @@ func NewConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, 
 	return cmForPG
 }
 
-func NewEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
+func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *appsv1.StatefulSet {
 	_, ports, env := generatePorts(emqx)
 
 	sts := &appsv1.StatefulSet{
@@ -185,7 +185,7 @@ func getSecurityContext() *corev1.PodSecurityContext {
 	}
 }
 
-func getVolumeClaimTemplates(emqx v1alpha2.Emqx) []corev1.PersistentVolumeClaim {
+func getVolumeClaimTemplates(emqx v1beta1.Emqx) []corev1.PersistentVolumeClaim {
 	storageSpec := emqx.GetStorage()
 	if reflect.ValueOf(storageSpec).IsNil() {
 		return []corev1.PersistentVolumeClaim{}
@@ -197,7 +197,7 @@ func getVolumeClaimTemplates(emqx v1alpha2.Emqx) []corev1.PersistentVolumeClaim 
 	}
 }
 
-func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
+func getEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{}
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
@@ -235,7 +235,7 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 			SubPath:   plugins["subPath"],
 		},
 	)
-	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
+	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
 	if ok && emqxEnterprise.GetLicense() != "" {
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
@@ -249,7 +249,7 @@ func getEmqxVolumeMounts(emqx v1alpha2.Emqx) []corev1.VolumeMount {
 	return volumeMounts
 }
 
-func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
+func getEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 	volumes := []corev1.Volume{}
 	storageSpec := emqx.GetStorage()
 	if reflect.ValueOf(storageSpec).IsNil() {
@@ -330,7 +330,7 @@ func getEmqxVolumes(emqx v1alpha2.Emqx) []corev1.Volume {
 			},
 		},
 	)
-	emqxEnterprise, ok := emqx.(*v1alpha2.EmqxEnterprise)
+	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
 	if ok && emqxEnterprise.GetLicense() != "" {
 		volumes = append(volumes,
 			corev1.Volume{
@@ -382,7 +382,7 @@ func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 	return specPolicy
 }
 
-func genVolumeClaimTemplate(emqx v1alpha2.Emqx, Name string) corev1.PersistentVolumeClaim {
+func genVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.PersistentVolumeClaim {
 	template := emqx.GetStorage().VolumeClaimTemplate
 	boolTrue := true
 	pvc := corev1.PersistentVolumeClaim{
@@ -414,7 +414,7 @@ func genVolumeClaimTemplate(emqx v1alpha2.Emqx, Name string) corev1.PersistentVo
 	return pvc
 }
 
-func generatePorts(emqx v1alpha2.Emqx) ([]corev1.ServicePort, []corev1.ContainerPort, []corev1.EnvVar) {
+func generatePorts(emqx v1beta1.Emqx) ([]corev1.ServicePort, []corev1.ContainerPort, []corev1.EnvVar) {
 	var servicePorts []corev1.ServicePort
 	var containerPorts []corev1.ContainerPort
 	var env []corev1.EnvVar

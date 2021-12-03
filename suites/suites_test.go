@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/controllers"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -79,7 +79,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = v1alpha2.AddToScheme(scheme.Scheme)
+	err = v1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -203,18 +203,18 @@ func GenerateRBAC(name, namespace string) (*corev1.ServiceAccount, *rbacv1.Role,
 	return sa, role, roleBinding
 }
 
-func GenerateEmqxBroker(name, namespace string) *v1alpha2.EmqxBroker {
+func GenerateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	replicas := int32(3)
-	return &v1alpha2.EmqxBroker{
+	return &v1beta1.EmqxBroker{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1alpha2",
+			APIVersion: "apps.emqx.io/v1beta1",
 			Kind:       "EmqxBroker",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha2.EmqxBrokerSpec{
+		Spec: v1beta1.EmqxBrokerSpec{
 			Image:              "emqx/emqx:4.3.10",
 			ServiceAccountName: "emqx",
 			Replicas:           &replicas,
@@ -222,18 +222,18 @@ func GenerateEmqxBroker(name, namespace string) *v1alpha2.EmqxBroker {
 	}
 }
 
-func GenerateEmqxEnterprise(name, namespace string) *v1alpha2.EmqxEnterprise {
+func GenerateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 	replicas := int32(3)
-	return &v1alpha2.EmqxEnterprise{
+	return &v1beta1.EmqxEnterprise{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1alpha2",
+			APIVersion: "apps.emqx.io/v1beta1",
 			Kind:       "EmqxBroker",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1alpha2.EmqxEnterpriseSpec{
+		Spec: v1beta1.EmqxEnterpriseSpec{
 			Image:              "emqx/emqx-ee:4.3.5",
 			ServiceAccountName: "emqx",
 			Replicas:           &replicas,
@@ -241,7 +241,7 @@ func GenerateEmqxEnterprise(name, namespace string) *v1alpha2.EmqxEnterprise {
 	}
 }
 
-func DeleteAll(emqx v1alpha2.Emqx) error {
+func DeleteAll(emqx v1beta1.Emqx) error {
 	ctx := context.Background()
 
 	for _, resource := range listResource(emqx) {
@@ -253,7 +253,7 @@ func DeleteAll(emqx v1alpha2.Emqx) error {
 	return nil
 }
 
-func EnsureDeleteAll(emqx v1alpha2.Emqx) bool {
+func EnsureDeleteAll(emqx v1beta1.Emqx) bool {
 	ctx := context.Background()
 
 	if err := k8sClient.Get(
@@ -306,14 +306,14 @@ func EnsureDeleteAll(emqx v1alpha2.Emqx) bool {
 			Name:      emqx.GetName(),
 			Namespace: emqx.GetNamespace(),
 		},
-		&v1alpha2.EmqxBroker{},
+		&v1beta1.EmqxBroker{},
 	); !errors.IsNotFound(err) {
 		return false
 	}
 	return true
 }
 
-func listResource(emqx v1alpha2.Emqx) []client.Object {
+func listResource(emqx v1beta1.Emqx) []client.Object {
 	meta := metav1.ObjectMeta{
 		Name:      emqx.GetName(),
 		Namespace: emqx.GetNamespace(),

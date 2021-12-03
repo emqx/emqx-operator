@@ -1,5 +1,5 @@
 ## slim example
-apiVersion: apps.emqx.io/v1alpha2
+apiVersion: apps.emqx.io/v1beta1
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
