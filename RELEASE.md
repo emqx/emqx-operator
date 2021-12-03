@@ -1,5 +1,3 @@
-# EMQ X Operator 1.0.0 Released
-
 ## Release Note 🍻
 
 ### Features 🌈
@@ -15,7 +13,7 @@
 - Resources restrictions with k8s requests and limits
 - Node selector
 
-### Breaking Changes
+### Breaking Changes 💡
 
 - Bump APIversion to `apps.emqx.io/v1beta1`
 - Add the `CRD` of `EMQ X Enterprise`

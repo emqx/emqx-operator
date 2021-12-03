@@ -76,7 +76,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 
 ### Deploy the operator out the Kubernetes cluster
 
-> Prerequirements: Storage Class, Custom Resource Definition
+> Prerequisites: Custom Resource Definition
 
 1. Make sure kube config is configured properly
 
