@@ -3,7 +3,7 @@ package controllers
 import (
 	"fmt"
 
-	"github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/cache"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/service"
@@ -23,7 +23,7 @@ type EmqxClusterHandler struct {
 }
 
 // Do will ensure the EMQ X Cluster is in the expected state and update the EMQ X Cluster status.
-func (ech *EmqxClusterHandler) Do(emqx v1alpha2.Emqx) error {
+func (ech *EmqxClusterHandler) Do(emqx v1beta1.Emqx) error {
 	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).Info("handler doing")
 	if err := emqx.Validate(); err != nil {
 		// TODO
@@ -71,7 +71,7 @@ func (ech *EmqxClusterHandler) Do(emqx v1alpha2.Emqx) error {
 	// 	}
 	// 	// if user delete statefulset or deployment, set status
 	// 	status := emqx.Status.Conditions
-	// 	if len(status) > 0 && status[0].Type == v1alpha2.ClusterConditionHealthy {
+	// 	if len(status) > 0 && status[0].Type == v1beta1.ClusterConditionHealthy {
 	// 		ech.eventsCli.CreateCluster(emqx)
 	// 		ech.Status.SetCreateCondition("emqx server be removed by user, restart")
 	// 		ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
@@ -97,16 +97,16 @@ func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) error {
 
 	if meta.State != cache.Check {
 		switch meta.Status {
-		case v1alpha2.ClusterConditionCreating:
+		case v1beta1.ClusterConditionCreating:
 			ech.eventsCli.CreateCluster(emqx)
 			emqx.SetCreateCondition(meta.Message)
-		case v1alpha2.ClusterConditionScaling:
+		case v1beta1.ClusterConditionScaling:
 			ech.eventsCli.NewNodeAdd(emqx, meta.Message)
 			emqx.SetScalingUpCondition(meta.Message)
-		case v1alpha2.ClusterConditionScalingDown:
+		case v1beta1.ClusterConditionScalingDown:
 			ech.eventsCli.NodeRemove(emqx, meta.Message)
 			emqx.SetScalingDownCondition(meta.Message)
-		case v1alpha2.ClusterConditionUpgrading:
+		case v1beta1.ClusterConditionUpgrading:
 			ech.eventsCli.UpdateCluster(emqx, meta.Message)
 			emqx.SetUpgradingCondition(meta.Message)
 		default:
@@ -118,8 +118,8 @@ func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) error {
 	return nil
 }
 
-func (ech *EmqxClusterHandler) createOwnerReferences(emqx v1alpha2.Emqx) []metav1.OwnerReference {
-	emqxGroupVersionKind := v1alpha2.VersionKind(emqx.GetKind())
+func (ech *EmqxClusterHandler) createOwnerReferences(emqx v1beta1.Emqx) []metav1.OwnerReference {
+	emqxGroupVersionKind := v1beta1.VersionKind(emqx.GetKind())
 	return []metav1.OwnerReference{
 		*metav1.NewControllerRef(emqx, emqxGroupVersionKind),
 	}

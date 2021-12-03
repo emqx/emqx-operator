@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/api/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -166,7 +166,7 @@ var _ = Describe("", func() {
 		})
 
 		AfterEach(func() {
-			emqx := &v1alpha2.EmqxBroker{
+			emqx := &v1beta1.EmqxBroker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      BrokerName,
 					Namespace: BrokerNameSpace,
@@ -177,7 +177,7 @@ var _ = Describe("", func() {
 				return EnsureDeleteAll(emqx)
 			}, Timeout, Interval).Should(BeTrue())
 
-			emqxEnterprise := &v1alpha2.EmqxEnterprise{
+			emqxEnterprise := &v1beta1.EmqxEnterprise{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      EnterpriseName,
 					Namespace: EnterpriseNameSpace,

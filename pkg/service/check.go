@@ -3,14 +3,14 @@ package service
 import (
 	"errors"
 
-	"github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/go-logr/logr"
 )
 
 // EmqxClusterCheck defines the intercace able to check the correct status of a emq x cluster
 type EmqxClusterCheck interface {
-	CheckEmqxReadyReplicas(emqx v1alpha2.Emqx) error
+	CheckEmqxReadyReplicas(emqx v1beta1.Emqx) error
 }
 
 // EmqxClusterChecker is our implementation of EmqxClusterCheck intercace
@@ -33,7 +33,7 @@ func NewEmqxClusterChecker(k8sService k8s.Services, logger logr.Logger) *EmqxClu
 }
 
 // CheckEmqxReadyReplicas controls that the number of deployed emqx ready pod is the same than the requested on the spec
-func (ec *EmqxClusterChecker) CheckEmqxReadyReplicas(emqx v1alpha2.Emqx) error {
+func (ec *EmqxClusterChecker) CheckEmqxReadyReplicas(emqx v1beta1.Emqx) error {
 	d, err := ec.k8sService.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (ec *EmqxClusterChecker) CheckEmqxReadyReplicas(emqx v1alpha2.Emqx) error {
 
 // TODO
 // GetEmqxClusterIPs return the IPS of brokers
-// func (ec *EmqxClusterChecker) GetEmqxClusterIPs(e *v1alpha2.Emqx) ([]string, error) {
+// func (ec *EmqxClusterChecker) GetEmqxClusterIPs(e *v1beta1.Emqx) ([]string, error) {
 // 	ips := []string{}
 // 	stsps, err := ec.k8sService.GetStatefulSetPods(e.Namespace, util.GetEmqxName(e))
 // 	if err != nil {

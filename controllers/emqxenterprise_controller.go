@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/emqx/emqx-operator/api/v1alpha2"
-	appsv1alpha2 "github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/api/v1beta1"
+	appsv1beta1 "github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/cache"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/service"
@@ -95,7 +95,7 @@ func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	reqLogger.Info("Reconciling EMQ X Cluster")
 
 	// Fetch the EMQ X Cluster instance
-	instance := &v1alpha2.EmqxEnterprise{}
+	instance := &v1beta1.EmqxEnterprise{}
 	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -134,6 +134,6 @@ func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 // SetupWithManager sets up the controller with the Manager.
 func (r *EmqxEnterpriseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv1alpha2.EmqxEnterprise{}).
+		For(&appsv1beta1.EmqxEnterprise{}).
 		Complete(r)
 }

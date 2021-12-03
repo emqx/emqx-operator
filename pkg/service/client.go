@@ -3,7 +3,7 @@ package service
 import (
 	"reflect"
 
-	"github.com/emqx/emqx-operator/api/v1alpha2"
+	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -14,13 +14,13 @@ import (
 // EmqxClusterClient has the minimumm methods that a EMQ X Cluster controller needs to satisfy
 // in order to talk with K8s
 type EmqxClusterClient interface {
-	EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxHeadlessService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxListenerService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 }
 
 // EmqxClusterKubeClient implements the required methods to talk with kubernetes
@@ -38,7 +38,7 @@ func NewEmqxClusterKubeClient(k8sService k8s.Services, logger logr.Logger) *Emqx
 }
 
 // EnsureEmqxSecret make sure the EMQ X secret exists
-func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	secret := NewSecretForCR(emqx, labels, ownerRefs)
 	if reflect.ValueOf(secret).IsNil() {
 		return nil
@@ -55,7 +55,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[
 		}
 
 		// The instance already known as emqx enterprise
-		emqxEnterprise, _ := emqx.(*v1alpha2.EmqxEnterprise)
+		emqxEnterprise, _ := emqx.(*v1beta1.EmqxEnterprise)
 		if shouldUpdateSecret(emqxEnterprise.GetLicense(), oldSecret.StringData["emqx.lic"]) {
 			return r.K8sService.UpdateSecret(emqx.GetNamespace(), secret)
 		}
@@ -64,12 +64,12 @@ func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1alpha2.Emqx, labels map[
 }
 
 // EnsureEmqxHeadlessService makes sure the EMQ X headless service exists
-func (r *EmqxClusterKubeClient) EnsureEmqxHeadlessService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+func (r *EmqxClusterKubeClient) EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	svc := NewHeadLessSvcForCR(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsService(emqx.GetNamespace(), svc)
 }
 
-func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	oldConfigMapForAcl, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetName())
 
 	if err != nil {
@@ -90,7 +90,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1alpha2.Emqx, la
 }
 
 // EnsureEmqxConfigMapForLoadedModules make sure the EMQ X configmap for loaded modules exists
-func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	oldConfigMapForLM, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetLoadedModules()["name"])
 	if err != nil {
 		// If no configmap for acl we need to create.
@@ -110,7 +110,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(emqx v1alpha
 }
 
 // EnsureEmqxConfigMapForLoadedPlugins make sure the EMQ X configmap for loaded plugins exists
-func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	oldConfigMapForLP, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetLoadedPlugins()["name"])
 	if err != nil {
 		// If no configmap for acl we need to create.
@@ -130,7 +130,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(emqx v1alpha
 }
 
 // EnsureEmqxStatefulSet makes sure the EMQ X statefulset exists in the desired state
-func (r *EmqxClusterKubeClient) EnsureEmqxStatefulSet(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+func (r *EmqxClusterKubeClient) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	// TODO PDB
 	oldSts, err := r.K8sService.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
@@ -152,7 +152,7 @@ func (r *EmqxClusterKubeClient) EnsureEmqxStatefulSet(emqx v1alpha2.Emqx, labels
 }
 
 // EnsureEmqxListenerService make sure the EMQ X service for ingress exists
-func (r *EmqxClusterKubeClient) EnsureEmqxListenerService(emqx v1alpha2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+func (r *EmqxClusterKubeClient) EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	listenerSvc := NewListenerSvcForCR(emqx, labels, ownerRefs)
 	return r.K8sService.CreateIfNotExistsService(emqx.GetNamespace(), listenerSvc)
 }
@@ -176,8 +176,8 @@ func shouldUpdateEmqx(expectResource, containterResource corev1.ResourceRequirem
 	return false
 }
 
-func shouldUpdateSecret(expectLiscence, emqxLiscence string) bool {
-	return expectLiscence != emqxLiscence
+func shouldUpdateSecret(expectLicense, emqxLicense string) bool {
+	return expectLicense != emqxLicense
 }
 
 func shouldUpdateEmqxConfigMapForAcl(expectEmqxACL, oldEmqxAcl string) bool {
