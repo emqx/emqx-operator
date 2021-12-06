@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGenerateLoadedPlugins(t *testing.T) {
@@ -24,8 +25,8 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 		},
 	}
 
-	p := emqxBroker.GetLoadedPlugins()["conf"]
-	if p != "{foo, true}.\n{bar, false}.\n{emqx_management, true}.\n" {
-		t.Errorf("unexpected data: %s", p)
-	}
+	assert.Equal(t,
+		emqxBroker.GetLoadedPlugins()["conf"],
+		"{foo, true}.\n{bar, false}.\n{emqx_management, true}.\n",
+	)
 }
