@@ -53,7 +53,7 @@ var _ = Describe("", func() {
 						cm,
 					)
 					return err == nil
-				}, Timeout, Interval).Should(BeTrue())
+				}, tuneout, interval).Should(BeTrue())
 
 				Expect(cm.Data).Should(Equal(map[string]string{
 					"acl.conf": emqx.GetACL()["conf"],
@@ -90,7 +90,7 @@ var _ = Describe("", func() {
 							"acl.conf": "{deny, all, pubsub, [\"#\"]}.\n",
 						},
 					)
-				}, Timeout, Interval).Should(BeTrue())
+				}, tuneout, interval).Should(BeTrue())
 			}
 			// TODO: check acl status by emqx api
 			// TODO: test acl by mqtt pubsub
@@ -98,10 +98,10 @@ var _ = Describe("", func() {
 
 		AfterEach(func() {
 			for _, emqx := range emqxList() {
-				Expect(DeleteAll(emqx)).ToNot(HaveOccurred())
+				Expect(deleteAll(emqx)).ToNot(HaveOccurred())
 				Eventually(func() bool {
-					return EnsureDeleteAll(emqx)
-				}, Timeout, Interval).Should(BeTrue())
+					return ensureDeleteAll(emqx)
+				}, tuneout, interval).Should(BeTrue())
 			}
 		})
 	})

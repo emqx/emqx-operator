@@ -53,7 +53,7 @@ var _ = Describe("", func() {
 						cm,
 					)
 					return err == nil
-				}, Timeout, Interval).Should(BeTrue())
+				}, tuneout, interval).Should(BeTrue())
 
 				Expect(cm.Data).Should(Equal(map[string]string{
 					"loaded_plugins": emqx.GetLoadedPlugins()["conf"],
@@ -90,17 +90,17 @@ var _ = Describe("", func() {
 						},
 					)
 					//return true
-				}, Timeout, Interval).Should(BeTrue())
+				}, tuneout, interval).Should(BeTrue())
 			}
 			// TODO: check plugins status by emqx api
 		})
 
 		AfterEach(func() {
 			for _, emqx := range emqxList() {
-				Expect(DeleteAll(emqx)).ToNot(HaveOccurred())
+				Expect(deleteAll(emqx)).ToNot(HaveOccurred())
 				Eventually(func() bool {
-					return EnsureDeleteAll(emqx)
-				}, Timeout, Interval).Should(BeTrue())
+					return ensureDeleteAll(emqx)
+				}, tuneout, interval).Should(BeTrue())
 			}
 		})
 	})
