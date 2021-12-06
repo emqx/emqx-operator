@@ -58,6 +58,13 @@ const (
 var k8sClient client.Client
 var testEnv *envtest.Environment
 
+var emqxList = func() []v1beta1.Emqx {
+	return []v1beta1.Emqx{
+		GenerateEmqxBroker(BrokerName, BrokerNameSpace),
+		GenerateEmqxEnterprise(EnterpriseName, EnterpriseNameSpace),
+	}
+}
+
 func TestSuites(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -113,36 +120,15 @@ var _ = BeforeSuite(func() {
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 
-	Expect(
-		k8sClient.Create(
-			context.Background(),
-			&corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: BrokerNameSpace,
-				},
-			},
-		),
-	).Should(Succeed())
+	for _, emqx := range emqxList() {
+		namespace := GenerateEmqxNamespace(emqx.GetNamespace())
+		Expect(k8sClient.Create(context.Background(), namespace)).Should(Succeed())
 
-	Expect(
-		k8sClient.Create(
-			context.Background(),
-			&corev1.Namespace{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Namespace",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: EnterpriseNameSpace,
-				},
-			},
-		),
-	).Should(Succeed())
-
+		sa, role, roleBinding := GenerateRBAC(emqx.GetName(), emqx.GetNamespace())
+		Expect(k8sClient.Create(context.Background(), sa)).Should(Succeed())
+		Expect(k8sClient.Create(context.Background(), role)).Should(Succeed())
+		Expect(k8sClient.Create(context.Background(), roleBinding)).Should(Succeed())
+	}
 }, 60)
 
 var _ = AfterSuite(func() {
@@ -150,6 +136,18 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+func GenerateEmqxNamespace(namespace string) *corev1.Namespace {
+	return &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+}
 
 func GenerateRBAC(name, namespace string) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding) {
 	meta := metav1.ObjectMeta{
@@ -306,7 +304,7 @@ func EnsureDeleteAll(emqx v1beta1.Emqx) bool {
 			Name:      emqx.GetName(),
 			Namespace: emqx.GetNamespace(),
 		},
-		&v1beta1.EmqxBroker{},
+		&appsv1.StatefulSet{},
 	); !errors.IsNotFound(err) {
 		return false
 	}
@@ -321,9 +319,9 @@ func listResource(emqx v1beta1.Emqx) []client.Object {
 
 	list := []client.Object{
 		emqx,
-		&corev1.ServiceAccount{ObjectMeta: meta},
-		&rbacv1.Role{ObjectMeta: meta},
-		&rbacv1.RoleBinding{ObjectMeta: meta},
+		// &corev1.ServiceAccount{ObjectMeta: meta},
+		// &rbacv1.Role{ObjectMeta: meta},
+		// &rbacv1.RoleBinding{ObjectMeta: meta},
 		&corev1.Service{ObjectMeta: meta},
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
