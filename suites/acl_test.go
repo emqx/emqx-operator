@@ -33,16 +33,10 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
 	Context("Check acl", func() {
-		// Define utility constants for object names and testing timeouts/durations and intervals.
-		BeforeEach(func() {
-			for _, emqx := range emqxList() {
-				Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
-			}
-		})
-
 		It("Check acl", func() {
-			cm := &corev1.ConfigMap{}
 			for _, emqx := range emqxList() {
+				cm := &corev1.ConfigMap{}
+
 				Eventually(func() bool {
 					err := k8sClient.Get(
 						context.Background(),
@@ -94,15 +88,6 @@ var _ = Describe("", func() {
 			}
 			// TODO: check acl status by emqx api
 			// TODO: test acl by mqtt pubsub
-		})
-
-		AfterEach(func() {
-			for _, emqx := range emqxList() {
-				Expect(deleteAll(emqx)).ToNot(HaveOccurred())
-				Eventually(func() bool {
-					return ensureDeleteAll(emqx)
-				}, tuneout, interval).Should(BeTrue())
-			}
 		})
 	})
 })

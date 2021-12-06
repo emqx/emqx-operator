@@ -19,7 +19,6 @@ package suites_test
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/api/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -34,18 +33,10 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
 	Context("Check service", func() {
-		BeforeEach(func() {
-			// for _, emqx := range emqxList() {
-			// 	Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
-			// }
-		})
-
 		servicePorts, containerPorts, env := ports()
 
 		It("Check headless service", func() {
 			for _, emqx := range emqxList() {
-				Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
-
 				svc := &corev1.Service{}
 				Eventually(func() bool {
 					err := k8sClient.Get(
@@ -82,15 +73,6 @@ var _ = Describe("", func() {
 
 		It("Check listener service", func() {
 			for _, emqx := range emqxList() {
-				if broker, ok := emqx.(*v1beta1.EmqxBroker); ok {
-					broker.Spec.Listener.Ports.MQTTS = int32(8884)
-					Expect(k8sClient.Create(context.Background(), broker)).Should(Succeed())
-				}
-				if enterprise, ok := emqx.(*v1beta1.EmqxEnterprise); ok {
-					enterprise.Spec.Listener.Ports.MQTTS = int32(8884)
-					Expect(k8sClient.Create(context.Background(), enterprise)).Should(Succeed())
-				}
-
 				svc := &corev1.Service{}
 				Eventually(func() bool {
 					err := k8sClient.Get(
@@ -104,18 +86,8 @@ var _ = Describe("", func() {
 					return err == nil
 				}, tuneout, interval).Should(BeTrue())
 
-				Expect(svc.Spec.Ports).Should(
-					ContainElements(
-						corev1.ServicePort{
-							Name:     "mqtts",
-							Port:     8884,
-							Protocol: "TCP",
-							TargetPort: intstr.IntOrString{
-								IntVal: 8884,
-							},
-						},
-					),
-				)
+				Expect(svc.Spec.Type).Should(Equal(corev1.ServiceTypeClusterIP))
+				Expect(svc.Spec.Ports).Should(ConsistOf(servicePorts))
 
 				sts := &appsv1.StatefulSet{}
 				Eventually(func() bool {
@@ -129,32 +101,9 @@ var _ = Describe("", func() {
 					)
 					return err == nil
 				}, tuneout, interval).Should(BeTrue())
-				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(
-					ConsistOf(
-						corev1.ContainerPort{
-							Name:          "mqtts",
-							Protocol:      "TCP",
-							ContainerPort: 8884,
-						},
-					),
-				)
-				Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(
-					ContainElements(
-						corev1.EnvVar{
-							Name:  "EMQX_LISTENER__SSL__EXTERNAL",
-							Value: "8884",
-						},
-					),
-				)
-			}
-		})
 
-		AfterEach(func() {
-			for _, emqx := range emqxList() {
-				Expect(deleteAll(emqx)).ToNot(HaveOccurred())
-				Eventually(func() bool {
-					return ensureDeleteAll(emqx)
-				}, tuneout, interval).Should(BeTrue())
+				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ConsistOf(containerPorts))
+				Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(env))
 			}
 		})
 	})
