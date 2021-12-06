@@ -221,6 +221,20 @@ func (in *EmqxBrokerSpec) DeepCopyInto(out *EmqxBrokerSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.ExtraVolumes != nil {
+		in, out := &in.ExtraVolumes, &out.ExtraVolumes
+		*out = make([]v1.Volume, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.ExtraVolumeMounts != nil {
+		in, out := &in.ExtraVolumeMounts, &out.ExtraVolumeMounts
+		*out = make([]v1.VolumeMount, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Env != nil {
 		in, out := &in.Env, &out.Env
 		*out = make([]v1.EnvVar, len(*in))
@@ -371,6 +385,20 @@ func (in *EmqxEnterpriseSpec) DeepCopyInto(out *EmqxEnterpriseSpec) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.ExtraVolumes != nil {
+		in, out := &in.ExtraVolumes, &out.ExtraVolumes
+		*out = make([]v1.Volume, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.ExtraVolumeMounts != nil {
+		in, out := &in.ExtraVolumeMounts, &out.ExtraVolumeMounts
+		*out = make([]v1.VolumeMount, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Env != nil {

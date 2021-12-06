@@ -17,3 +17,4 @@ bin/
 
 cspell.config.yaml
 .vscode/
+.idea/

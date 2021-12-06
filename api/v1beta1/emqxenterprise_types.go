@@ -60,6 +60,9 @@ type EmqxEnterpriseSpec struct {
 	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
 	ImagePullPolicy corev1.PullPolicy   `json:"imagePullPolicy,omitempty"`
 
+	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
+	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
+
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	ACL []ACL `json:"acl,omitempty"`
@@ -144,6 +147,11 @@ func (emqx *EmqxEnterprise) SetNodeSelector(nodeSelector map[string]string) {
 func (emqx *EmqxEnterprise) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
 func (emqx *EmqxEnterprise) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
 	emqx.Spec.ImagePullPolicy = pullPolicy
+}
+
+func (emqx *EmqxEnterprise) GetExtraVolumes() []corev1.Volume { return emqx.Spec.ExtraVolumes }
+func (emqx *EmqxEnterprise) GetExtraVolumeMounts() []corev1.VolumeMount {
+	return emqx.Spec.ExtraVolumeMounts
 }
 
 func (emqx *EmqxEnterprise) GetSecretName() string {
