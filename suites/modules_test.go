@@ -25,47 +25,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/emqx/emqx-operator/api/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
-
 var _ = Describe("", func() {
 	Context("Check modules", func() {
 		// Define utility constants for object names and testing timeouts/durations and intervals.
 		BeforeEach(func() {
-			ctx := context.Background()
-
-			sa, role, roleBinding := GenerateRBAC(BrokerName, BrokerNameSpace)
-			Expect(k8sClient.Create(ctx, sa)).Should(Succeed())
-			Expect(k8sClient.Create(ctx, role)).Should(Succeed())
-			Expect(k8sClient.Create(ctx, roleBinding)).Should(Succeed())
-
-			broker := GenerateEmqxBroker(BrokerName, BrokerNameSpace)
-			Expect(k8sClient.Create(ctx, broker)).Should(Succeed())
-
-			sa, role, roleBinding = GenerateRBAC(EnterpriseName, EnterpriseNameSpace)
-			Expect(k8sClient.Create(ctx, sa)).Should(Succeed())
-			Expect(k8sClient.Create(ctx, role)).Should(Succeed())
-			Expect(k8sClient.Create(ctx, roleBinding)).Should(Succeed())
-
-			enterprise := GenerateEmqxEnterprise(EnterpriseName, EnterpriseNameSpace)
-			Expect(k8sClient.Create(ctx, enterprise)).Should(Succeed())
+			for _, emqx := range emqxList() {
+				Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
+			}
 		})
 
 		It("Check emqx broker loaded modules", func() {
-			ctx := context.Background()
 			broker := GenerateEmqxBroker(BrokerName, BrokerNameSpace)
 
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
-					ctx,
+					context.Background(),
 					types.NamespacedName{
 						Name:      broker.GetLoadedModules()["name"],
 						Namespace: broker.GetNamespace(),
@@ -80,12 +61,11 @@ var _ = Describe("", func() {
 		})
 
 		It("Update emqx broker loaded modules", func() {
-			ctx := context.Background()
 			broker := GenerateEmqxBroker(BrokerName, BrokerNameSpace)
 
 			patch := []byte(`{"spec":{"modules":[{"name": "emqx_mod_presence", "enable": false}]}}`)
 			Expect(k8sClient.Patch(
-				ctx,
+				context.Background(),
 				broker,
 				client.RawPatch(types.MergePatchType, patch),
 			)).Should(Succeed())
@@ -93,7 +73,7 @@ var _ = Describe("", func() {
 			Eventually(func() bool {
 				cm := &corev1.ConfigMap{}
 				err := k8sClient.Get(
-					ctx,
+					context.Background(),
 					types.NamespacedName{
 						Name:      broker.GetLoadedModules()["name"],
 						Namespace: broker.GetNamespace(),
@@ -110,13 +90,12 @@ var _ = Describe("", func() {
 		})
 
 		It("Check emqx enterprise loaded modules", func() {
-			ctx := context.Background()
 			enterprise := GenerateEmqxEnterprise(EnterpriseName, EnterpriseNameSpace)
 
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
-					ctx,
+					context.Background(),
 					types.NamespacedName{
 						Name:      enterprise.GetLoadedModules()["name"],
 						Namespace: enterprise.GetNamespace(),
@@ -131,12 +110,11 @@ var _ = Describe("", func() {
 		})
 
 		It("Update emqx enterprise loaded modules", func() {
-			ctx := context.Background()
 			enterprise := GenerateEmqxEnterprise(EnterpriseName, EnterpriseNameSpace)
 
 			patch := []byte(`{"spec":{"modules":[{"name": "internal_acl", "enable": false, "configs": {"acl_rule_file": "etc/acl.conf"}}]}}`)
 			Expect(k8sClient.Patch(
-				ctx,
+				context.Background(),
 				enterprise,
 				client.RawPatch(types.MergePatchType, patch),
 			)).Should(Succeed())
@@ -144,7 +122,7 @@ var _ = Describe("", func() {
 			Eventually(func() bool {
 				cm := &corev1.ConfigMap{}
 				err := k8sClient.Get(
-					ctx,
+					context.Background(),
 					types.NamespacedName{
 						Name:      enterprise.GetLoadedModules()["name"],
 						Namespace: enterprise.GetNamespace(),
@@ -166,27 +144,12 @@ var _ = Describe("", func() {
 		})
 
 		AfterEach(func() {
-			emqx := &v1beta1.EmqxBroker{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      BrokerName,
-					Namespace: BrokerNameSpace,
-				},
+			for _, emqx := range emqxList() {
+				Expect(DeleteAll(emqx)).ToNot(HaveOccurred())
+				Eventually(func() bool {
+					return EnsureDeleteAll(emqx)
+				}, Timeout, Interval).Should(BeTrue())
 			}
-			Expect(DeleteAll(emqx)).ToNot(HaveOccurred())
-			Eventually(func() bool {
-				return EnsureDeleteAll(emqx)
-			}, Timeout, Interval).Should(BeTrue())
-
-			emqxEnterprise := &v1beta1.EmqxEnterprise{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      EnterpriseName,
-					Namespace: EnterpriseNameSpace,
-				},
-			}
-			Expect(DeleteAll(emqxEnterprise)).ToNot(HaveOccurred())
-			Eventually(func() bool {
-				return EnsureDeleteAll(emqxEnterprise)
-			}, Timeout, Interval).Should(BeTrue())
 		})
 	})
 })
