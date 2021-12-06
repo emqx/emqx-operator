@@ -3,6 +3,8 @@ package v1beta1_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/emqx/emqx-operator/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -25,10 +27,10 @@ func TestGenerateEmqxBrokerLoadedModules(t *testing.T) {
 		},
 	}
 
-	m := emqxBroker.GetLoadedModules()["conf"]
-	if m != "{foo, true}.\n{bar, false}.\n" {
-		t.Errorf("unexpected data: %s", m)
-	}
+	assert.Equal(t,
+		emqxBroker.GetLoadedModules()["conf"],
+		"{foo, true}.\n{bar, false}.\n",
+	)
 }
 
 func TestGenerateEmqxEnterpriseLoadedModules(t *testing.T) {
@@ -46,9 +48,8 @@ func TestGenerateEmqxEnterpriseLoadedModules(t *testing.T) {
 		},
 	}
 
-	m := emqxEnterprise.GetLoadedModules()["conf"]
-
-	if m != `[{"name":"fake","enable":true,"configs":{"foo":"bar"}}]` {
-		t.Errorf("unexpected data: %s", m)
-	}
+	assert.Equal(t,
+		emqxEnterprise.GetLoadedModules()["conf"],
+		`[{"name":"fake","enable":true,"configs":{"foo":"bar"}}]`,
+	)
 }

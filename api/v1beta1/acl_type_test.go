@@ -3,6 +3,8 @@ package v1beta1_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/emqx/emqx-operator/api/v1beta1"
 )
 
@@ -10,7 +12,6 @@ func TestGenerateACL(t *testing.T) {
 	var emqxBroker v1beta1.EmqxBroker
 	var emqxEneterprise v1beta1.EmqxEnterprise
 	var acl v1beta1.ACL
-	var s string
 
 	acl = v1beta1.ACL{Permission: "allow"}
 	emqxBroker = v1beta1.EmqxBroker{
@@ -20,11 +21,10 @@ func TestGenerateACL(t *testing.T) {
 			},
 		},
 	}
-
-	s = emqxBroker.GetACL()["conf"]
-	if s != "{allow, all, pubsub, [\"#\"]}.\n" {
-		t.Errorf("unexpected data: %s", s)
-	}
+	assert.Equal(t,
+		emqxBroker.GetACL()["conf"],
+		"{allow, all, pubsub, [\"#\"]}.\n",
+	)
 
 	acl = v1beta1.ACL{
 		Permission: "deny",
@@ -41,10 +41,10 @@ func TestGenerateACL(t *testing.T) {
 			},
 		},
 	}
-	s = emqxBroker.GetACL()["conf"]
-	if s != "{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n" {
-		t.Errorf("unexpected data: %s", s)
-	}
+	assert.Equal(t,
+		emqxBroker.GetACL()["conf"],
+		"{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n",
+	)
 
 	acl = v1beta1.ACL{
 		Permission: "allow",
@@ -65,8 +65,8 @@ func TestGenerateACL(t *testing.T) {
 			},
 		},
 	}
-	s = emqxEneterprise.GetACL()["conf"]
-	if s != "{allow, {'and', [{user, \"admin\"}, {client, \"emqx\"}, {ipaddr, \"127.0.0.1\"}]}, pubsub, [\"$SYS/#\", \"#\"]}.\n" {
-		t.Errorf("unexpected data: %s", s)
-	}
+	assert.Equal(t,
+		emqxEneterprise.GetACL()["conf"],
+		"{allow, {'and', [{user, \"admin\"}, {client, \"emqx\"}, {ipaddr, \"127.0.0.1\"}]}, pubsub, [\"$SYS/#\", \"#\"]}.\n",
+	)
 }
