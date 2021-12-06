@@ -32,6 +32,20 @@ func generateLoadedPlugins(plugins []Plugin) string {
 	if plugins == nil {
 		plugins = defaultLoadedPlugins()
 	}
+
+	contains := func(plugins []Plugin) int {
+		for index, value := range plugins {
+			if value.Name == "emqx_management" {
+				return index
+			}
+		}
+		return -1
+	}
+
+	if contains(plugins) == -1 {
+		plugins = append(plugins, Plugin{Name: "emqx_management", Enable: true})
+	}
+
 	var p string
 	for _, plugin := range plugins {
 		p = fmt.Sprintf("%s{%s, %t}.\n", p, plugin.Name, plugin.Enable)
