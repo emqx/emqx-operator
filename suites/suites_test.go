@@ -27,12 +27,9 @@ import (
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/controllers"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,7 +47,7 @@ const (
 	enterpriseName      = "emqx-ee"
 	enterpriseNameSpace = "enterprise"
 
-	tuneout  = time.Second * 10
+	tuneout  = time.Second * 60
 	interval = time.Millisecond * 250
 )
 
@@ -127,6 +124,8 @@ var _ = BeforeSuite(func() {
 		Expect(k8sClient.Create(context.Background(), sa)).Should(Succeed())
 		Expect(k8sClient.Create(context.Background(), role)).Should(Succeed())
 		Expect(k8sClient.Create(context.Background(), roleBinding)).Should(Succeed())
+
+		Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
 	}
 }, 60)
 
@@ -236,111 +235,4 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 			Replicas:           &replicas,
 		},
 	}
-}
-
-func deleteAll(emqx v1beta1.Emqx) error {
-	for _, resource := range listResource(emqx) {
-		err := k8sClient.Delete(context.Background(), resource)
-		if err != nil && !errors.IsNotFound(err) {
-			return err
-		}
-	}
-	return nil
-}
-
-func ensureDeleteAll(emqx v1beta1.Emqx) bool {
-	if err := k8sClient.Get(
-		context.Background(),
-		types.NamespacedName{Name: emqx.GetName(), Namespace: emqx.GetNamespace()},
-		&corev1.Service{},
-	); !errors.IsNotFound(err) {
-		return false
-	}
-	if err := k8sClient.Get(
-		context.Background(),
-		types.NamespacedName{Name: emqx.GetHeadlessServiceName(), Namespace: emqx.GetNamespace()},
-		&corev1.Service{},
-	); !errors.IsNotFound(err) {
-		return false
-	}
-	if err := k8sClient.Get(
-		context.Background(),
-		types.NamespacedName{
-			Name:      emqx.GetACL()["name"],
-			Namespace: emqx.GetNamespace(),
-		},
-		&corev1.ConfigMap{},
-	); !errors.IsNotFound(err) {
-		return false
-	}
-	if err := k8sClient.Get(
-		context.Background(),
-		types.NamespacedName{
-			Name:      emqx.GetLoadedModules()["name"],
-			Namespace: emqx.GetNamespace(),
-		},
-		&corev1.ConfigMap{},
-	); !errors.IsNotFound(err) {
-		return false
-	}
-	if err := k8sClient.Get(
-		context.Background(),
-		types.NamespacedName{
-			Name:      emqx.GetLoadedPlugins()["name"],
-			Namespace: emqx.GetNamespace(),
-		},
-		&corev1.ConfigMap{},
-	); !errors.IsNotFound(err) {
-		return false
-	}
-	if err := k8sClient.Get(
-		context.Background(),
-		types.NamespacedName{
-			Name:      emqx.GetName(),
-			Namespace: emqx.GetNamespace(),
-		},
-		&appsv1.StatefulSet{},
-	); !errors.IsNotFound(err) {
-		return false
-	}
-	return true
-}
-
-func listResource(emqx v1beta1.Emqx) []client.Object {
-	meta := metav1.ObjectMeta{
-		Name:      emqx.GetName(),
-		Namespace: emqx.GetNamespace(),
-	}
-
-	list := []client.Object{
-		emqx,
-		&corev1.Service{ObjectMeta: meta},
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      emqx.GetHeadlessServiceName(),
-				Namespace: emqx.GetNamespace(),
-			},
-		},
-		&corev1.ConfigMap{ObjectMeta: meta},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      emqx.GetACL()["name"],
-				Namespace: emqx.GetNamespace(),
-			},
-		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      emqx.GetLoadedPlugins()["name"],
-				Namespace: emqx.GetNamespace(),
-			},
-		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      emqx.GetLoadedModules()["name"],
-				Namespace: emqx.GetNamespace(),
-			},
-		},
-		&appsv1.StatefulSet{ObjectMeta: meta},
-	}
-	return list
 }

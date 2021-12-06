@@ -33,13 +33,6 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
 	Context("Check modules", func() {
-		// Define utility constants for object names and testing timeouts/durations and intervals.
-		BeforeEach(func() {
-			for _, emqx := range emqxList() {
-				Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
-			}
-		})
-
 		It("Check emqx broker loaded modules", func() {
 			broker := generateEmqxBroker(brokerName, brokerNameSpace)
 
@@ -141,15 +134,6 @@ var _ = Describe("", func() {
 			}, tuneout, interval).Should(BeTrue())
 
 			// TODO: check modules status by emqx api
-		})
-
-		AfterEach(func() {
-			for _, emqx := range emqxList() {
-				Expect(deleteAll(emqx)).ToNot(HaveOccurred())
-				Eventually(func() bool {
-					return ensureDeleteAll(emqx)
-				}, tuneout, interval).Should(BeTrue())
-			}
 		})
 	})
 })
