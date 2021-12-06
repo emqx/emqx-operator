@@ -13,6 +13,15 @@ func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar {
 }
 
 func generateEnv(emqx Emqx, env []corev1.EnvVar) []corev1.EnvVar {
+	contains := func(Env []corev1.EnvVar, Name string) int {
+		for index, value := range Env {
+			if value.Name == Name {
+				return index
+			}
+		}
+		return -1
+	}
+
 	e := defaultEnv(emqx)
 	for _, value := range e {
 		r := contains(env, value.Name)
@@ -22,15 +31,6 @@ func generateEnv(emqx Emqx, env []corev1.EnvVar) []corev1.EnvVar {
 	}
 	return env
 
-}
-
-func contains(Env []corev1.EnvVar, Name string) int {
-	for index, value := range Env {
-		if value.Name == Name {
-			return index
-		}
-	}
-	return -1
 }
 
 func defaultEnv(emqx Emqx) []corev1.EnvVar {

@@ -50,6 +50,9 @@ func generateListener(listener Listener) Listener {
 		if reflect.ValueOf(listener.Ports).IsZero() {
 			listener.Ports = defaultListener().Ports
 		}
+		if reflect.ValueOf(listener.Ports.API).IsZero() {
+			listener.Ports.API = defaultListener().Ports.API
+		}
 		return listener
 	}
 }

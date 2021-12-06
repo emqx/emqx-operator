@@ -25,7 +25,7 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 	}
 
 	p := emqxBroker.GetLoadedPlugins()["conf"]
-	if p != "{foo, true}.\n{bar, false}.\n" {
+	if p != "{foo, true}.\n{bar, false}.\n{emqx_management, true}.\n" {
 		t.Errorf("unexpected data: %s", p)
 	}
 }

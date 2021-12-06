@@ -160,6 +160,18 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 							Env:             mergeEnv(env, emqx.GetEnv()),
 							Ports:           ports,
 							VolumeMounts:    getEmqxVolumeMounts(emqx),
+							ReadinessProbe: &corev1.Probe{
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       5,
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/status",
+										Port: intstr.IntOrString{
+											IntVal: emqx.GetListener().Ports.API,
+										},
+									},
+								},
+							},
 						},
 					},
 					Volumes: getEmqxVolumes(emqx),
