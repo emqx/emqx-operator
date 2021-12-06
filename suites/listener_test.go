@@ -57,7 +57,7 @@ var _ = Describe("", func() {
 						svc,
 					)
 					return err == nil
-				}, Timeout, Interval).Should(BeTrue())
+				}, tuneout, interval).Should(BeTrue())
 
 				Expect(svc.Spec.Type).Should(Equal(corev1.ServiceTypeClusterIP))
 				Expect(svc.Spec.ClusterIP).Should(Equal(corev1.ClusterIPNone))
@@ -74,7 +74,7 @@ var _ = Describe("", func() {
 						sts,
 					)
 					return err == nil
-				}, Timeout, Interval).Should(BeTrue())
+				}, tuneout, interval).Should(BeTrue())
 				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ConsistOf(containerPorts))
 				Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(env))
 			}
@@ -102,7 +102,7 @@ var _ = Describe("", func() {
 						svc,
 					)
 					return err == nil
-				}, Timeout, Interval).Should(BeTrue())
+				}, tuneout, interval).Should(BeTrue())
 
 				Expect(svc.Spec.Ports).Should(
 					ContainElements(
@@ -128,7 +128,7 @@ var _ = Describe("", func() {
 						sts,
 					)
 					return err == nil
-				}, Timeout, Interval).Should(BeTrue())
+				}, tuneout, interval).Should(BeTrue())
 				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(
 					ConsistOf(
 						corev1.ContainerPort{
@@ -151,10 +151,10 @@ var _ = Describe("", func() {
 
 		AfterEach(func() {
 			for _, emqx := range emqxList() {
-				Expect(DeleteAll(emqx)).ToNot(HaveOccurred())
+				Expect(deleteAll(emqx)).ToNot(HaveOccurred())
 				Eventually(func() bool {
-					return EnsureDeleteAll(emqx)
-				}, Timeout, Interval).Should(BeTrue())
+					return ensureDeleteAll(emqx)
+				}, tuneout, interval).Should(BeTrue())
 			}
 		})
 	})

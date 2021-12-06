@@ -44,15 +44,14 @@ import (
 )
 
 const (
-	BrokerName      = "emqx"
-	BrokerNameSpace = "broker"
+	brokerName      = "emqx"
+	brokerNameSpace = "broker"
 
-	EnterpriseName      = "emqx-ee"
-	EnterpriseNameSpace = "enterprise"
+	enterpriseName      = "emqx-ee"
+	enterpriseNameSpace = "enterprise"
 
-	Timeout  = time.Second * 10
-	Duration = time.Second * 10
-	Interval = time.Millisecond * 250
+	tuneout  = time.Second * 10
+	interval = time.Millisecond * 250
 )
 
 var k8sClient client.Client
@@ -60,8 +59,8 @@ var testEnv *envtest.Environment
 
 var emqxList = func() []v1beta1.Emqx {
 	return []v1beta1.Emqx{
-		GenerateEmqxBroker(BrokerName, BrokerNameSpace),
-		GenerateEmqxEnterprise(EnterpriseName, EnterpriseNameSpace),
+		generateEmqxBroker(brokerName, brokerNameSpace),
+		generateEmqxEnterprise(enterpriseName, enterpriseNameSpace),
 	}
 }
 
@@ -121,10 +120,10 @@ var _ = BeforeSuite(func() {
 	}()
 
 	for _, emqx := range emqxList() {
-		namespace := GenerateEmqxNamespace(emqx.GetNamespace())
+		namespace := generateEmqxNamespace(emqx.GetNamespace())
 		Expect(k8sClient.Create(context.Background(), namespace)).Should(Succeed())
 
-		sa, role, roleBinding := GenerateRBAC(emqx.GetName(), emqx.GetNamespace())
+		sa, role, roleBinding := generateRBAC(emqx.GetName(), emqx.GetNamespace())
 		Expect(k8sClient.Create(context.Background(), sa)).Should(Succeed())
 		Expect(k8sClient.Create(context.Background(), role)).Should(Succeed())
 		Expect(k8sClient.Create(context.Background(), roleBinding)).Should(Succeed())
@@ -137,7 +136,7 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-func GenerateEmqxNamespace(namespace string) *corev1.Namespace {
+func generateEmqxNamespace(namespace string) *corev1.Namespace {
 	return &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -149,7 +148,7 @@ func GenerateEmqxNamespace(namespace string) *corev1.Namespace {
 	}
 }
 
-func GenerateRBAC(name, namespace string) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding) {
+func generateRBAC(name, namespace string) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding) {
 	meta := metav1.ObjectMeta{
 		Name:      name,
 		Namespace: namespace,
@@ -201,7 +200,7 @@ func GenerateRBAC(name, namespace string) (*corev1.ServiceAccount, *rbacv1.Role,
 	return sa, role, roleBinding
 }
 
-func GenerateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
+func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	replicas := int32(3)
 	return &v1beta1.EmqxBroker{
 		TypeMeta: metav1.TypeMeta{
@@ -220,7 +219,7 @@ func GenerateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	}
 }
 
-func GenerateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
+func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 	replicas := int32(3)
 	return &v1beta1.EmqxEnterprise{
 		TypeMeta: metav1.TypeMeta{
@@ -239,11 +238,9 @@ func GenerateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 	}
 }
 
-func DeleteAll(emqx v1beta1.Emqx) error {
-	ctx := context.Background()
-
+func deleteAll(emqx v1beta1.Emqx) error {
 	for _, resource := range listResource(emqx) {
-		err := k8sClient.Delete(ctx, resource)
+		err := k8sClient.Delete(context.Background(), resource)
 		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
@@ -251,25 +248,23 @@ func DeleteAll(emqx v1beta1.Emqx) error {
 	return nil
 }
 
-func EnsureDeleteAll(emqx v1beta1.Emqx) bool {
-	ctx := context.Background()
-
+func ensureDeleteAll(emqx v1beta1.Emqx) bool {
 	if err := k8sClient.Get(
-		ctx,
+		context.Background(),
 		types.NamespacedName{Name: emqx.GetName(), Namespace: emqx.GetNamespace()},
 		&corev1.Service{},
 	); !errors.IsNotFound(err) {
 		return false
 	}
 	if err := k8sClient.Get(
-		ctx,
+		context.Background(),
 		types.NamespacedName{Name: emqx.GetHeadlessServiceName(), Namespace: emqx.GetNamespace()},
 		&corev1.Service{},
 	); !errors.IsNotFound(err) {
 		return false
 	}
 	if err := k8sClient.Get(
-		ctx,
+		context.Background(),
 		types.NamespacedName{
 			Name:      emqx.GetACL()["name"],
 			Namespace: emqx.GetNamespace(),
@@ -279,7 +274,7 @@ func EnsureDeleteAll(emqx v1beta1.Emqx) bool {
 		return false
 	}
 	if err := k8sClient.Get(
-		ctx,
+		context.Background(),
 		types.NamespacedName{
 			Name:      emqx.GetLoadedModules()["name"],
 			Namespace: emqx.GetNamespace(),
@@ -289,7 +284,7 @@ func EnsureDeleteAll(emqx v1beta1.Emqx) bool {
 		return false
 	}
 	if err := k8sClient.Get(
-		ctx,
+		context.Background(),
 		types.NamespacedName{
 			Name:      emqx.GetLoadedPlugins()["name"],
 			Namespace: emqx.GetNamespace(),
@@ -299,7 +294,7 @@ func EnsureDeleteAll(emqx v1beta1.Emqx) bool {
 		return false
 	}
 	if err := k8sClient.Get(
-		ctx,
+		context.Background(),
 		types.NamespacedName{
 			Name:      emqx.GetName(),
 			Namespace: emqx.GetNamespace(),
@@ -319,9 +314,6 @@ func listResource(emqx v1beta1.Emqx) []client.Object {
 
 	list := []client.Object{
 		emqx,
-		// &corev1.ServiceAccount{ObjectMeta: meta},
-		// &rbacv1.Role{ObjectMeta: meta},
-		// &rbacv1.RoleBinding{ObjectMeta: meta},
 		&corev1.Service{ObjectMeta: meta},
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{

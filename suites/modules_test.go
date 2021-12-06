@@ -41,7 +41,7 @@ var _ = Describe("", func() {
 		})
 
 		It("Check emqx broker loaded modules", func() {
-			broker := GenerateEmqxBroker(BrokerName, BrokerNameSpace)
+			broker := generateEmqxBroker(brokerName, brokerNameSpace)
 
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
@@ -53,7 +53,7 @@ var _ = Describe("", func() {
 					}, cm,
 				)
 				return err == nil
-			}, Timeout, Interval).Should(BeTrue())
+			}, tuneout, interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
 				"loaded_modules": broker.GetLoadedModules()["conf"],
@@ -61,7 +61,7 @@ var _ = Describe("", func() {
 		})
 
 		It("Update emqx broker loaded modules", func() {
-			broker := GenerateEmqxBroker(BrokerName, BrokerNameSpace)
+			broker := generateEmqxBroker(brokerName, brokerNameSpace)
 
 			patch := []byte(`{"spec":{"modules":[{"name": "emqx_mod_presence", "enable": false}]}}`)
 			Expect(k8sClient.Patch(
@@ -84,13 +84,13 @@ var _ = Describe("", func() {
 					return false
 				}
 				return reflect.DeepEqual(cm.Data, map[string]string{"loaded_modules": "{emqx_mod_presence, false}.\n"})
-			}, Timeout, Interval).Should(BeTrue())
+			}, tuneout, interval).Should(BeTrue())
 
 			// TODO: check modules status by emqx api
 		})
 
 		It("Check emqx enterprise loaded modules", func() {
-			enterprise := GenerateEmqxEnterprise(EnterpriseName, EnterpriseNameSpace)
+			enterprise := generateEmqxEnterprise(enterpriseName, enterpriseNameSpace)
 
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
@@ -102,7 +102,7 @@ var _ = Describe("", func() {
 					}, cm,
 				)
 				return err == nil
-			}, Timeout, Interval).Should(BeTrue())
+			}, tuneout, interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
 				"loaded_modules": enterprise.GetLoadedModules()["conf"],
@@ -110,7 +110,7 @@ var _ = Describe("", func() {
 		})
 
 		It("Update emqx enterprise loaded modules", func() {
-			enterprise := GenerateEmqxEnterprise(EnterpriseName, EnterpriseNameSpace)
+			enterprise := generateEmqxEnterprise(enterpriseName, enterpriseNameSpace)
 
 			patch := []byte(`{"spec":{"modules":[{"name": "internal_acl", "enable": false, "configs": {"acl_rule_file": "etc/acl.conf"}}]}}`)
 			Expect(k8sClient.Patch(
@@ -138,17 +138,17 @@ var _ = Describe("", func() {
 						"loaded_modules": "[{\"name\":\"internal_acl\",\"configs\":{\"acl_rule_file\":\"etc/acl.conf\"}}]",
 					},
 				)
-			}, Timeout, Interval).Should(BeTrue())
+			}, tuneout, interval).Should(BeTrue())
 
 			// TODO: check modules status by emqx api
 		})
 
 		AfterEach(func() {
 			for _, emqx := range emqxList() {
-				Expect(DeleteAll(emqx)).ToNot(HaveOccurred())
+				Expect(deleteAll(emqx)).ToNot(HaveOccurred())
 				Eventually(func() bool {
-					return EnsureDeleteAll(emqx)
-				}, Timeout, Interval).Should(BeTrue())
+					return ensureDeleteAll(emqx)
+				}, tuneout, interval).Should(BeTrue())
 			}
 		})
 	})
