@@ -1,4 +1,3 @@
-
 # Image URL to use all building/pushing image targets
 IMG ?= emqx/emqx-operator-controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -39,6 +38,7 @@ help: ## Display this help.
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CURDIR)/manifests
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
