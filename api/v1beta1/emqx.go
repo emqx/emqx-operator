@@ -53,6 +53,9 @@ type EmqxSpec interface {
 	GetImagePullPolicy() corev1.PullPolicy
 	SetImagePullPolicy(pullPolicy corev1.PullPolicy)
 
+	GetExtraVolumes() []corev1.Volume
+	GetExtraVolumeMounts() []corev1.VolumeMount
+
 	GetEnv() []corev1.EnvVar
 
 	GetLabels() map[string]string

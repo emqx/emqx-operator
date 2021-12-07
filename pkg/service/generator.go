@@ -223,6 +223,10 @@ func getEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
 			MountPath: constants.EMQX_LOG_DIR,
 		},
 	)
+
+	extraVolumeMounts := emqx.GetExtraVolumeMounts()
+	volumeMounts = append(volumeMounts, extraVolumeMounts...)
+
 	acl := emqx.GetACL()
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
@@ -282,6 +286,9 @@ func getEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 			},
 		)
 	}
+
+	extraVolumes := emqx.GetExtraVolumes()
+	volumes = append(volumes, extraVolumes...)
 
 	acl := emqx.GetACL()
 	volumes = append(volumes,
