@@ -1,0 +1,25 @@
+#!/bin/bash
+set -euo pipefail
+
+SED_REPLACE="sed -i "
+case $(sed --help 2>&1) in
+    *GNU*) SED_REPLACE="sed -i ";;
+    *BusyBox*) SED_REPLACE="sed -i ";;
+    *) SED_REPLACE="sed -i '' ";;
+esac
+
+IMG="${1:-emqx/emqx-operator-controller:latest}"
+
+make_controller() {
+    cp config/manager/manager.yaml config/samples/operator/controller.yaml
+    $SED_REPLACE "s|image:[[:space:]].*|image: ${IMG}|g" config/samples/operator/controller.yaml
+}
+
+make_rbac() {
+    cat config/rbac/role_binding.yaml config/rbac/role.yaml > config/samples/operator/rbac.yaml
+    echo -e "\n---" >> config/samples/operator/rbac.yaml
+    cat config/rbac/service_account.yaml >> config/samples/operator/rbac.yaml
+}
+
+make_controller
+make_rbac

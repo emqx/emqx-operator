@@ -40,15 +40,18 @@ jobs:
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
         run: eval $(minikube docker-env) && docker build -t $IMG .
-      - run: make install
-      - env:
+      - name: Deploy controller and crd
+        env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
-        run: make deploy
+        run: |
+          make manifests
+          kubectl apply -f config/crd/bases
+          kubectl apply -f config/samples/operator
       - name: Check operator
         timeout-minutes: 10
         run: |
           set -euo pipefail
-          while ! kubectl describe pods -l "control-plane=controller-manager" -n operator-emqx-system | grep -qE 'Status:[ \t]+Running?'; do
+          while ! kubectl describe pods -l "control-plane=controller-manager" -n system | grep -qE 'Status:[ \t]+Running?'; do
             echo "waiting operator controller pod running"
             sleep 1
           done
@@ -116,7 +119,7 @@ jobs:
         if: failure()
         run: |
           set -x
-          kubectl logs -l "control-plane=controller-manager" -n operator-emqx-system -c manager
+          kubectl logs -l "control-plane=controller-manager" -n system -c manager
       - name: Get ${{ matrix.kind[0]}} status
         if: failure()
         run: |
