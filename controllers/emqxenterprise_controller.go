@@ -44,24 +44,23 @@ type EmqxEnterpriseReconciler struct {
 }
 
 func NewEmqxEnterpriseReconciler(mgr manager.Manager) *EmqxEnterpriseReconciler {
-	// Create kubernetes service.
-	k8sService := k8s.New(mgr.GetClient(), log)
+	manager := k8s.New(mgr.GetClient(), log)
 
 	// Create the emqx clients
 	// TODO
 
 	// Create internal services.
-	eService := service.NewEmqxClusterKubeClient(k8sService, log)
+	eService := service.NewEmqxClusterKubeClient(manager, log)
 	// TODO eChecker
 
 	// TODO eHealer
 
 	handler := &EmqxClusterHandler{
-		k8sServices: k8sService,
-		eService:    eService,
-		metaCache:   new(cache.MetaMap),
-		eventsCli:   k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
-		logger:      log,
+		manager:   manager,
+		eService:  eService,
+		metaCache: new(cache.MetaMap),
+		eventsCli: k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
+		logger:    log,
 	}
 
 	return &EmqxEnterpriseReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme(), Handler: handler}

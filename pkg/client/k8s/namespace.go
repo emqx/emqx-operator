@@ -4,52 +4,63 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/go-logr/logr"
 )
 
-// NameSpaces the client that knows how to interact with kubernetes to manage them
-type NameSpaces interface {
-	// GetNameSpace get namespace info form kubernetes
-	GetNameSpace(namespace string) (*corev1.Namespace, error)
+type NamespacesManagers interface {
+	GetNamespace(namespace string) (*corev1.Namespace, error)
+	CreateNamespace(object *corev1.Namespace) error
+	UpdateNamespace(object *corev1.Namespace) error
+	DeleteNamespace(namespace string) error
 }
 
-// NameSpacesOption is the NameSpaces client implementation using API calls to kubernetes.
-type NameSpacesOption struct {
-	client client.Client
-	logger logr.Logger
-}
-
-// NewNameSpaces returns a new NameSpaces client.
-func NewNameSpaces(logger logr.Logger) NameSpaces {
-	logger = logger.WithValues("service", "k8s.namespaces")
-	cfg, err := config.GetConfig()
-	if err != nil {
-		panic(err)
-	}
-	kubeClient, err := client.New(cfg, client.Options{})
-	if err != nil {
-		panic(err)
-	}
-	return &NameSpacesOption{
-		client: kubeClient,
-		logger: logger,
-	}
-}
-
-// GetNameSpace implement the NameSpaces.Interface
-func (n *NameSpacesOption) GetNameSpace(namespace string) (*corev1.Namespace, error) {
-	nm := &corev1.Namespace{}
-	err := n.client.Get(context.TODO(), types.NamespacedName{
-		Name:      namespace,
-		Namespace: namespace,
-	}, nm)
+func (manager *Manager) GetNamespace(namespace string) (*corev1.Namespace, error) {
+	object := &corev1.Namespace{}
+	err := manager.Client.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Namespace: namespace,
+		}, object,
+	)
 	if err != nil {
 		return nil, err
 	}
-	return nm, err
+	return object, err
+}
+
+func (manager *Manager) CreateNamespace(object *corev1.Namespace) error {
+	err := manager.Client.Create(context.TODO(), object)
+	if err != nil {
+		return err
+	}
+	manager.Logger.WithValues(
+		"kind", object.Kind,
+		"apiVersion", object.APIVersion,
+		"namespace", object.Namespace,
+		"name", object.Name,
+	).Info("Create successfully")
+	return nil
+}
+
+func (manager *Manager) UpdateNamespace(object *corev1.Namespace) error {
+	if err := manager.Client.Update(context.TODO(), object); err != nil {
+		return err
+	}
+	manager.Logger.WithValues(
+		"kind", object.Kind,
+		"apiVersion", object.APIVersion,
+		"namespace", object.Namespace,
+		"name", object.Name,
+	).Info("Update successfully")
+	return nil
+}
+
+func (manager *Manager) DeleteNamespace(namespace string) error {
+	object := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+		},
+	}
+	return manager.Client.Delete(context.TODO(), object)
 }

@@ -12,22 +12,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func NewSecretForCR(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
-	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
-	if ok && emqxEnterprise.GetLicense() != "" {
-		stringData := map[string]string{"emqx.lic": emqxEnterprise.GetLicense()}
-		return &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:          labels,
-				Name:            emqx.GetSecretName(),
-				Namespace:       emqx.GetNamespace(),
-				OwnerReferences: ownerRefs,
-			},
-			Type:       corev1.SecretTypeOpaque,
-			StringData: stringData,
-		}
-	} else {
-		return nil
+func NewSecretForCR(emqx v1beta1.EmqxEnterprise, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.Secret {
+	stringData := map[string]string{"emqx.lic": emqx.GetLicense()}
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:          labels,
+			Name:            emqx.GetSecretName(),
+			Namespace:       emqx.GetNamespace(),
+			OwnerReferences: ownerRefs,
+		},
+		Type:       corev1.SecretTypeOpaque,
+		StringData: stringData,
 	}
 }
 
