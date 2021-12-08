@@ -14,12 +14,12 @@ import (
 // EmqxClusterHandler is the EMQ X Cluster handler. This handler will create the required
 // resources that a EMQ X Cluster needs.
 type EmqxClusterHandler struct {
-	k8sServices k8s.Services
-	eService    service.EmqxClusterClient
-	eChecker    service.EmqxClusterCheck
-	eventsCli   k8s.Event
-	logger      logr.Logger
-	metaCache   *cache.MetaMap
+	manager   k8s.Manager
+	eService  service.EmqxClusterClient
+	eChecker  service.EmqxClusterCheck
+	eventsCli k8s.Event
+	logger    logr.Logger
+	metaCache *cache.MetaMap
 }
 
 // Do will ensure the EMQ X Cluster is in the expected state and update the EMQ X Cluster status.
@@ -51,7 +51,7 @@ func (ech *EmqxClusterHandler) Do(emqx v1beta1.Emqx) error {
 	if err := ech.Ensure(meta.Obj, labels, oRefs); err != nil {
 		ech.eventsCli.FailedCluster(emqx, err.Error())
 		emqx.SetFailedCondition(err.Error())
-		_ = ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+		_ = ech.manager.UpdateEmqx(emqx)
 		// TODO
 		// metrics.ClusterMetrics.SetClusterError(emqx.GetNamespace(), emqx.GetName())
 		return err
@@ -66,7 +66,7 @@ func (ech *EmqxClusterHandler) Do(emqx v1beta1.Emqx) error {
 	// 	if err.Error() != needRequeueMsg {
 	// 		ech.eventsCli.FailedCluster(emqx, err.Error())
 	// 		ech.Status.SetFailedCondition(err.Error())
-	// 		ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+	// 		ech.manager.UpdateCluster(emqx.GetNamespace(), emqx)
 	// 		return err
 	// 	}
 	// 	// if user delete statefulset or deployment, set status
@@ -74,7 +74,7 @@ func (ech *EmqxClusterHandler) Do(emqx v1beta1.Emqx) error {
 	// 	if len(status) > 0 && status[0].Type == v1beta1.ClusterConditionHealthy {
 	// 		ech.eventsCli.CreateCluster(emqx)
 	// 		ech.Status.SetCreateCondition("emqx server be removed by user, restart")
-	// 		ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+	// 		ech.manager.UpdateCluster(emqx.GetNamespace(), emqx)
 	// 	}
 	// 	return err
 	// }
@@ -82,7 +82,7 @@ func (ech *EmqxClusterHandler) Do(emqx v1beta1.Emqx) error {
 	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("SetReadyCondition...")
 	ech.eventsCli.HealthCluster(emqx)
 	emqx.SetReadyCondition("Cluster ok")
-	err := ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+	err := ech.manager.UpdateEmqx(emqx)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) error {
 			ech.eventsCli.UpdateCluster(emqx, meta.Message)
 			emqx.SetUpdatingCondition(meta.Message)
 		}
-		return ech.k8sServices.UpdateCluster(emqx.GetNamespace(), emqx)
+		return ech.manager.UpdateEmqx(emqx)
 	}
 	return nil
 }

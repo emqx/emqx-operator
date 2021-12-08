@@ -3,27 +3,27 @@ package k8s
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type SecretManagers interface {
-	GetSecret(namespace, name string) (*corev1.Secret, error)
-	CreateSecret(object *corev1.Secret) error
-	UpdateSecret(object *corev1.Secret) error
-	DeleteSecret(namespace, name string) error
+type RoleManagers interface {
+	GetRole(namespace, name string) (*rbacv1.Role, error)
+	CreateRole(object *rbacv1.Role) error
+	UpdateRole(object *rbacv1.Role) error
+	DeleteRole(namespace, name string) error
 }
 
-// GetSecret implement the Service.Interface
-func (manager *Manager) GetSecret(namespace, name string) (*corev1.Secret, error) {
-	object := &corev1.Secret{}
+func (manager *Manager) GetRole(namespace, name string) (*rbacv1.Role, error) {
+	object := &rbacv1.Role{}
 	err := manager.Client.Get(
 		context.TODO(),
 		types.NamespacedName{
 			Name:      name,
 			Namespace: namespace,
-		}, object,
+		},
+		object,
 	)
 
 	if err != nil {
@@ -32,7 +32,7 @@ func (manager *Manager) GetSecret(namespace, name string) (*corev1.Secret, error
 	return object, err
 }
 
-func (manager *Manager) CreateSecret(object *corev1.Secret) error {
+func (manager *Manager) CreateRole(object *rbacv1.Role) error {
 	err := manager.Client.Create(context.TODO(), object)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (manager *Manager) CreateSecret(object *corev1.Secret) error {
 	return nil
 }
 
-func (manager *Manager) UpdateSecret(object *corev1.Secret) error {
+func (manager *Manager) UpdateRole(object *rbacv1.Role) error {
 	if err := manager.Client.Update(context.TODO(), object); err != nil {
 		return err
 	}
@@ -54,13 +54,13 @@ func (manager *Manager) UpdateSecret(object *corev1.Secret) error {
 		"kind", object.Kind,
 		"apiVersion", object.APIVersion,
 		"namespace", object.Namespace,
-		"name", object.Name,
+		"serviceName", object.Name,
 	).Info("Update successfully")
 	return nil
 }
 
-func (manager *Manager) DeleteSecret(namespace string, name string) error {
-	object := &corev1.Secret{
+func (manager *Manager) DeleteRole(namespace, name string) error {
+	object := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

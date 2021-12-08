@@ -5,15 +5,11 @@ import (
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
-	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EmqxClusterClient has the minimumm methods that a EMQ X Cluster controller needs to satisfy
-// in order to talk with K8s
-type EmqxClusterClient interface {
+type EmqxClient interface {
 	EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
@@ -23,171 +19,161 @@ type EmqxClusterClient interface {
 	EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 }
 
-// EmqxClusterKubeClient implements the required methods to talk with kubernetes
-type EmqxClusterKubeClient struct {
-	K8sService k8s.Services
-	Logger     logr.Logger
+type Client struct {
+	k8s.Manager
 }
 
-// NewEmqxClusterKubeClient creates a New EmqxClusterKubeClient
-func NewEmqxClusterKubeClient(k8sService k8s.Services, logger logr.Logger) *EmqxClusterKubeClient {
-	return &EmqxClusterKubeClient{
-		K8sService: k8sService,
-		Logger:     logger,
-	}
+func NewClient(manager k8s.Manager) *Client {
+	return &Client{manager}
 }
 
-// EnsureEmqxSecret make sure the EMQ X secret exists
-func (r *EmqxClusterKubeClient) EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	secret := NewSecretForCR(emqx, labels, ownerRefs)
-	if reflect.ValueOf(secret).IsNil() {
-		return nil
-	} else {
-
-		oldSecret, err := r.K8sService.GetSecret(emqx.GetNamespace(), emqx.GetSecretName())
-
+func (client *Client) EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
+	if ok && emqxEnterprise.GetLicense() != "" {
+		new := NewSecretForCR(*emqxEnterprise, labels, ownerRefs)
+		old, err := client.GetSecret(emqx.GetNamespace(), emqx.GetSecretName())
 		if err != nil {
-			// If no secret exists we need to create.
 			if errors.IsNotFound(err) {
-				return r.K8sService.CreateSecret(emqx.GetNamespace(), secret)
+				return client.CreateSecret(new)
 			}
 			return err
 		}
 
-		// The instance already known as emqx enterprise
-		emqxEnterprise, _ := emqx.(*v1beta1.EmqxEnterprise)
-		if shouldUpdateSecret(emqxEnterprise.GetLicense(), oldSecret.StringData["emqx.lic"]) {
-			return r.K8sService.UpdateSecret(emqx.GetNamespace(), secret)
+		if new.StringData["emqx.lic"] != old.StringData["emqx.lic"] {
+			new.ResourceVersion = old.ResourceVersion
+			if err := client.UpdateSecret(new); err != nil {
+				return err
+			}
+			// TODO reload emqx.lic
+			return nil
 		}
+	}
+	return nil
+}
+
+func (client *Client) EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	_, err := client.GetService(emqx.GetNamespace(), emqx.GetHeadlessServiceName())
+	if err != nil {
+		if errors.IsNotFound(err) {
+			svc := NewHeadLessSvcForCR(emqx, labels, ownerRefs)
+			return client.CreateService(svc)
+		}
+		return err
+	}
+	return nil
+}
+
+func (client *Client) EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	_, err := client.GetService(emqx.GetNamespace(), emqx.GetName())
+	if err != nil {
+		if errors.IsNotFound(err) {
+			listenerSvc := NewListenerSvcForCR(emqx, labels, ownerRefs)
+			return client.CreateService(listenerSvc)
+		}
+		return err
+	}
+	return nil
+}
+
+func (client *Client) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	new := NewConfigMapForAcl(emqx, labels, ownerRefs)
+	old, err := client.GetConfigMap(new.Namespace, new.Name)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return client.CreateConfigMap(new)
+		} else {
+			return err
+		}
+	}
+
+	if new.Data["acl.conf"] != old.Data["acl.conf"] {
+		new.ResourceVersion = old.ResourceVersion
+		if err := client.UpdateConfigMap(new); err != nil {
+			return err
+		}
+		//TODO restart emqx pods
 		return nil
 	}
+	return nil
 }
 
-// EnsureEmqxHeadlessService makes sure the EMQ X headless service exists
-func (r *EmqxClusterKubeClient) EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	svc := NewHeadLessSvcForCR(emqx, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsService(emqx.GetNamespace(), svc)
-}
-
-func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	oldConfigMapForAcl, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetACL()["name"])
-
+func (client *Client) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	new := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
+	old, err := client.GetConfigMap(new.Namespace, new.Name)
 	if err != nil {
-		// If no configmap for acl we need to create.
 		if errors.IsNotFound(err) {
-			cm := NewConfigMapForAcl(emqx, labels, ownerRefs)
-			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
+			return client.CreateConfigMap(new)
+		} else {
+			return err
+		}
+	}
+
+	if new.Data["loaded_modules"] != old.Data["loaded_modules"] {
+		new.ResourceVersion = old.ResourceVersion
+		if err := client.UpdateConfigMap(new); err != nil {
+			return err
+		}
+		//TODO restart emqx pods
+		return err
+	}
+	return nil
+}
+
+func (client *Client) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	new := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
+	old, err := client.GetConfigMap(new.Namespace, new.Name)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return client.CreateConfigMap(new)
+		} else {
+			return err
+		}
+	}
+
+	if new.Data["loaded_plugins"] != old.Data["loaded_plugins"] {
+		new.ResourceVersion = old.ResourceVersion
+		if err := client.UpdateConfigMap(new); err != nil {
+			//TODO restart emqx pods
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	new := NewEmqxStatefulSet(emqx, labels, ownerRefs)
+	old, err := client.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return client.CreateStatefulSet(new)
 		}
 		return err
 	}
 
-	if shouldUpdateEmqxConfigMapForAcl(emqx.GetACL()["conf"], oldConfigMapForAcl.Data["acl.conf"]) {
-		cm := NewConfigMapForAcl(emqx, labels, ownerRefs)
-		return r.K8sService.UpdateConfigMap(emqx.GetNamespace(), cm)
-	}
-
-	return nil
-}
-
-// EnsureEmqxConfigMapForLoadedModules make sure the EMQ X configmap for loaded modules exists
-func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	oldConfigMapForLM, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetLoadedModules()["name"])
-	if err != nil {
-		// If no configmap for modules we need to create.
-		if errors.IsNotFound(err) {
-			cm := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
-			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
+	if broker, ok := emqx.(*v1beta1.EmqxBroker); ok {
+		if oldBroker, err := client.GetEmqxBroker(
+			emqx.GetNamespace(),
+			emqx.GetName(),
+		); err != nil {
+			if reflect.DeepEqual(oldBroker.Spec, broker.Spec) {
+				new.ResourceVersion = old.ResourceVersion
+				return client.UpdateStatefulSet(new)
+			}
 		}
-		return err
 	}
 
-	if shouldUpdateEmqxConfigMapForLM(emqx.GetLoadedModules()["conf"], oldConfigMapForLM.Data["loaded_modules"]) {
-		cm := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
-		return r.K8sService.UpdateConfigMap(emqx.GetNamespace(), cm)
-	}
-
-	return nil
-}
-
-// EnsureEmqxConfigMapForLoadedPlugins make sure the EMQ X configmap for loaded plugins exists
-func (r *EmqxClusterKubeClient) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	oldConfigMapForLP, err := r.K8sService.GetConfigMap(emqx.GetNamespace(), emqx.GetLoadedPlugins()["name"])
-	if err != nil {
-		// If no configmap for plugins we need to create.
-		if errors.IsNotFound(err) {
-			cm := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
-			return r.K8sService.CreateConfigMap(emqx.GetNamespace(), cm)
+	if enterprise, ok := emqx.(*v1beta1.EmqxEnterprise); ok {
+		if oldEnterprise, err := client.GetEmqxEnterprise(
+			emqx.GetNamespace(),
+			emqx.GetName(),
+		); err != nil {
+			if reflect.DeepEqual(oldEnterprise.Spec, enterprise.Spec) {
+				new.ResourceVersion = old.ResourceVersion
+				return client.UpdateStatefulSet(new)
+			}
 		}
-		return err
-	}
-
-	if shouldUpdateEmqxConfigMapForLP(emqx.GetLoadedPlugins()["conf"], oldConfigMapForLP.Data["loaded_plugins"]) {
-		cm := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
-		return r.K8sService.UpdateConfigMap(emqx.GetNamespace(), cm)
 	}
 
 	return nil
-}
-
-// EnsureEmqxStatefulSet makes sure the EMQ X statefulset exists in the desired state
-func (r *EmqxClusterKubeClient) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	// TODO PDB
-	oldSts, err := r.K8sService.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
-	if err != nil {
-		// If no resource we need to create.
-		if errors.IsNotFound(err) {
-			sts := NewEmqxStatefulSet(emqx, labels, ownerRefs)
-			return r.K8sService.CreateStatefulSet(emqx.GetNamespace(), sts)
-		}
-		return err
-	}
-
-	if shouldUpdateEmqx(emqx.GetResource(), oldSts.Spec.Template.Spec.Containers[0].Resources,
-		emqx.GetReplicas(), oldSts.Spec.Replicas) {
-		es := NewEmqxStatefulSet(emqx, labels, ownerRefs)
-		return r.K8sService.UpdateStatefulSet(emqx.GetNamespace(), es)
-	}
-
-	return nil
-}
-
-// EnsureEmqxListenerService make sure the EMQ X service for ingress exists
-func (r *EmqxClusterKubeClient) EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	listenerSvc := NewListenerSvcForCR(emqx, labels, ownerRefs)
-	return r.K8sService.CreateIfNotExistsService(emqx.GetNamespace(), listenerSvc)
-}
-
-func shouldUpdateEmqx(expectResource, containterResource corev1.ResourceRequirements, expectSize, replicas *int32) bool {
-	if expectSize != replicas {
-		return true
-	}
-	if result := containterResource.Requests.Cpu().Cmp(*expectResource.Requests.Cpu()); result != 0 {
-		return true
-	}
-	if result := containterResource.Requests.Memory().Cmp(*expectResource.Requests.Memory()); result != 0 {
-		return true
-	}
-	if result := containterResource.Limits.Cpu().Cmp(*expectResource.Limits.Cpu()); result != 0 {
-		return true
-	}
-	if result := containterResource.Limits.Memory().Cmp(*expectResource.Limits.Memory()); result != 0 {
-		return true
-	}
-	return false
-}
-
-func shouldUpdateSecret(expectLicense, emqxLicense string) bool {
-	return expectLicense != emqxLicense
-}
-
-func shouldUpdateEmqxConfigMapForAcl(expectEmqxACL, oldEmqxAcl string) bool {
-	return expectEmqxACL != oldEmqxAcl
-}
-
-func shouldUpdateEmqxConfigMapForLM(expectEmqxLM, oldEmqxLM string) bool {
-	return expectEmqxLM != oldEmqxLM
-}
-
-func shouldUpdateEmqxConfigMapForLP(expectEmqxLP, oldEmqxLP string) bool {
-	return expectEmqxLP != oldEmqxLP
 }

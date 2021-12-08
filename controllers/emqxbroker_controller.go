@@ -53,26 +53,26 @@ type EmqxBrokerReconciler struct {
 
 func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
 	// Create kubernetes service.
-	k8sService := k8s.New(mgr.GetClient(), log)
+	manager := k8s.New(mgr.GetClient(), log)
 
 	// TODO
 	// Create the emqx clients
 	// emqxBrokerClient := broker.New()
 
 	// Create internal services.
-	eService := service.NewEmqxClusterKubeClient(k8sService, log)
+	eService := service.NewEmqxClusterKubeClient(manager, log)
 	// TODO
-	eChecker := service.NewEmqxClusterChecker(k8sService, log)
+	eChecker := service.NewEmqxClusterChecker(manager, log)
 
 	// TODO eHealer
 
 	handler := &EmqxClusterHandler{
-		k8sServices: k8sService,
-		eService:    eService,
-		eChecker:    eChecker,
-		metaCache:   new(cache.MetaMap),
-		eventsCli:   k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
-		logger:      log,
+		manager:   manager,
+		eService:  eService,
+		eChecker:  eChecker,
+		metaCache: new(cache.MetaMap),
+		eventsCli: k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
+		logger:    log,
 	}
 
 	return &EmqxBrokerReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme(), Handler: handler}
