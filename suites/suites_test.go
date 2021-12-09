@@ -28,7 +28,6 @@ import (
 	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/controllers"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -120,11 +119,6 @@ var _ = BeforeSuite(func() {
 		namespace := generateEmqxNamespace(emqx.GetNamespace())
 		Expect(k8sClient.Create(context.Background(), namespace)).Should(Succeed())
 
-		sa, role, roleBinding := generateRBAC(emqx.GetName(), emqx.GetNamespace())
-		Expect(k8sClient.Create(context.Background(), sa)).Should(Succeed())
-		Expect(k8sClient.Create(context.Background(), role)).Should(Succeed())
-		Expect(k8sClient.Create(context.Background(), roleBinding)).Should(Succeed())
-
 		Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
 	}
 }, 60)
@@ -145,58 +139,6 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 			Name: namespace,
 		},
 	}
-}
-
-func generateRBAC(name, namespace string) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding) {
-	meta := metav1.ObjectMeta{
-		Name:      name,
-		Namespace: namespace,
-	}
-
-	sa := &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: meta,
-	}
-
-	role := &rbacv1.Role{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "Role",
-		},
-		ObjectMeta: meta,
-		Rules: []rbacv1.PolicyRule{
-			{
-				Verbs:     []string{"get", "watch", "list"},
-				APIGroups: []string{""},
-				Resources: []string{"endpoints"},
-			},
-		},
-	}
-
-	roleBinding := &rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "RoleBinding",
-		},
-		ObjectMeta: meta,
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      sa.Kind,
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     role.Kind,
-			Name:     role.Name,
-		},
-	}
-
-	return sa, role, roleBinding
 }
 
 func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {

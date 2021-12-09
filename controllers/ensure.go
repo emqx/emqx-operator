@@ -10,6 +10,10 @@ func (handler *Handler) Ensure(emqx v1beta1.Emqx, labels map[string]string, owne
 		return err
 	}
 
+	if err := handler.client.EnsureEmqxRBAC(emqx, labels, ownerRefs); err != nil {
+		return err
+	}
+
 	if err := handler.client.EnsureEmqxHeadlessService(emqx, labels, ownerRefs); err != nil {
 		return err
 	}

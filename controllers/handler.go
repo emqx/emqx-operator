@@ -61,7 +61,7 @@ func (handler *Handler) Do(emqx v1beta1.Emqx) error {
 	if err := handler.Ensure(meta.Obj, labels, oRefs); err != nil {
 		handler.eventsCli.FailedCluster(emqx, err.Error())
 		emqx.SetFailedCondition(err.Error())
-		_ = handler.client.UpdateEmqx(emqx)
+		_ = handler.client.UpdateEmqxStatus(emqx)
 		// TODO
 		// metrics.ClusterMetrics.SetClusterError(emqx.GetNamespace(), emqx.GetName())
 		return err
@@ -92,7 +92,7 @@ func (handler *Handler) Do(emqx v1beta1.Emqx) error {
 	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("SetReadyCondition...")
 	handler.eventsCli.HealthCluster(emqx)
 	emqx.SetReadyCondition("Cluster ok")
-	err := handler.client.UpdateEmqx(emqx)
+	err := handler.client.UpdateEmqxStatus(emqx)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (handler *Handler) updateStatus(meta *cache.Meta) error {
 			handler.eventsCli.UpdateCluster(emqx, meta.Message)
 			emqx.SetUpdatingCondition(meta.Message)
 		}
-		return handler.client.UpdateEmqx(emqx)
+		return handler.client.UpdateEmqxStatus(emqx)
 	}
 	return nil
 }
