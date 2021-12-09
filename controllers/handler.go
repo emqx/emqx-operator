@@ -9,22 +9,32 @@ import (
 	"github.com/emqx/emqx-operator/pkg/service"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// EmqxClusterHandler is the EMQ X Cluster handler. This handler will create the required
-// resources that a EMQ X Cluster needs.
-type EmqxClusterHandler struct {
-	manager   k8s.Manager
-	eService  service.EmqxClusterClient
-	eChecker  service.EmqxClusterCheck
+type Handler struct {
+	client    service.Client
+	checker   service.Checker
 	eventsCli k8s.Event
 	logger    logr.Logger
 	metaCache *cache.MetaMap
 }
 
+func NewHandler(mgr mgr.Manager) *Handler {
+	manager := *k8s.NewManager(mgr.GetClient(), log)
+
+	return &Handler{
+		client:    *service.NewClient(manager),
+		checker:   *service.NewChecker(manager),
+		metaCache: new(cache.MetaMap),
+		eventsCli: k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
+		logger:    log,
+	}
+}
+
 // Do will ensure the EMQ X Cluster is in the expected state and update the EMQ X Cluster status.
-func (ech *EmqxClusterHandler) Do(emqx v1beta1.Emqx) error {
-	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).Info("handler doing")
+func (handler *Handler) Do(emqx v1beta1.Emqx) error {
+	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).Info("handler doing")
 	if err := emqx.Validate(); err != nil {
 		// TODO
 		// metrics.ClusterMetrics.SetClusterError(emqx.GetNamespace(), emqx.GetName())
@@ -32,57 +42,57 @@ func (ech *EmqxClusterHandler) Do(emqx v1beta1.Emqx) error {
 	}
 
 	// diff new and new EMQ X Cluster, then update status
-	meta := ech.metaCache.Cache(emqx)
-	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(3).
+	meta := handler.metaCache.Cache(emqx)
+	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(3).
 		Info(fmt.Sprintf("meta status:%s, mes:%s, state:%s", meta.Status, meta.Message, meta.State))
-	if err := ech.updateStatus(meta); err != nil {
+	if err := handler.updateStatus(meta); err != nil {
 		return err
 	}
 
 	// Create owner refs so the objects manager by this handler have ownership to the
 	// received rc.
-	oRefs := ech.createOwnerReferences(emqx)
+	oRefs := handler.createOwnerReferences(emqx)
 
 	// Create the labels every object derived from this need to have.
 	labels := emqx.GetLabels()
 
-	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("Ensure...")
-	ech.eventsCli.EnsureCluster(emqx)
-	if err := ech.Ensure(meta.Obj, labels, oRefs); err != nil {
-		ech.eventsCli.FailedCluster(emqx, err.Error())
+	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("Ensure...")
+	handler.eventsCli.EnsureCluster(emqx)
+	if err := handler.Ensure(meta.Obj, labels, oRefs); err != nil {
+		handler.eventsCli.FailedCluster(emqx, err.Error())
 		emqx.SetFailedCondition(err.Error())
-		_ = ech.manager.UpdateEmqx(emqx)
+		_ = handler.client.UpdateEmqx(emqx)
 		// TODO
 		// metrics.ClusterMetrics.SetClusterError(emqx.GetNamespace(), emqx.GetName())
 		return err
 	}
 
-	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("CheckAndHeal...")
-	ech.eventsCli.CheckCluster(emqx)
+	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("CheckAndHeal...")
+	handler.eventsCli.CheckCluster(emqx)
 
 	// TODO
-	// if err := ech.CheckAndHeal(meta); err != nil {
+	// if err := handler.CheckAndHeal(meta); err != nil {
 	// 	metrics.ClusterMetrics.SetClusterError(emqx.GetNamespace(), emqx.GetName())
 	// 	if err.Error() != needRequeueMsg {
-	// 		ech.eventsCli.FailedCluster(emqx, err.Error())
-	// 		ech.Status.SetFailedCondition(err.Error())
-	// 		ech.manager.UpdateCluster(emqx.GetNamespace(), emqx)
+	// 		handler.eventsCli.FailedCluster(emqx, err.Error())
+	// 		handler.Status.SetFailedCondition(err.Error())
+	// 		handler.client.UpdateCluster(emqx.GetNamespace(), emqx)
 	// 		return err
 	// 	}
 	// 	// if user delete statefulset or deployment, set status
 	// 	status := emqx.Status.Conditions
 	// 	if len(status) > 0 && status[0].Type == v1beta1.ClusterConditionHealthy {
-	// 		ech.eventsCli.CreateCluster(emqx)
-	// 		ech.Status.SetCreateCondition("emqx server be removed by user, restart")
-	// 		ech.manager.UpdateCluster(emqx.GetNamespace(), emqx)
+	// 		handler.eventsCli.CreateCluster(emqx)
+	// 		handler.Status.SetCreateCondition("emqx server be removed by user, restart")
+	// 		handler.client.UpdateCluster(emqx.GetNamespace(), emqx)
 	// 	}
 	// 	return err
 	// }
 
-	ech.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("SetReadyCondition...")
-	ech.eventsCli.HealthCluster(emqx)
+	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("SetReadyCondition...")
+	handler.eventsCli.HealthCluster(emqx)
 	emqx.SetReadyCondition("Cluster ok")
-	err := ech.manager.UpdateEmqx(emqx)
+	err := handler.client.UpdateEmqx(emqx)
 	if err != nil {
 		return err
 	}
@@ -92,33 +102,33 @@ func (ech *EmqxClusterHandler) Do(emqx v1beta1.Emqx) error {
 	return nil
 }
 
-func (ech *EmqxClusterHandler) updateStatus(meta *cache.Meta) error {
+func (handler *Handler) updateStatus(meta *cache.Meta) error {
 	emqx := meta.Obj
 
 	if meta.State != cache.Check {
 		switch meta.Status {
 		case v1beta1.ClusterConditionCreating:
-			ech.eventsCli.CreateCluster(emqx)
+			handler.eventsCli.CreateCluster(emqx)
 			emqx.SetCreateCondition(meta.Message)
 		case v1beta1.ClusterConditionScaling:
-			ech.eventsCli.NewNodeAdd(emqx, meta.Message)
+			handler.eventsCli.NewNodeAdd(emqx, meta.Message)
 			emqx.SetScalingUpCondition(meta.Message)
 		case v1beta1.ClusterConditionScalingDown:
-			ech.eventsCli.NodeRemove(emqx, meta.Message)
+			handler.eventsCli.NodeRemove(emqx, meta.Message)
 			emqx.SetScalingDownCondition(meta.Message)
 		case v1beta1.ClusterConditionUpgrading:
-			ech.eventsCli.UpdateCluster(emqx, meta.Message)
+			handler.eventsCli.UpdateCluster(emqx, meta.Message)
 			emqx.SetUpgradingCondition(meta.Message)
 		default:
-			ech.eventsCli.UpdateCluster(emqx, meta.Message)
+			handler.eventsCli.UpdateCluster(emqx, meta.Message)
 			emqx.SetUpdatingCondition(meta.Message)
 		}
-		return ech.manager.UpdateEmqx(emqx)
+		return handler.client.UpdateEmqx(emqx)
 	}
 	return nil
 }
 
-func (ech *EmqxClusterHandler) createOwnerReferences(emqx v1beta1.Emqx) []metav1.OwnerReference {
+func (handler *Handler) createOwnerReferences(emqx v1beta1.Emqx) []metav1.OwnerReference {
 	emqxGroupVersionKind := v1beta1.VersionKind(emqx.GetKind())
 	return []metav1.OwnerReference{
 		*metav1.NewControllerRef(emqx, emqxGroupVersionKind),
