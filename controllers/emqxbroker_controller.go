@@ -23,13 +23,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
-	"github.com/emqx/emqx-operator/pkg/cache"
-	"github.com/emqx/emqx-operator/pkg/client/k8s"
-	"github.com/emqx/emqx-operator/pkg/service"
 	"k8s.io/apimachinery/pkg/runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -45,37 +41,16 @@ var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 // EmqxBrokerReconciler reconciles a EmqxBroker object
 type EmqxBrokerReconciler struct {
-	Client client.Client
 	Scheme *runtime.Scheme
 
-	Handler *EmqxClusterHandler
+	Handler Handler
 }
 
 func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
-	// Create kubernetes service.
-	manager := k8s.New(mgr.GetClient(), log)
-
-	// TODO
-	// Create the emqx clients
-	// emqxBrokerClient := broker.New()
-
-	// Create internal services.
-	eService := service.NewEmqxClusterKubeClient(manager, log)
-	// TODO
-	eChecker := service.NewEmqxClusterChecker(manager, log)
-
-	// TODO eHealer
-
-	handler := &EmqxClusterHandler{
-		manager:   manager,
-		eService:  eService,
-		eChecker:  eChecker,
-		metaCache: new(cache.MetaMap),
-		eventsCli: k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
-		logger:    log,
+	return &EmqxBrokerReconciler{
+		Scheme:  mgr.GetScheme(),
+		Handler: *NewHandler(mgr),
 	}
-
-	return &EmqxBrokerReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme(), Handler: handler}
 }
 
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -106,8 +81,7 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	reqLogger.Info("Reconciling EMQ X Cluster")
 
 	// Fetch the EMQ X Cluster instance
-	instance := &v1beta1.EmqxBroker{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	instance, err := r.Handler.client.GetEmqxBroker(req.Namespace, req.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -133,7 +107,7 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return reconcile.Result{}, err
 	}
 
-	if err = r.Handler.eChecker.CheckEmqxReadyReplicas(instance); err != nil {
+	if err = r.Handler.checker.CheckReadyReplicas(instance); err != nil {
 		reqLogger.Info(err.Error())
 		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 	}
