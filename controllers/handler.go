@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
@@ -9,8 +10,15 @@ import (
 	"github.com/emqx/emqx-operator/pkg/service"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
+
+type EmqxHandler interface {
+	Do(emqx v1beta1.Emqx) error
+	Ensure(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
+}
 
 type Handler struct {
 	client    service.Client

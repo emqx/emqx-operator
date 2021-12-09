@@ -17,94 +17,19 @@ limitations under the License.
 package controllers
 
 import (
-	"context"
-	"fmt"
-	"time"
-
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1beta1 "github.com/emqx/emqx-operator/api/v1beta1"
 )
 
 // EmqxEnterpriseReconciler reconciles a EmqxEnterprise object
 type EmqxEnterpriseReconciler struct {
-	Scheme *runtime.Scheme
-
-	Handler Handler
+	Handler
 }
 
 func NewEmqxEnterpriseReconciler(mgr manager.Manager) *EmqxEnterpriseReconciler {
-	return &EmqxEnterpriseReconciler{
-		Scheme:  mgr.GetScheme(),
-		Handler: *NewHandler(mgr),
-	}
-}
-
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/finalizers,verbs=update
-//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
-
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the EmqxEnterprise object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
-func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	reqLogger.Info("Reconciling EMQ X Cluster")
-
-	// Fetch the EMQ X Cluster instance
-	instance, err := r.Handler.client.GetEmqxEnterprise(req.Namespace, req.Name)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			reqLogger.Info("EMQ X Cluster delete")
-			instance.Namespace = req.NamespacedName.Namespace
-			instance.Name = req.NamespacedName.Name
-			r.Handler.metaCache.Del(instance)
-			return reconcile.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
-	}
-
-	reqLogger.V(5).Info(fmt.Sprintf("EMQ X Cluster Spec:\n %+v", instance))
-
-	if err = r.Handler.Do(instance); err != nil {
-		if err.Error() == "need requeue" {
-			return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
-		}
-		reqLogger.Error(err, "Reconcile handler")
-		return reconcile.Result{}, err
-	}
-
-	if err = r.Handler.checker.CheckReadyReplicas(instance); err != nil {
-		reqLogger.Info(err.Error())
-		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
-	}
-
-	return reconcile.Result{RequeueAfter: time.Duration(reconcileTime) * time.Second}, nil
+	return &EmqxEnterpriseReconciler{*NewHandler(mgr)}
 }
 
 // SetupWithManager sets up the controller with the Manager.
