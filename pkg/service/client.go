@@ -10,13 +10,15 @@ import (
 )
 
 type EmqxClient interface {
+	EnsureEmqxNamespace(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxRBAC(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
-	EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 }
 
 type Client struct {
@@ -48,6 +50,42 @@ func (client *Client) EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]stri
 			return nil
 		}
 	}
+	return nil
+}
+
+func (client *Client) EnsureEmqxRBAC(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	sa, role, roleBinding := NewRBAC(emqx, labels, ownerRefs)
+
+	if _, err := client.GetServiceAccount(
+		emqx.GetNamespace(),
+		emqx.GetName(),
+	); err != nil {
+		if errors.IsNotFound(err) {
+			return client.CreateServiceAccount(sa)
+		}
+		return err
+	}
+
+	if _, err := client.GetRole(
+		emqx.GetNamespace(),
+		emqx.GetName(),
+	); err != nil {
+		if errors.IsNotFound(err) {
+			return client.CreateRole(role)
+		}
+		return err
+	}
+
+	if _, err := client.GetRoleBinding(
+		emqx.GetNamespace(),
+		emqx.GetName(),
+	); err != nil {
+		if errors.IsNotFound(err) {
+			return client.CreateRoleBinding(roleBinding)
+		}
+		return err
+	}
+
 	return nil
 }
 
