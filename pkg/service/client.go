@@ -10,7 +10,6 @@ import (
 )
 
 type EmqxClient interface {
-	EnsureEmqxNamespace(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxRBAC(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
@@ -46,7 +45,7 @@ func (client *Client) EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]stri
 			if err := client.UpdateSecret(new); err != nil {
 				return err
 			}
-			// TODO reload emqx.lic
+			// TODO Use the emqx api to reload the license instead of restarting the pod
 			return nil
 		}
 	}
@@ -129,7 +128,6 @@ func (client *Client) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[st
 		if err := client.UpdateConfigMap(new); err != nil {
 			return err
 		}
-		//TODO restart emqx pods
 		return nil
 	}
 	return nil
@@ -151,7 +149,6 @@ func (client *Client) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, lab
 		if err := client.UpdateConfigMap(new); err != nil {
 			return err
 		}
-		//TODO restart emqx pods
 		return err
 	}
 	return nil
@@ -171,7 +168,7 @@ func (client *Client) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, lab
 	if new.Data["loaded_plugins"] != old.Data["loaded_plugins"] {
 		new.ResourceVersion = old.ResourceVersion
 		if err := client.UpdateConfigMap(new); err != nil {
-			//TODO restart emqx pods
+			//TODO Use the emqx api to reload the license instead of restarting the pod
 			return nil
 		}
 		return err
