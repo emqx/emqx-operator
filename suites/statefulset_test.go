@@ -33,8 +33,8 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
-	Context("Check acl", func() {
-		It("Check acl", func() {
+	Context("Check statefulset", func() {
+		It("Check statefulset", func() {
 			for _, emqx := range emqxList() {
 				podList := &corev1.PodList{}
 
@@ -50,9 +50,12 @@ var _ = Describe("", func() {
 						sts,
 					)
 					return err == nil
+					// if err != nil {
+					// 	fmt.Printf("===================%+v\n", sts)
+					// 	return sts.Status.ReadyReplicas == *emqx.GetReplicas()
+					// }
+					// return false
 				}, tuneout, interval).Should(BeTrue())
-
-				fmt.Printf("===================%+v\n", sts)
 
 				Eventually(func() bool {
 					err := k8sClient.List(

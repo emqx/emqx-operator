@@ -69,7 +69,7 @@ func (handler *Handler) Do(emqx v1beta1.Emqx) error {
 	if err := handler.Ensure(meta.Obj, labels, oRefs); err != nil {
 		handler.eventsCli.FailedCluster(emqx, err.Error())
 		emqx.SetFailedCondition(err.Error())
-		_ = handler.client.UpdateEmqxStatus(emqx)
+		_ = handler.updateEmqxStatus(emqx)
 		// TODO
 		// metrics.ClusterMetrics.SetClusterError(emqx.GetNamespace(), emqx.GetName())
 		return err
@@ -100,14 +100,7 @@ func (handler *Handler) Do(emqx v1beta1.Emqx) error {
 	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("SetReadyCondition...")
 	handler.eventsCli.HealthCluster(emqx)
 	emqx.SetReadyCondition("Cluster ok")
-	err := handler.client.UpdateEmqxStatus(emqx)
-	if err != nil {
-		return err
-	}
-	// TODO
-	// metrics.ClusterMetrics.SetClusterOK(emqx.GetNamespace(), emqx.GetName())
-
-	return nil
+	return handler.updateEmqxStatus(emqx)
 }
 
 func (handler *Handler) updateStatus(meta *cache.Meta) error {
@@ -131,7 +124,7 @@ func (handler *Handler) updateStatus(meta *cache.Meta) error {
 			handler.eventsCli.UpdateCluster(emqx, meta.Message)
 			emqx.SetUpdatingCondition(meta.Message)
 		}
-		return handler.client.UpdateEmqxStatus(emqx)
+		return handler.updateEmqxStatus(emqx)
 	}
 	return nil
 }
@@ -141,4 +134,14 @@ func (handler *Handler) createOwnerReferences(emqx v1beta1.Emqx) []metav1.OwnerR
 	return []metav1.OwnerReference{
 		*metav1.NewControllerRef(emqx, emqxGroupVersionKind),
 	}
+}
+
+func (handler *Handler) updateEmqxStatus(emqx v1beta1.Emqx) error {
+	if emqxBroker, ok := emqx.(*v1beta1.EmqxBroker); ok {
+		return handler.client.EmqxBroker.UpdateStatus(emqxBroker)
+	}
+	if emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise); ok {
+		return handler.client.EmqxEnterprise.UpdateStatus(emqxEnterprise)
+	}
+	return nil
 }

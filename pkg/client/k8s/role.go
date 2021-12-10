@@ -3,19 +3,33 @@ package k8s
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type RoleManagers interface {
-	GetRole(namespace, name string) (*rbacv1.Role, error)
-	CreateRole(object *rbacv1.Role) error
-	UpdateRole(object *rbacv1.Role) error
-	DeleteRole(namespace, name string) error
+	Get(namespace, name string) (*rbacv1.Role, error)
+	Create(object *rbacv1.Role) error
+	Update(object *rbacv1.Role) error
+	Delete(namespace, name string) error
 }
 
-func (manager *Manager) GetRole(namespace, name string) (*rbacv1.Role, error) {
+type RoleManager struct {
+	Client client.Client
+	Logger logr.Logger
+}
+
+func NewRoleManager(client client.Client, logger logr.Logger) *RoleManager {
+	return &RoleManager{
+		Client: client,
+		Logger: logger,
+	}
+}
+
+func (manager *RoleManager) Get(namespace, name string) (*rbacv1.Role, error) {
 	object := &rbacv1.Role{}
 	err := manager.Client.Get(
 		context.TODO(),
@@ -32,7 +46,7 @@ func (manager *Manager) GetRole(namespace, name string) (*rbacv1.Role, error) {
 	return object, err
 }
 
-func (manager *Manager) CreateRole(object *rbacv1.Role) error {
+func (manager *RoleManager) Create(object *rbacv1.Role) error {
 	err := manager.Client.Create(context.TODO(), object)
 	if err != nil {
 		return err
@@ -46,7 +60,7 @@ func (manager *Manager) CreateRole(object *rbacv1.Role) error {
 	return nil
 }
 
-func (manager *Manager) UpdateRole(object *rbacv1.Role) error {
+func (manager *RoleManager) Update(object *rbacv1.Role) error {
 	if err := manager.Client.Update(context.TODO(), object); err != nil {
 		return err
 	}
@@ -59,7 +73,7 @@ func (manager *Manager) UpdateRole(object *rbacv1.Role) error {
 	return nil
 }
 
-func (manager *Manager) DeleteRole(namespace, name string) error {
+func (manager *RoleManager) Delete(namespace, name string) error {
 	object := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

@@ -3,19 +3,33 @@ package k8s
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ConfigMapManagers interface {
-	GetConfigMap(namespace, name string) (*corev1.ConfigMap, error)
-	CreateConfigMap(configMap *corev1.ConfigMap) error
-	UpdateConfigMap(configMap *corev1.ConfigMap) error
-	DeleteConfigMap(namespace, name string) error
+	Get(namespace, name string) (*corev1.ConfigMap, error)
+	Create(configMap *corev1.ConfigMap) error
+	Update(configMap *corev1.ConfigMap) error
+	Delete(namespace, name string) error
 }
 
-func (manager *Manager) GetConfigMap(namespace string, name string) (*corev1.ConfigMap, error) {
+type ConfigMapManager struct {
+	Client client.Client
+	Logger logr.Logger
+}
+
+func NewConfigMapManager(client client.Client, logger logr.Logger) *ConfigMapManager {
+	return &ConfigMapManager{
+		Client: client,
+		Logger: logger,
+	}
+}
+
+func (manager *ConfigMapManager) Get(namespace string, name string) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{}
 	err := manager.Client.Get(
 		context.TODO(),
@@ -31,7 +45,7 @@ func (manager *Manager) GetConfigMap(namespace string, name string) (*corev1.Con
 	return configMap, err
 }
 
-func (manager *Manager) CreateConfigMap(object *corev1.ConfigMap) error {
+func (manager *ConfigMapManager) Create(object *corev1.ConfigMap) error {
 	err := manager.Client.Create(context.TODO(), object)
 	if err != nil {
 		return err
@@ -45,7 +59,7 @@ func (manager *Manager) CreateConfigMap(object *corev1.ConfigMap) error {
 	return nil
 }
 
-func (manager *Manager) UpdateConfigMap(object *corev1.ConfigMap) error {
+func (manager *ConfigMapManager) Update(object *corev1.ConfigMap) error {
 	if err := manager.Client.Update(context.TODO(), object); err != nil {
 		return err
 	}
@@ -58,7 +72,7 @@ func (manager *Manager) UpdateConfigMap(object *corev1.ConfigMap) error {
 	return nil
 }
 
-func (manager *Manager) DeleteConfigMap(namespace, name string) error {
+func (manager *ConfigMapManager) Delete(namespace, name string) error {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

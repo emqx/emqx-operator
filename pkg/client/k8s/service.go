@@ -3,19 +3,33 @@ package k8s
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ServiceManagers interface {
-	GetService(namespace string, name string) (*corev1.Service, error)
-	CreateService(object *corev1.Service) error
-	UpdateService(object *corev1.Service) error
-	DeleteService(namespace, name string) error
+	Get(namespace string, name string) (*corev1.Service, error)
+	Create(object *corev1.Service) error
+	Update(object *corev1.Service) error
+	Delete(namespace, name string) error
 }
 
-func (manager *Manager) GetService(namespace string, name string) (*corev1.Service, error) {
+type ServiceManager struct {
+	Client client.Client
+	Logger logr.Logger
+}
+
+func NewServiceManager(client client.Client, logger logr.Logger) *ServiceManager {
+	return &ServiceManager{
+		Client: client,
+		Logger: logger,
+	}
+}
+
+func (manager *ServiceManager) Get(namespace string, name string) (*corev1.Service, error) {
 	object := &corev1.Service{}
 	err := manager.Client.Get(
 		context.TODO(),
@@ -31,7 +45,7 @@ func (manager *Manager) GetService(namespace string, name string) (*corev1.Servi
 	return object, err
 }
 
-func (manager *Manager) CreateService(object *corev1.Service) error {
+func (manager *ServiceManager) Create(object *corev1.Service) error {
 	err := manager.Client.Create(context.TODO(), object)
 	if err != nil {
 		return err
@@ -45,7 +59,7 @@ func (manager *Manager) CreateService(object *corev1.Service) error {
 	return nil
 }
 
-func (manager *Manager) UpdateService(object *corev1.Service) error {
+func (manager *ServiceManager) Update(object *corev1.Service) error {
 	if err := manager.Client.Update(context.TODO(), object); err != nil {
 		return err
 	}
@@ -58,7 +72,7 @@ func (manager *Manager) UpdateService(object *corev1.Service) error {
 	return nil
 }
 
-func (manager *Manager) DeleteService(namespace string, name string) error {
+func (manager *ServiceManager) Delete(namespace string, name string) error {
 	object := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

@@ -3,19 +3,33 @@ package k8s
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type RoleBindingManagers interface {
-	GetRoleBinding(namespace, name string) (*rbacv1.RoleBinding, error)
-	CreateRoleBinding(object *rbacv1.RoleBinding) error
-	UpdateRoleBinding(object *rbacv1.RoleBinding) error
-	DeleteRoleBinding(namespace, name string) error
+	Get(namespace, name string) (*rbacv1.RoleBinding, error)
+	Create(object *rbacv1.RoleBinding) error
+	Update(object *rbacv1.RoleBinding) error
+	Delete(namespace, name string) error
 }
 
-func (manager *Manager) GetRoleBinding(namespace, name string) (*rbacv1.RoleBinding, error) {
+type RoleBindingManager struct {
+	Client client.Client
+	Logger logr.Logger
+}
+
+func NewRoleBindingManager(client client.Client, logger logr.Logger) *RoleBindingManager {
+	return &RoleBindingManager{
+		Client: client,
+		Logger: logger,
+	}
+}
+
+func (manager *RoleBindingManager) Get(namespace, name string) (*rbacv1.RoleBinding, error) {
 	object := &rbacv1.RoleBinding{}
 	err := manager.Client.Get(
 		context.TODO(),
@@ -32,7 +46,7 @@ func (manager *Manager) GetRoleBinding(namespace, name string) (*rbacv1.RoleBind
 	return object, err
 }
 
-func (manager *Manager) CreateRoleBinding(object *rbacv1.RoleBinding) error {
+func (manager *RoleBindingManager) Create(object *rbacv1.RoleBinding) error {
 	err := manager.Client.Create(context.TODO(), object)
 	if err != nil {
 		return err
@@ -46,7 +60,7 @@ func (manager *Manager) CreateRoleBinding(object *rbacv1.RoleBinding) error {
 	return nil
 }
 
-func (manager *Manager) UpdateRoleBinding(object *rbacv1.RoleBinding) error {
+func (manager *RoleBindingManager) Update(object *rbacv1.RoleBinding) error {
 	if err := manager.Client.Update(context.TODO(), object); err != nil {
 		return err
 	}
@@ -59,7 +73,7 @@ func (manager *Manager) UpdateRoleBinding(object *rbacv1.RoleBinding) error {
 	return nil
 }
 
-func (manager *Manager) DeleteRoleBinding(namespace, name string) error {
+func (manager *RoleBindingManager) Delete(namespace, name string) error {
 	object := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
