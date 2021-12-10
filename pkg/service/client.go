@@ -32,17 +32,17 @@ func (client *Client) EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]stri
 	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
 	if ok && emqxEnterprise.GetLicense() != "" {
 		new := NewSecretForCR(*emqxEnterprise, labels, ownerRefs)
-		old, err := client.GetSecret(emqx.GetNamespace(), emqx.GetSecretName())
+		old, err := client.Secret.Get(emqx.GetNamespace(), emqx.GetSecretName())
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return client.CreateSecret(new)
+				return client.Secret.Create(new)
 			}
 			return err
 		}
 
 		if new.StringData["emqx.lic"] != old.StringData["emqx.lic"] {
 			new.ResourceVersion = old.ResourceVersion
-			if err := client.UpdateSecret(new); err != nil {
+			if err := client.Secret.Update(new); err != nil {
 				return err
 			}
 			// TODO Use the emqx api to reload the license instead of restarting the pod
@@ -55,32 +55,32 @@ func (client *Client) EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]stri
 func (client *Client) EnsureEmqxRBAC(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	sa, role, roleBinding := NewRBAC(emqx, labels, ownerRefs)
 
-	if _, err := client.GetServiceAccount(
+	if _, err := client.ServiceAccount.Get(
 		emqx.GetNamespace(),
 		emqx.GetName(),
 	); err != nil {
 		if errors.IsNotFound(err) {
-			return client.CreateServiceAccount(sa)
+			return client.ServiceAccount.Create(sa)
 		}
 		return err
 	}
 
-	if _, err := client.GetRole(
+	if _, err := client.Role.Get(
 		emqx.GetNamespace(),
 		emqx.GetName(),
 	); err != nil {
 		if errors.IsNotFound(err) {
-			return client.CreateRole(role)
+			return client.Role.Create(role)
 		}
 		return err
 	}
 
-	if _, err := client.GetRoleBinding(
+	if _, err := client.RoleBinding.Get(
 		emqx.GetNamespace(),
 		emqx.GetName(),
 	); err != nil {
 		if errors.IsNotFound(err) {
-			return client.CreateRoleBinding(roleBinding)
+			return client.RoleBinding.Create(roleBinding)
 		}
 		return err
 	}
@@ -89,11 +89,11 @@ func (client *Client) EnsureEmqxRBAC(emqx v1beta1.Emqx, labels map[string]string
 }
 
 func (client *Client) EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	_, err := client.GetService(emqx.GetNamespace(), emqx.GetHeadlessServiceName())
+	_, err := client.Service.Get(emqx.GetNamespace(), emqx.GetHeadlessServiceName())
 	if err != nil {
 		if errors.IsNotFound(err) {
 			svc := NewHeadLessSvcForCR(emqx, labels, ownerRefs)
-			return client.CreateService(svc)
+			return client.Service.Create(svc)
 		}
 		return err
 	}
@@ -101,11 +101,11 @@ func (client *Client) EnsureEmqxHeadlessService(emqx v1beta1.Emqx, labels map[st
 }
 
 func (client *Client) EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
-	_, err := client.GetService(emqx.GetNamespace(), emqx.GetName())
+	_, err := client.Service.Get(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
 		if errors.IsNotFound(err) {
 			listenerSvc := NewListenerSvcForCR(emqx, labels, ownerRefs)
-			return client.CreateService(listenerSvc)
+			return client.Service.Create(listenerSvc)
 		}
 		return err
 	}
@@ -114,10 +114,10 @@ func (client *Client) EnsureEmqxListenerService(emqx v1beta1.Emqx, labels map[st
 
 func (client *Client) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	new := NewConfigMapForAcl(emqx, labels, ownerRefs)
-	old, err := client.GetConfigMap(new.Namespace, new.Name)
+	old, err := client.ConfigMap.Get(new.Namespace, new.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return client.CreateConfigMap(new)
+			return client.ConfigMap.Create(new)
 		} else {
 			return err
 		}
@@ -125,7 +125,7 @@ func (client *Client) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[st
 
 	if new.Data["acl.conf"] != old.Data["acl.conf"] {
 		new.ResourceVersion = old.ResourceVersion
-		if err := client.UpdateConfigMap(new); err != nil {
+		if err := client.ConfigMap.Update(new); err != nil {
 			return err
 		}
 		return nil
@@ -135,10 +135,10 @@ func (client *Client) EnsureEmqxConfigMapForAcl(emqx v1beta1.Emqx, labels map[st
 
 func (client *Client) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	new := NewConfigMapForLoadedModules(emqx, labels, ownerRefs)
-	old, err := client.GetConfigMap(new.Namespace, new.Name)
+	old, err := client.ConfigMap.Get(new.Namespace, new.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return client.CreateConfigMap(new)
+			return client.ConfigMap.Create(new)
 		} else {
 			return err
 		}
@@ -146,7 +146,7 @@ func (client *Client) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, lab
 
 	if new.Data["loaded_modules"] != old.Data["loaded_modules"] {
 		new.ResourceVersion = old.ResourceVersion
-		if err := client.UpdateConfigMap(new); err != nil {
+		if err := client.ConfigMap.Update(new); err != nil {
 			return err
 		}
 		return err
@@ -156,10 +156,10 @@ func (client *Client) EnsureEmqxConfigMapForLoadedModules(emqx v1beta1.Emqx, lab
 
 func (client *Client) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	new := NewConfigMapForLoadedPlugins(emqx, labels, ownerRefs)
-	old, err := client.GetConfigMap(new.Namespace, new.Name)
+	old, err := client.ConfigMap.Get(new.Namespace, new.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return client.CreateConfigMap(new)
+			return client.ConfigMap.Create(new)
 		} else {
 			return err
 		}
@@ -167,7 +167,7 @@ func (client *Client) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, lab
 
 	if new.Data["loaded_plugins"] != old.Data["loaded_plugins"] {
 		new.ResourceVersion = old.ResourceVersion
-		if err := client.UpdateConfigMap(new); err != nil {
+		if err := client.ConfigMap.Update(new); err != nil {
 			//TODO Use the emqx api to reload the license instead of restarting the pod
 			return nil
 		}
@@ -178,34 +178,34 @@ func (client *Client) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, lab
 
 func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
 	new := NewEmqxStatefulSet(emqx, labels, ownerRefs)
-	old, err := client.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
+	old, err := client.StatefulSet.Get(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return client.CreateStatefulSet(new)
+			return client.StatefulSet.Create(new)
 		}
 		return err
 	}
 
 	if broker, ok := emqx.(*v1beta1.EmqxBroker); ok {
-		if oldBroker, err := client.GetEmqxBroker(
+		if oldBroker, err := client.EmqxBroker.Get(
 			emqx.GetNamespace(),
 			emqx.GetName(),
 		); err != nil {
 			if reflect.DeepEqual(oldBroker.Spec, broker.Spec) {
 				new.ResourceVersion = old.ResourceVersion
-				return client.UpdateStatefulSet(new)
+				return client.StatefulSet.Update(new)
 			}
 		}
 	}
 
 	if enterprise, ok := emqx.(*v1beta1.EmqxEnterprise); ok {
-		if oldEnterprise, err := client.GetEmqxEnterprise(
+		if oldEnterprise, err := client.EmqxEnterprise.Get(
 			emqx.GetNamespace(),
 			emqx.GetName(),
 		); err != nil {
 			if reflect.DeepEqual(oldEnterprise.Spec, enterprise.Spec) {
 				new.ResourceVersion = old.ResourceVersion
-				return client.UpdateStatefulSet(new)
+				return client.StatefulSet.Update(new)
 			}
 		}
 	}

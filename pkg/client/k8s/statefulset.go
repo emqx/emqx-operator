@@ -3,19 +3,33 @@ package k8s
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type StatefulSetManagers interface {
-	GetStatefulSet(namespace, name string) (*appsv1.StatefulSet, error)
-	CreateStatefulSet(object *appsv1.StatefulSet) error
-	UpdateStatefulSet(object *appsv1.StatefulSet) error
-	DeleteStatefulSet(namespace, name string) error
+	Get(namespace, name string) (*appsv1.StatefulSet, error)
+	Create(object *appsv1.StatefulSet) error
+	Update(object *appsv1.StatefulSet) error
+	Delete(namespace, name string) error
 }
 
-func (manager *Manager) GetStatefulSet(namespace, name string) (*appsv1.StatefulSet, error) {
+type StatefulSetManager struct {
+	Client client.Client
+	Logger logr.Logger
+}
+
+func NewStatefulSetManager(client client.Client, logger logr.Logger) *StatefulSetManager {
+	return &StatefulSetManager{
+		Client: client,
+		Logger: logger,
+	}
+}
+
+func (manager *StatefulSetManager) Get(namespace, name string) (*appsv1.StatefulSet, error) {
 	object := &appsv1.StatefulSet{}
 	err := manager.Client.Get(
 		context.TODO(),
@@ -30,7 +44,7 @@ func (manager *Manager) GetStatefulSet(namespace, name string) (*appsv1.Stateful
 	return object, err
 }
 
-func (manager *Manager) CreateStatefulSet(object *appsv1.StatefulSet) error {
+func (manager *StatefulSetManager) Create(object *appsv1.StatefulSet) error {
 	err := manager.Client.Create(context.TODO(), object)
 	if err != nil {
 		return err
@@ -44,7 +58,7 @@ func (manager *Manager) CreateStatefulSet(object *appsv1.StatefulSet) error {
 	return err
 }
 
-func (manager *Manager) UpdateStatefulSet(object *appsv1.StatefulSet) error {
+func (manager *StatefulSetManager) Update(object *appsv1.StatefulSet) error {
 	err := manager.Client.Update(context.TODO(), object)
 	if err != nil {
 		return err
@@ -58,7 +72,7 @@ func (manager *Manager) UpdateStatefulSet(object *appsv1.StatefulSet) error {
 	return err
 }
 
-func (manager *Manager) DeleteStatefulSet(namespace, name string) error {
+func (manager *StatefulSetManager) Delete(namespace, name string) error {
 	object := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

@@ -20,7 +20,7 @@ func NewChecker(manager k8s.Manager) *Checker {
 }
 
 func (checker *Checker) CheckReadyReplicas(emqx v1beta1.Emqx) error {
-	sts, err := checker.GetStatefulSet(emqx.GetNamespace(), emqx.GetName())
+	sts, err := checker.StatefulSet.Get(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
 		return err
 	}

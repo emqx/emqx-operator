@@ -21,14 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-)
-
-var (
-	log = logf.Log.WithName("emqx-controller")
-	// reconcileTime is the delay between reconciliations. Defaults to 60s.
-	reconcileTime int
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}

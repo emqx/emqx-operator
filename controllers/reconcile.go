@@ -23,9 +23,16 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
+)
+
+var (
+	log = logf.Log.WithName("emqx-controller")
+	// reconcileTime is the delay between reconciliations. Defaults to 60s.
+	reconcileTime = time.Duration(30) * time.Second
 )
 
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -90,13 +97,13 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 	}
 
-	return reconcile.Result{RequeueAfter: time.Duration(reconcileTime) * time.Second}, nil
+	return reconcile.Result{RequeueAfter: reconcileTime}, nil
 }
 
 func (handler *Handler) getEmqx(Namespace, Name string) (v1beta1.Emqx, error) {
-	broker, err := handler.client.GetEmqxBroker(Namespace, Name)
+	broker, err := handler.client.EmqxBroker.Get(Namespace, Name)
 	if err != nil && errors.IsNotFound(err) {
-		return handler.client.GetEmqxEnterprise(Namespace, Name)
+		return handler.client.EmqxEnterprise.Get(Namespace, Name)
 	}
 	return broker, err
 }

@@ -3,19 +3,33 @@ package k8s
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ServiceAccountManagers interface {
-	GetServiceAccount(namespace, name string) (*corev1.ServiceAccount, error)
-	CreateServiceAccount(object *corev1.ServiceAccount) error
-	UpdateServiceAccount(object *corev1.ServiceAccount) error
-	DeleteServiceAccount(namespace, name string) error
+	Get(namespace, name string) (*corev1.ServiceAccount, error)
+	Create(object *corev1.ServiceAccount) error
+	Update(object *corev1.ServiceAccount) error
+	Delete(namespace, name string) error
 }
 
-func (manager *Manager) GetServiceAccount(namespace, name string) (*corev1.ServiceAccount, error) {
+type ServiceAccountManager struct {
+	Client client.Client
+	Logger logr.Logger
+}
+
+func NewServiceAccountManager(client client.Client, logger logr.Logger) *ServiceAccountManager {
+	return &ServiceAccountManager{
+		Client: client,
+		Logger: logger,
+	}
+}
+
+func (manager *ServiceAccountManager) Get(namespace, name string) (*corev1.ServiceAccount, error) {
 	object := &corev1.ServiceAccount{}
 	err := manager.Client.Get(
 		context.TODO(),
@@ -32,7 +46,7 @@ func (manager *Manager) GetServiceAccount(namespace, name string) (*corev1.Servi
 	return object, err
 }
 
-func (manager *Manager) CreateServiceAccount(object *corev1.ServiceAccount) error {
+func (manager *ServiceAccountManager) Create(object *corev1.ServiceAccount) error {
 	err := manager.Client.Create(context.TODO(), object)
 	if err != nil {
 		return err
@@ -46,7 +60,7 @@ func (manager *Manager) CreateServiceAccount(object *corev1.ServiceAccount) erro
 	return nil
 }
 
-func (manager *Manager) UpdateServiceAccount(object *corev1.ServiceAccount) error {
+func (manager *ServiceAccountManager) Update(object *corev1.ServiceAccount) error {
 	if err := manager.Client.Update(context.TODO(), object); err != nil {
 		return err
 	}
@@ -59,7 +73,7 @@ func (manager *Manager) UpdateServiceAccount(object *corev1.ServiceAccount) erro
 	return nil
 }
 
-func (manager *Manager) DeleteServiceAccount(namespace, name string) error {
+func (manager *ServiceAccountManager) Delete(namespace, name string) error {
 	object := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
