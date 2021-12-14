@@ -18,7 +18,6 @@ package suites_test
 
 import (
 	"context"
-	"reflect"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -65,9 +64,9 @@ var _ = Describe("", func() {
 					client.RawPatch(types.MergePatchType, patch),
 				)).Should(Succeed())
 
-				Eventually(func() bool {
+				Eventually(func() map[string]string {
 					cm := &corev1.ConfigMap{}
-					err := k8sClient.Get(
+					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
 							Name:      emqx.GetACL()["name"],
@@ -75,16 +74,12 @@ var _ = Describe("", func() {
 						},
 						cm,
 					)
-					if err != nil {
-						return false
-					}
-					return reflect.DeepEqual(
-						cm.Data,
-						map[string]string{
-							"acl.conf": "{deny, all, pubsub, [\"#\"]}.\n",
-						},
-					)
-				}, tuneout, interval).Should(BeTrue())
+					return cm.Data
+				}, tuneout, interval).Should(Equal(
+					map[string]string{
+						"acl.conf": "{deny, all, pubsub, [\"#\"]}.\n",
+					},
+				))
 			}
 			// TODO: check acl status by emqx api
 			// TODO: test acl by mqtt pubsub
