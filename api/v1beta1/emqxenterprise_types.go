@@ -40,7 +40,6 @@ type EmqxEnterpriseSpec struct {
 	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
 
-	//+kubebuilder:validation:Required
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
 	// The service account name which is being bind with the service
@@ -121,7 +120,13 @@ func (emqx *EmqxEnterprise) SetReplicas(replicas *int32) { emqx.Spec.Replicas = 
 func (emqx *EmqxEnterprise) GetImage() string      { return emqx.Spec.Image }
 func (emqx *EmqxEnterprise) SetImage(image string) { emqx.Spec.Image = image }
 
-func (emqx *EmqxEnterprise) GetServiceAccountName() string { return emqx.Spec.ServiceAccountName }
+func (emqx *EmqxEnterprise) GetServiceAccountName() string {
+	if emqx.Spec.ServiceAccountName == "" {
+		return emqx.Name
+	} else {
+		return emqx.Spec.ServiceAccountName
+	}
+}
 func (emqx *EmqxEnterprise) SetServiceAccountName(serviceAccountName string) {
 	emqx.Spec.ServiceAccountName = serviceAccountName
 }
