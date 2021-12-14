@@ -222,8 +222,7 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 			Namespace: namespace,
 		},
 		Spec: v1beta1.EmqxBrokerSpec{
-			Image:              "emqx/emqx:4.3.10",
-			ServiceAccountName: name,
+			Image: "emqx/emqx:4.3.10",
 		},
 	}
 }
@@ -235,8 +234,7 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 			Namespace: namespace,
 		},
 		Spec: v1beta1.EmqxEnterpriseSpec{
-			Image:              "emqx/emqx-ee:4.3.5",
-			ServiceAccountName: name,
+			Image: "emqx/emqx-ee:4.3.5",
 		},
 	}
 }
