@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type StateType string
@@ -56,7 +57,7 @@ func (c *MetaMap) Cache(obj v1beta1.Emqx) *Meta {
 	return c.Get(obj)
 }
 
-func (c *MetaMap) Get(obj v1beta1.Emqx) *Meta {
+func (c *MetaMap) Get(obj metav1.Object) *Meta {
 	meta, _ := c.Load(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 	return meta.(*Meta)
 }
@@ -65,7 +66,7 @@ func (c *MetaMap) Add(obj v1beta1.Emqx) {
 	c.Store(getNamespacedName(obj.GetNamespace(), obj.GetName()), newCluster(obj))
 }
 
-func (c *MetaMap) Del(obj v1beta1.Emqx) {
+func (c *MetaMap) Del(obj metav1.Object) {
 	c.Delete(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 }
 

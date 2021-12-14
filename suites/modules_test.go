@@ -18,7 +18,6 @@ package suites_test
 
 import (
 	"context"
-	"reflect"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -63,9 +62,9 @@ var _ = Describe("", func() {
 				client.RawPatch(types.MergePatchType, patch),
 			)).Should(Succeed())
 
-			Eventually(func() bool {
+			Eventually(func() map[string]string {
 				cm := &corev1.ConfigMap{}
-				err := k8sClient.Get(
+				_ = k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
 						Name:      broker.GetLoadedModules()["name"],
@@ -73,12 +72,10 @@ var _ = Describe("", func() {
 					},
 					cm,
 				)
-				if err != nil {
-					return false
-				}
-				return reflect.DeepEqual(cm.Data, map[string]string{"loaded_modules": "{emqx_mod_presence, false}.\n"})
-			}, tuneout, interval).Should(BeTrue())
-
+				return cm.Data
+			}, tuneout, interval).Should(Equal(
+				map[string]string{"loaded_modules": "{emqx_mod_presence, false}.\n"},
+			))
 			// TODO: check modules status by emqx api
 		})
 
@@ -112,9 +109,9 @@ var _ = Describe("", func() {
 				client.RawPatch(types.MergePatchType, patch),
 			)).Should(Succeed())
 
-			Eventually(func() bool {
+			Eventually(func() map[string]string {
 				cm := &corev1.ConfigMap{}
-				err := k8sClient.Get(
+				_ = k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
 						Name:      enterprise.GetLoadedModules()["name"],
@@ -122,17 +119,12 @@ var _ = Describe("", func() {
 					},
 					cm,
 				)
-				if err != nil {
-					return false
-				}
-				return reflect.DeepEqual(
-					cm.Data,
-					map[string]string{
-						"loaded_modules": "[{\"name\":\"internal_acl\",\"configs\":{\"acl_rule_file\":\"etc/acl.conf\"}}]",
-					},
-				)
-			}, tuneout, interval).Should(BeTrue())
-
+				return cm.Data
+			}, tuneout, interval).Should(Equal(
+				map[string]string{
+					"loaded_modules": "[{\"name\":\"internal_acl\",\"configs\":{\"acl_rule_file\":\"etc/acl.conf\"}}]",
+				},
+			))
 			// TODO: check modules status by emqx api
 		})
 	})

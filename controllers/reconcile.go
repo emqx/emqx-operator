@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/emqx/emqx-operator/api/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -73,9 +74,12 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			reqLogger.Info("EMQ X Cluster delete")
-			instance.SetNamespace(req.NamespacedName.Namespace)
-			instance.SetName(req.NamespacedName.Name)
-			handler.metaCache.Del(instance)
+			// instance.SetNamespace(req.NamespacedName.Namespace)
+			// instance.SetName(req.NamespacedName.Name)
+			handler.metaCache.Del(&metav1.ObjectMeta{
+				Name:      req.Name,
+				Namespace: req.Namespace,
+			})
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.

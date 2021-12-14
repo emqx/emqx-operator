@@ -18,14 +18,11 @@ package suites_test
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	//+kubebuilder:scaffold:imports
 )
@@ -36,12 +33,9 @@ var _ = Describe("", func() {
 	Context("Check statefulset", func() {
 		It("Check statefulset", func() {
 			for _, emqx := range emqxList() {
-				podList := &corev1.PodList{}
-
-				sts := &appsv1.StatefulSet{}
-
-				Eventually(func() bool {
-					err := k8sClient.Get(
+				Eventually(func() int32 {
+					sts := &appsv1.StatefulSet{}
+					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
 							Name:      emqx.GetName(),
@@ -49,26 +43,8 @@ var _ = Describe("", func() {
 						},
 						sts,
 					)
-					return err == nil
-					// if err != nil {
-					// 	fmt.Printf("===================%+v\n", sts)
-					// 	return sts.Status.ReadyReplicas == *emqx.GetReplicas()
-					// }
-					// return false
-				}, tuneout, interval).Should(BeTrue())
-
-				Eventually(func() bool {
-					err := k8sClient.List(
-						context.Background(),
-						podList,
-						client.InNamespace(emqx.GetNamespace()),
-					)
-					return err == nil
-				}, tuneout, interval).Should(BeTrue())
-
-				fmt.Printf("===================%+v\n", podList)
-
-				// Expect(sts.Status.ReadyReplicas).Should(Equal(*emqx.GetReplicas()))
+					return sts.Status.ReadyReplicas
+				}, tuneout, interval).Should(Equal(*emqx.GetReplicas()))
 			}
 		})
 	})

@@ -18,6 +18,7 @@ package suites_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -28,7 +29,9 @@ import (
 	"github.com/emqx/emqx-operator/api/v1beta1"
 	"github.com/emqx/emqx-operator/controllers"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +49,7 @@ const (
 	enterpriseName      = "emqx-ee"
 	enterpriseNameSpace = "enterprise"
 
-	tuneout  = time.Second * 60
+	tuneout  = time.Minute * 5
 	interval = time.Millisecond * 250
 )
 
@@ -70,6 +73,8 @@ func TestSuites(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+
+	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -124,17 +129,86 @@ var _ = BeforeSuite(func() {
 }, 60)
 
 var _ = AfterSuite(func() {
+	Expect(cleanAll()).Should(Succeed())
+
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
 
+func cleanAll() error {
+	broker := &v1beta1.EmqxBroker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      brokerName,
+			Namespace: brokerNameSpace,
+		},
+	}
+	if err := k8sClient.Get(
+		context.Background(),
+		types.NamespacedName{
+			Name:      brokerName,
+			Namespace: brokerNameSpace,
+		},
+		broker,
+	); !errors.IsNotFound(err) {
+		if err := k8sClient.Delete(
+			context.Background(),
+			&v1beta1.EmqxBroker{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      brokerName,
+					Namespace: brokerNameSpace,
+				},
+			},
+		); err != nil {
+			return err
+		}
+		if err := k8sClient.Delete(
+			context.Background(),
+			generateEmqxNamespace(brokerNameSpace),
+		); err != nil {
+			return err
+		}
+	}
+
+	enterprise := &v1beta1.EmqxEnterprise{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      enterpriseName,
+			Namespace: enterpriseNameSpace,
+		},
+	}
+
+	if err := k8sClient.Get(
+		context.Background(),
+		types.NamespacedName{
+			Name:      enterpriseName,
+			Namespace: enterpriseNameSpace,
+		},
+		enterprise,
+	); !errors.IsNotFound(err) {
+		if err := k8sClient.Delete(
+			context.Background(),
+			&v1beta1.EmqxEnterprise{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      enterpriseName,
+					Namespace: enterpriseNameSpace,
+				},
+			},
+		); err != nil {
+			return err
+		}
+		if err := k8sClient.Delete(
+			context.Background(),
+			generateEmqxNamespace(enterpriseNameSpace),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func generateEmqxNamespace(namespace string) *corev1.Namespace {
 	return &corev1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Namespace",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -144,17 +218,13 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	replicas := int32(3)
 	return &v1beta1.EmqxBroker{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta1",
-			Kind:       "EmqxBroker",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: v1beta1.EmqxBrokerSpec{
 			Image:              "emqx/emqx:4.3.10",
-			ServiceAccountName: "emqx",
+			ServiceAccountName: name,
 			Replicas:           &replicas,
 		},
 	}
@@ -163,17 +233,13 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 	replicas := int32(3)
 	return &v1beta1.EmqxEnterprise{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta1",
-			Kind:       "EmqxBroker",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: v1beta1.EmqxEnterpriseSpec{
 			Image:              "emqx/emqx-ee:4.3.5",
-			ServiceAccountName: "emqx",
+			ServiceAccountName: name,
 			Replicas:           &replicas,
 		},
 	}

@@ -18,7 +18,6 @@ package suites_test
 
 import (
 	"context"
-	"reflect"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -63,9 +62,9 @@ var _ = Describe("", func() {
 					client.RawPatch(types.MergePatchType, patch),
 				)).Should(Succeed())
 
-				Eventually(func() bool {
+				Eventually(func() map[string]string {
 					cm := &corev1.ConfigMap{}
-					err := k8sClient.Get(
+					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
 							Name:      emqx.GetLoadedPlugins()["name"],
@@ -73,17 +72,12 @@ var _ = Describe("", func() {
 						},
 						cm,
 					)
-					if err != nil {
-						return false
-					}
-					return reflect.DeepEqual(
-						cm.Data,
-						map[string]string{
-							"loaded_plugins": "{emqx_management, true}.\n{emqx_rule_engine, true}.\n",
-						},
-					)
-					//return true
-				}, tuneout, interval).Should(BeTrue())
+					return cm.Data
+				}, tuneout, interval).Should(Equal(
+					map[string]string{
+						"loaded_plugins": "{emqx_management, true}.\n{emqx_rule_engine, true}.\n",
+					},
+				))
 			}
 			// TODO: check plugins status by emqx api
 		})
