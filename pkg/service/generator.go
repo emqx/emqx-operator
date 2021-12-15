@@ -192,11 +192,13 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 					// Annotations:
 				},
 				Spec: corev1.PodSpec{
-					InitContainers: generateInitContainers(emqx),
+					// TODO initContainers
+					// InitContainers
 
 					// TODO
 					// Affinity: getAffinity(rc.Spec.Affinity, labels),
 					ServiceAccountName: emqx.GetServiceAccountName(),
+					SecurityContext:    getSecurityContext(),
 					Tolerations:        emqx.GetToleRations(),
 					NodeSelector:       emqx.GetNodeSelector(),
 					Containers: []corev1.Container{
@@ -206,7 +208,6 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 							ImagePullPolicy: getPullPolicy(emqx.GetImagePullPolicy()),
 							Resources:       emqx.GetResource(),
 							Env:             mergeEnv(env, emqx.GetEnv()),
-							SecurityContext: getContainerSecurityContext(),
 							Ports:           ports,
 							VolumeMounts:    getEmqxVolumeMounts(emqx),
 							ReadinessProbe: &corev1.Probe{
@@ -232,45 +233,17 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 	return sts
 }
 
-func generateInitContainers(emqx v1beta1.Emqx) []corev1.Container {
-	runAsUser := int64(0)
-	privileged := true
-	return []corev1.Container{
-		{
-			Image: emqx.GetImage(),
-			Name:  "emqx-volume-change-ownership",
-			Command: []string{
-				"/bin/bash",
-				"-c",
-				"mkdir -p /opt/emqx/data/ && mkdir -p /opt/emqx/log &&chown -R 1000:1000 /opt/emqx/data && chown -R 1000:1000 /opt/emqx/log",
-			},
-			SecurityContext: &corev1.SecurityContext{
-				RunAsUser:  &runAsUser,
-				Privileged: &privileged,
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      emqx.GetDataVolumeName(),
-					MountPath: constants.EMQX_DATA_DIR,
-				},
-				{
-					Name:      emqx.GetLogVolumeName(),
-					MountPath: constants.EMQX_LOG_DIR,
-				},
-			},
-		},
-	}
-}
-
-func getContainerSecurityContext() *corev1.SecurityContext {
+func getSecurityContext() *corev1.PodSecurityContext {
 	emqxUserGroup := int64(1000)
-	emqxUser := int64(1000)
 	runAsNonRoot := true
+	fsGroupChangeAlways := corev1.FSGroupChangeAlways
 
-	return &corev1.SecurityContext{
-		RunAsGroup:   &emqxUserGroup,
-		RunAsUser:    &emqxUser,
-		RunAsNonRoot: &runAsNonRoot,
+	return &corev1.PodSecurityContext{
+		FSGroup:             &emqxUserGroup,
+		FSGroupChangePolicy: &fsGroupChangeAlways,
+		RunAsNonRoot:        &runAsNonRoot,
+		RunAsUser:           &emqxUserGroup,
+		SupplementalGroups:  []int64{emqxUserGroup},
 	}
 }
 
