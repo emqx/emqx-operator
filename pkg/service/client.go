@@ -56,33 +56,49 @@ func (client *Client) EnsureEmqxRBAC(emqx v1beta1.Emqx, labels map[string]string
 	sa, role, roleBinding := NewRBAC(emqx, labels, ownerRefs)
 
 	if _, err := client.ServiceAccount.Get(
-		emqx.GetNamespace(),
-		emqx.GetName(),
+		sa.Namespace,
+		sa.Name,
 	); err != nil {
 		if errors.IsNotFound(err) {
-			return client.ServiceAccount.Create(sa)
+			if err := client.ServiceAccount.Create(sa); err != nil {
+				return err
+			}
 		}
 		return err
+	}
+
+	existRoleBinding := false
+	roleBindingList, err := client.RoleBinding.List(emqx.GetNamespace())
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	if len(roleBindingList.Items) != 0 {
+		for _, roleBinding := range roleBindingList.Items {
+			for _, subject := range roleBinding.Subjects {
+				if subject.Kind == "ServiceAccount" && subject.Name == emqx.GetServiceAccountName() {
+					existRoleBinding = true
+					role.Name = roleBinding.RoleRef.Name
+				}
+			}
+		}
 	}
 
 	if _, err := client.Role.Get(
-		emqx.GetNamespace(),
-		emqx.GetName(),
+		role.Namespace,
+		role.Name,
 	); err != nil {
 		if errors.IsNotFound(err) {
-			return client.Role.Create(role)
+			if err := client.Role.Create(role); err != nil {
+				return err
+			}
 		}
 		return err
 	}
 
-	if _, err := client.RoleBinding.Get(
-		emqx.GetNamespace(),
-		emqx.GetName(),
-	); err != nil {
-		if errors.IsNotFound(err) {
-			return client.RoleBinding.Create(roleBinding)
+	if !existRoleBinding {
+		if err := client.RoleBinding.Create(roleBinding); err != nil {
+			return err
 		}
-		return err
 	}
 
 	return nil

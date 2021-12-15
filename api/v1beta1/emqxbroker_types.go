@@ -121,10 +121,9 @@ func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.Image = image }
 
 func (emqx *EmqxBroker) GetServiceAccountName() string {
 	if emqx.Spec.ServiceAccountName == "" {
-		return emqx.Name
-	} else {
-		return emqx.Spec.ServiceAccountName
+		emqx.SetServiceAccountName(emqx.Name)
 	}
+	return emqx.Spec.ServiceAccountName
 }
 func (emqx *EmqxBroker) SetServiceAccountName(serviceAccountName string) {
 	emqx.Spec.ServiceAccountName = serviceAccountName

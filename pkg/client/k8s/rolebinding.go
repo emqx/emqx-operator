@@ -11,6 +11,7 @@ import (
 )
 
 type RoleBindingManagers interface {
+	List(namespace string) (*rbacv1.RoleBindingList, error)
 	Get(namespace, name string) (*rbacv1.RoleBinding, error)
 	Create(object *rbacv1.RoleBinding) error
 	Update(object *rbacv1.RoleBinding) error
@@ -27,6 +28,18 @@ func NewRoleBindingManager(client client.Client, logger logr.Logger) *RoleBindin
 		Client: client,
 		Logger: logger,
 	}
+}
+
+func (manager *RoleBindingManager) List(namespace string) (*rbacv1.RoleBindingList, error) {
+	list := &rbacv1.RoleBindingList{}
+	err := manager.Client.List(
+		context.TODO(),
+		list,
+		&client.ListOptions{
+			Namespace: namespace,
+		},
+	)
+	return list, err
 }
 
 func (manager *RoleBindingManager) Get(namespace, name string) (*rbacv1.RoleBinding, error) {
