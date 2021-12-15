@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"fmt"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,6 @@ type EmqxBrokerSpec struct {
 	// The fields of Broker.
 	//The replicas of emqx broker
 	//+kubebuilder:validation:Minimum=3
-	//+kubebuilder:validation:Required
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	//+kubebuilder:validation:Required
@@ -108,8 +108,14 @@ func (emqx *EmqxBroker) SetAPIVersion(version string) { emqx.APIVersion = versio
 func (emqx *EmqxBroker) GetKind() string              { return emqx.Kind }
 func (emqx *EmqxBroker) SetKind(kind string)          { emqx.Kind = kind }
 
-func (emqx *EmqxBroker) GetReplicas() *int32        { return emqx.Spec.Replicas }
-func (emqx *EmqxBroker) SetReplicas(replicas int32) { emqx.Spec.Replicas = &replicas }
+func (emqx *EmqxBroker) GetReplicas() *int32 {
+	if reflect.ValueOf(emqx.Spec.Replicas).IsZero() {
+		defaultReplicas := int32(3)
+		emqx.SetReplicas(&defaultReplicas)
+	}
+	return emqx.Spec.Replicas
+}
+func (emqx *EmqxBroker) SetReplicas(replicas *int32) { emqx.Spec.Replicas = replicas }
 
 func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.Image }
 func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.Image = image }

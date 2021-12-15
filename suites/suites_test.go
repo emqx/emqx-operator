@@ -216,7 +216,6 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 }
 
 func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
-	replicas := int32(3)
 	return &v1beta1.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -225,13 +224,11 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 		Spec: v1beta1.EmqxBrokerSpec{
 			Image:              "emqx/emqx:4.3.10",
 			ServiceAccountName: name,
-			Replicas:           &replicas,
 		},
 	}
 }
 
 func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
-	replicas := int32(3)
 	return &v1beta1.EmqxEnterprise{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -240,7 +237,6 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 		Spec: v1beta1.EmqxEnterpriseSpec{
 			Image:              "emqx/emqx-ee:4.3.5",
 			ServiceAccountName: name,
-			Replicas:           &replicas,
 		},
 	}
 }

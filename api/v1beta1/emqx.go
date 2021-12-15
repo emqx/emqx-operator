@@ -25,7 +25,7 @@ import (
 //+kubebuilder:object:generate=false
 type EmqxSpec interface {
 	GetReplicas() *int32
-	SetReplicas(replicas int32)
+	SetReplicas(replicas *int32)
 
 	GetImage() string
 	SetImage(image string)

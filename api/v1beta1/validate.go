@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-const maxNameLength = 48
+var maxNameLength = 48
 
 // Validate set the values by default if not defined and checks if the values given are valid
 func (emqx *EmqxBroker) Validate() error {
