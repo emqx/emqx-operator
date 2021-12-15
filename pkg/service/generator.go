@@ -29,7 +29,7 @@ func NewSecretForCR(emqx v1beta1.EmqxEnterprise, labels map[string]string, owner
 
 func NewRBAC(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding) {
 	meta := metav1.ObjectMeta{
-		Name:            emqx.GetName(),
+		Name:            emqx.GetServiceAccountName(),
 		Namespace:       emqx.GetNamespace(),
 		Labels:          labels,
 		OwnerReferences: ownerRefs,
