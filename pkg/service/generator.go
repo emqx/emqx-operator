@@ -192,7 +192,7 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 					// Annotations:
 				},
 				Spec: corev1.PodSpec{
-					InitContainers: getInitContainers(emqx),
+					InitContainers: generateInitContainers(emqx),
 
 					// TODO
 					// Affinity: getAffinity(rc.Spec.Affinity, labels),
@@ -232,7 +232,7 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 	return sts
 }
 
-func getInitContainers(emqx v1beta1.Emqx) []corev1.Container {
+func generateInitContainers(emqx v1beta1.Emqx) []corev1.Container {
 	runAsUser := int64(0)
 	privileged := true
 	return []corev1.Container{
