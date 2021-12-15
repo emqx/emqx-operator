@@ -192,9 +192,6 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 					// Annotations:
 				},
 				Spec: corev1.PodSpec{
-					// TODO initContainers
-					// InitContainers
-
 					// TODO
 					// Affinity: getAffinity(rc.Spec.Affinity, labels),
 					ServiceAccountName: emqx.GetServiceAccountName(),
@@ -206,6 +203,7 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 							Name:            emqx.GetName(),
 							Image:           emqx.GetImage(),
 							ImagePullPolicy: getPullPolicy(emqx.GetImagePullPolicy()),
+							SecurityContext: getContainerSecurityContext(),
 							Resources:       emqx.GetResource(),
 							Env:             mergeEnv(env, emqx.GetEnv()),
 							Ports:           ports,
@@ -244,6 +242,15 @@ func getSecurityContext() *corev1.PodSecurityContext {
 		RunAsNonRoot:        &runAsNonRoot,
 		RunAsUser:           &emqxUserGroup,
 		SupplementalGroups:  []int64{emqxUserGroup},
+	}
+}
+func getContainerSecurityContext() *corev1.SecurityContext {
+	emqxUserGroup := int64(1000)
+	runAsNonRoot := true
+
+	return &corev1.SecurityContext{
+		RunAsNonRoot: &runAsNonRoot,
+		RunAsUser:    &emqxUserGroup,
 	}
 }
 

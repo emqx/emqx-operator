@@ -17,7 +17,7 @@ spec:
           requests:
             storage: 20Mi
         accessModes:
-        - ReadWriteMany
+        - ReadWriteOnce
   listener:
     type: ClusterIP
     ports:
