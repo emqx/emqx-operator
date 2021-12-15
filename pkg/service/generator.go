@@ -184,7 +184,7 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 				MatchLabels: labels,
 			},
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			VolumeClaimTemplates: getVolumeClaimTemplates(emqx),
+			VolumeClaimTemplates: generateVolumeClaimTemplates(emqx),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
@@ -193,21 +193,21 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 				},
 				Spec: corev1.PodSpec{
 					// TODO
-					// Affinity: getAffinity(rc.Spec.Affinity, labels),
+					// Affinity: generateAffinity(rc.Spec.Affinity, labels),
 					ServiceAccountName: emqx.GetServiceAccountName(),
-					SecurityContext:    getSecurityContext(),
+					SecurityContext:    generateSecurityContext(),
 					Tolerations:        emqx.GetToleRations(),
 					NodeSelector:       emqx.GetNodeSelector(),
 					Containers: []corev1.Container{
 						{
 							Name:            emqx.GetName(),
 							Image:           emqx.GetImage(),
-							ImagePullPolicy: getPullPolicy(emqx.GetImagePullPolicy()),
-							SecurityContext: getContainerSecurityContext(),
+							ImagePullPolicy: generatePullPolicy(emqx.GetImagePullPolicy()),
+							SecurityContext: generateContainerSecurityContext(),
 							Resources:       emqx.GetResource(),
 							Env:             mergeEnv(env, emqx.GetEnv()),
 							Ports:           ports,
-							VolumeMounts:    getEmqxVolumeMounts(emqx),
+							VolumeMounts:    generateEmqxVolumeMounts(emqx),
 							ReadinessProbe: &corev1.Probe{
 								InitialDelaySeconds: 5,
 								PeriodSeconds:       5,
@@ -222,7 +222,7 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 							},
 						},
 					},
-					Volumes: getEmqxVolumes(emqx),
+					Volumes: generateEmqxVolumes(emqx),
 				},
 			},
 		},
@@ -231,8 +231,9 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 	return sts
 }
 
-func getSecurityContext() *corev1.PodSecurityContext {
+func generateSecurityContext() *corev1.PodSecurityContext {
 	emqxUserGroup := int64(1000)
+	emqxUser := int64(1000)
 	runAsNonRoot := true
 	fsGroupChangeAlways := corev1.FSGroupChangeAlways
 
@@ -240,33 +241,33 @@ func getSecurityContext() *corev1.PodSecurityContext {
 		FSGroup:             &emqxUserGroup,
 		FSGroupChangePolicy: &fsGroupChangeAlways,
 		RunAsNonRoot:        &runAsNonRoot,
-		RunAsUser:           &emqxUserGroup,
+		RunAsUser:           &emqxUser,
 		SupplementalGroups:  []int64{emqxUserGroup},
 	}
 }
-func getContainerSecurityContext() *corev1.SecurityContext {
-	emqxUserGroup := int64(1000)
+func generateContainerSecurityContext() *corev1.SecurityContext {
+	emqxUser := int64(1000)
 	runAsNonRoot := true
 
 	return &corev1.SecurityContext{
 		RunAsNonRoot: &runAsNonRoot,
-		RunAsUser:    &emqxUserGroup,
+		RunAsUser:    &emqxUser,
 	}
 }
 
-func getVolumeClaimTemplates(emqx v1beta1.Emqx) []corev1.PersistentVolumeClaim {
+func generateVolumeClaimTemplates(emqx v1beta1.Emqx) []corev1.PersistentVolumeClaim {
 	storageSpec := emqx.GetStorage()
 	if reflect.ValueOf(storageSpec).IsNil() {
 		return []corev1.PersistentVolumeClaim{}
 	} else {
 		return []corev1.PersistentVolumeClaim{
-			genVolumeClaimTemplate(emqx, emqx.GetDataVolumeName()),
-			genVolumeClaimTemplate(emqx, emqx.GetLogVolumeName()),
+			generateVolumeClaimTemplate(emqx, emqx.GetDataVolumeName()),
+			generateVolumeClaimTemplate(emqx, emqx.GetLogVolumeName()),
 		}
 	}
 }
 
-func getEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
+func generateEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{}
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
@@ -322,7 +323,7 @@ func getEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
 	return volumeMounts
 }
 
-func getEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
+func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 	volumes := []corev1.Volume{}
 	storageSpec := emqx.GetStorage()
 	if reflect.ValueOf(storageSpec).IsNil() {
@@ -429,7 +430,7 @@ func getEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 }
 
 // TODO
-// func getAffinity(affinity *corev1.Affinity, labels map[string]string) *corev1.Affinity {
+// func generateAffinity(affinity *corev1.Affinity, labels map[string]string) *corev1.Affinity {
 // 	if affinity != nil {
 // 		return affinity
 // 	}
@@ -451,14 +452,14 @@ func getEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 // 		},
 // 	}
 // }
-func getPullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
+func generatePullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
 	if specPolicy == "" {
 		return corev1.PullIfNotPresent
 	}
 	return specPolicy
 }
 
-func genVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.PersistentVolumeClaim {
+func generateVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.PersistentVolumeClaim {
 	template := emqx.GetStorage().VolumeClaimTemplate
 	boolTrue := true
 	pvc := corev1.PersistentVolumeClaim{
