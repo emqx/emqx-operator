@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	//+kubebuilder:scaffold:imports
 )
@@ -33,8 +34,8 @@ var _ = Describe("", func() {
 	Context("Check statefulset", func() {
 		It("Check statefulset", func() {
 			for _, emqx := range emqxList() {
+				sts := &appsv1.StatefulSet{}
 				Eventually(func() int32 {
-					sts := &appsv1.StatefulSet{}
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
@@ -45,6 +46,8 @@ var _ = Describe("", func() {
 					)
 					return sts.Status.ReadyReplicas
 				}, tuneout, interval).Should(Equal(*emqx.GetReplicas()))
+
+				Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 			}
 		})
 	})
