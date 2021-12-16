@@ -202,7 +202,7 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 						{
 							Name:            emqx.GetName(),
 							Image:           emqx.GetImage(),
-							ImagePullPolicy: generatePullPolicy(emqx.GetImagePullPolicy()),
+							ImagePullPolicy: emqx.GetImagePullPolicy(),
 							SecurityContext: generateContainerSecurityContext(),
 							Resources:       emqx.GetResource(),
 							Env:             mergeEnv(env, emqx.GetEnv()),
@@ -452,12 +452,6 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 // 		},
 // 	}
 // }
-func generatePullPolicy(specPolicy corev1.PullPolicy) corev1.PullPolicy {
-	if specPolicy == "" {
-		return corev1.PullIfNotPresent
-	}
-	return specPolicy
-}
 
 func generateVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.PersistentVolumeClaim {
 	template := emqx.GetStorage().VolumeClaimTemplate
