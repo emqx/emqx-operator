@@ -150,12 +150,7 @@ func (emqx *EmqxEnterprise) SetNodeSelector(nodeSelector map[string]string) {
 	emqx.Spec.NodeSelector = nodeSelector
 }
 
-func (emqx *EmqxEnterprise) GetImagePullPolicy() corev1.PullPolicy {
-	if emqx.Spec.ImagePullPolicy == "" {
-		emqx.SetImagePullPolicy(corev1.PullIfNotPresent)
-	}
-	return emqx.Spec.ImagePullPolicy
-}
+func (emqx *EmqxEnterprise) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
 func (emqx *EmqxEnterprise) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
 	emqx.Spec.ImagePullPolicy = pullPolicy
 }
