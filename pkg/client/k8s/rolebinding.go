@@ -81,7 +81,7 @@ func (manager *RoleBindingManager) Update(object *rbacv1.RoleBinding) error {
 		"kind", object.Kind,
 		"apiVersion", object.APIVersion,
 		"namespace", object.Namespace,
-		"serviceName", object.Name,
+		"name", object.Name,
 	).Info("Update roleBinding successfully")
 	return nil
 }
