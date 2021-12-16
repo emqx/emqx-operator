@@ -206,8 +206,8 @@ func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string
 		if oldBroker, err := client.EmqxBroker.Get(
 			emqx.GetNamespace(),
 			emqx.GetName(),
-		); err != nil {
-			if reflect.DeepEqual(oldBroker.Spec, broker.Spec) {
+		); err == nil {
+			if !reflect.DeepEqual(oldBroker.Spec, broker.Spec) {
 				new.ResourceVersion = old.ResourceVersion
 				return client.StatefulSet.Update(new)
 			}
@@ -218,8 +218,8 @@ func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string
 		if oldEnterprise, err := client.EmqxEnterprise.Get(
 			emqx.GetNamespace(),
 			emqx.GetName(),
-		); err != nil {
-			if reflect.DeepEqual(oldEnterprise.Spec, enterprise.Spec) {
+		); err == nil {
+			if !reflect.DeepEqual(oldEnterprise.Spec, enterprise.Spec) {
 				new.ResourceVersion = old.ResourceVersion
 				return client.StatefulSet.Update(new)
 			}
