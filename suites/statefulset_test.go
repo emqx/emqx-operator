@@ -45,7 +45,7 @@ var _ = Describe("", func() {
 						sts,
 					)
 					return sts.Status.ReadyReplicas
-				}, tuneout, interval).Should(Equal(*emqx.GetReplicas()))
+				}, timeout, interval).Should(Equal(*emqx.GetReplicas()))
 
 				Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 			}

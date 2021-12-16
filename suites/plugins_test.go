@@ -45,7 +45,7 @@ var _ = Describe("", func() {
 						cm,
 					)
 					return err == nil
-				}, tuneout, interval).Should(BeTrue())
+				}, timeout, interval).Should(BeTrue())
 
 				Expect(cm.Data).Should(Equal(map[string]string{
 					"loaded_plugins": emqx.GetLoadedPlugins()["conf"],
@@ -73,7 +73,7 @@ var _ = Describe("", func() {
 						cm,
 					)
 					return cm.Data
-				}, tuneout, interval).Should(Equal(
+				}, timeout, interval).Should(Equal(
 					map[string]string{
 						"loaded_plugins": "{emqx_management, true}.\n{emqx_rule_engine, true}.\n",
 					},
