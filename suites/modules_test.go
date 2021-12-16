@@ -45,7 +45,7 @@ var _ = Describe("", func() {
 					}, cm,
 				)
 				return err == nil
-			}, tuneout, interval).Should(BeTrue())
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
 				"loaded_modules": broker.GetLoadedModules()["conf"],
@@ -73,7 +73,7 @@ var _ = Describe("", func() {
 					cm,
 				)
 				return cm.Data
-			}, tuneout, interval).Should(Equal(
+			}, timeout, interval).Should(Equal(
 				map[string]string{"loaded_modules": "{emqx_mod_presence, false}.\n"},
 			))
 			// TODO: check modules status by emqx api
@@ -92,7 +92,7 @@ var _ = Describe("", func() {
 					}, cm,
 				)
 				return err == nil
-			}, tuneout, interval).Should(BeTrue())
+			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
 				"loaded_modules": enterprise.GetLoadedModules()["conf"],
@@ -120,7 +120,7 @@ var _ = Describe("", func() {
 					cm,
 				)
 				return cm.Data
-			}, tuneout, interval).Should(Equal(
+			}, timeout, interval).Should(Equal(
 				map[string]string{
 					"loaded_modules": "[{\"name\":\"internal_acl\",\"configs\":{\"acl_rule_file\":\"etc/acl.conf\"}}]",
 				},

@@ -49,7 +49,7 @@ const (
 	enterpriseName      = "emqx-ee"
 	enterpriseNameSpace = "enterprise"
 
-	tuneout  = time.Minute * 5
+	timeout  = time.Minute * 5
 	interval = time.Millisecond * 250
 )
 

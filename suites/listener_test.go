@@ -48,7 +48,7 @@ var _ = Describe("", func() {
 						svc,
 					)
 					return err == nil
-				}, tuneout, interval).Should(BeTrue())
+				}, timeout, interval).Should(BeTrue())
 
 				Expect(svc.Spec.Type).Should(Equal(corev1.ServiceTypeClusterIP))
 				Expect(svc.Spec.ClusterIP).Should(Equal(corev1.ClusterIPNone))
@@ -65,7 +65,7 @@ var _ = Describe("", func() {
 						sts,
 					)
 					return err == nil
-				}, tuneout, interval).Should(BeTrue())
+				}, timeout, interval).Should(BeTrue())
 				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ConsistOf(containerPorts))
 				Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(env))
 			}
@@ -84,7 +84,7 @@ var _ = Describe("", func() {
 						svc,
 					)
 					return err == nil
-				}, tuneout, interval).Should(BeTrue())
+				}, timeout, interval).Should(BeTrue())
 
 				Expect(svc.Spec.Type).Should(Equal(corev1.ServiceTypeClusterIP))
 				Expect(svc.Spec.Ports).Should(ConsistOf(servicePorts))
@@ -100,7 +100,7 @@ var _ = Describe("", func() {
 						sts,
 					)
 					return err == nil
-				}, tuneout, interval).Should(BeTrue())
+				}, timeout, interval).Should(BeTrue())
 
 				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ConsistOf(containerPorts))
 				Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(env))

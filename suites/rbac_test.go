@@ -73,7 +73,7 @@ var _ = Describe("", func() {
 						return err
 					}
 					return nil
-				}, tuneout, interval).ShouldNot(HaveOccurred())
+				}, timeout, interval).ShouldNot(HaveOccurred())
 			}
 		})
 	})
@@ -154,7 +154,7 @@ var _ = Describe("", func() {
 						sts,
 					)
 					return sts.Spec.Template.Spec.ServiceAccountName
-				}, tuneout, interval).Should(Equal("external"))
+				}, timeout, interval).Should(Equal("external"))
 			}
 		})
 
