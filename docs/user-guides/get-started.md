@@ -89,13 +89,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
 
 ## Deploy the EMQ X Broker
 
-1. Enable RBAC rule for EMQ X pods
-
-   ```shell
-   $ kubectl create -f https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/emqx/rbac.yaml
-   ```
-
-2. Create EMQ X Custom Resource file like this
+1. Create EMQ X Custom Resource file like this
 
    ```shell
    $ cat https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/emqx/emqx.yaml
@@ -176,7 +170,7 @@ This project can be run inside a kubernetes cluster or outside of it, by taking 
    > * [Details for *cluster* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
    > * [Details for *env* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
 
-3. Deploy EMQ X Custom Resource and check EMQ X status
+2. Deploy EMQ X Custom Resource and check EMQ X status
 
    ```shell
    $ kubectl create https://raw.githubusercontent.com/emqx/emqx-operator/1.0.0/config/samples/emqx/emqx.yaml
