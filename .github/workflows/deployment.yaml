@@ -46,6 +46,7 @@ jobs:
         run: |
           make manifests
           kubectl apply -f config/crd/bases
+          sed -i "s|image:[[:space:]].*|image: $IMG|g" config/samples/operator/controller.yaml
           kubectl apply -f config/samples/operator
       - name: Check operator
         timeout-minutes: 10
@@ -55,6 +56,7 @@ jobs:
             echo "waiting operator controller pod running"
             sleep 1
           done
+          kubectl logs --tail=100 -l "control-plane=controller-manager" -n system -c manager
       - name: Deploy ${{ matrix.kind[0] }}
         run: |
           sed -i "s|image:[[:space:]].*|image: ${{ matrix.kind[1] }}|g" config/samples/emqx/${{ matrix.kind[0] }}.yaml
@@ -116,13 +118,11 @@ jobs:
           done
       - name: Get controller status
         if: failure()
-        run: |
-          set -x
-          kubectl logs -l "control-plane=controller-manager" -n system -c manager
+        run: kubectl logs --tail=100 -l "control-plane=controller-manager" -n system -c manager
       - name: Get ${{ matrix.kind[0]}} status
         if: failure()
         run: |
           set -x
           kubectl describe sts ${{ matrix.kind[0]}}
           kubectl exec -i ${{ matrix.kind[0]}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
-          kubectl logs -l "cluster=emqx"
+          kubectl logs --tail=100 -l "cluster=emqx"
