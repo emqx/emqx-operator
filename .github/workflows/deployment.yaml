@@ -56,73 +56,13 @@ jobs:
             echo "waiting operator controller pod running"
             sleep 1
           done
-          kubectl logs --tail=100 -l "control-plane=controller-manager" -n system -c manager
-      - name: Deploy ${{ matrix.kind[0] }}
-        run: |
-          sed -i "s|image:[[:space:]].*|image: ${{ matrix.kind[1] }}|g" config/samples/emqx/${{ matrix.kind[0] }}.yaml
-          kubectl create -f config/samples/emqx/${{ matrix.kind[0] }}.yaml
-      - name: Check emqx pods
-        timeout-minutes: 15
-        run: |
-          set -euo pipefail
-          while ! kubectl describe sts ${{ matrix.kind[0]}} | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
-            echo "waiting ${{ matrix.kind[0]}} pod running"
-            sleep 1
-          done
-      - name: Check ${{ matrix.kind[0]}} broker
-        timeout-minutes: 15
-        run: |
-          set -euo pipefail
-          while ! kubectl exec -i ${{ matrix.kind[0]}}-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
-            echo "waiting ${{ matrix.kind[0]}} broker running"
-            sleep 1
-          done
-      - name: Check ${{ matrix.kind[0]}} cluster
-        timeout-minutes: 15
-        run: |
-          set -euo pipefail
-          while
-            nodes="$(kubectl exec -i ${{ matrix.kind[0]}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
-            [ "$nodes" != "3" ];
-          do
-            echo "waiting ${{ matrix.kind[0]}} cluster scale"
-            sleep 1
-          done
-      - run: kubectl scale --replicas=5 ${{ matrix.kind[0] }}/${{ matrix.kind[0] }}
-      - name: Check scale
-        timeout-minutes: 15
-        run: |
-          set -euo pipefail
-          while ! kubectl describe sts ${{ matrix.kind[0]}} | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
-            echo "waiting scale ${{ matrix.kind[0]}} to 5"
-            sleep 1
-          done
-      - name: Check ${{ matrix.kind[0]}}
-        timeout-minutes: 15
-        run: |
-          set -euo pipefail
-          while ! kubectl exec -i ${{ matrix.kind[0]}}-4 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
-            echo "waiting ${{ matrix.kind[0]}} broker running"
-            sleep 1
-          done
-      - name: Check ${{ matrix.kind[0]}} cluster
-        timeout-minutes: 15
-        run: |
-          set -euo pipefail
-          while
-            nodes="$(kubectl exec -i ${{ matrix.kind[0]}}-4 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
-            [ "$nodes" != "5" ];
-          do
-            echo "waiting ${{ matrix.kind[0]}} cluster scale"
-            sleep 1
-          done
+      - name: Deployment emqx
+        uses: ./.github/actions/deployment
+        with:
+          kind:  ${{ matrix.kind[0] }}
+          image: ${{ matrix.kind[1] }}
       - name: Get controller status
-        if: failure()
-        run: kubectl logs --tail=100 -l "control-plane=controller-manager" -n system -c manager
-      - name: Get ${{ matrix.kind[0]}} status
         if: failure()
         run: |
           set -x
-          kubectl describe sts ${{ matrix.kind[0]}}
-          kubectl exec -i ${{ matrix.kind[0]}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
-          kubectl logs --tail=100 -l "cluster=emqx"
+          kubectl logs -l "control-plane=controller-manager" -n system -c manager

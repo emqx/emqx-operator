@@ -1,0 +1,77 @@
+name: Deployment emqx by operator
+description: "Deployment emqx by operator, scale pod number, and check emqx cluster status"
+inputs:
+  kind:
+    description: "Kind name, must use sort name"
+    required: true
+    default: "emqx"
+  image:
+    description: "Image for emqx custom resource"
+    required: true
+    default: "emqx/emqx:latest"
+
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: |
+        kubectl create -f config/samples/emqx/rbac.yaml
+        sed -i "s|image:[[:space:]].*|image: ${{ inputs.image }}|g" config/samples/emqx/${{ inputs.kind }}.yaml
+        kubectl create -f config/samples/emqx/${{ inputs.kind }}.yaml
+    - shell: bash
+      run: |
+        set -euo pipefail
+        while ! kubectl describe sts ${{ inputs.kind}} | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
+          echo "waiting ${{ inputs.kind}} pod running"
+          sleep 1
+        done
+    - shell: bash
+      run: |
+        set -euo pipefail
+        while ! kubectl exec -i ${{ inputs.kind}}-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+          echo "waiting ${{ inputs.kind}} broker running"
+          sleep 1
+        done
+    - shell: bash
+      run: |
+        set -euo pipefail
+        while
+          nodes="$(kubectl exec -i ${{ inputs.kind}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
+          [ "$nodes" != "3" ];
+        do
+          echo "waiting ${{ inputs.kind}} cluster scale"
+          sleep 1
+        done
+    - shell: bash
+      run: kubectl scale --replicas=5 ${{ inputs.kind }}/${{ inputs.kind }}
+    - shell: bash
+      run: |
+        set -euo pipefail
+        while ! kubectl describe sts ${{ inputs.kind}} | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
+          echo "waiting scale ${{ inputs.kind}} to 5"
+          sleep 1
+        done
+    - shell: bash
+      run: |
+        set -euo pipefail
+        while ! kubectl exec -i ${{ inputs.kind}}-4 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+          echo "waiting ${{ inputs.kind}} broker running"
+          sleep 1
+        done
+    - shell: bash
+      run: |
+        set -euo pipefail
+        while
+          nodes="$(kubectl exec -i ${{ inputs.kind}}-4 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
+          [ "$nodes" != "5" ];
+        do
+          echo "waiting ${{ inputs.kind}} cluster scale"
+          sleep 1
+        done
+    - shell: bash
+      if: failure()
+      run: |
+        set -x
+        kubectl describe sts ${{ matrix.kind[0]}}
+        kubectl exec -i ${{ matrix.kind[0]}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
+        kubectl logs -l "cluster=emqx"
