@@ -1,26 +1,25 @@
-name: Run emqx operator test case
+name: Compatibility Test Suite
 
 on:
-  pull_request:
+  schedule:
+    - cron:  '0 */6 * * *'
+  push:
+    tags:
+      - "*"
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.17.3'
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: latest
-          args: --timeout=5m
-
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes-version:
+          - "v1.20.13"
+          - "v1.21.7"
+          - "v1.22.4"
+          - "v1.23.0"
     steps:
-      - run: minikube start
+      - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
@@ -40,11 +39,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        kubernetes-version:
+          - "v1.20.13"
+          - "v1.21.7"
+          - "v1.22.4"
+          - "v1.23.0"
         emqx:
+          - [emqx, "emqx/emqx:4.3.0"]
+          - [emqx, "emqx/emqx:4.3.1"]
+          - [emqx, "emqx/emqx:4.3.2"]
+          - [emqx, "emqx/emqx:4.3.3"]
+          - [emqx, "emqx/emqx:4.3.4"]
+          - [emqx, "emqx/emqx:4.3.5"]
+          - [emqx, "emqx/emqx:4.3.6"]
+          - [emqx, "emqx/emqx:4.3.7"]
+          - [emqx, "emqx/emqx:4.3.8"]
+          - [emqx, "emqx/emqx:4.3.9"]
+          - [emqx, "emqx/emqx:4.3.10"]
           - [emqx, "emqx/emqx:4.3.11"]
+          - [emqx-ee, "emqx/emqx-ee:4.3.0"]
+          - [emqx-ee, "emqx/emqx-ee:4.3.1"]
+          - [emqx-ee, "emqx/emqx-ee:4.3.2"]
+          - [emqx-ee, "emqx/emqx-ee:4.3.3"]
+          - [emqx-ee, "emqx/emqx-ee:4.3.4"]
+          - [emqx-ee, "emqx/emqx-ee:4.3.5"]
           - [emqx-ee, "emqx/emqx-ee:4.3.6"]
     steps:
-      - run: minikube start
+      - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
@@ -59,14 +80,14 @@ jobs:
           sed -i "s|image:[[:space:]].*|image: $IMG|g" config/samples/operator/controller.yaml
           kubectl apply -f config/samples/operator
       - name: Check operator
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           while ! kubectl describe pods -l "control-plane=controller-manager" -n system | grep -qE 'Status:[ \t]+Running?'; do
             echo "waiting operator controller pod running"
             sleep 1
           done
-      - name: Deployment emqx
+      - name: Deploy emqx
         timeout-minutes: 20
         uses: ./.github/actions/deployment
         with:
