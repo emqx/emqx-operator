@@ -49,7 +49,7 @@ jobs:
           sed -i "s|image:[[:space:]].*|image: $IMG|g" config/samples/operator/controller.yaml
           kubectl apply -f config/samples/operator
       - name: Check operator
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           while ! kubectl describe pods -l "control-plane=controller-manager" -n system | grep -qE 'Status:[ \t]+Running?'; do
@@ -62,7 +62,7 @@ jobs:
           sed -i "s|image:[[:space:]].*|image: ${{ matrix.kind[1] }}|g" config/samples/emqx/${{ matrix.kind[0] }}.yaml
           kubectl create -f config/samples/emqx/${{ matrix.kind[0] }}.yaml
       - name: Check emqx pods
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           while ! kubectl describe sts ${{ matrix.kind[0]}} | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
@@ -70,7 +70,7 @@ jobs:
             sleep 1
           done
       - name: Check ${{ matrix.kind[0]}} broker
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           while ! kubectl exec -i ${{ matrix.kind[0]}}-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
@@ -78,7 +78,7 @@ jobs:
             sleep 1
           done
       - name: Check ${{ matrix.kind[0]}} cluster
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           while
@@ -90,7 +90,7 @@ jobs:
           done
       - run: kubectl scale --replicas=5 ${{ matrix.kind[0] }}/${{ matrix.kind[0] }}
       - name: Check scale
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           while ! kubectl describe sts ${{ matrix.kind[0]}} | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
@@ -98,7 +98,7 @@ jobs:
             sleep 1
           done
       - name: Check ${{ matrix.kind[0]}}
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           while ! kubectl exec -i ${{ matrix.kind[0]}}-4 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
@@ -106,7 +106,7 @@ jobs:
             sleep 1
           done
       - name: Check ${{ matrix.kind[0]}} cluster
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           while
