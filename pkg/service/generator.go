@@ -429,7 +429,6 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 
 func generateVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.PersistentVolumeClaim {
 	template := emqx.GetStorage().VolumeClaimTemplate
-	boolTrue := true
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: template.APIVersion,
@@ -439,16 +438,6 @@ func generateVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.Persiste
 			Name:        Name,
 			Namespace:   emqx.GetNamespace(),
 			Annotations: emqx.GetAnnotations(),
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         emqx.GetAPIVersion(),
-					BlockOwnerDeletion: &boolTrue,
-					Controller:         &boolTrue,
-					Kind:               emqx.GetKind(),
-					Name:               emqx.GetName(),
-					UID:                emqx.GetUID(),
-				},
-			},
 		},
 		Spec:   template.Spec,
 		Status: template.Status,
