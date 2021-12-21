@@ -50,7 +50,8 @@ type EmqxEnterpriseSpec struct {
 	Storage *Storage `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
-	Labels Labels `json:"labels,omitempty"`
+	Labels      Labels            `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 
 	Listener Listener `json:"listener,omitempty"`
 
@@ -140,6 +141,11 @@ func (emqx *EmqxEnterprise) SetLicense(license string) { emqx.Spec.License = lic
 
 func (emqx *EmqxEnterprise) GetStorage() *Storage        { return emqx.Spec.Storage }
 func (emqx *EmqxEnterprise) SetStorage(storage *Storage) { emqx.Spec.Storage = storage }
+
+func (emqx *EmqxEnterprise) GetAnnotations() map[string]string { return emqx.Spec.Annotations }
+func (emqx *EmqxEnterprise) SetAnnotations(annotations map[string]string) {
+	emqx.Spec.Annotations = annotations
+}
 
 func (emqx *EmqxEnterprise) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxEnterprise) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }

@@ -187,13 +187,11 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 			VolumeClaimTemplates: generateVolumeClaimTemplates(emqx),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-					// TODO
-					// Annotations:
+					Labels:      labels,
+					Annotations: emqx.GetAnnotations(),
 				},
 				Spec: corev1.PodSpec{
-					// TODO
-					// Affinity: generateAffinity(rc.Spec.Affinity, labels),
+					Affinity:           emqx.GetAffinity(),
 					ServiceAccountName: emqx.GetServiceAccountName(),
 					SecurityContext:    generateSecurityContext(),
 					Tolerations:        emqx.GetToleRations(),
@@ -428,30 +426,6 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 	}
 	return volumes
 }
-
-// TODO
-// func generateAffinity(affinity *corev1.Affinity, labels map[string]string) *corev1.Affinity {
-// 	if affinity != nil {
-// 		return affinity
-// 	}
-
-// 	// Return a SOFT anti-affinity
-// 	return &corev1.Affinity{
-// 		PodAntiAffinity: &corev1.PodAntiAffinity{
-// 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-// 				{
-// 					Weight: 100,
-// 					PodAffinityTerm: corev1.PodAffinityTerm{
-// 						TopologyKey: util.HostnameTopologyKey,
-// 						LabelSelector: &metav1.LabelSelector{
-// 							MatchLabels: labels,
-// 						},
-// 					},
-// 				},
-// 			},
-// 		},
-// 	}
-// }
 
 func generateVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.PersistentVolumeClaim {
 	template := emqx.GetStorage().VolumeClaimTemplate

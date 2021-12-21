@@ -39,6 +39,9 @@ type EmqxSpec interface {
 	GetStorage() *Storage
 	SetStorage(storage *Storage)
 
+	GetAnnotations() map[string]string
+	SetAnnotations(annotations map[string]string)
+
 	GetListener() Listener
 
 	GetAffinity() *corev1.Affinity
