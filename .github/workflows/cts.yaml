@@ -45,24 +45,7 @@ jobs:
           - "v1.22.4"
           - "v1.23.0"
         emqx:
-          - [emqx, "emqx/emqx:4.3.0"]
-          - [emqx, "emqx/emqx:4.3.1"]
-          - [emqx, "emqx/emqx:4.3.2"]
-          - [emqx, "emqx/emqx:4.3.3"]
-          - [emqx, "emqx/emqx:4.3.4"]
-          - [emqx, "emqx/emqx:4.3.5"]
-          - [emqx, "emqx/emqx:4.3.6"]
-          - [emqx, "emqx/emqx:4.3.7"]
-          - [emqx, "emqx/emqx:4.3.8"]
-          - [emqx, "emqx/emqx:4.3.9"]
-          - [emqx, "emqx/emqx:4.3.10"]
           - [emqx, "emqx/emqx:4.3.11"]
-          - [emqx-ee, "emqx/emqx-ee:4.3.0"]
-          - [emqx-ee, "emqx/emqx-ee:4.3.1"]
-          - [emqx-ee, "emqx/emqx-ee:4.3.2"]
-          - [emqx-ee, "emqx/emqx-ee:4.3.3"]
-          - [emqx-ee, "emqx/emqx-ee:4.3.4"]
-          - [emqx-ee, "emqx/emqx-ee:4.3.5"]
           - [emqx-ee, "emqx/emqx-ee:4.3.6"]
     steps:
       - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
