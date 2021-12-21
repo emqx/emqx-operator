@@ -897,6 +897,10 @@ spec:
                         type: array
                     type: object
                 type: object
+              annotations:
+                additionalProperties:
+                  type: string
+                type: object
               env:
                 items:
                   description: EnvVar represents an environment variable present in

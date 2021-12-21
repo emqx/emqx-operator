@@ -49,7 +49,8 @@ type EmqxBrokerSpec struct {
 	Storage *Storage `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
-	Labels Labels `json:"labels,omitempty"`
+	Labels      Labels            `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 
 	Listener Listener `json:"listener,omitempty"`
 
@@ -136,6 +137,11 @@ func (emqx *EmqxBroker) SetResource(resource corev1.ResourceRequirements) {
 
 func (emqx *EmqxBroker) GetStorage() *Storage        { return emqx.Spec.Storage }
 func (emqx *EmqxBroker) SetStorage(storage *Storage) { emqx.Spec.Storage = storage }
+
+func (emqx *EmqxBroker) GetAnnotations() map[string]string { return emqx.Spec.Annotations }
+func (emqx *EmqxBroker) SetAnnotations(annotations map[string]string) {
+	emqx.Spec.Annotations = annotations
+}
 
 func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
