@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -138,12 +140,7 @@ var _ = AfterSuite(func() {
 })
 
 func cleanAll() error {
-	broker := &v1beta1.EmqxBroker{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      brokerName,
-			Namespace: brokerNameSpace,
-		},
-	}
+	broker := &v1beta1.EmqxBroker{}
 	if err := k8sClient.Get(
 		context.Background(),
 		types.NamespacedName{
@@ -156,12 +153,25 @@ func cleanAll() error {
 			context.Background(),
 			&v1beta1.EmqxBroker{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      brokerName,
-					Namespace: brokerNameSpace,
+					Name:      broker.GetName(),
+					Namespace: broker.GetNamespace(),
 				},
 			},
 		); err != nil {
 			return err
+		}
+		// If PVC is set, then it should be retained
+		if !reflect.ValueOf(broker.GetStorage()).IsNil() {
+			if err := k8sClient.List(
+				context.Background(),
+				&corev1.PersistentVolumeClaimList{},
+				&client.ListOptions{
+					Namespace:     broker.GetNamespace(),
+					LabelSelector: labels.SelectorFromSet(broker.GetLabels()),
+				},
+			); err != nil {
+				return err
+			}
 		}
 		if err := k8sClient.Delete(
 			context.Background(),
@@ -171,13 +181,7 @@ func cleanAll() error {
 		}
 	}
 
-	enterprise := &v1beta1.EmqxEnterprise{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      enterpriseName,
-			Namespace: enterpriseNameSpace,
-		},
-	}
-
+	enterprise := &v1beta1.EmqxEnterprise{}
 	if err := k8sClient.Get(
 		context.Background(),
 		types.NamespacedName{
@@ -190,12 +194,25 @@ func cleanAll() error {
 			context.Background(),
 			&v1beta1.EmqxEnterprise{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      enterpriseName,
-					Namespace: enterpriseNameSpace,
+					Name:      enterprise.GetName(),
+					Namespace: enterprise.GetNamespace(),
 				},
 			},
 		); err != nil {
 			return err
+		}
+		// If PVC is set, then it should be retained
+		if !reflect.ValueOf(enterprise.GetStorage()).IsNil() {
+			if err := k8sClient.List(
+				context.Background(),
+				&corev1.PersistentVolumeClaimList{},
+				&client.ListOptions{
+					Namespace:     enterprise.GetNamespace(),
+					LabelSelector: labels.SelectorFromSet(enterprise.GetLabels()),
+				},
+			); err != nil {
+				return err
+			}
 		}
 		if err := k8sClient.Delete(
 			context.Background(),
