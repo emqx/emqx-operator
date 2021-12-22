@@ -47,7 +47,11 @@ var _ = Describe("", func() {
 					return sts.Status.ReadyReplicas
 				}, timeout, interval).Should(Equal(*emqx.GetReplicas()))
 
+				Expect(sts.Spec.Template.Labels).Should(Equal(emqx.GetLabels()))
+				Expect(sts.Spec.Template.Annotations).Should(Equal(emqx.GetAnnotations()))
+				Expect(sts.Spec.Template.Spec.Affinity).Should(Equal(emqx.GetAffinity()))
 				Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
+				Expect(sts.Spec.Template.Spec.Containers[0].Resources).Should(Equal(emqx.GetResource()))
 			}
 		})
 	})

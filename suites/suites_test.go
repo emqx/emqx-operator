@@ -30,6 +30,7 @@ import (
 	"github.com/emqx/emqx-operator/controllers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -215,7 +216,9 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 	}
 }
 
+// Full
 func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
+	storageClassName := "standard"
 	return &v1beta1.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -223,10 +226,55 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 		},
 		Spec: v1beta1.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.10",
+			Labels: map[string]string{
+				"cluster": "emqx",
+			},
+			Storage: &v1beta1.Storage{
+				VolumeClaimTemplate: v1beta1.EmbeddedPersistentVolumeClaim{
+					Spec: corev1.PersistentVolumeClaimSpec{
+						StorageClassName: &storageClassName,
+						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: resource.MustParse("20Mi"),
+							},
+						},
+					},
+				},
+			},
+			Listener: v1beta1.Listener{
+				Type: "ClusterIP",
+				Ports: v1beta1.Ports{
+					MQTT:      1883,
+					MQTTS:     8883,
+					WS:        8083,
+					WSS:       8084,
+					Dashboard: 18083,
+					API:       8081,
+				},
+			},
+			ACL: []v1beta1.ACL{
+				{
+					Permission: "allow",
+				},
+			},
+			Plugins: []v1beta1.Plugin{
+				{
+					Name:   "emqx_management",
+					Enable: true,
+				},
+			},
+			Modules: []v1beta1.EmqxBrokerModules{
+				{
+					Name:   "emqx_mod_acl_internal",
+					Enable: true,
+				},
+			},
 		},
 	}
 }
 
+// Slim
 func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 	return &v1beta1.EmqxEnterprise{
 		ObjectMeta: metav1.ObjectMeta{
