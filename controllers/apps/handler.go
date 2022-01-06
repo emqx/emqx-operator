@@ -1,10 +1,10 @@
-package controllers
+package apps
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/emqx/emqx-operator/api/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/cache"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/service"

@@ -3,7 +3,7 @@ package v1beta1_test
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/api/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 )

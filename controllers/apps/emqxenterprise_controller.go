@@ -14,30 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package apps
 
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/emqx/emqx-operator/api/v1beta1"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	appsv1beta1 "github.com/emqx/emqx-operator/apis/apps/v1beta1"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
-// EmqxBrokerReconciler reconciles a EmqxBroker object
-type EmqxBrokerReconciler struct {
+// EmqxEnterpriseReconciler reconciles a EmqxEnterprise object
+type EmqxEnterpriseReconciler struct {
 	Handler
 }
 
-func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
-	return &EmqxBrokerReconciler{*NewHandler(mgr)}
+func NewEmqxEnterpriseReconciler(mgr manager.Manager) *EmqxEnterpriseReconciler {
+	return &EmqxEnterpriseReconciler{*NewHandler(mgr)}
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *EmqxBrokerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *EmqxEnterpriseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1beta1.EmqxBroker{}).
+		For(&appsv1beta1.EmqxEnterprise{}).
 		Complete(r)
 }

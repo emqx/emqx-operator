@@ -1,7 +1,7 @@
-package controllers
+package apps
 
 import (
-	"github.com/emqx/emqx-operator/api/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
