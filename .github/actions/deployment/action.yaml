@@ -1,6 +1,10 @@
 name: Deployment emqx by operator
 description: "Deployment emqx by operator, scale pod number, and check emqx cluster status"
 inputs:
+  apiVersion:
+    description: "API version"
+    required: true
+    default: "v1beta2"
   kind:
     description: "Kind name, must use short name"
     required: true
@@ -16,8 +20,8 @@ runs:
     - name: Deployment emqx
       shell: bash
       run: |
-        sed -i "s|image:[[:space:]].*|image: ${{ inputs.image }}|g" config/samples/emqx/${{ inputs.kind }}.yaml
-        kubectl create -f config/samples/emqx/${{ inputs.kind }}.yaml
+        sed -i "s|image:[[:space:]].*|image: ${{ inputs.image }}|g" .github/yamlfiles/${{ inputs.apiVersion }}/${{ inputs.kind }}.yaml
+        kubectl create -f .github/yamlfiles/${{ inputs.apiVersion }}/${{ inputs.kind }}.yaml
     - name: Check emqx pods status
       shell: bash
       run: |
@@ -53,7 +57,9 @@ runs:
         echo "${{ inputs.image }} cluster successfully"
     - name: Scale emqx replicas
       shell: bash
-      run: kubectl scale --replicas=5 ${{ inputs.kind }}/${{ inputs.kind }}
+      # run: kubectl scale --replicas=5 ${{ inputs.kind }}/${{ inputs.kind }}
+      run: |
+        kubectl patch ${{ inputs.kind }}/${{ inputs.kind }} -p '{"spec":{"replicas": 5}}' --type merge
     - name: Check scale
       shell: bash
       run: |

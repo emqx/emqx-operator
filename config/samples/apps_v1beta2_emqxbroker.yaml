@@ -1,0 +1,7 @@
+apiVersion: apps.emqx.io/v1beta2
+kind: EmqxBroker
+metadata:
+  name: emqxbroker-sample
+spec:
+  # Add fields here
+  foo: bar

@@ -40,11 +40,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        apiVersion:
+          - v1beta1
+          - v1beta2
         emqx:
           - [emqx, "emqx/emqx:4.3.11"]
           - [emqx-ee, "emqx/emqx-ee:4.3.6"]
     steps:
       - run: minikube start
+      - name: install cert-manager
+        run: |
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo update
+          helm install \
+            cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --version v1.6.1 \
+            --set installCRDs=true
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
@@ -56,13 +69,14 @@ jobs:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
         run: |
           eval $(minikube docker-env) && docker build -t $IMG .
-          sed -i "s|image:[[:space:]].*|image: $IMG|g" config/samples/operator/controller.yaml
-          kubectl apply -f config/samples/operator
+          # sed -i "s|image:[[:space:]].*|image: $IMG|g" config/samples/operator/controller.yaml
+          # kubectl apply -f config/samples/operator
+          make deploy
       - name: Check operator
         timeout-minutes: 10
         run: |
           set -euo pipefail
-          while ! kubectl describe pods -l "control-plane=controller-manager" -n system | grep -qE 'Status:[ \t]+Running?'; do
+          while [ $(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID' | wc -l) != 2 ]; do
             echo "waiting operator controller pod running"
             sleep 1
           done
@@ -70,6 +84,7 @@ jobs:
         timeout-minutes: 20
         uses: ./.github/actions/deployment
         with:
+          apiVersion: ${{ matrix.apiVersion }}
           kind:  ${{ matrix.emqx[0] }}
           image: ${{ matrix.emqx[1] }}
       - name: Get emqx logs
@@ -83,4 +98,4 @@ jobs:
         if: failure()
         run: |
           set -x
-          kubectl logs -l "control-plane=controller-manager" -n system -c manager
+          kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager

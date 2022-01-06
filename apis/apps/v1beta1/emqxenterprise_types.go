@@ -75,6 +75,7 @@ type EmqxEnterpriseSpec struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=emqx-ee
 //+kubebuilder:subresource:status
+//+kubebuilder:storageversion
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
 // EmqxEnterprise is the Schema for the emqxenterprises API
 type EmqxEnterprise struct {
