@@ -8,8 +8,6 @@ metadata:
   namespace: system
 spec:
   selfSigned: {}
-  # ca:
-  #   secretName: tls-test
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
