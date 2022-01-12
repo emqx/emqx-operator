@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package suites_test
+package controller_suite_test
 
 import (
 	"context"
@@ -81,10 +81,10 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 		// WebhookInstallOptions: envtest.WebhookInstallOptions{
-		// 	Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
+		// 	Paths: []string{filepath.Join("..", "config", "webhook")},
 		// },
 	}
 
