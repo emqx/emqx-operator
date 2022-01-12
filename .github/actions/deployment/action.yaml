@@ -21,7 +21,7 @@ runs:
       shell: bash
       run: |
         sed -i "s|image:[[:space:]].*|image: ${{ inputs.image }}|g" .github/yamlfiles/${{ inputs.apiVersion }}/${{ inputs.kind }}.yaml
-        kubectl create -f .github/yamlfiles/${{ inputs.apiVersion }}/${{ inputs.kind }}.yaml
+        kubectl apply -f .github/yamlfiles/${{ inputs.apiVersion }}/${{ inputs.kind }}.yaml
     - name: Check emqx pods status
       shell: bash
       run: |
