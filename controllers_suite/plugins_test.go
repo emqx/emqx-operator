@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package suites_test
+package controller_suite_test
 
 import (
 	"context"
@@ -31,16 +31,15 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
-	Context("Check acl", func() {
-		It("Check acl", func() {
+	Context("Check plugins", func() {
+		It("Check loaded plugins", func() {
 			for _, emqx := range emqxList() {
 				cm := &corev1.ConfigMap{}
-
 				Eventually(func() bool {
 					err := k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      emqx.GetACL()["name"],
+							Name:      emqx.GetLoadedPlugins()["name"],
 							Namespace: emqx.GetNamespace(),
 						},
 						cm,
@@ -49,15 +48,14 @@ var _ = Describe("", func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(cm.Data).Should(Equal(map[string]string{
-					"acl.conf": emqx.GetACL()["conf"],
+					"loaded_plugins": emqx.GetLoadedPlugins()["conf"],
 				}))
-
 			}
 		})
 
-		It("Update acl", func() {
+		It("Check update plugins", func() {
 			for _, emqx := range emqxList() {
-				patch := []byte(`{"spec": {"acl": [{"permission": "deny"}]}}`)
+				patch := []byte(`{"spec":{"plugins":[{"enable": true, "name": "emqx_management"},{"enable": true, "name": "emqx_rule_engine"}]}}`)
 				Expect(k8sClient.Patch(
 					context.Background(),
 					emqx,
@@ -69,7 +67,7 @@ var _ = Describe("", func() {
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      emqx.GetACL()["name"],
+							Name:      emqx.GetLoadedPlugins()["name"],
 							Namespace: emqx.GetNamespace(),
 						},
 						cm,
@@ -77,12 +75,11 @@ var _ = Describe("", func() {
 					return cm.Data
 				}, timeout, interval).Should(Equal(
 					map[string]string{
-						"acl.conf": "{deny, all, pubsub, [\"#\"]}.\n",
+						"loaded_plugins": "{emqx_management, true}.\n{emqx_rule_engine, true}.\n",
 					},
 				))
 			}
-			// TODO: check acl status by emqx api
-			// TODO: test acl by mqtt pubsub
+			// TODO: check plugins status by emqx api
 		})
 	})
 })

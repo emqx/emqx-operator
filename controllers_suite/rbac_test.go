@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package suites_test
+package controller_suite_test
 
 import (
 	"context"
