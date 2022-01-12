@@ -1,4 +1,4 @@
-name: Build emqx operator
+name: Release emqx operator
 
 on:
   push:
@@ -6,10 +6,17 @@ on:
       - "*"
 
 jobs:
-  docker:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: check image tag for yaml
+        run: |
+          tag=$(cat config/samples/operator/controller.yaml | egrep "image:[[:space:]]emqx/emqx-operator-controller" | sed -r 's|image:[[:space:]]emqx/emqx-operator-controller:(.*)|\1|g' | tr -d '[:space:]')
+          if [ "$tag" != "${GITHUB_REF##*/}" ]; then
+            echo "Need update image tag for config/samples/operator/controller.yaml"
+            exit 1
+          fi
       - uses: docker/setup-qemu-action@v1
       - uses: docker/setup-buildx-action@v1
       - uses: docker/metadata-action@v3

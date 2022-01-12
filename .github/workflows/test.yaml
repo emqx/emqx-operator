@@ -68,14 +68,13 @@ jobs:
         with:
           go-version: '1.17.3'
       - name: Build image
-        run: eval $(minikube docker-env) && docker build -t emqx/emqx-operator-controller:$(git describe --tags) .
+        env:
+          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
+        run: eval $(minikube docker-env) && docker build -t $IMG .
       - name: Deploy controller
-        run: |
-          make deploy
-          if ! git diff --quiet; then
-            echo "Need run make deploy"
-            exit 1
-          fi
+        env:
+          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
+        run: make deploy
       - name: Check operator
         timeout-minutes: 10
         run: |

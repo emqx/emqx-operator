@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= emqx/emqx-operator-controller:$(shell git describe --tags)
+IMG ?= emqx/emqx-operator-controller:$(shell ./get-version)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 #CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 CRD_OPTIONS ?= "crd"
