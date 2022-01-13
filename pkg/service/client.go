@@ -193,6 +193,25 @@ func (client *Client) EnsureEmqxConfigMapForLoadedPlugins(emqx v1beta1.Emqx, lab
 }
 
 func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error {
+	annotation := emqx.GetAnnotations()
+	if annotation == nil {
+		annotation = make(map[string]string)
+	}
+	if license, err := client.Secret.Get(emqx.GetNamespace(), emqx.GetSecretName()); err == nil {
+		annotation["License/ResourceVersion"] = license.ResourceVersion
+	}
+	if acl, err := client.ConfigMap.Get(emqx.GetNamespace(), emqx.GetACL()["name"]); err == nil {
+		annotation["ACL/ResourceVersion"] = acl.ResourceVersion
+	}
+	if plugins, err := client.ConfigMap.Get(emqx.GetNamespace(), emqx.GetLoadedPlugins()["name"]); err == nil {
+		annotation["LoadedPlugins/ResourceVersion"] = plugins.ResourceVersion
+	}
+	if modules, err := client.ConfigMap.Get(emqx.GetNamespace(), emqx.GetLoadedModules()["name"]); err == nil {
+		annotation["LoadedModules/ResourceVersion"] = modules.ResourceVersion
+	}
+
+	emqx.SetAnnotations(annotation)
+
 	new := NewEmqxStatefulSet(emqx, labels, ownerRefs)
 	old, err := client.StatefulSet.Get(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
@@ -202,28 +221,15 @@ func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string
 		return err
 	}
 
-	if broker, ok := emqx.(*v1beta1.EmqxBroker); ok {
-		if oldBroker, err := client.EmqxBroker.Get(
-			emqx.GetNamespace(),
-			emqx.GetName(),
-		); err == nil {
-			if *old.Spec.Replicas != *broker.Spec.Replicas || !reflect.DeepEqual(oldBroker.Spec, broker.Spec) {
-				new.ResourceVersion = old.ResourceVersion
-				return client.StatefulSet.Update(new)
-			}
-		}
-	}
-
-	if enterprise, ok := emqx.(*v1beta1.EmqxEnterprise); ok {
-		if oldEnterprise, err := client.EmqxEnterprise.Get(
-			emqx.GetNamespace(),
-			emqx.GetName(),
-		); err == nil {
-			if *old.Spec.Replicas != *enterprise.Spec.Replicas || !reflect.DeepEqual(oldEnterprise.Spec, enterprise.Spec) {
-				new.ResourceVersion = old.ResourceVersion
-				return client.StatefulSet.Update(new)
-			}
-		}
+	// Updates to statefulset spec for fields other than 'replicas', 'template', 'updateStrategy' and 'minReadySeconds' are forbidden
+	if !reflect.DeepEqual(old.Spec.Replicas, new.Spec.Replicas) ||
+		!reflect.DeepEqual(old.Spec.Template, new.Spec.Template) ||
+		!reflect.DeepEqual(old.Spec.UpdateStrategy, new.Spec.UpdateStrategy) {
+		new.ResourceVersion = old.ResourceVersion
+		old.Spec.Replicas = new.Spec.Replicas
+		old.Spec.Template = new.Spec.Template
+		old.Spec.UpdateStrategy = new.Spec.UpdateStrategy
+		return client.StatefulSet.Update(old)
 	}
 
 	return nil
