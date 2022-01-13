@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	//+kubebuilder:scaffold:imports
@@ -50,6 +51,21 @@ var _ = Describe("", func() {
 			Expect(cm.Data).Should(Equal(map[string]string{
 				"loaded_modules": broker.GetLoadedModules()["conf"],
 			}))
+
+			Eventually(func() map[string]string {
+				sts := &appsv1.StatefulSet{}
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      broker.GetName(),
+						Namespace: broker.GetNamespace(),
+					},
+					sts,
+				)
+				return sts.Spec.Template.Annotations
+			}, timeout, interval).Should(
+				HaveKeyWithValue("LoadedModules/ResourceVersion", cm.ResourceVersion),
+			)
 		})
 
 		It("Update emqx broker loaded modules", func() {
@@ -62,8 +78,8 @@ var _ = Describe("", func() {
 				client.RawPatch(types.MergePatchType, patch),
 			)).Should(Succeed())
 
+			cm := &corev1.ConfigMap{}
 			Eventually(func() map[string]string {
-				cm := &corev1.ConfigMap{}
 				_ = k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
@@ -76,6 +92,21 @@ var _ = Describe("", func() {
 			}, timeout, interval).Should(Equal(
 				map[string]string{"loaded_modules": "{emqx_mod_presence, false}.\n"},
 			))
+
+			Eventually(func() map[string]string {
+				sts := &appsv1.StatefulSet{}
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      broker.GetName(),
+						Namespace: broker.GetNamespace(),
+					},
+					sts,
+				)
+				return sts.Spec.Template.Annotations
+			}, timeout, interval).Should(
+				HaveKeyWithValue("LoadedModules/ResourceVersion", cm.ResourceVersion),
+			)
 			// TODO: check modules status by emqx api
 		})
 
@@ -97,6 +128,21 @@ var _ = Describe("", func() {
 			Expect(cm.Data).Should(Equal(map[string]string{
 				"loaded_modules": enterprise.GetLoadedModules()["conf"],
 			}))
+
+			Eventually(func() map[string]string {
+				sts := &appsv1.StatefulSet{}
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      enterprise.GetName(),
+						Namespace: enterprise.GetNamespace(),
+					},
+					sts,
+				)
+				return sts.Spec.Template.Annotations
+			}, timeout, interval).Should(
+				HaveKeyWithValue("LoadedModules/ResourceVersion", cm.ResourceVersion),
+			)
 		})
 
 		It("Update emqx enterprise loaded modules", func() {
@@ -109,8 +155,8 @@ var _ = Describe("", func() {
 				client.RawPatch(types.MergePatchType, patch),
 			)).Should(Succeed())
 
+			cm := &corev1.ConfigMap{}
 			Eventually(func() map[string]string {
-				cm := &corev1.ConfigMap{}
 				_ = k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
@@ -125,6 +171,21 @@ var _ = Describe("", func() {
 					"loaded_modules": "[{\"name\":\"internal_acl\",\"configs\":{\"acl_rule_file\":\"etc/acl.conf\"}}]",
 				},
 			))
+
+			Eventually(func() map[string]string {
+				sts := &appsv1.StatefulSet{}
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      enterprise.GetName(),
+						Namespace: enterprise.GetNamespace(),
+					},
+					sts,
+				)
+				return sts.Spec.Template.Annotations
+			}, timeout, interval).Should(
+				HaveKeyWithValue("LoadedModules/ResourceVersion", cm.ResourceVersion),
+			)
 			// TODO: check modules status by emqx api
 		})
 	})

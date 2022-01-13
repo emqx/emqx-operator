@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	//+kubebuilder:scaffold:imports
@@ -50,6 +51,21 @@ var _ = Describe("", func() {
 				Expect(cm.Data).Should(Equal(map[string]string{
 					"loaded_plugins": emqx.GetLoadedPlugins()["conf"],
 				}))
+
+				Eventually(func() map[string]string {
+					sts := &appsv1.StatefulSet{}
+					_ = k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						sts,
+					)
+					return sts.Spec.Template.Annotations
+				}, timeout, interval).Should(
+					HaveKeyWithValue("LoadedPlugins/ResourceVersion", cm.ResourceVersion),
+				)
 			}
 		})
 
@@ -62,8 +78,8 @@ var _ = Describe("", func() {
 					client.RawPatch(types.MergePatchType, patch),
 				)).Should(Succeed())
 
+				cm := &corev1.ConfigMap{}
 				Eventually(func() map[string]string {
-					cm := &corev1.ConfigMap{}
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
@@ -78,6 +94,22 @@ var _ = Describe("", func() {
 						"loaded_plugins": "{emqx_management, true}.\n{emqx_rule_engine, true}.\n",
 					},
 				))
+
+				Eventually(func() map[string]string {
+					sts := &appsv1.StatefulSet{}
+					_ = k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						sts,
+					)
+					return sts.Spec.Template.Annotations
+				}, timeout, interval).Should(
+					HaveKeyWithValue("LoadedPlugins/ResourceVersion", cm.ResourceVersion),
+				)
+
 			}
 			// TODO: check plugins status by emqx api
 		})
