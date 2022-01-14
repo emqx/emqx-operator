@@ -28,7 +28,6 @@ func mergeLabels(allLabels ...Labels) Labels {
 func defaultLabels(name string) Labels {
 	return map[string]string{
 		"apps.emqx.io/managed-by": "emqx-operator",
-		"apps.emqx.io/version":    "v1beta1",
 		"apps.emqx.io/instance":   name,
 	}
 }
