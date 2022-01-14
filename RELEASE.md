@@ -1,20 +1,18 @@
 ## Release Note 🍻
 
+🆕 Happy New Year!
+
 ### Features 🌈
 
-- Custom Resource Definition for **EMQ X Broker** and **EMQ X Enterprise**
-- Support EMQ X Broker 4.3.x version and EMQ X Enterprise 4.3.x version
-- Readability configuration about `acl`，`modules` and `plugins` in `YAML`
-- Support persistence for data and logs in EMQ X Cluster
-- Support the strategy of node discovery `k8s`
-- Support EMQ X metrics monitoring with `Prometheus`
-- Scaling EMQ X cluster without disconnection
-- Dynamic storage provisioning with pvc template
-- Resources restrictions with k8s requests and limits
-- Node selector
+- New APIVersion: apps.emqx.io/v1beta2
+- Restart pods when update `configmap` and `secret`
+- Retain PVC when deleting EMQ X Custom Resource
+- The emqx operator controller automatically creates the `serviceAccount`, `role` and `roleBinding` resources when the resource specified by `.spec.serviceAccountName` does not exist
+- `.spec.serviceAccountName` is no longer required in EMQ X Custom Resource
+- `.spec.replicas` is no longer required in EMQ X Custom Resource
+- Add extra volumes mount possibility
+- Add readiness probe for Statefulset
 
-### Breaking Changes 💡
+### Fixes 🛠
 
-- Bump APIversion to `apps.emqx.io/v1beta1`
-- Add the `CRD` of `EMQ X Enterprise`
-- Remove configurations:`cluster`, `loadedPluginConf`,`loadedModulesConf`,`aclConf`
+- Fix annotations for EMQ X Custom Resource not working
