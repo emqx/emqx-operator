@@ -1,11 +1,11 @@
 ## slim example
-apiVersion: apps.emqx.io/v1beta2
+apiVersion: apps.emqx.io/v1beta1
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
 spec:
   serviceAccountName: "emqx"
-  image: emqx/emqx-ee:4.3.5
+  image: emqx/emqx-ee:4.3.6
   replicas: 3
   labels:
     cluster: emqx
