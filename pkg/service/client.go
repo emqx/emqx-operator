@@ -225,7 +225,6 @@ func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string
 	if !reflect.DeepEqual(old.Spec.Replicas, new.Spec.Replicas) ||
 		!reflect.DeepEqual(old.Spec.Template, new.Spec.Template) ||
 		!reflect.DeepEqual(old.Spec.UpdateStrategy, new.Spec.UpdateStrategy) {
-		new.ResourceVersion = old.ResourceVersion
 		old.Spec.Replicas = new.Spec.Replicas
 		old.Spec.Template = new.Spec.Template
 		old.Spec.UpdateStrategy = new.Spec.UpdateStrategy
