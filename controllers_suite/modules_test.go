@@ -19,6 +19,7 @@ package controller_suite_test
 import (
 	"context"
 
+	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,13 +36,14 @@ var _ = Describe("", func() {
 	Context("Check modules", func() {
 		It("Check emqx broker loaded modules", func() {
 			broker := generateEmqxBroker(brokerName, brokerNameSpace)
+			modules := util.GetLoadedModules(broker)
 
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
-						Name:      broker.GetLoadedModules()["name"],
+						Name:      modules["name"],
 						Namespace: broker.GetNamespace(),
 					}, cm,
 				)
@@ -49,7 +51,7 @@ var _ = Describe("", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
-				"loaded_modules": broker.GetLoadedModules()["conf"],
+				"loaded_modules": modules["conf"],
 			}))
 
 			Eventually(func() map[string]string {
@@ -70,6 +72,7 @@ var _ = Describe("", func() {
 
 		It("Update emqx broker loaded modules", func() {
 			broker := generateEmqxBroker(brokerName, brokerNameSpace)
+			modules := util.GetLoadedModules(broker)
 
 			patch := []byte(`{"spec":{"modules":[{"name": "emqx_mod_presence", "enable": false}]}}`)
 			Expect(k8sClient.Patch(
@@ -83,7 +86,7 @@ var _ = Describe("", func() {
 				_ = k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
-						Name:      broker.GetLoadedModules()["name"],
+						Name:      modules["name"],
 						Namespace: broker.GetNamespace(),
 					},
 					cm,
@@ -112,13 +115,14 @@ var _ = Describe("", func() {
 
 		It("Check emqx enterprise loaded modules", func() {
 			enterprise := generateEmqxEnterprise(enterpriseName, enterpriseNameSpace)
+			modules := util.GetLoadedModules(enterprise)
 
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
-						Name:      enterprise.GetLoadedModules()["name"],
+						Name:      modules["name"],
 						Namespace: enterprise.GetNamespace(),
 					}, cm,
 				)
@@ -126,7 +130,7 @@ var _ = Describe("", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(cm.Data).Should(Equal(map[string]string{
-				"loaded_modules": enterprise.GetLoadedModules()["conf"],
+				"loaded_modules": modules["conf"],
 			}))
 
 			Eventually(func() map[string]string {
@@ -155,12 +159,13 @@ var _ = Describe("", func() {
 				client.RawPatch(types.MergePatchType, patch),
 			)).Should(Succeed())
 
+			modules := util.GetLoadedModules(enterprise)
 			cm := &corev1.ConfigMap{}
 			Eventually(func() map[string]string {
 				_ = k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
-						Name:      enterprise.GetLoadedModules()["name"],
+						Name:      modules["name"],
 						Namespace: enterprise.GetNamespace(),
 					},
 					cm,

@@ -1,10 +1,5 @@
 package v1beta1
 
-import (
-	"fmt"
-	"strings"
-)
-
 //+kubebuilder:object:generate=true
 type Topics struct {
 	Filter []string `json:"filter,omitempty"`
@@ -22,95 +17,6 @@ type ACL struct {
 	//+kubebuilder:validation:Enum=publish;subscribe
 	Action string `json:"action,omitempty"`
 	Topics Topics `json:"topics,omitempty"`
-}
-
-func (emqx *EmqxBroker) GetACL() map[string]string {
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "acl"),
-		"mountPath": "/opt/emqx/etc/acl.conf",
-		"subPath":   "acl.conf",
-		"conf":      generateACL(emqx.Spec.ACL),
-	}
-}
-
-func (emqx *EmqxEnterprise) GetACL() map[string]string {
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "acl"),
-		"mountPath": "/opt/emqx/etc/acl.conf",
-		"subPath":   "acl.conf",
-		"conf":      generateACL(emqx.Spec.ACL),
-	}
-}
-
-func generateACL(acls []ACL) string {
-	var s string
-	if acls == nil {
-		acls = defaultACL()
-	}
-	for _, acl := range acls {
-		who := getWho(acl)
-		action := getAction(acl)
-		topics := getTopics(acl)
-		s = fmt.Sprintf("%s{%s, %s, %s, %s}.\n", s, acl.Permission, who, action, topics)
-	}
-
-	return s
-}
-
-func getWho(acl ACL) string {
-	var who []string
-
-	if acl.Username == "" && acl.ClientID == "" && acl.IPAddress == "" {
-		return "all"
-	}
-	if acl.Username != "" {
-		username := fmt.Sprintf("{user, \"%s\"}", acl.Username)
-		who = append(who, username)
-	}
-	if acl.ClientID != "" {
-		clientid := fmt.Sprintf("{client, \"%s\"}", acl.ClientID)
-		who = append(who, clientid)
-	}
-	if acl.IPAddress != "" {
-		ipaddress := fmt.Sprintf("{ipaddr, \"%s\"}", acl.IPAddress)
-		who = append(who, ipaddress)
-	}
-
-	if len(who) == 0 {
-		return "all"
-	} else if len(who) == 1 {
-		return who[0]
-	} else {
-		return fmt.Sprintf("{'and', [%s]}", strings.Join(who, ", "))
-	}
-}
-
-func getAction(acl ACL) string {
-	if acl.Action == "" {
-		return "pubsub"
-	} else {
-		return acl.Action
-	}
-}
-
-func getTopics(acl ACL) string {
-	var list []string
-	if acl.Topics.Filter != nil {
-		for _, topic := range acl.Topics.Filter {
-			list = append(list, fmt.Sprintf("\"%s\"", topic))
-		}
-	}
-	if acl.Topics.Equal != nil {
-		for _, topic := range acl.Topics.Equal {
-			list = append(list, fmt.Sprintf("{eq, \"%s\"}", topic))
-		}
-	}
-
-	if len(list) == 0 {
-		return `["#"]`
-	} else {
-		return fmt.Sprintf("[%s]", strings.Join(list, ", "))
-	}
 }
 
 func defaultACL() []ACL {

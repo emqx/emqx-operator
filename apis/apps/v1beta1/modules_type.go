@@ -1,9 +1,6 @@
 package v1beta1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -13,34 +10,33 @@ type EmqxBrokerModules struct {
 	Enable bool   `json:"enable,omitempty"`
 }
 
-func (emqx *EmqxBroker) GetLoadedModules() map[string]string {
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
-		"mountPath": "/opt/emqx/data/loaded_modules",
-		"subPath":   "loaded_modules",
-		"conf":      generateEmqxBrokerLoadedModules(emqx.Spec.Modules),
-	}
-}
-
-func generateEmqxBrokerLoadedModules(modules []EmqxBrokerModules) string {
+func generateEmqxBrokerModules(modules []EmqxBrokerModules) []EmqxBrokerModules {
 	if modules == nil {
-		modules = defaultEmqxBrokerModules()
+		return defaultEmqxBrokerModules()
 	}
-	var p string
-	for _, module := range modules {
-		p = fmt.Sprintf("%s{%s, %t}.\n", p, module.Name, module.Enable)
+
+	contains := func(m []EmqxBrokerModules, Name string) int {
+		for index, value := range m {
+			if value.Name == Name {
+				return index
+			}
+		}
+		return -1
 	}
-	return p
+
+	for _, value := range defaultEmqxBrokerModules() {
+		r := contains(modules, value.Name)
+		if r == -1 {
+			modules = append(modules, value)
+		}
+	}
+	return modules
 }
 
 func defaultEmqxBrokerModules() []EmqxBrokerModules {
 	return []EmqxBrokerModules{
 		{
 			Name:   "emqx_mod_acl_internal",
-			Enable: true,
-		},
-		{
-			Name:   "emqx_mod_presence",
 			Enable: true,
 		},
 	}
@@ -54,21 +50,27 @@ type EmqxEnterpriseModules struct {
 	Configs runtime.RawExtension `json:"configs,omitempty"`
 }
 
-func (emqx *EmqxEnterprise) GetLoadedModules() map[string]string {
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-modules"),
-		"mountPath": "/opt/emqx/data/loaded_modules",
-		"subPath":   "loaded_modules",
-		"conf":      generateEmqxEnterpriseLoadedModules(emqx.Spec.Modules),
-	}
-}
-
-func generateEmqxEnterpriseLoadedModules(modules []EmqxEnterpriseModules) string {
+func generateEmqxEnterpriseModules(modules []EmqxEnterpriseModules) []EmqxEnterpriseModules {
 	if modules == nil {
-		modules = defaultEmqxEnterpriseModules()
+		return defaultEmqxEnterpriseModules()
 	}
-	data, _ := json.Marshal(modules)
-	return string(data)
+
+	contains := func(m []EmqxEnterpriseModules, Name string) int {
+		for index, value := range m {
+			if value.Name == Name {
+				return index
+			}
+		}
+		return -1
+	}
+
+	for _, value := range defaultEmqxEnterpriseModules() {
+		r := contains(modules, value.Name)
+		if r == -1 {
+			modules = append(modules, value)
+		}
+	}
+	return modules
 }
 
 func defaultEmqxEnterpriseModules() []EmqxEnterpriseModules {
@@ -77,15 +79,6 @@ func defaultEmqxEnterpriseModules() []EmqxEnterpriseModules {
 			Name:    "internal_cal",
 			Enable:  true,
 			Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "etc/acl.conf"}`)},
-		},
-		{
-			Name:    "presence",
-			Enable:  true,
-			Configs: runtime.RawExtension{Raw: []byte(`{"qos": 0}`)},
-		},
-		{
-			Name:   "recon",
-			Enable: true,
 		},
 		{
 			Name:   "retainer",

@@ -17,6 +17,9 @@ spec:
             storage: 20Mi
         accessModes:
         - ReadWriteOnce
+  env:
+    - name: "EMQX_LOG__LEVEL"
+      value: "debug"
   listener:
     type: ClusterIP
     ports:

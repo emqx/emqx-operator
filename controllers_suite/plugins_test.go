@@ -19,6 +19,7 @@ package controller_suite_test
 import (
 	"context"
 
+	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +41,7 @@ var _ = Describe("", func() {
 					err := k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      emqx.GetLoadedPlugins()["name"],
+							Name:      util.GetLoadedPlugins(emqx)["name"],
 							Namespace: emqx.GetNamespace(),
 						},
 						cm,
@@ -49,7 +50,7 @@ var _ = Describe("", func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(cm.Data).Should(Equal(map[string]string{
-					"loaded_plugins": emqx.GetLoadedPlugins()["conf"],
+					"loaded_plugins": util.GetLoadedPlugins(emqx)["conf"],
 				}))
 
 				Eventually(func() map[string]string {
@@ -83,7 +84,7 @@ var _ = Describe("", func() {
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      emqx.GetLoadedPlugins()["name"],
+							Name:      util.GetLoadedPlugins(emqx)["name"],
 							Namespace: emqx.GetNamespace(),
 						},
 						cm,

@@ -1,36 +1,14 @@
 package v1beta1
 
-import (
-	"fmt"
-)
-
 //+kubebuilder:object:generate=true
 type Plugin struct {
 	Name   string `json:"name,omitempty"`
 	Enable bool   `json:"enable,omitempty"`
 }
 
-func (emqx *EmqxBroker) GetLoadedPlugins() map[string]string {
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
-		"mountPath": "/opt/emqx/data/loaded_plugins",
-		"subPath":   "loaded_plugins",
-		"conf":      generateLoadedPlugins(emqx.Spec.Plugins),
-	}
-}
-
-func (emqx *EmqxEnterprise) GetLoadedPlugins() map[string]string {
-	return map[string]string{
-		"name":      fmt.Sprintf("%s-%s", emqx.Name, "loaded-plugins"),
-		"mountPath": "/opt/emqx/data/loaded_plugins",
-		"subPath":   "loaded_plugins",
-		"conf":      generateLoadedPlugins(emqx.Spec.Plugins),
-	}
-}
-
-func generateLoadedPlugins(plugins []Plugin) string {
+func generatePlugins(plugins []Plugin) []Plugin {
 	if plugins == nil {
-		plugins = defaultLoadedPlugins()
+		return defaultLoadedPlugins()
 	}
 
 	contains := func(plugins []Plugin) int {
@@ -46,11 +24,7 @@ func generateLoadedPlugins(plugins []Plugin) string {
 		plugins = append(plugins, Plugin{Name: "emqx_management", Enable: true})
 	}
 
-	var p string
-	for _, plugin := range plugins {
-		p = fmt.Sprintf("%s{%s, %t}.\n", p, plugin.Name, plugin.Enable)
-	}
-	return p
+	return plugins
 }
 
 func defaultLoadedPlugins() []Plugin {

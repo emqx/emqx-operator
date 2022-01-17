@@ -1,9 +1,10 @@
-package v1beta1_test
+package util_test
 
 import (
 	"testing"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,9 +25,10 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 			Plugins: plugins,
 		},
 	}
+	emqxBroker.Default()
 
 	assert.Equal(t,
-		emqxBroker.GetLoadedPlugins()["conf"],
+		util.GetLoadedPlugins(&emqxBroker)["conf"],
 		"{foo, true}.\n{bar, false}.\n{emqx_management, true}.\n",
 	)
 }

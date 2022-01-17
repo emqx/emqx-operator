@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
-	"github.com/emqx/emqx-operator/pkg/constants"
+	"github.com/emqx/emqx-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -18,7 +18,7 @@ func NewSecretForCR(emqx v1beta1.EmqxEnterprise, labels map[string]string, owner
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
-			Name:            emqx.GetSecretName(),
+			Name:            util.GetLicense(&emqx)["name"],
 			Namespace:       emqx.GetNamespace(),
 			OwnerReferences: ownerRefs,
 		},
@@ -123,7 +123,7 @@ func NewListenerSvcForCR(emqx v1beta1.Emqx, labels map[string]string, ownerRefs 
 }
 
 func NewConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-	acl := emqx.GetACL()
+	acl := util.GetACL(emqx)
 	cmForAcl := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
@@ -138,7 +138,7 @@ func NewConfigMapForAcl(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 }
 
 func NewConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-	modules := emqx.GetLoadedModules()
+	modules := util.GetLoadedModules(emqx)
 	cmForPM := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
@@ -153,7 +153,7 @@ func NewConfigMapForLoadedModules(emqx v1beta1.Emqx, labels map[string]string, o
 }
 
 func NewConfigMapForLoadedPlugins(emqx v1beta1.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) *corev1.ConfigMap {
-	plugins := emqx.GetLoadedPlugins()
+	plugins := util.GetLoadedPlugins(emqx)
 	cmForPG := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:          labels,
@@ -259,31 +259,35 @@ func generateVolumeClaimTemplates(emqx v1beta1.Emqx) []corev1.PersistentVolumeCl
 		return []corev1.PersistentVolumeClaim{}
 	} else {
 		return []corev1.PersistentVolumeClaim{
-			generateVolumeClaimTemplate(emqx, emqx.GetDataVolumeName()),
-			generateVolumeClaimTemplate(emqx, emqx.GetLogVolumeName()),
+			generateVolumeClaimTemplate(emqx, util.GetDataVolume(emqx)["name"]),
+			generateVolumeClaimTemplate(emqx, util.GetLogVolume(emqx)["name"]),
 		}
 	}
 }
 
 func generateEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{}
+
+	data := util.GetDataVolume(emqx)
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
-			Name:      emqx.GetDataVolumeName(),
-			MountPath: constants.EMQX_DATA_DIR,
+			Name:      data["name"],
+			MountPath: data["mountPath"],
 		},
 	)
+
+	log := util.GetLogVolume(emqx)
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
-			Name:      emqx.GetLogVolumeName(),
-			MountPath: constants.EMQX_LOG_DIR,
+			Name:      log["name"],
+			MountPath: log["mountPath"],
 		},
 	)
 
 	extraVolumeMounts := emqx.GetExtraVolumeMounts()
 	volumeMounts = append(volumeMounts, extraVolumeMounts...)
 
-	acl := emqx.GetACL()
+	acl := util.GetACL(emqx)
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
 			Name:      acl["name"],
@@ -291,7 +295,7 @@ func generateEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
 			SubPath:   acl["subPath"],
 		},
 	)
-	modules := emqx.GetLoadedModules()
+	modules := util.GetLoadedModules(emqx)
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
 			Name:      modules["name"],
@@ -299,7 +303,7 @@ func generateEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
 			SubPath:   modules["subPath"],
 		},
 	)
-	plugins := emqx.GetLoadedPlugins()
+	plugins := util.GetLoadedPlugins(emqx)
 	volumeMounts = append(volumeMounts,
 		corev1.VolumeMount{
 			Name:      plugins["name"],
@@ -309,11 +313,12 @@ func generateEmqxVolumeMounts(emqx v1beta1.Emqx) []corev1.VolumeMount {
 	)
 	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
 	if ok && emqxEnterprise.GetLicense() != "" {
+		license := util.GetLicense(emqx)
 		volumeMounts = append(volumeMounts,
 			corev1.VolumeMount{
-				Name:      emqx.GetSecretName(),
-				MountPath: constants.EMQX_LIC_DIR,
-				SubPath:   constants.EMQX_LIC_SUBPATH,
+				Name:      license["name"],
+				MountPath: license["mountPath"],
+				SubPath:   license["subPath"],
 				ReadOnly:  true,
 			},
 		)
@@ -327,7 +332,7 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 	if reflect.ValueOf(storageSpec).IsNil() {
 		volumes = append(volumes,
 			corev1.Volume{
-				Name: emqx.GetDataVolumeName(),
+				Name: util.GetDataVolume(emqx)["name"],
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
@@ -335,7 +340,7 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 		)
 		volumes = append(volumes,
 			corev1.Volume{
-				Name: emqx.GetLogVolumeName(),
+				Name: util.GetLogVolume(emqx)["name"],
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
@@ -346,7 +351,7 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 	extraVolumes := emqx.GetExtraVolumes()
 	volumes = append(volumes, extraVolumes...)
 
-	acl := emqx.GetACL()
+	acl := util.GetACL(emqx)
 	volumes = append(volumes,
 		corev1.Volume{
 			Name: acl["name"],
@@ -366,7 +371,7 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 		},
 	)
 
-	plugins := emqx.GetLoadedPlugins()
+	plugins := util.GetLoadedPlugins(emqx)
 	volumes = append(volumes,
 		corev1.Volume{
 			Name: plugins["name"],
@@ -386,7 +391,7 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 		},
 	)
 
-	modules := emqx.GetLoadedModules()
+	modules := util.GetLoadedModules(emqx)
 	volumes = append(volumes,
 		corev1.Volume{
 			Name: modules["name"],
@@ -409,10 +414,10 @@ func generateEmqxVolumes(emqx v1beta1.Emqx) []corev1.Volume {
 	if ok && emqxEnterprise.GetLicense() != "" {
 		volumes = append(volumes,
 			corev1.Volume{
-				Name: emqx.GetSecretName(),
+				Name: util.GetLicense(emqx)["name"],
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: emqx.GetSecretName(),
+						SecretName: util.GetLicense(emqx)["name"],
 						Items: []corev1.KeyToPath{
 							{
 								Key:  "emqx.lic",

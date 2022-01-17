@@ -1,4 +1,4 @@
-package v1beta1_test
+package util_test
 
 import (
 	"testing"
@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/pkg/util"
 )
 
 func TestGenerateACL(t *testing.T) {
@@ -21,8 +22,10 @@ func TestGenerateACL(t *testing.T) {
 			},
 		},
 	}
+	emqxBroker.Default()
+
 	assert.Equal(t,
-		emqxBroker.GetACL()["conf"],
+		util.GetACL(&emqxBroker)["conf"],
 		"{allow, all, pubsub, [\"#\"]}.\n",
 	)
 
@@ -41,8 +44,10 @@ func TestGenerateACL(t *testing.T) {
 			},
 		},
 	}
+	emqxBroker.Default()
+
 	assert.Equal(t,
-		emqxBroker.GetACL()["conf"],
+		util.GetACL(&emqxBroker)["conf"],
 		"{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n",
 	)
 
@@ -65,8 +70,10 @@ func TestGenerateACL(t *testing.T) {
 			},
 		},
 	}
+	emqxEneterprise.Default()
+
 	assert.Equal(t,
-		emqxEneterprise.GetACL()["conf"],
+		util.GetACL(&emqxEneterprise)["conf"],
 		"{allow, {'and', [{user, \"admin\"}, {client, \"emqx\"}, {ipaddr, \"127.0.0.1\"}]}, pubsub, [\"$SYS/#\", \"#\"]}.\n",
 	)
 }

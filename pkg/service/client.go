@@ -5,6 +5,7 @@ import (
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
+	"github.com/emqx/emqx-operator/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,7 +33,7 @@ func (client *Client) EnsureEmqxSecret(emqx v1beta1.Emqx, labels map[string]stri
 	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
 	if ok && emqxEnterprise.GetLicense() != "" {
 		new := NewSecretForCR(*emqxEnterprise, labels, ownerRefs)
-		old, err := client.Secret.Get(emqx.GetNamespace(), emqx.GetSecretName())
+		old, err := client.Secret.Get(emqx.GetNamespace(), util.GetLicense(emqx)["name"])
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return client.Secret.Create(new)
@@ -197,16 +198,16 @@ func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string
 	if annotation == nil {
 		annotation = make(map[string]string)
 	}
-	if license, err := client.Secret.Get(emqx.GetNamespace(), emqx.GetSecretName()); err == nil {
+	if license, err := client.Secret.Get(emqx.GetNamespace(), util.GetLicense(emqx)["name"]); err == nil {
 		annotation["License/ResourceVersion"] = license.ResourceVersion
 	}
-	if acl, err := client.ConfigMap.Get(emqx.GetNamespace(), emqx.GetACL()["name"]); err == nil {
+	if acl, err := client.ConfigMap.Get(emqx.GetNamespace(), util.GetACL(emqx)["name"]); err == nil {
 		annotation["ACL/ResourceVersion"] = acl.ResourceVersion
 	}
-	if plugins, err := client.ConfigMap.Get(emqx.GetNamespace(), emqx.GetLoadedPlugins()["name"]); err == nil {
+	if plugins, err := client.ConfigMap.Get(emqx.GetNamespace(), util.GetLoadedPlugins(emqx)["name"]); err == nil {
 		annotation["LoadedPlugins/ResourceVersion"] = plugins.ResourceVersion
 	}
-	if modules, err := client.ConfigMap.Get(emqx.GetNamespace(), emqx.GetLoadedModules()["name"]); err == nil {
+	if modules, err := client.ConfigMap.Get(emqx.GetNamespace(), util.GetLoadedModules(emqx)["name"]); err == nil {
 		annotation["LoadedModules/ResourceVersion"] = modules.ResourceVersion
 	}
 
