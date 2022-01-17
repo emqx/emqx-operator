@@ -63,7 +63,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	opts := zap.Options{
 		Development: true,
-		Level:       zapcore.WarnLevel,
+		Level:       zapcore.InfoLevel,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -96,13 +96,16 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQ X Enterprise")
 		os.Exit(1)
 	}
-	if err = (&appsv1beta1.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
-		os.Exit(1)
-	}
-	if err = (&appsv1beta1.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
-		os.Exit(1)
+
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&appsv1beta1.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
+			os.Exit(1)
+		}
+		if err = (&appsv1beta1.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
+			os.Exit(1)
+		}
 	}
 
 	//+kubebuilder:scaffold:builder
