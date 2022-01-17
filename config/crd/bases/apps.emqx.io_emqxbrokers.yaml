@@ -900,6 +900,7 @@ spec:
               annotations:
                 additionalProperties:
                   type: string
+                description: 'TODO: waiting to be deleted, should use meta.annotations'
                 type: object
               env:
                 items:
@@ -2478,7 +2479,7 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: The labels configure must be specified.
+                description: 'TODO: waiting to be deleted, should use meta.labels'
                 type: object
               listener:
                 properties:

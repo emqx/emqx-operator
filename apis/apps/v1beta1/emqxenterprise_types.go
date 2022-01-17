@@ -49,8 +49,9 @@ type EmqxEnterpriseSpec struct {
 
 	Storage *Storage `json:"storage,omitempty"`
 
-	// The labels configure must be specified.
-	Labels      Labels            `json:"labels,omitempty"`
+	// TODO: waiting to be deleted, should use meta.labels
+	Labels Labels `json:"labels,omitempty"`
+	// TODO: waiting to be deleted, should use meta.annotations
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	Listener Listener `json:"listener,omitempty"`
@@ -148,6 +149,11 @@ func (emqx *EmqxEnterprise) SetAnnotations(annotations map[string]string) {
 	emqx.Spec.Annotations = annotations
 }
 
+func (emqx *EmqxEnterprise) GetListener() Listener { return emqx.Spec.Listener }
+func (emqx *EmqxEnterprise) SetListener(listener Listener) {
+	emqx.Spec.Listener = listener
+}
+
 func (emqx *EmqxEnterprise) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxEnterprise) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
 
@@ -171,16 +177,24 @@ func (emqx *EmqxEnterprise) GetExtraVolumeMounts() []corev1.VolumeMount {
 	return emqx.Spec.ExtraVolumeMounts
 }
 
-func (emqx *EmqxEnterprise) GetSecretName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
+func (emqx *EmqxEnterprise) GetACL() []ACL { return emqx.Spec.ACL }
+func (emqx *EmqxEnterprise) SetACL(acl []ACL) {
+	emqx.Spec.ACL = acl
 }
 
-func (emqx *EmqxEnterprise) GetDataVolumeName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "data")
+func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar { return emqx.Spec.Env }
+func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) {
+	emqx.Spec.Env = env
 }
 
-func (emqx *EmqxEnterprise) GetLogVolumeName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "log")
+func (emqx *EmqxEnterprise) GetPlugins() []Plugin { return emqx.Spec.Plugins }
+func (emqx *EmqxEnterprise) SetPlugins(plugins []Plugin) {
+	emqx.Spec.Plugins = plugins
+}
+
+func (emqx *EmqxEnterprise) GetModules() []EmqxEnterpriseModules { return emqx.Spec.Modules }
+func (emqx *EmqxEnterprise) SetModules(modules []EmqxEnterpriseModules) {
+	emqx.Spec.Modules = modules
 }
 
 func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {

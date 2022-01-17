@@ -2,32 +2,31 @@ package v1beta1
 
 type Labels map[string]string
 
-func (emqx *EmqxBroker) GetLabels() map[string]string {
-	return generateLabels(emqx.Name, emqx.Spec.Labels)
-}
+func generateLabels(emqx Emqx) Labels {
+	var metaLabels Labels
+	var specLabels Labels
 
-func (emqx *EmqxEnterprise) GetLabels() map[string]string {
-	return generateLabels(emqx.Name, emqx.Spec.Labels)
-}
-
-func generateLabels(name string, labels Labels) Labels {
-	return mergeLabels(labels, defaultLabels(name))
-}
-
-func mergeLabels(allLabels ...Labels) Labels {
-	res := map[string]string{}
-
-	for _, labels := range allLabels {
-		for k, v := range labels {
-			res[k] = v
-		}
+	if broker, ok := emqx.(*EmqxBroker); ok {
+		metaLabels = broker.Labels
+		specLabels = broker.Spec.Labels
 	}
-	return res
-}
-
-func defaultLabels(name string) Labels {
-	return map[string]string{
-		"apps.emqx.io/managed-by": "emqx-operator",
-		"apps.emqx.io/instance":   name,
+	if enterprise, ok := emqx.(*EmqxEnterprise); ok {
+		metaLabels = enterprise.Labels
+		specLabels = enterprise.Spec.Labels
 	}
+	if metaLabels == nil {
+		metaLabels = make(Labels)
+	}
+	if specLabels == nil {
+		specLabels = make(Labels)
+	}
+
+	for key, value := range metaLabels {
+		specLabels[key] = value
+
+	}
+
+	specLabels["apps.emqx.io/managed-by"] = "emqx-operator"
+	specLabels["apps.emqx.io/instance"] = emqx.GetName()
+	return specLabels
 }

@@ -1,4 +1,4 @@
-package v1beta1_test
+package util_test
 
 import (
 	"testing"
@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -26,10 +27,11 @@ func TestGenerateEmqxBrokerLoadedModules(t *testing.T) {
 			Modules: modules,
 		},
 	}
+	emqxBroker.Default()
 
 	assert.Equal(t,
-		emqxBroker.GetLoadedModules()["conf"],
-		"{foo, true}.\n{bar, false}.\n",
+		util.GetLoadedModules(&emqxBroker)["conf"],
+		"{foo, true}.\n{bar, false}.\n{emqx_mod_acl_internal, true}.\n",
 	)
 }
 
@@ -47,9 +49,10 @@ func TestGenerateEmqxEnterpriseLoadedModules(t *testing.T) {
 			Modules: modules,
 		},
 	}
+	emqxEnterprise.Default()
 
 	assert.Equal(t,
-		emqxEnterprise.GetLoadedModules()["conf"],
-		`[{"name":"fake","enable":true,"configs":{"foo":"bar"}}]`,
+		util.GetLoadedModules(&emqxEnterprise)["conf"],
+		`[{"name":"fake","enable":true,"configs":{"foo":"bar"}},{"name":"internal_cal","enable":true,"configs":{"acl_rule_file":"etc/acl.conf"}},{"name":"retainer","enable":true,"configs":{"expiry_interval":0,"max_payload_size":"1MB","max_retained_messages":0,"storage_type":"ram"}}]`,
 	)
 }

@@ -43,6 +43,7 @@ type EmqxSpec interface {
 	SetAnnotations(annotations map[string]string)
 
 	GetListener() Listener
+	SetListener(Listener)
 
 	GetAffinity() *corev1.Affinity
 	SetAffinity(affinity *corev1.Affinity)
@@ -59,16 +60,15 @@ type EmqxSpec interface {
 	GetExtraVolumes() []corev1.Volume
 	GetExtraVolumeMounts() []corev1.VolumeMount
 
+	GetACL() []ACL
+	SetACL(acl []ACL)
+
 	GetEnv() []corev1.EnvVar
+	SetEnv(env []corev1.EnvVar)
 
-	GetLabels() map[string]string
-	GetACL() map[string]string
-	GetLoadedPlugins() map[string]string
-	GetLoadedModules() map[string]string
+	GetPlugins() []Plugin
+	SetPlugins(plugins []Plugin)
 
-	GetSecretName() string
-	GetDataVolumeName() string
-	GetLogVolumeName() string
 	GetHeadlessServiceName() string
 }
 
@@ -81,7 +81,4 @@ type Emqx interface {
 	EmqxStatus
 
 	client.Object
-
-	// validate
-	Validate() error
 }

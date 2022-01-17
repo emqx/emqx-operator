@@ -17,6 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	"reflect"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -42,7 +44,26 @@ var _ webhook.Defaulter = &EmqxBroker{}
 func (r *EmqxBroker) Default() {
 	emqxbrokerlog.Info("default", "name", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
+	r.Labels = generateLabels(r)
+	r.Spec.Labels = generateLabels(r)
+
+	if reflect.ValueOf(r.Spec.Replicas).IsZero() {
+		defaultReplicas := int32(3)
+		r.Spec.Replicas = &defaultReplicas
+	}
+
+	if r.Spec.ServiceAccountName == "" {
+		r.Spec.ServiceAccountName = r.Name
+	}
+
+	if r.Spec.ACL == nil {
+		r.Spec.ACL = defaultACL()
+	}
+
+	r.Spec.Env = generateEnv(r)
+	r.Spec.Plugins = generatePlugins(r.Spec.Plugins)
+	r.Spec.Modules = generateEmqxBrokerModules(r.Spec.Modules)
+	r.Spec.Listener = generateListener(r.Spec.Listener)
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

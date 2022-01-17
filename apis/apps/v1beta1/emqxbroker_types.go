@@ -18,7 +18,6 @@ package v1beta1
 
 import (
 	"fmt"
-	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,8 +47,9 @@ type EmqxBrokerSpec struct {
 
 	Storage *Storage `json:"storage,omitempty"`
 
-	// The labels configure must be specified.
-	Labels      Labels            `json:"labels,omitempty"`
+	// TODO: waiting to be deleted, should use meta.labels
+	Labels Labels `json:"labels,omitempty"`
+	// TODO: waiting to be deleted, should use meta.annotations
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	Listener Listener `json:"listener,omitempty"`
@@ -110,10 +110,6 @@ func (emqx *EmqxBroker) GetKind() string              { return emqx.Kind }
 func (emqx *EmqxBroker) SetKind(kind string)          { emqx.Kind = kind }
 
 func (emqx *EmqxBroker) GetReplicas() *int32 {
-	if reflect.ValueOf(emqx.Spec.Replicas).IsZero() {
-		defaultReplicas := int32(3)
-		emqx.SetReplicas(&defaultReplicas)
-	}
 	return emqx.Spec.Replicas
 }
 func (emqx *EmqxBroker) SetReplicas(replicas *int32) { emqx.Spec.Replicas = replicas }
@@ -122,9 +118,6 @@ func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.Image }
 func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.Image = image }
 
 func (emqx *EmqxBroker) GetServiceAccountName() string {
-	if emqx.Spec.ServiceAccountName == "" {
-		emqx.SetServiceAccountName(emqx.Name)
-	}
 	return emqx.Spec.ServiceAccountName
 }
 func (emqx *EmqxBroker) SetServiceAccountName(serviceAccountName string) {
@@ -142,6 +135,11 @@ func (emqx *EmqxBroker) SetStorage(storage *Storage) { emqx.Spec.Storage = stora
 func (emqx *EmqxBroker) GetAnnotations() map[string]string { return emqx.Spec.Annotations }
 func (emqx *EmqxBroker) SetAnnotations(annotations map[string]string) {
 	emqx.Spec.Annotations = annotations
+}
+
+func (emqx *EmqxBroker) GetListener() Listener { return emqx.Spec.Listener }
+func (emqx *EmqxBroker) SetListener(listener Listener) {
+	emqx.Spec.Listener = listener
 }
 
 func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
@@ -167,16 +165,24 @@ func (emqx *EmqxBroker) GetExtraVolumeMounts() []corev1.VolumeMount {
 	return emqx.Spec.ExtraVolumeMounts
 }
 
-func (emqx *EmqxBroker) GetSecretName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "secret")
+func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.ACL }
+func (emqx *EmqxBroker) SetACL(acl []ACL) {
+	emqx.Spec.ACL = acl
 }
 
-func (emqx *EmqxBroker) GetDataVolumeName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "data")
+func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.Env }
+func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {
+	emqx.Spec.Env = env
 }
 
-func (emqx *EmqxBroker) GetLogVolumeName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "log")
+func (emqx *EmqxBroker) GetPlugins() []Plugin { return emqx.Spec.Plugins }
+func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
+	emqx.Spec.Plugins = plugins
+}
+
+func (emqx *EmqxBroker) GetModules() []EmqxBrokerModules { return emqx.Spec.Modules }
+func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModules) {
+	emqx.Spec.Modules = modules
 }
 
 func (emqx *EmqxBroker) GetHeadlessServiceName() string {

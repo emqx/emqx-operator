@@ -1,8 +1,7 @@
 /*
 Copyright 2021.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
@@ -268,7 +267,7 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 // Full
 func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	storageClassName := "standard"
-	return &v1beta1.EmqxBroker{
+	emqx := &v1beta1.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -321,11 +320,13 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 			},
 		},
 	}
+	emqx.Default()
+	return emqx
 }
 
 // Slim
 func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
-	return &v1beta1.EmqxEnterprise{
+	emqx := &v1beta1.EmqxEnterprise{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -334,4 +335,6 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 			Image: "emqx/emqx-ee:4.3.5",
 		},
 	}
+	emqx.Default()
+	return emqx
 }

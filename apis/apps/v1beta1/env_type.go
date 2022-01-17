@@ -4,15 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar {
-	return generateEnv(emqx, emqx.Spec.Env)
-}
-
-func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar {
-	return generateEnv(emqx, emqx.Spec.Env)
-}
-
-func generateEnv(emqx Emqx, env []corev1.EnvVar) []corev1.EnvVar {
+func generateEnv(emqx Emqx) []corev1.EnvVar {
 	contains := func(Env []corev1.EnvVar, Name string) int {
 		for index, value := range Env {
 			if value.Name == Name {
@@ -22,6 +14,7 @@ func generateEnv(emqx Emqx, env []corev1.EnvVar) []corev1.EnvVar {
 		return -1
 	}
 
+	env := emqx.GetEnv()
 	e := defaultEnv(emqx)
 	for _, value := range e {
 		r := contains(env, value.Name)
