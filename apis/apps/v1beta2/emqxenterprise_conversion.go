@@ -51,6 +51,7 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ImagePullPolicy = src.Spec.ImagePullPolicy
 	dst.Spec.ExtraVolumes = src.Spec.ExtraVolumes
 	dst.Spec.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
+	dst.Spec.Env = src.Spec.Env
 
 	// Status
 	dst.Status.Conditions = src.Status.Conditions
@@ -87,6 +88,7 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.ImagePullPolicy = src.Spec.ImagePullPolicy
 	dst.Spec.ExtraVolumes = src.Spec.ExtraVolumes
 	dst.Spec.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
+	dst.Spec.Env = src.Spec.Env
 
 	// Status
 	dst.Status.Conditions = src.Status.Conditions
