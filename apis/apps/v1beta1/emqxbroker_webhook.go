@@ -17,7 +17,10 @@ limitations under the License.
 package v1beta1
 
 import (
+	"errors"
 	"reflect"
+	"regexp"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -75,7 +78,11 @@ var _ webhook.Validator = &EmqxBroker{}
 func (r *EmqxBroker) ValidateCreate() error {
 	emqxbrokerlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
+	if err := validateTag(r.Spec.Image); err != nil {
+		emqxbrokerlog.Error(err, "validate create failed")
+		return err
+	}
+
 	return nil
 }
 
@@ -83,7 +90,11 @@ func (r *EmqxBroker) ValidateCreate() error {
 func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 	emqxbrokerlog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
+	if err := validateTag(r.Spec.Image); err != nil {
+		emqxbrokerlog.Error(err, "validate update failed")
+		return err
+	}
+
 	return nil
 }
 
@@ -92,5 +103,14 @@ func (r *EmqxBroker) ValidateDelete() error {
 	emqxbrokerlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
+	return nil
+}
+
+func validateTag(image string) error {
+	str := strings.Split(image, ":")
+	match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[1])
+	if !match {
+		return errors.New("The tag of the image must match '^[0-9]+.[0-9]+.[0-9]+$'")
+	}
 	return nil
 }
