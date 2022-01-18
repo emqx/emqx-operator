@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: emqx/emqx-operator-controller
-  newTag: f484057
+  newTag: 1.1.1
