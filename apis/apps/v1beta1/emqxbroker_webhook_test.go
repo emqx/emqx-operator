@@ -197,3 +197,40 @@ func TestDefaultBroker(t *testing.T) {
 	assert.Equal(t, emqx.Spec.Listener.Ports.MQTTS, int32(8885))
 	assert.Equal(t, emqx.Spec.Listener.Ports.API, int32(8081))
 }
+
+func TestValidateCreateBroker(t *testing.T) {
+	emqx := v1beta1.EmqxBroker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+		Spec: v1beta1.EmqxBrokerSpec{
+			Image: "emqx/emqx:4.3.11",
+		},
+	}
+
+	emqx.Default()
+	assert.Nil(t, emqx.ValidateCreate())
+
+	emqx.Spec.Image = "emqx/emqx:fake"
+	assert.Error(t, emqx.ValidateCreate())
+}
+
+func TestValidateUpdateBroker(t *testing.T) {
+	emqx := v1beta1.EmqxBroker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+		Spec: v1beta1.EmqxBrokerSpec{
+			Image: "emqx/emqx:4.3.11",
+		},
+	}
+
+	emqx.Default()
+	assert.Nil(t, emqx.ValidateCreate())
+
+	new := &emqx
+	new.Spec.Image = "emqx/emqx:fake"
+	assert.Error(t, emqx.ValidateUpdate(new))
+}

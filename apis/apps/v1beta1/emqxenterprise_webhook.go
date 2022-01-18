@@ -73,7 +73,10 @@ var _ webhook.Validator = &EmqxEnterprise{}
 func (r *EmqxEnterprise) ValidateCreate() error {
 	emqxenterpriselog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
+	if err := validateTag(r.Spec.Image); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -81,7 +84,10 @@ func (r *EmqxEnterprise) ValidateCreate() error {
 func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 	emqxenterpriselog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
+	if err := validateTag(r.Spec.Image); err != nil {
+		return err
+	}
+
 	return nil
 }
 
