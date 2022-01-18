@@ -547,6 +547,7 @@ spec:
               annotations:
                 additionalProperties:
                   type: string
+                description: 'TODO: waiting to be deleted, should use meta.annotations'
                 type: object
               env:
                 items:
@@ -1561,7 +1562,7 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: The labels configure must be specified.
+                description: 'TODO: waiting to be deleted, should use meta.labels'
                 type: object
               listener:
                 properties:
@@ -4288,6 +4289,7 @@ spec:
               annotations:
                 additionalProperties:
                   type: string
+                description: 'TODO: waiting to be deleted, should use meta.annotations'
                 type: object
               env:
                 items:
@@ -5302,7 +5304,7 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: The labels configure must be specified.
+                description: 'TODO: waiting to be deleted, should use meta.labels'
                 type: object
               license:
                 type: string
@@ -7902,7 +7904,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.1.0
+        image: emqx/emqx-operator-controller:1.1.1
         livenessProbe:
           httpGet:
             path: /healthz

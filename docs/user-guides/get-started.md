@@ -17,7 +17,7 @@ We using [cert manager](https://github.com/jetstack/cert-manager) for provisioni
 1. Deploy operator controller
 
    ```shell
-   $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.0/config/samples/operator/controller.yaml
+   $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/operator/controller.yaml
    ```
 
 2. Check operator controller status
@@ -33,7 +33,7 @@ We using [cert manager](https://github.com/jetstack/cert-manager) for provisioni
 1. Create EMQ X Custom Resource file like this
 
    ```shell
-   $ cat https://raw.githubusercontent.com/emqx/emqx-operator/1.1.0/config/samples/emqx/emqx.yaml
+   $ cat https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/emqx/v1beta2/emqx.yaml
 
    apiVersion: apps.emqx.io/v1beta2
    kind: EmqxBroker
@@ -113,7 +113,7 @@ We using [cert manager](https://github.com/jetstack/cert-manager) for provisioni
 2. Deploy EMQ X Custom Resource and check EMQ X status
 
    ```shell
-   $ kubectl apply https://raw.githubusercontent.com/emqx/emqx-operator/1.1.0/config/samples/emqx/emqx.yaml
+   $ kubectl apply https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/emqx/v1beta2/emqx.yaml
    emqx.apps.emqx.io/emqx created
 
    $ kubectl get pods
