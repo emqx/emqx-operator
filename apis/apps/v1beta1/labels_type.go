@@ -23,7 +23,6 @@ func generateLabels(emqx Emqx) Labels {
 
 	for key, value := range metaLabels {
 		specLabels[key] = value
-
 	}
 
 	specLabels["apps.emqx.io/managed-by"] = "emqx-operator"

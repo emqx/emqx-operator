@@ -3,7 +3,10 @@ apiVersion: apps.emqx.io/v1beta1
 kind: EmqxBroker
 metadata:
   name: emqx
+  labels:
+    cluster: emqx
 spec:
+  serviceAccountName: emqx
   image: emqx/emqx:4.3.11
   replicas: 3
   labels:

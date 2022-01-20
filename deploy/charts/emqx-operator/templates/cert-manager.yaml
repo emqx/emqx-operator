@@ -1,0 +1,26 @@
+{{- if eq ".Values.cert-manager.enable" "true" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "emqx-operator.fullname" . }}-selfsigned-issuer
+  namespace: {{ .Release.Namespace }}
+spec:
+  selfSigned: {}
+{{- end}}
+{{- if eq ".Values.cert-manager.enable" "true" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "emqx-operator.fullname" . }}-serving-cert
+  namespace: {{ .Release.Namespace }}
+spec:
+  dnsNames:
+  - {{ include "emqx-operator.fullname" . }}-webhook-service.emqx-operator-system.svc
+  - {{ include "emqx-operator.fullname" . }}-service.emqx-operator-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "emqx-operator.fullname" . }}-selfsigned-issuer
+  secretName: webhook-server-cert
+{{- end}}
