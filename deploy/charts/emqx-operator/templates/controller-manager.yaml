@@ -24,7 +24,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
-      {{- include "emqx-operator.labels" . | nindent 6 }}
+      {{- include "emqx-operator.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -33,7 +33,7 @@ spec:
       {{- end }}
       labels:
         control-plane: controller-manager
-        {{- include "emqx-operator.selectorLabels" . | nindent 8 }}
+        {{- include "emqx-operator.labels" . | nindent 8 }}
     spec:
       containers:
       - args:
