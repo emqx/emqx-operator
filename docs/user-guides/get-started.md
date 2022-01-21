@@ -31,7 +31,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/co
    ```
 2. Install EMQ X Operator Controller by helm
    ```
-   $ helm install emqx-operator emqx \
+   $ helm install emqx-operator emqx/emqx-operator \
       --set installCRDs=true \
       --namespace emqx-operator-system \
       --create-namespace

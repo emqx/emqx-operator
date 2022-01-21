@@ -18,3 +18,5 @@ bin/
 cspell.config.yaml
 .vscode/
 .idea/
+
+*.tgz
