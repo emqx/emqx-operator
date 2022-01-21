@@ -136,7 +136,7 @@ We using [cert manager](https://github.com/jetstack/cert-manager) for provisioni
 >**Note**:
 >
 >* EMQ X Operator provides the default listener for EMQ X Cluster to connect. The default `Type` of service is `ClusterIP`,which can be modified as `LoadBalance` or `NodePort`.
->* The ports about `ws`、`wss`、`mqtt`、`mqtts`、`dashboard`、`api` need to ensure before deploying which means they can't be updated while the EMQ X Cluster in the running status
+>* The ports about `ws`、`wss`、`mqtt`、`mqtts`、`dashboard`、`api` need to be set before deploying because they can't be updated while `EMQ X Cluster` running.
 
 ### Scaling the cluster
 
