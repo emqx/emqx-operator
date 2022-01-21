@@ -1,4 +1,4 @@
-**Note**: EMQ X Operator requires Kubernetes v1.20.0 and up.
+**Note**: EMQ X Operator Controller requires Kubernetes v1.20.0 and up.
 
 ## Background
 
@@ -12,15 +12,32 @@ This project can be run inside a kubernetes cluster
 
 We using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it.
 
-### Deploy
+### Default static install
 
-1. Deploy operator controller
+> You don’t require any tweaking of the EMQ X Operator Controller install parameters.
 
-   ```shell
-   $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/operator/controller.yaml
+The default static configuration can be installed as follows:
+
+```shell
+$ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/operator/controller.yaml
+```
+
+### Installing with Helm
+
+1.  Add the EMQ X Helm repository:
+   ```
+   $ helm repo add emqx https://repos.emqx.io/charts
+   $ helm repo update
+   ```
+2. Install EMQ X Operator Controller by helm
+   ```
+   $ helm install emqx-operator emqx \
+      --set installCRDs=true \
+      --namespace emqx-operator-system \
+      --create-namespace
    ```
 
-2. Check operator controller status
+### Check EMQ X Operator Controller status
 
    ```shell
    $ kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system
