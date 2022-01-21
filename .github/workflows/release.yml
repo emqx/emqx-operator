@@ -10,14 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: check image tag for yaml
+      - name: Check image tag for yaml
         run: |
           tag=$(cat config/samples/operator/controller.yaml | egrep "image:[[:space:]]emqx/emqx-operator-controller" | sed -r 's|image:[[:space:]]emqx/emqx-operator-controller:(.*)|\1|g' | tr -d '[:space:]')
           if [ "$tag" != "${GITHUB_REF##*/}" ]; then
             echo "Need update image tag for config/samples/operator/controller.yaml"
             exit 1
           fi
-      - name: check version for helm
+      - name: Check appVersion for helm
         run: |
           appVersion=$(egrep "^appVersion" deploy/charts/emqx-operator/Chart.yaml | sed -r 's|^appVersion:[[:space:]]([0-9]+.[0-9]+.[0-9]+)$|\1|g')
           if [ "$appVersion" != "${GITHUB_REF##*/}" ]; then
@@ -61,3 +61,26 @@ jobs:
           body_path: RELEASE.md
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+  helm:
+    runs-on: self-hosted
+    if: github.repository_owner == 'emqx'
+    needs:
+      - release
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check appVersion for helm
+        working-directory: deploy/charts/emqx-operator
+        run: |
+          appVersion=$(egrep "^appVersion" Chart.yaml | sed -r 's|^appVersion:[[:space:]]([0-9]+.[0-9]+.[0-9]+)$|\1|g')
+          if [ "$appVersion" != "${GITHUB_REF##*/}" ]; then
+            echo "Need update appVersion for Chart.yaml"
+            exit 1
+          fi
+      - name: Create helm package
+        working-directory: deploy/charts/emqx-operator
+        run: helm package .
+      - name: Update helm repo
+        run: |
+          sudo mv $(find deploy/charts/emqx-operator -name "*.tgz") /repos/charts
+          sudo helm repo index /repos/charts
