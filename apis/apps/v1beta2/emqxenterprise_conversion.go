@@ -28,7 +28,11 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1beta1.EmqxEnterprise)
 
 	if !reflect.ValueOf(src.Spec.Storage).IsZero() {
-		dst.Spec.Storage.VolumeClaimTemplate.Spec = src.Spec.Storage
+		dst.Spec.Storage = &v1beta1.Storage{
+			VolumeClaimTemplate: v1beta1.EmbeddedPersistentVolumeClaim{
+				Spec: src.Spec.Storage,
+			},
+		}
 	}
 	dst.Spec.License = src.Spec.EmqxTemplate.License
 	dst.Spec.Listener = src.Spec.EmqxTemplate.Listener
