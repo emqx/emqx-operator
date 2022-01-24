@@ -12,9 +12,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Check image tag for yaml
         run: |
-          tag=$(cat deploy/manifests/controller.yaml | egrep "image:[[:space:]]emqx/emqx-operator-controller" | sed -r 's|image:[[:space:]]emqx/emqx-operator-controller:(.*)|\1|g' | tr -d '[:space:]')
+          tag=$(cat deploy/manifests/emqx-operator-controller.yaml | egrep "image:[[:space:]]emqx/emqx-operator-controller" | sed -r 's|image:[[:space:]]emqx/emqx-operator-controller:(.*)|\1|g' | tr -d '[:space:]')
           if [ "$tag" != "${GITHUB_REF##*/}" ]; then
-            echo "Need update image tag for deploy/manifests/controller.yaml"
+            echo "Need update image tag for deploy/manifests/emqx-operator-controller.yaml"
             exit 1
           fi
       - name: Check appVersion for helm
@@ -59,6 +59,18 @@ jobs:
           release_name: EMQ X Operator ${{ github.ref }} Released
           tag_name: ${{ github.ref }}
           body_path: RELEASE.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload release asset
+        id: upload-release-asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./deploy/manifests/emqx-operator-controller.yaml
+          asset_name: emqx-operator-controller.yaml
+          asset_content_type: application/octet-stream
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
