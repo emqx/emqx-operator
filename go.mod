@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.81.0 // indirect
+	github.com/banzaicloud/k8s-objectmatcher v1.7.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/go-logr/logr v0.4.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
