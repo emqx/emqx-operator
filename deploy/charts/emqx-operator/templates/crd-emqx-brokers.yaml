@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    {{- if eq ".Values.cert-manager.enable" "true" }}
+    {{- if (index .Values "cert-manager" "enable") }}
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "emqx-operator.fullname" . }}-serving-cert
     {{- end}}
     controller-gen.kubebuilder.io/version: v0.6.1

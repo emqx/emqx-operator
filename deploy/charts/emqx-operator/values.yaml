@@ -7,7 +7,7 @@ installCRDs: false
 replicaCount: 1
 
 image:
-  repository: nginx
+  repository: emqx/emqx-operator-controller
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
