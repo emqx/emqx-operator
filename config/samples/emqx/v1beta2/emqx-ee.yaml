@@ -1,12 +1,33 @@
-## slim example
 apiVersion: apps.emqx.io/v1beta2
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
 spec:
   serviceAccountName: "emqx"
-  image: emqx/emqx-ee:4.3.6
+  image: emqx/emqx-ee:4.4.0
   replicas: 3
   labels:
     cluster: emqx
-# license:  the license for EMQ X Enterprise should be completed
+  storage:
+    storageClassName: standard
+    resources:
+      requests:
+        storage: 20Mi
+    accessModes:
+    - ReadWriteOnce
+  env:
+    - name: "EMQX_LOG__LEVEL"
+      value: "debug"
+  emqxTemplate:
+#   acl: []
+#   plugins: []
+#   modules:
+    listener:
+      type: ClusterIP
+      ports:
+        mqtt: 1883
+        mqtts: 8883
+        ws: 8083
+        wss: 8084
+        dashboard: 18083
+        api: 8081
