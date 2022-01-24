@@ -17,10 +17,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   dnsNames:
-  - {{ include "emqx-operator.fullname" . }}-webhook-service.emqx-operator-system.svc
-  - {{ include "emqx-operator.fullname" . }}-service.emqx-operator-system.svc.cluster.local
+  - {{ include "emqx-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc
+  - {{ include "emqx-operator.fullname" . }}-service.{{ .Release.Namespace }}.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: {{ include "emqx-operator.fullname" . }}-selfsigned-issuer
-  secretName: webhook-server-cert
+  secretName: {{ index .Values "cert-manager" "secretName" | default (printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)) }}
 {{- end}}
