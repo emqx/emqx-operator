@@ -1,12 +1,12 @@
 package service
 
 import (
-	"reflect"
-
+	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/client/k8s"
 	"github.com/emqx/emqx-operator/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -222,14 +222,26 @@ func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string
 		return err
 	}
 
-	// Updates to statefulset spec for fields other than 'replicas', 'template', 'updateStrategy' and 'minReadySeconds' are forbidden
-	if !reflect.DeepEqual(old.Spec.Replicas, new.Spec.Replicas) ||
-		!reflect.DeepEqual(old.Spec.Template, new.Spec.Template) ||
-		!reflect.DeepEqual(old.Spec.UpdateStrategy, new.Spec.UpdateStrategy) {
-		old.Spec.Replicas = new.Spec.Replicas
-		old.Spec.Template = new.Spec.Template
-		old.Spec.UpdateStrategy = new.Spec.UpdateStrategy
-		return client.StatefulSet.Update(old)
+	patchResult, err := patch.DefaultPatchMaker.Calculate(old, new)
+	if err != nil {
+		return err
+	}
+	if !patchResult.IsEmpty() {
+		new.ResourceVersion = old.ResourceVersion
+		new.CreationTimestamp = old.CreationTimestamp
+		new.ManagedFields = old.ManagedFields
+		if new.Annotations == nil {
+			new.Annotations = make(map[string]string)
+		}
+		for key, value := range old.Annotations {
+			if _, present := new.Annotations[key]; !present {
+				new.Annotations[key] = value
+			}
+		}
+		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(new); err != nil {
+			return err
+		}
+		return client.StatefulSet.Update(new)
 	}
 
 	return nil
