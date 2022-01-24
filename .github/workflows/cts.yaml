@@ -76,7 +76,7 @@ jobs:
             --set installCRDs=true \
             --set image.tag=${{ github.sha }} \
             --namespace emqx-operator-system \
-            --cerate-namespace
+            --create-namespace
       - name: Check operator
         timeout-minutes: 15
         run: |
