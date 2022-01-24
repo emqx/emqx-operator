@@ -48,16 +48,9 @@ jobs:
 
   helm:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        cert-manager:
-          - true
-          - false
     steps:
       - run: minikube start
       - name: install cert-manager
-        if: matrix.cert-manager
         run: |
           helm repo add jetstack https://charts.jetstack.io
           helm repo update
@@ -68,15 +61,28 @@ jobs:
             --version v1.6.1 \
             --set installCRDs=true
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.3'
+      - name: Build image
+        env:
+          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
+        run: eval $(minikube docker-env) && docker build -t $IMG .
       - name: Run helm chart
         run: |
           helm install emqx-operator deploy/charts/emqx-operator \
             --set installCRDs=true \
             --set image.tag=${{ github.sha }} \
-            --set cert-manager.enable=${{ matrix.cert-manager }} \
             --namespace emqx-operator-system \
-            --create-namespace \
-            --debug --dry-run
+            --create-namespace
+      - name: Check operator
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
+            echo "waiting operator controller pod running"
+            sleep 1
+          done
 
   deployment:
     runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-{{- if eq ".Values.cert-manager.enable" "true" }}
+{{- if (index .Values "cert-manager" "enable") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
@@ -7,8 +7,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   selfSigned: {}
-{{- end}}
-{{- if eq ".Values.cert-manager.enable" "true" }}
+{{- end }}
+{{- if (index .Values "cert-manager" "enable") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -23,4 +23,4 @@ spec:
     kind: Issuer
     name: {{ include "emqx-operator.fullname" . }}-selfsigned-issuer
   secretName: {{ index .Values "cert-manager" "secretName" | default (printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)) }}
-{{- end}}
+{{- end }}
