@@ -12,9 +12,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Check image tag for yaml
         run: |
-          tag=$(cat config/samples/operator/controller.yaml | egrep "image:[[:space:]]emqx/emqx-operator-controller" | sed -r 's|image:[[:space:]]emqx/emqx-operator-controller:(.*)|\1|g' | tr -d '[:space:]')
+          tag=$(cat deploy/manifests/controller.yaml | egrep "image:[[:space:]]emqx/emqx-operator-controller" | sed -r 's|image:[[:space:]]emqx/emqx-operator-controller:(.*)|\1|g' | tr -d '[:space:]')
           if [ "$tag" != "${GITHUB_REF##*/}" ]; then
-            echo "Need update image tag for config/samples/operator/controller.yaml"
+            echo "Need update image tag for deploy/manifests/controller.yaml"
             exit 1
           fi
       - name: Check appVersion for helm
