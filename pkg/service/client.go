@@ -217,12 +217,20 @@ func (client *Client) EnsureEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string
 	old, err := client.StatefulSet.Get(emqx.GetNamespace(), emqx.GetName())
 	if err != nil {
 		if errors.IsNotFound(err) {
+			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(new); err != nil {
+				return err
+			}
 			return client.StatefulSet.Create(new)
 		}
 		return err
 	}
 
-	patchResult, err := patch.DefaultPatchMaker.Calculate(old, new)
+	opts := []patch.CalculateOption{
+		patch.IgnoreStatusFields(),
+		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
+		patch.IgnoreField("metadata"),
+	}
+	patchResult, err := patch.DefaultPatchMaker.Calculate(old, new, opts...)
 	if err != nil {
 		return err
 	}

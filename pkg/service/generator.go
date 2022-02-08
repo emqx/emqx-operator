@@ -183,8 +183,7 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
-			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			VolumeClaimTemplates: generateVolumeClaimTemplates(emqx),
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
@@ -226,6 +225,15 @@ func NewEmqxStatefulSet(emqx v1beta1.Emqx, labels map[string]string, ownerRefs [
 		},
 	}
 
+	storageSpec := emqx.GetStorage()
+	if !reflect.ValueOf(storageSpec).IsNil() {
+		sts.Spec.VolumeClaimTemplates = append(
+			sts.Spec.VolumeClaimTemplates,
+			generateVolumeClaimTemplate(emqx, util.GetDataVolume(emqx)["name"]),
+			generateVolumeClaimTemplate(emqx, util.GetLogVolume(emqx)["name"]),
+		)
+	}
+
 	return sts
 }
 
@@ -250,18 +258,6 @@ func generateContainerSecurityContext() *corev1.SecurityContext {
 	return &corev1.SecurityContext{
 		RunAsNonRoot: &runAsNonRoot,
 		RunAsUser:    &emqxUser,
-	}
-}
-
-func generateVolumeClaimTemplates(emqx v1beta1.Emqx) []corev1.PersistentVolumeClaim {
-	storageSpec := emqx.GetStorage()
-	if reflect.ValueOf(storageSpec).IsNil() {
-		return []corev1.PersistentVolumeClaim{}
-	} else {
-		return []corev1.PersistentVolumeClaim{
-			generateVolumeClaimTemplate(emqx, util.GetDataVolume(emqx)["name"]),
-			generateVolumeClaimTemplate(emqx, util.GetLogVolume(emqx)["name"]),
-		}
 	}
 }
 
@@ -440,15 +436,18 @@ func generateVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.Persiste
 			Kind:       template.Kind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        Name,
-			Namespace:   emqx.GetNamespace(),
-			Annotations: emqx.GetAnnotations(),
+			Name:      Name,
+			Namespace: emqx.GetNamespace(),
 		},
 		Spec:   template.Spec,
 		Status: template.Status,
 	}
 	if pvc.Spec.AccessModes == nil {
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+	}
+	if pvc.Spec.VolumeMode == nil {
+		fileSystem := corev1.PersistentVolumeFilesystem
+		pvc.Spec.VolumeMode = &fileSystem
 	}
 	return pvc
 }
