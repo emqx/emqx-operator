@@ -28,7 +28,7 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 	emqxBroker.Default()
 
 	assert.Equal(t,
-		util.GetLoadedPlugins(&emqxBroker)["conf"],
+		util.StringLoadedPlugins(emqxBroker.GetPlugins()),
 		"{foo, true}.\n{bar, false}.\n{emqx_management, true}.\n",
 	)
 }

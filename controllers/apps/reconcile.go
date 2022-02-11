@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -109,9 +110,26 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 }
 
 func (handler *Handler) getEmqx(Namespace, Name string) (v1beta1.Emqx, error) {
-	broker, err := handler.client.EmqxBroker.Get(Namespace, Name)
+	broker := &v1beta1.EmqxBroker{}
+	err := handler.client.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Name:      Name,
+			Namespace: Namespace,
+		},
+		broker,
+	)
 	if err != nil && errors.IsNotFound(err) {
-		return handler.client.EmqxEnterprise.Get(Namespace, Name)
+		enterprise := &v1beta1.EmqxEnterprise{}
+		err := handler.client.Get(
+			context.TODO(),
+			types.NamespacedName{
+				Name:      Name,
+				Namespace: Namespace,
+			},
+			enterprise,
+		)
+		return enterprise, err
 	}
 	return broker, err
 }

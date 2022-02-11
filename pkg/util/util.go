@@ -20,10 +20,10 @@ func GetLogVolume(emqx v1beta1.Emqx) map[string]string {
 	}
 }
 
-func GetLicense(emqx v1beta1.Emqx) map[string]string {
+func GetLicense(emqx v1beta1.EmqxEnterprise) map[string]string {
 	return map[string]string{
 		"name":      fmt.Sprintf("%s-%s", emqx.GetName(), "secret"),
-		"mountPath": "/opt/emqx/etc/emqx.lic",
+		"mountPath": "/mounted/license/emqx.lic",
 		"subPath":   "emqx.lic",
 	}
 }
