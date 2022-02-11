@@ -18,11 +18,13 @@ package controller_suite_test
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,12 +38,14 @@ var _ = Describe("", func() {
 	Context("Check plugins", func() {
 		It("Check loaded plugins", func() {
 			for _, emqx := range emqxList() {
+				loadedPluginsString := util.StringLoadedPlugins(emqx.GetPlugins())
+
 				cm := &corev1.ConfigMap{}
 				Eventually(func() bool {
 					err := k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      util.GetLoadedPlugins(emqx)["name"],
+							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
 							Namespace: emqx.GetNamespace(),
 						},
 						cm,
@@ -50,7 +54,7 @@ var _ = Describe("", func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(cm.Data).Should(Equal(map[string]string{
-					"loaded_plugins": util.GetLoadedPlugins(emqx)["conf"],
+					"loaded_plugins": loadedPluginsString,
 				}))
 
 				Eventually(func() map[string]string {
@@ -63,20 +67,34 @@ var _ = Describe("", func() {
 						},
 						sts,
 					)
-					return sts.Spec.Template.Annotations
+					return sts.Annotations
 				}, timeout, interval).Should(
-					HaveKeyWithValue("LoadedPlugins/ResourceVersion", cm.ResourceVersion),
+					HaveKeyWithValue(
+						"LoadedPlugins/Base64EncodeConfig",
+						base64.StdEncoding.EncodeToString([]byte(loadedPluginsString)),
+					),
 				)
 			}
 		})
 
 		It("Check update plugins", func() {
 			for _, emqx := range emqxList() {
-				patch := []byte(`{"spec":{"plugins":[{"enable": true, "name": "emqx_management"},{"enable": true, "name": "emqx_rule_engine"}]}}`)
-				Expect(k8sClient.Patch(
+				plugins := []v1beta1.Plugin{
+					{
+						Name:   "emqx_management",
+						Enable: true,
+					},
+					{
+						Name:   "emqx_rule_engine",
+						Enable: true,
+					},
+				}
+				emqx.SetPlugins(plugins)
+				loadedPluginsString := util.StringLoadedPlugins(emqx.GetPlugins())
+
+				Expect(k8sClient.Update(
 					context.Background(),
 					emqx,
-					client.RawPatch(types.MergePatchType, patch),
 				)).Should(Succeed())
 
 				cm := &corev1.ConfigMap{}
@@ -84,7 +102,7 @@ var _ = Describe("", func() {
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      util.GetLoadedPlugins(emqx)["name"],
+							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
 							Namespace: emqx.GetNamespace(),
 						},
 						cm,
@@ -92,7 +110,7 @@ var _ = Describe("", func() {
 					return cm.Data
 				}, timeout, interval).Should(Equal(
 					map[string]string{
-						"loaded_plugins": "{emqx_management, true}.\n{emqx_rule_engine, true}.\n",
+						"loaded_plugins": loadedPluginsString,
 					},
 				))
 
@@ -106,11 +124,13 @@ var _ = Describe("", func() {
 						},
 						sts,
 					)
-					return sts.Spec.Template.Annotations
+					return sts.Annotations
 				}, timeout, interval).Should(
-					HaveKeyWithValue("LoadedPlugins/ResourceVersion", cm.ResourceVersion),
+					HaveKeyWithValue(
+						"LoadedPlugins/Base64EncodeConfig",
+						base64.StdEncoding.EncodeToString([]byte(loadedPluginsString)),
+					),
 				)
-
 			}
 			// TODO: check plugins status by emqx api
 		})

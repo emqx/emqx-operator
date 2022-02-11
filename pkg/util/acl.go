@@ -5,30 +5,9 @@ import (
 	"strings"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetACL(obj client.Object) map[string]string {
-	if emqx, ok := obj.(*v1beta1.EmqxBroker); ok {
-		return map[string]string{
-			"name":      fmt.Sprintf("%s-%s", emqx.Name, "acl"),
-			"mountPath": "/opt/emqx/etc/acl.conf",
-			"subPath":   "acl.conf",
-			"conf":      stringACL(emqx.Spec.ACL),
-		}
-	}
-	if emqx, ok := obj.(*v1beta1.EmqxEnterprise); ok {
-		return map[string]string{
-			"name":      fmt.Sprintf("%s-%s", emqx.Name, "acl"),
-			"mountPath": "/opt/emqx/etc/acl.conf",
-			"subPath":   "acl.conf",
-			"conf":      stringACL(emqx.Spec.ACL),
-		}
-	}
-	return map[string]string{}
-}
-
-func stringACL(acls []v1beta1.ACL) string {
+func StringACL(acls []v1beta1.ACL) string {
 	var s string
 
 	for _, acl := range acls {

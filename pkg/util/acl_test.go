@@ -25,7 +25,7 @@ func TestGenerateACL(t *testing.T) {
 	emqxBroker.Default()
 
 	assert.Equal(t,
-		util.GetACL(&emqxBroker)["conf"],
+		util.StringACL(emqxBroker.GetACL()),
 		"{allow, all, pubsub, [\"#\"]}.\n",
 	)
 
@@ -47,7 +47,7 @@ func TestGenerateACL(t *testing.T) {
 	emqxBroker.Default()
 
 	assert.Equal(t,
-		util.GetACL(&emqxBroker)["conf"],
+		util.StringACL(emqxBroker.GetACL()),
 		"{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n",
 	)
 
@@ -73,7 +73,7 @@ func TestGenerateACL(t *testing.T) {
 	emqxEneterprise.Default()
 
 	assert.Equal(t,
-		util.GetACL(&emqxEneterprise)["conf"],
+		util.StringACL(emqxEneterprise.GetACL()),
 		"{allow, {'and', [{user, \"admin\"}, {client, \"emqx\"}, {ipaddr, \"127.0.0.1\"}]}, pubsub, [\"$SYS/#\", \"#\"]}.\n",
 	)
 }

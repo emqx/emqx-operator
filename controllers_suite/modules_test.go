@@ -18,7 +18,11 @@ package controller_suite_test
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,6 +30,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	//+kubebuilder:scaffold:imports
 )
@@ -36,64 +41,22 @@ var _ = Describe("", func() {
 	Context("Check modules", func() {
 		It("Check emqx broker loaded modules", func() {
 			broker := generateEmqxBroker(brokerName, brokerNameSpace)
-			modules := util.GetLoadedModules(broker)
+			loadedModulesString := util.StringEmqxBrokerLoadedModules(broker.Spec.Modules)
 
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
-						Name:      modules["name"],
+						Name:      fmt.Sprintf("%s-%s", broker.GetName(), "loaded-modules"),
 						Namespace: broker.GetNamespace(),
 					}, cm,
 				)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(cm.Data).Should(Equal(map[string]string{
-				"loaded_modules": modules["conf"],
-			}))
-
-			Eventually(func() map[string]string {
-				sts := &appsv1.StatefulSet{}
-				_ = k8sClient.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      broker.GetName(),
-						Namespace: broker.GetNamespace(),
-					},
-					sts,
-				)
-				return sts.Spec.Template.Annotations
-			}, timeout, interval).Should(
-				HaveKeyWithValue("LoadedModules/ResourceVersion", cm.ResourceVersion),
-			)
-		})
-
-		It("Update emqx broker loaded modules", func() {
-			broker := generateEmqxBroker(brokerName, brokerNameSpace)
-			modules := util.GetLoadedModules(broker)
-
-			patch := []byte(`{"spec":{"modules":[{"name": "emqx_mod_presence", "enable": false}]}}`)
-			Expect(k8sClient.Patch(
-				context.Background(),
-				broker,
-				client.RawPatch(types.MergePatchType, patch),
-			)).Should(Succeed())
-
-			cm := &corev1.ConfigMap{}
-			Eventually(func() map[string]string {
-				_ = k8sClient.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      modules["name"],
-						Namespace: broker.GetNamespace(),
-					},
-					cm,
-				)
-				return cm.Data
-			}, timeout, interval).Should(Equal(
-				map[string]string{"loaded_modules": "{emqx_mod_presence, false}.\n"},
+			Expect(cm.Data).Should(Equal(
+				map[string]string{"loaded_modules": loadedModulesString},
 			))
 
 			Eventually(func() map[string]string {
@@ -106,32 +69,88 @@ var _ = Describe("", func() {
 					},
 					sts,
 				)
-				return sts.Spec.Template.Annotations
+				return sts.Annotations
 			}, timeout, interval).Should(
-				HaveKeyWithValue("LoadedModules/ResourceVersion", cm.ResourceVersion),
+				HaveKeyWithValue(
+					"LoadedModules/Base64EncodeConfig",
+					base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
+				),
+			)
+		})
+
+		It("Update emqx broker loaded modules", func() {
+			broker := generateEmqxBroker(brokerName, brokerNameSpace)
+
+			modules := []v1beta1.EmqxBrokerModules{
+				{
+					Name:   "emqx_mod_presence",
+					Enable: false,
+				},
+			}
+			broker.Spec.Modules = modules
+
+			loadedModulesString := util.StringEmqxBrokerLoadedModules(broker.Spec.Modules)
+
+			Expect(k8sClient.Update(
+				context.Background(),
+				broker,
+			)).Should(Succeed())
+
+			cm := &corev1.ConfigMap{}
+			Eventually(func() map[string]string {
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      fmt.Sprintf("%s-%s", broker.GetName(), "loaded-modules"),
+						Namespace: broker.GetNamespace(),
+					},
+					cm,
+				)
+				return cm.Data
+			}, timeout, interval).Should(Equal(
+				map[string]string{"loaded_modules": loadedModulesString},
+			))
+
+			Eventually(func() map[string]string {
+				sts := &appsv1.StatefulSet{}
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      broker.GetName(),
+						Namespace: broker.GetNamespace(),
+					},
+					sts,
+				)
+				return sts.Annotations
+			}, timeout, interval).Should(
+				HaveKeyWithValue(
+					"LoadedModules/Base64EncodeConfig",
+					base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
+				),
 			)
 			// TODO: check modules status by emqx api
 		})
 
 		It("Check emqx enterprise loaded modules", func() {
 			enterprise := generateEmqxEnterprise(enterpriseName, enterpriseNameSpace)
-			modules := util.GetLoadedModules(enterprise)
+			data, _ := json.Marshal(enterprise.Spec.Modules)
+			loadedModulesString := string(data)
 
 			cm := &corev1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
-						Name:      modules["name"],
+						Name:      fmt.Sprintf("%s-%s", enterprise.GetName(), "loaded-modules"),
 						Namespace: enterprise.GetNamespace(),
 					}, cm,
 				)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(cm.Data).Should(Equal(map[string]string{
-				"loaded_modules": modules["conf"],
-			}))
+			Expect(cm.Data).Should(Equal(
+				map[string]string{"loaded_modules": loadedModulesString},
+			))
 
 			Eventually(func() map[string]string {
 				sts := &appsv1.StatefulSet{}
@@ -143,14 +162,28 @@ var _ = Describe("", func() {
 					},
 					sts,
 				)
-				return sts.Spec.Template.Annotations
+				return sts.Annotations
 			}, timeout, interval).Should(
-				HaveKeyWithValue("LoadedModules/ResourceVersion", cm.ResourceVersion),
+				HaveKeyWithValue(
+					"LoadedModules/Base64EncodeConfig",
+					base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
+				),
 			)
 		})
 
 		It("Update emqx enterprise loaded modules", func() {
 			enterprise := generateEmqxEnterprise(enterpriseName, enterpriseNameSpace)
+			modules := []v1beta1.EmqxEnterpriseModules{
+				{
+					Name:    "internal_cal",
+					Enable:  true,
+					Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "etc/acl.conf"}`)},
+				},
+			}
+			enterprise.Spec.Modules = modules
+
+			data, _ := json.Marshal(enterprise.Spec.Modules)
+			loadedModulesString := string(data)
 
 			patch := []byte(`{"spec":{"modules":[{"name": "internal_acl", "enable": false, "configs": {"acl_rule_file": "etc/acl.conf"}}]}}`)
 			Expect(k8sClient.Patch(
@@ -159,22 +192,19 @@ var _ = Describe("", func() {
 				client.RawPatch(types.MergePatchType, patch),
 			)).Should(Succeed())
 
-			modules := util.GetLoadedModules(enterprise)
 			cm := &corev1.ConfigMap{}
 			Eventually(func() map[string]string {
 				_ = k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
-						Name:      modules["name"],
+						Name:      fmt.Sprintf("%s-%s", enterprise.GetName(), "loaded-modules"),
 						Namespace: enterprise.GetNamespace(),
 					},
 					cm,
 				)
 				return cm.Data
 			}, timeout, interval).Should(Equal(
-				map[string]string{
-					"loaded_modules": "[{\"name\":\"internal_acl\",\"configs\":{\"acl_rule_file\":\"etc/acl.conf\"}}]",
-				},
+				map[string]string{"loaded_modules": loadedModulesString},
 			))
 
 			Eventually(func() map[string]string {
@@ -187,9 +217,12 @@ var _ = Describe("", func() {
 					},
 					sts,
 				)
-				return sts.Spec.Template.Annotations
+				return sts.Annotations
 			}, timeout, interval).Should(
-				HaveKeyWithValue("LoadedModules/ResourceVersion", cm.ResourceVersion),
+				HaveKeyWithValue(
+					"LoadedModules/Base64EncodeConfig",
+					base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
+				),
 			)
 			// TODO: check modules status by emqx api
 		})

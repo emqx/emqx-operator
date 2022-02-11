@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -21,7 +22,7 @@ type EmqxHandler interface {
 }
 
 type Handler struct {
-	client    service.Client
+	client    client.Client
 	checker   service.Checker
 	eventsCli k8s.Event
 	logger    logr.Logger
@@ -29,10 +30,11 @@ type Handler struct {
 }
 
 func NewHandler(mgr mgr.Manager) *Handler {
-	manager := *k8s.NewManager(mgr.GetClient(), log)
+	client := mgr.GetClient()
+	manager := *k8s.NewManager(client, log)
 
 	return &Handler{
-		client:    *service.NewClient(manager),
+		client:    client,
 		checker:   *service.NewChecker(manager),
 		metaCache: new(cache.MetaMap),
 		eventsCli: k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
@@ -52,16 +54,9 @@ func (handler *Handler) Do(emqx v1beta1.Emqx) error {
 		return err
 	}
 
-	// Create owner refs so the objects manager by this handler have ownership to the
-	// received rc.
-	oRefs := handler.createOwnerReferences(emqx)
-
-	// Create the labels every object derived from this need to have.
-	labels := emqx.GetLabels()
-
 	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(2).Info("Ensure...")
 	handler.eventsCli.EnsureCluster(emqx)
-	if err := handler.Ensure(meta.Obj, labels, oRefs); err != nil {
+	if err := handler.Ensure(meta.Obj); err != nil {
 		handler.eventsCli.FailedCluster(emqx, err.Error())
 		emqx.SetFailedCondition(err.Error())
 		_ = handler.updateEmqxStatus(emqx)
@@ -124,19 +119,25 @@ func (handler *Handler) updateStatus(meta *cache.Meta) error {
 	return nil
 }
 
-func (handler *Handler) createOwnerReferences(emqx v1beta1.Emqx) []metav1.OwnerReference {
-	emqxGroupVersionKind := v1beta1.VersionKind(emqx.GetKind())
-	return []metav1.OwnerReference{
-		*metav1.NewControllerRef(emqx, emqxGroupVersionKind),
-	}
-}
-
 func (handler *Handler) updateEmqxStatus(emqx v1beta1.Emqx) error {
-	if emqxBroker, ok := emqx.(*v1beta1.EmqxBroker); ok {
-		return handler.client.EmqxBroker.UpdateStatus(emqxBroker)
+	emqx.DescConditionsByTime()
+	err := handler.client.Status().Update(context.TODO(), emqx)
+	if err != nil {
+		handler.logger.WithValues(
+			"kind", emqx.GetKind(),
+			"apiVersion", emqx.GetAPIVersion(),
+			"namespace", emqx.GetNamespace(),
+			"name", emqx.GetName(),
+			"conditions", emqx.GetConditions(),
+		).Error(err, "Update emqx broker status unsuccessfully")
+		return err
 	}
-	if emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise); ok {
-		return handler.client.EmqxEnterprise.UpdateStatus(emqxEnterprise)
-	}
+	handler.logger.WithValues(
+		"kind", emqx.GetKind(),
+		"apiVersion", emqx.GetAPIVersion(),
+		"namespace", emqx.GetNamespace(),
+		"name", emqx.GetName(),
+		"conditions", emqx.GetConditions(),
+	).V(3).Info("Update emqx broker status successfully")
 	return nil
 }

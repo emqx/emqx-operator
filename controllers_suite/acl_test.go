@@ -18,11 +18,13 @@ package controller_suite_test
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,13 +38,15 @@ var _ = Describe("", func() {
 	Context("Check acl", func() {
 		It("Check acl", func() {
 			for _, emqx := range emqxList() {
+				aclString := util.StringACL(emqx.GetACL())
+
 				cm := &corev1.ConfigMap{}
 
 				Eventually(func() bool {
 					err := k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      util.GetACL(emqx)["name"],
+							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
 							Namespace: emqx.GetNamespace(),
 						},
 						cm,
@@ -51,7 +55,7 @@ var _ = Describe("", func() {
 				}, timeout, interval).Should(BeTrue())
 
 				Expect(cm.Data).Should(Equal(map[string]string{
-					"acl.conf": util.GetACL(emqx)["conf"],
+					"acl.conf": aclString,
 				}))
 
 				Eventually(func() map[string]string {
@@ -64,28 +68,32 @@ var _ = Describe("", func() {
 						},
 						sts,
 					)
-					return sts.Spec.Template.Annotations
+					return sts.Annotations
 				}, timeout, interval).Should(
-					HaveKeyWithValue("ACL/ResourceVersion", cm.ResourceVersion),
+					HaveKeyWithValue(
+						"ACL/Base64EncodeConfig",
+						base64.StdEncoding.EncodeToString([]byte(aclString)),
+					),
 				)
 			}
 		})
 
 		It("Update acl", func() {
 			for _, emqx := range emqxList() {
-				patch := []byte(`{"spec": {"acl": [{"permission": "deny"}]}}`)
-				Expect(k8sClient.Patch(
-					context.Background(),
-					emqx,
-					client.RawPatch(types.MergePatchType, patch),
-				)).Should(Succeed())
+				acl := []v1beta1.ACL{
+					{
+						Permission: "deny",
+					},
+				}
+				emqx.SetACL(acl)
+				aclString := util.StringACL(emqx.GetACL())
 
 				cm := &corev1.ConfigMap{}
 				Eventually(func() map[string]string {
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      util.GetACL(emqx)["name"],
+							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
 							Namespace: emqx.GetNamespace(),
 						},
 						cm,
@@ -93,7 +101,7 @@ var _ = Describe("", func() {
 					return cm.Data
 				}, timeout, interval).Should(Equal(
 					map[string]string{
-						"acl.conf": "{deny, all, pubsub, [\"#\"]}.\n",
+						"acl.conf": aclString,
 					},
 				))
 
@@ -107,9 +115,15 @@ var _ = Describe("", func() {
 						},
 						sts,
 					)
-					return sts.Spec.Template.Annotations
+					return sts.Annotations
 				}, timeout, interval).Should(
-					HaveKeyWithValue("ACL/ResourceVersion", cm.ResourceVersion),
+					HaveKeyWithValue(
+						"ACL/Base64EncodeConfig",
+						HaveKeyWithValue(
+							"ACL/Base64EncodeConfig",
+							base64.StdEncoding.EncodeToString([]byte(aclString)),
+						),
+					),
 				)
 			}
 			// TODO: check acl status by emqx api
