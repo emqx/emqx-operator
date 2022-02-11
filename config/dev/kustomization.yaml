@@ -1,0 +1,100 @@
+# Note modify this file upon your k8s cluster env.
+#../default/kustomization.yaml
+#     bases:
+#        - ../rbac
+#        - ../manager
+#     patchesStrategicMerge:
+#        - manager_webhook_patch.yaml
+#        - webhookcainjection_patch.yaml  
+#     vars:
+#       - name: SERVICE_NAMESPACE # namespace of the service
+#         objref:
+#           kind: Service
+#           version: v1
+#           name: webhook-service
+#         fieldref:
+#           fieldpath: metadata.namespace
+#       - name: SERVICE_NAME
+#         objref:
+#           kind: Service
+#           version: v1
+#           name: webhook-service
+#../webhook/kustomization.yaml
+#     resources:
+#       - service.yaml
+#../crd/kustomization.yaml
+#     patchesStrategicMerge:
+#       - patches/webhook_in_emqxbrokers.yaml
+#       - patches/webhook_in_emqxenterprises.yaml
+#       - patches/cainjection_in_emqxbrokers.yaml
+#       - patches/cainjection_in_emqxenterprises.yaml
+
+##Value of the url should be replaced on your dev env.
+#eg.
+#   value: "https://host.minikube.internal:9443/mutate-apps-emqx-io-v1beta1-emqxbroker"
+
+##Value of the caBundle should be replaced on your dev env.
+#Get the value like this: the ca.crt generated upon the csr.conf
+#$ cat config/cert/ca.crt | base64 | tr -d '\n'.
+ 
+##Note: In the end, modify the part of main.go in the project like this:
+#   mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+#       ....
+#       CertDir:                "config/cert",
+#   })
+
+resources: 
+- ../default 
+ 
+patches: 
+- patch: | 
+    - op: "add" 
+      path: "/webhooks/0/clientConfig/url"
+      value: "https://host.minikube.internal:9443/mutate-apps-emqx-io-v1beta1-emqxbroker"
+    - op: "remove" 
+      path: "/webhooks/0/clientConfig/service"
+    - op: "add"
+      path: "/webhooks/0/clientConfig/caBundle"
+      value: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN2akNDQWFZQ0NRQzVtMlRPR09MN1REQU5CZ2txaGtpRzl3MEJBUXNGQURBaE1SOHdIUVlEVlFRRERCWm8KYjNOMExtMXBibWxyZFdKbExtbHVkR1Z5Ym1Gc01CNFhEVEl5TURJeE1EQTNNalF3TmxvWERUUTVNRFl5T0RBMwpNalF3Tmxvd0lURWZNQjBHQTFVRUF3d1dhRzl6ZEM1dGFXNXBhM1ZpWlM1cGJuUmxjbTVoYkRDQ0FTSXdEUVlKCktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQU1JOUVIRzIwS0d0eS9HNlRWN2xTRjVSSVFtbC85d2MKT0VNMUQ0Tzkyd2tvTjZQUG5OL0dDVnBuTXZjcjFEcEgrUXVGbHF4cFJ5WmdpdXNKUzh4M3dvd3ZHeTd3U2g3bgpieCtGdDJyTHRGMENPaDNIdmlZQWltVi92UVhYUUxGQ1VPejNXYXF1QTVFT0krbXBpallyNTN3bmZCMGFhTmsvCmE2MG5TNHA5bndOWDBpQjh2TTZnaUxJQnlnZ0tJaGVBQ09oN2FmdDdkeENITUFEa1h4dkRPcFZYMmFIWDMwaVIKRzlCVVhNV25pa2NmTHBWamFkQUNPYU5aV3JUUTNWM09Ka2E1a1ZYNVV3cmpjbHEzZFZnbDJSVTh4ZjVON21tSgpGQnpBV3hPTTZXQ1hnMEdtOG5TNVJVU3BORHNCY2VVV0VmMDQzMnpNZFdFQjk2eGJJZkQ1c0U4Q0F3RUFBVEFOCkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVNna2c2b3dmaXRXbkZqZE5tUHJUMGc2NDU0REtjVkpMMGxVVG1HMXAKMW0zRVU3UVVsSmhXVGZZeXZGbGVhMjNPaUFwNG5ONjdZNmw1QjEreVE1Mk9WWG11TGJ6SzRkc0FPb2ZIL05XcAozZ2J3UzFsRGNvNTFpWUZDQ2Z1bkk5WWZ6TnZSMnkrSGhlOXI2ZG5pZFhscExqanhEQVpXVko5TlU4YW9pd0hVCjFzOXFFMXNJNzRWekg1Um5jODFaMzBDYlZ6d0k5V0M2eEZRU0VXd0Zwb1NiYjlJU3kxY1NjN3VHSG1WeTRrWlUKU0FlalgvR1lzTHRQd3prZ2w3NlJHdm5aVjJRM3ZiaWxqWlM0US9iNWRrbG0wVDNIVWlrd1V1Q1ZDTWErUGxmagpkYVRKRXBMVGVMeklZbVBnenFMUlB3Nk9uMWVoS1htYU0ySVMxY2V1RWJhbU53PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  target: 
+    kind: MutatingWebhookConfiguration
+- patch: | 
+    - op: "add" 
+      path: "/webhooks/1/clientConfig/url"
+      value: "https://host.minikube.internal:9443/mutate-apps-emqx-io-v1beta1-emqxenterprise" 
+    - op: "remove" 
+      path: "/webhooks/1/clientConfig/service"
+    - op: "add"
+      path: "/webhooks/1/clientConfig/caBundle"
+      value: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN2akNDQWFZQ0NRQzVtMlRPR09MN1REQU5CZ2txaGtpRzl3MEJBUXNGQURBaE1SOHdIUVlEVlFRRERCWm8KYjNOMExtMXBibWxyZFdKbExtbHVkR1Z5Ym1Gc01CNFhEVEl5TURJeE1EQTNNalF3TmxvWERUUTVNRFl5T0RBMwpNalF3Tmxvd0lURWZNQjBHQTFVRUF3d1dhRzl6ZEM1dGFXNXBhM1ZpWlM1cGJuUmxjbTVoYkRDQ0FTSXdEUVlKCktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQU1JOUVIRzIwS0d0eS9HNlRWN2xTRjVSSVFtbC85d2MKT0VNMUQ0Tzkyd2tvTjZQUG5OL0dDVnBuTXZjcjFEcEgrUXVGbHF4cFJ5WmdpdXNKUzh4M3dvd3ZHeTd3U2g3bgpieCtGdDJyTHRGMENPaDNIdmlZQWltVi92UVhYUUxGQ1VPejNXYXF1QTVFT0krbXBpallyNTN3bmZCMGFhTmsvCmE2MG5TNHA5bndOWDBpQjh2TTZnaUxJQnlnZ0tJaGVBQ09oN2FmdDdkeENITUFEa1h4dkRPcFZYMmFIWDMwaVIKRzlCVVhNV25pa2NmTHBWamFkQUNPYU5aV3JUUTNWM09Ka2E1a1ZYNVV3cmpjbHEzZFZnbDJSVTh4ZjVON21tSgpGQnpBV3hPTTZXQ1hnMEdtOG5TNVJVU3BORHNCY2VVV0VmMDQzMnpNZFdFQjk2eGJJZkQ1c0U4Q0F3RUFBVEFOCkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVNna2c2b3dmaXRXbkZqZE5tUHJUMGc2NDU0REtjVkpMMGxVVG1HMXAKMW0zRVU3UVVsSmhXVGZZeXZGbGVhMjNPaUFwNG5ONjdZNmw1QjEreVE1Mk9WWG11TGJ6SzRkc0FPb2ZIL05XcAozZ2J3UzFsRGNvNTFpWUZDQ2Z1bkk5WWZ6TnZSMnkrSGhlOXI2ZG5pZFhscExqanhEQVpXVko5TlU4YW9pd0hVCjFzOXFFMXNJNzRWekg1Um5jODFaMzBDYlZ6d0k5V0M2eEZRU0VXd0Zwb1NiYjlJU3kxY1NjN3VHSG1WeTRrWlUKU0FlalgvR1lzTHRQd3prZ2w3NlJHdm5aVjJRM3ZiaWxqWlM0US9iNWRrbG0wVDNIVWlrd1V1Q1ZDTWErUGxmagpkYVRKRXBMVGVMeklZbVBnenFMUlB3Nk9uMWVoS1htYU0ySVMxY2V1RWJhbU53PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  target: 
+    kind: MutatingWebhookConfiguration 
+- patch: | 
+    - op: "add" 
+      path: "/webhooks/0/clientConfig/url"
+      value: "https://host.minikube.internal:9443/validate-apps-emqx-io-v1beta1-emqxbroker" 
+    - op: "remove" 
+      path: "/webhooks/0/clientConfig/service"
+    - op: "add"
+      path: "/webhooks/0/clientConfig/caBundle"
+      value: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN2akNDQWFZQ0NRQzVtMlRPR09MN1REQU5CZ2txaGtpRzl3MEJBUXNGQURBaE1SOHdIUVlEVlFRRERCWm8KYjNOMExtMXBibWxyZFdKbExtbHVkR1Z5Ym1Gc01CNFhEVEl5TURJeE1EQTNNalF3TmxvWERUUTVNRFl5T0RBMwpNalF3Tmxvd0lURWZNQjBHQTFVRUF3d1dhRzl6ZEM1dGFXNXBhM1ZpWlM1cGJuUmxjbTVoYkRDQ0FTSXdEUVlKCktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQU1JOUVIRzIwS0d0eS9HNlRWN2xTRjVSSVFtbC85d2MKT0VNMUQ0Tzkyd2tvTjZQUG5OL0dDVnBuTXZjcjFEcEgrUXVGbHF4cFJ5WmdpdXNKUzh4M3dvd3ZHeTd3U2g3bgpieCtGdDJyTHRGMENPaDNIdmlZQWltVi92UVhYUUxGQ1VPejNXYXF1QTVFT0krbXBpallyNTN3bmZCMGFhTmsvCmE2MG5TNHA5bndOWDBpQjh2TTZnaUxJQnlnZ0tJaGVBQ09oN2FmdDdkeENITUFEa1h4dkRPcFZYMmFIWDMwaVIKRzlCVVhNV25pa2NmTHBWamFkQUNPYU5aV3JUUTNWM09Ka2E1a1ZYNVV3cmpjbHEzZFZnbDJSVTh4ZjVON21tSgpGQnpBV3hPTTZXQ1hnMEdtOG5TNVJVU3BORHNCY2VVV0VmMDQzMnpNZFdFQjk2eGJJZkQ1c0U4Q0F3RUFBVEFOCkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVNna2c2b3dmaXRXbkZqZE5tUHJUMGc2NDU0REtjVkpMMGxVVG1HMXAKMW0zRVU3UVVsSmhXVGZZeXZGbGVhMjNPaUFwNG5ONjdZNmw1QjEreVE1Mk9WWG11TGJ6SzRkc0FPb2ZIL05XcAozZ2J3UzFsRGNvNTFpWUZDQ2Z1bkk5WWZ6TnZSMnkrSGhlOXI2ZG5pZFhscExqanhEQVpXVko5TlU4YW9pd0hVCjFzOXFFMXNJNzRWekg1Um5jODFaMzBDYlZ6d0k5V0M2eEZRU0VXd0Zwb1NiYjlJU3kxY1NjN3VHSG1WeTRrWlUKU0FlalgvR1lzTHRQd3prZ2w3NlJHdm5aVjJRM3ZiaWxqWlM0US9iNWRrbG0wVDNIVWlrd1V1Q1ZDTWErUGxmagpkYVRKRXBMVGVMeklZbVBnenFMUlB3Nk9uMWVoS1htYU0ySVMxY2V1RWJhbU53PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  target: 
+    kind: ValidatingWebhookConfiguration 
+- patch: | 
+    - op: "add" 
+      path: "/webhooks/1/clientConfig/url"
+      value: "https://host.minikube.internal:9443/validate-apps-emqx-io-v1beta1-emqxenterprise"
+    - op: "remove" 
+      path: "/webhooks/1/clientConfig/service"
+    - op: "add"
+      path: "/webhooks/1/clientConfig/caBundle"
+      value: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN2akNDQWFZQ0NRQzVtMlRPR09MN1REQU5CZ2txaGtpRzl3MEJBUXNGQURBaE1SOHdIUVlEVlFRRERCWm8KYjNOMExtMXBibWxyZFdKbExtbHVkR1Z5Ym1Gc01CNFhEVEl5TURJeE1EQTNNalF3TmxvWERUUTVNRFl5T0RBMwpNalF3Tmxvd0lURWZNQjBHQTFVRUF3d1dhRzl6ZEM1dGFXNXBhM1ZpWlM1cGJuUmxjbTVoYkRDQ0FTSXdEUVlKCktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQU1JOUVIRzIwS0d0eS9HNlRWN2xTRjVSSVFtbC85d2MKT0VNMUQ0Tzkyd2tvTjZQUG5OL0dDVnBuTXZjcjFEcEgrUXVGbHF4cFJ5WmdpdXNKUzh4M3dvd3ZHeTd3U2g3bgpieCtGdDJyTHRGMENPaDNIdmlZQWltVi92UVhYUUxGQ1VPejNXYXF1QTVFT0krbXBpallyNTN3bmZCMGFhTmsvCmE2MG5TNHA5bndOWDBpQjh2TTZnaUxJQnlnZ0tJaGVBQ09oN2FmdDdkeENITUFEa1h4dkRPcFZYMmFIWDMwaVIKRzlCVVhNV25pa2NmTHBWamFkQUNPYU5aV3JUUTNWM09Ka2E1a1ZYNVV3cmpjbHEzZFZnbDJSVTh4ZjVON21tSgpGQnpBV3hPTTZXQ1hnMEdtOG5TNVJVU3BORHNCY2VVV0VmMDQzMnpNZFdFQjk2eGJJZkQ1c0U4Q0F3RUFBVEFOCkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVNna2c2b3dmaXRXbkZqZE5tUHJUMGc2NDU0REtjVkpMMGxVVG1HMXAKMW0zRVU3UVVsSmhXVGZZeXZGbGVhMjNPaUFwNG5ONjdZNmw1QjEreVE1Mk9WWG11TGJ6SzRkc0FPb2ZIL05XcAozZ2J3UzFsRGNvNTFpWUZDQ2Z1bkk5WWZ6TnZSMnkrSGhlOXI2ZG5pZFhscExqanhEQVpXVko5TlU4YW9pd0hVCjFzOXFFMXNJNzRWekg1Um5jODFaMzBDYlZ6d0k5V0M2eEZRU0VXd0Zwb1NiYjlJU3kxY1NjN3VHSG1WeTRrWlUKU0FlalgvR1lzTHRQd3prZ2w3NlJHdm5aVjJRM3ZiaWxqWlM0US9iNWRrbG0wVDNIVWlrd1V1Q1ZDTWErUGxmagpkYVRKRXBMVGVMeklZbVBnenFMUlB3Nk9uMWVoS1htYU0ySVMxY2V1RWJhbU53PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  target: 
+    kind: ValidatingWebhookConfiguration 
+patchesJson6902:
+  - target:
+      group: cert-manager.io
+      version: v1
+      kind: Certificate
+      name: serving-cert
+    path: certmanager_patch.json
