@@ -38,42 +38,7 @@ var _ = Describe("", func() {
 	Context("Check plugins", func() {
 		It("Check loaded plugins", func() {
 			for _, emqx := range emqxList() {
-				loadedPluginsString := util.StringLoadedPlugins(emqx.GetPlugins())
-
-				cm := &corev1.ConfigMap{}
-				Eventually(func() bool {
-					err := k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
-							Namespace: emqx.GetNamespace(),
-						},
-						cm,
-					)
-					return err == nil
-				}, timeout, interval).Should(BeTrue())
-
-				Expect(cm.Data).Should(Equal(map[string]string{
-					"loaded_plugins": loadedPluginsString,
-				}))
-
-				Eventually(func() map[string]string {
-					sts := &appsv1.StatefulSet{}
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      emqx.GetName(),
-							Namespace: emqx.GetNamespace(),
-						},
-						sts,
-					)
-					return sts.Annotations
-				}, timeout, interval).Should(
-					HaveKeyWithValue(
-						"LoadedPlugins/Base64EncodeConfig",
-						base64.StdEncoding.EncodeToString([]byte(loadedPluginsString)),
-					),
-				)
+				check_plugins(emqx)
 			}
 		})
 
@@ -90,49 +55,48 @@ var _ = Describe("", func() {
 					},
 				}
 				emqx.SetPlugins(plugins)
-				loadedPluginsString := util.StringLoadedPlugins(emqx.GetPlugins())
+				Expect(updateEmqx(emqx)).Should(Succeed())
 
-				Expect(k8sClient.Update(
-					context.Background(),
-					emqx,
-				)).Should(Succeed())
-
-				cm := &corev1.ConfigMap{}
-				Eventually(func() map[string]string {
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
-							Namespace: emqx.GetNamespace(),
-						},
-						cm,
-					)
-					return cm.Data
-				}, timeout, interval).Should(Equal(
-					map[string]string{
-						"loaded_plugins": loadedPluginsString,
-					},
-				))
-
-				Eventually(func() map[string]string {
-					sts := &appsv1.StatefulSet{}
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      emqx.GetName(),
-							Namespace: emqx.GetNamespace(),
-						},
-						sts,
-					)
-					return sts.Annotations
-				}, timeout, interval).Should(
-					HaveKeyWithValue(
-						"LoadedPlugins/Base64EncodeConfig",
-						base64.StdEncoding.EncodeToString([]byte(loadedPluginsString)),
-					),
-				)
+				check_plugins(emqx)
 			}
-			// TODO: check plugins status by emqx api
 		})
 	})
 })
+
+func check_plugins(emqx v1beta1.Emqx) {
+	loadedPluginsString := util.StringLoadedPlugins(emqx.GetPlugins())
+
+	Eventually(func() map[string]string {
+		cm := &corev1.ConfigMap{}
+		_ = k8sClient.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
+				Namespace: emqx.GetNamespace(),
+			},
+			cm,
+		)
+		return cm.Data
+	}, timeout, interval).Should(Equal(map[string]string{
+		"loaded_plugins": loadedPluginsString,
+	}))
+
+	Eventually(func() map[string]string {
+		sts := &appsv1.StatefulSet{}
+		_ = k8sClient.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      emqx.GetName(),
+				Namespace: emqx.GetNamespace(),
+			},
+			sts,
+		)
+		return sts.Annotations
+	}, timeout, interval).Should(
+		HaveKeyWithValue(
+			"LoadedPlugins/Base64EncodeConfig",
+			base64.StdEncoding.EncodeToString([]byte(loadedPluginsString)),
+		),
+	)
+	// TODO: check plugins status by emqx api
+}

@@ -38,43 +38,7 @@ var _ = Describe("", func() {
 	Context("Check acl", func() {
 		It("Check acl", func() {
 			for _, emqx := range emqxList() {
-				aclString := util.StringACL(emqx.GetACL())
-
-				cm := &corev1.ConfigMap{}
-
-				Eventually(func() bool {
-					err := k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
-							Namespace: emqx.GetNamespace(),
-						},
-						cm,
-					)
-					return err == nil
-				}, timeout, interval).Should(BeTrue())
-
-				Expect(cm.Data).Should(Equal(map[string]string{
-					"acl.conf": aclString,
-				}))
-
-				Eventually(func() map[string]string {
-					sts := &appsv1.StatefulSet{}
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      emqx.GetName(),
-							Namespace: emqx.GetNamespace(),
-						},
-						sts,
-					)
-					return sts.Annotations
-				}, timeout, interval).Should(
-					HaveKeyWithValue(
-						"ACL/Base64EncodeConfig",
-						base64.StdEncoding.EncodeToString([]byte(aclString)),
-					),
-				)
+				check_acl(emqx)
 			}
 		})
 
@@ -86,48 +50,50 @@ var _ = Describe("", func() {
 					},
 				}
 				emqx.SetACL(acl)
-				aclString := util.StringACL(emqx.GetACL())
+				Expect(updateEmqx(emqx)).Should(Succeed())
 
-				cm := &corev1.ConfigMap{}
-				Eventually(func() map[string]string {
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
-							Namespace: emqx.GetNamespace(),
-						},
-						cm,
-					)
-					return cm.Data
-				}, timeout, interval).Should(Equal(
-					map[string]string{
-						"acl.conf": aclString,
-					},
-				))
-
-				Eventually(func() map[string]string {
-					sts := &appsv1.StatefulSet{}
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      emqx.GetName(),
-							Namespace: emqx.GetNamespace(),
-						},
-						sts,
-					)
-					return sts.Annotations
-				}, timeout, interval).Should(
-					HaveKeyWithValue(
-						"ACL/Base64EncodeConfig",
-						HaveKeyWithValue(
-							"ACL/Base64EncodeConfig",
-							base64.StdEncoding.EncodeToString([]byte(aclString)),
-						),
-					),
-				)
+				check_acl(emqx)
 			}
-			// TODO: check acl status by emqx api
-			// TODO: test acl by mqtt pubsub
+
 		})
 	})
 })
+
+func check_acl(emqx v1beta1.Emqx) {
+	aclString := util.StringACL(emqx.GetACL())
+
+	cm := &corev1.ConfigMap{}
+	Eventually(func() map[string]string {
+		_ = k8sClient.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
+				Namespace: emqx.GetNamespace(),
+			},
+			cm,
+		)
+		return cm.Data
+	}, timeout, interval).Should(Equal(
+		map[string]string{"acl.conf": aclString},
+	))
+
+	Eventually(func() map[string]string {
+		sts := &appsv1.StatefulSet{}
+		_ = k8sClient.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      emqx.GetName(),
+				Namespace: emqx.GetNamespace(),
+			},
+			sts,
+		)
+		return sts.Annotations
+	}, timeout, interval).Should(
+		HaveKeyWithValue(
+			"ACL/Base64EncodeConfig",
+			base64.StdEncoding.EncodeToString([]byte(aclString)),
+		),
+	)
+	// TODO: check acl status by emqx api
+	// TODO: test acl by mqtt pubsub
+}
