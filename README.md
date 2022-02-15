@@ -1,31 +1,31 @@
 # emqx-operator
 
-A Kubernetes Operator for EMQ X Broker and EMQ X Enterprise
+A Kubernetes Operator for EMQX Broker and EMQX Enterprise
 
 ## Overview
 
-The EMQ X Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQ X](https://www.emqx.io/) includes EMQ X Broker and EMQ X Enterprise. The purpose of this project is to simplify and automate the configuration of EMQ X cluster.
+The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/) includes EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of EMQX cluster.
 
-The EMQ X Operator includes, but is not limited to, the following features:
+The EMQX Operator includes, but is not limited to, the following features:
 
-* **Kubernetes Custom Resource**: Deploy and manage EMQ X Cluster with pre-defined custom resources.
+* **Kubernetes Custom Resource**: Deploy and manage EMQX Cluster with pre-defined custom resources.
 
-* **Simplified Deployment Configuration**: Configure the fundamentals of EMQ X Cluster, including persistence, configuration, license and etc, in a Kubernetes-native way.
+* **Simplified Deployment Configuration**: Configure the fundamentals of EMQX Cluster, including persistence, configuration, license and etc, in a Kubernetes-native way.
 
-For an introduction to the EMQ X Operator, see the [get started](docs/user-guides/get-started.md) guide.
+For an introduction to the EMQX Operator, see the [get started](docs/user-guides/get-started.md) guide.
 
 ## Prerequisites
 
-The EMQ X Operator requires a Kubernetes cluster of version `>=1.20.0`.
+The EMQX Operator requires a Kubernetes cluster of version `>=1.20.0`.
 
 ## CustomResourceDefinitions
 
-A core feature of the EMQ X Operator is to monitor the Kubernetes API server for changes to specific objects and ensure that the running EMQ X deployments match these objects.
+A core feature of the EMQX Operator is to monitor the Kubernetes API server for changes to specific objects and ensure that the running EMQX deployments match these objects.
 The Operator acts on the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/).
 
-The example of EMQ X Broker see the [emqx.yaml](config/samples/emqx/v1beta2/emqx.yaml) and the example of EMQ X Enterprise see the [emqx-ee.yaml](config/samples/emqx/v1beta2/emqx-ee.yaml).
+The example of EMQX Broker see the [emqx.yaml](config/samples/emqx/v1beta2/emqx.yaml) and the example of EMQX Enterprise see the [emqx-ee.yaml](config/samples/emqx/v1beta2/emqx-ee.yaml).
 
-The EMQ X Operator automatically detects changes on any of the above custom resource objects, and ensures that running deployments are kept in sync with the changes.
+The EMQX Operator automatically detects changes on any of the above custom resource objects, and ensures that running deployments are kept in sync with the changes.
 
 ## Getting Start
 

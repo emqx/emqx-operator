@@ -1890,12 +1890,12 @@ spec:
                 type: array
             type: object
           status:
-            description: EmqxBrokerClusterStatus defines the observed state of EMQ X Cluster
+            description: EmqxBrokerClusterStatus defines the observed state of EMQX Cluster
             properties:
               conditions:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
                 items:
-                  description: Condition saves the state information of the EMQ X cluster
+                  description: Condition saves the state information of the EMQX cluster
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status to another.
@@ -3705,7 +3705,7 @@ spec:
                   conditions:
                     description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
                     items:
-                      description: Condition saves the state information of the EMQ X cluster
+                      description: Condition saves the state information of the EMQX cluster
                       properties:
                         lastTransitionTime:
                           description: Last time the condition transitioned from one status to another.

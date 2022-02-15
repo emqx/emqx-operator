@@ -1,6 +1,6 @@
 # emqx-operator
 
-The EMQ X Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQ X](https://www.emqx.io/) includes EMQ X Broker and EMQ X Enterprise. The purpose of this project is to simplify and automate the configuration of EMQ X cluster.
+The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/) includes EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of EMQX cluster.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ The EMQ X Operator provides [Kubernetes](https://kubernetes.io/) native deployme
 To install the chart with the release name `my-emqx-operator`:
 
 ```console
-## Add the EMQ X Helm repository
+## Add the EMQX Helm repository
 $ helm repo add emqx https://repos.emqx.io/charts
 $ helm repo update
 

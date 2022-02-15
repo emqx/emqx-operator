@@ -69,16 +69,16 @@ var (
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	reqLogger.Info("Reconciling EMQ X Cluster")
+	reqLogger.Info("Reconciling EMQX Cluster")
 
-	// Fetch the EMQ X Cluster instance
+	// Fetch the EMQX Cluster instance
 	instance, err := handler.getEmqx(req.Namespace, req.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			reqLogger.Info("EMQ X Cluster delete")
+			reqLogger.Info("EMQX Cluster delete")
 			// instance.SetNamespace(req.NamespacedName.Namespace)
 			// instance.SetName(req.NamespacedName.Name)
 			handler.metaCache.Del(&metav1.ObjectMeta{
@@ -91,7 +91,7 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.V(5).Info(fmt.Sprintf("EMQ X Cluster Spec:\n %+v", instance))
+	reqLogger.V(5).Info(fmt.Sprintf("EMQX Cluster Spec:\n %+v", instance))
 
 	if err := handler.Do(instance); err != nil {
 		if err.Error() == "need requeue" {

@@ -1,5 +1,5 @@
-EMQ X Operator Controller {{ .Chart.AppVersion }} has been deployed successfully!
+EMQX Operator Controller {{ .Chart.AppVersion }} has been deployed successfully!
 
-Now you can create the EMQ X Custom Resource file and deploy it.
+Now you can create the EMQX Custom Resource file and deploy it.
 
 Where to get help: https://github.com/emqx/emqx-operator/issues
