@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -50,11 +51,9 @@ const (
 
 	enterpriseName      = "emqx-ee"
 	enterpriseNameSpace = "enterprise"
-
-	timeout  = time.Minute * 5
-	interval = time.Millisecond * 250
 )
 
+var timeout, interval time.Duration
 var k8sClient client.Client
 var testEnv *envtest.Environment
 
@@ -74,6 +73,12 @@ func TestSuites(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+	interval = time.Millisecond * 250
+	timeout = time.Second * 30
+	if os.Getenv("CI") == "true" {
+		timeout = time.Minute * 5
+	}
+
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
@@ -268,6 +273,10 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	storageClassName := "standard"
 	emqx := &v1beta1.EmqxBroker{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps.emqx.io/v1beta1",
+			Kind:       "EmqxBroker",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -327,6 +336,10 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 // Slim
 func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 	emqx := &v1beta1.EmqxEnterprise{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps.emqx.io/v1beta1",
+			Kind:       "EmqxEnterprise",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -337,4 +350,28 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 	}
 	emqx.Default()
 	return emqx
+}
+
+func updateEmqx(emqx v1beta1.Emqx) error {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(emqx.GetObjectKind().GroupVersionKind())
+
+	err := k8sClient.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Name:      emqx.GetName(),
+			Namespace: emqx.GetNamespace(),
+		},
+		u,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	emqx.SetResourceVersion(u.GetResourceVersion())
+	emqx.SetCreationTimestamp(u.GetCreationTimestamp())
+	emqx.SetManagedFields(u.GetManagedFields())
+
+	return k8sClient.Update(context.Background(), emqx)
 }
