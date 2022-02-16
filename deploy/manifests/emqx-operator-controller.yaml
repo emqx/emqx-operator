@@ -7904,7 +7904,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.1.1
+        image: emqx/emqx-operator-controller:1.1.2
         livenessProbe:
           httpGet:
             path: /healthz
