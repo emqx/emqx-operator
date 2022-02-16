@@ -4,7 +4,7 @@ set -euo pipefail
 # ensure dir
 cd -P -- "$(dirname -- "$0")"
 
-if [ "$(git describe --tag | egrep "^[0-9]+\.[0-9]+\.[0-9]$")" != "" ]; then
+if git describe --tag | egrep -q "^[0-9]+\.[0-9]+\.[0-9]$"; then
     git describe --tag
 else
     git rev-parse --short HEAD

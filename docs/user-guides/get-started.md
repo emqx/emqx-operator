@@ -19,7 +19,7 @@ We using [cert manager](https://github.com/jetstack/cert-manager) for provisioni
 The default static configuration can be installed as follows:
 
 ```shell
-$ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/operator/controller.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/config/samples/operator/controller.yaml
 ```
 
 ### Installing with Helm
@@ -50,7 +50,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/co
 1. Create EMQX Custom Resource file like this
 
    ```shell
-   $ cat https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/emqx/v1beta2/emqx.yaml
+   $ cat https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/config/samples/emqx/v1beta2/emqx.yaml
 
    apiVersion: apps.emqx.io/v1beta2
    kind: EmqxBroker
@@ -130,7 +130,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/co
 2. Deploy EMQX Custom Resource and check EMQX status
 
    ```shell
-   $ kubectl apply https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/emqx/v1beta2/emqx.yaml
+   $ kubectl apply https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/config/samples/emqx/v1beta2/emqx.yaml
    emqx.apps.emqx.io/emqx created
 
    $ kubectl get pods
