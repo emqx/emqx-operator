@@ -11,7 +11,7 @@ import (
 // Phase of the RF status
 type Phase string
 
-// Condition saves the state information of the EMQ X cluster
+// Condition saves the state information of the EMQX cluster
 type Condition struct {
 	// Status of cluster condition.
 	Type ConditionType `json:"type"`
@@ -59,7 +59,7 @@ type EmqxStatus interface {
 	ClearCondition(t ConditionType)
 }
 
-// EmqxBrokerClusterStatus defines the observed state of EMQ X Cluster
+// EmqxBrokerClusterStatus defines the observed state of EMQX Cluster
 type Status struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file

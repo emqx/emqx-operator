@@ -1,4 +1,4 @@
-**Note**: EMQ X Operator Controller requires Kubernetes v1.20.0 and up.
+**Note**: EMQX Operator Controller requires Kubernetes v1.20.0 and up.
 
 ## Background
 
@@ -14,7 +14,7 @@ We using [cert manager](https://github.com/jetstack/cert-manager) for provisioni
 
 ### Default static install
 
-> You don’t require any tweaking of the EMQ X Operator Controller install parameters.
+> You don’t require any tweaking of the EMQX Operator Controller install parameters.
 
 The default static configuration can be installed as follows:
 
@@ -24,12 +24,12 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/co
 
 ### Installing with Helm
 
-1.  Add the EMQ X Helm repository:
+1.  Add the EMQX Helm repository:
    ```
    $ helm repo add emqx https://repos.emqx.io/charts
    $ helm repo update
    ```
-2. Install EMQ X Operator Controller by helm
+2. Install EMQX Operator Controller by helm
    ```
    $ helm install emqx-operator emqx/emqx-operator \
       --set installCRDs=true \
@@ -37,7 +37,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/co
       --create-namespace
    ```
 
-### Check EMQ X Operator Controller status
+### Check EMQX Operator Controller status
 
    ```shell
    $ kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system
@@ -45,9 +45,9 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/co
    emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0          15s
    ```
 
-## Deploy the EMQ X Broker
+## Deploy the EMQX Broker
 
-1. Create EMQ X Custom Resource file like this
+1. Create EMQX Custom Resource file like this
 
    ```shell
    $ cat https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/emqx/v1beta2/emqx.yaml
@@ -127,7 +127,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/co
    > * [Details for *cluster* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
    > * [Details for *env* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
 
-2. Deploy EMQ X Custom Resource and check EMQ X status
+2. Deploy EMQX Custom Resource and check EMQX status
 
    ```shell
    $ kubectl apply https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/config/samples/emqx/v1beta2/emqx.yaml
@@ -152,8 +152,8 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.1/co
 
 >**Note**:
 >
->* EMQ X Operator provides the default listener for EMQ X Cluster to connect. The default `Type` of service is `ClusterIP`,which can be modified as `LoadBalance` or `NodePort`.
->* The ports about `ws`、`wss`、`mqtt`、`mqtts`、`dashboard`、`api` need to be set before deploying because they can't be updated while `EMQ X Cluster` running.
+>* EMQX Operator provides the default listener for EMQX Cluster to connect. The default `Type` of service is `ClusterIP`,which can be modified as `LoadBalance` or `NodePort`.
+>* The ports about `ws`、`wss`、`mqtt`、`mqtts`、`dashboard`、`api` need to be set before deploying because they can't be updated while `EMQX Cluster` running.
 
 ### Scaling the cluster
 

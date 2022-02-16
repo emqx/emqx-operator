@@ -56,7 +56,7 @@ jobs:
         with:
           draft: false
           prerelease: false
-          release_name: EMQ X Operator ${{ github.ref }} Released
+          release_name: EMQX Operator ${{ github.ref }} Released
           tag_name: ${{ github.ref }}
           body_path: RELEASE.md
         env:

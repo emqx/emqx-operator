@@ -16,7 +16,7 @@ const (
 	Check  StateType = "check"
 )
 
-// Meta contains EMQ X Cluster some metadata
+// Meta contains EMQX Cluster some metadata
 type Meta struct {
 	NameSpace string
 	Name      string
@@ -42,7 +42,7 @@ func newCluster(emqx v1beta1.Emqx) *Meta {
 	}
 }
 
-// MetaMap cache last EMQ X Cluster and meta data
+// MetaMap cache last EMQX Cluster and meta data
 type MetaMap struct {
 	sync.Map
 }

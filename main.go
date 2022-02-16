@@ -86,14 +86,14 @@ func main() {
 	newEmqxBrokerReconciler := controllers.NewEmqxBrokerReconciler(mgr)
 
 	if err := newEmqxBrokerReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EMQ X Broker")
+		setupLog.Error(err, "unable to create controller", "controller", "EMQX Broker")
 		os.Exit(1)
 	}
 
 	newEmqxEnterpriseReconciler := controllers.NewEmqxEnterpriseReconciler(mgr)
 
 	if err = newEmqxEnterpriseReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EMQ X Enterprise")
+		setupLog.Error(err, "unable to create controller", "controller", "EMQX Enterprise")
 		os.Exit(1)
 	}
 

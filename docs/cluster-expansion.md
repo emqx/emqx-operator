@@ -1,6 +1,6 @@
-# Scaling EMQ X Cluster
+# Scaling EMQX Cluster
 
-> [Introduction to EMQ X cluster](https://docs.emqx.io/en/broker/v4.3/advanced/cluster.html)
+> [Introduction to EMQX cluster](https://docs.emqx.io/en/broker/v4.3/advanced/cluster.html)
 
 **Note**: Now only supports the strategy of node discovery"*k8s*".
 

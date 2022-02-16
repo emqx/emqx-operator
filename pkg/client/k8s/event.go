@@ -86,5 +86,5 @@ func (e *EventOption) FailedCluster(object runtime.Object, message string) {
 
 // HealthCluster implement the Event.Interface
 func (e *EventOption) HealthCluster(object runtime.Object) {
-	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta1.ClusterConditionHealthy), "EMQ X cluster is healthy")
+	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta1.ClusterConditionHealthy), "EMQX cluster is healthy")
 }

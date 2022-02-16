@@ -1,6 +1,6 @@
 apiVersion: v2
 name: emqx-operator
-description: A Helm chart for EMQ X Operator Controller
+description: A Helm chart for EMQX Operator Controller
 
 # A chart can be either an 'application' or a 'library' chart.
 #
