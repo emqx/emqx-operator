@@ -18,10 +18,12 @@ package apps
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -74,7 +76,7 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	// Fetch the EMQX Cluster instance
 	instance, err := handler.getEmqx(req.Namespace, req.Name)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8sErrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -101,7 +103,7 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return reconcile.Result{}, err
 	}
 
-	if err := handler.checker.CheckReadyReplicas(instance); err != nil {
+	if err := handler.checkReadyReplicas(instance); err != nil {
 		reqLogger.Info(err.Error())
 		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 	}
@@ -119,7 +121,7 @@ func (handler *Handler) getEmqx(Namespace, Name string) (v1beta1.Emqx, error) {
 		},
 		broker,
 	)
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && k8sErrors.IsNotFound(err) {
 		enterprise := &v1beta1.EmqxEnterprise{}
 		err := handler.client.Get(
 			context.TODO(),
@@ -132,4 +134,22 @@ func (handler *Handler) getEmqx(Namespace, Name string) (v1beta1.Emqx, error) {
 		return enterprise, err
 	}
 	return broker, err
+}
+
+func (handler *Handler) checkReadyReplicas(emqx v1beta1.Emqx) error {
+	sts := &appsv1.StatefulSet{}
+	if err := handler.client.Get(
+		context.Background(),
+		types.NamespacedName{
+			Name:      emqx.GetName(),
+			Namespace: emqx.GetNamespace(),
+		},
+		sts,
+	); err != nil {
+		return err
+	}
+	if *emqx.GetReplicas() != sts.Status.ReadyReplicas {
+		return errors.New("waiting all of emqx pods become ready")
+	}
+	return nil
 }

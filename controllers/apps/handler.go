@@ -6,8 +6,7 @@ import (
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/cache"
-	"github.com/emqx/emqx-operator/pkg/client/k8s"
-	"github.com/emqx/emqx-operator/pkg/service"
+	"github.com/emqx/emqx-operator/pkg/manager"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -23,21 +22,18 @@ type EmqxHandler interface {
 
 type Handler struct {
 	client    client.Client
-	checker   service.Checker
-	eventsCli k8s.Event
+	eventsCli manager.Event
 	logger    logr.Logger
 	metaCache *cache.MetaMap
 }
 
 func NewHandler(mgr mgr.Manager) *Handler {
 	client := mgr.GetClient()
-	manager := *k8s.NewManager(client, log)
 
 	return &Handler{
 		client:    client,
-		checker:   *service.NewChecker(manager),
 		metaCache: new(cache.MetaMap),
-		eventsCli: k8s.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
+		eventsCli: manager.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
 		logger:    log,
 	}
 }

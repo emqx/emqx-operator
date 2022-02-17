@@ -1,4 +1,4 @@
-package k8s
+package manager
 
 import (
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
