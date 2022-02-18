@@ -498,9 +498,7 @@ func generateConfigMapForModules(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 }
 
 func generateSecretForLicense(emqx v1beta1.EmqxEnterprise, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
-	container := sts.Spec.Template.Spec.Containers[0]
-	licenseName := fmt.Sprintf("%s-%s", emqx.GetName(), "license")
-	licenseData := map[string]string{"emqx.lic": emqx.GetLicense()}
+
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -508,17 +506,19 @@ func generateSecretForLicense(emqx v1beta1.EmqxEnterprise, sts *appsv1.StatefulS
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
-			Name:      licenseName,
+			Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "license"),
 			Namespace: emqx.GetNamespace(),
 		},
 		Type:       corev1.SecretTypeOpaque,
-		StringData: licenseData,
+		Data:       map[string][]byte{"emqx.lic": []byte(emqx.GetLicense())},
+		StringData: map[string]string{"emqx.lic": emqx.GetLicense()},
 	}
 
+	container := sts.Spec.Template.Spec.Containers[0]
 	container.VolumeMounts = append(
 		container.VolumeMounts,
 		corev1.VolumeMount{
-			Name:      licenseName,
+			Name:      secret.Name,
 			MountPath: "/mounted/license",
 			ReadOnly:  true,
 		},

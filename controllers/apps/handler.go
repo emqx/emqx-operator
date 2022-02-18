@@ -22,18 +22,18 @@ type EmqxHandler interface {
 
 type Handler struct {
 	client    client.Client
+	executor  manager.Executor
 	eventsCli manager.Event
 	logger    logr.Logger
 	metaCache *cache.MetaMap
 }
 
 func NewHandler(mgr mgr.Manager) *Handler {
-	client := mgr.GetClient()
-
 	return &Handler{
-		client:    client,
+		client:    mgr.GetClient(),
+		executor:  *manager.NewExecutor(mgr.GetConfig()),
 		metaCache: new(cache.MetaMap),
-		eventsCli: manager.NewEvent(mgr.GetEventRecorderFor("emqx-operator"), log),
+		eventsCli: manager.NewEvent(mgr.GetEventRecorderFor("emqx-operator")),
 		logger:    log,
 	}
 }
