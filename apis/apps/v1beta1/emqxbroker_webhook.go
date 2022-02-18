@@ -67,6 +67,9 @@ func (r *EmqxBroker) Default() {
 	r.Spec.Plugins = generatePlugins(r.Spec.Plugins)
 	r.Spec.Modules = generateEmqxBrokerModules(r.Spec.Modules)
 	r.Spec.Listener = generateListener(r.Spec.Listener)
+	if r.Spec.TelegrafTemplate != nil {
+		r.Spec.TelegrafTemplate = generateTelegrafTemplate(r.Spec.TelegrafTemplate)
+	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -95,6 +98,11 @@ func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 		return err
 	}
 
+	if err := validateTelegrafTemplate(r.Spec.TelegrafTemplate); err != nil {
+		emqxbrokerlog.Error(err, "validate create failed")
+		return err
+	}
+
 	return nil
 }
 
@@ -111,6 +119,16 @@ func validateTag(image string) error {
 	match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[1])
 	if !match {
 		return errors.New("The tag of the image must match '^[0-9]+.[0-9]+.[0-9]+$'")
+	}
+	return nil
+}
+
+func validateTelegrafTemplate(telegrafTemplate *TelegrafTemplate) error {
+	if telegrafTemplate != nil && telegrafTemplate.Image == nil {
+		return errors.New("The image of telegraf must be completed")
+	}
+	if telegrafTemplate != nil && telegrafTemplate.Conf == nil {
+		return errors.New("The conf of the telegraf must be completed")
 	}
 	return nil
 }

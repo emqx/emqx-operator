@@ -70,6 +70,9 @@ type EmqxSpec interface {
 	SetPlugins(plugins []Plugin)
 
 	GetHeadlessServiceName() string
+
+	GetTelegrafTemplate() *TelegrafTemplate
+	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
 }
 
 // +kubebuilder:object:generate=false

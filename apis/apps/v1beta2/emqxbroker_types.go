@@ -68,6 +68,8 @@ type EmqxBrokerSpec struct {
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	EmqxTemplate EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
+
+	TelegrafTemplate *v1beta1.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 // EmqxBrokerStatus defines the observed state of EmqxBroker

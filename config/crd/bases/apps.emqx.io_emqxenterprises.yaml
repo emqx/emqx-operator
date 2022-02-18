@@ -2880,6 +2880,15 @@ spec:
                         type: object
                     type: object
                 type: object
+              telegrafTemplate:
+                properties:
+                  conf:
+                    type: string
+                  image:
+                    type: string
+                  name:
+                    type: string
+                type: object
               toleRations:
                 items:
                   description: The pod this Toleration is attached to tolerates any
@@ -5687,6 +5696,15 @@ spec:
                   volumeName:
                     description: VolumeName is the binding reference to the PersistentVolume
                       backing this claim.
+                    type: string
+                type: object
+              telegrafTemplate:
+                properties:
+                  conf:
+                    type: string
+                  image:
+                    type: string
+                  name:
                     type: string
                 type: object
               toleRations:

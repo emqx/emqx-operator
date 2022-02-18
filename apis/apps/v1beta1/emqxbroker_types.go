@@ -69,6 +69,8 @@ type EmqxBrokerSpec struct {
 	Plugins []Plugin `json:"plugins,omitempty"`
 
 	Modules []EmqxBrokerModules `json:"modules,omitempty"`
+
+	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -187,4 +189,11 @@ func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModules) {
 
 func (emqx *EmqxBroker) GetHeadlessServiceName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
+}
+
+func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {
+	return emqx.Spec.TelegrafTemplate
+}
+func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
+	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

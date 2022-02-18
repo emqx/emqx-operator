@@ -45,6 +45,17 @@ func Generate(emqx v1beta1.Emqx) []client.Object {
 		}
 	}
 
+	// add logic for the telegraf pod
+	if emqx.GetTelegrafTemplate() != nil {
+		telegrafConfName := fmt.Sprintf("%s-%s", emqx.GetName(), "telegraf-config")
+
+		sts = generateSideCarForTelegraf(emqx, sts)
+		telegraf, sts := generateConfigMapForTelegraf(emqx, sts)
+
+		resources = append(resources, telegraf)
+		sts = generateVolumeForTelegraf(sts, telegrafConfName)
+	}
+
 	resources = append(resources, sts)
 
 	ownerRef := metav1.NewControllerRef(emqx, v1beta1.VersionKind(emqx.GetKind()))
@@ -96,6 +107,36 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 	}
 
 	return generateVolume(emqx, sts)
+}
+
+func generateSideCarForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
+
+	telegrafTemplate := emqx.GetTelegrafTemplate()
+
+	telegrafConfName := fmt.Sprintf("%s-%s", emqx.GetName(), "telegraf-config")
+	logName := fmt.Sprintf("%s-%s", emqx.GetName(), "log")
+
+	containerForTelegraf := corev1.Container{
+		Name:            telegrafTemplate.GetName(),
+		Image:           telegrafTemplate.GetImage(),
+		ImagePullPolicy: "IfNotPresent",
+		VolumeMounts: []corev1.VolumeMount{
+			corev1.VolumeMount{
+				Name:      telegrafConfName,
+				MountPath: "/etc/telegraf/telegraf.conf",
+				SubPath:   "telegraf.conf",
+				ReadOnly:  true,
+			},
+			corev1.VolumeMount{
+				Name:      logName,
+				MountPath: "/opt/emqx/log",
+			},
+		},
+	}
+
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, containerForTelegraf)
+
+	return sts
 }
 
 func generateRBAC(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, *appsv1.StatefulSet) {
@@ -497,6 +538,25 @@ func generateConfigMapForModules(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 	return cm, sts
 }
 
+func generateConfigMapForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+	telegrafConfName := fmt.Sprintf("%s-%s", emqx.GetName(), "telegraf-config")
+	telegrafConfData := emqx.GetTelegrafTemplate().GetConf()
+	cm := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    emqx.GetLabels(),
+			Name:      telegrafConfName,
+			Namespace: emqx.GetNamespace(),
+		},
+		Data: map[string]string{"telegraf.conf": telegrafConfData},
+	}
+
+	return cm, sts
+}
+
 func generateSecretForLicense(emqx v1beta1.EmqxEnterprise, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
 	container := sts.Spec.Template.Spec.Containers[0]
 	licenseName := fmt.Sprintf("%s-%s", emqx.GetName(), "license")
@@ -583,6 +643,23 @@ func generateVolume(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) *appsv1.Stateful
 	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, emqx.GetExtraVolumes()...)
 
 	sts.Spec.Template.Spec.Containers = []corev1.Container{container}
+	return sts
+}
+
+func generateVolumeForTelegraf(sts *appsv1.StatefulSet, name string) *appsv1.StatefulSet {
+	sts.Spec.Template.Spec.Volumes = append(
+		sts.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: name,
+					},
+				},
+			},
+		},
+	)
 	return sts
 }
 

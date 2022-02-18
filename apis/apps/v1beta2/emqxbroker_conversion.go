@@ -91,6 +91,7 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.ExtraVolumes = src.Spec.ExtraVolumes
 	dst.Spec.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
 	dst.Spec.Env = src.Spec.Env
+	dst.Spec.TelegrafTemplate = src.Spec.TelegrafTemplate
 
 	// Status
 	dst.Status.Conditions = src.Status.Conditions
