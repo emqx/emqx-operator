@@ -2,7 +2,6 @@ package manager
 
 import (
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
-	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -33,14 +32,12 @@ type Event interface {
 // EventOption is the Event client interface implementation that using API calls to kubernetes.
 type EventOption struct {
 	eventsCli record.EventRecorder
-	logger    logr.Logger
 }
 
 // NewEvent returns a new Event client
-func NewEvent(eventCli record.EventRecorder, logger logr.Logger) Event {
+func NewEvent(eventCli record.EventRecorder) Event {
 	return &EventOption{
 		eventsCli: eventCli,
-		logger:    logger,
 	}
 }
 

@@ -62,8 +62,8 @@ var _ = Describe("", func() {
 func check_acl(emqx v1beta1.Emqx) {
 	aclString := util.StringACL(emqx.GetACL())
 
-	cm := &corev1.ConfigMap{}
 	Eventually(func() map[string]string {
+		cm := &corev1.ConfigMap{}
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
