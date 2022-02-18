@@ -53,7 +53,7 @@ func Generate(emqx v1beta1.Emqx) []client.Object {
 		telegraf, sts := generateConfigMapForTelegraf(emqx, sts)
 
 		resources = append(resources, telegraf)
-		sts = generateVolumeForTelegraf(sts, telegrafConfName)
+		generateVolumeForTelegraf(sts, telegrafConfName)
 	}
 
 	resources = append(resources, sts)
