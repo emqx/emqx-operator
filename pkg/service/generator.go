@@ -47,13 +47,9 @@ func Generate(emqx v1beta1.Emqx) []client.Object {
 
 	// add logic for the telegraf pod
 	if emqx.GetTelegrafTemplate() != nil {
-		telegrafConfName := fmt.Sprintf("%s-%s", emqx.GetName(), "telegraf-config")
-
-		sts = generateSideCarForTelegraf(emqx, sts)
-		telegraf, sts := generateConfigMapForTelegraf(emqx, sts)
-
-		resources = append(resources, telegraf)
-		generateVolumeForTelegraf(sts, telegrafConfName)
+		cmForTelegraf, stsAddTelegraf := generateContainerForTelegraf(emqx, sts)
+		resources = append(resources, cmForTelegraf)
+		sts = stsAddTelegraf
 	}
 
 	resources = append(resources, sts)
@@ -109,7 +105,7 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 	return generateVolume(emqx, sts)
 }
 
-func generateSideCarForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
+func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 
 	telegrafTemplate := emqx.GetTelegrafTemplate()
 
@@ -117,17 +113,17 @@ func generateSideCarForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) *app
 	logName := fmt.Sprintf("%s-%s", emqx.GetName(), "log")
 
 	containerForTelegraf := corev1.Container{
-		Name:            telegrafTemplate.GetName(),
-		Image:           telegrafTemplate.GetImage(),
+		Name:            *telegrafTemplate.Name,
+		Image:           *telegrafTemplate.Image,
 		ImagePullPolicy: "IfNotPresent",
 		VolumeMounts: []corev1.VolumeMount{
-			corev1.VolumeMount{
+			{
 				Name:      telegrafConfName,
 				MountPath: "/etc/telegraf/telegraf.conf",
 				SubPath:   "telegraf.conf",
 				ReadOnly:  true,
 			},
-			corev1.VolumeMount{
+			{
 				Name:      logName,
 				MountPath: "/opt/emqx/log",
 			},
@@ -136,7 +132,11 @@ func generateSideCarForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) *app
 
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, containerForTelegraf)
 
-	return sts
+	cm, sts := generateConfigMapForTelegraf(emqx, sts)
+
+	sts = generateVolumeForTelegraf(sts, telegrafConfName)
+
+	return cm, sts
 }
 
 func generateRBAC(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, *appsv1.StatefulSet) {
@@ -540,7 +540,7 @@ func generateConfigMapForModules(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 
 func generateConfigMapForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	telegrafConfName := fmt.Sprintf("%s-%s", emqx.GetName(), "telegraf-config")
-	telegrafConfData := emqx.GetTelegrafTemplate().GetConf()
+	telegrafConfData := emqx.GetTelegrafTemplate().Conf
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -551,7 +551,7 @@ func generateConfigMapForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 			Name:      telegrafConfName,
 			Namespace: emqx.GetNamespace(),
 		},
-		Data: map[string]string{"telegraf.conf": telegrafConfData},
+		Data: map[string]string{"telegraf.conf": *telegrafConfData},
 	}
 
 	return cm, sts
