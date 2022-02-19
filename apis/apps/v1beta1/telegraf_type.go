@@ -14,15 +14,3 @@ func generateTelegrafTemplate(telegrafTemplate *TelegrafTemplate) *TelegrafTempl
 	}
 	return telegrafTemplate
 }
-
-func (telegrafTemplate *TelegrafTemplate) GetName() string {
-	return *telegrafTemplate.Name
-}
-
-func (telegrafTemplate *TelegrafTemplate) GetImage() string {
-	return *telegrafTemplate.Image
-}
-
-func (telegrafTemplate *TelegrafTemplate) GetConf() string {
-	return *telegrafTemplate.Conf
-}
