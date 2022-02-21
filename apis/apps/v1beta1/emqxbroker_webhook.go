@@ -124,7 +124,7 @@ func validateTag(image string) error {
 }
 
 func validateTelegrafTemplate(telegrafTemplate *TelegrafTemplate) error {
-	if telegrafTemplate != nil && telegrafTemplate.Image == nil {
+	if telegrafTemplate != nil && telegrafTemplate.Image == "" {
 		return errors.New("The image of telegraf must be completed")
 	}
 	if telegrafTemplate != nil && telegrafTemplate.Conf == nil {
