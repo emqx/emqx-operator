@@ -275,7 +275,7 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	telegrafConf :=
 		`
 	[global_tags]
-	  instanceID = "{{instance_id}}"
+	  instanceID = "emqx"
 
 	[agent]
 	  interval = "60s"
