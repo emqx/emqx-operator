@@ -46,4 +46,9 @@ spec:
       wss: 8084
       dashboard: 18083
       api: 8081
+  plugins:
+    - name: emqx_management
+      enable: true
+    - name: emqx_dashboard
+      enable: true
 # license:  the license for EMQX Enterprise should be completed

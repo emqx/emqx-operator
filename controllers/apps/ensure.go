@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
@@ -69,12 +70,8 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta1.Emqx) err
 		obj.SetAnnotations(annotations)
 	}
 
-	if err := client.NewDryRunClient(handler.client).Update(context.TODO(), obj); err != nil {
-		return err
-	}
-
 	opts := []patch.CalculateOption{}
-	switch obj.(type) {
+	switch resource := obj.(type) {
 	case *appsv1.StatefulSet:
 		opts = append(
 			opts,
@@ -86,7 +83,23 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta1.Emqx) err
 			patch.IgnoreField("metadata"), // ignore metadata.managedFields
 			patch.IgnoreField("secret"),
 		)
+	case *corev1.Service:
+		storageResource := &corev1.Service{}
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.UnstructuredContent(), storageResource)
+		if err != nil {
+			return err
+		}
+		// Required fields when updating service in k8s 1.21
+		if storageResource.Spec.ClusterIP != "" {
+			resource.Spec.ClusterIP = storageResource.Spec.ClusterIP
+		}
+		obj = resource
 	}
+
+	if err := client.NewDryRunClient(handler.client).Update(context.TODO(), obj); err != nil {
+		return err
+	}
+
 	patchResult, err := patch.DefaultPatchMaker.Calculate(u, obj, opts...)
 	if err != nil {
 		logger.Error(err, "unable to patch with comparison object")

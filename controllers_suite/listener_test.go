@@ -19,6 +19,7 @@ package controller_suite_test
 import (
 	"context"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -89,6 +90,96 @@ var _ = Describe("", func() {
 				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ConsistOf(containerPorts))
 				Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(env))
 			}
+		})
+
+		It("Update listener service", func() {
+			emqx := generateEmqxBroker(brokerName, brokerNameSpace)
+			servicePorts := []corev1.ServicePort{
+				{
+					Name:     "api",
+					Port:     28081,
+					NodePort: 30001,
+					Protocol: "TCP",
+					TargetPort: intstr.IntOrString{
+						IntVal: 28081,
+					},
+				},
+				{
+					Name:     "mqtt",
+					Port:     21883,
+					NodePort: 30002,
+					Protocol: "TCP",
+					TargetPort: intstr.IntOrString{
+						IntVal: 21883,
+					},
+				},
+			}
+
+			containerPorts := []corev1.ContainerPort{
+				{
+					Name:          "mqtt",
+					Protocol:      "TCP",
+					ContainerPort: 21883,
+				},
+				{
+					Name:          "api",
+					Protocol:      "TCP",
+					ContainerPort: 28081,
+				},
+			}
+
+			env := []corev1.EnvVar{
+				{
+					Name:  "EMQX_LISTENER__TCP__EXTERNAL",
+					Value: "21883",
+				},
+				{
+					Name:  "EMQX_MANAGEMENT__LISTENER__HTTP",
+					Value: "28081",
+				},
+			}
+
+			listener := v1beta1.Listener{
+				Type: corev1.ServiceTypeNodePort,
+				Ports: v1beta1.Ports{
+					API:  int32(28081),
+					MQTT: int32(21883),
+				},
+				NodePorts: v1beta1.Ports{
+					API:  int32(30001),
+					MQTT: int32(30002),
+				},
+			}
+			emqx.SetListener(listener)
+			Expect(updateEmqx(emqx)).Should(Succeed())
+
+			svc := &corev1.Service{}
+			Eventually(func() corev1.ServiceType {
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      emqx.GetName(),
+						Namespace: emqx.GetNamespace(),
+					},
+					svc,
+				)
+				return svc.Spec.Type
+			}, timeout, interval).Should(Equal(corev1.ServiceTypeNodePort))
+			Expect(svc.Spec.Ports).Should(ConsistOf(servicePorts))
+
+			sts := &appsv1.StatefulSet{}
+			Eventually(func() []corev1.ContainerPort {
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      emqx.GetName(),
+						Namespace: emqx.GetNamespace(),
+					},
+					sts,
+				)
+				return sts.Spec.Template.Spec.Containers[0].Ports
+			}, timeout, interval).Should(ConsistOf(containerPorts))
+			Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(env))
 		})
 	})
 })
