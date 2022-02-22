@@ -50,13 +50,26 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta1.Emqx) err
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-				// handler.logger.Error(err, "Unable to patch emqx %s with comparison object", obj.GetObjectKind().GroupVersionKind().Kind)
-				logger.Error(err, "Unable to patch with comparison object")
-				return err
-			}
 			return handler.doCreate(obj)
 		}
+		return err
+	}
+
+	obj.SetResourceVersion(u.GetResourceVersion())
+	obj.SetCreationTimestamp(u.GetCreationTimestamp())
+	obj.SetManagedFields(u.GetManagedFields())
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	for key, value := range u.GetAnnotations() {
+		if _, present := annotations[key]; !present {
+			annotations[key] = value
+		}
+		obj.SetAnnotations(annotations)
+	}
+
+	if err := client.NewDryRunClient(handler.client).Update(context.TODO(), obj); err != nil {
 		return err
 	}
 
@@ -68,24 +81,14 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta1.Emqx) err
 			patch.IgnoreStatusFields(),
 			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
 		)
-	case *corev1.Secret:
-		opts = append(
-			opts,
-			patch.IgnoreField("stringData"),
+	case *corev1.ServiceAccount:
+		opts = append(opts,
+			patch.IgnoreField("metadata"), // ignore metadata.managedFields
+			patch.IgnoreField("secret"),
 		)
 	}
-
-	if _, ok := obj.(*appsv1.StatefulSet); ok {
-		opts = []patch.CalculateOption{
-			patch.IgnoreStatusFields(),
-			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
-			patch.IgnoreField("metadata"),
-		}
-	}
-
 	patchResult, err := patch.DefaultPatchMaker.Calculate(u, obj, opts...)
 	if err != nil {
-		// handler.logger.Error(err, "Unable to patch emqx %s with comparison object", obj.GetObjectKind().GroupVersionKind().Kind)
 		logger.Error(err, "unable to patch with comparison object")
 		return err
 	}
@@ -107,8 +110,12 @@ func (handler *Handler) doCreate(obj client.Object) error {
 		"namespace", obj.GetNamespace(),
 		"name", obj.GetName(),
 	)
-	err := handler.client.Create(context.TODO(), obj)
-	if err != nil {
+	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
+		logger.Error(err, "unable to patch emqx with comparison object")
+		return err
+	}
+	if err := handler.client.Create(context.TODO(), obj); err != nil {
+		logger.Error(err, "crate resource failed")
 		return err
 	}
 	logger.Info("create resource successfully")
@@ -116,31 +123,17 @@ func (handler *Handler) doCreate(obj client.Object) error {
 }
 
 func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
-	obj.SetResourceVersion(storageObj.GetResourceVersion())
-	obj.SetCreationTimestamp(storageObj.GetCreationTimestamp())
-	obj.SetManagedFields(storageObj.GetManagedFields())
-
-	annotations := obj.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	for key, value := range storageObj.GetAnnotations() {
-		if _, present := annotations[key]; !present {
-			annotations[key] = value
-		}
-		obj.SetAnnotations(annotations)
-	}
-	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-		return err
-	}
-
 	logger := handler.logger.WithValues(
 		"groupVersionKind", obj.GetObjectKind().GroupVersionKind().String(),
 		"namespace", obj.GetNamespace(),
 		"name", obj.GetName(),
 	)
-	err := handler.client.Update(context.TODO(), obj)
-	if err != nil {
+	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
+		logger.Error(err, "unable to patch emqx with comparison object")
+		return err
+	}
+	if err := handler.client.Update(context.TODO(), obj); err != nil {
+		logger.Error(err, "update resource failed")
 		return err
 	}
 	logger.Info("update resource successfully")
