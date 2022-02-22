@@ -52,22 +52,6 @@ var _ = Describe("", func() {
 
 				Expect(svc.Spec.Type).Should(Equal(corev1.ServiceTypeClusterIP))
 				Expect(svc.Spec.ClusterIP).Should(Equal(corev1.ClusterIPNone))
-				// Expect(svc.Spec.Ports).Should(ConsistOf(servicePorts))
-
-				// sts := &appsv1.StatefulSet{}
-				// Eventually(func() bool {
-				// 	err := k8sClient.Get(
-				// 		context.Background(),
-				// 		types.NamespacedName{
-				// 			Name:      emqx.GetName(),
-				// 			Namespace: emqx.GetNamespace(),
-				// 		},
-				// 		sts,
-				// 	)
-				// 	return err == nil
-				// }, timeout, interval).Should(BeTrue())
-				// Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ConsistOf(containerPorts))
-				// Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(env))
 			}
 		})
 
