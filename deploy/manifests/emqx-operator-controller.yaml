@@ -1869,6 +1869,15 @@ spec:
                         type: object
                     type: object
                 type: object
+              telegrafTemplate:
+                properties:
+                  conf:
+                    type: string
+                  image:
+                    type: string
+                  name:
+                    type: string
+                type: object
               toleRations:
                 items:
                   description: The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
@@ -3674,6 +3683,15 @@ spec:
                     type: string
                   volumeName:
                     description: VolumeName is the binding reference to the PersistentVolume backing this claim.
+                    type: string
+                type: object
+              telegrafTemplate:
+                properties:
+                  conf:
+                    type: string
+                  image:
+                    type: string
+                  name:
                     type: string
                 type: object
               toleRations:
@@ -5616,6 +5634,15 @@ spec:
                         type: object
                     type: object
                 type: object
+              telegrafTemplate:
+                properties:
+                  conf:
+                    type: string
+                  image:
+                    type: string
+                  name:
+                    type: string
+                type: object
               toleRations:
                 items:
                   description: The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
@@ -7428,6 +7455,15 @@ spec:
                     description: VolumeName is the binding reference to the PersistentVolume backing this claim.
                     type: string
                 type: object
+              telegrafTemplate:
+                properties:
+                  conf:
+                    type: string
+                  image:
+                    type: string
+                  name:
+                    type: string
+                type: object
               toleRations:
                 items:
                   description: The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
@@ -7613,6 +7649,18 @@ rules:
   - ""
   resources:
   - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
   verbs:
   - create
   - delete
@@ -7904,7 +7952,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.1.2
+        image: kirago/emqx-operator-controller:1.1.2.11
         livenessProbe:
           httpGet:
             path: /healthz

@@ -71,6 +71,8 @@ type EmqxEnterpriseSpec struct {
 	Plugins []Plugin `json:"plugins,omitempty"`
 
 	Modules []EmqxEnterpriseModules `json:"modules,omitempty"`
+
+	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -199,4 +201,11 @@ func (emqx *EmqxEnterprise) SetModules(modules []EmqxEnterpriseModules) {
 
 func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
+}
+
+func (emqx *EmqxEnterprise) GetTelegrafTemplate() *TelegrafTemplate {
+	return emqx.Spec.TelegrafTemplate
+}
+func (emqx *EmqxEnterprise) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
+	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

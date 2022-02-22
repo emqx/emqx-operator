@@ -68,7 +68,8 @@ type EmqxEnterpriseSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	EmqxTemplate EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
+	EmqxTemplate     EmqxEnterpriseTemplate    `json:"emqxTemplate,omitempty"`
+	TelegrafTemplate *v1beta1.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 // EmqxEnterpriseStatus defines the observed state of EmqxEnterprise
