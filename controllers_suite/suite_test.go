@@ -74,7 +74,7 @@ func TestSuites(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	interval = time.Millisecond * 250
-	timeout = time.Second * 30
+	timeout = time.Minute * 1
 	if os.Getenv("CI") == "true" {
 		timeout = time.Minute * 5
 	}

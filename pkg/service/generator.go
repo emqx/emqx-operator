@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/util"
@@ -192,141 +193,52 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 	}
 
 	container := sts.Spec.Template.Spec.Containers[0]
-	if !reflect.ValueOf(listener.Ports.MQTT).IsZero() {
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "EMQX_LISTENER__TCP__EXTERNAL",
-			Value: fmt.Sprint(listener.Ports.MQTT),
-		})
-		container.Ports = append(container.Ports, corev1.ContainerPort{
-			Name:          "mqtt",
-			ContainerPort: listener.Ports.MQTT,
-			Protocol:      corev1.ProtocolTCP,
-		})
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     "mqtt",
-			Port:     listener.Ports.MQTT,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: listener.Ports.MQTT,
-			},
-		})
-	}
-	if !reflect.ValueOf(listener.Ports.MQTTS).IsZero() {
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "EMQX_LISTENER__SSL__EXTERNAL",
-			Value: fmt.Sprint(listener.Ports.MQTTS),
-		})
-		container.Ports = append(container.Ports, corev1.ContainerPort{
-			Name:          "mqtts",
-			ContainerPort: listener.Ports.MQTTS,
-			Protocol:      corev1.ProtocolTCP,
-		})
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     "mqtts",
-			Port:     listener.Ports.MQTTS,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: listener.Ports.MQTTS,
-			},
-		})
-	}
-	if !reflect.ValueOf(listener.Ports.WS).IsZero() {
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "EMQX_LISTENER__WS__EXTERNAL",
-			Value: fmt.Sprint(listener.Ports.WS),
-		})
-		container.Ports = append(container.Ports, corev1.ContainerPort{
-			Name:          "ws",
-			ContainerPort: listener.Ports.WS,
-			Protocol:      corev1.ProtocolTCP,
-		})
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     "ws",
-			Port:     listener.Ports.WS,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: listener.Ports.WS,
-			},
-		})
-	}
-	if !reflect.ValueOf(listener.Ports.WSS).IsZero() {
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "EMQX_LISTENER__WSS__EXTERNAL",
-			Value: fmt.Sprint(listener.Ports.WSS),
-		})
-		container.Ports = append(container.Ports, corev1.ContainerPort{
-			Name:          "wss",
-			ContainerPort: listener.Ports.WSS,
-			Protocol:      corev1.ProtocolTCP,
-		})
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     "wss",
-			Port:     listener.Ports.WSS,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: listener.Ports.WSS,
-			},
-		})
-	}
-	if !reflect.ValueOf(listener.Ports.Dashboard).IsZero() {
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "EMQX_DASHBOARD__LISTENER__HTTP",
-			Value: fmt.Sprint(listener.Ports.Dashboard),
-		})
-		container.Ports = append(container.Ports, corev1.ContainerPort{
-			Name:          "dashboard",
-			ContainerPort: listener.Ports.Dashboard,
-			Protocol:      corev1.ProtocolTCP,
-		})
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     "dashboard",
-			Port:     listener.Ports.Dashboard,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: listener.Ports.Dashboard,
-			},
-		})
-	}
-	if !reflect.ValueOf(listener.Ports.API).IsZero() {
-		container.ReadinessProbe = &corev1.Probe{
-			FailureThreshold: 3,
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.IntOrString{
-						IntVal: listener.Ports.API,
-					},
-					Scheme: corev1.URISchemeHTTP,
+
+	ports := reflect.ValueOf(listener.Ports)
+	nodePorts := reflect.ValueOf(listener.NodePorts)
+
+	for i := 0; i < ports.NumField(); i++ {
+		port := int32(ports.Field(i).Int())
+		if port != 0 {
+			name := strings.ToLower(ports.Type().Field(i).Name)
+			nodePort := int32(nodePorts.Field(i).Int())
+
+			var envName string
+			switch name {
+			default:
+				envName = fmt.Sprintf("EMQX_LISTENER__%s__EXTERNAL", strings.ToUpper(name))
+			case "mqtt":
+				envName = "EMQX_LISTENER__TCP__EXTERNAL"
+			case "mqtts":
+				envName = "EMQX_LISTENER__SSL__EXTERNAL"
+			case "api":
+				envName = "EMQX_MANAGEMENT__LISTENER__HTTP"
+			case "dashboard":
+				envName = "EMQX_DASHBOARD__LISTENER__HTTP"
+			}
+
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  envName,
+				Value: fmt.Sprint(port),
+			})
+
+			container.Ports = append(container.Ports, corev1.ContainerPort{
+				Name:          name,
+				ContainerPort: port,
+				Protocol:      corev1.ProtocolTCP,
+			})
+
+			svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+				Name:     name,
+				Port:     port,
+				NodePort: nodePort,
+				Protocol: "TCP",
+				TargetPort: intstr.IntOrString{
+					Type:   0,
+					IntVal: port,
 				},
-			},
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       5,
-			SuccessThreshold:    1,
-			TimeoutSeconds:      1,
+			})
 		}
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "EMQX_MANAGEMENT__LISTENER__HTTP",
-			Value: fmt.Sprint(listener.Ports.API),
-		})
-		container.Ports = append(container.Ports, corev1.ContainerPort{
-			Name:          "api",
-			ContainerPort: listener.Ports.API,
-			Protocol:      corev1.ProtocolTCP,
-		})
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
-			Name:     "api",
-			Port:     listener.Ports.API,
-			Protocol: "TCP",
-			TargetPort: intstr.IntOrString{
-				Type:   0,
-				IntVal: listener.Ports.API,
-			},
-		})
 	}
 	sts.Spec.Template.Spec.Containers = []corev1.Container{container}
 	return headlessSvc, svc, sts
