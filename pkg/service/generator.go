@@ -200,6 +200,7 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 		container.Ports = append(container.Ports, corev1.ContainerPort{
 			Name:          "mqtt",
 			ContainerPort: listener.Ports.MQTT,
+			Protocol:      corev1.ProtocolTCP,
 		})
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 			Name:     "mqtt",
@@ -219,6 +220,7 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 		container.Ports = append(container.Ports, corev1.ContainerPort{
 			Name:          "mqtts",
 			ContainerPort: listener.Ports.MQTTS,
+			Protocol:      corev1.ProtocolTCP,
 		})
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 			Name:     "mqtts",
@@ -238,6 +240,7 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 		container.Ports = append(container.Ports, corev1.ContainerPort{
 			Name:          "ws",
 			ContainerPort: listener.Ports.WS,
+			Protocol:      corev1.ProtocolTCP,
 		})
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 			Name:     "ws",
@@ -257,6 +260,7 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 		container.Ports = append(container.Ports, corev1.ContainerPort{
 			Name:          "wss",
 			ContainerPort: listener.Ports.WSS,
+			Protocol:      corev1.ProtocolTCP,
 		})
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 			Name:     "wss",
@@ -276,6 +280,7 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 		container.Ports = append(container.Ports, corev1.ContainerPort{
 			Name:          "dashboard",
 			ContainerPort: listener.Ports.Dashboard,
+			Protocol:      corev1.ProtocolTCP,
 		})
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 			Name:     "dashboard",
@@ -289,16 +294,20 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 	}
 	if !reflect.ValueOf(listener.Ports.API).IsZero() {
 		container.ReadinessProbe = &corev1.Probe{
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       5,
+			FailureThreshold: 3,
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/status",
 					Port: intstr.IntOrString{
 						IntVal: listener.Ports.API,
 					},
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       5,
+			SuccessThreshold:    1,
+			TimeoutSeconds:      1,
 		}
 		container.Env = append(container.Env, corev1.EnvVar{
 			Name:  "EMQX_MANAGEMENT__LISTENER__HTTP",
@@ -307,6 +316,7 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 		container.Ports = append(container.Ports, corev1.ContainerPort{
 			Name:          "api",
 			ContainerPort: listener.Ports.API,
+			Protocol:      corev1.ProtocolTCP,
 		})
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
 			Name:     "api",
@@ -498,7 +508,6 @@ func generateConfigMapForModules(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 }
 
 func generateSecretForLicense(emqx v1beta1.EmqxEnterprise, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
-
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -510,7 +519,6 @@ func generateSecretForLicense(emqx v1beta1.EmqxEnterprise, sts *appsv1.StatefulS
 			Namespace: emqx.GetNamespace(),
 		},
 		Type:       corev1.SecretTypeOpaque,
-		Data:       map[string][]byte{"emqx.lic": []byte(emqx.GetLicense())},
 		StringData: map[string]string{"emqx.lic": emqx.GetLicense()},
 	}
 

@@ -40,8 +40,6 @@ func NewHandler(mgr mgr.Manager) *Handler {
 
 // Do will ensure the EMQX Cluster is in the expected state and update the EMQX Cluster status.
 func (handler *Handler) Do(emqx v1beta1.Emqx) error {
-	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).Info("handler doing")
-
 	// diff new and new EMQX Cluster, then update status
 	meta := handler.metaCache.Cache(emqx)
 	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(3).
