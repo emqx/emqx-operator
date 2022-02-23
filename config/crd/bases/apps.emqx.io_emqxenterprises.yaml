@@ -2485,10 +2485,18 @@ spec:
                 type: string
               listener:
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
                   externalIPs:
                     items:
                       type: string
                     type: array
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
                   loadBalancerIP:
                     type: string
                   loadBalancerSourceRanges:
@@ -3855,10 +3863,18 @@ spec:
                     type: string
                   listener:
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
                       externalIPs:
                         items:
                           type: string
                         type: array
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
                       loadBalancerIP:
                         type: string
                       loadBalancerSourceRanges:
