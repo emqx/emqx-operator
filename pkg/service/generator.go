@@ -243,9 +243,9 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    emqx.GetLabels(),
-			Name:      emqx.GetName(),
-			Namespace: emqx.GetNamespace(),
+			Name:        emqx.GetName(),
+			Namespace:   emqx.GetNamespace(),
+			Annotations: listener.Annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:                     listener.Type,
@@ -255,6 +255,14 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 			Selector:                 emqx.GetLabels(),
 		},
 	}
+	labels := listener.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	for k, v := range emqx.GetLabels() {
+		labels[k] = v
+	}
+	svc.Labels = labels
 
 	container := sts.Spec.Template.Spec.Containers[0]
 

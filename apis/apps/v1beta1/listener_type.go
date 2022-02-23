@@ -8,6 +8,8 @@ import (
 
 //+kubebuilder:object:generate=true
 type Listener struct {
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 	//+kubebuilder:validation:Enum=NodePort;LoadBalancer;ClusterIP
 	Type                     corev1.ServiceType `json:"type,omitempty"`
 	LoadBalancerIP           string             `json:"loadBalancerIP,omitempty" protobuf:"bytes,8,opt,name=loadBalancerIP"`

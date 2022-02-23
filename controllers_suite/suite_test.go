@@ -389,6 +389,9 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				"cluster": "emqx",
+			},
 		},
 		Spec: v1beta1.EmqxEnterpriseSpec{
 			Image: "emqx/emqx-ee:4.4.0",

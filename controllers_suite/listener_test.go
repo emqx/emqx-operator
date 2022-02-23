@@ -140,7 +140,9 @@ var _ = Describe("", func() {
 			}
 
 			listener := v1beta1.Listener{
-				Type: corev1.ServiceTypeNodePort,
+				Type:        corev1.ServiceTypeNodePort,
+				Labels:      map[string]string{"test/labels": "service"},
+				Annotations: map[string]string{"test/annotations": "service"},
 				Ports: v1beta1.Ports{
 					API:  int32(28081),
 					MQTT: int32(21883),
@@ -166,6 +168,9 @@ var _ = Describe("", func() {
 				return svc.Spec.Type
 			}, timeout, interval).Should(Equal(corev1.ServiceTypeNodePort))
 			Expect(svc.Spec.Ports).Should(ConsistOf(servicePorts))
+			Expect(svc.Annotations).Should(HaveKeyWithValue("test/annotations", "service"))
+			Expect(svc.Labels).Should(HaveKeyWithValue("test/labels", "service"))
+			Expect(svc.Labels).Should(HaveKeyWithValue("cluster", "emqx"))
 
 			sts := &appsv1.StatefulSet{}
 			Eventually(func() []corev1.ContainerPort {
