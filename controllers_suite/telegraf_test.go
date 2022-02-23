@@ -17,8 +17,8 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
-	Context("Check telegraf Conf", func() {
-		It("Check loaded plugins", func() {
+	Context("Check telegraf conf", func() {
+		It("Check telegraf conf", func() {
 			for _, emqx := range emqxList() {
 				check_telegraf(emqx)
 			}
