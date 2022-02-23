@@ -53,6 +53,7 @@ spec:
       enable: true
 # license:  the license for EMQX Enterprise should be completed
   telegrafTemplate:
+    name: "telegraf"
     image: "telegraf:1.19.3"
     conf: |
       [global_tags]
