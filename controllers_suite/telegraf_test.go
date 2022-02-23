@@ -24,24 +24,6 @@ var _ = Describe("", func() {
 			}
 		})
 
-		It("Check update plugins", func() {
-			for _, emqx := range emqxList() {
-				plugins := []v1beta1.Plugin{
-					{
-						Name:   "emqx_management",
-						Enable: true,
-					},
-					{
-						Name:   "emqx_rule_engine",
-						Enable: true,
-					},
-				}
-				emqx.SetPlugins(plugins)
-				Expect(updateEmqx(emqx)).Should(Succeed())
-
-				check_plugins(emqx)
-			}
-		})
 	})
 })
 
