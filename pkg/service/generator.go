@@ -84,7 +84,7 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 					NodeSelector: emqx.GetNodeSelector(),
 					Containers: []corev1.Container{
 						{
-							Name:            emqx.GetName(),
+							Name:            "emqx",
 							Image:           emqx.GetImage(),
 							ImagePullPolicy: emqx.GetImagePullPolicy(),
 							Resources:       emqx.GetResource(),
