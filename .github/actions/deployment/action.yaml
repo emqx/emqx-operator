@@ -36,7 +36,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        while ! kubectl exec -i ${{ inputs.kind}}-0 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+        while ! kubectl exec -i ${{ inputs.kind}}-0 -c emqx -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
           echo "waiting ${{ inputs.kind}} broker running"
           sleep 1
         done
@@ -47,7 +47,7 @@ runs:
       run: |
         set -euo pipefail
         while
-          nodes="$(kubectl exec -i ${{ inputs.kind}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
+          nodes="$(kubectl exec -i ${{ inputs.kind}}-0 -c emqx -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
           [ "$nodes" != "3" ];
         do
           echo "waiting ${{ inputs.kind}} cluster scale"
@@ -74,7 +74,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        while ! kubectl exec -i ${{ inputs.kind}}-4 -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
+        while ! kubectl exec -i ${{ inputs.kind}}-4 -c emqx -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
           echo "waiting ${{ inputs.kind}} broker running"
           sleep 1
         done
@@ -84,7 +84,7 @@ runs:
       run: |
         set -euo pipefail
         while
-          nodes="$(kubectl exec -i ${{ inputs.kind}}-4 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
+          nodes="$(kubectl exec -i ${{ inputs.kind}}-4 -c emqx -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
           [ "$nodes" != "5" ];
         do
           echo "waiting ${{ inputs.kind}} cluster scale"

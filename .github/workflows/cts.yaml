@@ -97,7 +97,7 @@ jobs:
         run: |
           set -x
           kubectl describe sts ${{ matrix.emqx[0]}}
-          kubectl exec -i ${{ matrix.emqx[0]}}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
+          kubectl exec -i ${{ matrix.emqx[0]}}-0 -c emqx -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
           kubectl logs -l "cluster=emqx"
       - name: Get controller status
         if: failure()
