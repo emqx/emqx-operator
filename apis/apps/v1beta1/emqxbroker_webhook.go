@@ -67,9 +67,6 @@ func (r *EmqxBroker) Default() {
 	r.Spec.Plugins = generatePlugins(r.Spec.Plugins)
 	r.Spec.Modules = generateEmqxBrokerModules(r.Spec.Modules)
 	r.Spec.Listener = generateListener(r.Spec.Listener)
-	if r.Spec.TelegrafTemplate != nil {
-		r.Spec.TelegrafTemplate = generateTelegrafTemplate(r.Spec.TelegrafTemplate)
-	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

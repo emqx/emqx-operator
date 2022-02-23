@@ -349,7 +349,6 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 				},
 			},
 			TelegrafTemplate: &v1beta1.TelegrafTemplate{
-				Name:  "telegraf",
 				Image: "telegraf:1.19.3",
 				Conf:  &telegrafConf,
 			},
@@ -419,7 +418,6 @@ JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
 EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 -----END CERTIFICATE-----`,
 			TelegrafTemplate: &v1beta1.TelegrafTemplate{
-				Name:  "telegraf",
 				Image: "telegraf:1.19.3",
 				Conf:  &telegrafConf,
 			},

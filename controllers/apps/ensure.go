@@ -182,14 +182,14 @@ func (handler *Handler) postUpdate(obj client.Object, emqx v1beta1.Emqx) error {
 			return err
 		}
 		for _, pod := range pods.Items {
-			_, stderr, err := handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), emqx.GetTelegrafTemplate().Name, "/bin/kill 1", nil)
+			_, stderr, err := handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), "telegraf", "/bin/kill 1", nil)
 			if err != nil {
-				return fmt.Errorf("exec container: %s in pod: %s error: %v", emqx.GetTelegrafTemplate().Name, pod.GetName(), err)
+				return fmt.Errorf("exec container: %s in pod: %s error: %v", "telegraf", pod.GetName(), err)
 			}
 			if stderr != "" {
-				return fmt.Errorf("container: %s in pod: %s update telegraf failed: %s", emqx.GetTelegrafTemplate().Name, pod.GetName(), stderr)
+				return fmt.Errorf("container: %s in pod: %s update telegraf failed: %s", "telegraf", pod.GetName(), stderr)
 			}
-			handler.logger.Info(fmt.Sprintf("container: %s in pod: %s update config successfully", emqx.GetTelegrafTemplate().Name, pod.GetName()))
+			handler.logger.Info(fmt.Sprintf("container: %s in pod: %s update config successfully", "telegraf", pod.GetName()))
 		}
 	}
 	return nil

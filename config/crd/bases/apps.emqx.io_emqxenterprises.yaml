@@ -2886,8 +2886,6 @@ spec:
                     type: string
                   image:
                     type: string
-                  name:
-                    type: string
                   resources:
                     description: ResourceRequirements describes the compute resource
                       requirements.
@@ -5730,8 +5728,6 @@ spec:
                   conf:
                     type: string
                   image:
-                    type: string
-                  name:
                     type: string
                   resources:
                     description: ResourceRequirements describes the compute resource

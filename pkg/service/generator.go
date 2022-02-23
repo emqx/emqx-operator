@@ -113,7 +113,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 	logName := fmt.Sprintf("%s-%s", emqx.GetName(), "log")
 
 	containerForTelegraf := corev1.Container{
-		Name:            telegrafTemplate.Name,
+		Name:            "telegraf",
 		Image:           telegrafTemplate.Image,
 		ImagePullPolicy: "IfNotPresent",
 		Resources:       emqx.GetTelegrafTemplate().Resources,
