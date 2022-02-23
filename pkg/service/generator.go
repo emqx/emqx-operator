@@ -115,7 +115,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 	containerForTelegraf := corev1.Container{
 		Name:            "telegraf",
 		Image:           telegrafTemplate.Image,
-		ImagePullPolicy: "IfNotPresent",
+		ImagePullPolicy: telegrafTemplate.ImagePullPolicy,
 		Resources:       emqx.GetTelegrafTemplate().Resources,
 		VolumeMounts: []corev1.VolumeMount{
 			{

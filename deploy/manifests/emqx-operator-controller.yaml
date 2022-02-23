@@ -1875,6 +1875,9 @@ spec:
                     type: string
                   image:
                     type: string
+                  imagePullPolicy:
+                    description: PullPolicy describes a policy for if/when to pull a container image
+                    type: string
                   resources:
                     description: ResourceRequirements describes the compute resource requirements.
                     properties:
@@ -3710,6 +3713,9 @@ spec:
                   conf:
                     type: string
                   image:
+                    type: string
+                  imagePullPolicy:
+                    description: PullPolicy describes a policy for if/when to pull a container image
                     type: string
                   resources:
                     description: ResourceRequirements describes the compute resource requirements.
@@ -5680,6 +5686,9 @@ spec:
                     type: string
                   image:
                     type: string
+                  imagePullPolicy:
+                    description: PullPolicy describes a policy for if/when to pull a container image
+                    type: string
                   resources:
                     description: ResourceRequirements describes the compute resource requirements.
                     properties:
@@ -7520,6 +7529,9 @@ spec:
                   conf:
                     type: string
                   image:
+                    type: string
+                  imagePullPolicy:
+                    description: PullPolicy describes a policy for if/when to pull a container image
                     type: string
                   resources:
                     description: ResourceRequirements describes the compute resource requirements.
