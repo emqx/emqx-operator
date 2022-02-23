@@ -68,7 +68,7 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/co
          requests:
            storage: 20Mi
        accessModes:
-       - ReadWriteMany
+       - ReadWriteOnce
      emqxTemplate:
        listener:
          type: ClusterIP
