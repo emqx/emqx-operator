@@ -272,6 +272,27 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 // Full
 func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	storageClassName := "standard"
+	telegrafConf := `
+	[global_tags]
+      instanceID = "test"
+
+    [[inputs.http]]
+     urls = ["http://127.0.0.1:8081/api/v4/emqx_prometheus"]
+     method = "GET"
+     timeout = "5s"
+     username = "admin"
+     password = "public"
+     data_format = "json"
+    [[inputs.tail]]
+      files = ["/opt/emqx/log/emqx.log.[1-9]"]
+      from_beginning = false
+      max_undelivered_lines = 64
+      character_encoding = "utf-8"
+      data_format = "grok"
+      grok_patterns = ['^%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.999999999-07:00"} \[%{LOGLEVEL:level}\] (?m)%{GREEDYDATA:messages}$']
+    
+    [[outputs.discard]]
+	`
 	emqx := &v1beta1.EmqxBroker{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps.emqx.io/v1beta1",
@@ -327,6 +348,10 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 					Enable: true,
 				},
 			},
+			TelegrafTemplate: &v1beta1.TelegrafTemplate{
+				Image: "telegraf:1.19.3",
+				Conf:  &telegrafConf,
+			},
 		},
 	}
 	emqx.Default()
@@ -335,6 +360,27 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 
 // Slim
 func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
+	telegrafConf := `
+	[global_tags]
+      instanceID = "test"
+
+    [[inputs.http]]
+     urls = ["http://127.0.0.1:8081/api/v4/emqx_prometheus"]
+     method = "GET"
+     timeout = "5s"
+     username = "admin"
+     password = "public"
+     data_format = "json"
+    [[inputs.tail]]
+      files = ["/opt/emqx/log/emqx.log.[1-9]"]
+      from_beginning = false
+      max_undelivered_lines = 64
+      character_encoding = "utf-8"
+      data_format = "grok"
+      grok_patterns = ['^%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.999999999-07:00"} \[%{LOGLEVEL:level}\] (?m)%{GREEDYDATA:messages}$']
+    
+    [[outputs.discard]]
+	`
 	emqx := &v1beta1.EmqxEnterprise{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps.emqx.io/v1beta1",
@@ -371,6 +417,10 @@ UrW88THMtlz9sb56kmM3JIOoIJoep6xNEajIBnoChSGjtBYFNFwzdwSTCodYkgPu
 JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
 EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 -----END CERTIFICATE-----`,
+			TelegrafTemplate: &v1beta1.TelegrafTemplate{
+				Image: "telegraf:1.19.3",
+				Conf:  &telegrafConf,
+			},
 		},
 	}
 	emqx.Default()

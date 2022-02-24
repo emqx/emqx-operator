@@ -83,6 +83,11 @@ func (r *EmqxBroker) ValidateCreate() error {
 		return err
 	}
 
+	if err := validateTelegrafTemplate(r.Spec.TelegrafTemplate); err != nil {
+		emqxbrokerlog.Error(err, "validate create failed")
+		return err
+	}
+
 	return nil
 }
 
@@ -111,6 +116,16 @@ func validateTag(image string) error {
 	match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[1])
 	if !match {
 		return errors.New("The tag of the image must match '^[0-9]+.[0-9]+.[0-9]+$'")
+	}
+	return nil
+}
+
+func validateTelegrafTemplate(telegrafTemplate *TelegrafTemplate) error {
+	if telegrafTemplate != nil && telegrafTemplate.Image == "" {
+		return errors.New("The image of telegraf must be completed")
+	}
+	if telegrafTemplate != nil && telegrafTemplate.Conf == nil {
+		return errors.New("The conf of the telegraf must be completed")
 	}
 	return nil
 }

@@ -20,7 +20,7 @@ runs:
     - name: Deployment emqx
       shell: bash
       run: |
-        sed -i "s|image:[[:space:]].*|image: ${{ inputs.image }}|g" config/samples/emqx/${{ inputs.apiVersion }}/${{ inputs.kind }}.yaml
+        sed -i "s|image:[[:space:]]emqx.*|image: ${{ inputs.image }}|1" config/samples/emqx/${{ inputs.apiVersion }}/${{ inputs.kind }}.yaml
         kubectl apply -f config/samples/emqx/${{ inputs.apiVersion }}/${{ inputs.kind }}.yaml
     - name: Check emqx pods status
       shell: bash

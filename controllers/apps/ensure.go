@@ -173,7 +173,23 @@ func (handler *Handler) postUpdate(obj client.Object, emqx v1beta1.Emqx) error {
 			if stderr != "" {
 				return fmt.Errorf("pod %s get license info failed: %s", pod.GetName(), stderr)
 			}
-			handler.logger.Info(fmt.Sprintf("pod %s update license successfully", pod.GetName()))
+			handler.logger.Info(fmt.Sprintf("container %s update license successfully", pod.GetName()))
+		}
+	}
+	if obj.GetName() == fmt.Sprintf("%s-%s", emqx.GetName(), "telegraf-config") {
+		pods, err := handler.getPods(emqx)
+		if err != nil {
+			return err
+		}
+		for _, pod := range pods.Items {
+			_, stderr, err := handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), "telegraf", "/bin/kill 1", nil)
+			if err != nil {
+				return fmt.Errorf("exec container: %s in pod: %s error: %v", "telegraf", pod.GetName(), err)
+			}
+			if stderr != "" {
+				return fmt.Errorf("container: %s in pod: %s update telegraf failed: %s", "telegraf", pod.GetName(), stderr)
+			}
+			handler.logger.Info(fmt.Sprintf("container: %s in pod: %s update config successfully", "telegraf", pod.GetName()))
 		}
 	}
 	return nil
