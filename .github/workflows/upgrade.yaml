@@ -1,0 +1,94 @@
+name: Upgrade emqx operator
+
+on:
+  pull_request:
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        apiVersion:
+          - v1beta1
+          - v1beta2
+        emqx:
+          - [EmqxBroker, "emqx/emqx:4.4.1"]
+          - [EmqxEnterprise, "emqx/emqx-ee:4.4.0"]
+    steps:
+      - run: minikube start
+      - name: install cert-manager
+        run: |
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo update
+          helm install \
+            cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --version v1.6.1 \
+            --set installCRDs=true
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.3'
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install storage operator
+        run: |
+          curl -f -L "https://github.com/emqx/emqx-operator/releases/download/$(git describe --abbrev=0 --tags)/emqx-operator-controller.yaml" -o ./emqx-operator-controller.yaml
+          kubectl apply -f emqx-operator-controller.yaml
+      - name: Check operator
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
+            echo "waiting operator controller pod running"
+            sleep 1
+          done
+      - name: Deploy emqx
+        run: |
+          cat << "EOF" | kubectl apply -f -
+          apiVersion: apps.emqx.io/${{ matrix.apiVersion }}
+          kind: ${{ matrix.emqx[0] }}
+          metadata:
+            name: emqx
+            labels:
+              cluster: emqx
+          spec:
+            image: ${{ matrix.emqx[1] }}
+          EOF
+      - name: Check emqx pods status
+        run: |
+          set -euo pipefail
+          while ! kubectl describe sts ${{ inputs.kind}} | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
+            echo "waiting ${{ inputs.kind}} pod running"
+            sleep 1
+          done
+          echo "==========================="
+          echo "${{ inputs.image }} pod run successfully"
+      - name: Build image
+        env:
+          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
+        run: eval $(minikube docker-env) && docker build -t $IMG .
+      - name: Deploy controller
+        env:
+          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
+        run: make deploy
+      - name: Check operator
+        env:
+          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .image' | tr -d '"')" != "$IMG" ]; do
+            echo "waiting operator controller pod running"
+            sleep 1
+          done
+      - run: kubectl exec -i emqx-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
+      - name: Check emqx restarts
+        run: |
+          restart=$(kubectl get pods -l "cluster=emqx" -o json | jq '.items[].status.containerStatuses[] | select(.restartCount != 0)')
+          if [ -n "$restart" ]; then
+            echo $restart
+            exit 1
+          fi
