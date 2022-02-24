@@ -1,0 +1,102 @@
+{
+  "en": [
+    {
+      "title": "Introduction",
+      "children": [
+        {
+          "title": "EMQX Operator introduction",
+          "path": "./"
+        },
+        {
+          "title": "Main features",
+          "path": "introduction/features"
+        },
+        {
+          "title": "Deployment",
+          "path": "introduction/deployment"
+        }
+      ]
+    },
+    {
+      "title": "Getting Started",
+      "children": [
+        {
+          "title": "Getting Started",
+          "path": "getting-started/getting-started"
+        }
+      ]
+    },
+    {
+      "title": "configuration",
+      "children": [
+        {
+          "title": "configuration",
+          "path": "configuration/configuration"
+        },
+        {
+          "title": "Scale Cluster",
+          "path": "configuration/cluster"
+        }
+      ]
+    },
+    {
+      "title": "FAQ",
+      "children": [
+        {
+          "title": "Common errors",
+          "path": "faq/faq"
+        }
+      ]
+    }
+  ],
+  "cn": [
+    {
+      "title": "产品介绍",
+      "children": [
+        {
+          "title": "EMQX Operator是什么",
+          "path": "./"
+        },
+        {
+          "title": "核心功能",
+          "path": "introduction/features"
+        },
+        {
+          "title": "部署要求",
+          "path": "introduction/deployment"
+        }
+      ]
+    },
+    {
+      "title": "快速开始",
+      "children": [
+        {
+          "title": "快速开始",
+          "path": "getting-started/getting-started"
+        }
+      ]
+    },
+    {
+      "title": "配置",
+      "children": [
+        {
+          "title": "配置",
+          "path": "configuration/configuration"
+        },
+        {
+          "title": "集群扩展",
+          "path": "configuration/cluster"
+        }
+      ]
+    },
+    {
+      "title": "FAQ 常见问题解答",
+      "children": [
+        {
+          "title": "常见错误",
+          "path": "faq/faq"
+        }
+      ]
+    }
+  ]
+}

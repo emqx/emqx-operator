@@ -1,3 +1,5 @@
+# Getting Started
+
 **Note**: EMQX Operator Controller requires Kubernetes v1.20.0 and up.
 
 ## Background
@@ -139,10 +141,10 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/co
    emqx-1   1/1     Running   0          22m
    emqx-2   1/1     Running   0          22m
 
-   $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl status
+   $ kubectl exec -it emqx-0 -- emqx_ctl status
    Node 'emqx@emqx-0.emqx.default.svc.cluster.local' 4.3.11 is started
 
-   $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl cluster status
+   $ kubectl exec -it emqx-0 -- emqx_ctl cluster status
    Cluster status: #{running_nodes =>
                          ['emqx@emqx-0.emqx.default.svc.cluster.local',
                           'emqx@emqx-1.emqx.default.svc.cluster.local',
@@ -154,7 +156,3 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/co
 >
 >* EMQX Operator provides the default listener for EMQX Cluster to connect. The default `Type` of service is `ClusterIP`,which can be modified as `LoadBalance` or `NodePort`.
 >* The ports about `ws`、`wss`、`mqtt`、`mqtts`、`dashboard`、`api` need to be set before deploying because they can't be updated while `EMQX Cluster` running.
-
-### Scaling the cluster
-
-[cluster-expansion](../cluster-expansion.md)

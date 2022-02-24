@@ -40,3 +40,11 @@ jobs:
           use-quiet-mode: 'yes'
           check-modified-files-only: 'yes'
           base-branch: 'main'
+
+  check-docs-directory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@main
+      - name: check directory config
+        run: python3 .ci/directory_check.py directory.json $(pwd)/docs
