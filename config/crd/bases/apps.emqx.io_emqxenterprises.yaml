@@ -2489,6 +2489,57 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  certificate:
+                    properties:
+                      mqtts:
+                        properties:
+                          data:
+                            properties:
+                              ca.crt:
+                                format: byte
+                                type: string
+                              tls.crt:
+                                format: byte
+                                type: string
+                              tls.key:
+                                format: byte
+                                type: string
+                            type: object
+                          stringData:
+                            properties:
+                              ca.crt:
+                                type: string
+                              tls.crt:
+                                type: string
+                              tls.key:
+                                type: string
+                            type: object
+                        type: object
+                      wss:
+                        properties:
+                          data:
+                            properties:
+                              ca.crt:
+                                format: byte
+                                type: string
+                              tls.crt:
+                                format: byte
+                                type: string
+                              tls.key:
+                                format: byte
+                                type: string
+                            type: object
+                          stringData:
+                            properties:
+                              ca.crt:
+                                type: string
+                              tls.crt:
+                                type: string
+                              tls.key:
+                                type: string
+                            type: object
+                        type: object
+                    type: object
                   externalIPs:
                     items:
                       type: string
@@ -3904,6 +3955,57 @@ spec:
                       annotations:
                         additionalProperties:
                           type: string
+                        type: object
+                      certificate:
+                        properties:
+                          mqtts:
+                            properties:
+                              data:
+                                properties:
+                                  ca.crt:
+                                    format: byte
+                                    type: string
+                                  tls.crt:
+                                    format: byte
+                                    type: string
+                                  tls.key:
+                                    format: byte
+                                    type: string
+                                type: object
+                              stringData:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
+                            type: object
+                          wss:
+                            properties:
+                              data:
+                                properties:
+                                  ca.crt:
+                                    format: byte
+                                    type: string
+                                  tls.crt:
+                                    format: byte
+                                    type: string
+                                  tls.key:
+                                    format: byte
+                                    type: string
+                                type: object
+                              stringData:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
+                            type: object
                         type: object
                       externalIPs:
                         items:

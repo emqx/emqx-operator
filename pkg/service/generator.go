@@ -38,6 +38,16 @@ func Generate(emqx v1beta1.Emqx) []client.Object {
 	module, sts := generateConfigMapForModules(emqx, sts)
 	resources = append(resources, module)
 
+	mqttsCerts, sts := generateSecretForMQTTSCertificate(emqx, sts)
+	if mqttsCerts != nil {
+		resources = append(resources, mqttsCerts)
+	}
+
+	wssCerts, sts := generateSecretForWSSCertificate(emqx, sts)
+	if wssCerts != nil {
+		resources = append(resources, wssCerts)
+	}
+
 	if emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise); ok {
 		if emqxEnterprise.GetLicense() != "" {
 			var license *corev1.Secret
@@ -489,6 +499,154 @@ func generateConfigMapForModules(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 		},
 	)
 	return cm, sts
+}
+
+func generateSecretForMQTTSCertificate(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
+	cert := emqx.GetListener().Certificate.WSS
+	if reflect.ValueOf(cert).IsZero() {
+		return nil, sts
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    emqx.GetLabels(),
+			Name:      fmt.Sprintf("%s-%s-%s", emqx.GetName(), "mqtts", "cert"),
+			Namespace: emqx.GetNamespace(),
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			"ca.crt":  cert.Data.CaCert,
+			"tls.crt": cert.Data.TLSCert,
+			"tls.key": cert.Data.TLSKey,
+		},
+		StringData: map[string]string{
+			"ca.crt":  cert.StringData.CaCert,
+			"tls.crt": cert.StringData.TLSCert,
+			"tls.key": cert.StringData.TLSKey,
+		},
+	}
+
+	container := sts.Spec.Template.Spec.Containers[0]
+	container.VolumeMounts = append(
+		container.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      secret.Name,
+			MountPath: "/mounted/certs/mqtts",
+			ReadOnly:  true,
+		},
+	)
+	container.Env = append(
+		container.Env,
+		corev1.EnvVar{
+			Name:  "EMQX_LISTENER__SSL__EXTERNAL__CERTFILE",
+			Value: "/mounted/certs/mqtts/tls.crt",
+		},
+		corev1.EnvVar{
+			Name:  "EMQX_LISTENER__SSL__EXTERNAL__KEYFILE",
+			Value: "/mounted/certs/mqtts/tls.key",
+		},
+	)
+	if len(cert.Data.CaCert) != 0 || cert.StringData.CaCert != "" {
+		container.Env = append(
+			container.Env,
+			corev1.EnvVar{
+				Name:  "EMQX_LISTENER__SSL__EXTERNAL__CACERTFILE",
+				Value: "/mounted/certs/mqtts/ca.crt",
+			},
+		)
+	}
+	sts.Spec.Template.Spec.Containers = []corev1.Container{container}
+	sts.Spec.Template.Spec.Volumes = append(
+		sts.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: secret.Name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secret.Name,
+				},
+			},
+		},
+	)
+
+	return secret, sts
+}
+
+func generateSecretForWSSCertificate(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
+	cert := emqx.GetListener().Certificate.WSS
+	if reflect.ValueOf(cert).IsZero() {
+		return nil, sts
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    emqx.GetLabels(),
+			Name:      fmt.Sprintf("%s-%s-%s", emqx.GetName(), "wss", "cert"),
+			Namespace: emqx.GetNamespace(),
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			"ca.crt":  cert.Data.CaCert,
+			"tls.crt": cert.Data.TLSCert,
+			"tls.key": cert.Data.TLSKey,
+		},
+		StringData: map[string]string{
+			"ca.crt":  cert.StringData.CaCert,
+			"tls.crt": cert.StringData.TLSCert,
+			"tls.key": cert.StringData.TLSKey,
+		},
+	}
+
+	container := sts.Spec.Template.Spec.Containers[0]
+	container.VolumeMounts = append(
+		container.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      secret.Name,
+			MountPath: "/mounted/certs/wss",
+			ReadOnly:  true,
+		},
+	)
+	container.Env = append(
+		container.Env,
+		corev1.EnvVar{
+			Name:  "EMQX_LISTENER__WSS__EXTERNAL__CERTFILE",
+			Value: "/mounted/certs/wss/tls.crt",
+		},
+		corev1.EnvVar{
+			Name:  "EMQX_LISTENER__WSS__EXTERNAL__KEYFILE",
+			Value: "/mounted/certs/wss/tls.key",
+		},
+	)
+	if len(cert.Data.CaCert) != 0 || cert.StringData.CaCert != "" {
+		container.Env = append(
+			container.Env,
+			corev1.EnvVar{
+				Name:  "EMQX_LISTENER__WSS__EXTERNAL__CACERTFILE",
+				Value: "/mounted/certs/wss/ca.crt",
+			},
+		)
+	}
+	sts.Spec.Template.Spec.Containers = []corev1.Container{container}
+	sts.Spec.Template.Spec.Volumes = append(
+		sts.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: secret.Name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secret.Name,
+				},
+			},
+		},
+	)
+
+	return secret, sts
 }
 
 func generateSecretForLicense(emqx v1beta1.EmqxEnterprise, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
