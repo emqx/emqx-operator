@@ -19,7 +19,6 @@ package controller_suite_test
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	"github.com/emqx/emqx-operator/pkg/util"
@@ -71,8 +70,8 @@ func check_plugins(emqx v1beta1.Emqx) {
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
-				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
 				Namespace: emqx.GetNamespace(),
+				Name:      util.Name4Plugins(emqx),
 			},
 			cm,
 		)

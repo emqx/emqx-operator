@@ -18,9 +18,9 @@ package controller_suite_test
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -40,19 +40,20 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_license(emqx *v1beta1.EmqxEnterprise) {
+func check_license(emqx v1beta1.Emqx) {
+	emqxEneterprise, _ := emqx.(*v1beta1.EmqxEnterprise)
 	Eventually(func() map[string][]byte {
 		secret := &corev1.Secret{}
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
-				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "license"),
 				Namespace: emqx.GetNamespace(),
+				Name:      util.Name4License(emqx),
 			},
 			secret,
 		)
 		return secret.Data
 	}, timeout, interval).Should(Equal(
-		map[string][]byte{"emqx.lic": []byte(emqx.GetLicense())},
+		map[string][]byte{"emqx.lic": []byte(emqxEneterprise.GetLicense())},
 	))
 }

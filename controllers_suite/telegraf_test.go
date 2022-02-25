@@ -2,9 +2,9 @@ package controller_suite_test
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -34,8 +34,8 @@ func check_telegraf(emqx v1beta1.Emqx) {
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
-				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "telegraf-config"),
 				Namespace: emqx.GetNamespace(),
+				Name:      util.Name4Telegraf(emqx),
 			},
 			cm,
 		)
