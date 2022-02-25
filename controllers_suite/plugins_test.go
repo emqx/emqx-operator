@@ -71,7 +71,7 @@ func check_plugins(emqx v1beta1.Emqx) {
 			context.Background(),
 			types.NamespacedName{
 				Namespace: emqx.GetNamespace(),
-				Name:      util.Name4Plugins(emqx),
+				Name:      util.NameForPlugins(emqx),
 			},
 			cm,
 		)

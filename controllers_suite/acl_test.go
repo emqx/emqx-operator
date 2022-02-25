@@ -66,7 +66,7 @@ func check_acl(emqx v1beta1.Emqx) {
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
-				Name:      util.Name4ACL(emqx),
+				Name:      util.NameForACL(emqx),
 				Namespace: emqx.GetNamespace(),
 			},
 			cm,

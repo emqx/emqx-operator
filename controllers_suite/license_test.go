@@ -48,7 +48,7 @@ func check_license(emqx v1beta1.Emqx) {
 			context.Background(),
 			types.NamespacedName{
 				Namespace: emqx.GetNamespace(),
-				Name:      util.Name4License(emqx),
+				Name:      util.NameForLicense(emqx),
 			},
 			secret,
 		)

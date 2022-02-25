@@ -35,7 +35,7 @@ func check_telegraf(emqx v1beta1.Emqx) {
 			context.Background(),
 			types.NamespacedName{
 				Namespace: emqx.GetNamespace(),
-				Name:      util.Name4Telegraf(emqx),
+				Name:      util.NameForTelegraf(emqx),
 			},
 			cm,
 		)
