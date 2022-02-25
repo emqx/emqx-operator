@@ -43,7 +43,9 @@ type EmqxBrokerSpec struct {
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	//+kubebuilder:validation:Required
-	Image string `json:"image,omitempty"`
+	Image            string                        `json:"image,omitempty"`
+	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
@@ -57,10 +59,9 @@ type EmqxBrokerSpec struct {
 	Labels      v1beta1.Labels    `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 
-	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
-	ImagePullPolicy corev1.PullPolicy   `json:"imagePullPolicy,omitempty"`
+	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
