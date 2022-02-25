@@ -159,14 +159,46 @@ func (handler *Handler) postUpdate(obj client.Object, emqx v1beta1.Emqx) error {
 			return err
 		}
 		for _, pod := range pods.Items {
-			_, stderr, err := handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), emqx.GetName(), "emqx_ctl license reload /mounted/license/emqx.lic", nil)
+			_, stderr, err := handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), "emqx", "emqx_ctl license reload /mounted/license/emqx.lic", nil)
 			if err != nil {
 				return fmt.Errorf("exec pod %s error: %v", pod.GetName(), err)
 			}
 			if stderr != "" {
 				return fmt.Errorf("pod %s update license failed: %s", pod.GetName(), stderr)
 			}
-			_, stderr, err = handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), emqx.GetName(), "emqx_ctl license info", nil)
+			_, stderr, err = handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), "emqx", "emqx_ctl license info", nil)
+			if err != nil {
+				return fmt.Errorf("exec pod %s error: %v", pod.GetName(), err)
+			}
+			if stderr != "" {
+				return fmt.Errorf("pod %s get license info failed: %s", pod.GetName(), stderr)
+			}
+			handler.logger.Info(fmt.Sprintf("container %s update license successfully", pod.GetName()))
+		}
+	}
+	if obj.GetName() == fmt.Sprintf("%s-%s-%s", emqx.GetName(), "mqtts", "cert") {
+		pods, err := handler.getPods(emqx)
+		if err != nil {
+			return err
+		}
+		for _, pod := range pods.Items {
+			_, stderr, err := handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), "emqx", "listeners restart mqtt:ssl:external", nil)
+			if err != nil {
+				return fmt.Errorf("exec pod %s error: %v", pod.GetName(), err)
+			}
+			if stderr != "" {
+				return fmt.Errorf("pod %s get license info failed: %s", pod.GetName(), stderr)
+			}
+			handler.logger.Info(fmt.Sprintf("container %s update license successfully", pod.GetName()))
+		}
+	}
+	if obj.GetName() == fmt.Sprintf("%s-%s-%s", emqx.GetName(), "wss", "cert") {
+		pods, err := handler.getPods(emqx)
+		if err != nil {
+			return err
+		}
+		for _, pod := range pods.Items {
+			_, stderr, err := handler.executor.ExecToPod(emqx.GetNamespace(), pod.GetName(), "emqx", "listeners restart mqtt:wss:external", nil)
 			if err != nil {
 				return fmt.Errorf("exec pod %s error: %v", pod.GetName(), err)
 			}

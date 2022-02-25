@@ -17,6 +17,7 @@ type Listener struct {
 	ExternalIPs              []string           `json:"externalIPs,omitempty" protobuf:"bytes,5,rep,name=externalIPs"`
 	Ports                    Ports              `json:"ports,omitempty"`
 	NodePorts                Ports              `json:"nodePorts,omitempty"`
+	Certificate              Certificate        `json:"certificate,omitempty"`
 }
 
 type Ports struct {
@@ -32,6 +33,29 @@ type Ports struct {
 	Dashboard int32 `json:"dashboard,omitempty"`
 	//+kubebuilder:validation:Maximum=65535
 	API int32 `json:"api,omitempty"`
+}
+
+//+kubebuilder:object:generate=true
+type Certificate struct {
+	WSS   CertificateConf `json:"wss,omitempty"`
+	MQTTS CertificateConf `json:"mqtts,omitempty"`
+}
+
+type CertificateConf struct {
+	Data       CertificateData       `json:"data,omitempty"`
+	StringData CertificateStringData `json:"stringData,omitempty"`
+}
+
+type CertificateData struct {
+	CaCert  []byte `json:"ca.crt,omitempty"`
+	TLSCert []byte `json:"tls.crt,omitempty"`
+	TLSKey  []byte `json:"tls.key,omitempty"`
+}
+
+type CertificateStringData struct {
+	CaCert  string `json:"ca.crt,omitempty"`
+	TLSCert string `json:"tls.crt,omitempty"`
+	TLSKey  string `json:"tls.key,omitempty"`
 }
 
 func generateListener(listener Listener) Listener {

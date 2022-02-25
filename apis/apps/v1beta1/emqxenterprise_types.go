@@ -45,7 +45,6 @@ type EmqxEnterpriseSpec struct {
 	// The service account name which is being bind with the service
 	// account of the crd instance.
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-	License   string                      `json:"license,omitempty"`
 
 	Storage *Storage `json:"storage,omitempty"`
 
@@ -55,6 +54,7 @@ type EmqxEnterpriseSpec struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	Listener Listener `json:"listener,omitempty"`
+	License  string   `json:"license,omitempty"`
 
 	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
