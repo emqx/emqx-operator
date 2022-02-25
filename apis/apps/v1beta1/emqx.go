@@ -30,6 +30,12 @@ type EmqxSpec interface {
 	GetImage() string
 	SetImage(image string)
 
+	GetImagePullPolicy() corev1.PullPolicy
+	SetImagePullPolicy(pullPolicy corev1.PullPolicy)
+
+	GetImagePullSecrets() []corev1.LocalObjectReference
+	SetImagePullSecrets([]corev1.LocalObjectReference)
+
 	GetServiceAccountName() string
 	SetServiceAccountName(serviceAccountName string)
 
@@ -53,9 +59,6 @@ type EmqxSpec interface {
 
 	GetNodeSelector() map[string]string
 	SetNodeSelector(nodeSelector map[string]string)
-
-	GetImagePullPolicy() corev1.PullPolicy
-	SetImagePullPolicy(pullPolicy corev1.PullPolicy)
 
 	GetExtraVolumes() []corev1.Volume
 	GetExtraVolumeMounts() []corev1.VolumeMount

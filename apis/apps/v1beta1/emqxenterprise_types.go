@@ -38,7 +38,9 @@ type EmqxEnterpriseSpec struct {
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	//+kubebuilder:validation:Required
-	Image string `json:"image,omitempty"`
+	Image            string                        `json:"image,omitempty"`
+	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
@@ -56,10 +58,9 @@ type EmqxEnterpriseSpec struct {
 	Listener Listener `json:"listener,omitempty"`
 	License  string   `json:"license,omitempty"`
 
-	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
-	ImagePullPolicy corev1.PullPolicy   `json:"imagePullPolicy,omitempty"`
+	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
@@ -125,6 +126,18 @@ func (emqx *EmqxEnterprise) SetReplicas(replicas *int32) { emqx.Spec.Replicas = 
 func (emqx *EmqxEnterprise) GetImage() string      { return emqx.Spec.Image }
 func (emqx *EmqxEnterprise) SetImage(image string) { emqx.Spec.Image = image }
 
+func (emqx *EmqxEnterprise) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
+func (emqx *EmqxEnterprise) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
+	emqx.Spec.ImagePullPolicy = pullPolicy
+}
+
+func (emqx *EmqxEnterprise) GetImagePullSecrets() []corev1.LocalObjectReference {
+	return emqx.Spec.ImagePullSecrets
+}
+func (emqx *EmqxEnterprise) SetImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) {
+	emqx.Spec.ImagePullSecrets = imagePullSecrets
+}
+
 func (emqx *EmqxEnterprise) GetServiceAccountName() string {
 	if emqx.Spec.ServiceAccountName == "" {
 		emqx.SetServiceAccountName(emqx.Name)
@@ -167,11 +180,6 @@ func (emqx *EmqxEnterprise) SetToleRations(tolerations []corev1.Toleration) {
 func (emqx *EmqxEnterprise) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
 func (emqx *EmqxEnterprise) SetNodeSelector(nodeSelector map[string]string) {
 	emqx.Spec.NodeSelector = nodeSelector
-}
-
-func (emqx *EmqxEnterprise) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
-func (emqx *EmqxEnterprise) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
-	emqx.Spec.ImagePullPolicy = pullPolicy
 }
 
 func (emqx *EmqxEnterprise) GetExtraVolumes() []corev1.Volume { return emqx.Spec.ExtraVolumes }

@@ -37,7 +37,9 @@ type EmqxBrokerSpec struct {
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	//+kubebuilder:validation:Required
-	Image string `json:"image,omitempty"`
+	Image            string                        `json:"image,omitempty"`
+	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
@@ -54,10 +56,9 @@ type EmqxBrokerSpec struct {
 
 	Listener Listener `json:"listener,omitempty"`
 
-	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
-	ImagePullPolicy corev1.PullPolicy   `json:"imagePullPolicy,omitempty"`
+	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
@@ -119,6 +120,18 @@ func (emqx *EmqxBroker) SetReplicas(replicas *int32) { emqx.Spec.Replicas = repl
 func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.Image }
 func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.Image = image }
 
+func (emqx *EmqxBroker) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
+func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
+	emqx.Spec.ImagePullPolicy = pullPolicy
+}
+
+func (emqx *EmqxBroker) GetImagePullSecrets() []corev1.LocalObjectReference {
+	return emqx.Spec.ImagePullSecrets
+}
+func (emqx *EmqxBroker) SetImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) {
+	emqx.Spec.ImagePullSecrets = imagePullSecrets
+}
+
 func (emqx *EmqxBroker) GetServiceAccountName() string {
 	return emqx.Spec.ServiceAccountName
 }
@@ -155,11 +168,6 @@ func (emqx *EmqxBroker) SetToleRations(tolerations []corev1.Toleration) {
 func (emqx *EmqxBroker) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
 func (emqx *EmqxBroker) SetNodeSelector(nodeSelector map[string]string) {
 	emqx.Spec.NodeSelector = nodeSelector
-}
-
-func (emqx *EmqxBroker) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
-func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
-	emqx.Spec.ImagePullPolicy = pullPolicy
 }
 
 func (emqx *EmqxBroker) GetExtraVolumes() []corev1.Volume { return emqx.Spec.ExtraVolumes }
