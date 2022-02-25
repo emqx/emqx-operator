@@ -154,26 +154,26 @@ func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
 	return nil
 }
 func (handler *Handler) postUpdate(obj client.Object, emqx v1beta1.Emqx) error {
-	if obj.GetName() == util.Name4License(emqx) {
+	if obj.GetName() == util.NameForLicense(emqx) {
 		err := handler.execToPods(emqx, "emqx", "emqx_ctl license reload /mounted/license/emqx.lic")
 		if err != nil {
 			return err
 		}
 	}
-	if obj.GetName() == util.Name4MQTTSCertificate(emqx) {
+	if obj.GetName() == util.NameForMQTTSCertificate(emqx) {
 		err := handler.execToPods(emqx, "emqx", "listeners restart mqtt:ssl:external")
 		if err != nil {
 			return err
 		}
 	}
 
-	if obj.GetName() == util.Name4WSSCertificate(emqx) {
+	if obj.GetName() == util.NameForWSSCertificate(emqx) {
 		err := handler.execToPods(emqx, "emqx", "listeners restart mqtt:wss:external")
 		if err != nil {
 			return err
 		}
 	}
-	if obj.GetName() == util.Name4Telegraf(emqx) {
+	if obj.GetName() == util.NameForTelegraf(emqx) {
 		err := handler.execToPods(emqx, "telegraf", "/bin/kill 1")
 		if err != nil {
 			return err

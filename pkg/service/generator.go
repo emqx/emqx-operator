@@ -124,7 +124,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
 			Namespace: emqx.GetNamespace(),
-			Name:      util.Name4Telegraf(emqx),
+			Name:      util.NameForTelegraf(emqx),
 		},
 		Data: map[string]string{"telegraf.conf": *telegrafTemplate.Conf},
 	}
@@ -142,7 +142,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 				ReadOnly:  true,
 			},
 			{
-				Name:      util.Name4Log(emqx),
+				Name:      util.NameForLog(emqx),
 				MountPath: "/opt/emqx/log",
 			},
 		},
@@ -330,7 +330,7 @@ func generateConfigMapForAcl(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
 			Namespace: emqx.GetNamespace(),
-			Name:      util.Name4ACL(emqx),
+			Name:      util.NameForACL(emqx),
 		},
 		Data: map[string]string{"acl.conf": aclString},
 	}
@@ -386,7 +386,7 @@ func generateConfigMapForPlugins(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
 			Namespace: emqx.GetNamespace(),
-			Name:      util.Name4Plugins(emqx),
+			Name:      util.NameForPlugins(emqx),
 		},
 		Data: map[string]string{"loaded_plugins": loadedPluginsString},
 	}
@@ -449,7 +449,7 @@ func generateConfigMapForModules(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
 			Namespace: emqx.GetNamespace(),
-			Name:      util.Name4Modules(emqx),
+			Name:      util.NameForModules(emqx),
 		},
 		Data: map[string]string{"loaded_modules": loadedModulesString},
 	}
@@ -508,7 +508,7 @@ func generateSecretForMQTTSCertificate(emqx v1beta1.Emqx, sts *appsv1.StatefulSe
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
 			Namespace: emqx.GetNamespace(),
-			Name:      util.Name4MQTTSCertificate(emqx),
+			Name:      util.NameForMQTTSCertificate(emqx),
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
@@ -582,7 +582,7 @@ func generateSecretForWSSCertificate(emqx v1beta1.Emqx, sts *appsv1.StatefulSet)
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
 			Namespace: emqx.GetNamespace(),
-			Name:      util.Name4WSSCertificate(emqx),
+			Name:      util.NameForWSSCertificate(emqx),
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
@@ -658,7 +658,7 @@ func generateSecretForLicense(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*core
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
 			Namespace: emqx.GetNamespace(),
-			Name:      util.Name4License(emqx),
+			Name:      util.NameForLicense(emqx),
 		},
 		Type:       corev1.SecretTypeOpaque,
 		StringData: map[string]string{"emqx.lic": emqxEnterprise.GetLicense()},
@@ -699,8 +699,8 @@ func generateSecretForLicense(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*core
 func generateVolume(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
 	container := sts.Spec.Template.Spec.Containers[0]
 
-	dataName := util.Name4Data(emqx)
-	logName := util.Name4Log(emqx)
+	dataName := util.NameForData(emqx)
+	logName := util.NameForLog(emqx)
 
 	container.VolumeMounts = append(
 		container.VolumeMounts,
