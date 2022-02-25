@@ -47,4 +47,4 @@ jobs:
       - name: Check out code
         uses: actions/checkout@main
       - name: check directory config
-        run: python3 .ci/directory_check.py directory.json $(pwd)/docs
+        run: python3 .github/scripts/directory_check.py directory.json $(pwd)/docs

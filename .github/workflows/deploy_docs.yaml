@@ -1,18 +1,23 @@
 name: Deploy Docs
 
-concurrency: 
+concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'docs/**'
+    tags:
+      - "*"
 
 jobs:
   deploy:
+    strategy:
+      fail-fast: false
+      matrix:
+        ref:
+          - "latest"
+          - ""
+
     runs-on: ubuntu-20.04
     if: github.repository_owner == 'emqx'
     steps:
@@ -42,20 +47,17 @@ jobs:
 
     - name: set env
       run: |
-         BRANCH=$(echo ${{ github.ref }} | sed -r  "s ^refs/heads/|^refs/tags/(.*) \1 g")
-         if [ "$BRANCH" = "main" ];then
-         VERSION="latest"
-         else
-         VERSION=v$BRANCH
-         fi
-         echo "DOCS_BRANCH=$BRANCH" >> $GITHUB_ENV
-         echo "VERSION=$VERSION" >> $GITHUB_ENV
-         echo "DOCS_TYPE=emqx-operator" >> $GITHUB_ENV
+        if [ "${{ matrix.ref }}" == "latest" ]; then
+          echo "VERSION=latest" >> $GITHUB_ENV
+        else
+          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+        fi
+        echo "DOCS_TYPE=emqx-operator" >> $GITHUB_ENV
 
     - name: remove unused files
       run: |
         cd docs-files
-        python3 .ci/remove_unused.py $(pwd)/docs
+        python3 .github/scripts/remove_unused.py $(pwd)/docs
 
     - name: move files
       run: |
@@ -69,7 +71,7 @@ jobs:
         cp -r docs-files/docs/en_US/* frontend/docs/en/${DOCS_TYPE}/${VERSION}/
         cp -r docs-files/docs/zh_CN/* frontend/docs/zh/${DOCS_TYPE}/${VERSION}/
         cp docs-files/docs/directory.json frontend/docs/.vuepress/config/directory.json
-        echo "[\"latest\"]" > frontend/docs/.vuepress/public/api/${DOCS_TYPE}_versions.json
+        cd docs-files && git tag -l | egrep "^[1-9]\.[0-9]\.[0-9]?" | jq -R -s -c 'split("\n")[:-1]' > ../frontend/docs/.vuepress/public/api/${DOCS_TYPE}_versions.json
 
     - name: build docs
       run: |
