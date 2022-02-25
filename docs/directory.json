@@ -32,10 +32,6 @@
         {
           "title": "configuration",
           "path": "configuration/configuration"
-        },
-        {
-          "title": "Scale Cluster",
-          "path": "configuration/cluster"
         }
       ]
     },
@@ -82,10 +78,6 @@
         {
           "title": "配置",
           "path": "configuration/configuration"
-        },
-        {
-          "title": "集群扩展",
-          "path": "configuration/cluster"
         }
       ]
     },
