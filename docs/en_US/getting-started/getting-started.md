@@ -49,92 +49,20 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/co
 
 ## Deploy the EMQX Broker
 
-1. Create EMQX Custom Resource file like this
-
-   ```shell
-   $ cat https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/config/samples/emqx/v1beta2/emqx.yaml
-
+1. Deploy EMQX Custom Resource
+   ```
+   cat << "EOF" | kubectl apply -f -
    apiVersion: apps.emqx.io/v1beta2
    kind: EmqxBroker
    metadata:
      name: emqx
    spec:
-     serviceAccountName: "emqx"
-     image: emqx/emqx:4.3.11
-     replicas: 3
-     labels:
-       cluster: emqx
-     storage:
-       storageClassName: standard
-       resources:
-         requests:
-           storage: 20Mi
-       accessModes:
-       - ReadWriteOnce
-     emqxTemplate:
-       listener:
-         type: ClusterIP
-         ports:
-           mqtt: 1883
-           mqtts: 8883
-           ws: 8083
-           wss: 8084
-           dashboard: 18083
-           api: 8081
-       acl:
-         - permission: allow
-           username: "dashboard"
-           action: subscribe
-           topics:
-             filter:
-               - "$SYS/#"
-               - "#"
-         - permission: allow
-           ipaddress: "127.0.0.1"
-           topics:
-             filter:
-               - "$SYS/#"
-             equal:
-               - "#"
-         - permission: deny
-           action: subscribe
-           topics:
-             filter:
-               - "$SYS/#"
-             equal:
-               - "#"
-         - permission: allow
-       plugins:
-         - name: emqx_management
-           enable: true
-         - name: emqx_recon
-           enable: true
-         - name: emqx_retainer
-           enable: true
-         - name: emqx_dashboard
-           enable: true
-         - name: emqx_telemetry
-           enable: true
-         - name: emqx_rule_engine
-           enable: true
-         - name: emqx_bridge_mqtt
-           enable: false
-       modules:
-         - name: emqx_mod_acl_internal
-           enable: true
-         - name: emqx_mod_presence
-           enable: true
+     image: emqx/emqx:4.4.0
+   EOF
    ```
 
-   > * [Details for *cluster* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
-   > * [Details for *env* config](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
-
-2. Deploy EMQX Custom Resource and check EMQX status
-
-   ```shell
-   $ kubectl apply https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/config/samples/emqx/v1beta2/emqx.yaml
-   emqx.apps.emqx.io/emqx created
-
+2. Check EMQX status
+   ```bash
    $ kubectl get pods
    NAME              READY   STATUS    RESTARTS   AGE
    emqx-0   1/1     Running   0          22m
@@ -151,8 +79,3 @@ $ kubectl apply -f https://raw.githubusercontent.com/emqx/emqx-operator/1.1.2/co
                           'emqx@emqx-2.emqx.default.svc.cluster.local'],
                      stopped_nodes => []}
    ```
-
->**Note**:
->
->* EMQX Operator provides the default listener for EMQX Cluster to connect. The default `Type` of service is `ClusterIP`,which can be modified as `LoadBalance` or `NodePort`.
->* The ports about `ws`、`wss`、`mqtt`、`mqtts`、`dashboard`、`api` need to be set before deploying because they can't be updated while `EMQX Cluster` running.
