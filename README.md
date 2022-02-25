@@ -12,7 +12,7 @@ The EMQX Operator includes, but is not limited to, the following features:
 
 * **Simplified Deployment Configuration**: Configure the fundamentals of EMQX Cluster, including persistence, configuration, license and etc, in a Kubernetes-native way.
 
-For an introduction to the EMQX Operator, see the [get started](docs/user-guides/get-started.md) guide.
+For an introduction to the EMQX Operator, see the [introduction](docs/en_US/README.md).
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ The EMQX Operator automatically detects changes on any of the above custom resou
 
 ## Getting Start
 
-For more information on get started, see the [user guide](docs/user-guides/get-started.md)
+For more information on get started, see the [getting started](docs/en_US/getting-started/getting-started.md)
 
 ## Development
 
@@ -38,9 +38,9 @@ For more information on get started, see the [user guide](docs/user-guides/get-s
 - golang environment
 - docker (used for creating container images, etc.)
 - Kubernetes cluster
-  
+
 ## Contributing
-Many files (api, config, controller, hack,...) in this repository are auto-generated. 
+Many files (api, config, controller, hack,...) in this repository are auto-generated.
 Before proposing a pull request:
 
 1. Commit your changes.
@@ -48,4 +48,4 @@ Before proposing a pull request:
 3. Commit the generated changes.
 
 ## Troubleshooting
-Check the [troubleshooting documentation](docs/troubleshooting.md) for common issues and frequently asked questions (FAQ).
+Check the [troubleshooting documentation](docs/en_US/faq/faq.md) for common issues and frequently asked questions (FAQ).

@@ -1,6 +1,6 @@
 # FAQ
 
-## `make docker build` errors:
+## `make docker build` error:
 
 ```bash
 Unexpected error: msg: "failed to start the controlplane. retried 5 times: fork/exec /usr/local/kubebuilder/bin/etcd: no such file or directory"

@@ -1,30 +1,31 @@
-# Scaling EMQX Cluster
+# 扩展 EMQX 集群
 
-> [Introduction to EMQX cluster](https://docs.emqx.io/en/broker/v4.3/advanced/cluster.html)
+[EMQX 集群介绍](https://docs.emqx.io/en/broker/v4.3/advanced/cluster.html)
 
-**Note**: Now only supports the strategy of node discovery"*k8s*".
+**Note**: 现在只支持k8s的节点发现策略
 
-## Configuration Details
+## 集群详细配置
 
-[`cluster` details](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
+[集群配置](https://docs.emqx.io/en/broker/v4.3/configuration/configuration.html)
 
-## Example for `Operator cluster yaml`
+## 集群配置例子
 
-```yaml
+```
 ...
 cluster:
     name: emqx
-    k8s:   
-      apiserver: https://xxxxxxxx
+    k8s:
+      apiserver: <https://xxxxxxxx>
       service_name: emqx
       address_type: dns
       suffix: pod.cluster.local
       app_name: emqx
       namespace: default
 ...
+
 ```
 
-## Dependency details
+## 依赖
 
 <table>
     <tr>
@@ -32,7 +33,7 @@ cluster:
         cluster.discovery
         </th>
         <th>
-        cluster.k8s.address_type    
+        cluster.k8s.address_type
         </th>
         <th>
         cluster.k8s.suffix
