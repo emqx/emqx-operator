@@ -102,6 +102,19 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 							ImagePullPolicy: emqx.GetImagePullPolicy(),
 							Resources:       emqx.GetResource(),
 							Env:             emqx.GetEnv(),
+							StartupProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									Exec: &corev1.ExecAction{
+										Command: []string{
+											"/opt/emqx/bin/emqx",
+											"ping",
+										},
+									},
+								},
+								TimeoutSeconds:      10,
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       15,
+							},
 						},
 					},
 				},
@@ -291,6 +304,26 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 				envName = "EMQX_MANAGEMENT__LISTENER__HTTP"
 			case "dashboard":
 				envName = "EMQX_DASHBOARD__LISTENER__HTTP"
+			}
+
+			if name == "api" {
+				probe := &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/status",
+							Port: intstr.IntOrString{
+								IntVal: port,
+							},
+							Scheme: corev1.URISchemeHTTP,
+						},
+					},
+				}
+				container.ReadinessProbe = probe
+				container.ReadinessProbe.InitialDelaySeconds = 5
+				container.ReadinessProbe.PeriodSeconds = 5
+				container.LivenessProbe = probe
+				container.LivenessProbe.InitialDelaySeconds = 30
+				container.LivenessProbe.PeriodSeconds = 30
 			}
 
 			container.Env = append(container.Env, corev1.EnvVar{
