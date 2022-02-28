@@ -1,5 +1,25 @@
 name: Run emqx operator test case
 
+checklog: &checklog
+  - if: failure()
+    run: kubectl describe sts ${{ matrix.emqx[0]}}
+  - if: failure()
+    run: kubectl describe pods -l "cluster=emqx"
+  - if: failure()
+    run: kubectl exec -i ${{ matrix.emqx[0] }}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
+  - if: failure()
+    run: kubectl logs ${{ matrix.emqx[0] }}-0 -c emqx --tail=1000
+  - if: failure()
+    run: kubectl logs ${{ matrix.emqx[0] }}-1 -c emqx --tail=1000
+  - if: failure()
+    run: kubectl logs ${{ matrix.emqx[0] }}-2 -c emqx --tail=1000
+  - if: failure()
+    run: kubectl logs ${{ matrix.emqx[0] }}-3 -c emqx --tail=1000
+  - if: failure()
+    run: kubectl logs ${{ matrix.emqx[0] }}-4 -c emqx --tail=1000
+  - if: failure()
+    run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
+
 on:
   push:
     tags:
@@ -83,6 +103,7 @@ jobs:
             echo "waiting operator controller pod running"
             sleep 1
           done
+      <<: *checklog
 
   deployment:
     runs-on: ubuntu-latest
@@ -134,21 +155,4 @@ jobs:
           apiVersion: ${{ matrix.apiVersion }}
           kind:  ${{ matrix.emqx[0] }}
           image: ${{ matrix.emqx[1] }}
-      - if: failure()
-        run: kubectl describe sts ${{ matrix.emqx[0]}}
-      - if: failure()
-        run: kubectl describe pods -l "cluster=emqx"
-      - if: failure()
-        run: kubectl exec -i ${{ matrix.emqx[0] }}-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
-      - if: failure()
-        run: kubectl logs ${{ matrix.emqx[0] }}-0 -c emqx --tail=1000
-      - if: failure()
-        run: kubectl logs ${{ matrix.emqx[0] }}-1 -c emqx --tail=1000
-      - if: failure()
-        run: kubectl logs ${{ matrix.emqx[0] }}-2 -c emqx --tail=1000
-      - if: failure()
-        run: kubectl logs ${{ matrix.emqx[0] }}-3 -c emqx --tail=1000
-      - if: failure()
-        run: kubectl logs ${{ matrix.emqx[0] }}-4 -c emqx --tail=1000
-      - if: failure()
-        run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
+      <<: *checklog
