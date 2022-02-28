@@ -89,6 +89,12 @@ var _ = Describe("", func() {
 
 				Expect(sts.Spec.Template.Spec.Containers[0].Ports).Should(ConsistOf(containerPorts))
 				Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(env))
+				Expect(sts.Spec.Template.Spec.Containers[0].ReadinessProbe.Handler.HTTPGet.Port).Should(
+					Equal(intstr.IntOrString{IntVal: int32(8081)}),
+				)
+				Expect(sts.Spec.Template.Spec.Containers[0].LivenessProbe.Handler.HTTPGet.Port).Should(
+					Equal(intstr.IntOrString{IntVal: int32(8081)}),
+				)
 			}
 		})
 
