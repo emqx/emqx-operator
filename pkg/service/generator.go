@@ -93,6 +93,7 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 				Spec: corev1.PodSpec{
 					Affinity:         emqx.GetAffinity(),
 					Tolerations:      emqx.GetToleRations(),
+					NodeName:         emqx.GetNodeName(),
 					NodeSelector:     emqx.GetNodeSelector(),
 					ImagePullSecrets: emqx.GetImagePullSecrets(),
 					Containers: []corev1.Container{

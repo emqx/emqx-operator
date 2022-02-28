@@ -1712,6 +1712,8 @@ spec:
                       type: string
                   type: object
                 type: array
+              nodeName:
+                type: string
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -3722,6 +3724,8 @@ spec:
                   type: string
                 description: The labels configure must be specified.
                 type: object
+              nodeName:
+                type: string
               nodeSelector:
                 additionalProperties:
                   type: string
