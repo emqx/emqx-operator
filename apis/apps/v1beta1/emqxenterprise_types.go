@@ -50,6 +50,8 @@ type EmqxEnterpriseSpec struct {
 
 	Storage *Storage `json:"storage,omitempty"`
 
+	NodeName     string            `json:"nodeName,omitempty"`
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// TODO: waiting to be deleted, should use meta.labels
 	Labels Labels `json:"labels,omitempty"`
 	// TODO: waiting to be deleted, should use meta.annotations
@@ -58,9 +60,8 @@ type EmqxEnterpriseSpec struct {
 	Listener Listener `json:"listener,omitempty"`
 	License  string   `json:"license,omitempty"`
 
-	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
+	Affinity    *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations []corev1.Toleration `json:"toleRations,omitempty"`
 
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
@@ -159,6 +160,16 @@ func (emqx *EmqxEnterprise) SetLicense(license string) { emqx.Spec.License = lic
 func (emqx *EmqxEnterprise) GetStorage() *Storage        { return emqx.Spec.Storage }
 func (emqx *EmqxEnterprise) SetStorage(storage *Storage) { emqx.Spec.Storage = storage }
 
+func (emqx *EmqxEnterprise) GetNodeName() string { return emqx.Spec.NodeName }
+func (emqx *EmqxEnterprise) SetNodeName(nodeName string) {
+	emqx.Spec.NodeName = nodeName
+}
+
+func (emqx *EmqxEnterprise) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
+func (emqx *EmqxEnterprise) SetNodeSelector(nodeSelector map[string]string) {
+	emqx.Spec.NodeSelector = nodeSelector
+}
+
 func (emqx *EmqxEnterprise) GetAnnotations() map[string]string { return emqx.Spec.Annotations }
 func (emqx *EmqxEnterprise) SetAnnotations(annotations map[string]string) {
 	emqx.Spec.Annotations = annotations
@@ -175,11 +186,6 @@ func (emqx *EmqxEnterprise) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.A
 func (emqx *EmqxEnterprise) GetToleRations() []corev1.Toleration { return emqx.Spec.ToleRations }
 func (emqx *EmqxEnterprise) SetToleRations(tolerations []corev1.Toleration) {
 	emqx.Spec.ToleRations = tolerations
-}
-
-func (emqx *EmqxEnterprise) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
-func (emqx *EmqxEnterprise) SetNodeSelector(nodeSelector map[string]string) {
-	emqx.Spec.NodeSelector = nodeSelector
 }
 
 func (emqx *EmqxEnterprise) GetExtraVolumes() []corev1.Volume { return emqx.Spec.ExtraVolumes }

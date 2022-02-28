@@ -45,6 +45,12 @@ type EmqxSpec interface {
 	GetStorage() *Storage
 	SetStorage(storage *Storage)
 
+	GetNodeName() string
+	SetNodeName(nodeName string)
+
+	GetNodeSelector() map[string]string
+	SetNodeSelector(nodeSelector map[string]string)
+
 	GetAnnotations() map[string]string
 	SetAnnotations(annotations map[string]string)
 
@@ -56,9 +62,6 @@ type EmqxSpec interface {
 
 	GetToleRations() []corev1.Toleration
 	SetToleRations(tolerations []corev1.Toleration)
-
-	GetNodeSelector() map[string]string
-	SetNodeSelector(nodeSelector map[string]string)
 
 	GetExtraVolumes() []corev1.Volume
 	GetExtraVolumeMounts() []corev1.VolumeMount

@@ -62,6 +62,7 @@ type EmqxEnterpriseSpec struct {
 
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
