@@ -9,6 +9,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        install:
+          - static
+          - helm
         apiVersion:
           - v1beta1
           - v1beta2
@@ -34,9 +37,19 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install storage operator
+        if: matrix.install == 'static'
         run: |
           curl -f -L "https://github.com/emqx/emqx-operator/releases/download/$(git describe --abbrev=0 --tags)/emqx-operator-controller.yaml" -o ./emqx-operator-controller.yaml
           kubectl apply -f emqx-operator-controller.yaml
+      - name: Install storage operator
+        if: matrix.install == 'helm'
+        run: |
+          helm repo add emqx https://repos.emqx.io/charts
+          helm repo update
+          helm install emqx-operator emqx/emqx-operator \
+            --set installCRDs=true \
+            --namespace emqx-operator-system \
+            --create-namespace
       - name: Check operator
         timeout-minutes: 10
         run: |
@@ -71,9 +84,18 @@ jobs:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
         run: eval $(minikube docker-env) && docker build -t $IMG .
       - name: Deploy controller
+        if: matrix.install == 'static'
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
         run: make deploy
+      - name: Deploy controller
+        if: matrix.install == 'helm'
+        run: |
+          helm upgrade --install emqx-operator deploy/charts/emqx-operator \
+            --set installCRDs=true \
+            --set image.tag=${{ github.sha }} \
+            --namespace emqx-operator-system \
+            --create-namespace
       - name: Check operator
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
