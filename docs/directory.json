@@ -36,6 +36,19 @@
       ]
     },
     {
+      "title": "reference",
+      "children": [
+        {
+          "title": "EMQX Broker",
+          "path": "reference/emqxBroker"
+        },
+        {
+          "title": "EMQX Enterprise",
+          "path": "reference/emqxEnterprise"
+        }
+      ]
+    },
+    {
       "title": "FAQ",
       "children": [
         {
@@ -78,6 +91,19 @@
         {
           "title": "配置",
           "path": "configuration/configuration"
+        }
+      ]
+    },
+    {
+      "title": "参考",
+      "children": [
+        {
+          "title": "EMQX Broker",
+          "path": "reference/emqxBroker"
+        },
+        {
+          "title": "EMQX Enterprise",
+          "path": "reference/emqxEnterprise"
         }
       ]
     },
