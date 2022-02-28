@@ -1,23 +1,15 @@
 ## Release Note 🍻
 
-🆕 Happy Valentine's Day!
-
 ### Features 🌈
 
-- Now we can use helm to deploy, like this:
-
-  ```
-  $ helm repo add emqx https://repos.emqx.io/charts
-  $ helm repo update
-  $ helm install emqx-operator emqx/emqx-operator \
-            --set installCRDs=true \
-            --set cert-manager.enable=true \
-            --namespace emqx-operator-system \
-            --create-namespace
-  ```
+- Add telegraf sidecar container, sending metrics and events from `emqx_prometheus` plugin and emqx logs.
+- Add `.spec.imagePullSecret` for Custom Resource
+- Add `.spec.emqxTemplate.listener.certificate` for Custom Resource
+- Add `.spec.emqxTemplate.listener.labels` for Custom Resource
+- Add `.spec.emqxTemplate.listener.annotations` for Custom Resource
+- Now update `.spec.license` in EmqxEnterprise does not require restart pods
 
 ### Fixes 🛠
 
-- Fix ".spec.storage" conversion failed for EmqxEnterprise in v1beta2 API version
-
-- Fix an issue where the controller frequently performs updates when Custom Resource are not updated
+- Fix update service failed in k8s 1.21
+- Fix `.spec.listener.nodePort` not work
