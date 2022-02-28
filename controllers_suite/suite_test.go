@@ -273,26 +273,26 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 	storageClassName := "standard"
 	telegrafConf := `
-	[global_tags]
-      instanceID = "test"
+[global_tags]
+  instanceID = "test"
 
-    [[inputs.http]]
-     urls = ["http://127.0.0.1:8081/api/v4/emqx_prometheus"]
-     method = "GET"
-     timeout = "5s"
-     username = "admin"
-     password = "public"
-     data_format = "json"
-    [[inputs.tail]]
-      files = ["/opt/emqx/log/emqx.log.[1-9]"]
-      from_beginning = false
-      max_undelivered_lines = 64
-      character_encoding = "utf-8"
-      data_format = "grok"
-      grok_patterns = ['^%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.999999999-07:00"} \[%{LOGLEVEL:level}\] (?m)%{GREEDYDATA:messages}$']
-    
-    [[outputs.discard]]
-	`
+[[inputs.http]]
+  urls = ["http://127.0.0.1:8081/api/v4/emqx_prometheus"]
+  method = "GET"
+  timeout = "5s"
+  username = "admin"
+  password = "public"
+  data_format = "json"
+[[inputs.tail]]
+  files = ["/opt/emqx/log/emqx.log.[1-5]"]
+  from_beginning = false
+  max_undelivered_lines = 64
+  character_encoding = "utf-8"
+  data_format = "grok"
+  grok_patterns = ['^%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.999999999-07:00"} \[%{LOGLEVEL:level}\] (?m)%{GREEDYDATA:messages}$']
+
+[[outputs.discard]]
+`
 	emqx := &v1beta1.EmqxBroker{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps.emqx.io/v1beta1",
@@ -361,26 +361,26 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 // Slim
 func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 	telegrafConf := `
-	[global_tags]
-      instanceID = "test"
+[global_tags]
+  instanceID = "test"
 
-    [[inputs.http]]
-     urls = ["http://127.0.0.1:8081/api/v4/emqx_prometheus"]
-     method = "GET"
-     timeout = "5s"
-     username = "admin"
-     password = "public"
-     data_format = "json"
-    [[inputs.tail]]
-      files = ["/opt/emqx/log/emqx.log.[1-9]"]
-      from_beginning = false
-      max_undelivered_lines = 64
-      character_encoding = "utf-8"
-      data_format = "grok"
-      grok_patterns = ['^%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.999999999-07:00"} \[%{LOGLEVEL:level}\] (?m)%{GREEDYDATA:messages}$']
-    
-    [[outputs.discard]]
-	`
+[[inputs.http]]
+  urls = ["http://127.0.0.1:8081/api/v4/emqx_prometheus"]
+  method = "GET"
+  timeout = "5s"
+  username = "admin"
+  password = "public"
+  data_format = "json"
+[[inputs.tail]]
+  files = ["/opt/emqx/log/emqx.log.[1-5]"]
+  from_beginning = false
+  max_undelivered_lines = 64
+  character_encoding = "utf-8"
+  data_format = "grok"
+  grok_patterns = ['^%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.999999999-07:00"} \[%{LOGLEVEL:level}\] (?m)%{GREEDYDATA:messages}$']
+
+[[outputs.discard]]
+`
 	emqx := &v1beta1.EmqxEnterprise{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps.emqx.io/v1beta1",
@@ -395,7 +395,8 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 		},
 		Spec: v1beta1.EmqxEnterpriseSpec{
 			Image: "emqx/emqx-ee:4.4.0",
-			License: `-----BEGIN CERTIFICATE-----
+			License: `
+-----BEGIN CERTIFICATE-----
 MIIENzCCAx+gAwIBAgIDdMvVMA0GCSqGSIb3DQEBBQUAMIGDMQswCQYDVQQGEwJD
 TjERMA8GA1UECAwIWmhlamlhbmcxETAPBgNVBAcMCEhhbmd6aG91MQwwCgYDVQQK
 DANFTVExDDAKBgNVBAsMA0VNUTESMBAGA1UEAwwJKi5lbXF4LmlvMR4wHAYJKoZI
@@ -419,7 +420,8 @@ iL3a2tdZ4sq+h/Z1elIXD71JJBAImjr6BljTIdUCfVtNvxlE8M0D/rKSn2jwzsjI
 UrW88THMtlz9sb56kmM3JIOoIJoep6xNEajIBnoChSGjtBYFNFwzdwSTCodYkgPu
 JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
 EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
------END CERTIFICATE-----`,
+-----END CERTIFICATE-----
+`,
 			TelegrafTemplate: &v1beta1.TelegrafTemplate{
 				Image: "telegraf:1.19.3",
 				Conf:  &telegrafConf,

@@ -11,20 +11,20 @@ func generatePlugins(plugins []Plugin) []Plugin {
 		return defaultLoadedPlugins()
 	}
 
-	contains := func(plugins []Plugin) int {
-		for index, value := range plugins {
-			if value.Name == "emqx_management" {
-				return index
-			}
-		}
-		return -1
-	}
-
-	if contains(plugins) == -1 {
+	if containsPlugins(plugins, "emqx_management") == -1 {
 		plugins = append(plugins, Plugin{Name: "emqx_management", Enable: true})
 	}
 
 	return plugins
+}
+
+func containsPlugins(plugins []Plugin, name string) int {
+	for index, value := range plugins {
+		if value.Name == name {
+			return index
+		}
+	}
+	return -1
 }
 
 func defaultLoadedPlugins() []Plugin {
