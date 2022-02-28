@@ -151,8 +151,8 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 				MountPath: "/opt/emqx/log",
 			},
 		},
-		Lifecycle: &corev1.Lifecycle{
-			PostStart: &corev1.Handler{
+		ReadinessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/status",
 					Port:   port,
@@ -160,6 +160,11 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},
+			InitialDelaySeconds: 30,
+			PeriodSeconds:       5,
+			TimeoutSeconds:      30,
+			SuccessThreshold:    1,
+			FailureThreshold:    3,
 		},
 	}
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
