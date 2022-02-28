@@ -5,25 +5,24 @@ import (
 )
 
 func generateEnv(emqx Emqx) []corev1.EnvVar {
-	contains := func(Env []corev1.EnvVar, Name string) int {
-		for index, value := range Env {
-			if value.Name == Name {
-				return index
-			}
-		}
-		return -1
-	}
-
 	env := emqx.GetEnv()
 	e := defaultEnv(emqx)
 	for _, value := range e {
-		r := contains(env, value.Name)
+		r := containsEnv(env, value.Name)
 		if r == -1 {
 			env = append(env, value)
 		}
 	}
 	return env
+}
 
+func containsEnv(Env []corev1.EnvVar, Name string) int {
+	for index, value := range Env {
+		if value.Name == Name {
+			return index
+		}
+	}
+	return -1
 }
 
 func defaultEnv(emqx Emqx) []corev1.EnvVar {

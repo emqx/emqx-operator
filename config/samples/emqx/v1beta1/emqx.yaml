@@ -135,6 +135,8 @@ spec:
   plugins:
     - name: emqx_management
       enable: true
+    - name: emqx_prometheus
+      enable: true
     - name: emqx_recon
       enable: true
     - name: emqx_retainer

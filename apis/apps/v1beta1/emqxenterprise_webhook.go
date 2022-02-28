@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -62,6 +63,15 @@ func (r *EmqxEnterprise) Default() {
 	r.Spec.Plugins = generatePlugins(r.Spec.Plugins)
 	r.Spec.Modules = generateEmqxEnterpriseModules(r.Spec.Modules)
 	r.Spec.Listener = generateListener(r.Spec.Listener)
+
+	if r.Spec.TelegrafTemplate != nil {
+		if containsPlugins(r.Spec.Plugins, "emqx_prometheus") == -1 {
+			r.Spec.Plugins = append(r.Spec.Plugins, Plugin{Name: "emqx_prometheus", Enable: true})
+		}
+		if containsEnv(r.Spec.Env, "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER") == -1 {
+			r.Spec.Env = append(r.Spec.Env, corev1.EnvVar{Name: "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER", Value: ""})
+		}
+	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
