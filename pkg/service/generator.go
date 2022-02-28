@@ -113,6 +113,10 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 }
 
 func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+	port := intstr.IntOrString{
+		Type:   intstr.Int,
+		IntVal: emqx.GetListener().Ports.API,
+	}
 	telegrafTemplate := emqx.GetTelegrafTemplate()
 	if telegrafTemplate == nil {
 		return nil, sts
@@ -145,6 +149,16 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 			{
 				Name:      util.NameForLog(emqx),
 				MountPath: "/opt/emqx/log",
+			},
+		},
+		Lifecycle: &corev1.Lifecycle{
+			PostStart: &corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/status",
+					Port:   port,
+					Host:   "127.0.0.1",
+					Scheme: corev1.URISchemeHTTP,
+				},
 			},
 		},
 	}
