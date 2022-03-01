@@ -87,11 +87,6 @@ func (r *EmqxEnterprise) ValidateCreate() error {
 		return err
 	}
 
-	if err := validateTelegrafTemplate(r.Spec.TelegrafTemplate); err != nil {
-		emqxbrokerlog.Error(err, "validate create failed")
-		return err
-	}
-
 	return nil
 }
 

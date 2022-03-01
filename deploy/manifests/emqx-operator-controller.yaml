@@ -1559,6 +1559,15 @@ spec:
               imagePullPolicy:
                 description: PullPolicy describes a policy for if/when to pull a container image
                 type: string
+              imagePullSecrets:
+                items:
+                  description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
+                  properties:
+                    name:
+                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                      type: string
+                  type: object
+                type: array
               labels:
                 additionalProperties:
                   type: string
@@ -1566,10 +1575,69 @@ spec:
                 type: object
               listener:
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  certificate:
+                    properties:
+                      mqtts:
+                        properties:
+                          data:
+                            properties:
+                              ca.crt:
+                                format: byte
+                                type: string
+                              tls.crt:
+                                format: byte
+                                type: string
+                              tls.key:
+                                format: byte
+                                type: string
+                            type: object
+                          stringData:
+                            properties:
+                              ca.crt:
+                                type: string
+                              tls.crt:
+                                type: string
+                              tls.key:
+                                type: string
+                            type: object
+                        type: object
+                      wss:
+                        properties:
+                          data:
+                            properties:
+                              ca.crt:
+                                format: byte
+                                type: string
+                              tls.crt:
+                                format: byte
+                                type: string
+                              tls.key:
+                                format: byte
+                                type: string
+                            type: object
+                          stringData:
+                            properties:
+                              ca.crt:
+                                type: string
+                              tls.crt:
+                                type: string
+                              tls.key:
+                                type: string
+                            type: object
+                        type: object
+                    type: object
                   externalIPs:
                     items:
                       type: string
                     type: array
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
                   loadBalancerIP:
                     type: string
                   loadBalancerSourceRanges:
@@ -2483,10 +2551,69 @@ spec:
                     type: array
                   listener:
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      certificate:
+                        properties:
+                          mqtts:
+                            properties:
+                              data:
+                                properties:
+                                  ca.crt:
+                                    format: byte
+                                    type: string
+                                  tls.crt:
+                                    format: byte
+                                    type: string
+                                  tls.key:
+                                    format: byte
+                                    type: string
+                                type: object
+                              stringData:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
+                            type: object
+                          wss:
+                            properties:
+                              data:
+                                properties:
+                                  ca.crt:
+                                    format: byte
+                                    type: string
+                                  tls.crt:
+                                    format: byte
+                                    type: string
+                                  tls.key:
+                                    format: byte
+                                    type: string
+                                type: object
+                              stringData:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
+                            type: object
+                        type: object
                       externalIPs:
                         items:
                           type: string
                         type: array
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
                       loadBalancerIP:
                         type: string
                       loadBalancerSourceRanges:
@@ -3584,6 +3711,15 @@ spec:
               imagePullPolicy:
                 description: PullPolicy describes a policy for if/when to pull a container image
                 type: string
+              imagePullSecrets:
+                items:
+                  description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
+                  properties:
+                    name:
+                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                      type: string
+                  type: object
+                type: array
               labels:
                 additionalProperties:
                   type: string
@@ -5365,6 +5501,15 @@ spec:
               imagePullPolicy:
                 description: PullPolicy describes a policy for if/when to pull a container image
                 type: string
+              imagePullSecrets:
+                items:
+                  description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
+                  properties:
+                    name:
+                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                      type: string
+                  type: object
+                type: array
               labels:
                 additionalProperties:
                   type: string
@@ -5374,10 +5519,69 @@ spec:
                 type: string
               listener:
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  certificate:
+                    properties:
+                      mqtts:
+                        properties:
+                          data:
+                            properties:
+                              ca.crt:
+                                format: byte
+                                type: string
+                              tls.crt:
+                                format: byte
+                                type: string
+                              tls.key:
+                                format: byte
+                                type: string
+                            type: object
+                          stringData:
+                            properties:
+                              ca.crt:
+                                type: string
+                              tls.crt:
+                                type: string
+                              tls.key:
+                                type: string
+                            type: object
+                        type: object
+                      wss:
+                        properties:
+                          data:
+                            properties:
+                              ca.crt:
+                                format: byte
+                                type: string
+                              tls.crt:
+                                format: byte
+                                type: string
+                              tls.key:
+                                format: byte
+                                type: string
+                            type: object
+                          stringData:
+                            properties:
+                              ca.crt:
+                                type: string
+                              tls.crt:
+                                type: string
+                              tls.key:
+                                type: string
+                            type: object
+                        type: object
+                    type: object
                   externalIPs:
                     items:
                       type: string
                     type: array
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
                   loadBalancerIP:
                     type: string
                   loadBalancerSourceRanges:
@@ -6296,10 +6500,69 @@ spec:
                     type: string
                   listener:
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      certificate:
+                        properties:
+                          mqtts:
+                            properties:
+                              data:
+                                properties:
+                                  ca.crt:
+                                    format: byte
+                                    type: string
+                                  tls.crt:
+                                    format: byte
+                                    type: string
+                                  tls.key:
+                                    format: byte
+                                    type: string
+                                type: object
+                              stringData:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
+                            type: object
+                          wss:
+                            properties:
+                              data:
+                                properties:
+                                  ca.crt:
+                                    format: byte
+                                    type: string
+                                  tls.crt:
+                                    format: byte
+                                    type: string
+                                  tls.key:
+                                    format: byte
+                                    type: string
+                                type: object
+                              stringData:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
+                            type: object
+                        type: object
                       externalIPs:
                         items:
                           type: string
                         type: array
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
                       loadBalancerIP:
                         type: string
                       loadBalancerSourceRanges:
@@ -7400,6 +7663,15 @@ spec:
               imagePullPolicy:
                 description: PullPolicy describes a policy for if/when to pull a container image
                 type: string
+              imagePullSecrets:
+                items:
+                  description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
+                  properties:
+                    name:
+                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                      type: string
+                  type: object
+                type: array
               labels:
                 additionalProperties:
                   type: string
