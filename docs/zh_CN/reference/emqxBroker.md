@@ -357,10 +357,10 @@ EmqxBrokerSpec is a description of a EmqxBroker.
 
 ## TelegrafTemplate
 
-+ **image** (string)
++ **image** (string), required
 
   更多信息:  https://kubernetes.io/docs/concepts/containers/images
 
-- **config** (string)
+- **config** (string), required
 
   Telegraf 的配置
