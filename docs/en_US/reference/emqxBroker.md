@@ -439,9 +439,9 @@ EmqxBrokerSpec is a description of a EmqxBroker.
 
 ## TelegrafTemplate
 
-+ **image** (string)
++ **image** (string), required
 
   Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images This field is optional to allow higher level config management to default or override container images in workload controllers like Deployments and StatefulSets.
 
--  **config** (string)
+-  **config** (string), required
 
