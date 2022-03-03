@@ -78,7 +78,7 @@ func defaultEmqxEnterpriseModules() []EmqxEnterpriseModules {
 		{
 			Name:    "internal_cal",
 			Enable:  true,
-			Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "etc/acl.conf"}`)},
+			Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
 		},
 		{
 			Name:   "retainer",
