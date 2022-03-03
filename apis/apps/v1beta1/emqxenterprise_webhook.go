@@ -59,10 +59,17 @@ func (r *EmqxEnterprise) Default() {
 		r.Spec.ACL = defaultACL()
 	}
 
-	r.Spec.Env = generateEnv(r)
 	r.Spec.Plugins = generatePlugins(r.Spec.Plugins)
 	r.Spec.Modules = generateEmqxEnterpriseModules(r.Spec.Modules)
 	r.Spec.Listener = generateListener(r.Spec.Listener)
+
+	r.Spec.Env = generateEnv(r)
+	for _, e := range r.Spec.Env {
+		if e.Name == "EMQX_CLUSTER__DISCOVERY" && e.Value == "dns" {
+			// dns clusters do not need serviceAccount
+			r.Spec.ServiceAccountName = ""
+		}
+	}
 
 	if r.Spec.TelegrafTemplate != nil {
 		if containsPlugins(r.Spec.Plugins, "emqx_prometheus") == -1 {

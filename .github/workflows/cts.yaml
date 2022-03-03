@@ -48,7 +48,9 @@ jobs:
           - v1beta1
           - v1beta2
         emqx:
+          - [emqx, "emqx/emqx:4.3.11"]
           - [emqx, "emqx/emqx:4.4.1"]
+          - [emqx-ee, "emqx/emqx-ee:4.3.6"]
           - [emqx-ee, "emqx/emqx-ee:4.4.0"]
     steps:
       - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
