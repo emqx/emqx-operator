@@ -120,7 +120,11 @@ func validateTag(image string) error {
 	str := strings.Split(image, ":")
 	match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[1])
 	if !match {
-		return errors.New("The tag of the image must match '^[0-9]+.[0-9]+.[0-9]+$'")
+		match, _ := regexp.MatchString("^latest$", str[1])
+		if match {
+			return nil
+		}
+		return errors.New("the tag of the image must match '^[0-9]+.[0-9]+.[0-9]+$'")
 	}
 	return nil
 }
