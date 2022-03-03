@@ -276,4 +276,7 @@ func TestValidateUpdateBroker(t *testing.T) {
 	new := &emqx
 	new.Spec.Image = "emqx/emqx:fake"
 	assert.Error(t, emqx.ValidateUpdate(new))
+
+	new.Spec.Image = "emqx/emqx:latest"
+	assert.Nil(t, emqx.ValidateUpdate(new))
 }
