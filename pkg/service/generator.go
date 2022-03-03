@@ -24,7 +24,9 @@ func Generate(emqx v1beta1.Emqx) []client.Object {
 	sts := generateStatefulSetDef(emqx)
 
 	sa, role, roleBinding, sts := generateRBAC(emqx, sts)
-	resources = append(resources, sa, role, roleBinding)
+	if sa != nil {
+		resources = append(resources, sa, role, roleBinding)
+	}
 
 	headlessSvc, svc, sts := generateSvc(emqx, sts)
 	resources = append(resources, headlessSvc, svc)
@@ -112,9 +114,10 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 										},
 									},
 								},
-								TimeoutSeconds:      10,
+								TimeoutSeconds:      15,
 								InitialDelaySeconds: 5,
-								PeriodSeconds:       15,
+								PeriodSeconds:       30,
+								FailureThreshold:    10,
 							},
 						},
 					},
@@ -182,6 +185,9 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 }
 
 func generateRBAC(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, *appsv1.StatefulSet) {
+	if emqx.GetServiceAccountName() == "" {
+		return nil, nil, nil, sts
+	}
 	meta := metav1.ObjectMeta{
 		Name:      emqx.GetServiceAccountName(),
 		Namespace: emqx.GetNamespace(),
@@ -301,30 +307,10 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 				envName = "EMQX_LISTENER__TCP__EXTERNAL"
 			case "mqtts":
 				envName = "EMQX_LISTENER__SSL__EXTERNAL"
-			case "api":
-				envName = "EMQX_MANAGEMENT__LISTENER__HTTP"
 			case "dashboard":
 				envName = "EMQX_DASHBOARD__LISTENER__HTTP"
-			}
-
-			if name == "api" {
-				probe := &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/status",
-							Port: intstr.IntOrString{
-								IntVal: port,
-							},
-							Scheme: corev1.URISchemeHTTP,
-						},
-					},
-				}
-				container.ReadinessProbe = probe
-				container.ReadinessProbe.InitialDelaySeconds = 5
-				container.ReadinessProbe.PeriodSeconds = 5
-				container.LivenessProbe = probe
-				container.LivenessProbe.InitialDelaySeconds = 30
-				container.LivenessProbe.PeriodSeconds = 30
+			case "api":
+				envName = "EMQX_MANAGEMENT__LISTENER__HTTP"
 			}
 
 			container.Env = append(container.Env, corev1.EnvVar{
@@ -348,6 +334,36 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 					IntVal: port,
 				},
 			})
+
+			if name == "api" {
+				headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, corev1.ServicePort{
+					Name:     name,
+					Port:     port,
+					Protocol: "TCP",
+					TargetPort: intstr.IntOrString{
+						Type:   0,
+						IntVal: port,
+					},
+				})
+
+				probe := &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/status",
+							Port: intstr.IntOrString{
+								IntVal: port,
+							},
+							Scheme: corev1.URISchemeHTTP,
+						},
+					},
+				}
+				container.ReadinessProbe = probe
+				container.ReadinessProbe.InitialDelaySeconds = 5
+				container.ReadinessProbe.PeriodSeconds = 5
+				container.LivenessProbe = probe
+				container.LivenessProbe.InitialDelaySeconds = 30
+				container.LivenessProbe.PeriodSeconds = 30
+			}
 		}
 	}
 	sts.Spec.Template.Spec.Containers = []corev1.Container{container}

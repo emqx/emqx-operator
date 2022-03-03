@@ -64,10 +64,17 @@ func (r *EmqxBroker) Default() {
 		r.Spec.ACL = defaultACL()
 	}
 
-	r.Spec.Env = generateEnv(r)
 	r.Spec.Plugins = generatePlugins(r.Spec.Plugins)
 	r.Spec.Modules = generateEmqxBrokerModules(r.Spec.Modules)
 	r.Spec.Listener = generateListener(r.Spec.Listener)
+
+	r.Spec.Env = generateEnv(r)
+	for _, e := range r.Spec.Env {
+		if e.Name == "EMQX_CLUSTER__DISCOVERY" && e.Value == "dns" {
+			// dns clusters do not need serviceAccount
+			r.Spec.ServiceAccountName = ""
+		}
+	}
 
 	if r.Spec.TelegrafTemplate != nil {
 		if containsPlugins(r.Spec.Plugins, "emqx_prometheus") == -1 {
@@ -118,13 +125,15 @@ func (r *EmqxBroker) ValidateDelete() error {
 
 func validateTag(image string) error {
 	str := strings.Split(image, ":")
-	match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[1])
-	if !match {
-		match, _ := regexp.MatchString("^latest$", str[1])
-		if match {
-			return nil
+	if len(str) > 1 {
+		match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[1])
+		if !match {
+			match, _ := regexp.MatchString("^latest$", str[1])
+			if match {
+				return nil
+			}
+			return errors.New("the tag of the image must match '^[0-9]+.[0-9]+.[0-9]+$'")
 		}
-		return errors.New("the tag of the image must match '^[0-9]+.[0-9]+.[0-9]+$'")
 	}
 	return nil
 }

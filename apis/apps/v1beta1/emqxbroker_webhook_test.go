@@ -1,6 +1,7 @@
 package v1beta1_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
@@ -8,6 +9,123 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestDefaultForEnv(t *testing.T) {
+	emqx := &v1beta1.EmqxBroker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+		Spec: v1beta1.EmqxBrokerSpec{
+			Image: "emqx/emqx:4.3.11",
+			Env: []corev1.EnvVar{
+				{
+					Name:  "EMQX_NAME",
+					Value: "foo",
+				},
+				{
+					Name:  "EMQX_FOO",
+					Value: "bar",
+				},
+			},
+		},
+	}
+
+	emqx.Default()
+
+	assert.ElementsMatch(t, emqx.Spec.Env,
+		[]corev1.EnvVar{
+			{
+				Name:  "EMQX_FOO",
+				Value: "bar",
+			},
+			{
+				Name:  "EMQX_NAME",
+				Value: "foo",
+			},
+			{
+				Name:  "EMQX_CLUSTER__DISCOVERY",
+				Value: "k8s",
+			},
+			{
+				Name:  "EMQX_CLUSTER__K8S__APP_NAME",
+				Value: "emqx",
+			},
+			{
+				Name:  "EMQX_CLUSTER__K8S__SERVICE_NAME",
+				Value: "emqx-headless",
+			},
+			{
+				Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
+				Value: "emqx",
+			},
+			{
+				Name:  "EMQX_CLUSTER__K8S__APISERVER",
+				Value: "https://kubernetes.default.svc:443",
+			},
+			{
+				Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
+				Value: "hostname",
+			},
+			{
+				Name:  "EMQX_CLUSTER__K8S__SUFFIX",
+				Value: "svc.cluster.local",
+			},
+		},
+	)
+
+	emqx.Spec.Image = "emqx/emqx:4.4.0"
+	emqx.Spec.Env = []corev1.EnvVar{}
+	emqx.Default()
+
+	assert.ElementsMatch(t, emqx.Spec.Env,
+		[]corev1.EnvVar{
+			{
+				Name:  "EMQX_NAME",
+				Value: "emqx",
+			},
+			{
+				Name:  "EMQX_CLUSTER__DISCOVERY",
+				Value: "dns",
+			},
+			{
+				Name:  "EMQX_CLUSTER__DNS__TYPE",
+				Value: "srv",
+			},
+			{
+				Name:  "EMQX_CLUSTER__DNS__APP",
+				Value: "emqx",
+			},
+			{
+				Name:  "EMQX_CLUSTER__DNS__NAME",
+				Value: "emqx-headless.emqx.svc.cluster.local",
+			},
+		},
+	)
+}
+
+func TestDefaultForServiceAccountName(t *testing.T) {
+	emqx := &v1beta1.EmqxBroker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+		Spec: v1beta1.EmqxBrokerSpec{
+			Image: "emqx/emqx:4.3.11",
+		},
+	}
+	emqx.Default()
+	assert.Equal(t, emqx.Spec.ServiceAccountName, "emqx")
+
+	emqx.Spec.Image = "emqx/emqx:4.4.0"
+	emqx.Spec.Env = []corev1.EnvVar{}
+	emqx.Spec.ServiceAccountName = "fake"
+	emqx.Default()
+	fmt.Printf("%+v\n", emqx.Spec.Env)
+	fmt.Println(emqx.Spec.ServiceAccountName)
+
+	assert.Equal(t, emqx.Spec.ServiceAccountName, "")
+}
 
 func TestDefaultBroker(t *testing.T) {
 	emqx := &v1beta1.EmqxBroker{
@@ -22,16 +140,6 @@ func TestDefaultBroker(t *testing.T) {
 			Image: "emqx/emqx:4.3.11",
 			Labels: map[string]string{
 				"cluster": "emqx",
-			},
-			Env: []corev1.EnvVar{
-				{
-					Name:  "EMQX_NAME",
-					Value: "foo",
-				},
-				{
-					Name:  "EMQX_FOO",
-					Value: "bar",
-				},
 			},
 			Plugins: []v1beta1.Plugin{
 				{
@@ -64,7 +172,6 @@ func TestDefaultBroker(t *testing.T) {
 	emqx.Default()
 
 	assert.Equal(t, *emqx.Spec.Replicas, int32(3))
-	assert.Equal(t, emqx.Spec.ServiceAccountName, emqx.Name)
 
 	// Labels
 	assert.Contains(t, emqx.Labels, "foo")
@@ -76,48 +183,6 @@ func TestDefaultBroker(t *testing.T) {
 	assert.Contains(t, emqx.Spec.Labels, "cluster")
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/managed-by")
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/instance")
-
-	// ENV
-	assert.ElementsMatch(t, emqx.Spec.Env,
-		[]corev1.EnvVar{
-			{
-				Name:  "EMQX_FOO",
-				Value: "bar",
-			},
-			{
-				Name:  "EMQX_NAME",
-				Value: "foo",
-			},
-			{
-				Name:  "EMQX_CLUSTER__DISCOVERY",
-				Value: "k8s",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__APP_NAME",
-				Value: emqx.GetName(),
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__SERVICE_NAME",
-				Value: emqx.GetHeadlessServiceName(),
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
-				Value: emqx.GetNamespace(),
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__APISERVER",
-				Value: "https://kubernetes.default.svc:443",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
-				Value: "hostname",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__SUFFIX",
-				Value: "svc.cluster.local",
-			},
-		},
-	)
 
 	// ACL
 	assert.ElementsMatch(t, emqx.Spec.ACL,
