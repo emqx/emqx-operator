@@ -1,4 +1,4 @@
-package v1beta2
+package v1beta3
 
 import corev1 "k8s.io/api/core/v1"
 

@@ -1,4 +1,4 @@
-package v1beta2
+package v1beta3
 
 import (
 	"fmt"
@@ -25,12 +25,12 @@ type ACL struct {
 }
 
 //+kubebuilder:object:generate=false
-type ACLs struct {
+type ACLList struct {
 	Items []ACL
 }
 
-func (a *ACLs) Default() {
-	a.Items = []ACL{
+func (list *ACLList) Default() {
+	list.Items = []ACL{
 		{
 			Permission: "allow",
 			Username:   "dashboard",
@@ -65,10 +65,10 @@ func (a *ACLs) Default() {
 	}
 }
 
-func (a *ACLs) String() string {
+func (list *ACLList) String() string {
 	var s string
 
-	for _, acl := range a.Items {
+	for _, acl := range list.Items {
 		who := getWho(acl)
 		action := getAction(acl)
 		topics := getTopics(acl)

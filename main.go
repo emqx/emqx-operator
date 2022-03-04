@@ -33,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	appsv1beta1 "github.com/emqx/emqx-operator/apis/apps/v1beta1"
 	appsv1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	controllers "github.com/emqx/emqx-operator/controllers/apps"
 	//+kubebuilder:scaffold:imports
 )
@@ -47,8 +47,8 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(appsv1beta1.AddToScheme(scheme))
 	utilruntime.Must(appsv1beta2.AddToScheme(scheme))
+	utilruntime.Must(appsv1beta3.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -98,14 +98,6 @@ func main() {
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&appsv1beta1.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
-			os.Exit(1)
-		}
-		if err = (&appsv1beta1.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
-			os.Exit(1)
-		}
 		if err = (&appsv1beta2.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
 			os.Exit(1)
@@ -114,8 +106,15 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
 			os.Exit(1)
 		}
+		if err = (&appsv1beta3.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
+			os.Exit(1)
+		}
+		if err = (&appsv1beta3.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
+			os.Exit(1)
+		}
 	}
-
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

@@ -1,4 +1,4 @@
-package v1beta2
+package v1beta3
 
 import "fmt"
 
@@ -9,11 +9,11 @@ type Plugin struct {
 }
 
 //+kubebuilder:object:generate=false
-type Plugins struct {
+type PluginList struct {
 	Items []Plugin
 }
 
-func (p *Plugins) Default() {
+func (list *PluginList) Default() {
 	defultPlugins := []Plugin{
 		{
 			Name:   "emqx_management",
@@ -40,17 +40,17 @@ func (p *Plugins) Default() {
 			Enable: true,
 		},
 	}
-	if p.Items == nil {
-		p.Items = defultPlugins
+	if list.Items == nil {
+		list.Items = defultPlugins
 	}
-	_, index := p.Lookup("emqx_management")
+	_, index := list.Lookup("emqx_management")
 	if index == -1 {
-		p.Items = append(p.Items, Plugin{Name: "emqx_management", Enable: true})
+		list.Items = append(list.Items, Plugin{Name: "emqx_management", Enable: true})
 	}
 }
 
-func (p *Plugins) Lookup(name string) (*Plugin, int) {
-	for index, plugin := range p.Items {
+func (list *PluginList) Lookup(name string) (*Plugin, int) {
+	for index, plugin := range list.Items {
 		if plugin.Name == name {
 			return &plugin, index
 		}
@@ -58,9 +58,9 @@ func (p *Plugins) Lookup(name string) (*Plugin, int) {
 	return nil, -1
 }
 
-func (p *Plugins) String() string {
+func (list *PluginList) String() string {
 	var str string
-	for _, plugin := range p.Items {
+	for _, plugin := range list.Items {
 		str = fmt.Sprintf("%s{%s, %t}.\n", str, plugin.Name, plugin.Enable)
 	}
 	return str

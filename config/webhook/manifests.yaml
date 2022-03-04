@@ -13,6 +13,48 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-apps-emqx-io-v1beta3-emqxbroker
+  failurePolicy: Fail
+  name: memqxbroker.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta3
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxbrokers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-apps-emqx-io-v1beta3-emqxenterprise
+  failurePolicy: Fail
+  name: memqxenterprise.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta3
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxenterprises
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-apps-emqx-io-v1beta2-emqxbroker
   failurePolicy: Fail
   name: memqxbroker.kb.io
@@ -48,6 +90,14 @@ webhooks:
     resources:
     - emqxenterprises
   sideEffects: None
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
 - admissionReviewVersions:
   - v1
   - v1beta1
@@ -55,14 +105,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-apps-emqx-io-v1beta1-emqxbroker
+      path: /validate-apps-emqx-io-v1beta3-emqxbroker
   failurePolicy: Fail
-  name: mutating.broker.emqx.io
+  name: vemqxbroker.kb.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v1beta1
+    - v1beta3
     operations:
     - CREATE
     - UPDATE
@@ -76,28 +126,20 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-apps-emqx-io-v1beta1-emqxenterprise
+      path: /validate-apps-emqx-io-v1beta3-emqxenterprise
   failurePolicy: Fail
-  name: mutating.enterprise.emqx.io
+  name: vemqxenterprise.kb.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v1beta1
+    - v1beta3
     operations:
     - CREATE
     - UPDATE
     resources:
     - emqxenterprises
   sideEffects: None
-
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  creationTimestamp: null
-  name: validating-webhook-configuration
-webhooks:
 - admissionReviewVersions:
   - v1
   - v1beta1
@@ -134,48 +176,6 @@ webhooks:
     - apps.emqx.io
     apiVersions:
     - v1beta2
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxenterprises
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-apps-emqx-io-v1beta1-emqxbroker
-  failurePolicy: Fail
-  name: validator.broker.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxbrokers
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-apps-emqx-io-v1beta1-emqxenterprise
-  failurePolicy: Fail
-  name: validator.enterprise.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta1
     operations:
     - CREATE
     - UPDATE
