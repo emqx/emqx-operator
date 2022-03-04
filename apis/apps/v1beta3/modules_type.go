@@ -1,4 +1,4 @@
-package v1beta2
+package v1beta3
 
 import (
 	"fmt"
@@ -7,23 +7,23 @@ import (
 )
 
 //+kubebuilder:object:generate=true
-type EmqxBrokerModules struct {
+type EmqxBrokerModule struct {
 	Name   string `json:"name,omitempty"`
 	Enable bool   `json:"enable,omitempty"`
 }
 
 //+kubebuilder:object:generate=false
-type EmqxBrokerModulesList struct {
-	Items []EmqxBrokerModules
+type EmqxBrokerModuleList struct {
+	Items []EmqxBrokerModule
 }
 
-func (list *EmqxBrokerModulesList) Default() {
-	defaultModule := EmqxBrokerModules{
+func (list *EmqxBrokerModuleList) Default() {
+	defaultModule := EmqxBrokerModule{
 		Name:   "emqx_mod_acl_internal",
 		Enable: true,
 	}
 	if list.Items == nil {
-		list.Items = []EmqxBrokerModules{defaultModule}
+		list.Items = []EmqxBrokerModule{defaultModule}
 	}
 	_, index := list.Lookup(defaultModule.Name)
 	if index == -1 {
@@ -31,7 +31,7 @@ func (list *EmqxBrokerModulesList) Default() {
 	}
 }
 
-func (list *EmqxBrokerModulesList) Lookup(name string) (*EmqxBrokerModules, int) {
+func (list *EmqxBrokerModuleList) Lookup(name string) (*EmqxBrokerModule, int) {
 	for index, module := range list.Items {
 		if module.Name == name {
 			return &module, index
@@ -40,7 +40,7 @@ func (list *EmqxBrokerModulesList) Lookup(name string) (*EmqxBrokerModules, int)
 	return nil, -1
 }
 
-func (list *EmqxBrokerModulesList) String() string {
+func (list *EmqxBrokerModuleList) String() string {
 	var str string
 	for _, module := range list.Items {
 		str = fmt.Sprintf("%s{%s, %t}.\n", str, module.Name, module.Enable)
@@ -49,7 +49,7 @@ func (list *EmqxBrokerModulesList) String() string {
 }
 
 //+kubebuilder:object:generate=true
-type EmqxEnterpriseModules struct {
+type EmqxEnterpriseModule struct {
 	Name   string `json:"name,omitempty"`
 	Enable bool   `json:"enable,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -57,12 +57,12 @@ type EmqxEnterpriseModules struct {
 }
 
 //+kubebuilder:object:generate=false
-type EmqxEnterpriseModulesList struct {
-	Items []EmqxEnterpriseModules
+type EmqxEnterpriseModuleList struct {
+	Items []EmqxEnterpriseModule
 }
 
-func (list *EmqxEnterpriseModulesList) Default() {
-	defaultModules := []EmqxEnterpriseModules{
+func (list *EmqxEnterpriseModuleList) Default() {
+	defaultModules := []EmqxEnterpriseModule{
 		{
 			Name:    "internal_cal",
 			Enable:  true,
@@ -82,7 +82,7 @@ func (list *EmqxEnterpriseModulesList) Default() {
 	list.Append(defaultModules)
 }
 
-func (list *EmqxEnterpriseModulesList) Lookup(name string) (*EmqxEnterpriseModules, int) {
+func (list *EmqxEnterpriseModuleList) Lookup(name string) (*EmqxEnterpriseModule, int) {
 	for index, module := range list.Items {
 		if module.Name == name {
 			return &module, index
@@ -91,7 +91,7 @@ func (list *EmqxEnterpriseModulesList) Lookup(name string) (*EmqxEnterpriseModul
 	return nil, -1
 }
 
-func (list *EmqxEnterpriseModulesList) Append(modules []EmqxEnterpriseModules) {
+func (list *EmqxEnterpriseModuleList) Append(modules []EmqxEnterpriseModule) {
 	for _, module := range modules {
 		_, index := list.Lookup(module.Name)
 		if index == -1 {
@@ -100,7 +100,7 @@ func (list *EmqxEnterpriseModulesList) Append(modules []EmqxEnterpriseModules) {
 	}
 }
 
-func (list *EmqxEnterpriseModulesList) Overwrite(modules []EmqxEnterpriseModules) {
+func (list *EmqxEnterpriseModuleList) Overwrite(modules []EmqxEnterpriseModule) {
 	for _, module := range modules {
 		_, index := list.Lookup(module.Name)
 		if index == -1 {
