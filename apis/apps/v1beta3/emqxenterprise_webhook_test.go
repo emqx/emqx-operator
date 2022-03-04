@@ -1,16 +1,16 @@
-package v1beta2_test
+package v1beta3_test
 
 import (
 	"testing"
 
-	v1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDefaultEnterprise(t *testing.T) {
-	emqx := &v1beta2.EmqxEnterprise{
+	emqx := &v1beta3.EmqxEnterprise{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
@@ -18,15 +18,12 @@ func TestDefaultEnterprise(t *testing.T) {
 				"foo": "bar",
 			},
 		},
-		Spec: v1beta2.EmqxEnterpriseSpec{
+		Spec: v1beta3.EmqxEnterpriseSpec{
 			Image: "emqx/emqx:4.3.11",
-			Labels: map[string]string{
-				"cluster": "emqx",
-			},
-			EmqxTemplate: v1beta2.EmqxEnterpriseTemplate{
-				Listener: v1beta2.Listener{
-					Ports: v1beta2.Ports{
-						MQTTS: 8885,
+			EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
+				Listener: v1beta3.Listener{
+					MQTTS: v1beta3.Port{
+						Port: int32(8885),
 					},
 				},
 			},
@@ -39,19 +36,13 @@ func TestDefaultEnterprise(t *testing.T) {
 
 	// Labels
 	assert.Contains(t, emqx.Labels, "foo")
-	assert.Contains(t, emqx.Labels, "cluster")
 	assert.Contains(t, emqx.Labels, "apps.emqx.io/managed-by")
 	assert.Contains(t, emqx.Labels, "apps.emqx.io/instance")
 
-	assert.Contains(t, emqx.Spec.Labels, "foo")
-	assert.Contains(t, emqx.Spec.Labels, "cluster")
-	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/managed-by")
-	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/instance")
-
 	// Listener
 	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Type, corev1.ServiceType("ClusterIP"))
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.MQTTS, int32(8885))
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.API, int32(8081))
+	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.MQTTS.Port, int32(8885))
+	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.API.Port, int32(8081))
 
 	telegrafConf := `
 [global_tags]
@@ -74,13 +65,13 @@ func TestDefaultEnterprise(t *testing.T) {
 
 [[outputs.discard]]
 `
-	emqx.Spec.TelegrafTemplate = &v1beta2.TelegrafTemplate{
+	emqx.Spec.TelegrafTemplate = &v1beta3.TelegrafTemplate{
 		Image: "telegraf:1.19.3",
 		Conf:  &telegrafConf,
 	}
 	emqx.Default()
 	assert.Subset(t, emqx.Spec.EmqxTemplate.Plugins,
-		[]v1beta2.Plugin{
+		[]v1beta3.Plugin{
 			{
 				Name:   "emqx_prometheus",
 				Enable: true,

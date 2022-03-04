@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -69,24 +70,24 @@ func (r *EmqxEnterprise) Default() {
 	}
 
 	if r.Spec.EmqxTemplate.ACL == nil {
-		acls := &ACLs{}
+		acls := &v1beta3.ACLList{}
 		acls.Default()
 		r.Spec.EmqxTemplate.ACL = acls.Items
 	}
 
-	plugins := &Plugins{
+	plugins := &v1beta3.PluginList{
 		Items: r.Spec.EmqxTemplate.Plugins,
 	}
 	plugins.Default()
 	if r.Spec.TelegrafTemplate != nil {
 		_, index := plugins.Lookup("emqx_prometheus")
 		if index == -1 {
-			plugins.Items = append(plugins.Items, Plugin{Name: "emqx_prometheus", Enable: true})
+			plugins.Items = append(plugins.Items, v1beta3.Plugin{Name: "emqx_prometheus", Enable: true})
 		}
 	}
 	r.Spec.EmqxTemplate.Plugins = plugins.Items
 
-	modules := &EmqxEnterpriseModulesList{
+	modules := &v1beta3.EmqxEnterpriseModuleList{
 		Items: r.Spec.EmqxTemplate.Modules,
 	}
 	modules.Default()
@@ -96,7 +97,7 @@ func (r *EmqxEnterprise) Default() {
 	listener.Default()
 	r.Spec.EmqxTemplate.Listener = *listener
 
-	env := &Environments{
+	env := &v1beta3.EnvList{
 		Items: r.Spec.Env,
 	}
 	str := strings.Split(r.GetImage(), ":")

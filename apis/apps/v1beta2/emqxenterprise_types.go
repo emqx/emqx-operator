@@ -19,6 +19,7 @@ package v1beta2
 import (
 	"reflect"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,11 +28,11 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type EmqxEnterpriseTemplate struct {
-	License  string                  `json:"license,omitempty"`
-	Listener Listener                `json:"listener,omitempty"`
-	ACL      []ACL                   `json:"acl,omitempty"`
-	Plugins  []Plugin                `json:"plugins,omitempty"`
-	Modules  []EmqxEnterpriseModules `json:"modules,omitempty"`
+	License  string                         `json:"license,omitempty"`
+	Listener Listener                       `json:"listener,omitempty"`
+	ACL      []v1beta3.ACL                  `json:"acl,omitempty"`
+	Plugins  []v1beta3.Plugin               `json:"plugins,omitempty"`
+	Modules  []v1beta3.EmqxEnterpriseModule `json:"modules,omitempty"`
 }
 
 // EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
@@ -71,15 +72,14 @@ type EmqxEnterpriseSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	EmqxTemplate     EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
-	TelegrafTemplate *TelegrafTemplate      `json:"telegrafTemplate,omitempty"`
+	EmqxTemplate     EmqxEnterpriseTemplate    `json:"emqxTemplate,omitempty"`
+	TelegrafTemplate *v1beta3.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=emqx-ee
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
-//+kubebuilder:storageversion
 
 // EmqxEnterprise is the Schema for the emqxenterprises API
 type EmqxEnterprise struct {
@@ -188,8 +188,8 @@ func (emqx *EmqxEnterprise) GetExtraVolumeMounts() []corev1.VolumeMount {
 	return emqx.Spec.ExtraVolumeMounts
 }
 
-func (emqx *EmqxEnterprise) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
-func (emqx *EmqxEnterprise) SetACL(acl []ACL) {
+func (emqx *EmqxEnterprise) GetACL() []v1beta3.ACL { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxEnterprise) SetACL(acl []v1beta3.ACL) {
 	emqx.Spec.EmqxTemplate.ACL = acl
 }
 
@@ -198,21 +198,21 @@ func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) {
 	emqx.Spec.Env = env
 }
 
-func (emqx *EmqxEnterprise) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
-func (emqx *EmqxEnterprise) SetPlugins(plugins []Plugin) {
+func (emqx *EmqxEnterprise) GetPlugins() []v1beta3.Plugin { return emqx.Spec.EmqxTemplate.Plugins }
+func (emqx *EmqxEnterprise) SetPlugins(plugins []v1beta3.Plugin) {
 	emqx.Spec.EmqxTemplate.Plugins = plugins
 }
 
-func (emqx *EmqxEnterprise) GetModules() []EmqxEnterpriseModules {
+func (emqx *EmqxEnterprise) GetModules() []v1beta3.EmqxEnterpriseModule {
 	return emqx.Spec.EmqxTemplate.Modules
 }
-func (emqx *EmqxEnterprise) SetModules(modules []EmqxEnterpriseModules) {
+func (emqx *EmqxEnterprise) SetModules(modules []v1beta3.EmqxEnterpriseModule) {
 	emqx.Spec.EmqxTemplate.Modules = modules
 }
 
-func (emqx *EmqxEnterprise) GetTelegrafTemplate() *TelegrafTemplate {
+func (emqx *EmqxEnterprise) GetTelegrafTemplate() *v1beta3.TelegrafTemplate {
 	return emqx.Spec.TelegrafTemplate
 }
-func (emqx *EmqxEnterprise) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
+func (emqx *EmqxEnterprise) SetTelegrafTemplate(telegrafTemplate *v1beta3.TelegrafTemplate) {
 	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

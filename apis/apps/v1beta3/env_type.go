@@ -1,4 +1,4 @@
-package v1beta2
+package v1beta3
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type Environments struct {
+type EnvList struct {
 	Items []corev1.EnvVar
 }
 
-func (e *Environments) Default(emqx client.Object) {
+func (list *EnvList) Default(emqx client.Object) {
 	defaultEnvs := []corev1.EnvVar{
 		{
 			Name:  "EMQX_LOG__TO",
@@ -22,31 +22,31 @@ func (e *Environments) Default(emqx client.Object) {
 			Value: emqx.GetName(),
 		},
 	}
-	e.Append(defaultEnvs)
+	list.Append(defaultEnvs)
 }
 
-func (e *Environments) Append(envs []corev1.EnvVar) {
+func (list *EnvList) Append(envs []corev1.EnvVar) {
 	for _, env := range envs {
-		_, index := e.Lookup(env.Name)
+		_, index := list.Lookup(env.Name)
 		if index == -1 {
-			e.Items = append(e.Items, env)
+			list.Items = append(list.Items, env)
 		}
 	}
 }
 
-func (e *Environments) Overwrite(envs []corev1.EnvVar) {
+func (list *EnvList) Overwrite(envs []corev1.EnvVar) {
 	for _, env := range envs {
-		_, index := e.Lookup(env.Name)
+		_, index := list.Lookup(env.Name)
 		if index == -1 {
-			e.Items = append(e.Items, env)
+			list.Items = append(list.Items, env)
 		} else {
-			e.Items[index].Value = env.Value
+			list.Items[index].Value = env.Value
 		}
 	}
 }
 
-func (e *Environments) Lookup(name string) (*corev1.EnvVar, int) {
-	for index, env := range e.Items {
+func (list *EnvList) Lookup(name string) (*corev1.EnvVar, int) {
+	for index, env := range list.Items {
 		if env.Name == name {
 			return &env, index
 		}
@@ -54,7 +54,7 @@ func (e *Environments) Lookup(name string) (*corev1.EnvVar, int) {
 	return nil, -1
 }
 
-func (e *Environments) ClusterForDNS(emqx client.Object) {
+func (list *EnvList) ClusterForDNS(emqx client.Object) {
 	names := &Names{emqx}
 	clusterEnvs := []corev1.EnvVar{
 		{
@@ -78,11 +78,11 @@ func (e *Environments) ClusterForDNS(emqx client.Object) {
 			Value: fmt.Sprintf("%s.%s.svc.cluster.local", names.HeadlessSvc(), emqx.GetNamespace()),
 		},
 	}
-	e.Default(emqx)
-	e.Append(clusterEnvs)
+	list.Default(emqx)
+	list.Append(clusterEnvs)
 }
 
-func (e *Environments) ClusterForK8S(emqx client.Object) {
+func (list *EnvList) ClusterForK8S(emqx client.Object) {
 	names := &Names{emqx}
 	clusterEnvs := []corev1.EnvVar{
 		{
@@ -118,6 +118,6 @@ func (e *Environments) ClusterForK8S(emqx client.Object) {
 			Value: "svc.cluster.local",
 		},
 	}
-	e.Default(emqx)
-	e.Append(clusterEnvs)
+	list.Default(emqx)
+	list.Append(clusterEnvs)
 }

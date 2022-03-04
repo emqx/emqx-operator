@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,10 +26,10 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type EmqxBrokerTemplate struct {
-	Listener Listener            `json:"listener,omitempty"`
-	ACL      []ACL               `json:"acl,omitempty"`
-	Plugins  []Plugin            `json:"plugins,omitempty"`
-	Modules  []EmqxBrokerModules `json:"modules,omitempty"`
+	Listener Listener                   `json:"listener,omitempty"`
+	ACL      []v1beta3.ACL              `json:"acl,omitempty"`
+	Plugins  []v1beta3.Plugin           `json:"plugins,omitempty"`
+	Modules  []v1beta3.EmqxBrokerModule `json:"modules,omitempty"`
 }
 
 // EmqxBrokerSpec defines the desired state of EmqxBroker
@@ -70,14 +71,13 @@ type EmqxBrokerSpec struct {
 
 	EmqxTemplate EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 
-	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
+	TelegrafTemplate *v1beta3.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=emqx
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
-//+kubebuilder:storageversion
 
 // EmqxBroker is the Schema for the emqxbrokers API
 type EmqxBroker struct {
@@ -176,8 +176,8 @@ func (emqx *EmqxBroker) GetExtraVolumeMounts() []corev1.VolumeMount {
 	return emqx.Spec.ExtraVolumeMounts
 }
 
-func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
-func (emqx *EmqxBroker) SetACL(acl []ACL) {
+func (emqx *EmqxBroker) GetACL() []v1beta3.ACL { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxBroker) SetACL(acl []v1beta3.ACL) {
 	emqx.Spec.EmqxTemplate.ACL = acl
 }
 
@@ -186,19 +186,21 @@ func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {
 	emqx.Spec.Env = env
 }
 
-func (emqx *EmqxBroker) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
-func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
+func (emqx *EmqxBroker) GetPlugins() []v1beta3.Plugin { return emqx.Spec.EmqxTemplate.Plugins }
+func (emqx *EmqxBroker) SetPlugins(plugins []v1beta3.Plugin) {
 	emqx.Spec.EmqxTemplate.Plugins = plugins
 }
 
-func (emqx *EmqxBroker) GetModules() []EmqxBrokerModules { return emqx.Spec.EmqxTemplate.Modules }
-func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModules) {
+func (emqx *EmqxBroker) GetModules() []v1beta3.EmqxBrokerModule {
+	return emqx.Spec.EmqxTemplate.Modules
+}
+func (emqx *EmqxBroker) SetModules(modules []v1beta3.EmqxBrokerModule) {
 	emqx.Spec.EmqxTemplate.Modules = modules
 }
 
-func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {
+func (emqx *EmqxBroker) GetTelegrafTemplate() *v1beta3.TelegrafTemplate {
 	return emqx.Spec.TelegrafTemplate
 }
-func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
+func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *v1beta3.TelegrafTemplate) {
 	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

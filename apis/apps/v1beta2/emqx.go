@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,17 +67,17 @@ type EmqxSpec interface {
 	GetExtraVolumes() []corev1.Volume
 	GetExtraVolumeMounts() []corev1.VolumeMount
 
-	GetACL() []ACL
-	SetACL(acl []ACL)
+	GetACL() []v1beta3.ACL
+	SetACL(acl []v1beta3.ACL)
 
 	GetEnv() []corev1.EnvVar
 	SetEnv(env []corev1.EnvVar)
 
-	GetPlugins() []Plugin
-	SetPlugins(plugins []Plugin)
+	GetPlugins() []v1beta3.Plugin
+	SetPlugins(plugins []v1beta3.Plugin)
 
-	GetTelegrafTemplate() *TelegrafTemplate
-	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
+	GetTelegrafTemplate() *v1beta3.TelegrafTemplate
+	SetTelegrafTemplate(telegraftedTemplate *v1beta3.TelegrafTemplate)
 }
 
 // +kubebuilder:object:generate=false
