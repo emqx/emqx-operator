@@ -1,4 +1,4 @@
-package v1beta2_test
+package v1beta3_test
 
 import (
 	"testing"
@@ -7,11 +7,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 )
 
 func TestEnvK8S(t *testing.T) {
-	envs := &v1beta2.Environments{
+	envs := &v1beta3.EnvList{
 		Items: []corev1.EnvVar{
 			{
 				Name:  "EMQX_NAME",
@@ -24,7 +24,7 @@ func TestEnvK8S(t *testing.T) {
 		},
 	}
 
-	emvBroker := &v1beta2.EmqxBroker{
+	emvBroker := &v1beta3.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
@@ -79,7 +79,7 @@ func TestEnvK8S(t *testing.T) {
 }
 
 func TestEnvDNS(t *testing.T) {
-	envs := &v1beta2.Environments{
+	envs := &v1beta3.EnvList{
 		Items: []corev1.EnvVar{
 			{
 				Name:  "EMQX_NAME",
@@ -92,7 +92,7 @@ func TestEnvDNS(t *testing.T) {
 		},
 	}
 
-	emqx := &v1beta2.EmqxEnterprise{
+	emqx := &v1beta3.EmqxEnterprise{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",

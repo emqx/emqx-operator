@@ -46,6 +46,7 @@ jobs:
           - "v1.23.0"
         apiVersion:
           - v1beta2
+          - v1beta3
         emqx:
           - [emqx, "emqx/emqx:4.3.11"]
           - [emqx, "emqx/emqx:4.4.1"]

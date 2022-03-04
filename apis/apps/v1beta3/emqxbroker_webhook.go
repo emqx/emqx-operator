@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta3
 
 import (
 	"errors"
 	"regexp"
 	"strings"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,7 +39,7 @@ func (r *EmqxBroker) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta1-emqxbroker,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta1,name=mutating.broker.emqx.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta3-emqxbroker,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta3,name=memqxbroker.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &EmqxBroker{}
 
@@ -48,52 +47,41 @@ var _ webhook.Defaulter = &EmqxBroker{}
 func (r *EmqxBroker) Default() {
 	emqxbrokerlog.Info("default", "name", r.Name)
 
-	labels := make(map[string]string)
-	for k, v := range r.Labels {
-		labels[k] = v
+	if r.Labels == nil {
+		r.Labels = make(map[string]string)
 	}
-	for k, v := range r.Spec.Labels {
-		labels[k] = v
-	}
-	labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	labels["apps.emqx.io/instance"] = r.GetName()
+	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	r.Labels["apps.emqx.io/instance"] = r.GetName()
 
-	r.Labels = labels
-	r.Spec.Labels = labels
-
-	if r.Spec.ServiceAccountName == "" {
-		r.Spec.ServiceAccountName = r.Name
-	}
-
-	if r.Spec.ACL == nil {
-		acls := &v1beta2.ACLs{}
+	if r.Spec.EmqxTemplate.ACL == nil {
+		acls := &ACLList{}
 		acls.Default()
-		r.Spec.ACL = acls.Items
+		r.Spec.EmqxTemplate.ACL = acls.Items
 	}
 
-	plugins := &v1beta2.Plugins{
-		Items: r.Spec.Plugins,
+	plugins := &PluginList{
+		Items: r.Spec.EmqxTemplate.Plugins,
 	}
 	plugins.Default()
 	if r.Spec.TelegrafTemplate != nil {
 		_, index := plugins.Lookup("emqx_prometheus")
 		if index == -1 {
-			plugins.Items = append(plugins.Items, v1beta2.Plugin{Name: "emqx_prometheus", Enable: true})
+			plugins.Items = append(plugins.Items, Plugin{Name: "emqx_prometheus", Enable: true})
 		}
 	}
-	r.Spec.Plugins = plugins.Items
+	r.Spec.EmqxTemplate.Plugins = plugins.Items
 
-	modules := &v1beta2.EmqxBrokerModulesList{
-		Items: r.Spec.Modules,
+	modules := &EmqxBrokerModuleList{
+		Items: r.Spec.EmqxTemplate.Modules,
 	}
 	modules.Default()
-	r.Spec.Modules = modules.Items
+	r.Spec.EmqxTemplate.Modules = modules.Items
 
-	listener := &r.Spec.Listener
+	listener := &r.Spec.EmqxTemplate.Listener
 	listener.Default()
-	r.Spec.Listener = *listener
+	r.Spec.EmqxTemplate.Listener = *listener
 
-	env := &v1beta2.Environments{
+	env := &EnvList{
 		Items: r.Spec.Env,
 	}
 	str := strings.Split(r.GetImage(), ":")
@@ -114,10 +102,6 @@ func (r *EmqxBroker) Default() {
 		})
 	}
 
-	e, _ := env.Lookup("EMQX_CLUSTER__DISCOVERY")
-	if e != nil && e.Value == "dns" {
-		r.Spec.ServiceAccountName = ""
-	}
 	r.Spec.Env = env.Items
 
 	if r.Spec.SecurityContext == nil {
@@ -135,7 +119,7 @@ func (r *EmqxBroker) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta1-emqxbroker,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta1,name=validator.broker.emqx.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta3-emqxbroker,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta3,name=vemqxbroker.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &EmqxBroker{}
 
@@ -147,7 +131,6 @@ func (r *EmqxBroker) ValidateCreate() error {
 		emqxbrokerlog.Error(err, "validate create failed")
 		return err
 	}
-
 	return nil
 }
 
@@ -159,7 +142,6 @@ func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
-
 	return nil
 }
 
