@@ -147,11 +147,20 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 		Data: map[string]string{"telegraf.conf": *telegrafTemplate.Conf},
 	}
 
+	command := v1beta1.GenerateCommandForTelegrafReadinessProbe(emqx.GetEnv())
+
 	container := corev1.Container{
 		Name:            "telegraf",
 		Image:           telegrafTemplate.Image,
 		ImagePullPolicy: telegrafTemplate.ImagePullPolicy,
 		Resources:       telegrafTemplate.Resources,
+		ReadinessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				Exec: &corev1.ExecAction{
+					Command: command,
+				},
+			},
+		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      cm.Name,
