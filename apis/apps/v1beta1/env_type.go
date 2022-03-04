@@ -1,6 +1,7 @@
 package v1beta1
 
 import (
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"strings"
@@ -37,17 +38,6 @@ func containsEnv(env []corev1.EnvVar, name string) int {
 		}
 	}
 	return -1
-}
-
-func getEnvValueFromNameExisted(env []corev1.EnvVar, name string) string {
-	var value string
-	for _, item := range env {
-		if item.Name == name {
-			value = item.Value
-			break
-		}
-	}
-	return value
 }
 
 func clusterEnvForK8S(emqx Emqx) []corev1.EnvVar {
@@ -112,23 +102,21 @@ func clusterEnvForDNS(emqx Emqx) []corev1.EnvVar {
 	}
 }
 
-func GenerateCommandForTelegrafReadinessProbe(env []corev1.EnvVar) []string {
+func GenerateAuthorizationForTelegrafReadinessProbe(env []corev1.EnvVar) string {
 	var managementId, managementSecret string
-	if containsEnv(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID") == -1 {
+	indexOfID := containsEnv(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID")
+	if indexOfID == -1 {
 		managementId = "admin"
 	} else {
-		managementId = getEnvValueFromNameExisted(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID")
+		managementId = env[indexOfID].Value
 	}
 
-	if containsEnv(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET") == -1 {
+	indexOfSecret := containsEnv(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET")
+	if indexOfSecret == -1 {
 		managementSecret = "public"
 	} else {
-		managementSecret = getEnvValueFromNameExisted(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET")
+		managementSecret = env[indexOfSecret].Value
 	}
-	command := []string{
-		"sh",
-		"-c",
-		fmt.Sprintf("curl -u %s:%s 'http://127.0.0.1:8081/api/v4/emqx_prometheus'", managementId, managementSecret),
-	}
-	return command
+	str := fmt.Sprintf("%s:%s", managementId, managementSecret)
+	return base64.StdEncoding.EncodeToString([]byte(str))
 }

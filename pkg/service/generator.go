@@ -147,7 +147,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 		Data: map[string]string{"telegraf.conf": *telegrafTemplate.Conf},
 	}
 
-	command := v1beta1.GenerateCommandForTelegrafReadinessProbe(emqx.GetEnv())
+	bearerStr := v1beta1.GenerateAuthorizationForTelegrafReadinessProbe(emqx.GetEnv())
 
 	container := corev1.Container{
 		Name:            "telegraf",
@@ -156,8 +156,17 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 		Resources:       telegrafTemplate.Resources,
 		Lifecycle: &corev1.Lifecycle{
 			PostStart: &corev1.Handler{
-				Exec: &corev1.ExecAction{
-					Command: command,
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/api/v4/emqx_prometheus",
+					Port: intstr.IntOrString{
+						IntVal: emqx.GetListener().Ports.API,
+					},
+					HTTPHeaders: []corev1.HTTPHeader{
+						{
+							Name:  "Authorization",
+							Value: fmt.Sprintf("Bearer %s", bearerStr),
+						},
+					},
 				},
 			},
 		},
