@@ -14,13 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	"regexp"
 	"strings"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,7 +38,7 @@ func (r *EmqxEnterprise) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta1-emqxenterprise,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta1,name=mutating.enterprise.emqx.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta2-emqxenterprise,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=memqxenterprise.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &EmqxEnterprise{}
 
@@ -57,6 +56,9 @@ func (r *EmqxEnterprise) Default() {
 	labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	labels["apps.emqx.io/instance"] = r.GetName()
 
+	r.Labels = labels
+	r.Spec.Labels = labels
+
 	if r.Spec.Replicas == nil {
 		defaultReplicas := int32(3)
 		r.Spec.Replicas = &defaultReplicas
@@ -66,27 +68,33 @@ func (r *EmqxEnterprise) Default() {
 		r.Spec.ServiceAccountName = r.Name
 	}
 
-	plugins := &v1beta2.Plugins{
-		Items: r.Spec.Plugins,
+	if r.Spec.EmqxTemplate.ACL == nil {
+		acls := &ACLs{}
+		acls.Default()
+		r.Spec.EmqxTemplate.ACL = acls.Items
+	}
+
+	plugins := &Plugins{
+		Items: r.Spec.EmqxTemplate.Plugins,
 	}
 	plugins.Default()
 	if r.Spec.TelegrafTemplate != nil {
 		_, index := plugins.Lookup("emqx_prometheus")
 		if index == -1 {
-			plugins.Items = append(plugins.Items, v1beta2.Plugin{Name: "emqx_prometheus", Enable: true})
+			plugins.Items = append(plugins.Items, Plugin{Name: "emqx_prometheus", Enable: true})
 		}
 	}
-	r.Spec.Plugins = plugins.Items
+	r.Spec.EmqxTemplate.Plugins = plugins.Items
 
-	modules := &v1beta2.EmqxEnterpriseModulesList{}
-	modules.Merge(r.Spec.Modules)
-	r.Spec.Modules = modules.Items
+	modules := &EmqxEnterpriseModulesList{}
+	modules.Merge(r.Spec.EmqxTemplate.Modules)
+	r.Spec.EmqxTemplate.Modules = modules.Items
 
-	listener := r.Spec.Listener
+	listener := r.Spec.EmqxTemplate.Listener
 	listener.Default()
-	r.Spec.Listener = listener
+	r.Spec.EmqxTemplate.Listener = listener
 
-	env := &v1beta2.Environments{}
+	env := &Environments{}
 	env.ClusterForK8S(r)
 	str := strings.Split(r.GetImage(), ":")
 	if len(str) > 1 {
@@ -112,7 +120,7 @@ func (r *EmqxEnterprise) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta1-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta1,name=validator.enterprise.emqx.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta2-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=vemqxenterprise.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &EmqxEnterprise{}
 
@@ -123,7 +131,6 @@ func (r *EmqxEnterprise) ValidateCreate() error {
 	if err := validateTag(r.Spec.Image); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -134,7 +141,6 @@ func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 	if err := validateTag(r.Spec.Image); err != nil {
 		return err
 	}
-
 	return nil
 }
 

@@ -1,4 +1,4 @@
-package v1beta1
+package v1beta2
 
 import (
 	"reflect"
@@ -58,34 +58,27 @@ type CertificateStringData struct {
 	TLSKey  string `json:"tls.key,omitempty"`
 }
 
-func generateListener(listener Listener) Listener {
-	if reflect.ValueOf(listener).IsZero() {
-		return defaultListener()
+func (l *Listener) Default() {
+	defaultPorts := Ports{
+		MQTT:      1883,
+		MQTTS:     8883,
+		WS:        8083,
+		WSS:       8084,
+		Dashboard: 18083,
+		API:       8081,
+	}
+	if reflect.ValueOf(l).IsZero() {
+		l.Type = corev1.ServiceTypeClusterIP
+		l.Ports = defaultPorts
 	} else {
-		if reflect.ValueOf(listener.Type).IsZero() {
-			listener.Type = defaultListener().Type
+		if reflect.ValueOf(l.Type).IsZero() {
+			l.Type = corev1.ServiceTypeClusterIP
 		}
-		if reflect.ValueOf(listener.Ports).IsZero() {
-			listener.Ports = defaultListener().Ports
+		if reflect.ValueOf(l.Ports).IsZero() {
+			l.Ports = defaultPorts
 		}
-		if reflect.ValueOf(listener.Ports.API).IsZero() {
-			listener.Ports.API = defaultListener().Ports.API
+		if reflect.ValueOf(l.Ports.API).IsZero() {
+			l.Ports.API = defaultPorts.API
 		}
-		return listener
 	}
-}
-
-func defaultListener() Listener {
-	return Listener{
-		Type: "ClusterIP",
-		Ports: Ports{
-			MQTT:      1883,
-			MQTTS:     8883,
-			WS:        8083,
-			WSS:       8084,
-			Dashboard: 18083,
-			API:       8081,
-		},
-	}
-
 }

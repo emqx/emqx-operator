@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	controllers "github.com/emqx/emqx-operator/controllers/apps"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -57,8 +57,8 @@ var timeout, interval time.Duration
 var k8sClient client.Client
 var testEnv *envtest.Environment
 
-var emqxList = func() []v1beta1.Emqx {
-	return []v1beta1.Emqx{
+var emqxList = func() []v1beta2.Emqx {
+	return []v1beta2.Emqx{
 		generateEmqxBroker(brokerName, brokerNameSpace),
 		generateEmqxEnterprise(enterpriseName, enterpriseNameSpace),
 	}
@@ -96,7 +96,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = v1beta1.AddToScheme(scheme.Scheme)
+	err = v1beta2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -122,9 +122,9 @@ var _ = BeforeSuite(func() {
 	// })
 	// Expect(err).NotTo(HaveOccurred())
 
-	// err = (&v1beta1.EmqxBroker{}).SetupWebhookWithManager(k8sManager)
+	// err = (&v1beta2.EmqxBroker{}).SetupWebhookWithManager(k8sManager)
 	// Expect(err).NotTo(HaveOccurred())
-	// err = (&v1beta1.EmqxEnterprise{}).SetupWebhookWithManager(k8sManager)
+	// err = (&v1beta2.EmqxEnterprise{}).SetupWebhookWithManager(k8sManager)
 	// Expect(err).NotTo(HaveOccurred())
 
 	newEmqxBroker := controllers.NewEmqxBrokerReconciler(k8sManager)
@@ -176,7 +176,7 @@ var _ = AfterSuite(func() {
 })
 
 func cleanAll() error {
-	broker := &v1beta1.EmqxBroker{}
+	broker := &v1beta2.EmqxBroker{}
 	if err := k8sClient.Get(
 		context.Background(),
 		types.NamespacedName{
@@ -187,7 +187,7 @@ func cleanAll() error {
 	); !errors.IsNotFound(err) {
 		if err := k8sClient.Delete(
 			context.Background(),
-			&v1beta1.EmqxBroker{
+			&v1beta2.EmqxBroker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      broker.GetName(),
 					Namespace: broker.GetNamespace(),
@@ -197,7 +197,7 @@ func cleanAll() error {
 			return err
 		}
 		// If PVC is set, then it should be retained
-		if !reflect.ValueOf(broker.GetStorage()).IsNil() {
+		if !reflect.ValueOf(broker.GetStorage()).IsZero() {
 			if err := k8sClient.List(
 				context.Background(),
 				&corev1.PersistentVolumeClaimList{},
@@ -217,7 +217,7 @@ func cleanAll() error {
 		}
 	}
 
-	enterprise := &v1beta1.EmqxEnterprise{}
+	enterprise := &v1beta2.EmqxEnterprise{}
 	if err := k8sClient.Get(
 		context.Background(),
 		types.NamespacedName{
@@ -228,7 +228,7 @@ func cleanAll() error {
 	); !errors.IsNotFound(err) {
 		if err := k8sClient.Delete(
 			context.Background(),
-			&v1beta1.EmqxEnterprise{
+			&v1beta2.EmqxEnterprise{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      enterprise.GetName(),
 					Namespace: enterprise.GetNamespace(),
@@ -238,7 +238,7 @@ func cleanAll() error {
 			return err
 		}
 		// If PVC is set, then it should be retained
-		if !reflect.ValueOf(enterprise.GetStorage()).IsNil() {
+		if !reflect.ValueOf(enterprise.GetStorage()).IsZero() {
 			if err := k8sClient.List(
 				context.Background(),
 				&corev1.PersistentVolumeClaimList{},
@@ -270,7 +270,7 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 }
 
 // Full
-func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
+func generateEmqxBroker(name, namespace string) *v1beta2.EmqxBroker {
 	storageClassName := "standard"
 	telegrafConf := `
 [global_tags]
@@ -293,62 +293,60 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 
 [[outputs.discard]]
 `
-	emqx := &v1beta1.EmqxBroker{
+	emqx := &v1beta2.EmqxBroker{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta1",
+			APIVersion: "apps.emqx.io/v1beta2",
 			Kind:       "EmqxBroker",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1beta1.EmqxBrokerSpec{
+		Spec: v1beta2.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.10",
 			Labels: map[string]string{
 				"cluster": "emqx",
 			},
-			Storage: &v1beta1.Storage{
-				VolumeClaimTemplate: v1beta1.EmbeddedPersistentVolumeClaim{
-					Spec: corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &storageClassName,
-						AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("20Mi"),
-							},
-						},
+			Storage: corev1.PersistentVolumeClaimSpec{
+				StorageClassName: &storageClassName,
+				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse("20Mi"),
 					},
 				},
 			},
-			Listener: v1beta1.Listener{
-				Type: "ClusterIP",
-				Ports: v1beta1.Ports{
-					MQTT:      1883,
-					MQTTS:     8883,
-					WS:        8083,
-					WSS:       8084,
-					Dashboard: 18083,
-					API:       8081,
+			EmqxTemplate: v1beta2.EmqxBrokerTemplate{
+				Listener: v1beta2.Listener{
+					Type: "ClusterIP",
+					Ports: v1beta2.Ports{
+						MQTT:      1883,
+						MQTTS:     8883,
+						WS:        8083,
+						WSS:       8084,
+						Dashboard: 18083,
+						API:       8081,
+					},
+				},
+				ACL: []v1beta2.ACL{
+					{
+						Permission: "allow",
+					},
+				},
+				Plugins: []v1beta2.Plugin{
+					{
+						Name:   "emqx_management",
+						Enable: true,
+					},
+				},
+				Modules: []v1beta2.EmqxBrokerModules{
+					{
+						Name:   "emqx_mod_acl_internal",
+						Enable: true,
+					},
 				},
 			},
-			ACL: []v1beta1.ACL{
-				{
-					Permission: "allow",
-				},
-			},
-			Plugins: []v1beta1.Plugin{
-				{
-					Name:   "emqx_management",
-					Enable: true,
-				},
-			},
-			Modules: []v1beta1.EmqxBrokerModules{
-				{
-					Name:   "emqx_mod_acl_internal",
-					Enable: true,
-				},
-			},
-			TelegrafTemplate: &v1beta1.TelegrafTemplate{
+			TelegrafTemplate: &v1beta2.TelegrafTemplate{
 				Image: "telegraf:1.19.3",
 				Conf:  &telegrafConf,
 			},
@@ -359,7 +357,7 @@ func generateEmqxBroker(name, namespace string) *v1beta1.EmqxBroker {
 }
 
 // Slim
-func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
+func generateEmqxEnterprise(name, namespace string) *v1beta2.EmqxEnterprise {
 	telegrafConf := `
 [global_tags]
   instanceID = "test"
@@ -381,9 +379,9 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 
 [[outputs.discard]]
 `
-	emqx := &v1beta1.EmqxEnterprise{
+	emqx := &v1beta2.EmqxEnterprise{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta1",
+			APIVersion: "apps.emqx.io/v1beta2",
 			Kind:       "EmqxEnterprise",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -393,9 +391,10 @@ func generateEmqxEnterprise(name, namespace string) *v1beta1.EmqxEnterprise {
 				"cluster": "emqx",
 			},
 		},
-		Spec: v1beta1.EmqxEnterpriseSpec{
+		Spec: v1beta2.EmqxEnterpriseSpec{
 			Image: "emqx/emqx-ee:4.4.0",
-			License: `
+			EmqxTemplate: v1beta2.EmqxEnterpriseTemplate{
+				License: `
 -----BEGIN CERTIFICATE-----
 MIIENzCCAx+gAwIBAgIDdMvVMA0GCSqGSIb3DQEBBQUAMIGDMQswCQYDVQQGEwJD
 TjERMA8GA1UECAwIWmhlamlhbmcxETAPBgNVBAcMCEhhbmd6aG91MQwwCgYDVQQK
@@ -422,7 +421,9 @@ JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
 EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 -----END CERTIFICATE-----
 `,
-			TelegrafTemplate: &v1beta1.TelegrafTemplate{
+			},
+
+			TelegrafTemplate: &v1beta2.TelegrafTemplate{
 				Image: "telegraf:1.19.3",
 				Conf:  &telegrafConf,
 			},
@@ -432,7 +433,7 @@ EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 	return emqx
 }
 
-func updateEmqx(emqx v1beta1.Emqx) error {
+func updateEmqx(emqx v1beta2.Emqx) error {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(emqx.GetObjectKind().GroupVersionKind())
 

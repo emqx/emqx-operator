@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"fmt"
 
+	v1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -52,11 +53,11 @@ type EmqxBrokerSpec struct {
 	NodeName     string            `json:"nodeName,omitempty"`
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// TODO: waiting to be deleted, should use meta.labels
-	Labels Labels `json:"labels,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
 	// TODO: waiting to be deleted, should use meta.annotations
 	Annotations map[string]string `json:"annotations,omitempty"`
 
-	Listener Listener `json:"listener,omitempty"`
+	Listener v1beta2.Listener `json:"listener,omitempty"`
 
 	Affinity    *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations []corev1.Toleration `json:"toleRations,omitempty"`
@@ -66,27 +67,27 @@ type EmqxBrokerSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	ACL []ACL `json:"acl,omitempty"`
+	ACL []v1beta2.ACL `json:"acl,omitempty"`
 
-	Plugins []Plugin `json:"plugins,omitempty"`
+	Plugins []v1beta2.Plugin `json:"plugins,omitempty"`
 
-	Modules []EmqxBrokerModules `json:"modules,omitempty"`
+	Modules []v1beta2.EmqxBrokerModules `json:"modules,omitempty"`
 
-	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
+	TelegrafTemplate *v1beta2.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=emqx
 //+kubebuilder:subresource:status
-//+kubebuilder:storageversion
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
+
 // EmqxBroker is the Schema for the emqxbrokers API
 type EmqxBroker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxBrokerSpec `json:"spec,omitempty"`
-	Status `json:"status,omitempty"`
+	Spec           EmqxBrokerSpec `json:"spec,omitempty"`
+	v1beta2.Status `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -163,8 +164,8 @@ func (emqx *EmqxBroker) SetAnnotations(annotations map[string]string) {
 	emqx.Spec.Annotations = annotations
 }
 
-func (emqx *EmqxBroker) GetListener() Listener { return emqx.Spec.Listener }
-func (emqx *EmqxBroker) SetListener(listener Listener) {
+func (emqx *EmqxBroker) GetListener() v1beta2.Listener { return emqx.Spec.Listener }
+func (emqx *EmqxBroker) SetListener(listener v1beta2.Listener) {
 	emqx.Spec.Listener = listener
 }
 
@@ -181,8 +182,8 @@ func (emqx *EmqxBroker) GetExtraVolumeMounts() []corev1.VolumeMount {
 	return emqx.Spec.ExtraVolumeMounts
 }
 
-func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.ACL }
-func (emqx *EmqxBroker) SetACL(acl []ACL) {
+func (emqx *EmqxBroker) GetACL() []v1beta2.ACL { return emqx.Spec.ACL }
+func (emqx *EmqxBroker) SetACL(acl []v1beta2.ACL) {
 	emqx.Spec.ACL = acl
 }
 
@@ -191,13 +192,13 @@ func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {
 	emqx.Spec.Env = env
 }
 
-func (emqx *EmqxBroker) GetPlugins() []Plugin { return emqx.Spec.Plugins }
-func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
+func (emqx *EmqxBroker) GetPlugins() []v1beta2.Plugin { return emqx.Spec.Plugins }
+func (emqx *EmqxBroker) SetPlugins(plugins []v1beta2.Plugin) {
 	emqx.Spec.Plugins = plugins
 }
 
-func (emqx *EmqxBroker) GetModules() []EmqxBrokerModules { return emqx.Spec.Modules }
-func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModules) {
+func (emqx *EmqxBroker) GetModules() []v1beta2.EmqxBrokerModules { return emqx.Spec.Modules }
+func (emqx *EmqxBroker) SetModules(modules []v1beta2.EmqxBrokerModules) {
 	emqx.Spec.Modules = modules
 }
 
@@ -205,9 +206,9 @@ func (emqx *EmqxBroker) GetHeadlessServiceName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }
 
-func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {
+func (emqx *EmqxBroker) GetTelegrafTemplate() *v1beta2.TelegrafTemplate {
 	return emqx.Spec.TelegrafTemplate
 }
-func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
+func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *v1beta2.TelegrafTemplate) {
 	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

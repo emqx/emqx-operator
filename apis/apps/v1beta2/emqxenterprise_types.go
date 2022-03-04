@@ -17,7 +17,9 @@ limitations under the License.
 package v1beta2
 
 import (
-	v1beta1 "github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"fmt"
+	"reflect"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,11 +28,11 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type EmqxEnterpriseTemplate struct {
-	License  string                          `json:"license,omitempty"`
-	Listener v1beta1.Listener                `json:"listener,omitempty"`
-	ACL      []v1beta1.ACL                   `json:"acl,omitempty"`
-	Plugins  []v1beta1.Plugin                `json:"plugins,omitempty"`
-	Modules  []v1beta1.EmqxEnterpriseModules `json:"modules,omitempty"`
+	License  string                  `json:"license,omitempty"`
+	Listener Listener                `json:"listener,omitempty"`
+	ACL      []ACL                   `json:"acl,omitempty"`
+	Plugins  []Plugin                `json:"plugins,omitempty"`
+	Modules  []EmqxEnterpriseModules `json:"modules,omitempty"`
 }
 
 // EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
@@ -57,7 +59,7 @@ type EmqxEnterpriseSpec struct {
 	Storage corev1.PersistentVolumeClaimSpec `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
-	Labels      v1beta1.Labels    `json:"labels,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
@@ -70,27 +72,23 @@ type EmqxEnterpriseSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	EmqxTemplate     EmqxEnterpriseTemplate    `json:"emqxTemplate,omitempty"`
-	TelegrafTemplate *v1beta1.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
-}
-
-// EmqxEnterpriseStatus defines the observed state of EmqxEnterprise
-type EmqxEnterpriseStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	v1beta1.Status `json:"status,omitempty"`
+	EmqxTemplate     EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
+	TelegrafTemplate *TelegrafTemplate      `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:shortName=emqx-ee
 //+kubebuilder:subresource:status
+//+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
+//+kubebuilder:storageversion
 
 // EmqxEnterprise is the Schema for the emqxenterprises API
 type EmqxEnterprise struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxEnterpriseSpec   `json:"spec,omitempty"`
-	Status EmqxEnterpriseStatus `json:"status,omitempty"`
+	Spec   EmqxEnterpriseSpec `json:"spec,omitempty"`
+	Status `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -104,4 +102,122 @@ type EmqxEnterpriseList struct {
 
 func init() {
 	SchemeBuilder.Register(&EmqxEnterprise{}, &EmqxEnterpriseList{})
+}
+
+func (emqx *EmqxEnterprise) GetAPIVersion() string        { return emqx.APIVersion }
+func (emqx *EmqxEnterprise) SetAPIVersion(version string) { emqx.APIVersion = version }
+func (emqx *EmqxEnterprise) GetKind() string              { return emqx.Kind }
+func (emqx *EmqxEnterprise) SetKind(kind string)          { emqx.Kind = kind }
+
+func (emqx *EmqxEnterprise) GetReplicas() *int32 {
+	if reflect.ValueOf(emqx.Spec.Replicas).IsZero() {
+		defaultReplicas := int32(3)
+		emqx.SetReplicas(&defaultReplicas)
+	}
+	return emqx.Spec.Replicas
+}
+func (emqx *EmqxEnterprise) SetReplicas(replicas *int32) { emqx.Spec.Replicas = replicas }
+
+func (emqx *EmqxEnterprise) GetImage() string      { return emqx.Spec.Image }
+func (emqx *EmqxEnterprise) SetImage(image string) { emqx.Spec.Image = image }
+
+func (emqx *EmqxEnterprise) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
+func (emqx *EmqxEnterprise) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
+	emqx.Spec.ImagePullPolicy = pullPolicy
+}
+
+func (emqx *EmqxEnterprise) GetImagePullSecrets() []corev1.LocalObjectReference {
+	return emqx.Spec.ImagePullSecrets
+}
+func (emqx *EmqxEnterprise) SetImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) {
+	emqx.Spec.ImagePullSecrets = imagePullSecrets
+}
+
+func (emqx *EmqxEnterprise) GetServiceAccountName() string {
+	if emqx.Spec.ServiceAccountName == "" {
+		emqx.SetServiceAccountName(emqx.Name)
+	}
+	return emqx.Spec.ServiceAccountName
+}
+func (emqx *EmqxEnterprise) SetServiceAccountName(serviceAccountName string) {
+	emqx.Spec.ServiceAccountName = serviceAccountName
+}
+
+func (emqx *EmqxEnterprise) GetResource() corev1.ResourceRequirements { return emqx.Spec.Resources }
+func (emqx *EmqxEnterprise) SetResource(resource corev1.ResourceRequirements) {
+	emqx.Spec.Resources = resource
+}
+
+func (emqx *EmqxEnterprise) GetLicense() string        { return emqx.Spec.EmqxTemplate.License }
+func (emqx *EmqxEnterprise) SetLicense(license string) { emqx.Spec.EmqxTemplate.License = license }
+
+func (emqx *EmqxEnterprise) GetStorage() corev1.PersistentVolumeClaimSpec { return emqx.Spec.Storage }
+func (emqx *EmqxEnterprise) SetStorage(storage corev1.PersistentVolumeClaimSpec) {
+	emqx.Spec.Storage = storage
+}
+
+func (emqx *EmqxEnterprise) GetNodeName() string { return emqx.Spec.NodeName }
+func (emqx *EmqxEnterprise) SetNodeName(nodeName string) {
+	emqx.Spec.NodeName = nodeName
+}
+
+func (emqx *EmqxEnterprise) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
+func (emqx *EmqxEnterprise) SetNodeSelector(nodeSelector map[string]string) {
+	emqx.Spec.NodeSelector = nodeSelector
+}
+
+func (emqx *EmqxEnterprise) GetAnnotations() map[string]string { return emqx.Spec.Annotations }
+func (emqx *EmqxEnterprise) SetAnnotations(annotations map[string]string) {
+	emqx.Spec.Annotations = annotations
+}
+
+func (emqx *EmqxEnterprise) GetListener() Listener { return emqx.Spec.EmqxTemplate.Listener }
+func (emqx *EmqxEnterprise) SetListener(listener Listener) {
+	emqx.Spec.EmqxTemplate.Listener = listener
+}
+
+func (emqx *EmqxEnterprise) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
+func (emqx *EmqxEnterprise) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
+
+func (emqx *EmqxEnterprise) GetToleRations() []corev1.Toleration { return emqx.Spec.ToleRations }
+func (emqx *EmqxEnterprise) SetToleRations(tolerations []corev1.Toleration) {
+	emqx.Spec.ToleRations = tolerations
+}
+
+func (emqx *EmqxEnterprise) GetExtraVolumes() []corev1.Volume { return emqx.Spec.ExtraVolumes }
+func (emqx *EmqxEnterprise) GetExtraVolumeMounts() []corev1.VolumeMount {
+	return emqx.Spec.ExtraVolumeMounts
+}
+
+func (emqx *EmqxEnterprise) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxEnterprise) SetACL(acl []ACL) {
+	emqx.Spec.EmqxTemplate.ACL = acl
+}
+
+func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar { return emqx.Spec.Env }
+func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) {
+	emqx.Spec.Env = env
+}
+
+func (emqx *EmqxEnterprise) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
+func (emqx *EmqxEnterprise) SetPlugins(plugins []Plugin) {
+	emqx.Spec.EmqxTemplate.Plugins = plugins
+}
+
+func (emqx *EmqxEnterprise) GetModules() []EmqxEnterpriseModules {
+	return emqx.Spec.EmqxTemplate.Modules
+}
+func (emqx *EmqxEnterprise) SetModules(modules []EmqxEnterpriseModules) {
+	emqx.Spec.EmqxTemplate.Modules = modules
+}
+
+func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
+}
+
+func (emqx *EmqxEnterprise) GetTelegrafTemplate() *TelegrafTemplate {
+	return emqx.Spec.TelegrafTemplate
+}
+func (emqx *EmqxEnterprise) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
+	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

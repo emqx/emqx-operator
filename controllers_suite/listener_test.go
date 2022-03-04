@@ -19,7 +19,7 @@ package controller_suite_test
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -145,15 +145,15 @@ var _ = Describe("", func() {
 				},
 			}
 
-			listener := v1beta1.Listener{
+			listener := v1beta2.Listener{
 				Type:        corev1.ServiceTypeNodePort,
 				Labels:      map[string]string{"test/labels": "service"},
 				Annotations: map[string]string{"test/annotations": "service"},
-				Ports: v1beta1.Ports{
+				Ports: v1beta2.Ports{
 					API:  int32(28081),
 					MQTT: int32(21883),
 				},
-				NodePorts: v1beta1.Ports{
+				NodePorts: v1beta2.Ports{
 					API:  int32(30001),
 					MQTT: int32(30002),
 				},

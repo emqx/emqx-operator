@@ -1,4 +1,4 @@
-package v1beta1
+package v1beta2
 
 import (
 	"sort"
@@ -59,7 +59,7 @@ type EmqxStatus interface {
 	ClearCondition(t ConditionType)
 }
 
-// EmqxStatus defines the observed state of EMQX
+// Emqx Status defines the observed state of EMQX
 type Status struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file

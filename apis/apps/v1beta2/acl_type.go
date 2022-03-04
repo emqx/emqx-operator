@@ -1,4 +1,4 @@
-package v1beta1
+package v1beta2
 
 //+kubebuilder:object:generate=true
 type Topics struct {
@@ -19,8 +19,13 @@ type ACL struct {
 	Topics Topics `json:"topics,omitempty"`
 }
 
-func defaultACL() []ACL {
-	return []ACL{
+//+kubebuilder:object:generate=false
+type ACLs struct {
+	Items []ACL
+}
+
+func (a *ACLs) Default() {
+	a.Items = []ACL{
 		{
 			Permission: "allow",
 			Username:   "dashboard",

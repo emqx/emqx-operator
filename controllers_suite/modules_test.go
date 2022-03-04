@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,25 +47,25 @@ var _ = Describe("", func() {
 		It("Check update modules", func() {
 			for _, emqx := range emqxList() {
 				switch obj := emqx.(type) {
-				case *v1beta1.EmqxBroker:
-					modules := []v1beta1.EmqxBrokerModules{
+				case *v1beta2.EmqxBroker:
+					modules := []v1beta2.EmqxBrokerModules{
 						{
 							Name:   "emqx_mod_presence",
 							Enable: false,
 						},
 					}
-					obj.Spec.Modules = modules
+					obj.Spec.EmqxTemplate.Modules = modules
 					Expect(updateEmqx(obj)).Should(Succeed())
 					check_modules(obj)
-				case *v1beta1.EmqxEnterprise:
-					modules := []v1beta1.EmqxEnterpriseModules{
+				case *v1beta2.EmqxEnterprise:
+					modules := []v1beta2.EmqxEnterpriseModules{
 						{
 							Name:    "internal_cal",
 							Enable:  true,
 							Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
 						},
 					}
-					obj.Spec.Modules = modules
+					obj.Spec.EmqxTemplate.Modules = modules
 					Expect(updateEmqx(obj)).Should(Succeed())
 					check_modules(obj)
 				default:
@@ -76,10 +76,10 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_modules(emqx v1beta1.Emqx) {
+func check_modules(emqx v1beta2.Emqx) {
 	switch obj := emqx.(type) {
-	case *v1beta1.EmqxBroker:
-		loadedModulesString := util.StringEmqxBrokerLoadedModules(obj.Spec.Modules)
+	case *v1beta2.EmqxBroker:
+		loadedModulesString := util.StringEmqxBrokerLoadedModules(obj.Spec.EmqxTemplate.Modules)
 
 		Eventually(func() map[string]string {
 			cm := &corev1.ConfigMap{}
@@ -112,8 +112,8 @@ func check_modules(emqx v1beta1.Emqx) {
 				base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
 			),
 		)
-	case *v1beta1.EmqxEnterprise:
-		data, _ := json.Marshal(obj.Spec.Modules)
+	case *v1beta2.EmqxEnterprise:
+		data, _ := json.Marshal(obj.Spec.EmqxTemplate.Modules)
 		loadedModulesString := string(data)
 
 		Eventually(func() map[string]string {

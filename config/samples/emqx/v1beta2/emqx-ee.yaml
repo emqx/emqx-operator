@@ -2,12 +2,12 @@ apiVersion: apps.emqx.io/v1beta2
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
+  labels:
+    cluster: emqx
 spec:
   serviceAccountName: "emqx"
   image: emqx/emqx-ee:4.4.0
   replicas: 3
-  labels:
-    cluster: emqx
   storage:
     storageClassName: standard
     resources:
@@ -19,9 +19,6 @@ spec:
     - name: "EMQX_LOG__LEVEL"
       value: "debug"
   emqxTemplate:
-#   acl: []
-#   plugins: []
-#   modules:
     listener:
       type: ClusterIP
       ports:

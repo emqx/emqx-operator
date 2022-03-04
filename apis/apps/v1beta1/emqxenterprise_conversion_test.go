@@ -1,4 +1,4 @@
-package v1beta2_test
+package v1beta1_test
 
 import (
 	"testing"
@@ -36,7 +36,7 @@ var v1beta1Enterprise = &v1beta1.EmqxEnterprise{
 				},
 			},
 		},
-		Plugins: []v1beta1.Plugin{
+		Plugins: []v1beta2.Plugin{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -46,7 +46,7 @@ var v1beta1Enterprise = &v1beta1.EmqxEnterprise{
 				Enable: false,
 			},
 		},
-		Modules: []v1beta1.EmqxEnterpriseModules{
+		Modules: []v1beta2.EmqxEnterpriseModules{
 			{
 				Name:    "internal_cal",
 				Enable:  true,
@@ -63,8 +63,8 @@ var v1beta1Enterprise = &v1beta1.EmqxEnterprise{
 						}`)},
 			},
 		},
-		Listener: v1beta1.Listener{
-			Ports: v1beta1.Ports{
+		Listener: v1beta2.Listener{
+			Ports: v1beta2.Ports{
 				MQTTS: 8885,
 			},
 		},
@@ -93,7 +93,7 @@ var v1beta2Enterprise = &v1beta2.EmqxEnterprise{
 			},
 		},
 		EmqxTemplate: v1beta2.EmqxEnterpriseTemplate{
-			Plugins: []v1beta1.Plugin{
+			Plugins: []v1beta2.Plugin{
 				{
 					Name:   "foo",
 					Enable: true,
@@ -103,7 +103,7 @@ var v1beta2Enterprise = &v1beta2.EmqxEnterprise{
 					Enable: false,
 				},
 			},
-			Modules: []v1beta1.EmqxEnterpriseModules{
+			Modules: []v1beta2.EmqxEnterpriseModules{
 				{
 					Name:    "internal_cal",
 					Enable:  true,
@@ -120,8 +120,8 @@ var v1beta2Enterprise = &v1beta2.EmqxEnterprise{
 						}`)},
 				},
 			},
-			Listener: v1beta1.Listener{
-				Ports: v1beta1.Ports{
+			Listener: v1beta2.Listener{
+				Ports: v1beta2.Ports{
 					MQTTS: 8885,
 				},
 			},
@@ -130,15 +130,15 @@ var v1beta2Enterprise = &v1beta2.EmqxEnterprise{
 }
 
 func TestConvertToEnterprise(t *testing.T) {
-	emqx := &v1beta1.EmqxEnterprise{}
-	err := v1beta2Enterprise.ConvertTo(emqx)
+	emqx := &v1beta2.EmqxEnterprise{}
+	err := v1beta1Enterprise.ConvertTo(emqx)
 	assert.Nil(t, err)
-	assert.Equal(t, emqx, v1beta1Enterprise)
+	assert.Equal(t, emqx, v1beta2Enterprise)
 }
 
 func TestConvertFromEnterprise(t *testing.T) {
-	emqx := &v1beta2.EmqxEnterprise{}
-	err := emqx.ConvertFrom(v1beta1Enterprise)
+	emqx := &v1beta1.EmqxEnterprise{}
+	err := emqx.ConvertFrom(v1beta2Enterprise)
 	assert.Nil(t, err)
-	assert.Equal(t, emqx, v1beta2Enterprise)
+	assert.Equal(t, emqx, v1beta1Enterprise)
 }
