@@ -123,7 +123,7 @@ func GenerateCommandForTelegrafReadinessProbe(env []corev1.EnvVar) []string {
 	if containsEnv(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET") == -1 {
 		managementSecret = "public"
 	} else {
-		managementSecret = "xx"
+		managementSecret = getEnvValueFromNameExisted(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET")
 	}
 	command := []string{
 		"sh",
