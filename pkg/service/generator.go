@@ -154,16 +154,12 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 		Image:           telegrafTemplate.Image,
 		ImagePullPolicy: telegrafTemplate.ImagePullPolicy,
 		Resources:       telegrafTemplate.Resources,
-		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+		Lifecycle: &corev1.Lifecycle{
+			PostStart: &corev1.Handler{
 				Exec: &corev1.ExecAction{
 					Command: command,
 				},
 			},
-			FailureThreshold: 10,
-			PeriodSeconds:    10,
-			SuccessThreshold: 1,
-			TimeoutSeconds:   10,
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
