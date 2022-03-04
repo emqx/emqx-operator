@@ -160,6 +160,10 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 					Command: command,
 				},
 			},
+			FailureThreshold: 10,
+			PeriodSeconds:    10,
+			SuccessThreshold: 1,
+			TimeoutSeconds:   10,
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
