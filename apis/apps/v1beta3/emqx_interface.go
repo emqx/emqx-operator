@@ -14,10 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta3
 
 import (
-	v1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,14 +36,11 @@ type EmqxSpec interface {
 	GetImagePullSecrets() []corev1.LocalObjectReference
 	SetImagePullSecrets([]corev1.LocalObjectReference)
 
-	GetServiceAccountName() string
-	SetServiceAccountName(serviceAccountName string)
-
 	GetResource() corev1.ResourceRequirements
 	SetResource(resource corev1.ResourceRequirements)
 
-	GetStorage() *Storage
-	SetStorage(storage *Storage)
+	GetPersistent() corev1.PersistentVolumeClaimSpec
+	SetPersistent(persistent corev1.PersistentVolumeClaimSpec)
 
 	GetNodeName() string
 	SetNodeName(nodeName string)
@@ -55,9 +51,6 @@ type EmqxSpec interface {
 	GetAnnotations() map[string]string
 	SetAnnotations(annotations map[string]string)
 
-	GetListener() v1beta2.Listener
-	SetListener(v1beta2.Listener)
-
 	GetAffinity() *corev1.Affinity
 	SetAffinity(affinity *corev1.Affinity)
 
@@ -67,22 +60,23 @@ type EmqxSpec interface {
 	GetExtraVolumes() []corev1.Volume
 	GetExtraVolumeMounts() []corev1.VolumeMount
 
-	GetACL() []v1beta2.ACL
-	SetACL(acl []v1beta2.ACL)
+	GetACL() []ACL
+	SetACL(acl []ACL)
 
 	GetEnv() []corev1.EnvVar
 	SetEnv(env []corev1.EnvVar)
 
-	GetPlugins() []v1beta2.Plugin
-	SetPlugins(plugins []v1beta2.Plugin)
+	GetPlugins() []Plugin
+	SetPlugins(plugins []Plugin)
 
-	GetHeadlessServiceName() string
+	GetListener() Listener
+	SetListener(Listener)
 
 	GetSecurityContext() *corev1.PodSecurityContext
 	SetSecurityContext(securityContext *corev1.PodSecurityContext)
 
-	GetTelegrafTemplate() *v1beta2.TelegrafTemplate
-	SetTelegrafTemplate(telegraftedTemplate *v1beta2.TelegrafTemplate)
+	GetTelegrafTemplate() *TelegrafTemplate
+	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
 }
 
 // +kubebuilder:object:generate=false
@@ -91,7 +85,7 @@ type Emqx interface {
 	v1.Object
 
 	EmqxSpec
-	v1beta2.EmqxStatus
+	EmqxStatus
 
 	client.Object
 }

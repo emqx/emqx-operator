@@ -1,9 +1,8 @@
-package v1beta2_test
+package v1beta3_test
 
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -11,12 +10,12 @@ import (
 )
 
 func TestDefaultForClusterEnv(t *testing.T) {
-	emqx := &v1beta2.EmqxBroker{
+	emqx := &v1beta3.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: v1beta2.EmqxBrokerSpec{
+		Spec: v1beta3.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
 		},
 	}
@@ -46,41 +45,13 @@ func TestDefaultForClusterEnv(t *testing.T) {
 	)
 }
 
-func TestDefaultForServiceAccountName(t *testing.T) {
-	emqx := &v1beta2.EmqxBroker{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx",
-			Namespace: "emqx",
-		},
-		Spec: v1beta2.EmqxBrokerSpec{
-			Image: "emqx/emqx:4.3.11",
-		},
-	}
-	emqx.Default()
-	assert.Equal(t, emqx.Spec.ServiceAccountName, "emqx")
-
-	emqx.Spec.Image = "emqx/emqx:4.4.0"
-	emqx.Spec.Env = []corev1.EnvVar{}
-	emqx.Spec.ServiceAccountName = "fake"
-	emqx.Default()
-	assert.Equal(t, emqx.Spec.ServiceAccountName, "")
-}
-
 func TestDefaultBroker(t *testing.T) {
-	defaultReplicas := int32(3)
-	emqx := &v1beta2.EmqxBroker{
+	emqx := &v1beta3.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 			Labels: map[string]string{
 				"foo": "bar",
-			},
-		},
-		Spec: v1beta2.EmqxBrokerSpec{
-			Replicas: &defaultReplicas,
-			Image:    "emqx/emqx:4.3.11",
-			Labels: map[string]string{
-				"cluster": "emqx",
 			},
 		},
 	}
@@ -91,14 +62,8 @@ func TestDefaultBroker(t *testing.T) {
 
 	// Labels
 	assert.Contains(t, emqx.Labels, "foo")
-	assert.Contains(t, emqx.Labels, "cluster")
 	assert.Contains(t, emqx.Labels, "apps.emqx.io/managed-by")
 	assert.Contains(t, emqx.Labels, "apps.emqx.io/instance")
-
-	assert.Contains(t, emqx.Spec.Labels, "foo")
-	assert.Contains(t, emqx.Spec.Labels, "cluster")
-	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/managed-by")
-	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/instance")
 
 	telegrafConf := `
 [global_tags]
@@ -126,15 +91,31 @@ func TestDefaultBroker(t *testing.T) {
 		Conf:  &telegrafConf,
 	}
 	emqx.Default()
+	assert.Subset(t, emqx.Spec.EmqxTemplate.Plugins,
+		[]v1beta3.Plugin{
+			{
+				Name:   "emqx_prometheus",
+				Enable: true,
+			},
+		},
+	)
+	assert.Subset(t, emqx.Spec.Env,
+		[]corev1.EnvVar{
+			{
+				Name:  "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER",
+				Value: "",
+			},
+		},
+	)
 }
 
 func TestValidateCreateBroker(t *testing.T) {
-	emqx := v1beta2.EmqxBroker{
+	emqx := v1beta3.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: v1beta2.EmqxBrokerSpec{
+		Spec: v1beta3.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
 		},
 	}
@@ -147,12 +128,12 @@ func TestValidateCreateBroker(t *testing.T) {
 }
 
 func TestValidateUpdateBroker(t *testing.T) {
-	emqx := v1beta2.EmqxBroker{
+	emqx := v1beta3.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: v1beta2.EmqxBrokerSpec{
+		Spec: v1beta3.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
 		},
 	}

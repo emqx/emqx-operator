@@ -1,4 +1,4 @@
-package v1beta2_test
+package v1beta3_test
 
 import (
 	"testing"
@@ -6,12 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 )
 
 func TestEmqxBrokerModulesDefault(t *testing.T) {
-	modules := &v1beta2.EmqxBrokerModulesList{
-		Items: []v1beta2.EmqxBrokerModules{
+	modules := &v1beta3.EmqxBrokerModuleList{
+		Items: []v1beta3.EmqxBrokerModule{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -25,7 +25,7 @@ func TestEmqxBrokerModulesDefault(t *testing.T) {
 
 	modules.Default()
 	assert.ElementsMatch(t, modules.Items,
-		[]v1beta2.EmqxBrokerModules{
+		[]v1beta3.EmqxBrokerModule{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -44,8 +44,8 @@ func TestEmqxBrokerModulesDefault(t *testing.T) {
 }
 
 func TestEmqxBrokerModulesString(t *testing.T) {
-	modules := &v1beta2.EmqxBrokerModulesList{
-		Items: []v1beta2.EmqxBrokerModules{
+	modules := &v1beta3.EmqxBrokerModuleList{
+		Items: []v1beta3.EmqxBrokerModule{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -63,8 +63,8 @@ func TestEmqxBrokerModulesString(t *testing.T) {
 }
 
 func TestEmqxEnterpriseModulesDefault(t *testing.T) {
-	modules := &v1beta2.EmqxEnterpriseModulesList{
-		Items: []v1beta2.EmqxEnterpriseModules{
+	modules := &v1beta3.EmqxEnterpriseModuleList{
+		Items: []v1beta3.EmqxEnterpriseModule{
 			{
 				Name:    "fake",
 				Enable:  true,
@@ -79,7 +79,7 @@ func TestEmqxEnterpriseModulesDefault(t *testing.T) {
 
 	modules.Default()
 	assert.ElementsMatch(t, modules.Items,
-		[]v1beta2.EmqxEnterpriseModules{
+		[]v1beta3.EmqxEnterpriseModule{
 			{
 				Name:    "fake",
 				Enable:  true,

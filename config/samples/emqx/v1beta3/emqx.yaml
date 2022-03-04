@@ -1,0 +1,6 @@
+apiVersion: apps.emqx.io/v1beta3
+kind: EmqxBroker
+metadata:
+  name: emqx
+spec:
+  image: emqx/emqx:4.4.1
