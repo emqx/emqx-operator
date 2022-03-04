@@ -102,7 +102,7 @@ func clusterEnvForDNS(emqx Emqx) []corev1.EnvVar {
 	}
 }
 
-func GenerateAuthorizationForTelegrafReadinessProbe(env []corev1.EnvVar) string {
+func GenerateAuthorizationForTelegraf(env []corev1.EnvVar) string {
 	var managementId, managementSecret string
 	indexOfID := containsEnv(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID")
 	if indexOfID == -1 {

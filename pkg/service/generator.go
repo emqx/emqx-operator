@@ -147,7 +147,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 		Data: map[string]string{"telegraf.conf": *telegrafTemplate.Conf},
 	}
 
-	bearerStr := v1beta1.GenerateAuthorizationForTelegrafReadinessProbe(emqx.GetEnv())
+	bearerStr := v1beta1.GenerateAuthorizationForTelegraf(emqx.GetEnv())
 
 	container := corev1.Container{
 		Name:            "telegraf",
