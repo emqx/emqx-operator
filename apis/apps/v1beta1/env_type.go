@@ -1,6 +1,7 @@
 package v1beta1
 
 import (
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"strings"
@@ -30,9 +31,9 @@ func generateEnv(emqx Emqx) []corev1.EnvVar {
 	return emqxEnv
 }
 
-func containsEnv(Env []corev1.EnvVar, Name string) int {
-	for index, value := range Env {
-		if value.Name == Name {
+func containsEnv(env []corev1.EnvVar, name string) int {
+	for index, value := range env {
+		if value.Name == name {
 			return index
 		}
 	}
@@ -99,4 +100,23 @@ func clusterEnvForDNS(emqx Emqx) []corev1.EnvVar {
 			Value: fmt.Sprintf("%s.%s.svc.cluster.local", emqx.GetHeadlessServiceName(), emqx.GetNamespace()),
 		},
 	}
+}
+
+func GenerateAuthorizationForTelegraf(env []corev1.EnvVar) string {
+	var managementId, managementSecret string
+	indexOfID := containsEnv(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID")
+	if indexOfID == -1 {
+		managementId = "admin"
+	} else {
+		managementId = env[indexOfID].Value
+	}
+
+	indexOfSecret := containsEnv(env, "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET")
+	if indexOfSecret == -1 {
+		managementSecret = "public"
+	} else {
+		managementSecret = env[indexOfSecret].Value
+	}
+	str := fmt.Sprintf("%s:%s", managementId, managementSecret)
+	return base64.StdEncoding.EncodeToString([]byte(str))
 }
