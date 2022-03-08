@@ -106,7 +106,7 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 							Resources:       emqx.GetResource(),
 							Env:             emqx.GetEnv(),
 							StartupProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{
 											"/opt/emqx/bin/emqx",
@@ -155,7 +155,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 		ImagePullPolicy: telegrafTemplate.ImagePullPolicy,
 		Resources:       telegrafTemplate.Resources,
 		Lifecycle: &corev1.Lifecycle{
-			PostStart: &corev1.Handler{
+			PostStart: &corev1.LifecycleHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/api/v4/emqx_prometheus",
 					Port: intstr.IntOrString{
@@ -365,7 +365,7 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 				})
 
 				probe := &corev1.Probe{
-					Handler: corev1.Handler{
+					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Path: "/status",
 							Port: intstr.IntOrString{
