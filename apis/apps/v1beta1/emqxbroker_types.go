@@ -80,6 +80,7 @@ type EmqxBrokerSpec struct {
 //+kubebuilder:resource:shortName=emqx
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
+//+kubebuilder:unservedversion
 
 // EmqxBroker is the Schema for the emqxbrokers API
 type EmqxBroker struct {
