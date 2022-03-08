@@ -19,7 +19,7 @@ package controller_suite_test
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -160,8 +160,8 @@ var _ = Describe("", func() {
 
 		AfterEach(func() {
 			for _, emqx := range emqxList() {
-				if broker, ok := emqx.(*v1beta1.EmqxBroker); ok {
-					old := &v1beta1.EmqxBroker{}
+				if broker, ok := emqx.(*v1beta2.EmqxBroker); ok {
+					old := &v1beta2.EmqxBroker{}
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
@@ -176,8 +176,8 @@ var _ = Describe("", func() {
 						broker,
 					)).Should(Succeed())
 				}
-				if enterprise, ok := emqx.(*v1beta1.EmqxEnterprise); ok {
-					old := &v1beta1.EmqxEnterprise{}
+				if enterprise, ok := emqx.(*v1beta2.EmqxEnterprise); ok {
+					old := &v1beta2.EmqxEnterprise{}
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{

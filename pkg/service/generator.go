@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func Generate(emqx v1beta1.Emqx) []client.Object {
+func Generate(emqx v1beta2.Emqx) []client.Object {
 	var resources []client.Object
 
 	sts := generateStatefulSetDef(emqx)
@@ -62,7 +62,7 @@ func Generate(emqx v1beta1.Emqx) []client.Object {
 
 	resources = append(resources, sts)
 
-	ownerRef := metav1.NewControllerRef(emqx, v1beta1.VersionKind(emqx.GetKind()))
+	ownerRef := metav1.NewControllerRef(emqx, emqx.GetObjectKind().GroupVersionKind())
 	for _, resource := range resources {
 		addOwnerRefToObject(resource, *ownerRef)
 	}
@@ -70,7 +70,7 @@ func Generate(emqx v1beta1.Emqx) []client.Object {
 	return resources
 }
 
-func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
+func generateStatefulSetDef(emqx v1beta2.Emqx) *appsv1.StatefulSet {
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -129,7 +129,7 @@ func generateStatefulSetDef(emqx v1beta1.Emqx) *appsv1.StatefulSet {
 	return generateVolume(emqx, sts)
 }
 
-func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+func generateContainerForTelegraf(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	telegrafTemplate := emqx.GetTelegrafTemplate()
 	if telegrafTemplate == nil {
 		return nil, sts
@@ -147,7 +147,22 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 		Data: map[string]string{"telegraf.conf": *telegrafTemplate.Conf},
 	}
 
-	bearerStr := v1beta1.GenerateAuthorizationForTelegraf(emqx.GetEnv())
+	env := v1beta2.Environments{
+		Items: emqx.GetEnv(),
+	}
+	managementId := "admin"
+	if e, _ := env.Lookup("EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID"); e != nil {
+		managementId = e.Value
+	}
+	managementSecret := "public"
+	if e, _ := env.Lookup("EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET"); e != nil {
+		managementId = e.Value
+	}
+	str := fmt.Sprintf("%s:%s", managementId, managementSecret)
+	authHeader := corev1.HTTPHeader{
+		Name:  "Authorization",
+		Value: fmt.Sprintf("Bearer %s", base64.StdEncoding.EncodeToString([]byte(str))),
+	}
 
 	container := corev1.Container{
 		Name:            "telegraf",
@@ -162,10 +177,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 						IntVal: emqx.GetListener().Ports.API,
 					},
 					HTTPHeaders: []corev1.HTTPHeader{
-						{
-							Name:  "Authorization",
-							Value: fmt.Sprintf("Bearer %s", bearerStr),
-						},
+						authHeader,
 					},
 				},
 			},
@@ -202,7 +214,7 @@ func generateContainerForTelegraf(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*
 	return cm, sts
 }
 
-func generateRBAC(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, *appsv1.StatefulSet) {
+func generateRBAC(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, *appsv1.StatefulSet) {
 	if emqx.GetServiceAccountName() == "" {
 		return nil, nil, nil, sts
 	}
@@ -260,8 +272,10 @@ func generateRBAC(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ServiceAc
 	return sa, role, roleBinding, sts
 }
 
-func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *corev1.Service, *appsv1.StatefulSet) {
+func generateSvc(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *corev1.Service, *appsv1.StatefulSet) {
 	listener := emqx.GetListener()
+
+	headlessSvcIPFamilyPolicy := corev1.IPFamilyPolicySingleStack
 	headlessSvc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -273,8 +287,9 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 			Namespace: emqx.GetNamespace(),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector:  emqx.GetLabels(),
-			ClusterIP: corev1.ClusterIPNone,
+			Selector:       emqx.GetLabels(),
+			ClusterIP:      corev1.ClusterIPNone,
+			IPFamilyPolicy: &headlessSvcIPFamilyPolicy,
 		},
 	}
 	sts.Spec.ServiceName = headlessSvc.Name
@@ -388,7 +403,7 @@ func generateSvc(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 	return headlessSvc, svc, sts
 }
 
-func generateConfigMapForAcl(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+func generateConfigMapForAcl(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	aclString := util.StringACL(emqx.GetACL())
 
 	cm := &corev1.ConfigMap{
@@ -445,7 +460,7 @@ func generateConfigMapForAcl(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev
 	return cm, sts
 }
 
-func generateConfigMapForPlugins(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+func generateConfigMapForPlugins(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	loadedPluginsString := util.StringLoadedPlugins(emqx.GetPlugins())
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -501,13 +516,13 @@ func generateConfigMapForPlugins(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 	return cm, sts
 }
 
-func generateConfigMapForModules(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+func generateConfigMapForModules(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	var loadedModulesString string
 	switch obj := emqx.(type) {
-	case *v1beta1.EmqxBroker:
-		loadedModulesString = util.StringEmqxBrokerLoadedModules(obj.Spec.Modules)
-	case *v1beta1.EmqxEnterprise:
-		data, _ := json.Marshal(obj.Spec.Modules)
+	case *v1beta2.EmqxBroker:
+		loadedModulesString = util.StringEmqxBrokerLoadedModules(obj.Spec.EmqxTemplate.Modules)
+	case *v1beta2.EmqxEnterprise:
+		data, _ := json.Marshal(obj.Spec.EmqxTemplate.Modules)
 		loadedModulesString = string(data)
 	}
 	cm := &corev1.ConfigMap{
@@ -563,7 +578,7 @@ func generateConfigMapForModules(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*c
 	return cm, sts
 }
 
-func generateSecretForMQTTSCertificate(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
+func generateSecretForMQTTSCertificate(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
 	cert := emqx.GetListener().Certificate.WSS
 	if reflect.ValueOf(cert).IsZero() {
 		return nil, sts
@@ -637,7 +652,7 @@ func generateSecretForMQTTSCertificate(emqx v1beta1.Emqx, sts *appsv1.StatefulSe
 	return secret, sts
 }
 
-func generateSecretForWSSCertificate(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
+func generateSecretForWSSCertificate(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
 	cert := emqx.GetListener().Certificate.WSS
 	if reflect.ValueOf(cert).IsZero() {
 		return nil, sts
@@ -711,8 +726,8 @@ func generateSecretForWSSCertificate(emqx v1beta1.Emqx, sts *appsv1.StatefulSet)
 	return secret, sts
 }
 
-func generateSecretForLicense(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
-	emqxEnterprise, ok := emqx.(*v1beta1.EmqxEnterprise)
+func generateSecretForLicense(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
+	emqxEnterprise, ok := emqx.(*v1beta2.EmqxEnterprise)
 	if !ok {
 		return nil, sts
 	}
@@ -765,7 +780,7 @@ func generateSecretForLicense(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) (*core
 	return secret, sts
 }
 
-func generateVolume(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
+func generateVolume(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
 	container := sts.Spec.Template.Spec.Containers[0]
 
 	dataName := util.NameForData(emqx)
@@ -783,7 +798,7 @@ func generateVolume(emqx v1beta1.Emqx, sts *appsv1.StatefulSet) *appsv1.Stateful
 		},
 	)
 
-	if reflect.ValueOf(emqx.GetStorage()).IsNil() {
+	if reflect.ValueOf(emqx.GetStorage()).IsZero() {
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
 			genreateEmptyDirVolume(dataName),
@@ -814,19 +829,14 @@ func genreateEmptyDirVolume(Name string) corev1.Volume {
 	}
 }
 
-func generateVolumeClaimTemplate(emqx v1beta1.Emqx, Name string) corev1.PersistentVolumeClaim {
-	template := emqx.GetStorage().VolumeClaimTemplate
+func generateVolumeClaimTemplate(emqx v1beta2.Emqx, Name string) corev1.PersistentVolumeClaim {
+	template := emqx.GetStorage()
 	pvc := corev1.PersistentVolumeClaim{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: template.APIVersion,
-			Kind:       template.Kind,
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      Name,
 			Namespace: emqx.GetNamespace(),
 		},
-		Spec:   template.Spec,
-		Status: template.Status,
+		Spec: template,
 	}
 	if pvc.Spec.AccessModes == nil {
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}

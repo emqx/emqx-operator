@@ -2039,7 +2039,7 @@ spec:
                 type: array
             type: object
           status:
-            description: EmqxBrokerClusterStatus defines the observed state of EMQX Cluster
+            description: Emqx Status defines the observed state of EMQX
             properties:
               conditions:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
@@ -2072,7 +2072,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       scale:
         specReplicasPath: .spec.replicas
@@ -3980,45 +3980,44 @@ spec:
                 type: array
             type: object
           status:
-            description: EmqxBrokerStatus defines the observed state of EmqxBroker
+            description: Emqx Status defines the observed state of EMQX
             properties:
-              status:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
-                properties:
-                  conditions:
-                    description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
-                    items:
-                      description: Condition saves the state information of the EMQX cluster
-                      properties:
-                        lastTransitionTime:
-                          description: Last time the condition transitioned from one status to another.
-                          type: string
-                        lastUpdateTime:
-                          description: The last time this condition was updated.
-                          type: string
-                        message:
-                          description: A human readable message indicating details about the transition.
-                          type: string
-                        reason:
-                          description: The reason for the condition's last transition.
-                          type: string
-                        status:
-                          description: Status of the condition, one of True, False, Unknown.
-                          type: string
-                        type:
-                          description: Status of cluster condition.
-                          type: string
-                      required:
-                      - status
-                      - type
-                      type: object
-                    type: array
-                type: object
+              conditions:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+                items:
+                  description: Condition saves the state information of the EMQX cluster
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status to another.
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      type: string
+                    message:
+                      description: A human readable message indicating details about the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Status of cluster condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
             type: object
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
       status: {}
 status:
   acceptedNames:
@@ -6066,7 +6065,7 @@ spec:
                 type: array
             type: object
           status:
-            description: EmqxBrokerClusterStatus defines the observed state of EMQX Cluster
+            description: Emqx Status defines the observed state of EMQX
             properties:
               conditions:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
@@ -6099,7 +6098,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       scale:
         specReplicasPath: .spec.replicas
@@ -8012,45 +8011,44 @@ spec:
                 type: array
             type: object
           status:
-            description: EmqxEnterpriseStatus defines the observed state of EmqxEnterprise
+            description: Emqx Status defines the observed state of EMQX
             properties:
-              status:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
-                properties:
-                  conditions:
-                    description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
-                    items:
-                      description: Condition saves the state information of the EMQX cluster
-                      properties:
-                        lastTransitionTime:
-                          description: Last time the condition transitioned from one status to another.
-                          type: string
-                        lastUpdateTime:
-                          description: The last time this condition was updated.
-                          type: string
-                        message:
-                          description: A human readable message indicating details about the transition.
-                          type: string
-                        reason:
-                          description: The reason for the condition's last transition.
-                          type: string
-                        status:
-                          description: Status of the condition, one of True, False, Unknown.
-                          type: string
-                        type:
-                          description: Status of cluster condition.
-                          type: string
-                      required:
-                      - status
-                      - type
-                      type: object
-                    type: array
-                type: object
+              conditions:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+                items:
+                  description: Condition saves the state information of the EMQX cluster
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status to another.
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      type: string
+                    message:
+                      description: A human readable message indicating details about the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Status of cluster condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
             type: object
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
       status: {}
 status:
   acceptedNames:
@@ -8553,6 +8551,48 @@ webhooks:
     service:
       name: emqx-operator-webhook-service
       namespace: emqx-operator-system
+      path: /mutate-apps-emqx-io-v1beta2-emqxbroker
+  failurePolicy: Fail
+  name: memqxbroker.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxbrokers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: emqx-operator-webhook-service
+      namespace: emqx-operator-system
+      path: /mutate-apps-emqx-io-v1beta2-emqxenterprise
+  failurePolicy: Fail
+  name: memqxenterprise.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxenterprises
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: emqx-operator-webhook-service
+      namespace: emqx-operator-system
       path: /mutate-apps-emqx-io-v1beta1-emqxbroker
   failurePolicy: Fail
   name: mutating.broker.emqx.io
@@ -8596,6 +8636,48 @@ metadata:
     cert-manager.io/inject-ca-from: emqx-operator-system/emqx-operator-serving-cert
   name: emqx-operator-validating-webhook-configuration
 webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: emqx-operator-webhook-service
+      namespace: emqx-operator-system
+      path: /validate-apps-emqx-io-v1beta2-emqxbroker
+  failurePolicy: Fail
+  name: vemqxbroker.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxbrokers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: emqx-operator-webhook-service
+      namespace: emqx-operator-system
+      path: /validate-apps-emqx-io-v1beta2-emqxenterprise
+  failurePolicy: Fail
+  name: vemqxenterprise.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxenterprises
+  sideEffects: None
 - admissionReviewVersions:
   - v1
   - v1beta1

@@ -1,0 +1,57 @@
+package v1beta2
+
+//+kubebuilder:object:generate=true
+type Plugin struct {
+	Name   string `json:"name,omitempty"`
+	Enable bool   `json:"enable,omitempty"`
+}
+
+//+kubebuilder:object:generate=false
+type Plugins struct {
+	Items []Plugin
+}
+
+func (p *Plugins) Default() {
+	defultPlugins := []Plugin{
+		{
+			Name:   "emqx_management",
+			Enable: true,
+		},
+		{
+			Name:   "emqx_recon",
+			Enable: true,
+		},
+		{
+			Name:   "emqx_retainer",
+			Enable: true,
+		},
+		{
+			Name:   "emqx_dashboard",
+			Enable: true,
+		},
+		{
+			Name:   "emqx_telemetry",
+			Enable: true,
+		},
+		{
+			Name:   "emqx_rule_engine",
+			Enable: true,
+		},
+	}
+	if p.Items == nil {
+		p.Items = defultPlugins
+	}
+	_, index := p.Lookup("emqx_management")
+	if index == -1 {
+		p.Items = append(p.Items, Plugin{Name: "emqx_management", Enable: true})
+	}
+}
+
+func (p *Plugins) Lookup(name string) (*Plugin, int) {
+	for index, plugin := range p.Items {
+		if plugin.Name == name {
+			return &plugin, index
+		}
+	}
+	return nil, -1
+}

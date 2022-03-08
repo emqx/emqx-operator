@@ -3,40 +3,40 @@ package util
 import (
 	"fmt"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func NameForLicense(emqx v1beta1.Emqx) string {
+func NameForLicense(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s", emqx.GetName(), "license")
 }
-func NameForACL(emqx v1beta1.Emqx) string {
+func NameForACL(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s", emqx.GetName(), "acl")
 }
 
-func NameForPlugins(emqx v1beta1.Emqx) string {
+func NameForPlugins(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins")
 }
 
-func NameForModules(emqx v1beta1.Emqx) string {
+func NameForModules(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-modules")
 }
 
-func NameForData(emqx v1beta1.Emqx) string {
+func NameForData(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s", emqx.GetName(), "data")
 }
 
-func NameForLog(emqx v1beta1.Emqx) string {
+func NameForLog(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s", emqx.GetName(), "log")
 }
 
-func NameForMQTTSCertificate(emqx v1beta1.Emqx) string {
+func NameForMQTTSCertificate(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s-%s", emqx.GetName(), "mqtts", "cert")
 }
 
-func NameForWSSCertificate(emqx v1beta1.Emqx) string {
+func NameForWSSCertificate(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s-%s", emqx.GetName(), "wss", "cert")
 }
 
-func NameForTelegraf(emqx v1beta1.Emqx) string {
+func NameForTelegraf(emqx client.Object) string {
 	return fmt.Sprintf("%s-%s", emqx.GetName(), "telegraf")
 }

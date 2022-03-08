@@ -3,10 +3,10 @@ name: Check helm version
 on:
   push:
     paths:
-      - deploy/charts
+      - deploy/charts/**
   pull_request:
     paths:
-      - deploy/charts
+      - deploy/charts/**
 
 jobs:
   check-helm-version:

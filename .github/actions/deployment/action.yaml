@@ -57,9 +57,9 @@ runs:
         echo "${{ inputs.image }} cluster successfully"
     - name: Scale emqx replicas
       shell: bash
-      # run: kubectl scale --replicas=5 ${{ inputs.kind }}/${{ inputs.kind }}
-      run: |
-        kubectl patch ${{ inputs.kind }}/${{ inputs.kind }} -p '{"spec":{"replicas": 5}}' --type merge
+      run: kubectl scale --replicas=5 ${{ inputs.kind }}/${{ inputs.kind }}
+      # run: |
+      #   kubectl patch ${{ inputs.kind }}/${{ inputs.kind }} -p '{"spec":{"replicas": 5}}' --type merge
     - name: Check scale
       shell: bash
       run: |

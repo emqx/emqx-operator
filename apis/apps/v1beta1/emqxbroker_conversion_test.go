@@ -1,4 +1,4 @@
-package v1beta2_test
+package v1beta1_test
 
 import (
 	"testing"
@@ -35,7 +35,7 @@ var v1beta1Broker = &v1beta1.EmqxBroker{
 				},
 			},
 		},
-		Plugins: []v1beta1.Plugin{
+		Plugins: []v1beta2.Plugin{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -45,14 +45,14 @@ var v1beta1Broker = &v1beta1.EmqxBroker{
 				Enable: false,
 			},
 		},
-		Modules: []v1beta1.EmqxBrokerModules{
+		Modules: []v1beta2.EmqxBrokerModules{
 			{
 				Name:   "emqx_mod_acl_internal",
 				Enable: true,
 			},
 		},
-		Listener: v1beta1.Listener{
-			Ports: v1beta1.Ports{
+		Listener: v1beta2.Listener{
+			Ports: v1beta2.Ports{
 				MQTTS: 8885,
 			},
 		},
@@ -81,7 +81,7 @@ var v1beta2Broker = &v1beta2.EmqxBroker{
 			},
 		},
 		EmqxTemplate: v1beta2.EmqxBrokerTemplate{
-			Plugins: []v1beta1.Plugin{
+			Plugins: []v1beta2.Plugin{
 				{
 					Name:   "foo",
 					Enable: true,
@@ -91,14 +91,14 @@ var v1beta2Broker = &v1beta2.EmqxBroker{
 					Enable: false,
 				},
 			},
-			Modules: []v1beta1.EmqxBrokerModules{
+			Modules: []v1beta2.EmqxBrokerModules{
 				{
 					Name:   "emqx_mod_acl_internal",
 					Enable: true,
 				},
 			},
-			Listener: v1beta1.Listener{
-				Ports: v1beta1.Ports{
+			Listener: v1beta2.Listener{
+				Ports: v1beta2.Ports{
 					MQTTS: 8885,
 				},
 			},
@@ -107,15 +107,15 @@ var v1beta2Broker = &v1beta2.EmqxBroker{
 }
 
 func TestConvertToBroker(t *testing.T) {
-	emqx := &v1beta1.EmqxBroker{}
-	err := v1beta2Broker.ConvertTo(emqx)
+	emqx := &v1beta2.EmqxBroker{}
+	err := v1beta1Broker.ConvertTo(emqx)
 	assert.Nil(t, err)
-	assert.Equal(t, emqx, v1beta1Broker)
+	assert.Equal(t, emqx, v1beta2Broker)
 }
 
 func TestConvertFromBroker(t *testing.T) {
-	emqx := &v1beta2.EmqxBroker{}
-	err := emqx.ConvertFrom(v1beta1Broker)
+	emqx := &v1beta1.EmqxBroker{}
+	err := emqx.ConvertFrom(v1beta2Broker)
 	assert.Nil(t, err)
-	assert.Equal(t, emqx, v1beta2Broker)
+	assert.Equal(t, emqx, v1beta1Broker)
 }

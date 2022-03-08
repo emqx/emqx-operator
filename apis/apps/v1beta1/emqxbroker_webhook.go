@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,9 +49,18 @@ var _ webhook.Defaulter = &EmqxBroker{}
 func (r *EmqxBroker) Default() {
 	emqxbrokerlog.Info("default", "name", r.Name)
 
-	r.Labels = generateLabels(r)
-	r.Spec.Labels = generateLabels(r)
+	labels := make(map[string]string)
+	for k, v := range r.Labels {
+		labels[k] = v
+	}
+	for k, v := range r.Spec.Labels {
+		labels[k] = v
+	}
+	labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	labels["apps.emqx.io/instance"] = r.GetName()
 
+	r.Labels = labels
+	r.Spec.Labels = labels
 	if reflect.ValueOf(r.Spec.Replicas).IsZero() {
 		defaultReplicas := int32(3)
 		r.Spec.Replicas = &defaultReplicas
@@ -61,27 +71,52 @@ func (r *EmqxBroker) Default() {
 	}
 
 	if r.Spec.ACL == nil {
-		r.Spec.ACL = defaultACL()
+		acls := &v1beta2.ACLs{}
+		acls.Default()
+		r.Spec.ACL = acls.Items
 	}
 
-	r.Spec.Plugins = generatePlugins(r.Spec.Plugins)
-	r.Spec.Modules = generateEmqxBrokerModules(r.Spec.Modules)
-	r.Spec.Listener = generateListener(r.Spec.Listener)
+	plugins := &v1beta2.Plugins{
+		Items: r.Spec.Plugins,
+	}
+	plugins.Default()
+	if r.Spec.TelegrafTemplate != nil {
+		_, index := plugins.Lookup("emqx_prometheus")
+		if index == -1 {
+			plugins.Items = append(plugins.Items, v1beta2.Plugin{Name: "emqx_prometheus", Enable: true})
+		}
+	}
+	r.Spec.Plugins = plugins.Items
 
-	r.Spec.Env = generateEnv(r)
+	modules := &v1beta2.EmqxBrokerModulesList{}
+	modules.Merge(r.Spec.Modules)
+	r.Spec.Modules = modules.Items
+
+	listener := r.Spec.Listener
+	listener.Default()
+	r.Spec.Listener = listener
+
+	env := &v1beta2.Environments{}
+	env.ClusterForK8S(r)
+	str := strings.Split(r.GetImage(), ":")
+	if len(str) > 1 {
+		match, _ := regexp.MatchString("^[4-9].[4-9]+.[0-9]+$", str[1])
+		if match {
+			// 4.4.x uses dns clustering by default
+			env.ClusterForDNS(r)
+		}
+	}
+	env.Merge(r.Spec.Env)
+	if r.Spec.TelegrafTemplate != nil {
+		if _, index := env.Lookup("EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER"); index == -1 {
+			env.Items = append(env.Items, corev1.EnvVar{Name: "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER", Value: ""})
+		}
+	}
+	r.Spec.Env = env.Items
 	for _, e := range r.Spec.Env {
 		if e.Name == "EMQX_CLUSTER__DISCOVERY" && e.Value == "dns" {
 			// dns clusters do not need serviceAccount
 			r.Spec.ServiceAccountName = ""
-		}
-	}
-
-	if r.Spec.TelegrafTemplate != nil {
-		if containsPlugins(r.Spec.Plugins, "emqx_prometheus") == -1 {
-			r.Spec.Plugins = append(r.Spec.Plugins, Plugin{Name: "emqx_prometheus", Enable: true})
-		}
-		if containsEnv(r.Spec.Env, "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER") == -1 {
-			r.Spec.Env = append(r.Spec.Env, corev1.EnvVar{Name: "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER", Value: ""})
 		}
 	}
 }

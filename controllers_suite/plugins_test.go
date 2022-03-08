@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -43,7 +43,7 @@ var _ = Describe("", func() {
 
 		It("Check update plugins", func() {
 			for _, emqx := range emqxList() {
-				plugins := []v1beta1.Plugin{
+				plugins := []v1beta2.Plugin{
 					{
 						Name:   "emqx_management",
 						Enable: true,
@@ -62,7 +62,7 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_plugins(emqx v1beta1.Emqx) {
+func check_plugins(emqx v1beta2.Emqx) {
 	loadedPluginsString := util.StringLoadedPlugins(emqx.GetPlugins())
 
 	Eventually(func() map[string]string {

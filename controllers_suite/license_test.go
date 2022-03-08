@@ -19,7 +19,7 @@ package controller_suite_test
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,8 +40,8 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_license(emqx v1beta1.Emqx) {
-	emqxEneterprise, _ := emqx.(*v1beta1.EmqxEnterprise)
+func check_license(emqx v1beta2.Emqx) {
+	emqxEneterprise, _ := emqx.(*v1beta2.EmqxEnterprise)
 	Eventually(func() map[string][]byte {
 		secret := &corev1.Secret{}
 		_ = k8sClient.Get(

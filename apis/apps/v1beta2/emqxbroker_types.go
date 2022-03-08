@@ -17,7 +17,8 @@ limitations under the License.
 package v1beta2
 
 import (
-	v1beta1 "github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,10 +27,10 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type EmqxBrokerTemplate struct {
-	Listener v1beta1.Listener            `json:"listener,omitempty"`
-	ACL      []v1beta1.ACL               `json:"acl,omitempty"`
-	Plugins  []v1beta1.Plugin            `json:"plugins,omitempty"`
-	Modules  []v1beta1.EmqxBrokerModules `json:"modules,omitempty"`
+	Listener Listener            `json:"listener,omitempty"`
+	ACL      []ACL               `json:"acl,omitempty"`
+	Plugins  []Plugin            `json:"plugins,omitempty"`
+	Modules  []EmqxBrokerModules `json:"modules,omitempty"`
 }
 
 // EmqxBrokerSpec defines the desired state of EmqxBroker
@@ -56,7 +57,7 @@ type EmqxBrokerSpec struct {
 	Storage corev1.PersistentVolumeClaimSpec `json:"storage,omitempty"`
 
 	// The labels configure must be specified.
-	Labels      v1beta1.Labels    `json:"labels,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
@@ -71,26 +72,22 @@ type EmqxBrokerSpec struct {
 
 	EmqxTemplate EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 
-	TelegrafTemplate *v1beta1.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
-}
-
-// EmqxBrokerStatus defines the observed state of EmqxBroker
-type EmqxBrokerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	v1beta1.Status `json:"status,omitempty"`
+	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:shortName=emqx
 //+kubebuilder:subresource:status
+//+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
+//+kubebuilder:storageversion
 
 // EmqxBroker is the Schema for the emqxbrokers API
 type EmqxBroker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxBrokerSpec   `json:"spec,omitempty"`
-	Status EmqxBrokerStatus `json:"status,omitempty"`
+	Spec   EmqxBrokerSpec `json:"spec,omitempty"`
+	Status `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -104,4 +101,110 @@ type EmqxBrokerList struct {
 
 func init() {
 	SchemeBuilder.Register(&EmqxBroker{}, &EmqxBrokerList{})
+}
+
+func (emqx *EmqxBroker) GetAPIVersion() string        { return emqx.APIVersion }
+func (emqx *EmqxBroker) SetAPIVersion(version string) { emqx.APIVersion = version }
+func (emqx *EmqxBroker) GetKind() string              { return emqx.Kind }
+func (emqx *EmqxBroker) SetKind(kind string)          { emqx.Kind = kind }
+
+func (emqx *EmqxBroker) GetReplicas() *int32 {
+	return emqx.Spec.Replicas
+}
+func (emqx *EmqxBroker) SetReplicas(replicas *int32) { emqx.Spec.Replicas = replicas }
+
+func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.Image }
+func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.Image = image }
+
+func (emqx *EmqxBroker) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
+func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
+	emqx.Spec.ImagePullPolicy = pullPolicy
+}
+
+func (emqx *EmqxBroker) GetImagePullSecrets() []corev1.LocalObjectReference {
+	return emqx.Spec.ImagePullSecrets
+}
+func (emqx *EmqxBroker) SetImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) {
+	emqx.Spec.ImagePullSecrets = imagePullSecrets
+}
+
+func (emqx *EmqxBroker) GetServiceAccountName() string {
+	return emqx.Spec.ServiceAccountName
+}
+func (emqx *EmqxBroker) SetServiceAccountName(serviceAccountName string) {
+	emqx.Spec.ServiceAccountName = serviceAccountName
+}
+
+func (emqx *EmqxBroker) GetResource() corev1.ResourceRequirements { return emqx.Spec.Resources }
+func (emqx *EmqxBroker) SetResource(resource corev1.ResourceRequirements) {
+	emqx.Spec.Resources = resource
+}
+
+func (emqx *EmqxBroker) GetStorage() corev1.PersistentVolumeClaimSpec { return emqx.Spec.Storage }
+func (emqx *EmqxBroker) SetStorage(storage corev1.PersistentVolumeClaimSpec) {
+	emqx.Spec.Storage = storage
+}
+
+func (emqx *EmqxBroker) GetNodeName() string { return emqx.Spec.NodeName }
+func (emqx *EmqxBroker) SetNodeName(nodeName string) {
+	emqx.Spec.NodeName = nodeName
+}
+
+func (emqx *EmqxBroker) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
+func (emqx *EmqxBroker) SetNodeSelector(nodeSelector map[string]string) {
+	emqx.Spec.NodeSelector = nodeSelector
+}
+
+func (emqx *EmqxBroker) GetAnnotations() map[string]string { return emqx.Spec.Annotations }
+func (emqx *EmqxBroker) SetAnnotations(annotations map[string]string) {
+	emqx.Spec.Annotations = annotations
+}
+
+func (emqx *EmqxBroker) GetListener() Listener { return emqx.Spec.EmqxTemplate.Listener }
+func (emqx *EmqxBroker) SetListener(listener Listener) {
+	emqx.Spec.EmqxTemplate.Listener = listener
+}
+
+func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
+func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
+
+func (emqx *EmqxBroker) GetToleRations() []corev1.Toleration { return emqx.Spec.ToleRations }
+func (emqx *EmqxBroker) SetToleRations(tolerations []corev1.Toleration) {
+	emqx.Spec.ToleRations = tolerations
+}
+
+func (emqx *EmqxBroker) GetExtraVolumes() []corev1.Volume { return emqx.Spec.ExtraVolumes }
+func (emqx *EmqxBroker) GetExtraVolumeMounts() []corev1.VolumeMount {
+	return emqx.Spec.ExtraVolumeMounts
+}
+
+func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxBroker) SetACL(acl []ACL) {
+	emqx.Spec.EmqxTemplate.ACL = acl
+}
+
+func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.Env }
+func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {
+	emqx.Spec.Env = env
+}
+
+func (emqx *EmqxBroker) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
+func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
+	emqx.Spec.EmqxTemplate.Plugins = plugins
+}
+
+func (emqx *EmqxBroker) GetModules() []EmqxBrokerModules { return emqx.Spec.EmqxTemplate.Modules }
+func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModules) {
+	emqx.Spec.EmqxTemplate.Modules = modules
+}
+
+func (emqx *EmqxBroker) GetHeadlessServiceName() string {
+	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
+}
+
+func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {
+	return emqx.Spec.TelegrafTemplate
+}
+func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
+	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

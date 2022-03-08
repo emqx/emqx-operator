@@ -29,7 +29,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -112,8 +112,8 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	return reconcile.Result{RequeueAfter: reconcileTime}, nil
 }
 
-func (handler *Handler) getEmqx(Namespace, Name string) (v1beta1.Emqx, error) {
-	broker := &v1beta1.EmqxBroker{}
+func (handler *Handler) getEmqx(Namespace, Name string) (v1beta2.Emqx, error) {
+	broker := &v1beta2.EmqxBroker{}
 	err := handler.client.Get(
 		context.TODO(),
 		types.NamespacedName{
@@ -123,7 +123,7 @@ func (handler *Handler) getEmqx(Namespace, Name string) (v1beta1.Emqx, error) {
 		broker,
 	)
 	if err != nil && k8sErrors.IsNotFound(err) {
-		enterprise := &v1beta1.EmqxEnterprise{}
+		enterprise := &v1beta2.EmqxEnterprise{}
 		err := handler.client.Get(
 			context.TODO(),
 			types.NamespacedName{
@@ -137,7 +137,7 @@ func (handler *Handler) getEmqx(Namespace, Name string) (v1beta1.Emqx, error) {
 	return broker, err
 }
 
-func (handler *Handler) checkReadyReplicas(emqx v1beta1.Emqx) error {
+func (handler *Handler) checkReadyReplicas(emqx v1beta2.Emqx) error {
 	sts := &appsv1.StatefulSet{}
 	if err := handler.client.Get(
 		context.Background(),

@@ -1,22 +1,21 @@
-package v1beta1_test
+package v1beta2_test
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	v1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDefaultForEnv(t *testing.T) {
-	emqx := &v1beta1.EmqxBroker{
+	emqx := &v1beta2.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: v1beta1.EmqxBrokerSpec{
+		Spec: v1beta2.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
 			Env: []corev1.EnvVar{
 				{
@@ -105,12 +104,12 @@ func TestDefaultForEnv(t *testing.T) {
 }
 
 func TestDefaultForServiceAccountName(t *testing.T) {
-	emqx := &v1beta1.EmqxBroker{
+	emqx := &v1beta2.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: v1beta1.EmqxBrokerSpec{
+		Spec: v1beta2.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
 		},
 	}
@@ -121,14 +120,11 @@ func TestDefaultForServiceAccountName(t *testing.T) {
 	emqx.Spec.Env = []corev1.EnvVar{}
 	emqx.Spec.ServiceAccountName = "fake"
 	emqx.Default()
-	fmt.Printf("%+v\n", emqx.Spec.Env)
-	fmt.Println(emqx.Spec.ServiceAccountName)
-
 	assert.Equal(t, emqx.Spec.ServiceAccountName, "")
 }
 
 func TestDefaultBroker(t *testing.T) {
-	emqx := &v1beta1.EmqxBroker{
+	emqx := &v1beta2.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
@@ -136,34 +132,36 @@ func TestDefaultBroker(t *testing.T) {
 				"foo": "bar",
 			},
 		},
-		Spec: v1beta1.EmqxBrokerSpec{
+		Spec: v1beta2.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
 			Labels: map[string]string{
 				"cluster": "emqx",
 			},
-			Plugins: []v1beta1.Plugin{
-				{
-					Name:   "foo",
-					Enable: true,
+			EmqxTemplate: v1beta2.EmqxBrokerTemplate{
+				Plugins: []v1beta2.Plugin{
+					{
+						Name:   "foo",
+						Enable: true,
+					},
+					{
+						Name:   "bar",
+						Enable: false,
+					},
 				},
-				{
-					Name:   "bar",
-					Enable: false,
+				Modules: []v1beta2.EmqxBrokerModules{
+					{
+						Name:   "foo",
+						Enable: true,
+					},
+					{
+						Name:   "bar",
+						Enable: false,
+					},
 				},
-			},
-			Modules: []v1beta1.EmqxBrokerModules{
-				{
-					Name:   "foo",
-					Enable: true,
-				},
-				{
-					Name:   "bar",
-					Enable: false,
-				},
-			},
-			Listener: v1beta1.Listener{
-				Ports: v1beta1.Ports{
-					MQTTS: 8885,
+				Listener: v1beta2.Listener{
+					Ports: v1beta2.Ports{
+						MQTTS: 8885,
+					},
 				},
 			},
 		},
@@ -185,13 +183,13 @@ func TestDefaultBroker(t *testing.T) {
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/instance")
 
 	// ACL
-	assert.ElementsMatch(t, emqx.Spec.ACL,
-		[]v1beta1.ACL{
+	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.ACL,
+		[]v1beta2.ACL{
 			{
 				Permission: "allow",
 				Username:   "dashboard",
 				Action:     "subscribe",
-				Topics: v1beta1.Topics{
+				Topics: v1beta2.Topics{
 					Filter: []string{
 						"$STS?#",
 					},
@@ -200,7 +198,7 @@ func TestDefaultBroker(t *testing.T) {
 			{
 				Permission: "allow",
 				IPAddress:  "127.0.0.1",
-				Topics: v1beta1.Topics{
+				Topics: v1beta2.Topics{
 					Filter: []string{
 						"$SYS/#",
 						"#",
@@ -210,7 +208,7 @@ func TestDefaultBroker(t *testing.T) {
 			{
 				Permission: "deny",
 				Action:     "subscribe",
-				Topics: v1beta1.Topics{
+				Topics: v1beta2.Topics{
 					Filter: []string{"$SYS/#"},
 					Equal:  []string{"#"},
 				},
@@ -222,8 +220,8 @@ func TestDefaultBroker(t *testing.T) {
 	)
 
 	// Plugins
-	assert.ElementsMatch(t, emqx.Spec.Plugins,
-		[]v1beta1.Plugin{
+	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.Plugins,
+		[]v1beta2.Plugin{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -240,8 +238,8 @@ func TestDefaultBroker(t *testing.T) {
 	)
 
 	// Modules
-	assert.ElementsMatch(t, emqx.Spec.Modules,
-		[]v1beta1.EmqxBrokerModules{
+	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.Modules,
+		[]v1beta2.EmqxBrokerModules{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -258,9 +256,9 @@ func TestDefaultBroker(t *testing.T) {
 	)
 
 	// Listener
-	assert.Equal(t, emqx.Spec.Listener.Type, corev1.ServiceType("ClusterIP"))
-	assert.Equal(t, emqx.Spec.Listener.Ports.MQTTS, int32(8885))
-	assert.Equal(t, emqx.Spec.Listener.Ports.API, int32(8081))
+	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Type, corev1.ServiceType("ClusterIP"))
+	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.MQTTS, int32(8885))
+	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.API, int32(8081))
 
 	telegrafConf := `
 [global_tags]
@@ -283,13 +281,13 @@ func TestDefaultBroker(t *testing.T) {
 
 [[outputs.discard]]
 `
-	emqx.Spec.TelegrafTemplate = &v1beta1.TelegrafTemplate{
+	emqx.Spec.TelegrafTemplate = &v1beta2.TelegrafTemplate{
 		Image: "telegraf:1.19.3",
 		Conf:  &telegrafConf,
 	}
 	emqx.Default()
-	assert.Subset(t, emqx.Spec.Plugins,
-		[]v1beta1.Plugin{
+	assert.Subset(t, emqx.Spec.EmqxTemplate.Plugins,
+		[]v1beta2.Plugin{
 			{
 				Name:   "emqx_prometheus",
 				Enable: true,
@@ -307,12 +305,12 @@ func TestDefaultBroker(t *testing.T) {
 }
 
 func TestValidateCreateBroker(t *testing.T) {
-	emqx := v1beta1.EmqxBroker{
+	emqx := v1beta2.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: v1beta1.EmqxBrokerSpec{
+		Spec: v1beta2.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
 		},
 	}
@@ -325,12 +323,12 @@ func TestValidateCreateBroker(t *testing.T) {
 }
 
 func TestValidateUpdateBroker(t *testing.T) {
-	emqx := v1beta1.EmqxBroker{
+	emqx := v1beta2.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: v1beta1.EmqxBrokerSpec{
+		Spec: v1beta2.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
 		},
 	}

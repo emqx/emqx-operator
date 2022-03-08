@@ -15,6 +15,48 @@ webhooks:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
       namespace: {{ .Release.Namespace }}
+      path: /validate-apps-emqx-io-v1beta2-emqxbroker
+  failurePolicy: Fail
+  name: vemqxbroker.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxbrokers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: {{ include "emqx-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /validate-apps-emqx-io-v1beta2-emqxenterprise
+  failurePolicy: Fail
+  name: vemqxenterprise.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxenterprises
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: {{ include "emqx-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
       path: /validate-apps-emqx-io-v1beta1-emqxbroker
   failurePolicy: Fail
   name: validator.broker.emqx.io

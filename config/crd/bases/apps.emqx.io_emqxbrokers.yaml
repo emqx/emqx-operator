@@ -3143,8 +3143,7 @@ spec:
                 type: array
             type: object
           status:
-            description: EmqxBrokerClusterStatus defines the observed state of EMQX
-              Cluster
+            description: Emqx Status defines the observed state of EMQX
             properties:
               conditions:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
@@ -3182,7 +3181,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       scale:
         specReplicasPath: .spec.replicas
@@ -6143,54 +6142,49 @@ spec:
                 type: array
             type: object
           status:
-            description: EmqxBrokerStatus defines the observed state of EmqxBroker
+            description: Emqx Status defines the observed state of EMQX
             properties:
-              status:
+              conditions:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "make" to regenerate code after modifying
-                  this file'
-                properties:
-                  conditions:
-                    description: 'INSERT ADDITIONAL STATUS FIELD - define observed
-                      state of cluster Important: Run "operator-sdk generate k8s"
-                      to regenerate code after modifying this file Add custom validation
-                      using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
-                    items:
-                      description: Condition saves the state information of the EMQX
-                        cluster
-                      properties:
-                        lastTransitionTime:
-                          description: Last time the condition transitioned from one
-                            status to another.
-                          type: string
-                        lastUpdateTime:
-                          description: The last time this condition was updated.
-                          type: string
-                        message:
-                          description: A human readable message indicating details
-                            about the transition.
-                          type: string
-                        reason:
-                          description: The reason for the condition's last transition.
-                          type: string
-                        status:
-                          description: Status of the condition, one of True, False,
-                            Unknown.
-                          type: string
-                        type:
-                          description: Status of cluster condition.
-                          type: string
-                      required:
-                      - status
-                      - type
-                      type: object
-                    type: array
-                type: object
+                  of cluster Important: Run "operator-sdk generate k8s" to regenerate
+                  code after modifying this file Add custom validation using kubebuilder
+                  tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+                items:
+                  description: Condition saves the state information of the EMQX cluster
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Status of cluster condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
             type: object
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
       status: {}
 status:
   acceptedNames:

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 )
 
-func StringACL(acls []v1beta1.ACL) string {
+func StringACL(acls []v1beta2.ACL) string {
 	var s string
 
 	for _, acl := range acls {
@@ -20,7 +20,7 @@ func StringACL(acls []v1beta1.ACL) string {
 	return s
 }
 
-func getWho(acl v1beta1.ACL) string {
+func getWho(acl v1beta2.ACL) string {
 	var who []string
 
 	if acl.Username == "" && acl.ClientID == "" && acl.IPAddress == "" {
@@ -48,7 +48,7 @@ func getWho(acl v1beta1.ACL) string {
 	}
 }
 
-func getAction(acl v1beta1.ACL) string {
+func getAction(acl v1beta2.ACL) string {
 	if acl.Action == "" {
 		return "pubsub"
 	} else {
@@ -56,7 +56,7 @@ func getAction(acl v1beta1.ACL) string {
 	}
 }
 
-func getTopics(acl v1beta1.ACL) string {
+func getTopics(acl v1beta2.ACL) string {
 	var list []string
 	if acl.Topics.Filter != nil {
 		for _, topic := range acl.Topics.Filter {
