@@ -94,9 +94,9 @@ func (r *EmqxBroker) Default() {
 	modules.Default()
 	r.Spec.Modules = modules.Items
 
-	listener := r.Spec.Listener
+	listener := &r.Spec.Listener
 	listener.Default()
-	r.Spec.Listener = listener
+	r.Spec.Listener = *listener
 
 	env := &v1beta2.Environments{
 		Items: r.Spec.Env,

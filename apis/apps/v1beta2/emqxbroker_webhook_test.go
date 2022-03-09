@@ -79,13 +79,6 @@ func TestDefaultBroker(t *testing.T) {
 			Labels: map[string]string{
 				"cluster": "emqx",
 			},
-			EmqxTemplate: v1beta2.EmqxBrokerTemplate{
-				Listener: v1beta2.Listener{
-					Ports: v1beta2.Ports{
-						MQTTS: 8885,
-					},
-				},
-			},
 		},
 	}
 
@@ -103,11 +96,6 @@ func TestDefaultBroker(t *testing.T) {
 	assert.Contains(t, emqx.Spec.Labels, "cluster")
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/managed-by")
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/instance")
-
-	// Listener
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Type, corev1.ServiceType("ClusterIP"))
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.MQTTS, int32(8885))
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.API, int32(8081))
 
 	telegrafConf := `
 [global_tags]
