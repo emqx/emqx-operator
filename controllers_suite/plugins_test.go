@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
-	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -63,7 +62,11 @@ var _ = Describe("", func() {
 })
 
 func check_plugins(emqx v1beta2.Emqx) {
-	loadedPluginsString := util.StringLoadedPlugins(emqx.GetPlugins())
+	names := v1beta2.Names{Object: emqx}
+	plugins := &v1beta2.Plugins{
+		Items: emqx.GetPlugins(),
+	}
+	loadedPluginsString := plugins.String()
 
 	Eventually(func() map[string]string {
 		cm := &corev1.ConfigMap{}
@@ -71,7 +74,7 @@ func check_plugins(emqx v1beta2.Emqx) {
 			context.Background(),
 			types.NamespacedName{
 				Namespace: emqx.GetNamespace(),
-				Name:      util.NameForPlugins(emqx),
+				Name:      names.Plugins(),
 			},
 			cm,
 		)

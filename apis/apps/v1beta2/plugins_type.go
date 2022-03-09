@@ -1,5 +1,7 @@
 package v1beta2
 
+import "fmt"
+
 //+kubebuilder:object:generate=true
 type Plugin struct {
 	Name   string `json:"name,omitempty"`
@@ -54,4 +56,13 @@ func (p *Plugins) Lookup(name string) (*Plugin, int) {
 		}
 	}
 	return nil, -1
+}
+
+func (p *Plugins) String() string {
+	var str string
+	for _, plugin := range p.Items {
+		str = fmt.Sprintf("%s{%s, %t}.\n", str, plugin.Name, plugin.Enable)
+	}
+	return str
+
 }

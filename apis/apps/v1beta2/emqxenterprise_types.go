@@ -17,7 +17,6 @@ limitations under the License.
 package v1beta2
 
 import (
-	"fmt"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -209,10 +208,6 @@ func (emqx *EmqxEnterprise) GetModules() []EmqxEnterpriseModules {
 }
 func (emqx *EmqxEnterprise) SetModules(modules []EmqxEnterpriseModules) {
 	emqx.Spec.EmqxTemplate.Modules = modules
-}
-
-func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }
 
 func (emqx *EmqxEnterprise) GetTelegrafTemplate() *TelegrafTemplate {

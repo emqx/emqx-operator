@@ -1,6 +1,8 @@
 package v1beta2
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -15,17 +17,17 @@ type EmqxBrokerModulesList struct {
 	Items []EmqxBrokerModules
 }
 
-func (list *EmqxBrokerModulesList) Merge(modules []EmqxBrokerModules) {
-	if list.Items == nil {
-		list.Default()
+func (list *EmqxBrokerModulesList) Default() {
+	defaultModule := EmqxBrokerModules{
+		Name:   "emqx_mod_acl_internal",
+		Enable: true,
 	}
-	for _, module := range modules {
-		_, index := list.Lookup(module.Name)
-		if index == -1 {
-			list.Items = append(list.Items, module)
-		} else {
-			list.Items[index].Enable = module.Enable
-		}
+	if list.Items == nil {
+		list.Items = []EmqxBrokerModules{defaultModule}
+	}
+	_, index := list.Lookup(defaultModule.Name)
+	if index == -1 {
+		list.Items = append(list.Items, defaultModule)
 	}
 }
 
@@ -38,13 +40,12 @@ func (list *EmqxBrokerModulesList) Lookup(name string) (*EmqxBrokerModules, int)
 	return nil, -1
 }
 
-func (list *EmqxBrokerModulesList) Default() {
-	list.Items = []EmqxBrokerModules{
-		{
-			Name:   "emqx_mod_acl_internal",
-			Enable: true,
-		},
+func (list *EmqxBrokerModulesList) String() string {
+	var str string
+	for _, module := range list.Items {
+		str = fmt.Sprintf("%s{%s, %t}.\n", str, module.Name, module.Enable)
 	}
+	return str
 }
 
 //+kubebuilder:object:generate=true
@@ -60,32 +61,8 @@ type EmqxEnterpriseModulesList struct {
 	Items []EmqxEnterpriseModules
 }
 
-func (list *EmqxEnterpriseModulesList) Merge(modules []EmqxEnterpriseModules) {
-	if list.Items == nil {
-		list.Default()
-	}
-	for _, module := range modules {
-		_, index := list.Lookup(module.Name)
-		if index == -1 {
-			list.Items = append(list.Items, module)
-		} else {
-			list.Items[index].Enable = module.Enable
-			list.Items[index].Configs = module.Configs
-		}
-	}
-}
-
-func (list *EmqxEnterpriseModulesList) Lookup(name string) (*EmqxEnterpriseModules, int) {
-	for index, module := range list.Items {
-		if module.Name == name {
-			return &module, index
-		}
-	}
-	return nil, -1
-}
-
 func (list *EmqxEnterpriseModulesList) Default() {
-	list.Items = []EmqxEnterpriseModules{
+	defaultModules := []EmqxEnterpriseModules{
 		{
 			Name:    "internal_cal",
 			Enable:  true,
@@ -101,5 +78,33 @@ func (list *EmqxEnterpriseModulesList) Default() {
 				"storage_type": "ram"
 			}`)},
 		},
+	}
+
+	for _, module := range defaultModules {
+		_, index := list.Lookup(module.Name)
+		if index == -1 {
+			list.Items = append(list.Items, module)
+		}
+	}
+}
+
+func (list *EmqxEnterpriseModulesList) Lookup(name string) (*EmqxEnterpriseModules, int) {
+	for index, module := range list.Items {
+		if module.Name == name {
+			return &module, index
+		}
+	}
+	return nil, -1
+}
+
+func (list *EmqxEnterpriseModulesList) Merge(modules []EmqxEnterpriseModules) {
+	for _, module := range modules {
+		_, index := list.Lookup(module.Name)
+		if index == -1 {
+			list.Items = append(list.Items, module)
+		} else {
+			list.Items[index].Enable = module.Enable
+			list.Items[index].Configs = module.Configs
+		}
 	}
 }

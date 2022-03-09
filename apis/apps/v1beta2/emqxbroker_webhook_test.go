@@ -138,26 +138,6 @@ func TestDefaultBroker(t *testing.T) {
 				"cluster": "emqx",
 			},
 			EmqxTemplate: v1beta2.EmqxBrokerTemplate{
-				Plugins: []v1beta2.Plugin{
-					{
-						Name:   "foo",
-						Enable: true,
-					},
-					{
-						Name:   "bar",
-						Enable: false,
-					},
-				},
-				Modules: []v1beta2.EmqxBrokerModules{
-					{
-						Name:   "foo",
-						Enable: true,
-					},
-					{
-						Name:   "bar",
-						Enable: false,
-					},
-				},
 				Listener: v1beta2.Listener{
 					Ports: v1beta2.Ports{
 						MQTTS: 8885,
@@ -181,79 +161,6 @@ func TestDefaultBroker(t *testing.T) {
 	assert.Contains(t, emqx.Spec.Labels, "cluster")
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/managed-by")
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/instance")
-
-	// ACL
-	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.ACL,
-		[]v1beta2.ACL{
-			{
-				Permission: "allow",
-				Username:   "dashboard",
-				Action:     "subscribe",
-				Topics: v1beta2.Topics{
-					Filter: []string{
-						"$STS?#",
-					},
-				},
-			},
-			{
-				Permission: "allow",
-				IPAddress:  "127.0.0.1",
-				Topics: v1beta2.Topics{
-					Filter: []string{
-						"$SYS/#",
-						"#",
-					},
-				},
-			},
-			{
-				Permission: "deny",
-				Action:     "subscribe",
-				Topics: v1beta2.Topics{
-					Filter: []string{"$SYS/#"},
-					Equal:  []string{"#"},
-				},
-			},
-			{
-				Permission: "allow",
-			},
-		},
-	)
-
-	// Plugins
-	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.Plugins,
-		[]v1beta2.Plugin{
-			{
-				Name:   "foo",
-				Enable: true,
-			},
-			{
-				Name:   "bar",
-				Enable: false,
-			},
-			{
-				Name:   "emqx_management",
-				Enable: true,
-			},
-		},
-	)
-
-	// Modules
-	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.Modules,
-		[]v1beta2.EmqxBrokerModules{
-			{
-				Name:   "foo",
-				Enable: true,
-			},
-			{
-				Name:   "bar",
-				Enable: false,
-			},
-			{
-				Name:   "emqx_mod_acl_internal",
-				Enable: true,
-			},
-		},
-	)
 
 	// Listener
 	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Type, corev1.ServiceType("ClusterIP"))

@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
-	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -79,7 +78,10 @@ var _ = Describe("", func() {
 func check_modules(emqx v1beta2.Emqx) {
 	switch obj := emqx.(type) {
 	case *v1beta2.EmqxBroker:
-		loadedModulesString := util.StringEmqxBrokerLoadedModules(obj.Spec.EmqxTemplate.Modules)
+		modules := &v1beta2.EmqxBrokerModulesList{
+			Items: obj.Spec.EmqxTemplate.Modules,
+		}
+		loadedModulesString := modules.String()
 
 		Eventually(func() map[string]string {
 			cm := &corev1.ConfigMap{}

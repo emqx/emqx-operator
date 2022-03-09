@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
-	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -28,14 +27,14 @@ var _ = Describe("", func() {
 })
 
 func check_telegraf(emqx v1beta2.Emqx) {
-
+	names := v1beta2.Names{Object: emqx}
 	Eventually(func() map[string]string {
 		cm := &corev1.ConfigMap{}
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
 				Namespace: emqx.GetNamespace(),
-				Name:      util.NameForTelegraf(emqx),
+				Name:      names.Telegraf(),
 			},
 			cm,
 		)

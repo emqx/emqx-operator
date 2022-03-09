@@ -88,8 +88,10 @@ func (r *EmqxBroker) Default() {
 	}
 	r.Spec.EmqxTemplate.Plugins = plugins.Items
 
-	modules := &EmqxBrokerModulesList{}
-	modules.Merge(r.Spec.EmqxTemplate.Modules)
+	modules := &EmqxBrokerModulesList{
+		Items: r.Spec.EmqxTemplate.Modules,
+	}
+	modules.Default()
 	r.Spec.EmqxTemplate.Modules = modules.Items
 
 	listener := r.Spec.EmqxTemplate.Listener

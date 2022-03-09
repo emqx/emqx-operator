@@ -38,12 +38,13 @@ var _ = Describe("", func() {
 
 		It("Check headless service", func() {
 			for _, emqx := range emqxList() {
+				names := v1beta2.Names{Object: emqx}
 				svc := &corev1.Service{}
 				Eventually(func() bool {
 					err := k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
-							Name:      emqx.GetHeadlessServiceName(),
+							Name:      names.HeadlessSvc(),
 							Namespace: emqx.GetNamespace(),
 						},
 						svc,

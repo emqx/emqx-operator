@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
-	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -59,14 +58,18 @@ var _ = Describe("", func() {
 })
 
 func check_acl(emqx v1beta2.Emqx) {
-	aclString := util.StringACL(emqx.GetACL())
+	names := v1beta2.Names{Object: emqx}
+	acls := &v1beta2.ACLs{
+		Items: emqx.GetACL(),
+	}
+	aclString := acls.String()
 
 	Eventually(func() map[string]string {
 		cm := &corev1.ConfigMap{}
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
-				Name:      util.NameForACL(emqx),
+				Name:      names.ACL(),
 				Namespace: emqx.GetNamespace(),
 			},
 			cm,
