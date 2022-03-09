@@ -11,7 +11,30 @@ type Environments struct {
 	Items []corev1.EnvVar
 }
 
-func (e *Environments) Merge(envs []corev1.EnvVar) {
+func (e *Environments) Default(emqx client.Object) {
+	defaultEnvs := []corev1.EnvVar{
+		{
+			Name:  "EMQX_LOG__TO",
+			Value: "both",
+		},
+		{
+			Name:  "EMQX_NAME",
+			Value: emqx.GetName(),
+		},
+	}
+	e.Append(defaultEnvs)
+}
+
+func (e *Environments) Append(envs []corev1.EnvVar) {
+	for _, env := range envs {
+		_, index := e.Lookup(env.Name)
+		if index == -1 {
+			e.Items = append(e.Items, env)
+		}
+	}
+}
+
+func (e *Environments) Overwrite(envs []corev1.EnvVar) {
 	for _, env := range envs {
 		_, index := e.Lookup(env.Name)
 		if index == -1 {
@@ -33,7 +56,7 @@ func (e *Environments) Lookup(name string) (*corev1.EnvVar, int) {
 
 func (e *Environments) ClusterForDNS(emqx client.Object) {
 	names := &Names{emqx}
-	e.Items = []corev1.EnvVar{
+	clusterEnvs := []corev1.EnvVar{
 		{
 			Name:  "EMQX_NAME",
 			Value: emqx.GetName(),
@@ -55,11 +78,13 @@ func (e *Environments) ClusterForDNS(emqx client.Object) {
 			Value: fmt.Sprintf("%s.%s.svc.cluster.local", names.HeadlessSvc(), emqx.GetNamespace()),
 		},
 	}
+	e.Default(emqx)
+	e.Append(clusterEnvs)
 }
 
 func (e *Environments) ClusterForK8S(emqx client.Object) {
 	names := &Names{emqx}
-	e.Items = []corev1.EnvVar{
+	clusterEnvs := []corev1.EnvVar{
 		{
 			Name:  "EMQX_NAME",
 			Value: emqx.GetName(),
@@ -93,4 +118,6 @@ func (e *Environments) ClusterForK8S(emqx client.Object) {
 			Value: "svc.cluster.local",
 		},
 	}
+	e.Default(emqx)
+	e.Append(clusterEnvs)
 }

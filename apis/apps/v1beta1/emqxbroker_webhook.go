@@ -98,29 +98,32 @@ func (r *EmqxBroker) Default() {
 	listener.Default()
 	r.Spec.Listener = listener
 
-	env := &v1beta2.Environments{}
-	env.ClusterForK8S(r)
+	env := &v1beta2.Environments{
+		Items: r.Spec.Env,
+	}
 	str := strings.Split(r.GetImage(), ":")
 	if len(str) > 1 {
 		match, _ := regexp.MatchString("^[4-9].[4-9]+.[0-9]+$", str[1])
 		if match {
 			// 4.4.x uses dns clustering by default
 			env.ClusterForDNS(r)
+		} else {
+			env.ClusterForK8S(r)
 		}
+	} else {
+		env.ClusterForK8S(r)
 	}
-	env.Merge(r.Spec.Env)
 	if r.Spec.TelegrafTemplate != nil {
-		if _, index := env.Lookup("EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER"); index == -1 {
-			env.Items = append(env.Items, corev1.EnvVar{Name: "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER", Value: ""})
-		}
+		env.Append([]corev1.EnvVar{
+			{Name: "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER", Value: ""},
+		})
+	}
+
+	e, _ := env.Lookup("EMQX_CLUSTER__DISCOVERY")
+	if e != nil && e.Value == "dns" {
+		r.Spec.ServiceAccountName = ""
 	}
 	r.Spec.Env = env.Items
-	for _, e := range r.Spec.Env {
-		if e.Name == "EMQX_CLUSTER__DISCOVERY" && e.Value == "dns" {
-			// dns clusters do not need serviceAccount
-			r.Spec.ServiceAccountName = ""
-		}
-	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

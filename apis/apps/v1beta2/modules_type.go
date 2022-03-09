@@ -79,13 +79,7 @@ func (list *EmqxEnterpriseModulesList) Default() {
 			}`)},
 		},
 	}
-
-	for _, module := range defaultModules {
-		_, index := list.Lookup(module.Name)
-		if index == -1 {
-			list.Items = append(list.Items, module)
-		}
-	}
+	list.Append(defaultModules)
 }
 
 func (list *EmqxEnterpriseModulesList) Lookup(name string) (*EmqxEnterpriseModules, int) {
@@ -97,7 +91,16 @@ func (list *EmqxEnterpriseModulesList) Lookup(name string) (*EmqxEnterpriseModul
 	return nil, -1
 }
 
-func (list *EmqxEnterpriseModulesList) Merge(modules []EmqxEnterpriseModules) {
+func (list *EmqxEnterpriseModulesList) Append(modules []EmqxEnterpriseModules) {
+	for _, module := range modules {
+		_, index := list.Lookup(module.Name)
+		if index == -1 {
+			list.Items = append(list.Items, module)
+		}
+	}
+}
+
+func (list *EmqxEnterpriseModulesList) Overwrite(modules []EmqxEnterpriseModules) {
 	for _, module := range modules {
 		_, index := list.Lookup(module.Name)
 		if index == -1 {
