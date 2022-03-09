@@ -19,6 +19,9 @@ spec:
     - name: "EMQX_LOG__LEVEL"
       value: "debug"
   emqxTemplate:
+    plugins:
+      - name: emqx_management
+        enable: true
     listener:
       type: ClusterIP
       ports:

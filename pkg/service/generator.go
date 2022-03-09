@@ -105,19 +105,16 @@ func generateStatefulSetDef(emqx v1beta2.Emqx) *appsv1.StatefulSet {
 							ImagePullPolicy: emqx.GetImagePullPolicy(),
 							Resources:       emqx.GetResource(),
 							Env:             emqx.GetEnv(),
-							StartupProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
+							Lifecycle: &corev1.Lifecycle{
+								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{
-											"/opt/emqx/bin/emqx",
-											"ping",
+											"/opt/emqx/bin/emqx_ctl",
+											"cluster",
+											"leave",
 										},
 									},
 								},
-								TimeoutSeconds:      15,
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       30,
-								FailureThreshold:    10,
 							},
 						},
 					},
@@ -379,23 +376,31 @@ func generateSvc(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 					},
 				})
 
-				probe := &corev1.Probe{
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/status",
-							Port: intstr.IntOrString{
-								IntVal: port,
-							},
-							Scheme: corev1.URISchemeHTTP,
-						},
+				httpGetAction := &corev1.HTTPGetAction{
+					Path: "/status",
+					Port: intstr.IntOrString{
+						IntVal: port,
 					},
+					Scheme: corev1.URISchemeHTTP,
 				}
-				container.ReadinessProbe = probe
-				container.ReadinessProbe.InitialDelaySeconds = 5
-				container.ReadinessProbe.PeriodSeconds = 5
-				container.LivenessProbe = probe
-				container.LivenessProbe.InitialDelaySeconds = 30
-				container.LivenessProbe.PeriodSeconds = 30
+
+				container.ReadinessProbe = &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: httpGetAction,
+					},
+					InitialDelaySeconds: 10,
+					PeriodSeconds:       5,
+					FailureThreshold:    30,
+				}
+
+				container.LivenessProbe = &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: httpGetAction,
+					},
+					InitialDelaySeconds: 60,
+					PeriodSeconds:       30,
+					FailureThreshold:    10,
+				}
 			}
 		}
 	}
