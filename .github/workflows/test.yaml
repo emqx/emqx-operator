@@ -55,7 +55,6 @@ jobs:
           - static
           - helm
         apiVersion:
-          - v1beta1
           - v1beta2
         emqx:
           - [emqx, "emqx/emqx:4.3.11"]
