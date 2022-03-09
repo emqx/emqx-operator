@@ -123,6 +123,9 @@ func generateStatefulSetDef(emqx v1beta2.Emqx) *appsv1.StatefulSet {
 		},
 	}
 
+	terminationGracePeriodSeconds := int64(60)
+	sts.Spec.Template.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
+
 	return generateVolume(emqx, sts)
 }
 
