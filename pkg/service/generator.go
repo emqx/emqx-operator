@@ -105,19 +105,16 @@ func generateStatefulSetDef(emqx v1beta2.Emqx) *appsv1.StatefulSet {
 							ImagePullPolicy: emqx.GetImagePullPolicy(),
 							Resources:       emqx.GetResource(),
 							Env:             emqx.GetEnv(),
-							StartupProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
+							Lifecycle: &corev1.Lifecycle{
+								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
 										Command: []string{
-											"/opt/emqx/bin/emqx",
-											"ping",
+											"/opt/emqx/bin/emqx_ctl",
+											"cluster",
+											"leave",
 										},
 									},
 								},
-								TimeoutSeconds:      15,
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       30,
-								FailureThreshold:    10,
 							},
 						},
 					},
@@ -390,11 +387,13 @@ func generateSvc(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 						},
 					},
 				}
-				container.ReadinessProbe = probe
-				container.ReadinessProbe.InitialDelaySeconds = 5
-				container.ReadinessProbe.PeriodSeconds = 5
+
+				container.StartupProbe = probe
+				container.StartupProbe.InitialDelaySeconds = 10
+				container.StartupProbe.PeriodSeconds = 10
+				container.StartupProbe.FailureThreshold = 30
+
 				container.LivenessProbe = probe
-				container.LivenessProbe.InitialDelaySeconds = 30
 				container.LivenessProbe.PeriodSeconds = 30
 			}
 		}
