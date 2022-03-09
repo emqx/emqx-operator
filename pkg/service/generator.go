@@ -376,25 +376,31 @@ func generateSvc(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 					},
 				})
 
-				probe := &corev1.Probe{
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/status",
-							Port: intstr.IntOrString{
-								IntVal: port,
-							},
-							Scheme: corev1.URISchemeHTTP,
-						},
+				httpGetAction := &corev1.HTTPGetAction{
+					Path: "/status",
+					Port: intstr.IntOrString{
+						IntVal: port,
 					},
+					Scheme: corev1.URISchemeHTTP,
 				}
 
-				container.StartupProbe = probe
-				container.StartupProbe.InitialDelaySeconds = 10
-				container.StartupProbe.PeriodSeconds = 10
-				container.StartupProbe.FailureThreshold = 30
+				container.ReadinessProbe = &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: httpGetAction,
+					},
+					InitialDelaySeconds: 10,
+					PeriodSeconds:       5,
+					FailureThreshold:    30,
+				}
 
-				container.LivenessProbe = probe
-				container.LivenessProbe.PeriodSeconds = 30
+				container.LivenessProbe = &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: httpGetAction,
+					},
+					InitialDelaySeconds: 60,
+					PeriodSeconds:       30,
+					FailureThreshold:    10,
+				}
 			}
 		}
 	}
