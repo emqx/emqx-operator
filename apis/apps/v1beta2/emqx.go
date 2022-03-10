@@ -75,8 +75,6 @@ type EmqxSpec interface {
 	GetPlugins() []Plugin
 	SetPlugins(plugins []Plugin)
 
-	GetHeadlessServiceName() string
-
 	GetTelegrafTemplate() *TelegrafTemplate
 	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
 }

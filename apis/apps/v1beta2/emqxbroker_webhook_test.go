@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestDefaultForEnv(t *testing.T) {
+func TestDefaultForClusterEnv(t *testing.T) {
 	emqx := &v1beta2.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
@@ -17,58 +17,16 @@ func TestDefaultForEnv(t *testing.T) {
 		},
 		Spec: v1beta2.EmqxBrokerSpec{
 			Image: "emqx/emqx:4.3.11",
-			Env: []corev1.EnvVar{
-				{
-					Name:  "EMQX_NAME",
-					Value: "foo",
-				},
-				{
-					Name:  "EMQX_FOO",
-					Value: "bar",
-				},
-			},
 		},
 	}
 
 	emqx.Default()
 
-	assert.ElementsMatch(t, emqx.Spec.Env,
+	assert.Subset(t, emqx.Spec.Env,
 		[]corev1.EnvVar{
-			{
-				Name:  "EMQX_FOO",
-				Value: "bar",
-			},
-			{
-				Name:  "EMQX_NAME",
-				Value: "foo",
-			},
 			{
 				Name:  "EMQX_CLUSTER__DISCOVERY",
 				Value: "k8s",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__APP_NAME",
-				Value: "emqx",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__SERVICE_NAME",
-				Value: "emqx-headless",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
-				Value: "emqx",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__APISERVER",
-				Value: "https://kubernetes.default.svc:443",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
-				Value: "hostname",
-			},
-			{
-				Name:  "EMQX_CLUSTER__K8S__SUFFIX",
-				Value: "svc.cluster.local",
 			},
 		},
 	)
@@ -77,27 +35,11 @@ func TestDefaultForEnv(t *testing.T) {
 	emqx.Spec.Env = []corev1.EnvVar{}
 	emqx.Default()
 
-	assert.ElementsMatch(t, emqx.Spec.Env,
+	assert.Subset(t, emqx.Spec.Env,
 		[]corev1.EnvVar{
-			{
-				Name:  "EMQX_NAME",
-				Value: "emqx",
-			},
 			{
 				Name:  "EMQX_CLUSTER__DISCOVERY",
 				Value: "dns",
-			},
-			{
-				Name:  "EMQX_CLUSTER__DNS__TYPE",
-				Value: "srv",
-			},
-			{
-				Name:  "EMQX_CLUSTER__DNS__APP",
-				Value: "emqx",
-			},
-			{
-				Name:  "EMQX_CLUSTER__DNS__NAME",
-				Value: "emqx-headless.emqx.svc.cluster.local",
 			},
 		},
 	)
@@ -137,33 +79,6 @@ func TestDefaultBroker(t *testing.T) {
 			Labels: map[string]string{
 				"cluster": "emqx",
 			},
-			EmqxTemplate: v1beta2.EmqxBrokerTemplate{
-				Plugins: []v1beta2.Plugin{
-					{
-						Name:   "foo",
-						Enable: true,
-					},
-					{
-						Name:   "bar",
-						Enable: false,
-					},
-				},
-				Modules: []v1beta2.EmqxBrokerModules{
-					{
-						Name:   "foo",
-						Enable: true,
-					},
-					{
-						Name:   "bar",
-						Enable: false,
-					},
-				},
-				Listener: v1beta2.Listener{
-					Ports: v1beta2.Ports{
-						MQTTS: 8885,
-					},
-				},
-			},
 		},
 	}
 
@@ -181,84 +96,6 @@ func TestDefaultBroker(t *testing.T) {
 	assert.Contains(t, emqx.Spec.Labels, "cluster")
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/managed-by")
 	assert.Contains(t, emqx.Spec.Labels, "apps.emqx.io/instance")
-
-	// ACL
-	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.ACL,
-		[]v1beta2.ACL{
-			{
-				Permission: "allow",
-				Username:   "dashboard",
-				Action:     "subscribe",
-				Topics: v1beta2.Topics{
-					Filter: []string{
-						"$STS?#",
-					},
-				},
-			},
-			{
-				Permission: "allow",
-				IPAddress:  "127.0.0.1",
-				Topics: v1beta2.Topics{
-					Filter: []string{
-						"$SYS/#",
-						"#",
-					},
-				},
-			},
-			{
-				Permission: "deny",
-				Action:     "subscribe",
-				Topics: v1beta2.Topics{
-					Filter: []string{"$SYS/#"},
-					Equal:  []string{"#"},
-				},
-			},
-			{
-				Permission: "allow",
-			},
-		},
-	)
-
-	// Plugins
-	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.Plugins,
-		[]v1beta2.Plugin{
-			{
-				Name:   "foo",
-				Enable: true,
-			},
-			{
-				Name:   "bar",
-				Enable: false,
-			},
-			{
-				Name:   "emqx_management",
-				Enable: true,
-			},
-		},
-	)
-
-	// Modules
-	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.Modules,
-		[]v1beta2.EmqxBrokerModules{
-			{
-				Name:   "foo",
-				Enable: true,
-			},
-			{
-				Name:   "bar",
-				Enable: false,
-			},
-			{
-				Name:   "emqx_mod_acl_internal",
-				Enable: true,
-			},
-		},
-	)
-
-	// Listener
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Type, corev1.ServiceType("ClusterIP"))
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.MQTTS, int32(8885))
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.API, int32(8081))
 
 	telegrafConf := `
 [global_tags]

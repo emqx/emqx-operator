@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
-	"github.com/emqx/emqx-operator/pkg/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -41,6 +40,7 @@ var _ = Describe("", func() {
 })
 
 func check_license(emqx v1beta2.Emqx) {
+	names := v1beta2.Names{Object: emqx}
 	emqxEneterprise, _ := emqx.(*v1beta2.EmqxEnterprise)
 	Eventually(func() map[string][]byte {
 		secret := &corev1.Secret{}
@@ -48,7 +48,7 @@ func check_license(emqx v1beta2.Emqx) {
 			context.Background(),
 			types.NamespacedName{
 				Namespace: emqx.GetNamespace(),
-				Name:      util.NameForLicense(emqx),
+				Name:      names.License(),
 			},
 			secret,
 		)

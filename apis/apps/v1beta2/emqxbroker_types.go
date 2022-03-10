@@ -17,8 +17,6 @@ limitations under the License.
 package v1beta2
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -196,10 +194,6 @@ func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
 func (emqx *EmqxBroker) GetModules() []EmqxBrokerModules { return emqx.Spec.EmqxTemplate.Modules }
 func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModules) {
 	emqx.Spec.EmqxTemplate.Modules = modules
-}
-
-func (emqx *EmqxBroker) GetHeadlessServiceName() string {
-	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
 }
 
 func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {

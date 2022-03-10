@@ -11,7 +11,6 @@ import (
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/pkg/service"
-	"github.com/emqx/emqx-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -154,26 +153,27 @@ func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
 	return nil
 }
 func (handler *Handler) postUpdate(obj client.Object, emqx v1beta2.Emqx) error {
-	if obj.GetName() == util.NameForLicense(emqx) {
+	names := v1beta2.Names{Object: emqx}
+	if obj.GetName() == names.License() {
 		err := handler.execToPods(emqx, "emqx", "emqx_ctl license reload /mounted/license/emqx.lic")
 		if err != nil {
 			return err
 		}
 	}
-	if obj.GetName() == util.NameForMQTTSCertificate(emqx) {
+	if obj.GetName() == names.MQTTSCertificate() {
 		err := handler.execToPods(emqx, "emqx", "listeners restart mqtt:ssl:external")
 		if err != nil {
 			return err
 		}
 	}
 
-	if obj.GetName() == util.NameForWSSCertificate(emqx) {
+	if obj.GetName() == names.WSSCertificate() {
 		err := handler.execToPods(emqx, "emqx", "listeners restart mqtt:wss:external")
 		if err != nil {
 			return err
 		}
 	}
-	if obj.GetName() == util.NameForTelegraf(emqx) {
+	if obj.GetName() == names.Telegraf() {
 		err := handler.execToPods(emqx, "telegraf", "/bin/kill 1")
 		if err != nil {
 			return err
