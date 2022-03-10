@@ -3,15 +3,16 @@
 ### Features 🌈
 
 - Support DNS Cluster for emqx-4.4.x
-- Add `TerminationGracePeriodSeconds` for emqx container to shutdown gracefully
+- The `EMQX` container can now be terminated more gracefully
+  - Add `TerminationGracePeriodSeconds`
+  - Add `preStop` command
   
+### Notes 📗
+
+- **Now we no longer support the creation of new v1beta1 resources,but existing v1beta1 resources are not affected**
 
 ### Fixes 🛠
 
-- Fix telegraf container run failed occasionally
-- Fix acl plugin not work in emqx enterprise modules
+- Fix `Telegraf` container run failed occasionally
+- Fix `ACL` not work in emqx enterprise modules
 - Fix can not use latest tag for emqx image
-
-### Notes 📗
-
-- **Set unserved version for v1beta1 api version**
