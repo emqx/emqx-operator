@@ -7,7 +7,7 @@
 
 - For EMQX 4.4, a DNS cluster is used by default, no additional `serviceAccount` needs to be created, EMQX 4.3 still uses the k8s APIServer cluster
 - The EMQX container can now be terminated more gracefully
-  - Add `TerminationGracePeriodSeconds` for EMQX container
+  - Add `terminationGracePeriodSeconds` for EMQX container
   - Add `preStop` command for EMQX container
   
 ### Fixes 🛠
