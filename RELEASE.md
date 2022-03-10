@@ -2,14 +2,16 @@
 
 ### Features 🌈
 
-- Add telegraf sidecar container, sending metrics and events from `emqx_prometheus` plugin and emqx logs.
-- Add `.spec.imagePullSecret` for Custom Resource
-- Add `.spec.emqxTemplate.listener.certificate` for Custom Resource
-- Add `.spec.emqxTemplate.listener.labels` for Custom Resource
-- Add `.spec.emqxTemplate.listener.annotations` for Custom Resource
-- Now update `.spec.license` in EmqxEnterprise does not require restart pods
+- Support DNS Cluster for emqx-4.4.x
+- Add `TerminationGracePeriodSeconds` for emqx container to shutdown gracefully
+  
 
 ### Fixes 🛠
 
-- Fix update service failed in k8s 1.21
-- Fix `.spec.listener.nodePort` not work
+- Fix telegraf container run failed occasionally
+- Fix acl plugin not work in emqx enterprise modules
+- Fix can not use latest tag for emqx image
+
+### Notes 📗
+
+- **Set unserved version for v1beta1 api version**
