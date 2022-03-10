@@ -1,7 +1,7 @@
 package manager
 
 import (
-	"github.com/emqx/emqx-operator/apis/apps/v1beta1"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -43,27 +43,27 @@ func NewEvent(eventCli record.EventRecorder) Event {
 
 // NewNodeAdd implement the Event.Interface
 func (e *EventOption) NewNodeAdd(object runtime.Object, message string) {
-	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta1.ClusterConditionScaling), message)
+	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta2.ClusterConditionScaling), message)
 }
 
 // NodeRemove implement the Event.Interface
 func (e *EventOption) NodeRemove(object runtime.Object, message string) {
-	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta1.ClusterConditionScalingDown), message)
+	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta2.ClusterConditionScalingDown), message)
 }
 
 // CreateCluster implement the Event.Interface
 func (e *EventOption) CreateCluster(object runtime.Object) {
-	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta1.ClusterConditionCreating), "Bootstrap emqx cluster")
+	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta2.ClusterConditionCreating), "Bootstrap emqx cluster")
 }
 
 // UpdateCluster implement the Event.Interface
 func (e *EventOption) UpdateCluster(object runtime.Object, message string) {
-	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta1.ClusterConditionUpdating), message)
+	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta2.ClusterConditionUpdating), message)
 }
 
 // UpgradedCluster implement the Event.Interface
 func (e *EventOption) UpgradedCluster(object runtime.Object, message string) {
-	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta1.ClusterConditionUpgrading), message)
+	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta2.ClusterConditionUpgrading), message)
 }
 
 // EnsureCluster implement the Event.Interface
@@ -78,10 +78,10 @@ func (e *EventOption) CheckCluster(object runtime.Object) {
 
 // FailedCluster implement the Event.Interface
 func (e *EventOption) FailedCluster(object runtime.Object, message string) {
-	e.eventsCli.Event(object, v1.EventTypeWarning, string(v1beta1.ClusterConditionFailed), message)
+	e.eventsCli.Event(object, v1.EventTypeWarning, string(v1beta2.ClusterConditionFailed), message)
 }
 
 // HealthCluster implement the Event.Interface
 func (e *EventOption) HealthCluster(object runtime.Object) {
-	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta1.ClusterConditionHealthy), "EMQX cluster is healthy")
+	e.eventsCli.Event(object, v1.EventTypeNormal, string(v1beta2.ClusterConditionHealthy), "EMQX cluster is healthy")
 }
