@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= emqx/emqx-operator-controller:$(shell ./get-version)
+IMG ?= emqx/emqx-operator-controller:$(shell $(CURDIR)/scripts/get-version.sh)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 #CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 CRD_OPTIONS ?= "crd"
@@ -80,12 +80,6 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-
-pre-release: manifests kustomize ## Pre-release preparation
-	sed -i -r 's|^appVersion:.*|appVersion: $(shell ./get-version)|g' deploy/charts/emqx-operator/Chart.yaml
-
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default > deploy/manifests/emqx-operator-controller.yaml
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
