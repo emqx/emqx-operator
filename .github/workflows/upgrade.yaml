@@ -1,5 +1,9 @@
 name: Upgrade emqx operator
 
+concurrency:
+  group: upgrade-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
 
@@ -13,7 +17,6 @@ jobs:
           - static
           - helm
         apiVersion:
-          - v1beta1
           - v1beta2
         emqx:
           - [EmqxBroker, "emqx/emqx:4.4.1"]
