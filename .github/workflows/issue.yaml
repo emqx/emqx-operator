@@ -2,8 +2,7 @@ name: Manage stale issues
 
 on:
   schedule:
-    # run hourly
-    - cron: "0 * * * *"
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 jobs:
