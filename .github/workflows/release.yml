@@ -48,31 +48,15 @@ jobs:
           push: ${{ startsWith(github.ref, 'refs/tags/') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Create release
-        uses: actions/create-release@v1
-        id: create_release
+      - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          draft: false
-          prerelease: false
-          release_name: EMQX Operator ${{ github.ref }} Released
-          tag_name: ${{ github.ref }}
+          token: ${{ github.token }}
+          name: EMQX Operator ${{ github.ref_name }} Released
           body_path: RELEASE.md
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Upload release asset
-        id: upload-release-asset
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./deploy/manifests/emqx-operator-controller.yaml
-          asset_name: emqx-operator-controller.yaml
-          asset_content_type: application/octet-stream
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          generate_release_notes: true
+          files: |
+            deploy/manifests/emqx-operator-controller.yaml
 
   helm:
     runs-on: self-hosted
