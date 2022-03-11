@@ -3,10 +3,10 @@ name: Check helm version
 on:
   push:
     paths:
-      - deploy/charts/**
+      - deploy/charts/emqx-operator/templates/**
   pull_request:
     paths:
-      - deploy/charts/**
+      - deploy/charts/emqx-operator/templates/**
 
 jobs:
   check-helm-version:
