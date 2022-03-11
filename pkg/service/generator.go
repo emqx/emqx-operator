@@ -602,7 +602,7 @@ func generateConfigMapForModules(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*c
 
 func generateSecretForMQTTSCertificate(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
 	names := v1beta2.Names{Object: emqx}
-	cert := emqx.GetListener().Certificate.WSS
+	cert := emqx.GetListener().Certificate.MQTTS
 	if reflect.ValueOf(cert).IsZero() {
 		return nil, sts
 	}
@@ -623,11 +623,14 @@ func generateSecretForMQTTSCertificate(emqx v1beta2.Emqx, sts *appsv1.StatefulSe
 			"tls.crt": cert.Data.TLSCert,
 			"tls.key": cert.Data.TLSKey,
 		},
-		StringData: map[string]string{
+	}
+
+	if cert.StringData.CaCert != "" || cert.StringData.TLSCert != "" || cert.StringData.TLSKey != "" {
+		secret.StringData = map[string]string{
 			"ca.crt":  cert.StringData.CaCert,
 			"tls.crt": cert.StringData.TLSCert,
 			"tls.key": cert.StringData.TLSKey,
-		},
+		}
 	}
 
 	container := sts.Spec.Template.Spec.Containers[0]
@@ -698,11 +701,14 @@ func generateSecretForWSSCertificate(emqx v1beta2.Emqx, sts *appsv1.StatefulSet)
 			"tls.crt": cert.Data.TLSCert,
 			"tls.key": cert.Data.TLSKey,
 		},
-		StringData: map[string]string{
+	}
+
+	if cert.StringData.CaCert != "" || cert.StringData.TLSCert != "" || cert.StringData.TLSKey != "" {
+		secret.StringData = map[string]string{
 			"ca.crt":  cert.StringData.CaCert,
 			"tls.crt": cert.StringData.TLSCert,
 			"tls.key": cert.StringData.TLSKey,
-		},
+		}
 	}
 
 	container := sts.Spec.Template.Spec.Containers[0]
