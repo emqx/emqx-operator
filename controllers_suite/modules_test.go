@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -46,8 +46,8 @@ var _ = Describe("", func() {
 		It("Check update modules", func() {
 			for _, emqx := range emqxList() {
 				switch obj := emqx.(type) {
-				case *v1beta2.EmqxBroker:
-					modules := []v1beta2.EmqxBrokerModules{
+				case *v1beta3.EmqxBroker:
+					modules := []v1beta3.EmqxBrokerModule{
 						{
 							Name:   "emqx_mod_presence",
 							Enable: false,
@@ -56,8 +56,8 @@ var _ = Describe("", func() {
 					obj.Spec.EmqxTemplate.Modules = modules
 					Expect(updateEmqx(obj)).Should(Succeed())
 					check_modules(obj)
-				case *v1beta2.EmqxEnterprise:
-					modules := []v1beta2.EmqxEnterpriseModules{
+				case *v1beta3.EmqxEnterprise:
+					modules := []v1beta3.EmqxEnterpriseModule{
 						{
 							Name:    "internal_cal",
 							Enable:  true,
@@ -75,10 +75,10 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_modules(emqx v1beta2.Emqx) {
+func check_modules(emqx v1beta3.Emqx) {
 	switch obj := emqx.(type) {
-	case *v1beta2.EmqxBroker:
-		modules := &v1beta2.EmqxBrokerModulesList{
+	case *v1beta3.EmqxBroker:
+		modules := &v1beta3.EmqxBrokerModuleList{
 			Items: obj.Spec.EmqxTemplate.Modules,
 		}
 		loadedModulesString := modules.String()
@@ -114,7 +114,7 @@ func check_modules(emqx v1beta2.Emqx) {
 				base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
 			),
 		)
-	case *v1beta2.EmqxEnterprise:
+	case *v1beta3.EmqxEnterprise:
 		data, _ := json.Marshal(obj.Spec.EmqxTemplate.Modules)
 		loadedModulesString := string(data)
 
