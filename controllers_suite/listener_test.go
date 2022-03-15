@@ -19,7 +19,7 @@ package controller_suite_test
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -38,7 +38,7 @@ var _ = Describe("", func() {
 
 		It("Check headless service", func() {
 			for _, emqx := range emqxList() {
-				names := v1beta2.Names{Object: emqx}
+				names := v1beta3.Names{Object: emqx}
 				svc := &corev1.Service{}
 				Eventually(func() bool {
 					err := k8sClient.Get(
@@ -146,17 +146,17 @@ var _ = Describe("", func() {
 				},
 			}
 
-			listener := v1beta2.Listener{
+			listener := v1beta3.Listener{
 				Type:        corev1.ServiceTypeNodePort,
 				Labels:      map[string]string{"test/labels": "service"},
 				Annotations: map[string]string{"test/annotations": "service"},
-				Ports: v1beta2.Ports{
-					API:  int32(28081),
-					MQTT: int32(21883),
+				API: v1beta3.Port{
+					Port:     int32(28081),
+					NodePort: int32(30001),
 				},
-				NodePorts: v1beta2.Ports{
-					API:  int32(30001),
-					MQTT: int32(30002),
+				MQTT: v1beta3.Port{
+					Port:     int32(21883),
+					NodePort: int32(30002),
 				},
 			}
 			emqx.SetListener(listener)

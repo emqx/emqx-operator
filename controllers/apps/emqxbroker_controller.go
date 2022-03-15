@@ -20,7 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -38,6 +38,6 @@ func NewEmqxBrokerReconciler(mgr manager.Manager) *EmqxBrokerReconciler {
 // SetupWithManager sets up the controller with the Manager.
 func (r *EmqxBrokerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1beta2.EmqxBroker{}).
+		For(&v1beta3.EmqxBroker{}).
 		Complete(r)
 }
