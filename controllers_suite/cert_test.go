@@ -21,7 +21,7 @@ import (
 	"encoding/base64"
 	"reflect"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -36,9 +36,9 @@ var _ = Describe("", func() {
 	Context("Check service", func() {
 		It("Check mqtts cert", func() {
 			for _, emqx := range emqxList() {
-				names := v1beta2.Names{Object: emqx}
+				names := v1beta3.Names{Object: emqx}
 				check_cert(
-					emqx.GetListener().Certificate.MQTTS,
+					emqx.GetListener().MQTTS.Cert,
 					types.NamespacedName{
 						Name:      names.MQTTSCertificate(),
 						Namespace: emqx.GetNamespace(),
@@ -48,9 +48,9 @@ var _ = Describe("", func() {
 		})
 		It("Check wss cert", func() {
 			for _, emqx := range emqxList() {
-				names := v1beta2.Names{Object: emqx}
+				names := v1beta3.Names{Object: emqx}
 				check_cert(
-					emqx.GetListener().Certificate.WSS,
+					emqx.GetListener().WSS.Cert,
 					types.NamespacedName{
 						Name:      names.MQTTSCertificate(),
 						Namespace: emqx.GetNamespace(),
@@ -61,7 +61,7 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_cert(cert v1beta2.CertificateConf, namespacedName types.NamespacedName) {
+func check_cert(cert v1beta3.CertConf, namespacedName types.NamespacedName) {
 	if !reflect.ValueOf(cert).IsZero() {
 		secret := &corev1.Secret{}
 		Eventually(func() bool {

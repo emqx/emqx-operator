@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/emqx/emqx-operator/pkg/cache"
 	"github.com/emqx/emqx-operator/pkg/manager"
 	"github.com/go-logr/logr"
@@ -15,8 +15,8 @@ import (
 )
 
 type EmqxHandler interface {
-	Do(emqx v1beta2.Emqx) error
-	Ensure(emqx v1beta2.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
+	Do(emqx v1beta3.Emqx) error
+	Ensure(emqx v1beta3.Emqx, labels map[string]string, ownerRefs []metav1.OwnerReference) error
 	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
 }
 
@@ -39,7 +39,7 @@ func NewHandler(mgr mgr.Manager) *Handler {
 }
 
 // Do will ensure the EMQX Cluster is in the expected state and update the EMQX Cluster status.
-func (handler *Handler) Do(emqx v1beta2.Emqx) error {
+func (handler *Handler) Do(emqx v1beta3.Emqx) error {
 	// diff new and new EMQX Cluster, then update status
 	meta := handler.metaCache.Cache(emqx)
 	handler.logger.WithValues("namespace", emqx.GetNamespace(), "name", emqx.GetName()).V(3).
@@ -73,7 +73,7 @@ func (handler *Handler) Do(emqx v1beta2.Emqx) error {
 	// 	}
 	// 	// if user delete statefulset or deployment, set status
 	// 	status := emqx.Status.Conditions
-	// 	if len(status) > 0 && status[0].Type == v1beta2.ClusterConditionHealthy {
+	// 	if len(status) > 0 && status[0].Type == v1beta3.ClusterConditionHealthy {
 	// 		handler.eventsCli.CreateCluster(emqx)
 	// 		handler.Status.SetCreateCondition("emqx server be removed by user, restart")
 	// 		handler.client.UpdateCluster(emqx.GetNamespace(), emqx)
@@ -92,16 +92,16 @@ func (handler *Handler) updateStatus(meta *cache.Meta) error {
 
 	if meta.State != cache.Check {
 		switch meta.Status {
-		case v1beta2.ClusterConditionCreating:
+		case v1beta3.ClusterConditionCreating:
 			handler.eventsCli.CreateCluster(emqx)
 			emqx.SetCreateCondition(meta.Message)
-		case v1beta2.ClusterConditionScaling:
+		case v1beta3.ClusterConditionScaling:
 			handler.eventsCli.NewNodeAdd(emqx, meta.Message)
 			emqx.SetScalingUpCondition(meta.Message)
-		case v1beta2.ClusterConditionScalingDown:
+		case v1beta3.ClusterConditionScalingDown:
 			handler.eventsCli.NodeRemove(emqx, meta.Message)
 			emqx.SetScalingDownCondition(meta.Message)
-		case v1beta2.ClusterConditionUpgrading:
+		case v1beta3.ClusterConditionUpgrading:
 			handler.eventsCli.UpdateCluster(emqx, meta.Message)
 			emqx.SetUpgradingCondition(meta.Message)
 		default:
@@ -113,7 +113,7 @@ func (handler *Handler) updateStatus(meta *cache.Meta) error {
 	return nil
 }
 
-func (handler *Handler) updateEmqxStatus(emqx v1beta2.Emqx) error {
+func (handler *Handler) updateEmqxStatus(emqx v1beta3.Emqx) error {
 	emqx.DescConditionsByTime()
 	err := handler.client.Status().Update(context.TODO(), emqx)
 	if err != nil {

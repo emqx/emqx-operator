@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -42,7 +42,7 @@ var _ = Describe("", func() {
 
 		It("Update acl", func() {
 			for _, emqx := range emqxList() {
-				acl := []v1beta2.ACL{
+				acl := []v1beta3.ACL{
 					{
 						Permission: "deny",
 					},
@@ -57,9 +57,9 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_acl(emqx v1beta2.Emqx) {
-	names := v1beta2.Names{Object: emqx}
-	acls := &v1beta2.ACLs{
+func check_acl(emqx v1beta3.Emqx) {
+	names := v1beta3.Names{Object: emqx}
+	acls := &v1beta3.ACLList{
 		Items: emqx.GetACL(),
 	}
 	aclString := acls.String()

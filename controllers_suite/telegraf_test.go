@@ -3,7 +3,7 @@ package controller_suite_test
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -26,8 +26,8 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_telegraf(emqx v1beta2.Emqx) {
-	names := v1beta2.Names{Object: emqx}
+func check_telegraf(emqx v1beta3.Emqx) {
+	names := v1beta3.Names{Object: emqx}
 	Eventually(func() map[string]string {
 		cm := &corev1.ConfigMap{}
 		_ = k8sClient.Get(

@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	controllers "github.com/emqx/emqx-operator/controllers/apps"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -57,8 +57,8 @@ var timeout, interval time.Duration
 var k8sClient client.Client
 var testEnv *envtest.Environment
 
-var emqxList = func() []v1beta2.Emqx {
-	return []v1beta2.Emqx{
+var emqxList = func() []v1beta3.Emqx {
+	return []v1beta3.Emqx{
 		generateEmqxBroker(brokerName, brokerNameSpace),
 		generateEmqxEnterprise(enterpriseName, enterpriseNameSpace),
 	}
@@ -96,7 +96,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = v1beta2.AddToScheme(scheme.Scheme)
+	err = v1beta3.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -122,9 +122,9 @@ var _ = BeforeSuite(func() {
 	// })
 	// Expect(err).NotTo(HaveOccurred())
 
-	// err = (&v1beta2.EmqxBroker{}).SetupWebhookWithManager(k8sManager)
+	// err = (&v1beta3.EmqxBroker{}).SetupWebhookWithManager(k8sManager)
 	// Expect(err).NotTo(HaveOccurred())
-	// err = (&v1beta2.EmqxEnterprise{}).SetupWebhookWithManager(k8sManager)
+	// err = (&v1beta3.EmqxEnterprise{}).SetupWebhookWithManager(k8sManager)
 	// Expect(err).NotTo(HaveOccurred())
 
 	newEmqxBroker := controllers.NewEmqxBrokerReconciler(k8sManager)
@@ -176,7 +176,7 @@ var _ = AfterSuite(func() {
 })
 
 func cleanAll() error {
-	broker := &v1beta2.EmqxBroker{}
+	broker := &v1beta3.EmqxBroker{}
 	if err := k8sClient.Get(
 		context.Background(),
 		types.NamespacedName{
@@ -187,7 +187,7 @@ func cleanAll() error {
 	); !errors.IsNotFound(err) {
 		if err := k8sClient.Delete(
 			context.Background(),
-			&v1beta2.EmqxBroker{
+			&v1beta3.EmqxBroker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      broker.GetName(),
 					Namespace: broker.GetNamespace(),
@@ -197,7 +197,7 @@ func cleanAll() error {
 			return err
 		}
 		// If PVC is set, then it should be retained
-		if !reflect.ValueOf(broker.GetStorage()).IsZero() {
+		if !reflect.ValueOf(broker.GetPersistent()).IsZero() {
 			if err := k8sClient.List(
 				context.Background(),
 				&corev1.PersistentVolumeClaimList{},
@@ -217,7 +217,7 @@ func cleanAll() error {
 		}
 	}
 
-	enterprise := &v1beta2.EmqxEnterprise{}
+	enterprise := &v1beta3.EmqxEnterprise{}
 	if err := k8sClient.Get(
 		context.Background(),
 		types.NamespacedName{
@@ -228,7 +228,7 @@ func cleanAll() error {
 	); !errors.IsNotFound(err) {
 		if err := k8sClient.Delete(
 			context.Background(),
-			&v1beta2.EmqxEnterprise{
+			&v1beta3.EmqxEnterprise{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      enterprise.GetName(),
 					Namespace: enterprise.GetNamespace(),
@@ -238,7 +238,7 @@ func cleanAll() error {
 			return err
 		}
 		// If PVC is set, then it should be retained
-		if !reflect.ValueOf(enterprise.GetStorage()).IsZero() {
+		if !reflect.ValueOf(enterprise.GetPersistent()).IsZero() {
 			if err := k8sClient.List(
 				context.Background(),
 				&corev1.PersistentVolumeClaimList{},
@@ -270,7 +270,7 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 }
 
 // Full
-func generateEmqxBroker(name, namespace string) *v1beta2.EmqxBroker {
+func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 	storageClassName := "standard"
 	telegrafConf := `
 [global_tags]
@@ -293,21 +293,21 @@ func generateEmqxBroker(name, namespace string) *v1beta2.EmqxBroker {
 
 [[outputs.discard]]
 `
-	emqx := &v1beta2.EmqxBroker{
+	emqx := &v1beta3.EmqxBroker{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta2",
+			APIVersion: "apps.emqx.io/v1beta3",
 			Kind:       "EmqxBroker",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-		},
-		Spec: v1beta2.EmqxBrokerSpec{
-			Image: "emqx/emqx:4.3.10",
 			Labels: map[string]string{
 				"cluster": "emqx",
 			},
-			Storage: corev1.PersistentVolumeClaimSpec{
+		},
+		Spec: v1beta3.EmqxBrokerSpec{
+			Image: "emqx/emqx:4.3.10",
+			Persistent: corev1.PersistentVolumeClaimSpec{
 				StorageClassName: &storageClassName,
 				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 				Resources: corev1.ResourceRequirements{
@@ -316,27 +316,35 @@ func generateEmqxBroker(name, namespace string) *v1beta2.EmqxBroker {
 					},
 				},
 			},
-			EmqxTemplate: v1beta2.EmqxBrokerTemplate{
-				Listener: v1beta2.Listener{
+			EmqxTemplate: v1beta3.EmqxBrokerTemplate{
+				Listener: v1beta3.Listener{
 					Type: "ClusterIP",
-					Ports: v1beta2.Ports{
-						MQTT:      1883,
-						MQTTS:     8883,
-						WS:        8083,
-						WSS:       8084,
-						Dashboard: 18083,
-						API:       8081,
+					API: v1beta3.Port{
+						Port: int32(8081),
 					},
-					Certificate: v1beta2.Certificate{
-						MQTTS: v1beta2.CertificateConf{
-							Data: v1beta2.CertificateData{
+					Dashboard: v1beta3.Port{
+						Port: int32(18083),
+					},
+					MQTT: v1beta3.Port{
+						Port: int32(1883),
+					},
+					MQTTS: v1beta3.Port{
+						Port: int32(8883),
+						Cert: v1beta3.CertConf{
+							Data: v1beta3.CertData{
 								CaCert:  []byte("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURVVENDQWptZ0F3SUJBZ0lKQVBQWUNqVG14ZHQvTUEwR0NTcUdTSWIzRFFFQkN3VUFNRDh4Q3pBSkJnTlYKQkFZVEFrTk9NUkV3RHdZRFZRUUlEQWhvWVc1bmVtaHZkVEVNTUFvR0ExVUVDZ3dEUlUxUk1ROHdEUVlEVlFRRApEQVpTYjI5MFEwRXdIaGNOTWpBd05UQTRNRGd3TmpVeVdoY05NekF3TlRBMk1EZ3dOalV5V2pBL01Rc3dDUVlEClZRUUdFd0pEVGpFUk1BOEdBMVVFQ0F3SWFHRnVaM3BvYjNVeEREQUtCZ05WQkFvTUEwVk5VVEVQTUEwR0ExVUUKQXd3R1VtOXZkRU5CTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF6Y2dWTGV4MQpFWjlPTjY0RVg4dit3Y1Nqek9acGlFT3NBT3VTWE9FTjN3YjhGS1V4Q2RzR3JzSllCN2E1Vk0vSm90MjVNb2QyCmp1UzNPQk1nNnI4NWsyVFdqZHhVb1VzK0hpVUIvcFAvQVJhYVc2Vm50cEFFb2twaWovcHJ6V01QZ0puQkYzVXIKTWp0YkxheUg5aEdtcFFySTVjMnZtSFEycmVSWm5TRmJZKzJiOFNYWiszbFpaZ3o5K0JhUVlXZFFXZmFVV0VIWgp1RGFOaVZpVk8wT1Q4RFJqQ3VpRHAzeVlEajNpTFdiVEEvZ0RMNlRmNVh1SHVFd2NPUVVyZCtoMGh5SXBoTzhECnRzcnNIWjE0ajRBV1lMazFDUEE2cHExSElVdkVsMnJBTngybFZVTnYrbnQ2NEsvTXIzUm5WUWQ5czhiSytUWFEKS0dIZDJMdi9QQUxZdXdJREFRQUJvMUF3VGpBZEJnTlZIUTRFRmdRVUdCbVcraUR6eGN0V0FXeG1oZ2RsRThQagpFYlF3SHdZRFZSMGpCQmd3Rm9BVUdCbVcraUR6eGN0V0FXeG1oZ2RsRThQakViUXdEQVlEVlIwVEJBVXdBd0VCCi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFHYmhSVWpwSXJlZDRjRkFGSjdiYllEOWhLdS95eldQV2tNUmEKRXJsQ0tIbXVZc1lrKzVkMTZKUWhKYUZ5Nk1HWGZMZ28zS1YyaXRsMGQrT1dOSDBVOVVMWGNnbFR4eTYrbmpvNQpDRnFkVUJQd04xanhoem85eXRlRE1LRjQrQUhJeGJ2Q0FKYTE3cWN3VUtSNU1LTnZ2MDlDNnB2UURKTHppZDd5CkUyZGtnU3VnZ2lrM29hMDQyN0t2Y3RGZjh1aE9WOTRSdkVEeXF2VDUrcGdOWVoyWWZnYTlwRC9qanBvSEVVbG8KODhJR1U4L3dKQ3gzRHMyeWM4K29CZy95bnhHOGYvSG1DQzFFVDZFSEhvZTJqbG84RnBVL1NnR3RnaFMxWUwzMApJV3hOc1ByVVArWHNacEJKeS9tdk9oRTVRWG82WTM1ekRxcWo4dEk3QUdtQVd1MjJqZz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"),
 								TLSCert: []byte("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURFekNDQWZ1Z0F3SUJBZ0lCQWpBTkJna3Foa2lHOXcwQkFRc0ZBREEvTVFzd0NRWURWUVFHRXdKRFRqRVIKTUE4R0ExVUVDQXdJYUdGdVozcG9iM1V4RERBS0JnTlZCQW9NQTBWTlVURVBNQTBHQTFVRUF3d0dVbTl2ZEVOQgpNQjRYRFRJd01EVXdPREE0TURjd05Wb1hEVE13TURVd05qQTRNRGN3TlZvd1B6RUxNQWtHQTFVRUJoTUNRMDR4CkVUQVBCZ05WQkFnTUNHaGhibWQ2YUc5MU1Rd3dDZ1lEVlFRS0RBTkZUVkV4RHpBTkJnTlZCQU1NQmxObGNuWmwKY2pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTE5lV1QzcEUrUUZmaVJKekttbgpBTVVyV28zSzJqL1RtMytYbmw2V0x6NjcvMHJjWXJKYmJLdlMzdXlSUC9zdFh5WEVLdzlDZXB5UTFWaUJWRmtXCkFveThxUUVPV0ZEc1pjLzVVemhYVW5iNkxYcjNxVGtGRWpObWhqKzd1enYvbGJCeGxVRzFObFl6U2VPQjYvUlQKOHpIL2xoT2VLaExuV1lQWGRYS3NhMUZMNmlqNFg4RGVETzFrWTdmdkFHbUJuL1RIaDF1VHBEaXpNNFltZUkrNwo0ZG1heUE1eFh2QVJ0ZTVoNFZ1NVNJemU3aUMwNTdOK3Z5bVRvTWsySmdrK1paRnB5WHJucSt5bzZSYUQzQU5jCmxyYzRGYmVVUVo1YTVzNVN4Z3M5YTBZM1dNRys3YzVWblZYY2JqQlJ6L2FxMk50T25RUWppa0tLUUE4R0YwODAKQlFrQ0F3RUFBYU1hTUJnd0NRWURWUjBUQkFJd0FEQUxCZ05WSFE4RUJBTUNCZUF3RFFZSktvWklodmNOQVFFTApCUUFEZ2dFQkFKZWZuTVpwYVJESFFTTlVJRUwzaXdHWEU5YzZQbUlzUVZFMnVzdHIrQ2FrQnAzVFo0bDBlbkx0CmlHTWZFVkZqdTY5Y080b3lva1d2K2hsNWVDTWtIQmYxNEt2NTF2ajQ0OGpvd1luRjF6bXpuN1NFem01VXpsc2EKc3FqdEFwcm5MeW9mNjlXdExVMWo1cllXQnVGWDg2eU9Ud1JBRk5qbTlmdmhBY3JFT05Cc1F0cWlwQldrTVJPcAppVVlNa1JxYktjUU1kd3hvditsSEJZS3E5emJXUm9xTFJPQW41NFNScWdRazZjMTVKZEVmZ09PalNoYnNPa0lIClVocWN3UmtRaWM3bjF6d0hWR1ZEZ05JWlZnbUoySWRJV0JsUEVDN29MclJyQkQvWDFpRUVYdEthYjZwNW8yMm4KS0I1bU4raVFhRStPZTJjcEdLWkppSlJkTStJcUREUT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="),
 								TLSKey:  []byte("LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBczE1WlBla1Q1QVYrSkVuTXFhY0F4U3RhamNyYVA5T2JmNWVlWHBZdlBydi9TdHhpCnNsdHNxOUxlN0pFLyt5MWZKY1FyRDBKNm5KRFZXSUZVV1JZQ2pMeXBBUTVZVU94bHovbFRPRmRTZHZvdGV2ZXAKT1FVU00yYUdQN3U3Ty8rVnNIR1ZRYlUyVmpOSjQ0SHI5RlB6TWYrV0U1NHFFdWRaZzlkMWNxeHJVVXZxS1BoZgp3TjRNN1dSanQrOEFhWUdmOU1lSFc1T2tPTE16aGlaNGo3dmgyWnJJRG5GZThCRzE3bUhoVzdsSWpON3VJTFRuCnMzNi9LWk9neVRZbUNUNWxrV25KZXVlcjdLanBGb1BjQTF5V3R6Z1Z0NVJCbmxybXpsTEdDejFyUmpkWXdiN3QKemxXZFZkeHVNRkhQOXFyWTIwNmRCQ09LUW9wQUR3WVhUelFGQ1FJREFRQUJBb0lCQVFDdXZDYnI3UGQzbHZJLwpuN1ZGUUcrN3BIUmUxVkt3QXhEa3gydDhjWW9zN3kvUVdjbThQdHdxdHc1OEh6UFpHV1lyZ0dNQ1JwenprUlNGClY5ZzN3UDFTNVNjdTVDNmRCdTVZSUdjMTU3dHFOR1hCK1NwZFpkZEpRNE5jNnlHSFhZRVJsbFQwNGZmQkdjM04KV0cvb1lTLzFjU3RlaVNJcnNEeS85MUZ2R1JDaTdGUHhIM3dJZ0hzc1kvdHc2OXMxQ2Z2YXE1bHIyTlRGenhJRwp4Q3ZwSktFZFNmVmZTOUk3TFlpeW1WanN0M0lPUi93NzYvWkZZOWNSYThadG1RU1dXc20wVFVwUkMxamRjYmttClpvSnB0WVdsUCtnU3d4L2ZwTVlmdHJrSkZHT0poSEpIUWh3eFQ1WC9hakFJU2Vxamp3a1dTRUpMd25IUWQxMUMKWnkyKzI5bEJBb0dCQU5sRUFJSzRWeENxeVBYTktmb09PaTVkUzY0TmZ2eUg0QTF2MitLYUhXYzdscWFxUE40OQplemZOMm4zWCtLV3g0Y3ZpREQ5MTRZYzJKUTF2VkpqU2FIY2k3eWl2b2NEbzJPZlpEbWpCcXphTXAveStyWDFSCi9mM01taVRxTWE0NjhyamF4STlSUlp1N3ZEZ3BUUit6YTErT0JDZ016anZBbmc4ZEp1Ti81Z2psQW9HQkFOTlkKdVlQS3RlYXJCbWtxZHJTVjdlVFVlNDlOaHIwWG90TGFWQkgzN1RDVzBYdjl3ak8yeG1ibTVHYS9EQ3RQSXNCYgp5UGVZd1g5RmpvYXN1YWRVRDdoUnZiRnU2ZEJhMEhHTG1rWFJKWlRjRDdNRVgyTGh1NEJ1QzcyeURMTEZkMHIrCkVwOVdQN0Y1aUp5YWdZcUladHorNHVmN2dCdlVEZG12WHozc0dyMVZBb0dBZFhURDZlZUtlaUk2UGxoS0J6dEYKek9iM0VRT08wU3NMdjNmbm9kdTdaYUhiVWdMYW9UTVB1QjE3cjJqZ3JZTTdGS1FDQnhUTmRmR1ptbWZEamxMQgoweFo1d0w4aWJVMzBaWEw4elRsV1BFbFNUOXN0bzRCK0ZZVlZGL3ZjRzlzV2VVVWIybmNQY0ovUG8zVUFrdERHCmpZUVRUeXVOR3RTSkhwYWQvWU9aY3RrQ2dZQnRXUmFDN2JxM29mMHJKR0ZPaGRRVDlTd0l0Ti9scmZqOGh5SEEKT2pwcVRWNE5mUG1oc0F0dTZqOTZPWmFlUWMrRkh2Z1h3dDA2Y0U2UnQ0Ukc0dU5QUmx1VEZnTzdYWUZEZml0UAp2Q3Bwbm9JdzZTNUJCdkh3UFArdUloVVgyYnNpL2RtOHZ1OHRiK2dTdm80UGt3dEZoRXI2STlIZ2xCS21jbW9nCnE2d2FFUUtCZ0h5ZWNGQmVNNkxzMTFDZDY0dmJvcndKUEF1eElXN0hCQUZqL0JTOTlvZUc0VGpCeDRTejJkRmQKcnpVaWJKdDRuZG5ISXZDTjhKUWtqTkcxNGk5aEpsbitIM21Sc3M4ZmJaOXZRZHFHKzJ2T1dBRFlTenpzTkk1NQpSRlk3SmpsdUtjVmtwL3pDRGVVeFRVM082c1MrdjYvM1ZFMTFDb2I2T1lReDNsTjV3clozCi0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg=="),
 							},
 						},
-						WSS: v1beta2.CertificateConf{
-							StringData: v1beta2.CertificateStringData{
+					},
+					WS: v1beta3.Port{
+						Port: int32(8083),
+					},
+					WSS: v1beta3.Port{
+						Port: int32(8084),
+						Cert: v1beta3.CertConf{
+							StringData: v1beta3.CertStringData{
 								CaCert: `-----BEGIN CERTIFICATE-----
 MIIDUTCCAjmgAwIBAgIJAPPYCjTmxdt/MA0GCSqGSIb3DQEBCwUAMD8xCzAJBgNV
 BAYTAkNOMREwDwYDVQQIDAhoYW5nemhvdTEMMAoGA1UECgwDRU1RMQ8wDQYDVQQD
@@ -410,25 +418,25 @@ RFY7JjluKcVkp/zCDeUxTU3O6sS+v6/3VE11Cob6OYQx3lN5wrZ3
 						},
 					},
 				},
-				ACL: []v1beta2.ACL{
+				ACL: []v1beta3.ACL{
 					{
 						Permission: "allow",
 					},
 				},
-				Plugins: []v1beta2.Plugin{
+				Plugins: []v1beta3.Plugin{
 					{
 						Name:   "emqx_management",
 						Enable: true,
 					},
 				},
-				Modules: []v1beta2.EmqxBrokerModules{
+				Modules: []v1beta3.EmqxBrokerModule{
 					{
 						Name:   "emqx_mod_acl_internal",
 						Enable: true,
 					},
 				},
 			},
-			TelegrafTemplate: &v1beta2.TelegrafTemplate{
+			TelegrafTemplate: &v1beta3.TelegrafTemplate{
 				Image: "telegraf:1.19.3",
 				Conf:  &telegrafConf,
 			},
@@ -439,7 +447,7 @@ RFY7JjluKcVkp/zCDeUxTU3O6sS+v6/3VE11Cob6OYQx3lN5wrZ3
 }
 
 // Slim
-func generateEmqxEnterprise(name, namespace string) *v1beta2.EmqxEnterprise {
+func generateEmqxEnterprise(name, namespace string) *v1beta3.EmqxEnterprise {
 	telegrafConf := `
 [global_tags]
   instanceID = "test"
@@ -461,9 +469,9 @@ func generateEmqxEnterprise(name, namespace string) *v1beta2.EmqxEnterprise {
 
 [[outputs.discard]]
 `
-	emqx := &v1beta2.EmqxEnterprise{
+	emqx := &v1beta3.EmqxEnterprise{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta2",
+			APIVersion: "apps.emqx.io/v1beta3",
 			Kind:       "EmqxEnterprise",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -473,39 +481,14 @@ func generateEmqxEnterprise(name, namespace string) *v1beta2.EmqxEnterprise {
 				"cluster": "emqx",
 			},
 		},
-		Spec: v1beta2.EmqxEnterpriseSpec{
+		Spec: v1beta3.EmqxEnterpriseSpec{
 			Image: "emqx/emqx-ee:4.4.0",
-			EmqxTemplate: v1beta2.EmqxEnterpriseTemplate{
-				License: `
------BEGIN CERTIFICATE-----
-MIIENzCCAx+gAwIBAgIDdMvVMA0GCSqGSIb3DQEBBQUAMIGDMQswCQYDVQQGEwJD
-TjERMA8GA1UECAwIWmhlamlhbmcxETAPBgNVBAcMCEhhbmd6aG91MQwwCgYDVQQK
-DANFTVExDDAKBgNVBAsMA0VNUTESMBAGA1UEAwwJKi5lbXF4LmlvMR4wHAYJKoZI
-hvcNAQkBFg96aGFuZ3doQGVtcXguaW8wHhcNMjAwNjIwMDMwMjUyWhcNNDkwMTAx
-MDMwMjUyWjBjMQswCQYDVQQGEwJDTjEZMBcGA1UECgwQRU1RIFggRXZhbHVhdGlv
-bjEZMBcGA1UEAwwQRU1RIFggRXZhbHVhdGlvbjEeMBwGCSqGSIb3DQEJARYPY29u
-dGFjdEBlbXF4LmlvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArw+3
-2w9B7Rr3M7IOiMc7OD3Nzv2KUwtK6OSQ07Y7ikDJh0jynWcw6QamTiRWM2Ale8jr
-0XAmKgwUSI42+f4w84nPpAH4k1L0zupaR10VYKIowZqXVEvSyV8G2N7091+6Jcon
-DcaNBqZLRe1DiZXMJlhXnDgq14FPAxffKhCXiCgYtluLDDLKv+w9BaQGZVjxlFe5
-cw32+z/xHU366npHBpafCbxBtWsNvchMVtLBqv9yPmrMqeBROyoJaI3nL78xDgpd
-cRorqo+uQ1HWdcM6InEFET6pwkeuAF8/jJRlT12XGgZKKgFQTCkZi4hv7aywkGBE
-JruPif/wlK0YuPJu6QIDAQABo4HSMIHPMBEGCSsGAQQBg5odAQQEDAIxMDCBlAYJ
-KwYBBAGDmh0CBIGGDIGDZW1xeF9iYWNrZW5kX3JlZGlzLGVtcXhfYmFja2VuZF9t
-eXNxbCxlbXF4X2JhY2tlbmRfcGdzcWwsZW1xeF9iYWNrZW5kX21vbmdvLGVtcXhf
-YmFja2VuZF9jYXNzYSxlbXF4X2JyaWRnZV9rYWZrYSxlbXF4X2JyaWRnZV9yYWJi
-aXQwEAYJKwYBBAGDmh0DBAMMATEwEQYJKwYBBAGDmh0EBAQMAjEwMA0GCSqGSIb3
-DQEBBQUAA4IBAQDHUe6+P2U4jMD23u96vxCeQrhc/rXWvpmU5XB8Q/VGnJTmv3yU
-EPyTFKtEZYVX29z16xoipUE6crlHhETOfezYsm9K0DxF3fNilOLRKkg9VEWcb5hj
-iL3a2tdZ4sq+h/Z1elIXD71JJBAImjr6BljTIdUCfVtNvxlE8M0D/rKSn2jwzsjI
-UrW88THMtlz9sb56kmM3JIOoIJoep6xNEajIBnoChSGjtBYFNFwzdwSTCodYkgPu
-JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
-EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
------END CERTIFICATE-----
-`,
+			EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
+				License: v1beta3.License{
+					Data: []byte("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVOekNDQXgrZ0F3SUJBZ0lEZE12Vk1BMEdDU3FHU0liM0RRRUJCUVVBTUlHRE1Rc3dDUVlEVlFRR0V3SkQKVGpFUk1BOEdBMVVFQ0F3SVdtaGxhbWxoYm1jeEVUQVBCZ05WQkFjTUNFaGhibWQ2YUc5MU1Rd3dDZ1lEVlFRSwpEQU5GVFZFeEREQUtCZ05WQkFzTUEwVk5VVEVTTUJBR0ExVUVBd3dKS2k1bGJYRjRMbWx2TVI0d0hBWUpLb1pJCmh2Y05BUWtCRmc5NmFHRnVaM2RvUUdWdGNYZ3VhVzh3SGhjTk1qQXdOakl3TURNd01qVXlXaGNOTkRrd01UQXgKTURNd01qVXlXakJqTVFzd0NRWURWUVFHRXdKRFRqRVpNQmNHQTFVRUNnd1FSVTFSSUZnZ1JYWmhiSFZoZEdsdgpiakVaTUJjR0ExVUVBd3dRUlUxUklGZ2dSWFpoYkhWaGRHbHZiakVlTUJ3R0NTcUdTSWIzRFFFSkFSWVBZMjl1CmRHRmpkRUJsYlhGNExtbHZNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXJ3KzMKMnc5QjdScjNNN0lPaU1jN09EM056djJLVXd0SzZPU1EwN1k3aWtESmgwanluV2N3NlFhbVRpUldNMkFsZThqcgowWEFtS2d3VVNJNDIrZjR3ODRuUHBBSDRrMUwwenVwYVIxMFZZS0lvd1pxWFZFdlN5VjhHMk43MDkxKzZKY29uCkRjYU5CcVpMUmUxRGlaWE1KbGhYbkRncTE0RlBBeGZmS2hDWGlDZ1l0bHVMRERMS3YrdzlCYVFHWlZqeGxGZTUKY3czMit6L3hIVTM2Nm5wSEJwYWZDYnhCdFdzTnZjaE1WdExCcXY5eVBtck1xZUJST3lvSmFJM25MNzh4RGdwZApjUm9ycW8rdVExSFdkY002SW5FRkVUNnB3a2V1QUY4L2pKUmxUMTJYR2daS0tnRlFUQ2taaTRodjdheXdrR0JFCkpydVBpZi93bEswWXVQSnU2UUlEQVFBQm80SFNNSUhQTUJFR0NTc0dBUVFCZzVvZEFRUUVEQUl4TURDQmxBWUoKS3dZQkJBR0RtaDBDQklHR0RJR0RaVzF4ZUY5aVlXTnJaVzVrWDNKbFpHbHpMR1Z0Y1hoZlltRmphMlZ1WkY5dAplWE54YkN4bGJYRjRYMkpoWTJ0bGJtUmZjR2R6Y1d3c1pXMXhlRjlpWVdOclpXNWtYMjF2Ym1kdkxHVnRjWGhmClltRmphMlZ1WkY5allYTnpZU3hsYlhGNFgySnlhV1JuWlY5cllXWnJZU3hsYlhGNFgySnlhV1JuWlY5eVlXSmkKYVhRd0VBWUpLd1lCQkFHRG1oMERCQU1NQVRFd0VRWUpLd1lCQkFHRG1oMEVCQVFNQWpFd01BMEdDU3FHU0liMwpEUUVCQlFVQUE0SUJBUURIVWU2K1AyVTRqTUQyM3U5NnZ4Q2VRcmhjL3JYV3ZwbVU1WEI4US9WR25KVG12M3lVCkVQeVRGS3RFWllWWDI5ejE2eG9pcFVFNmNybEhoRVRPZmV6WXNtOUswRHhGM2ZOaWxPTFJLa2c5VkVXY2I1aGoKaUwzYTJ0ZFo0c3EraC9aMWVsSVhENzFKSkJBSW1qcjZCbGpUSWRVQ2ZWdE52eGxFOE0wRC9yS1NuMmp3enNqSQpVclc4OFRITXRsejlzYjU2a21NM0pJT29JSm9lcDZ4TkVhaklCbm9DaFNHanRCWUZORnd6ZHdTVENvZFlrZ1B1CkppZnF4VEtTdXdBR1NscXhKVXdoaldHOHVsekwzL3BDQVlFd2xXbWQyK25zZm90UWRpQU5kYVBuZXo3bzB6MHMKRXVqT0NaTWJLOHFOZlNieW81MHE1aUlYaHoyWklHbCs0aGRwCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"),
+				},
 			},
-
-			TelegrafTemplate: &v1beta2.TelegrafTemplate{
+			TelegrafTemplate: &v1beta3.TelegrafTemplate{
 				Image: "telegraf:1.19.3",
 				Conf:  &telegrafConf,
 			},
@@ -515,7 +498,7 @@ EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 	return emqx
 }
 
-func updateEmqx(emqx v1beta2.Emqx) error {
+func updateEmqx(emqx v1beta3.Emqx) error {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(emqx.GetObjectKind().GroupVersionKind())
 
