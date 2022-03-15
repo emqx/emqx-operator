@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,17 +22,17 @@ type Meta struct {
 	Name      string
 	State     StateType
 	Size      int32
-	Obj       v1beta2.Emqx
+	Obj       v1beta3.Emqx
 
-	Status  v1beta2.ConditionType
+	Status  v1beta3.ConditionType
 	Message string
 
 	Config map[string]string
 }
 
-func newCluster(emqx v1beta2.Emqx) *Meta {
+func newCluster(emqx v1beta3.Emqx) *Meta {
 	return &Meta{
-		Status:    v1beta2.ClusterConditionCreating,
+		Status:    v1beta3.ClusterConditionCreating,
 		Obj:       emqx,
 		Size:      *emqx.GetReplicas(),
 		State:     Create,
@@ -47,7 +47,7 @@ type MetaMap struct {
 	sync.Map
 }
 
-func (c *MetaMap) Cache(obj v1beta2.Emqx) *Meta {
+func (c *MetaMap) Cache(obj v1beta3.Emqx) *Meta {
 	meta, ok := c.Load(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 	if !ok {
 		c.Add(obj)
@@ -62,7 +62,7 @@ func (c *MetaMap) Get(obj metav1.Object) *Meta {
 	return meta.(*Meta)
 }
 
-func (c *MetaMap) Add(obj v1beta2.Emqx) {
+func (c *MetaMap) Add(obj v1beta3.Emqx) {
 	c.Store(getNamespacedName(obj.GetNamespace(), obj.GetName()), newCluster(obj))
 }
 
@@ -70,7 +70,7 @@ func (c *MetaMap) Del(obj metav1.Object) {
 	c.Delete(getNamespacedName(obj.GetNamespace(), obj.GetName()))
 }
 
-func (c *MetaMap) Update(meta *Meta, new v1beta2.Emqx) {
+func (c *MetaMap) Update(meta *Meta, new v1beta3.Emqx) {
 	if meta.Obj.GetGeneration() == new.GetGeneration() {
 		meta.State = Check
 		return
@@ -84,18 +84,18 @@ func (c *MetaMap) Update(meta *Meta, new v1beta2.Emqx) {
 	// meta.Auth.Password = old.Spec.Password
 	meta.Obj = new
 
-	meta.Status = v1beta2.ClusterConditionUpdating
+	meta.Status = v1beta3.ClusterConditionUpdating
 	meta.Message = "Updating emqx config"
 	if isImagesChanged(old, new) {
-		meta.Status = v1beta2.ClusterConditionUpgrading
+		meta.Status = v1beta3.ClusterConditionUpgrading
 		meta.Message = fmt.Sprintf("Upgrading to %s", new.GetImage())
 	}
 	if isScalingDown(old, new) {
-		meta.Status = v1beta2.ClusterConditionScalingDown
+		meta.Status = v1beta3.ClusterConditionScalingDown
 		meta.Message = fmt.Sprintf("Scaling down form: %d to: %d", meta.Size, new.GetReplicas())
 	}
 	if isScalingUp(old, new) {
-		meta.Status = v1beta2.ClusterConditionScaling
+		meta.Status = v1beta3.ClusterConditionScaling
 		meta.Message = fmt.Sprintf("Scaling up form: %d to: %d", meta.Size, new.GetReplicas())
 	}
 	// if isResourcesChange(old, new) {
@@ -103,19 +103,19 @@ func (c *MetaMap) Update(meta *Meta, new v1beta2.Emqx) {
 	// }
 }
 
-func isImagesChanged(old, new v1beta2.Emqx) bool {
+func isImagesChanged(old, new v1beta3.Emqx) bool {
 	return old.GetImage() == new.GetImage()
 }
 
-func isScalingDown(old, new v1beta2.Emqx) bool {
+func isScalingDown(old, new v1beta3.Emqx) bool {
 	return *old.GetReplicas() > *new.GetReplicas()
 }
 
-func isScalingUp(old, new v1beta2.Emqx) bool {
+func isScalingUp(old, new v1beta3.Emqx) bool {
 	return *old.GetReplicas() < *new.GetReplicas()
 }
 
-// func isResourcesChange(old, new *v1beta2.EmqxBroker) bool {
+// func isResourcesChange(old, new *v1beta3.EmqxBroker) bool {
 // 	return old.Spec.Resources.Limits.Memory().Size() != new.Spec.Resources.Limits.Memory().Size() ||
 // 		old.Spec.Resources.Limits.Cpu().Size() != new.Spec.Resources.Limits.Cpu().Size()
 // }
