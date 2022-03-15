@@ -37,9 +37,7 @@ func (r *EmqxEnterprise) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta2-emqxenterprise,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=memqxenterprise.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta2-emqxenterprise,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=mutating.emqxenterprise.v1beta2.emqx.io,admissionReviewVersions={v1,v1beta2}
 
 var _ webhook.Defaulter = &EmqxEnterprise{}
 
@@ -122,8 +120,7 @@ func (r *EmqxEnterprise) Default() {
 	}
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta2-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=vemqxenterprise.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta2-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=validator.emqxenterprise.v1beta2.emqx.io,admissionReviewVersions={v1,v1beta2}
 
 var _ webhook.Validator = &EmqxEnterprise{}
 

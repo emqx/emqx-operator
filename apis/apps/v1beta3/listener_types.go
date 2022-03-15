@@ -51,13 +51,13 @@ type Listener struct {
 func (l *Listener) Default() {
 	if l.Dashboard.Port == 0 && l.MQTT.Port == 0 && l.MQTTS.Port == 0 && l.WS.Port == 0 && l.WSS.Port == 0 {
 		l.Dashboard.Port = int32(18083)
-		l.MQTT = Port{Port: int32(1883)}
-		l.MQTTS = Port{Port: int32(8883)}
-		l.WS = Port{Port: int32(8083)}
-		l.WSS = Port{Port: int32(8084)}
+		l.MQTT.Port = int32(1883)
+		l.MQTTS.Port = int32(8883)
+		l.WS.Port = int32(8083)
+		l.WSS.Port = int32(8084)
 	}
 	if l.API.Port == 0 {
-		l.API = Port{Port: int32(8081)}
+		l.API.Port = int32(8081)
 	}
 	if l.Type == "" {
 		l.Type = corev1.ServiceTypeClusterIP
