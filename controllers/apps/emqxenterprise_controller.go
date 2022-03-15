@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	appsv1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	appsv1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}

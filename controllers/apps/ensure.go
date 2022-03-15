@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/emqx/emqx-operator/pkg/service"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,10 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (handler *Handler) Ensure(emqx v1beta2.Emqx) error {
+func (handler *Handler) Ensure(emqx v1beta3.Emqx) error {
 	resources := service.Generate(emqx)
 
 	for _, resource := range resources {
+		// bytes1, _ := json.Marshal(resource)
+		// fmt.Printf("=================%s\n", string(bytes1))
 		err := handler.createOrUpdate(resource, emqx)
 		if err != nil {
 			return err
@@ -31,7 +33,7 @@ func (handler *Handler) Ensure(emqx v1beta2.Emqx) error {
 	return nil
 }
 
-func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta2.Emqx) error {
+func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta3.Emqx) error {
 	logger := handler.logger.WithValues(
 		"groupVersionKind", obj.GetObjectKind().GroupVersionKind().String(),
 		"namespace", obj.GetNamespace(),
@@ -152,8 +154,8 @@ func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
 	logger.Info("update resource successfully")
 	return nil
 }
-func (handler *Handler) postUpdate(obj client.Object, emqx v1beta2.Emqx) error {
-	names := v1beta2.Names{Object: emqx}
+func (handler *Handler) postUpdate(obj client.Object, emqx v1beta3.Emqx) error {
+	names := v1beta3.Names{Object: emqx}
 	if obj.GetName() == names.License() {
 		err := handler.execToPods(emqx, "emqx", "emqx_ctl license reload /mounted/license/emqx.lic")
 		if err != nil {
@@ -182,7 +184,7 @@ func (handler *Handler) postUpdate(obj client.Object, emqx v1beta2.Emqx) error {
 	return nil
 }
 
-func (handler *Handler) getPods(emqx v1beta2.Emqx) (*corev1.PodList, error) {
+func (handler *Handler) getPods(emqx v1beta3.Emqx) (*corev1.PodList, error) {
 	pods := &corev1.PodList{}
 	err := handler.client.List(
 		context.TODO(),
@@ -195,7 +197,7 @@ func (handler *Handler) getPods(emqx v1beta2.Emqx) (*corev1.PodList, error) {
 	return pods, err
 }
 
-func (handler *Handler) execToPods(emqx v1beta2.Emqx, containerName, command string) error {
+func (handler *Handler) execToPods(emqx v1beta3.Emqx, containerName, command string) error {
 	pods, err := handler.getPods(emqx)
 	if err != nil {
 		return err

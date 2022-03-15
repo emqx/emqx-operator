@@ -19,7 +19,7 @@ package controller_suite_test
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -39,9 +39,9 @@ var _ = Describe("", func() {
 	})
 })
 
-func check_license(emqx v1beta2.Emqx) {
-	names := v1beta2.Names{Object: emqx}
-	emqxEneterprise, _ := emqx.(*v1beta2.EmqxEnterprise)
+func check_license(emqx v1beta3.Emqx) {
+	names := v1beta3.Names{Object: emqx}
+	emqxEneterprise, _ := emqx.(*v1beta3.EmqxEnterprise)
 	Eventually(func() map[string][]byte {
 		secret := &corev1.Secret{}
 		_ = k8sClient.Get(
@@ -54,6 +54,6 @@ func check_license(emqx v1beta2.Emqx) {
 		)
 		return secret.Data
 	}, timeout, interval).Should(Equal(
-		map[string][]byte{"emqx.lic": []byte(emqxEneterprise.GetLicense())},
-	))
+		map[string][]byte{"emqx.lic": []byte(emqxEneterprise.GetLicense().Data)}),
+	)
 }
