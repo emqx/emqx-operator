@@ -36,9 +36,7 @@ func (r *EmqxEnterprise) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta3-emqxenterprise,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta3,name=memqxenterprise.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta3-emqxenterprise,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta3,name=mutating.emqxenterprise.v1beta3.emqx.io,admissionReviewVersions={v1,v1beta3}
 
 var _ webhook.Defaulter = &EmqxEnterprise{}
 
@@ -70,9 +68,7 @@ func (r *EmqxEnterprise) Default() {
 	modules.Default()
 	r.Spec.EmqxTemplate.Modules = modules.Items
 
-	listener := &r.Spec.EmqxTemplate.Listener
-	listener.Default()
-	r.Spec.EmqxTemplate.Listener = *listener
+	r.Spec.EmqxTemplate.Listener.Default()
 
 	env := &EnvList{
 		Items: r.Spec.Env,
@@ -107,8 +103,7 @@ func (r *EmqxEnterprise) Default() {
 	}
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta3-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta3,name=vemqxenterprise.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta3-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta3,name=validator.emqxenterprise.v1beta3.emqx.io,admissionReviewVersions={v1,v1beta3}
 
 var _ webhook.Validator = &EmqxEnterprise{}
 

@@ -43,6 +43,7 @@ resources:
   path: github.com/emqx/emqx-operator/apis/apps/v1beta2
   version: v1beta2
   webhooks:
+    conversion: true
     defaulting: true
     validation: true
     webhookVersion: v1
@@ -56,6 +57,7 @@ resources:
   path: github.com/emqx/emqx-operator/apis/apps/v1beta2
   version: v1beta2
   webhooks:
+    conversion: true
     defaulting: true
     validation: true
     webhookVersion: v1
