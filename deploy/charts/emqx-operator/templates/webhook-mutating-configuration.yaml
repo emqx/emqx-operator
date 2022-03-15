@@ -10,19 +10,19 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1beta1
+  - v1beta3
   clientConfig:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
       namespace: {{ .Release.Namespace }}
-      path: /mutate-apps-emqx-io-v1beta2-emqxbroker
+      path: /mutate-apps-emqx-io-v1beta3-emqxbroker
   failurePolicy: Fail
-  name: memqxbroker.kb.io
+  name: mutating.emqxbroker.v1beta3.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v1beta2
+    - v1beta3
     operations:
     - CREATE
     - UPDATE
@@ -31,19 +31,19 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta1
+  - v1beta3
   clientConfig:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
       namespace: {{ .Release.Namespace }}
-      path: /mutate-apps-emqx-io-v1beta2-emqxenterprise
+      path: /mutate-apps-emqx-io-v1beta3-emqxenterprise
   failurePolicy: Fail
-  name: memqxenterprise.kb.io
+  name: mutating.emqxenterprise.v1beta3.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v1beta2
+    - v1beta3
     operations:
     - CREATE
     - UPDATE
@@ -52,19 +52,19 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta1
+  - v1beta2
   clientConfig:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
       namespace: {{ .Release.Namespace }}
-      path: /mutate-apps-emqx-io-v1beta1-emqxbroker
+      path: /mutate-apps-emqx-io-v1beta2-emqxbroker
   failurePolicy: Fail
-  name: mutating.broker.emqx.io
+  name: mutating.emqxbroker.v1beta2.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -73,19 +73,19 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta1
+  - v1beta2
   clientConfig:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
       namespace: {{ .Release.Namespace }}
-      path: /mutate-apps-emqx-io-v1beta1-emqxenterprise
+      path: /mutate-apps-emqx-io-v1beta2-emqxenterprise
   failurePolicy: Fail
-  name: mutating.enterprise.emqx.io
+  name: mutating.emqxenterprise.v1beta2.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
