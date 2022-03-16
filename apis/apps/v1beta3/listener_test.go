@@ -25,7 +25,7 @@ func TestListenerDefaultForWebhook(t *testing.T) {
 			EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
 				Listener: v1beta3.Listener{
 					Type: corev1.ServiceTypeNodePort,
-					MQTTS: v1beta3.Port{
+					MQTTS: v1beta3.ListenerPort{
 						Port:     int32(8885),
 						NodePort: int32(8885),
 					},
@@ -59,7 +59,7 @@ func TestListenerDefault(t *testing.T) {
 
 	listener = &v1beta3.Listener{
 		Type: corev1.ServiceTypeNodePort,
-		MQTTS: v1beta3.Port{
+		MQTTS: v1beta3.ListenerPort{
 			Port:     int32(8885),
 			NodePort: int32(8885),
 		},

@@ -26,7 +26,7 @@ type Cert struct {
 	StringData CertStringData `json:"stringData,omitempty"`
 }
 
-type Port struct {
+type ListenerPort struct {
 	Port     int32    `json:"port,omitempty"`
 	NodePort int32    `json:"nodePort,omitempty"`
 	Cert     CertConf `json:"cert,omitempty"`
@@ -40,12 +40,12 @@ type Listener struct {
 	LoadBalancerIP           string             `json:"loadBalancerIP,omitempty" protobuf:"bytes,8,opt,name=loadBalancerIP"`
 	LoadBalancerSourceRanges []string           `json:"loadBalancerSourceRanges,omitempty" protobuf:"bytes,9,opt,name=loadBalancerSourceRanges"`
 	ExternalIPs              []string           `json:"externalIPs,omitempty" protobuf:"bytes,5,rep,name=externalIPs"`
-	API                      Port               `json:"api,omitempty"`
-	Dashboard                Port               `json:"dashboard,omitempty"`
-	MQTT                     Port               `json:"mqtt,omitempty"`
-	MQTTS                    Port               `json:"mqtts,omitempty"`
-	WS                       Port               `json:"ws,omitempty"`
-	WSS                      Port               `json:"wss,omitempty"`
+	API                      ListenerPort       `json:"api,omitempty"`
+	Dashboard                ListenerPort       `json:"dashboard,omitempty"`
+	MQTT                     ListenerPort       `json:"mqtt,omitempty"`
+	MQTTS                    ListenerPort       `json:"mqtts,omitempty"`
+	WS                       ListenerPort       `json:"ws,omitempty"`
+	WSS                      ListenerPort       `json:"wss,omitempty"`
 }
 
 func (l *Listener) Default() {
