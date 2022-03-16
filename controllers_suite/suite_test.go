@@ -76,7 +76,7 @@ var _ = BeforeSuite(func() {
 	interval = time.Millisecond * 250
 	timeout = time.Minute * 1
 	if os.Getenv("CI") == "true" {
-		timeout = time.Minute * 5
+		timeout = time.Minute * 10
 	}
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
