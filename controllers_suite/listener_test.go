@@ -150,11 +150,11 @@ var _ = Describe("", func() {
 				Type:        corev1.ServiceTypeNodePort,
 				Labels:      map[string]string{"test/labels": "service"},
 				Annotations: map[string]string{"test/annotations": "service"},
-				API: v1beta3.Port{
+				API: v1beta3.ListenerPort{
 					Port:     int32(28081),
 					NodePort: int32(30001),
 				},
-				MQTT: v1beta3.Port{
+				MQTT: v1beta3.ListenerPort{
 					Port:     int32(21883),
 					NodePort: int32(30002),
 				},

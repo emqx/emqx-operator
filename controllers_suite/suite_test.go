@@ -327,16 +327,16 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 			EmqxTemplate: v1beta3.EmqxBrokerTemplate{
 				Listener: v1beta3.Listener{
 					Type: "ClusterIP",
-					API: v1beta3.Port{
+					API: v1beta3.ListenerPort{
 						Port: int32(8081),
 					},
-					Dashboard: v1beta3.Port{
+					Dashboard: v1beta3.ListenerPort{
 						Port: int32(18083),
 					},
-					MQTT: v1beta3.Port{
+					MQTT: v1beta3.ListenerPort{
 						Port: int32(1883),
 					},
-					MQTTS: v1beta3.Port{
+					MQTTS: v1beta3.ListenerPort{
 						Port: int32(8883),
 						Cert: v1beta3.CertConf{
 							Data: v1beta3.CertData{
@@ -346,10 +346,10 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 							},
 						},
 					},
-					WS: v1beta3.Port{
+					WS: v1beta3.ListenerPort{
 						Port: int32(8083),
 					},
-					WSS: v1beta3.Port{
+					WSS: v1beta3.ListenerPort{
 						Port: int32(8084),
 						Cert: v1beta3.CertConf{
 							StringData: v1beta3.CertStringData{

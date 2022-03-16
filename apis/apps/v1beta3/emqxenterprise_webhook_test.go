@@ -22,7 +22,7 @@ func TestDefaultEnterprise(t *testing.T) {
 			Image: "emqx/emqx:4.3.11",
 			EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
 				Listener: v1beta3.Listener{
-					MQTTS: v1beta3.Port{
+					MQTTS: v1beta3.ListenerPort{
 						Port: int32(8885),
 					},
 				},

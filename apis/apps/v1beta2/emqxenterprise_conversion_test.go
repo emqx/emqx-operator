@@ -127,7 +127,7 @@ var v1beta3Enterprise = &v1beta3.EmqxEnterprise{
 				},
 			},
 			Listener: v1beta3.Listener{
-				MQTTS: v1beta3.Port{
+				MQTTS: v1beta3.ListenerPort{
 					Port: int32(8885),
 				},
 			},
