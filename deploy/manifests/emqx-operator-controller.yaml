@@ -3877,7 +3877,7 @@ spec:
                 type: object
               replicas:
                 format: int32
-                minimum: 3
+                minimum: 1
                 type: integer
               resources:
                 description: ResourceRequirements describes the compute resource requirements.
@@ -7891,7 +7891,7 @@ spec:
                 type: object
               replicas:
                 format: int32
-                minimum: 3
+                minimum: 1
                 type: integer
               resources:
                 description: ResourceRequirements describes the compute resource requirements.
@@ -8434,7 +8434,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: emqx/emqx-operator-controller:91a35a1
+        image: emqx/emqx-operator-controller:1.1.5
         livenessProbe:
           httpGet:
             path: /healthz
@@ -8506,7 +8506,7 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1beta3
+  - v1beta1
   clientConfig:
     service:
       name: emqx-operator-webhook-service
@@ -8527,7 +8527,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta3
+  - v1beta1
   clientConfig:
     service:
       name: emqx-operator-webhook-service
@@ -8548,7 +8548,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: emqx-operator-webhook-service
@@ -8569,7 +8569,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: emqx-operator-webhook-service
@@ -8598,7 +8598,7 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1beta3
+  - v1beta1
   clientConfig:
     service:
       name: emqx-operator-webhook-service
@@ -8619,7 +8619,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta3
+  - v1beta1
   clientConfig:
     service:
       name: emqx-operator-webhook-service
@@ -8640,7 +8640,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: emqx-operator-webhook-service
@@ -8661,7 +8661,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: emqx-operator-webhook-service
