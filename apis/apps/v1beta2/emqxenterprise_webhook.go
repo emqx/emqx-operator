@@ -37,7 +37,7 @@ func (r *EmqxEnterprise) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta2-emqxenterprise,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=mutating.emqxenterprise.v1beta2.emqx.io,admissionReviewVersions={v1,v1beta2}
+//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta2-emqxenterprise,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=mutating.emqxenterprise.v1beta2.emqx.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &EmqxEnterprise{}
 
@@ -121,7 +121,7 @@ func (r *EmqxEnterprise) Default() {
 	}
 }
 
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta2-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=validator.emqxenterprise.v1beta2.emqx.io,admissionReviewVersions={v1,v1beta2}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta2-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta2,name=validator.emqxenterprise.v1beta2.emqx.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &EmqxEnterprise{}
 

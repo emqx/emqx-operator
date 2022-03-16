@@ -10,7 +10,7 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1beta3
+  - v1beta1
   clientConfig:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
@@ -31,7 +31,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta3
+  - v1beta1
   clientConfig:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
@@ -52,7 +52,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
@@ -73,7 +73,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
