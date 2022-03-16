@@ -51,6 +51,10 @@ var _ = Describe("", func() {
 						Name:   "emqx_rule_engine",
 						Enable: true,
 					},
+					{
+						Name:   "emqx_prometheus",
+						Enable: true,
+					},
 				}
 				emqx.SetPlugins(plugins)
 				Expect(updateEmqx(emqx)).Should(Succeed())
