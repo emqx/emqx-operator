@@ -150,6 +150,7 @@ func convertToListener(src Listener) v1beta3.Listener {
 	dst.LoadBalancerSourceRanges = src.LoadBalancerSourceRanges
 	dst.ExternalIPs = src.ExternalIPs
 
+	dst.API.Port = src.Ports.API
 	dst.Dashboard.Port = src.Ports.Dashboard
 	dst.MQTT.Port = src.Ports.MQTT
 	dst.MQTTS.Port = src.Ports.MQTTS

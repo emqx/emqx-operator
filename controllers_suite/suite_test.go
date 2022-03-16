@@ -76,7 +76,7 @@ var _ = BeforeSuite(func() {
 	interval = time.Millisecond * 250
 	timeout = time.Minute * 1
 	if os.Getenv("CI") == "true" {
-		timeout = time.Minute * 5
+		timeout = time.Minute * 10
 	}
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
@@ -306,7 +306,7 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 			},
 		},
 		Spec: v1beta3.EmqxBrokerSpec{
-			Image: "emqx/emqx:4.3.10",
+			Image: "emqx/emqx:4.4.1",
 			Persistent: corev1.PersistentVolumeClaimSpec{
 				StorageClassName: &storageClassName,
 				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
