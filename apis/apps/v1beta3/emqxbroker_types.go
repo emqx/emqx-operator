@@ -30,7 +30,7 @@ type EmqxBrokerTemplate struct {
 
 // EmqxBrokerSpec defines the desired state of EmqxBroker
 type EmqxBrokerSpec struct {
-	//+kubebuilder:validation:Minimum=3
+	//+kubebuilder:validation:Minimum=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	//+kubebuilder:validation:Required

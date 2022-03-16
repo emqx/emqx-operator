@@ -5961,7 +5961,7 @@ spec:
                 type: object
               replicas:
                 format: int32
-                minimum: 3
+                minimum: 1
                 type: integer
               resources:
                 description: ResourceRequirements describes the compute resource requirements.

@@ -36,7 +36,7 @@ type License struct {
 
 // EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
 type EmqxEnterpriseSpec struct {
-	//+kubebuilder:validation:Minimum=3
+	//+kubebuilder:validation:Minimum=1
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	//+kubebuilder:validation:Required

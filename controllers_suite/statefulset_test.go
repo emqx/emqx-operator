@@ -35,18 +35,19 @@ var _ = Describe("", func() {
 		It("Check statefulset", func() {
 			for _, emqx := range emqxList() {
 				sts := &appsv1.StatefulSet{}
-				Eventually(func() int32 {
-					_ = k8sClient.Get(
-						context.Background(),
+				Eventually(func() error {
+					err := k8sClient.Get(
+						context.TODO(),
 						types.NamespacedName{
 							Name:      emqx.GetName(),
 							Namespace: emqx.GetNamespace(),
 						},
 						sts,
 					)
-					return sts.Status.ReadyReplicas
-				}, timeout, interval).Should(Equal(*emqx.GetReplicas()))
+					return err
+				}, timeout, interval).Should(Succeed())
 
+				Expect(sts.Spec.Replicas).Should(Equal(emqx.GetReplicas()))
 				Expect(sts.Spec.Template.Labels).Should(Equal(emqx.GetLabels()))
 				Expect(sts.Spec.Template.Spec.Affinity).Should(Equal(emqx.GetAffinity()))
 				Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))

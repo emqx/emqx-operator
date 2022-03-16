@@ -76,12 +76,12 @@ var _ = BeforeSuite(func() {
 	interval = time.Millisecond * 250
 	timeout = time.Minute * 1
 	if os.Getenv("CI") == "true" {
-		timeout = time.Minute * 10
+		timeout = time.Minute * 5
 	}
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
-	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
+	// Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -293,6 +293,7 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 
 [[outputs.discard]]
 `
+	replicas := int32(1)
 	emqx := &v1beta3.EmqxBroker{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps.emqx.io/v1beta3",
@@ -306,7 +307,8 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 			},
 		},
 		Spec: v1beta3.EmqxBrokerSpec{
-			Image: "emqx/emqx:4.4.1",
+			Image:    "emqx/emqx:4.4.0",
+			Replicas: &replicas,
 			Persistent: corev1.PersistentVolumeClaimSpec{
 				StorageClassName: &storageClassName,
 				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
@@ -314,6 +316,12 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 					Requests: corev1.ResourceList{
 						corev1.ResourceStorage: resource.MustParse("20Mi"),
 					},
+				},
+			},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "EMQX_LOG__LEVEL",
+					Value: "debug",
 				},
 			},
 			EmqxTemplate: v1beta3.EmqxBrokerTemplate{
@@ -469,6 +477,7 @@ func generateEmqxEnterprise(name, namespace string) *v1beta3.EmqxEnterprise {
 
 [[outputs.discard]]
 `
+	replicas := int32(1)
 	emqx := &v1beta3.EmqxEnterprise{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps.emqx.io/v1beta3",
@@ -482,7 +491,8 @@ func generateEmqxEnterprise(name, namespace string) *v1beta3.EmqxEnterprise {
 			},
 		},
 		Spec: v1beta3.EmqxEnterpriseSpec{
-			Image: "emqx/emqx-ee:4.4.0",
+			Image:    "emqx/emqx-ee:4.4.0",
+			Replicas: &replicas,
 			EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
 				License: v1beta3.License{
 					Data: []byte("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVOekNDQXgrZ0F3SUJBZ0lEZE12Vk1BMEdDU3FHU0liM0RRRUJCUVVBTUlHRE1Rc3dDUVlEVlFRR0V3SkQKVGpFUk1BOEdBMVVFQ0F3SVdtaGxhbWxoYm1jeEVUQVBCZ05WQkFjTUNFaGhibWQ2YUc5MU1Rd3dDZ1lEVlFRSwpEQU5GVFZFeEREQUtCZ05WQkFzTUEwVk5VVEVTTUJBR0ExVUVBd3dKS2k1bGJYRjRMbWx2TVI0d0hBWUpLb1pJCmh2Y05BUWtCRmc5NmFHRnVaM2RvUUdWdGNYZ3VhVzh3SGhjTk1qQXdOakl3TURNd01qVXlXaGNOTkRrd01UQXgKTURNd01qVXlXakJqTVFzd0NRWURWUVFHRXdKRFRqRVpNQmNHQTFVRUNnd1FSVTFSSUZnZ1JYWmhiSFZoZEdsdgpiakVaTUJjR0ExVUVBd3dRUlUxUklGZ2dSWFpoYkhWaGRHbHZiakVlTUJ3R0NTcUdTSWIzRFFFSkFSWVBZMjl1CmRHRmpkRUJsYlhGNExtbHZNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXJ3KzMKMnc5QjdScjNNN0lPaU1jN09EM056djJLVXd0SzZPU1EwN1k3aWtESmgwanluV2N3NlFhbVRpUldNMkFsZThqcgowWEFtS2d3VVNJNDIrZjR3ODRuUHBBSDRrMUwwenVwYVIxMFZZS0lvd1pxWFZFdlN5VjhHMk43MDkxKzZKY29uCkRjYU5CcVpMUmUxRGlaWE1KbGhYbkRncTE0RlBBeGZmS2hDWGlDZ1l0bHVMRERMS3YrdzlCYVFHWlZqeGxGZTUKY3czMit6L3hIVTM2Nm5wSEJwYWZDYnhCdFdzTnZjaE1WdExCcXY5eVBtck1xZUJST3lvSmFJM25MNzh4RGdwZApjUm9ycW8rdVExSFdkY002SW5FRkVUNnB3a2V1QUY4L2pKUmxUMTJYR2daS0tnRlFUQ2taaTRodjdheXdrR0JFCkpydVBpZi93bEswWXVQSnU2UUlEQVFBQm80SFNNSUhQTUJFR0NTc0dBUVFCZzVvZEFRUUVEQUl4TURDQmxBWUoKS3dZQkJBR0RtaDBDQklHR0RJR0RaVzF4ZUY5aVlXTnJaVzVrWDNKbFpHbHpMR1Z0Y1hoZlltRmphMlZ1WkY5dAplWE54YkN4bGJYRjRYMkpoWTJ0bGJtUmZjR2R6Y1d3c1pXMXhlRjlpWVdOclpXNWtYMjF2Ym1kdkxHVnRjWGhmClltRmphMlZ1WkY5allYTnpZU3hsYlhGNFgySnlhV1JuWlY5cllXWnJZU3hsYlhGNFgySnlhV1JuWlY5eVlXSmkKYVhRd0VBWUpLd1lCQkFHRG1oMERCQU1NQVRFd0VRWUpLd1lCQkFHRG1oMEVCQVFNQWpFd01BMEdDU3FHU0liMwpEUUVCQlFVQUE0SUJBUURIVWU2K1AyVTRqTUQyM3U5NnZ4Q2VRcmhjL3JYV3ZwbVU1WEI4US9WR25KVG12M3lVCkVQeVRGS3RFWllWWDI5ejE2eG9pcFVFNmNybEhoRVRPZmV6WXNtOUswRHhGM2ZOaWxPTFJLa2c5VkVXY2I1aGoKaUwzYTJ0ZFo0c3EraC9aMWVsSVhENzFKSkJBSW1qcjZCbGpUSWRVQ2ZWdE52eGxFOE0wRC9yS1NuMmp3enNqSQpVclc4OFRITXRsejlzYjU2a21NM0pJT29JSm9lcDZ4TkVhaklCbm9DaFNHanRCWUZORnd6ZHdTVENvZFlrZ1B1CkppZnF4VEtTdXdBR1NscXhKVXdoaldHOHVsekwzL3BDQVlFd2xXbWQyK25zZm90UWRpQU5kYVBuZXo3bzB6MHMKRXVqT0NaTWJLOHFOZlNieW81MHE1aUlYaHoyWklHbCs0aGRwCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"),

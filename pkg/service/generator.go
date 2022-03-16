@@ -161,7 +161,7 @@ func generateContainerForTelegraf(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*
 	str := fmt.Sprintf("%s:%s", managementId, managementSecret)
 	authHeader := corev1.HTTPHeader{
 		Name:  "Authorization",
-		Value: fmt.Sprintf("Bearer %s", base64.StdEncoding.EncodeToString([]byte(str))),
+		Value: fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(str))),
 	}
 
 	container := corev1.Container{
@@ -169,8 +169,8 @@ func generateContainerForTelegraf(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*
 		Image:           telegrafTemplate.Image,
 		ImagePullPolicy: telegrafTemplate.ImagePullPolicy,
 		Resources:       telegrafTemplate.Resources,
-		Lifecycle: &corev1.Lifecycle{
-			PostStart: &corev1.LifecycleHandler{
+		StartupProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/api/v4/emqx_prometheus",
 					Port: intstr.IntOrString{
@@ -181,6 +181,9 @@ func generateContainerForTelegraf(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*
 					},
 				},
 			},
+			InitialDelaySeconds: 60,
+			PeriodSeconds:       10,
+			FailureThreshold:    30,
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
@@ -195,6 +198,7 @@ func generateContainerForTelegraf(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*
 			},
 		},
 	}
+
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
 
 	sts.Spec.Template.Spec.Volumes = append(
