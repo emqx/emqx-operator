@@ -3963,6 +3963,10 @@ spec:
               replicas:
                 default: 3
                 format: int32
+<<<<<<< HEAD
+=======
+                minimum: 1
+>>>>>>> fix(webhook): fix wrong admissionReviewVersions
                 type: integer
               resources:
                 description: ResourceRequirements describes the compute resource requirements.
