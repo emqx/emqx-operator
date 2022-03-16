@@ -98,7 +98,7 @@ var v1beta3Broker = &v1beta3.EmqxBroker{
 				},
 			},
 			Listener: v1beta3.Listener{
-				MQTTS: v1beta3.Port{
+				MQTTS: v1beta3.ListenerPort{
 					Port: int32(8885),
 				},
 			},
