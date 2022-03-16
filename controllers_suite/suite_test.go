@@ -76,12 +76,12 @@ var _ = BeforeSuite(func() {
 	interval = time.Millisecond * 250
 	timeout = time.Minute * 1
 	if os.Getenv("CI") == "true" {
-		timeout = time.Minute * 10
+		timeout = time.Minute * 5
 	}
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
-	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
+	// Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -316,6 +316,12 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 					Requests: corev1.ResourceList{
 						corev1.ResourceStorage: resource.MustParse("20Mi"),
 					},
+				},
+			},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "EMQX_LOG__LEVEL",
+					Value: "debug",
 				},
 			},
 			EmqxTemplate: v1beta3.EmqxBrokerTemplate{
