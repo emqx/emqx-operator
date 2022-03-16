@@ -37,7 +37,7 @@ func (r *EmqxBroker) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta3-emqxbroker,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta3,name=mutating.emqxbroker.v1beta3.emqx.io,admissionReviewVersions={v1,v1beta3}
+//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v1beta3-emqxbroker,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta3,name=mutating.emqxbroker.v1beta3.emqx.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &EmqxBroker{}
 
@@ -114,7 +114,7 @@ func (r *EmqxBroker) Default() {
 	}
 }
 
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta3-emqxbroker,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta3,name=validator.emqxbroker.v1beta3.emqx.io,admissionReviewVersions={v1,v1beta3}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta3-emqxbroker,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta3,name=validator.emqxbroker.v1beta3.emqx.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &EmqxBroker{}
 

@@ -31,7 +31,10 @@ jobs:
           curl -fsL "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.16.4-${OS}-${ARCH}.tar.gz" -o kubebuilder-tools
           tar -zxvf kubebuilder-tools
           sudo mv kubebuilder/ /usr/local/kubebuilder
-      - run: make test
+      - env:
+          ## uses real k8s cluster for run test suite
+          USE_EXISTING_CLUSTER: true
+        run: go test github.com/emqx/emqx-operator/controllers_suite -v
       - run: go tool cover -func=cover.out
 
   deployment:
