@@ -24,7 +24,7 @@ func TestDefaultEnterprise(t *testing.T) {
 			Replicas: &defaultReplicas,
 			EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
 				Listener: v1beta3.Listener{
-					MQTTS: v1beta3.Port{
+					MQTTS: v1beta3.ListenerPort{
 						Port: int32(8885),
 					},
 				},
