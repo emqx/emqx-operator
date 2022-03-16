@@ -166,6 +166,7 @@ func generateContainerForTelegraf(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*
 			},
 		},
 	}
+
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
 
 	sts.Spec.Template.Spec.Volumes = append(
