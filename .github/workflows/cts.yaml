@@ -34,7 +34,7 @@ jobs:
       - env:
           ## uses real k8s cluster for run test suite
           USE_EXISTING_CLUSTER: true
-        run: go test github.com/emqx/emqx-operator/controllers_suite -v
+        run: go test github.com/emqx/emqx-operator/test/controllers -v
       - run: go tool cover -func=cover.out
 
   deployment:
