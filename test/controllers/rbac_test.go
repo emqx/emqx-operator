@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller_suite_test
+package controller_test
 
 import (
 	"context"
@@ -22,8 +22,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
 	//+kubebuilder:scaffold:imports
 )
@@ -31,27 +31,45 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
-	Context("Check statefulset", func() {
-		It("Check statefulset", func() {
+	Context("Check RBAC", func() {
+		It("Check exist", func() {
 			for _, emqx := range emqxList() {
-				sts := &appsv1.StatefulSet{}
+				sa := &corev1.ServiceAccount{}
+				role := &rbacv1.Role{}
+				roleBinding := &rbacv1.RoleBinding{}
 				Eventually(func() error {
-					err := k8sClient.Get(
-						context.TODO(),
+					if err := k8sClient.Get(
+						context.Background(),
 						types.NamespacedName{
 							Name:      emqx.GetName(),
 							Namespace: emqx.GetNamespace(),
 						},
-						sts,
-					)
-					return err
-				}, timeout, interval).Should(Succeed())
-
-				Expect(sts.Spec.Replicas).Should(Equal(emqx.GetReplicas()))
-				Expect(sts.Spec.Template.Labels).Should(Equal(emqx.GetLabels()))
-				Expect(sts.Spec.Template.Spec.Affinity).Should(Equal(emqx.GetAffinity()))
-				Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
-				Expect(sts.Spec.Template.Spec.Containers[0].Resources).Should(Equal(emqx.GetResource()))
+						sa,
+					); err != nil {
+						return err
+					}
+					if err := k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						role,
+					); err != nil {
+						return err
+					}
+					if err := k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						roleBinding,
+					); err != nil {
+						return err
+					}
+					return nil
+				}, timeout, interval).ShouldNot(HaveOccurred())
 			}
 		})
 	})

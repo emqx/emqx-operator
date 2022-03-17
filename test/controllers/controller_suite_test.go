@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller_suite_test
+package controller_test
 
 import (
 	"context"
@@ -81,15 +81,10 @@ var _ = BeforeSuite(func() {
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
-	// Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
-
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
-		// WebhookInstallOptions: envtest.WebhookInstallOptions{
-		// 	Paths: []string{filepath.Join("..", "config", "webhook")},
-		// },
 	}
 
 	cfg, err := testEnv.Start()
@@ -110,23 +105,6 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	// // start webhook server using Manager
-	// webhookInstallOptions := &testEnv.WebhookInstallOptions
-	// k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-	// 	Scheme:             scheme.Scheme,
-	// 	Host:               webhookInstallOptions.LocalServingHost,
-	// 	Port:               webhookInstallOptions.LocalServingPort,
-	// 	CertDir:            webhookInstallOptions.LocalServingCertDir,
-	// 	LeaderElection:     false,
-	// 	MetricsBindAddress: "0",
-	// })
-	// Expect(err).NotTo(HaveOccurred())
-
-	// err = (&v1beta3.EmqxBroker{}).SetupWebhookWithManager(k8sManager)
-	// Expect(err).NotTo(HaveOccurred())
-	// err = (&v1beta3.EmqxEnterprise{}).SetupWebhookWithManager(k8sManager)
-	// Expect(err).NotTo(HaveOccurred())
-
 	newEmqxBroker := controllers.NewEmqxBrokerReconciler(k8sManager)
 	err = newEmqxBroker.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -146,18 +124,6 @@ var _ = BeforeSuite(func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
-
-	// // wait for the webhook server to get ready
-	// dialer := &net.Dialer{Timeout: time.Second}
-	// addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
-	// Eventually(func() error {
-	// 	conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	conn.Close()
-	// 	return nil
-	// }).Should(Succeed())
 
 	for _, emqx := range emqxList() {
 		namespace := generateEmqxNamespace(emqx.GetNamespace())

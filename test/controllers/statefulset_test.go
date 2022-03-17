@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller_suite_test
+package controller_test
 
 import (
 	"context"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	//+kubebuilder:scaffold:imports
@@ -31,29 +31,28 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
-	Context("Check license", func() {
-		It("Check license", func() {
-			emqx := generateEmqxEnterprise(enterpriseName, enterpriseNameSpace)
-			check_license(emqx)
+	Context("Check statefulset", func() {
+		It("Check statefulset", func() {
+			for _, emqx := range emqxList() {
+				sts := &appsv1.StatefulSet{}
+				Eventually(func() error {
+					err := k8sClient.Get(
+						context.TODO(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						sts,
+					)
+					return err
+				}, timeout, interval).Should(Succeed())
+
+				Expect(sts.Spec.Replicas).Should(Equal(emqx.GetReplicas()))
+				Expect(sts.Spec.Template.Labels).Should(Equal(emqx.GetLabels()))
+				Expect(sts.Spec.Template.Spec.Affinity).Should(Equal(emqx.GetAffinity()))
+				Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
+				Expect(sts.Spec.Template.Spec.Containers[0].Resources).Should(Equal(emqx.GetResource()))
+			}
 		})
 	})
 })
-
-func check_license(emqx v1beta3.Emqx) {
-	names := v1beta3.Names{Object: emqx}
-	emqxEneterprise, _ := emqx.(*v1beta3.EmqxEnterprise)
-	Eventually(func() map[string][]byte {
-		secret := &corev1.Secret{}
-		_ = k8sClient.Get(
-			context.Background(),
-			types.NamespacedName{
-				Namespace: emqx.GetNamespace(),
-				Name:      names.License(),
-			},
-			secret,
-		)
-		return secret.Data
-	}, timeout, interval).Should(Equal(
-		map[string][]byte{"emqx.lic": []byte(emqxEneterprise.GetLicense().Data)}),
-	)
-}

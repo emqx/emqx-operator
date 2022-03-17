@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller_suite_test
+package controller_test
 
 import (
 	"context"
@@ -33,59 +33,51 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
-	Context("Check plugins", func() {
-		It("Check loaded plugins", func() {
+	Context("Check acl", func() {
+		It("Check acl", func() {
 			for _, emqx := range emqxList() {
-				check_plugins(emqx)
+				check_acl(emqx)
 			}
 		})
 
-		It("Check update plugins", func() {
+		It("Update acl", func() {
 			for _, emqx := range emqxList() {
-				plugins := []v1beta3.Plugin{
+				acl := []v1beta3.ACL{
 					{
-						Name:   "emqx_management",
-						Enable: true,
-					},
-					{
-						Name:   "emqx_rule_engine",
-						Enable: true,
-					},
-					{
-						Name:   "emqx_prometheus",
-						Enable: true,
+						Permission: "deny",
 					},
 				}
-				emqx.SetPlugins(plugins)
+				emqx.SetACL(acl)
 				Expect(updateEmqx(emqx)).Should(Succeed())
 
-				check_plugins(emqx)
+				check_acl(emqx)
 			}
+
 		})
 	})
 })
 
-func check_plugins(emqx v1beta3.Emqx) {
+func check_acl(emqx v1beta3.Emqx) {
 	names := v1beta3.Names{Object: emqx}
-	plugins := &v1beta3.PluginList{
-		Items: emqx.GetPlugins(),
+	acls := &v1beta3.ACLList{
+		Items: emqx.GetACL(),
 	}
-	loadedPluginsString := plugins.String()
+	aclString := acls.String()
 
 	Eventually(func() map[string]string {
 		cm := &corev1.ConfigMap{}
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
+				Name:      names.ACL(),
 				Namespace: emqx.GetNamespace(),
-				Name:      names.Plugins(),
 			},
 			cm,
 		)
 		return cm.Data
-	}, timeout, interval).Should(Equal(map[string]string{
-		"loaded_plugins": loadedPluginsString,
-	}))
+	}, timeout, interval).Should(Equal(
+		map[string]string{"acl.conf": aclString},
+	))
 
 	Eventually(func() map[string]string {
 		sts := &appsv1.StatefulSet{}
@@ -100,9 +92,10 @@ func check_plugins(emqx v1beta3.Emqx) {
 		return sts.Annotations
 	}, timeout, interval).Should(
 		HaveKeyWithValue(
-			"LoadedPlugins/Base64EncodeConfig",
-			base64.StdEncoding.EncodeToString([]byte(loadedPluginsString)),
+			"ACL/Base64EncodeConfig",
+			base64.StdEncoding.EncodeToString([]byte(aclString)),
 		),
 	)
-	// TODO: check plugins status by emqx api
+	// TODO: check acl status by emqx api
+	// TODO: test acl by mqtt pubsub
 }
