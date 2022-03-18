@@ -1,39 +1,22 @@
 package v1beta2_test
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var v1beta2Enterprise = &v1beta2.EmqxEnterprise{
+var v1beta2EmqxEnterprise = v1beta2.EmqxEnterprise{
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "emqx",
-		Namespace: "emqx",
-		Labels: map[string]string{
-			"emqx": "cluster",
-		},
-		Annotations: map[string]string{
-			"bar": "foo",
-		},
+		Name:      "enterprise",
+		Namespace: "enterprise",
 	},
 	Spec: v1beta2.EmqxEnterpriseSpec{
 		Image: "emqx/emqx:4.3.11",
-		Labels: map[string]string{
-			"cluster": "emqx",
-		},
-		Annotations: map[string]string{
-			"foo": "bar",
-		},
-		Storage: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				"ReadWriteOnce",
-			},
-		},
 		EmqxTemplate: v1beta2.EmqxEnterpriseTemplate{
 			License: `-----BEGIN CERTIFICATE-----
 MIIENzCCAx+gAwIBAgIDdMvVMA0GCSqGSIb3DQEBBQUAMIGDMQswCQYDVQQGEwJD
@@ -61,75 +44,20 @@ JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
 EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 -----END CERTIFICATE-----
 `,
-			Plugins: []v1beta3.Plugin{
-				{
-					Name:   "foo",
-					Enable: true,
-				},
-				{
-					Name:   "bar",
-					Enable: false,
-				},
-			},
-			Modules: []v1beta3.EmqxEnterpriseModule{
-				{
-					Name:   "emqx_mod_acl_internal",
-					Enable: true,
-				},
-			},
-			Listener: v1beta2.Listener{
-				Ports: v1beta2.Ports{
-					MQTTS: 8885,
-				},
-			},
 		},
 	},
 }
 
-var v1beta3Enterprise = &v1beta3.EmqxEnterprise{
+var v1beta3EmqxEnterprise = v1beta3.EmqxEnterprise{
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "emqx",
-		Namespace: "emqx",
-		Labels: map[string]string{
-			"cluster": "emqx",
-			"emqx":    "cluster",
-		},
-		Annotations: map[string]string{
-			"foo": "bar",
-			"bar": "foo",
-		},
+		Name:      "enterprise",
+		Namespace: "enterprise",
 	},
 	Spec: v1beta3.EmqxEnterpriseSpec{
 		Image: "emqx/emqx:4.3.11",
-		Persistent: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				"ReadWriteOnce",
-			},
-		},
 		EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
 			License: v1beta3.License{
 				Data: []byte("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVOekNDQXgrZ0F3SUJBZ0lEZE12Vk1BMEdDU3FHU0liM0RRRUJCUVVBTUlHRE1Rc3dDUVlEVlFRR0V3SkQKVGpFUk1BOEdBMVVFQ0F3SVdtaGxhbWxoYm1jeEVUQVBCZ05WQkFjTUNFaGhibWQ2YUc5MU1Rd3dDZ1lEVlFRSwpEQU5GVFZFeEREQUtCZ05WQkFzTUEwVk5VVEVTTUJBR0ExVUVBd3dKS2k1bGJYRjRMbWx2TVI0d0hBWUpLb1pJCmh2Y05BUWtCRmc5NmFHRnVaM2RvUUdWdGNYZ3VhVzh3SGhjTk1qQXdOakl3TURNd01qVXlXaGNOTkRrd01UQXgKTURNd01qVXlXakJqTVFzd0NRWURWUVFHRXdKRFRqRVpNQmNHQTFVRUNnd1FSVTFSSUZnZ1JYWmhiSFZoZEdsdgpiakVaTUJjR0ExVUVBd3dRUlUxUklGZ2dSWFpoYkhWaGRHbHZiakVlTUJ3R0NTcUdTSWIzRFFFSkFSWVBZMjl1CmRHRmpkRUJsYlhGNExtbHZNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXJ3KzMKMnc5QjdScjNNN0lPaU1jN09EM056djJLVXd0SzZPU1EwN1k3aWtESmgwanluV2N3NlFhbVRpUldNMkFsZThqcgowWEFtS2d3VVNJNDIrZjR3ODRuUHBBSDRrMUwwenVwYVIxMFZZS0lvd1pxWFZFdlN5VjhHMk43MDkxKzZKY29uCkRjYU5CcVpMUmUxRGlaWE1KbGhYbkRncTE0RlBBeGZmS2hDWGlDZ1l0bHVMRERMS3YrdzlCYVFHWlZqeGxGZTUKY3czMit6L3hIVTM2Nm5wSEJwYWZDYnhCdFdzTnZjaE1WdExCcXY5eVBtck1xZUJST3lvSmFJM25MNzh4RGdwZApjUm9ycW8rdVExSFdkY002SW5FRkVUNnB3a2V1QUY4L2pKUmxUMTJYR2daS0tnRlFUQ2taaTRodjdheXdrR0JFCkpydVBpZi93bEswWXVQSnU2UUlEQVFBQm80SFNNSUhQTUJFR0NTc0dBUVFCZzVvZEFRUUVEQUl4TURDQmxBWUoKS3dZQkJBR0RtaDBDQklHR0RJR0RaVzF4ZUY5aVlXTnJaVzVrWDNKbFpHbHpMR1Z0Y1hoZlltRmphMlZ1WkY5dAplWE54YkN4bGJYRjRYMkpoWTJ0bGJtUmZjR2R6Y1d3c1pXMXhlRjlpWVdOclpXNWtYMjF2Ym1kdkxHVnRjWGhmClltRmphMlZ1WkY5allYTnpZU3hsYlhGNFgySnlhV1JuWlY5cllXWnJZU3hsYlhGNFgySnlhV1JuWlY5eVlXSmkKYVhRd0VBWUpLd1lCQkFHRG1oMERCQU1NQVRFd0VRWUpLd1lCQkFHRG1oMEVCQVFNQWpFd01BMEdDU3FHU0liMwpEUUVCQlFVQUE0SUJBUURIVWU2K1AyVTRqTUQyM3U5NnZ4Q2VRcmhjL3JYV3ZwbVU1WEI4US9WR25KVG12M3lVCkVQeVRGS3RFWllWWDI5ejE2eG9pcFVFNmNybEhoRVRPZmV6WXNtOUswRHhGM2ZOaWxPTFJLa2c5VkVXY2I1aGoKaUwzYTJ0ZFo0c3EraC9aMWVsSVhENzFKSkJBSW1qcjZCbGpUSWRVQ2ZWdE52eGxFOE0wRC9yS1NuMmp3enNqSQpVclc4OFRITXRsejlzYjU2a21NM0pJT29JSm9lcDZ4TkVhaklCbm9DaFNHanRCWUZORnd6ZHdTVENvZFlrZ1B1CkppZnF4VEtTdXdBR1NscXhKVXdoaldHOHVsekwzL3BDQVlFd2xXbWQyK25zZm90UWRpQU5kYVBuZXo3bzB6MHMKRXVqT0NaTWJLOHFOZlNieW81MHE1aUlYaHoyWklHbCs0aGRwCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"),
-			},
-			Plugins: []v1beta3.Plugin{
-				{
-					Name:   "foo",
-					Enable: true,
-				},
-				{
-					Name:   "bar",
-					Enable: false,
-				},
-			},
-			Modules: []v1beta3.EmqxEnterpriseModule{
-				{
-					Name:   "emqx_mod_acl_internal",
-					Enable: true,
-				},
-			},
-			Listener: v1beta3.Listener{
-				MQTTS: v1beta3.ListenerPort{
-					Port: int32(8885),
-				},
 			},
 		},
 	},
@@ -137,24 +65,17 @@ var v1beta3Enterprise = &v1beta3.EmqxEnterprise{
 
 func TestConvertToEnterprise(t *testing.T) {
 	emqx := &v1beta3.EmqxEnterprise{}
-	err := v1beta2Enterprise.ConvertTo(emqx)
-
-	v1beta3Enterprise.Spec.EmqxTemplate.License.Data = nil
-	v1beta3Enterprise.Spec.EmqxTemplate.License.StringData = v1beta2Enterprise.Spec.EmqxTemplate.License
+	err := v1beta2EmqxEnterprise.ConvertTo(emqx)
 
 	assert.Nil(t, err)
-	assert.Equal(t, emqx, v1beta3Enterprise)
+	assert.Equal(t, emqx.Spec.EmqxTemplate.License.StringData, v1beta2EmqxEnterprise.Spec.EmqxTemplate.License)
 }
 
 func TestConvertFromEnterprise(t *testing.T) {
 	emqx := &v1beta2.EmqxEnterprise{}
-	err := emqx.ConvertFrom(v1beta3Enterprise)
-
-	v1beta2Enterprise.Labels = v1beta3Enterprise.Labels
-	v1beta2Enterprise.Annotations = v1beta3Enterprise.Annotations
-	v1beta2Enterprise.Spec.Labels = v1beta3Enterprise.Labels
-	v1beta2Enterprise.Spec.Annotations = v1beta3Enterprise.Annotations
+	err := emqx.ConvertFrom(&v1beta3EmqxEnterprise)
 
 	assert.Nil(t, err)
-	assert.Equal(t, emqx, v1beta2Enterprise)
+	license, _ := base64.StdEncoding.DecodeString(string(v1beta3EmqxEnterprise.Spec.EmqxTemplate.License.Data))
+	assert.Equal(t, emqx.Spec.EmqxTemplate.License, string(license))
 }

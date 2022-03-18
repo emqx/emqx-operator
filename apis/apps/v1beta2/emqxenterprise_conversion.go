@@ -104,11 +104,12 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.Annotations = src.Annotations
 
 	// License
-	if src.Spec.EmqxTemplate.License.StringData != "" {
-		dst.Spec.EmqxTemplate.License = src.Spec.EmqxTemplate.License.StringData
-	} else {
+	if len(src.Spec.EmqxTemplate.License.Data) != 0 {
 		license, _ := base64.StdEncoding.DecodeString(string(src.Spec.EmqxTemplate.License.Data))
 		dst.Spec.EmqxTemplate.License = string(license)
+	}
+	if src.Spec.EmqxTemplate.License.StringData != "" {
+		dst.Spec.EmqxTemplate.License = src.Spec.EmqxTemplate.License.StringData
 	}
 
 	// Listener
