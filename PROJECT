@@ -12,41 +12,8 @@ resources:
   domain: emqx.io
   group: apps
   kind: EmqxBroker
-  path: github.com/emqx/emqx-operator/apis/apps/v1beta1
-  version: v1beta1
-  webhooks:
-    conversion: true
-    defaulting: true
-    validation: true
-    webhookVersion: v1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: emqx.io
-  group: apps
-  kind: EmqxEnterprise
-  path: github.com/emqx/emqx-operator/apis/apps/v1beta1
-  version: v1beta1
-  webhooks:
-    conversion: true
-    defaulting: true
-    validation: true
-    webhookVersion: v1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: emqx.io
-  group: apps
-  kind: EmqxBroker
   path: github.com/emqx/emqx-operator/apis/apps/v1beta2
   version: v1beta2
-  webhooks:
-    conversion: true
-    defaulting: true
-    validation: true
-    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -56,11 +23,6 @@ resources:
   kind: EmqxEnterprise
   path: github.com/emqx/emqx-operator/apis/apps/v1beta2
   version: v1beta2
-  webhooks:
-    conversion: true
-    defaulting: true
-    validation: true
-    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
