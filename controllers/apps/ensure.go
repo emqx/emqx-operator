@@ -22,8 +22,6 @@ func (handler *Handler) Ensure(emqx v1beta3.Emqx) error {
 	resources := service.Generate(emqx)
 
 	for _, resource := range resources {
-		// bytes1, _ := json.Marshal(resource)
-		// fmt.Printf("=================%s\n", string(bytes1))
 		err := handler.createOrUpdate(resource, emqx)
 		if err != nil {
 			return err
