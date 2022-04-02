@@ -53,6 +53,7 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
 	dst.Spec.Env = src.Spec.Env
 	dst.Spec.TelegrafTemplate = src.Spec.TelegrafTemplate
+	dst.Spec.SecurityContext = src.Spec.SecurityContext
 
 	// Status
 	dst.Status.Conditions = src.Status.Conditions
@@ -94,6 +95,7 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
 	dst.Spec.Env = src.Spec.Env
 	dst.Spec.TelegrafTemplate = src.Spec.TelegrafTemplate
+	dst.Spec.SecurityContext = src.Spec.SecurityContext
 
 	// Status
 	dst.Status.Conditions = src.Status.Conditions

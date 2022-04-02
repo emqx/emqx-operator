@@ -68,6 +68,8 @@ type EmqxBrokerSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+
 	EmqxTemplate EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 
 	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
@@ -194,6 +196,13 @@ func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
 func (emqx *EmqxBroker) GetModules() []EmqxBrokerModules { return emqx.Spec.EmqxTemplate.Modules }
 func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModules) {
 	emqx.Spec.EmqxTemplate.Modules = modules
+}
+
+func (emqx *EmqxBroker) GetSecurityContext() *corev1.PodSecurityContext {
+	return emqx.Spec.SecurityContext
+}
+func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityContext) {
+	emqx.Spec.SecurityContext = securityContext
 }
 
 func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {

@@ -188,6 +188,10 @@ EmqxBrokerSpec is a description of a EmqxBroker.
 
   - **extraVolumeMounts.subPathExpr** (string)
 
+- **securityContext** (PodSecurityContext)
+  
+  更多信息: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context
+
 ## EmqxBrokerTemplate
 
 - **acl**

@@ -282,6 +282,10 @@ EmqxBrokerSpec is a description of a EmqxBroker.
 
     Expanded path within the volume from which the container's volume should be mounted. Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment. Defaults to "" (volume's root). SubPathExpr and SubPath are mutually exclusive.
 
+- **securityContext** (PodSecurityContext)
+  
+    SecurityContext holds pod-level security attributes and common container settings. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context
+
 ## EmqxBrokerTemplate
 
 - **acl**

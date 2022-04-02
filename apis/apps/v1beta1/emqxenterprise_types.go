@@ -75,6 +75,8 @@ type EmqxEnterpriseSpec struct {
 
 	Modules []v1beta2.EmqxEnterpriseModules `json:"modules,omitempty"`
 
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+
 	TelegrafTemplate *v1beta2.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
@@ -217,6 +219,13 @@ func (emqx *EmqxEnterprise) SetModules(modules []v1beta2.EmqxEnterpriseModules) 
 
 func (emqx *EmqxEnterprise) GetHeadlessServiceName() string {
 	return fmt.Sprintf("%s-%s", emqx.Name, "headless")
+}
+
+func (emqx *EmqxEnterprise) GetSecurityContext() *corev1.PodSecurityContext {
+	return emqx.Spec.SecurityContext
+}
+func (emqx *EmqxEnterprise) SetSecurityContext(securityContext *corev1.PodSecurityContext) {
+	emqx.Spec.SecurityContext = securityContext
 }
 
 func (emqx *EmqxEnterprise) GetTelegrafTemplate() *v1beta2.TelegrafTemplate {

@@ -75,6 +75,9 @@ type EmqxSpec interface {
 	GetPlugins() []Plugin
 	SetPlugins(plugins []Plugin)
 
+	GetSecurityContext() *corev1.PodSecurityContext
+	SetSecurityContext(securityContext *corev1.PodSecurityContext)
+
 	GetTelegrafTemplate() *TelegrafTemplate
 	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
 }

@@ -188,6 +188,10 @@ EmqxEnterpriseSpec is a description of a EmqxEnterprise.
 
   - **extraVolumeMounts.subPathExpr** (string)
 
+- **securityContext** (PodSecurityContext)
+  
+  更多信息: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context
+
 ## EmqxEnterpriseTemplate
 
 - **license** (string)

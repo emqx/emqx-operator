@@ -280,6 +280,11 @@ func (in *EmqxBrokerSpec) DeepCopyInto(out *EmqxBrokerSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.SecurityContext != nil {
+		in, out := &in.SecurityContext, &out.SecurityContext
+		*out = new(v1.PodSecurityContext)
+		(*in).DeepCopyInto(*out)
+	}
 	in.EmqxTemplate.DeepCopyInto(&out.EmqxTemplate)
 	if in.TelegrafTemplate != nil {
 		in, out := &in.TelegrafTemplate, &out.TelegrafTemplate
@@ -474,6 +479,11 @@ func (in *EmqxEnterpriseSpec) DeepCopyInto(out *EmqxEnterpriseSpec) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if in.SecurityContext != nil {
+		in, out := &in.SecurityContext, &out.SecurityContext
+		*out = new(v1.PodSecurityContext)
+		(*in).DeepCopyInto(*out)
 	}
 	in.EmqxTemplate.DeepCopyInto(&out.EmqxTemplate)
 	if in.TelegrafTemplate != nil {
