@@ -122,6 +122,20 @@ func (r *EmqxEnterprise) Default() {
 		r.Spec.ServiceAccountName = ""
 	}
 	r.Spec.Env = env.Items
+
+	if r.Spec.SecurityContext == nil {
+		emqxUserGroup := int64(1000)
+		runAsNonRoot := true
+		fsGroupChangeAlways := corev1.FSGroupChangeAlways
+
+		r.Spec.SecurityContext = &corev1.PodSecurityContext{
+			FSGroup:             &emqxUserGroup,
+			FSGroupChangePolicy: &fsGroupChangeAlways,
+			RunAsNonRoot:        &runAsNonRoot,
+			RunAsUser:           &emqxUserGroup,
+			SupplementalGroups:  []int64{emqxUserGroup},
+		}
+	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

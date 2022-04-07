@@ -71,6 +71,8 @@ type EmqxEnterpriseSpec struct {
 
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+
 	EmqxTemplate     EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
 	TelegrafTemplate *TelegrafTemplate      `json:"telegrafTemplate,omitempty"`
 }
@@ -208,6 +210,13 @@ func (emqx *EmqxEnterprise) GetModules() []EmqxEnterpriseModules {
 }
 func (emqx *EmqxEnterprise) SetModules(modules []EmqxEnterpriseModules) {
 	emqx.Spec.EmqxTemplate.Modules = modules
+}
+
+func (emqx *EmqxEnterprise) GetSecurityContext() *corev1.PodSecurityContext {
+	return emqx.Spec.SecurityContext
+}
+func (emqx *EmqxEnterprise) SetSecurityContext(securityContext *corev1.PodSecurityContext) {
+	emqx.Spec.SecurityContext = securityContext
 }
 
 func (emqx *EmqxEnterprise) GetTelegrafTemplate() *TelegrafTemplate {

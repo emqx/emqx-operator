@@ -69,20 +69,6 @@ func Generate(emqx v1beta2.Emqx) []client.Object {
 	return resources
 }
 
-func generatePodSecurityContext() *corev1.PodSecurityContext {
-	emqxUserGroup := int64(1000)
-	runAsNonRoot := true
-	fsGroupChangeAlways := corev1.FSGroupChangeAlways
-
-	return &corev1.PodSecurityContext{
-		FSGroup:             &emqxUserGroup,
-		FSGroupChangePolicy: &fsGroupChangeAlways,
-		RunAsNonRoot:        &runAsNonRoot,
-		RunAsUser:           &emqxUserGroup,
-		SupplementalGroups:  []int64{emqxUserGroup},
-	}
-}
-
 func generateStatefulSetDef(emqx v1beta2.Emqx) *appsv1.StatefulSet {
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -111,7 +97,7 @@ func generateStatefulSetDef(emqx v1beta2.Emqx) *appsv1.StatefulSet {
 					NodeName:         emqx.GetNodeName(),
 					NodeSelector:     emqx.GetNodeSelector(),
 					ImagePullSecrets: emqx.GetImagePullSecrets(),
-					SecurityContext:  generatePodSecurityContext(),
+					SecurityContext:  emqx.GetSecurityContext(),
 					Containers: []corev1.Container{
 						{
 							Name:            "emqx",

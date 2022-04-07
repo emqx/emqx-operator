@@ -78,6 +78,9 @@ type EmqxSpec interface {
 
 	GetHeadlessServiceName() string
 
+	GetSecurityContext() *corev1.PodSecurityContext
+	SetSecurityContext(securityContext *corev1.PodSecurityContext)
+
 	GetTelegrafTemplate() *v1beta2.TelegrafTemplate
 	SetTelegrafTemplate(telegraftedTemplate *v1beta2.TelegrafTemplate)
 }
