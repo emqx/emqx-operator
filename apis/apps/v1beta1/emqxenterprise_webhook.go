@@ -57,11 +57,6 @@ func (r *EmqxEnterprise) Default() {
 	labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	labels["apps.emqx.io/instance"] = r.GetName()
 
-	if r.Spec.Replicas == nil {
-		defaultReplicas := int32(3)
-		r.Spec.Replicas = &defaultReplicas
-	}
-
 	if r.Spec.ServiceAccountName == "" {
 		r.Spec.ServiceAccountName = r.Name
 	}

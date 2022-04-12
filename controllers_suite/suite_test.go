@@ -271,6 +271,7 @@ func generateEmqxNamespace(namespace string) *corev1.Namespace {
 
 // Full
 func generateEmqxBroker(name, namespace string) *v1beta2.EmqxBroker {
+	defaultReplicas := int32(3)
 	storageClassName := "standard"
 	telegrafConf := `
 [global_tags]
@@ -303,7 +304,8 @@ func generateEmqxBroker(name, namespace string) *v1beta2.EmqxBroker {
 			Namespace: namespace,
 		},
 		Spec: v1beta2.EmqxBrokerSpec{
-			Image: "emqx/emqx:4.3.10",
+			Replicas: &defaultReplicas,
+			Image:    "emqx/emqx:4.3.10",
 			Labels: map[string]string{
 				"cluster": "emqx",
 			},
@@ -440,6 +442,7 @@ RFY7JjluKcVkp/zCDeUxTU3O6sS+v6/3VE11Cob6OYQx3lN5wrZ3
 
 // Slim
 func generateEmqxEnterprise(name, namespace string) *v1beta2.EmqxEnterprise {
+	defaultReplicas := int32(3)
 	telegrafConf := `
 [global_tags]
   instanceID = "test"
@@ -474,7 +477,8 @@ func generateEmqxEnterprise(name, namespace string) *v1beta2.EmqxEnterprise {
 			},
 		},
 		Spec: v1beta2.EmqxEnterpriseSpec{
-			Image: "emqx/emqx-ee:4.4.0",
+			Replicas: &defaultReplicas,
+			Image:    "emqx/emqx-ee:4.4.0",
 			EmqxTemplate: v1beta2.EmqxEnterpriseTemplate{
 				License: `
 -----BEGIN CERTIFICATE-----
