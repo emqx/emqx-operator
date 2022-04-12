@@ -84,8 +84,6 @@ func TestDefaultBroker(t *testing.T) {
 
 	emqx.Default()
 
-	assert.Equal(t, *emqx.Spec.Replicas, int32(3))
-
 	// Labels
 	assert.Contains(t, emqx.Labels, "foo")
 	assert.Contains(t, emqx.Labels, "cluster")
