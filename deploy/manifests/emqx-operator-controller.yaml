@@ -1747,9 +1747,9 @@ spec:
                   type: object
                 type: array
               replicas:
+                default: 3
                 description: The fields of Broker. The replicas of emqx broker
                 format: int32
-                minimum: 3
                 type: integer
               resources:
                 description: The service account name which is being bind with the service account of the crd instance.
@@ -3882,9 +3882,9 @@ spec:
                   type: string
                 type: object
               replicas:
+                default: 3
                 description: The fields of Broker. The replicas of emqx broker
                 format: int32
-                minimum: 3
                 type: integer
               resources:
                 description: The service account name which is being bind with the service account of the crd instance.
@@ -5949,9 +5949,9 @@ spec:
                   type: object
                 type: array
               replicas:
+                default: 3
                 description: The fields of Broker. The replicas of emqx broker
                 format: int32
-                minimum: 3
                 type: integer
               resources:
                 description: The service account name which is being bind with the service account of the crd instance.
@@ -8089,9 +8089,9 @@ spec:
                   type: string
                 type: object
               replicas:
+                default: 3
                 description: The fields of Broker. The replicas of emqx broker
                 format: int32
-                minimum: 3
                 type: integer
               resources:
                 description: The service account name which is being bind with the service account of the crd instance.
@@ -8826,7 +8826,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.1.5
+        image: kirago/emqx-operator-controller:1.1.5.rc-1
         livenessProbe:
           httpGet:
             path: /healthz

@@ -59,11 +59,6 @@ func (r *EmqxEnterprise) Default() {
 	r.Labels = labels
 	r.Spec.Labels = labels
 
-	if r.Spec.Replicas == nil {
-		defaultReplicas := int32(3)
-		r.Spec.Replicas = &defaultReplicas
-	}
-
 	if r.Spec.ServiceAccountName == "" {
 		r.Spec.ServiceAccountName = r.Name
 	}

@@ -34,7 +34,7 @@ type EmqxBrokerSpec struct {
 
 	// The fields of Broker.
 	//The replicas of emqx broker
-	//+kubebuilder:validation:Minimum=3
+	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	//+kubebuilder:validation:Required

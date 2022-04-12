@@ -18,7 +18,6 @@ package v1beta1
 
 import (
 	"errors"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -61,10 +60,6 @@ func (r *EmqxBroker) Default() {
 
 	r.Labels = labels
 	r.Spec.Labels = labels
-	if reflect.ValueOf(r.Spec.Replicas).IsZero() {
-		defaultReplicas := int32(3)
-		r.Spec.Replicas = &defaultReplicas
-	}
 
 	if r.Spec.ServiceAccountName == "" {
 		r.Spec.ServiceAccountName = r.Name
