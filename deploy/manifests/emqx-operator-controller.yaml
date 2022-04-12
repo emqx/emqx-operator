@@ -8826,7 +8826,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: kirago/emqx-operator-controller:1.1.5.rc-1
+        image: emqx/emqx-operator-controller:1.1.5
         livenessProbe:
           httpGet:
             path: /healthz
