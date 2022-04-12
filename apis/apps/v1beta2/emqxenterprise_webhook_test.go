@@ -10,6 +10,7 @@ import (
 )
 
 func TestDefaultEnterprise(t *testing.T) {
+	defaultReplicas := int32(3)
 	emqx := &v1beta2.EmqxEnterprise{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
@@ -19,7 +20,8 @@ func TestDefaultEnterprise(t *testing.T) {
 			},
 		},
 		Spec: v1beta2.EmqxEnterpriseSpec{
-			Image: "emqx/emqx:4.3.11",
+			Replicas: &defaultReplicas,
+			Image:    "emqx/emqx:4.3.11",
 			Labels: map[string]string{
 				"cluster": "emqx",
 			},
@@ -34,6 +36,8 @@ func TestDefaultEnterprise(t *testing.T) {
 	}
 
 	emqx.Default()
+
+	assert.Equal(t, *emqx.Spec.Replicas, int32(3))
 
 	// Labels
 	assert.Contains(t, emqx.Labels, "foo")
