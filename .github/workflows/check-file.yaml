@@ -34,12 +34,12 @@ jobs:
         run: sudo npm install -g markdownlint-cli
       - name: Markdown lint
         run: markdownlint -c .github/workflows/markdownlint.json ./
-      - name: Markdown link check
-        uses: gaurav-nelson/github-action-markdown-link-check@v1
-        with:
-          use-quiet-mode: 'yes'
-          check-modified-files-only: 'yes'
-          base-branch: 'main'
+      # - name: Markdown link check
+      #   uses: gaurav-nelson/github-action-markdown-link-check@v1
+      #   with:
+      #     use-quiet-mode: 'yes'
+      #     check-modified-files-only: 'yes'
+      #     base-branch: 'main'
 
   check-docs-directory:
     runs-on: ubuntu-latest
