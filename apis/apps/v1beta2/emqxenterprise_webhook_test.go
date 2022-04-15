@@ -81,20 +81,4 @@ func TestDefaultEnterprise(t *testing.T) {
 		Conf:  &telegrafConf,
 	}
 	emqx.Default()
-	assert.Subset(t, emqx.Spec.EmqxTemplate.Plugins,
-		[]v1beta2.Plugin{
-			{
-				Name:   "emqx_prometheus",
-				Enable: true,
-			},
-		},
-	)
-	assert.Subset(t, emqx.Spec.Env,
-		[]corev1.EnvVar{
-			{
-				Name:  "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER",
-				Value: "",
-			},
-		},
-	)
 }
