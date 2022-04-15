@@ -170,19 +170,6 @@ func generateContainerForTelegraf(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*
 		Image:           telegrafTemplate.Image,
 		ImagePullPolicy: telegrafTemplate.ImagePullPolicy,
 		Resources:       telegrafTemplate.Resources,
-		Lifecycle: &corev1.Lifecycle{
-			PostStart: &corev1.LifecycleHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/api/v4/emqx_prometheus",
-					Port: intstr.IntOrString{
-						IntVal: emqx.GetListener().Ports.API,
-					},
-					HTTPHeaders: []corev1.HTTPHeader{
-						authHeader,
-					},
-				},
-			},
-		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      cm.Name,
