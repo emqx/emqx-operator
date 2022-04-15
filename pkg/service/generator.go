@@ -148,41 +148,11 @@ func generateContainerForTelegraf(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*
 		Data: map[string]string{"telegraf.conf": *telegrafTemplate.Conf},
 	}
 
-	env := v1beta2.Environments{
-		Items: emqx.GetEnv(),
-	}
-	managementId := "admin"
-	if e, _ := env.Lookup("EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID"); e != nil {
-		managementId = e.Value
-	}
-	managementSecret := "public"
-	if e, _ := env.Lookup("EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET"); e != nil {
-		managementId = e.Value
-	}
-	str := fmt.Sprintf("%s:%s", managementId, managementSecret)
-	authHeader := corev1.HTTPHeader{
-		Name:  "Authorization",
-		Value: fmt.Sprintf("Bearer %s", base64.StdEncoding.EncodeToString([]byte(str))),
-	}
-
 	container := corev1.Container{
 		Name:            "telegraf",
 		Image:           telegrafTemplate.Image,
 		ImagePullPolicy: telegrafTemplate.ImagePullPolicy,
 		Resources:       telegrafTemplate.Resources,
-		Lifecycle: &corev1.Lifecycle{
-			PostStart: &corev1.LifecycleHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/api/v4/emqx_prometheus",
-					Port: intstr.IntOrString{
-						IntVal: emqx.GetListener().Ports.API,
-					},
-					HTTPHeaders: []corev1.HTTPHeader{
-						authHeader,
-					},
-				},
-			},
-		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      cm.Name,
