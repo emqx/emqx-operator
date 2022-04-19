@@ -3191,7 +3191,7 @@ spec:
   - name: v1beta3
     schema:
       openAPIV3Schema:
-        description: EmqxEnterprise is the Schema for the emqxenterprises API
+        description: EmqxEnterprise is the Schema for the emqxEnterprises API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
