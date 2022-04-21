@@ -70,7 +70,7 @@ $ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.1.6/emqx
    emqx-2   1/1     Running   0          22m
 
    $ kubectl exec -it emqx-0 -- emqx_ctl status
-   Node 'emqx@emqx-0.emqx.default.svc.cluster.local' 4.3.11 is started
+   Node 'emqx@emqx-0.emqx.default.svc.cluster.local' 4.4.3 is started
 
    $ kubectl exec -it emqx-0 -- emqx_ctl cluster status
    Cluster status: #{running_nodes =>

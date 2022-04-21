@@ -24,7 +24,9 @@ var _ = Describe("EMQX Broker", func() {
 				},
 			},
 			Spec: v1beta3.EmqxBrokerSpec{
-				Image: "emqx/emqx:4.4.3",
+				EmqxTemplate: v1beta3.EmqxBrokerTemplate{
+					Image: "emqx/emqx:4.4.3",
+				},
 			},
 		}
 		BeforeEach(func() {
@@ -50,7 +52,9 @@ var _ = Describe("EMQX Enterprise", func() {
 				},
 			},
 			Spec: v1beta3.EmqxEnterpriseSpec{
-				Image: "emqx/emqx-ee:4.4.3",
+				EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
+					Image: "emqx/emqx-ee:4.4.3",
+				},
 			},
 		}
 		BeforeEach(func() {

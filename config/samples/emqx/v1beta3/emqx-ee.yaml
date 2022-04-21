@@ -5,7 +5,6 @@ metadata:
   labels:
     foo: "bar"
 spec:
-  image: emqx/emqx-ee:4.4.0
   replicas: 3
   # persistent:
   #   storageClassName: standard
@@ -14,22 +13,23 @@ spec:
   #       storage: 20Mi
   #   accessModes:
   #   - ReadWriteOnce
-  env:
-    - name: "EMQX_LOG__LEVEL"
-      value: "debug"
-    - name: "EMQX_LOG__TO"
-      value: "both"
-    - name: "EMQX_NAME"
-      value: "emqx-ee"
-    - name: "EMQX_CLUSTER__DISCOVERY"
-      value: "dns"
-    - name: "EMQX_CLUSTER__DNS__TYPE"
-      value: "srv"
-    - name: "EMQX_CLUSTER__DNS__APP"
-      value: "emqx-ee"
-    - name: "EMQX_CLUSTER__DNS__NAME"
-      value: "emqx-ee-headless.default.svc.cluster.local"
   emqxTemplate:
+    image: emqx/emqx-ee:4.4.0
+    env:
+      - name: "EMQX_LOG__LEVEL"
+        value: "debug"
+      - name: "EMQX_LOG__TO"
+        value: "both"
+      - name: "EMQX_NAME"
+        value: "emqx-ee"
+      - name: "EMQX_CLUSTER__DISCOVERY"
+        value: "dns"
+      - name: "EMQX_CLUSTER__DNS__TYPE"
+        value: "srv"
+      - name: "EMQX_CLUSTER__DNS__APP"
+        value: "emqx-ee"
+      - name: "EMQX_CLUSTER__DNS__NAME"
+        value: "emqx-ee-headless.default.svc.cluster.local"
     plugins:
       - name: emqx_management
         enable: true

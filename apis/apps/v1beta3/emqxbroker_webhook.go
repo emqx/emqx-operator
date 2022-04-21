@@ -78,7 +78,7 @@ func (r *EmqxBroker) Default() {
 	r.Spec.EmqxTemplate.Listener.Default()
 
 	env := &EnvList{
-		Items: r.Spec.Env,
+		Items: r.Spec.EmqxTemplate.Env,
 	}
 	str := strings.Split(r.GetImage(), ":")
 	if len(str) > 1 {
@@ -98,13 +98,13 @@ func (r *EmqxBroker) Default() {
 		})
 	}
 
-	r.Spec.Env = env.Items
+	r.Spec.EmqxTemplate.Env = env.Items
 
-	if r.Spec.SecurityContext == nil {
+	if r.Spec.EmqxTemplate.SecurityContext == nil {
 		emqxUserGroup := int64(1000)
 		fsGroupChangeAlways := corev1.FSGroupChangeAlways
 
-		r.Spec.SecurityContext = &corev1.PodSecurityContext{
+		r.Spec.EmqxTemplate.SecurityContext = &corev1.PodSecurityContext{
 			RunAsUser:           &emqxUserGroup,
 			RunAsGroup:          &emqxUserGroup,
 			FSGroup:             &emqxUserGroup,
@@ -122,7 +122,7 @@ var _ webhook.Validator = &EmqxBroker{}
 func (r *EmqxBroker) ValidateCreate() error {
 	emqxbrokerlog.Info("validate create", "name", r.Name)
 
-	if err := validateTag(r.Spec.Image); err != nil {
+	if err := validateTag(r.Spec.EmqxTemplate.Image); err != nil {
 		emqxbrokerlog.Error(err, "validate create failed")
 		return err
 	}
@@ -133,7 +133,7 @@ func (r *EmqxBroker) ValidateCreate() error {
 func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 	emqxbrokerlog.Info("validate update", "name", r.Name)
 
-	if err := validateTag(r.Spec.Image); err != nil {
+	if err := validateTag(r.Spec.EmqxTemplate.Image); err != nil {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
