@@ -37,6 +37,10 @@ spec:
     spec:
       containers:
       - args:
+        {{- if and (.Values.metrics.enabled) (eq .Values.metrics.type "prometheus") }}
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        {{- end }}
         - --leader-elect
         command:
         - /manager
@@ -67,6 +71,18 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+      {{- if and (.Values.metrics.enabled) (eq .Values.metrics.type "prometheus") }}
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+      {{- end }}
       securityContext:
         runAsNonRoot: true
       serviceAccountName: {{ include "emqx-operator.serviceAccountName" . }}

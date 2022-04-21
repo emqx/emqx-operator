@@ -37,6 +37,17 @@ $ helm install emqx-operator emqx/emqx-operator \
    --namespace emqx-operator-system \
    --create-namespace
 ```
+**注意事项**：
+如果想通过`Prometheus`收集`emqx-operator`相关`metrics`，需要提前部署`Prometheus`服务组件，并开启`metrics`特性
+
+```bash
+$ helm install emqx-operator emqx/emqx-operator \
+   --set installCRDs=true \
+   --set metrics.enabled=true \
+   --namespace emqx-operator-system \
+   --create-namespace
+```
+
 
 ### 检查 EMQX Operator 控制器状态
 

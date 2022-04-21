@@ -38,6 +38,16 @@ $ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.1.5/emqx
       --namespace emqx-operator-system \
       --create-namespace
    ```
+**Note**:
+If you want to collect metrics about `emqx-operator` by `Prometheus`,first of all you need to deploy `Prometheus` and turn on the feature of metrics
+
+```bash
+$ helm install emqx-operator emqx/emqx-operator \
+   --set installCRDs=true \
+   --set metrics.enabled=true \
+   --namespace emqx-operator-system \
+   --create-namespace
+```
 
 ### Check EMQX Operator Controller status
 
