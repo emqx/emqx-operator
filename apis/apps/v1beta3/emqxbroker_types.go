@@ -22,6 +22,19 @@ import (
 )
 
 type EmqxBrokerTemplate struct {
+	//+kubebuilder:validation:Required
+	Image           string            `json:"image,omitempty"`
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
+	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
+	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
+
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	Listener Listener           `json:"listener,omitempty"`
 	ACL      []ACL              `json:"acl,omitempty"`
 	Plugins  []Plugin           `json:"plugins,omitempty"`
@@ -33,12 +46,8 @@ type EmqxBrokerSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	//+kubebuilder:validation:Required
-	Image            string                        `json:"image,omitempty"`
-	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	Resources  corev1.ResourceRequirements      `json:"resources,omitempty"`
 	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
 
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
@@ -46,16 +55,8 @@ type EmqxBrokerSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
-	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
-	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
-
-	Env []corev1.EnvVar `json:"env,omitempty"`
-
-	EmqxTemplate EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
-
-	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
-
-	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
+	EmqxTemplate     EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
+	TelegrafTemplate *TelegrafTemplate  `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -97,12 +98,14 @@ func (emqx *EmqxBroker) GetReplicas() *int32 {
 }
 func (emqx *EmqxBroker) SetReplicas(replicas *int32) { emqx.Spec.Replicas = replicas }
 
-func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.Image }
-func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.Image = image }
+func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.EmqxTemplate.Image }
+func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.EmqxTemplate.Image = image }
 
-func (emqx *EmqxBroker) GetImagePullPolicy() corev1.PullPolicy { return emqx.Spec.ImagePullPolicy }
+func (emqx *EmqxBroker) GetImagePullPolicy() corev1.PullPolicy {
+	return emqx.Spec.EmqxTemplate.ImagePullPolicy
+}
 func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
-	emqx.Spec.ImagePullPolicy = pullPolicy
+	emqx.Spec.EmqxTemplate.ImagePullPolicy = pullPolicy
 }
 
 func (emqx *EmqxBroker) GetImagePullSecrets() []corev1.LocalObjectReference {
@@ -112,9 +115,11 @@ func (emqx *EmqxBroker) SetImagePullSecrets(imagePullSecrets []corev1.LocalObjec
 	emqx.Spec.ImagePullSecrets = imagePullSecrets
 }
 
-func (emqx *EmqxBroker) GetResource() corev1.ResourceRequirements { return emqx.Spec.Resources }
+func (emqx *EmqxBroker) GetResource() corev1.ResourceRequirements {
+	return emqx.Spec.EmqxTemplate.Resources
+}
 func (emqx *EmqxBroker) SetResource(resource corev1.ResourceRequirements) {
-	emqx.Spec.Resources = resource
+	emqx.Spec.EmqxTemplate.Resources = resource
 }
 
 func (emqx *EmqxBroker) GetPersistent() corev1.PersistentVolumeClaimSpec {
@@ -147,9 +152,9 @@ func (emqx *EmqxBroker) SetToleRations(tolerations []corev1.Toleration) {
 	emqx.Spec.ToleRations = tolerations
 }
 
-func (emqx *EmqxBroker) GetExtraVolumes() []corev1.Volume { return emqx.Spec.ExtraVolumes }
+func (emqx *EmqxBroker) GetExtraVolumes() []corev1.Volume { return emqx.Spec.EmqxTemplate.ExtraVolumes }
 func (emqx *EmqxBroker) GetExtraVolumeMounts() []corev1.VolumeMount {
-	return emqx.Spec.ExtraVolumeMounts
+	return emqx.Spec.EmqxTemplate.ExtraVolumeMounts
 }
 
 func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
@@ -157,9 +162,9 @@ func (emqx *EmqxBroker) SetACL(acl []ACL) {
 	emqx.Spec.EmqxTemplate.ACL = acl
 }
 
-func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.Env }
+func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.EmqxTemplate.Env }
 func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {
-	emqx.Spec.Env = env
+	emqx.Spec.EmqxTemplate.Env = env
 }
 
 func (emqx *EmqxBroker) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
@@ -173,10 +178,10 @@ func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModule) {
 }
 
 func (emqx *EmqxBroker) GetSecurityContext() *corev1.PodSecurityContext {
-	return emqx.Spec.SecurityContext
+	return emqx.Spec.EmqxTemplate.SecurityContext
 }
 func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityContext) {
-	emqx.Spec.SecurityContext = securityContext
+	emqx.Spec.EmqxTemplate.SecurityContext = securityContext
 }
 
 func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {
