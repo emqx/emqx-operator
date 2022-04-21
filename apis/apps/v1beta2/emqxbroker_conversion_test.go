@@ -135,13 +135,13 @@ var v1beta3EmqxBroker = v1beta3.EmqxBroker{
 		},
 	},
 	Spec: v1beta3.EmqxBrokerSpec{
-		Image: "emqx/emqx:4.4.1",
 		Persistent: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				"ReadWriteOnce",
 			},
 		},
 		EmqxTemplate: v1beta3.EmqxBrokerTemplate{
+			Image: "emqx/emqx:4.4.1",
 			Listener: v1beta3.Listener{
 				Type: corev1.ServiceTypeNodePort,
 				API: v1beta3.ListenerPort{
