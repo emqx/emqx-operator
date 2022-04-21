@@ -64,15 +64,16 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Spec
 	dst.Spec.Replicas = src.Spec.Replicas
-	dst.Spec.Image = src.Spec.Image
-	dst.Spec.Resources = src.Spec.Resources
 	dst.Spec.Affinity = src.Spec.Affinity
 	dst.Spec.ToleRations = src.Spec.ToleRations
 	dst.Spec.NodeSelector = src.Spec.NodeSelector
-	dst.Spec.ImagePullPolicy = src.Spec.ImagePullPolicy
-	dst.Spec.ExtraVolumes = src.Spec.ExtraVolumes
-	dst.Spec.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
-	dst.Spec.Env = src.Spec.Env
+
+	dst.Spec.EmqxTemplate.Image = src.Spec.Image
+	dst.Spec.EmqxTemplate.Resources = src.Spec.Resources
+	dst.Spec.EmqxTemplate.ImagePullPolicy = src.Spec.ImagePullPolicy
+	dst.Spec.EmqxTemplate.ExtraVolumes = src.Spec.ExtraVolumes
+	dst.Spec.EmqxTemplate.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
+	dst.Spec.EmqxTemplate.Env = src.Spec.Env
 	dst.Spec.TelegrafTemplate = src.Spec.TelegrafTemplate
 
 	// Status
@@ -124,15 +125,16 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 
 	// Spec
 	dst.Spec.Replicas = src.Spec.Replicas
-	dst.Spec.Image = src.Spec.Image
-	dst.Spec.Resources = src.Spec.Resources
 	dst.Spec.Affinity = src.Spec.Affinity
 	dst.Spec.ToleRations = src.Spec.ToleRations
 	dst.Spec.NodeSelector = src.Spec.NodeSelector
-	dst.Spec.ImagePullPolicy = src.Spec.ImagePullPolicy
-	dst.Spec.ExtraVolumes = src.Spec.ExtraVolumes
-	dst.Spec.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
-	dst.Spec.Env = src.Spec.Env
+
+	dst.Spec.Image = src.Spec.EmqxTemplate.Image
+	dst.Spec.Resources = src.Spec.EmqxTemplate.Resources
+	dst.Spec.ImagePullPolicy = src.Spec.EmqxTemplate.ImagePullPolicy
+	dst.Spec.ExtraVolumes = src.Spec.EmqxTemplate.ExtraVolumes
+	dst.Spec.ExtraVolumeMounts = src.Spec.EmqxTemplate.ExtraVolumeMounts
+	dst.Spec.Env = src.Spec.EmqxTemplate.Env
 	dst.Spec.TelegrafTemplate = src.Spec.TelegrafTemplate
 
 	// Status

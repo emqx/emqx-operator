@@ -3,4 +3,4 @@ kind: EmqxBroker
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:4.3.11
+  image: emqx/emqx:4.4.3
