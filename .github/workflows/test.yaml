@@ -107,7 +107,7 @@ jobs:
             sleep 1
           done
       - name: Deployment emqx
-        timeout-minutes: 5
+        timeout-minutes: 10
         uses: ./.github/actions/deployment
         with:
           apiVersion: ${{ matrix.apiVersion }}
