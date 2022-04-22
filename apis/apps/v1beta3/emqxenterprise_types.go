@@ -61,9 +61,9 @@ type EmqxEnterpriseSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
-	EmqxTemplate EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
-
-	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
+	InitContainers   []corev1.Container     `json:"initContainers,omitempty"`
+	EmqxTemplate     EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
+	TelegrafTemplate *TelegrafTemplate      `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -200,6 +200,13 @@ func (emqx *EmqxEnterprise) GetLicense() License {
 }
 func (emqx *EmqxEnterprise) SetLicense(license License) {
 	emqx.Spec.EmqxTemplate.License = license
+}
+
+func (emqx *EmqxEnterprise) GetInitContainers() []corev1.Container {
+	return emqx.Spec.InitContainers
+}
+func (emqx *EmqxEnterprise) SetInitContainers(containers []corev1.Container) {
+	emqx.Spec.InitContainers = containers
 }
 
 func (emqx *EmqxEnterprise) GetTelegrafTemplate() *TelegrafTemplate {

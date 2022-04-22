@@ -285,6 +285,17 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 					},
 				},
 			},
+			InitContainers: []corev1.Container{
+				{
+					Name:  "busybox",
+					Image: "busybox",
+					Args: []string{
+						"sh",
+						"-c",
+						"echo 'Hello World'",
+					},
+				},
+			},
 			EmqxTemplate: v1beta3.EmqxBrokerTemplate{
 				Image: "emqx/emqx:4.4.3",
 				Env: []corev1.EnvVar{

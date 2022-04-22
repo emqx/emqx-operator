@@ -75,6 +75,9 @@ type EmqxSpec interface {
 	GetSecurityContext() *corev1.PodSecurityContext
 	SetSecurityContext(securityContext *corev1.PodSecurityContext)
 
+	GetInitContainers() []corev1.Container
+	SetInitContainers(containers []corev1.Container)
+
 	GetTelegrafTemplate() *TelegrafTemplate
 	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
 }
