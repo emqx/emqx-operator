@@ -109,14 +109,13 @@ func (r *EmqxEnterprise) Default() {
 
 	if r.Spec.SecurityContext == nil {
 		emqxUserGroup := int64(1000)
-		runAsNonRoot := true
 		fsGroupChangeAlways := corev1.FSGroupChangeAlways
 
 		r.Spec.SecurityContext = &corev1.PodSecurityContext{
+			RunAsUser:           &emqxUserGroup,
+			RunAsGroup:          &emqxUserGroup,
 			FSGroup:             &emqxUserGroup,
 			FSGroupChangePolicy: &fsGroupChangeAlways,
-			RunAsNonRoot:        &runAsNonRoot,
-			RunAsUser:           &emqxUserGroup,
 			SupplementalGroups:  []int64{emqxUserGroup},
 		}
 	}
