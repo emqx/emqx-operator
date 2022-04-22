@@ -39,14 +39,30 @@ $ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.1.5/emqx
       --create-namespace
    ```
 **Note**:
-If you want to collect metrics about `emqx-operator` by `Prometheus`,first of all you need to deploy `Prometheus` and turn on the feature of metrics
+If you want to collect metrics about `emqx-operator` by `Prometheus`,first of all you need to deploy `Prometheus` and apply the application of `ServiceMonitor`
+eg:
 
 ```bash
-$ helm install emqx-operator emqx/emqx-operator \
-   --set installCRDs=true \
-   --set metrics.enabled=true \
-   --namespace emqx-operator-system \
-   --create-namespace
+$ cat << EOF kubectl apply -f -
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: emqx-operator-controller-manager-metrics-monitor
+  namespace: emqx-operator-system
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    path: /metrics
+    port: https
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+EOF
 ```
 
 ### Check EMQX Operator Controller status
