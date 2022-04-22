@@ -57,6 +57,12 @@ spec:
       runAsGroup: 1000
       fsGroup: 1000
       fsGroupChangePolicy: Always
+    args:
+      - bash
+      - -c
+      - |
+        printenv | grep "^EMQX_"
+        emqx foreground
     image: emqx/emqx-ee:4.4.0
     env:
       - name: "EMQX_LOG__LEVEL"

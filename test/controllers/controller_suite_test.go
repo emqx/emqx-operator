@@ -304,6 +304,11 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 						Value: "debug",
 					},
 				},
+				Args: []string{
+					"bash",
+					"-c",
+					"echo 'Hello World' && emqx foreground",
+				},
 				Listener: v1beta3.Listener{
 					Type: "ClusterIP",
 					API: v1beta3.ListenerPort{
