@@ -106,6 +106,7 @@ func generateStatefulSetDef(emqx v1beta3.Emqx) *appsv1.StatefulSet {
 							ImagePullPolicy: emqx.GetImagePullPolicy(),
 							Resources:       emqx.GetResource(),
 							Env:             emqx.GetEnv(),
+							Args:            emqx.GetArgs(),
 							Lifecycle: &corev1.Lifecycle{
 								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{

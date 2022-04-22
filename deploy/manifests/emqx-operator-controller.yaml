@@ -2575,6 +2575,10 @@ spec:
                       - permission
                       type: object
                     type: array
+                  args:
+                    items:
+                      type: string
+                    type: array
                   env:
                     items:
                       description: EnvVar represents an environment variable present in a Container.
@@ -7532,6 +7536,10 @@ spec:
                       required:
                       - permission
                       type: object
+                    type: array
+                  args:
+                    items:
+                      type: string
                     type: array
                   env:
                     items:
