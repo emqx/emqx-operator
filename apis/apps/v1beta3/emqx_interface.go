@@ -60,11 +60,14 @@ type EmqxSpec interface {
 	GetExtraVolumes() []corev1.Volume
 	GetExtraVolumeMounts() []corev1.VolumeMount
 
-	GetACL() []ACL
-	SetACL(acl []ACL)
-
 	GetEnv() []corev1.EnvVar
 	SetEnv(env []corev1.EnvVar)
+
+	GetArgs() []string
+	SetArgs(args []string)
+
+	GetACL() []ACL
+	SetACL(acl []ACL)
 
 	GetPlugins() []Plugin
 	SetPlugins(plugins []Plugin)

@@ -53,6 +53,7 @@ var _ = Describe("", func() {
 				Expect(sts.Spec.Template.Spec.Affinity).Should(Equal(emqx.GetAffinity()))
 				Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 				Expect(sts.Spec.Template.Spec.Containers[0].Resources).Should(Equal(emqx.GetResource()))
+				Expect(sts.Spec.Template.Spec.Containers[0].Args).Should(Equal(emqx.GetArgs()))
 				Expect(sts.Spec.Template.Spec.SecurityContext.FSGroup).Should(Equal(emqx.GetSecurityContext().FSGroup))
 				// Expect(sts.Spec.Template.Spec.SecurityContext.FSGroupChangePolicy).Should(Equal(emqx.GetSecurityContext().FSGroupChangePolicy)) Expect(sts.Spec.Template.Spec.SecurityContext.RunAsNonRoot).Should(Equal(emqx.GetSecurityContext().RunAsNonRoot))
 				Expect(sts.Spec.Template.Spec.SecurityContext.RunAsUser).Should(Equal(emqx.GetSecurityContext().RunAsUser))

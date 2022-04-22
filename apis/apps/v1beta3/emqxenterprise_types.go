@@ -34,7 +34,8 @@ type EmqxEnterpriseTemplate struct {
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
-	Env []corev1.EnvVar `json:"env,omitempty"`
+	Env  []corev1.EnvVar `json:"env,omitempty"`
+	Args []string        `json:"args,omitempty"`
 
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
 
@@ -174,6 +175,11 @@ func (emqx *EmqxEnterprise) SetACL(acl []ACL) {
 func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar { return emqx.Spec.EmqxTemplate.Env }
 func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) {
 	emqx.Spec.EmqxTemplate.Env = env
+}
+
+func (emqx *EmqxEnterprise) GetArgs() []string { return emqx.Spec.EmqxTemplate.Args }
+func (emqx *EmqxEnterprise) SetArgs(args []string) {
+	emqx.Spec.EmqxTemplate.Args = args
 }
 
 func (emqx *EmqxEnterprise) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
