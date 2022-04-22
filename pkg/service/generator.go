@@ -98,6 +98,7 @@ func generateStatefulSetDef(emqx v1beta3.Emqx) *appsv1.StatefulSet {
 					NodeSelector:     emqx.GetNodeSelector(),
 					ImagePullSecrets: emqx.GetImagePullSecrets(),
 					SecurityContext:  emqx.GetSecurityContext(),
+					InitContainers:   emqx.GetInitContainers(),
 					Containers: []corev1.Container{
 						{
 							Name:            "emqx",
