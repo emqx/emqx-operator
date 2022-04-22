@@ -38,7 +38,7 @@ $ helm install emqx-operator emqx/emqx-operator \
    --create-namespace
 ```
 **注意事项**：
-如果想通过`Prometheus`收集`emqx-operator`相关`metrics`，需要提前部署[Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator)，并应用`ServiceMonitor`
+如果想通过`Prometheus`收集`emqx-operator`相关`metrics`，需要提前部署[Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator)
 
 ```bash
 $ cat << EOF kubectl apply -f -

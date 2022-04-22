@@ -39,7 +39,7 @@ $ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.1.5/emqx
       --create-namespace
    ```
 **Note**:
-If you want to collect metrics about `EMQX Operator` by `Prometheus`,first of all you need to deploy [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator) and apply the application of `ServiceMonitor`
+If you want to collect metrics about `EMQX Operator` by `Prometheus`,first of all you need to deploy [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator)
 
 ```bash
 $ cat << EOF kubectl apply -f -

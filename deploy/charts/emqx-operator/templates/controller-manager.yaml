@@ -74,7 +74,8 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=10
-        image: "{{ .Values.image.repositoryForKubeRbacProxy }}:{{ .Values.image.tagForKubeRbacProxy }}"
+        image: "{{index .Values "kube-rbac-proxy" "repository"}}:{{index .Values "kube-rbac-proxy" "tag" | default (index .Values "kube-rbac-proxy" "tag") }}"
+        imagePullPolicy: {{index .Values "kube-rbac-proxy" "pullPolicy" }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443

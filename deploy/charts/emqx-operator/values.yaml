@@ -11,8 +11,11 @@ image:
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
-  repositoryForKubeRbacProxy: gcr.io/kubebuilder/kube-rbac-proxy
-  tagForKubeKubeRbacProxy: v0.8.0
+
+kube-rbac-proxy:
+    repository: gcr.io/kubebuilder/kube-rbac-proxy
+    tag: v0.8.0
+    pullPolicy: IfNotPresent
 
 imagePullSecrets: []
 nameOverride: ""
