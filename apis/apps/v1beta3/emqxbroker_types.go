@@ -55,6 +55,7 @@ type EmqxBrokerSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
+	InitContainers   []corev1.Container `json:"initContainers,omitempty"`
 	EmqxTemplate     EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 	TelegrafTemplate *TelegrafTemplate  `json:"telegrafTemplate,omitempty"`
 }
@@ -182,6 +183,13 @@ func (emqx *EmqxBroker) GetSecurityContext() *corev1.PodSecurityContext {
 }
 func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityContext) {
 	emqx.Spec.EmqxTemplate.SecurityContext = securityContext
+}
+
+func (emqx *EmqxBroker) GetInitContainers() []corev1.Container {
+	return emqx.Spec.InitContainers
+}
+func (emqx *EmqxBroker) SetInitContainers(containers []corev1.Container) {
+	emqx.Spec.InitContainers = containers
 }
 
 func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {
