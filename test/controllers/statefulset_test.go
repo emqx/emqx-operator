@@ -57,9 +57,11 @@ var _ = Describe("", func() {
 				// Expect(sts.Spec.Template.Spec.SecurityContext.FSGroupChangePolicy).Should(Equal(emqx.GetSecurityContext().FSGroupChangePolicy)) Expect(sts.Spec.Template.Spec.SecurityContext.RunAsNonRoot).Should(Equal(emqx.GetSecurityContext().RunAsNonRoot))
 				Expect(sts.Spec.Template.Spec.SecurityContext.RunAsUser).Should(Equal(emqx.GetSecurityContext().RunAsUser))
 				Expect(sts.Spec.Template.Spec.SecurityContext.SupplementalGroups).Should(Equal(emqx.GetSecurityContext().SupplementalGroups))
-				Expect(sts.Spec.Template.Spec.InitContainers[0].Name).Should(Equal(emqx.GetInitContainers()[0].Name))
-				Expect(sts.Spec.Template.Spec.InitContainers[0].Image).Should(Equal(emqx.GetInitContainers()[0].Image))
-				Expect(sts.Spec.Template.Spec.InitContainers[0].Args).Should(Equal(emqx.GetInitContainers()[0].Args))
+				if emqx.GetInitContainers() != nil {
+					Expect(sts.Spec.Template.Spec.InitContainers[0].Name).Should(Equal(emqx.GetInitContainers()[0].Name))
+					Expect(sts.Spec.Template.Spec.InitContainers[0].Image).Should(Equal(emqx.GetInitContainers()[0].Image))
+					Expect(sts.Spec.Template.Spec.InitContainers[0].Args).Should(Equal(emqx.GetInitContainers()[0].Args))
+				}
 			}
 		})
 	})
