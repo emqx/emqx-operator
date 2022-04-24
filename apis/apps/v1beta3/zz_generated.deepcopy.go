@@ -304,6 +304,21 @@ func (in *EmqxBrokerTemplate) DeepCopyInto(out *EmqxBrokerTemplate) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
+	if in.ReadinessProbe != nil {
+		in, out := &in.ReadinessProbe, &out.ReadinessProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.LivenessProbe != nil {
+		in, out := &in.LivenessProbe, &out.LivenessProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.StartupProbe != nil {
+		in, out := &in.StartupProbe, &out.StartupProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Listener.DeepCopyInto(&out.Listener)
 	if in.ACL != nil {
 		in, out := &in.ACL, &out.ACL
@@ -502,6 +517,21 @@ func (in *EmqxEnterpriseTemplate) DeepCopyInto(out *EmqxEnterpriseTemplate) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
+	if in.ReadinessProbe != nil {
+		in, out := &in.ReadinessProbe, &out.ReadinessProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.LivenessProbe != nil {
+		in, out := &in.LivenessProbe, &out.LivenessProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.StartupProbe != nil {
+		in, out := &in.StartupProbe, &out.StartupProbe
+		*out = new(v1.Probe)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Listener.DeepCopyInto(&out.Listener)
 	if in.ACL != nil {
 		in, out := &in.ACL, &out.ACL

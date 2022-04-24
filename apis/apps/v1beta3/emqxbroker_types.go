@@ -32,9 +32,12 @@ type EmqxBrokerTemplate struct {
 	Env  []corev1.EnvVar `json:"env,omitempty"`
 	Args []string        `json:"args,omitempty"`
 
-	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+	SecurityContext *corev1.PodSecurityContext  `json:"securityContext,omitempty"`
+	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
+	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
 
 	Listener Listener           `json:"listener,omitempty"`
 	ACL      []ACL              `json:"acl,omitempty"`
@@ -100,28 +103,11 @@ func (emqx *EmqxBroker) GetReplicas() *int32 {
 }
 func (emqx *EmqxBroker) SetReplicas(replicas *int32) { emqx.Spec.Replicas = replicas }
 
-func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.EmqxTemplate.Image }
-func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.EmqxTemplate.Image = image }
-
-func (emqx *EmqxBroker) GetImagePullPolicy() corev1.PullPolicy {
-	return emqx.Spec.EmqxTemplate.ImagePullPolicy
-}
-func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
-	emqx.Spec.EmqxTemplate.ImagePullPolicy = pullPolicy
-}
-
 func (emqx *EmqxBroker) GetImagePullSecrets() []corev1.LocalObjectReference {
 	return emqx.Spec.ImagePullSecrets
 }
 func (emqx *EmqxBroker) SetImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) {
 	emqx.Spec.ImagePullSecrets = imagePullSecrets
-}
-
-func (emqx *EmqxBroker) GetResource() corev1.ResourceRequirements {
-	return emqx.Spec.EmqxTemplate.Resources
-}
-func (emqx *EmqxBroker) SetResource(resource corev1.ResourceRequirements) {
-	emqx.Spec.EmqxTemplate.Resources = resource
 }
 
 func (emqx *EmqxBroker) GetPersistent() corev1.PersistentVolumeClaimSpec {
@@ -141,11 +127,6 @@ func (emqx *EmqxBroker) SetNodeSelector(nodeSelector map[string]string) {
 	emqx.Spec.NodeSelector = nodeSelector
 }
 
-func (emqx *EmqxBroker) GetListener() Listener { return emqx.Spec.EmqxTemplate.Listener }
-func (emqx *EmqxBroker) SetListener(listener Listener) {
-	emqx.Spec.EmqxTemplate.Listener = listener
-}
-
 func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
 func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
 
@@ -154,14 +135,40 @@ func (emqx *EmqxBroker) SetToleRations(tolerations []corev1.Toleration) {
 	emqx.Spec.ToleRations = tolerations
 }
 
+func (emqx *EmqxBroker) GetInitContainers() []corev1.Container {
+	return emqx.Spec.InitContainers
+}
+func (emqx *EmqxBroker) SetInitContainers(containers []corev1.Container) {
+	emqx.Spec.InitContainers = containers
+}
+
+func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.EmqxTemplate.Image }
+func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.EmqxTemplate.Image = image }
+
+func (emqx *EmqxBroker) GetImagePullPolicy() corev1.PullPolicy {
+	return emqx.Spec.EmqxTemplate.ImagePullPolicy
+}
+func (emqx *EmqxBroker) SetImagePullPolicy(pullPolicy corev1.PullPolicy) {
+	emqx.Spec.EmqxTemplate.ImagePullPolicy = pullPolicy
+}
+
 func (emqx *EmqxBroker) GetExtraVolumes() []corev1.Volume { return emqx.Spec.EmqxTemplate.ExtraVolumes }
 func (emqx *EmqxBroker) GetExtraVolumeMounts() []corev1.VolumeMount {
 	return emqx.Spec.EmqxTemplate.ExtraVolumeMounts
 }
 
-func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
-func (emqx *EmqxBroker) SetACL(acl []ACL) {
-	emqx.Spec.EmqxTemplate.ACL = acl
+func (emqx *EmqxBroker) GetResource() corev1.ResourceRequirements {
+	return emqx.Spec.EmqxTemplate.Resources
+}
+func (emqx *EmqxBroker) SetResource(resource corev1.ResourceRequirements) {
+	emqx.Spec.EmqxTemplate.Resources = resource
+}
+
+func (emqx *EmqxBroker) GetSecurityContext() *corev1.PodSecurityContext {
+	return emqx.Spec.EmqxTemplate.SecurityContext
+}
+func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityContext) {
+	emqx.Spec.EmqxTemplate.SecurityContext = securityContext
 }
 
 func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.EmqxTemplate.Env }
@@ -174,6 +181,37 @@ func (emqx *EmqxBroker) SetArgs(args []string) {
 	emqx.Spec.EmqxTemplate.Args = args
 }
 
+func (emqx *EmqxBroker) GetReadinessProbe() *corev1.Probe {
+	return emqx.Spec.EmqxTemplate.ReadinessProbe
+}
+func (emqx *EmqxBroker) SetReadinessProbe(probe *corev1.Probe) {
+	emqx.Spec.EmqxTemplate.ReadinessProbe = probe
+}
+
+func (emqx *EmqxBroker) GetLivenessProbe() *corev1.Probe {
+	return emqx.Spec.EmqxTemplate.LivenessProbe
+}
+func (emqx *EmqxBroker) SetLivenessProbe(probe *corev1.Probe) {
+	emqx.Spec.EmqxTemplate.LivenessProbe = probe
+}
+
+func (emqx *EmqxBroker) GetStartupProbe() *corev1.Probe {
+	return emqx.Spec.EmqxTemplate.StartupProbe
+}
+func (emqx *EmqxBroker) SetStartupProbe(probe *corev1.Probe) {
+	emqx.Spec.EmqxTemplate.StartupProbe = probe
+}
+
+func (emqx *EmqxBroker) GetListener() Listener { return emqx.Spec.EmqxTemplate.Listener }
+func (emqx *EmqxBroker) SetListener(listener Listener) {
+	emqx.Spec.EmqxTemplate.Listener = listener
+}
+
+func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxBroker) SetACL(acl []ACL) {
+	emqx.Spec.EmqxTemplate.ACL = acl
+}
+
 func (emqx *EmqxBroker) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
 func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
 	emqx.Spec.EmqxTemplate.Plugins = plugins
@@ -182,20 +220,6 @@ func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
 func (emqx *EmqxBroker) GetModules() []EmqxBrokerModule { return emqx.Spec.EmqxTemplate.Modules }
 func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModule) {
 	emqx.Spec.EmqxTemplate.Modules = modules
-}
-
-func (emqx *EmqxBroker) GetSecurityContext() *corev1.PodSecurityContext {
-	return emqx.Spec.EmqxTemplate.SecurityContext
-}
-func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityContext) {
-	emqx.Spec.EmqxTemplate.SecurityContext = securityContext
-}
-
-func (emqx *EmqxBroker) GetInitContainers() []corev1.Container {
-	return emqx.Spec.InitContainers
-}
-func (emqx *EmqxBroker) SetInitContainers(containers []corev1.Container) {
-	emqx.Spec.InitContainers = containers
 }
 
 func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {

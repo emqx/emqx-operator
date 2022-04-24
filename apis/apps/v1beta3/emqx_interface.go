@@ -27,18 +27,6 @@ type EmqxSpec interface {
 	GetReplicas() *int32
 	SetReplicas(replicas *int32)
 
-	GetImage() string
-	SetImage(image string)
-
-	GetImagePullPolicy() corev1.PullPolicy
-	SetImagePullPolicy(pullPolicy corev1.PullPolicy)
-
-	GetImagePullSecrets() []corev1.LocalObjectReference
-	SetImagePullSecrets([]corev1.LocalObjectReference)
-
-	GetResource() corev1.ResourceRequirements
-	SetResource(resource corev1.ResourceRequirements)
-
 	GetPersistent() corev1.PersistentVolumeClaimSpec
 	SetPersistent(persistent corev1.PersistentVolumeClaimSpec)
 
@@ -57,8 +45,35 @@ type EmqxSpec interface {
 	GetToleRations() []corev1.Toleration
 	SetToleRations(tolerations []corev1.Toleration)
 
+	GetInitContainers() []corev1.Container
+	SetInitContainers(containers []corev1.Container)
+
+	GetImage() string
+	SetImage(image string)
+
+	GetImagePullPolicy() corev1.PullPolicy
+	SetImagePullPolicy(pullPolicy corev1.PullPolicy)
+
+	GetImagePullSecrets() []corev1.LocalObjectReference
+	SetImagePullSecrets([]corev1.LocalObjectReference)
+
+	GetSecurityContext() *corev1.PodSecurityContext
+	SetSecurityContext(securityContext *corev1.PodSecurityContext)
+
+	GetResource() corev1.ResourceRequirements
+	SetResource(resource corev1.ResourceRequirements)
+
 	GetExtraVolumes() []corev1.Volume
 	GetExtraVolumeMounts() []corev1.VolumeMount
+
+	GetReadinessProbe() *corev1.Probe
+	SetReadinessProbe(probe *corev1.Probe)
+
+	GetLivenessProbe() *corev1.Probe
+	SetLivenessProbe(probe *corev1.Probe)
+
+	GetStartupProbe() *corev1.Probe
+	SetStartupProbe(probe *corev1.Probe)
 
 	GetEnv() []corev1.EnvVar
 	SetEnv(env []corev1.EnvVar)
@@ -74,12 +89,6 @@ type EmqxSpec interface {
 
 	GetListener() Listener
 	SetListener(Listener)
-
-	GetSecurityContext() *corev1.PodSecurityContext
-	SetSecurityContext(securityContext *corev1.PodSecurityContext)
-
-	GetInitContainers() []corev1.Container
-	SetInitContainers(containers []corev1.Container)
 
 	GetTelegrafTemplate() *TelegrafTemplate
 	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
