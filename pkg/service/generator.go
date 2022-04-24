@@ -107,6 +107,9 @@ func generateStatefulSetDef(emqx v1beta3.Emqx) *appsv1.StatefulSet {
 							Resources:       emqx.GetResource(),
 							Env:             emqx.GetEnv(),
 							Args:            emqx.GetArgs(),
+							ReadinessProbe:  emqx.GetReadinessProbe(),
+							LivenessProbe:   emqx.GetLivenessProbe(),
+							StartupProbe:    emqx.GetStartupProbe(),
 							Lifecycle: &corev1.Lifecycle{
 								PreStop: &corev1.LifecycleHandler{
 									Exec: &corev1.ExecAction{
@@ -347,32 +350,6 @@ func generateSvc(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 						IntVal: port,
 					},
 				})
-
-				httpGetAction := &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.IntOrString{
-						IntVal: port,
-					},
-					Scheme: corev1.URISchemeHTTP,
-				}
-
-				container.ReadinessProbe = &corev1.Probe{
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: httpGetAction,
-					},
-					InitialDelaySeconds: 10,
-					PeriodSeconds:       5,
-					FailureThreshold:    30,
-				}
-
-				container.LivenessProbe = &corev1.Probe{
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: httpGetAction,
-					},
-					InitialDelaySeconds: 60,
-					PeriodSeconds:       30,
-					FailureThreshold:    10,
-				}
 			}
 		}
 	}

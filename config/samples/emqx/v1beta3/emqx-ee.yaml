@@ -52,6 +52,7 @@ spec:
           sysctl -w net.netfilter.nf_conntrack_max=1000000
           sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
   emqxTemplate:
+    image: emqx/emqx-ee:4.4.3
     securityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -63,7 +64,6 @@ spec:
       - |
         printenv | grep "^EMQX_"
         emqx foreground
-    image: emqx/emqx-ee:4.4.0
     env:
       - name: "EMQX_LOG__LEVEL"
         value: "debug"
@@ -79,6 +79,20 @@ spec:
         value: "emqx-ee"
       - name: "EMQX_CLUSTER__DNS__NAME"
         value: "emqx-ee-headless.default.svc.cluster.local"
+    readinessProbe:
+      httpGet:
+        path: /status
+        port: 8081
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 30
+    livenessProbe:
+      httpGet:
+        path: /status
+        port: 8081
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      failureThreshold: 10
     plugins:
       - name: emqx_management
         enable: true
