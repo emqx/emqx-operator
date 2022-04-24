@@ -17,7 +17,7 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       path: /validate-apps-emqx-io-v1beta3-emqxbroker
   failurePolicy: Fail
-  name: validator.emqxbroker.v1beta3.emqx.io
+  name: validator.broker.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
@@ -38,7 +38,7 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       path: /validate-apps-emqx-io-v1beta3-emqxenterprise
   failurePolicy: Fail
-  name: validator.emqxenterprise.v1beta3.emqx.io
+  name: validator.enterprise.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
