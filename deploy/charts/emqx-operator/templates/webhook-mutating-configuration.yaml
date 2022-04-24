@@ -17,7 +17,7 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       path: /mutate-apps-emqx-io-v1beta3-emqxbroker
   failurePolicy: Fail
-  name: mutating.emqxbroker.v1beta3.emqx.io
+  name: mutating.broker.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
@@ -38,7 +38,7 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       path: /mutate-apps-emqx-io-v1beta3-emqxenterprise
   failurePolicy: Fail
-  name: mutating.emqxenterprise.v1beta3.emqx.io
+  name: mutating.enterprise.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
