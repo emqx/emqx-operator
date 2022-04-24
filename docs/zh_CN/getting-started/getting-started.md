@@ -37,6 +37,32 @@ $ helm install emqx-operator emqx/emqx-operator \
    --namespace emqx-operator-system \
    --create-namespace
 ```
+**注意事项**：
+如果想通过`Prometheus`收集`emqx-operator`相关`metrics`，需要提前部署[Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator)
+
+```bash
+$ cat << EOF kubectl apply -f -
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: emqx-operator-controller-manager-metrics-monitor
+  namespace: emqx-operator-system
+spec:
+  endpoints:
+  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    path: /metrics
+    port: https
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+EOF
+```
+
 
 ### 检查 EMQX Operator 控制器状态
 

@@ -12,6 +12,11 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
+kube-rbac-proxy:
+    repository: gcr.io/kubebuilder/kube-rbac-proxy
+    tag: v0.8.0
+    pullPolicy: IfNotPresent
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
