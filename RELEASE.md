@@ -1,5 +1,6 @@
 ## Release Note 🍻
 
-### Fixes 🛠
+### Features 🌈
 
-- Fix `.spec.listener.certificate.*.data` not work
+- Add `SecurityContext` for `EMQX Custom Resource`
+- Add `kube-rbac-proxy.yaml` for `EMQX Operator Controller`
