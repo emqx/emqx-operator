@@ -104,7 +104,7 @@ jobs:
         timeout-minutes: 10
         run: |
           set -euo pipefail
-          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.name=="manager" and .ready==true) | .image' | tr -d '"')" != "$IMG" ]; do
+          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .image' | tr -d '"')" != "$IMG" ]; do
             echo "waiting operator controller pod running"
             sleep 1
           done
