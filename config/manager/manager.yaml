@@ -5,6 +5,21 @@ metadata:
     control-plane: controller-manager
   name: system
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: controller-manager-metrics-service
+  namespace: system
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: metrics
+  selector:
+    control-plane: controller-manager
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -29,10 +44,16 @@ spec:
         - /manager
         args:
         - --leader-elect
+        - --metrics-bind-address=:8080
+        - --health-probe-bind-address=:8081        
         image: controller:latest
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP        
         livenessProbe:
           httpGet:
             path: /healthz

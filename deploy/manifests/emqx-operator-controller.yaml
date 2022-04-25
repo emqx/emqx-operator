@@ -8691,34 +8691,6 @@ rules:
   - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: emqx-operator-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: emqx-operator-proxy-role
-rules:
-- apiGroups:
-  - authentication.k8s.io
-  resources:
-  - tokenreviews
-  verbs:
-  - create
-- apiGroups:
-  - authorization.k8s.io
-  resources:
-  - subjectaccessreviews
-  verbs:
-  - create
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: emqx-operator-leader-election-rolebinding
@@ -8740,19 +8712,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: emqx-operator-manager-role
-subjects:
-- kind: ServiceAccount
-  name: emqx-operator-controller-manager
-  namespace: emqx-operator-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: emqx-operator-proxy-rolebinding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: emqx-operator-proxy-role
 subjects:
 - kind: ServiceAccount
   name: emqx-operator-controller-manager
@@ -8786,9 +8745,9 @@ metadata:
   namespace: emqx-operator-system
 spec:
   ports:
-  - name: https
-    port: 8443
-    targetPort: https
+  - name: metrics
+    port: 8080
+    targetPort: metrics
   selector:
     control-plane: controller-manager
 ---
@@ -8824,6 +8783,8 @@ spec:
       containers:
       - args:
         - --leader-elect
+        - --metrics-bind-address=:8080
+        - --health-probe-bind-address=:8081
         command:
         - /manager
         image: emqx/emqx-operator-controller:1.1.6
@@ -8835,6 +8796,9 @@ spec:
           periodSeconds: 20
         name: manager
         ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
         - containerPort: 9443
           name: webhook-server
           protocol: TCP
