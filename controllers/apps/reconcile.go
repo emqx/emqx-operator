@@ -18,10 +18,9 @@ package apps
 
 import (
 	"context"
-	"errors"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -70,42 +68,22 @@ var (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	reqLogger.Info("Reconciling")
-
 	// Fetch the EMQX Cluster instance
 	instance, err := handler.getEmqx(req.Namespace, req.Name)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			reqLogger.Info("EMQX Cluster delete")
-			// instance.SetNamespace(req.NamespacedName.Namespace)
-			// instance.SetName(req.NamespacedName.Name)
-			handler.metaCache.Del(&metav1.ObjectMeta{
-				Name:      req.Name,
-				Namespace: req.Namespace,
-			})
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	// reqLogger.V(5).Info(fmt.Sprintf("EMQX Cluster Spec:\n %+v", instance))
-
 	if err := handler.Do(instance); err != nil {
 		if err.Error() == "need requeue" {
 			return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 		}
-		reqLogger.Error(err, "Reconcile handler")
+		handler.eventsCli.Event(instance, corev1.EventTypeWarning, "Reconcile", err.Error())
 		return reconcile.Result{}, err
-	}
-
-	if err := handler.checkReadyReplicas(instance); err != nil {
-		reqLogger.Info(err.Error())
-		return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 	}
 
 	return reconcile.Result{RequeueAfter: reconcileTime}, nil
@@ -134,22 +112,4 @@ func (handler *Handler) getEmqx(Namespace, Name string) (v1beta3.Emqx, error) {
 		return enterprise, err
 	}
 	return broker, err
-}
-
-func (handler *Handler) checkReadyReplicas(emqx v1beta3.Emqx) error {
-	sts := &appsv1.StatefulSet{}
-	if err := handler.client.Get(
-		context.Background(),
-		types.NamespacedName{
-			Name:      emqx.GetName(),
-			Namespace: emqx.GetNamespace(),
-		},
-		sts,
-	); err != nil {
-		return err
-	}
-	if *emqx.GetReplicas() != sts.Status.ReadyReplicas {
-		return errors.New("waiting all of emqx pods become ready")
-	}
-	return nil
 }
