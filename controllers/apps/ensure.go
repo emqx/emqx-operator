@@ -113,7 +113,6 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta3.Emqx) err
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -128,7 +127,7 @@ func (handler *Handler) doCreate(obj client.Object) error {
 		return err
 	}
 	if err := handler.client.Create(context.TODO(), obj); err != nil {
-		logger.Error(err, "crate resource failed")
+		logger.Error(err, "create resource failed")
 		return err
 	}
 	logger.Info("create resource successfully")
