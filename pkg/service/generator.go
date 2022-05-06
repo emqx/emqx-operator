@@ -54,11 +54,6 @@ func Generate(emqx v1beta3.Emqx) []client.Object {
 		resources = append(resources, license)
 	}
 
-	cmForTelegraf, sts := generateContainerForTelegraf(emqx, sts)
-	if cmForTelegraf != nil {
-		resources = append(resources, cmForTelegraf)
-	}
-
 	resources = append(resources, sts)
 
 	ownerRef := metav1.NewControllerRef(emqx, emqx.GetObjectKind().GroupVersionKind())
@@ -132,63 +127,6 @@ func generateStatefulSetDef(emqx v1beta3.Emqx) *appsv1.StatefulSet {
 	sts.Spec.Template.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
 
 	return generateVolume(emqx, sts)
-}
-
-func generateContainerForTelegraf(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
-	names := v1beta3.Names{Object: emqx}
-	telegrafTemplate := emqx.GetTelegrafTemplate()
-	if telegrafTemplate == nil {
-		return nil, sts
-	}
-	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:    emqx.GetLabels(),
-			Namespace: emqx.GetNamespace(),
-			Name:      names.Telegraf(),
-		},
-		Data: map[string]string{"telegraf.conf": *telegrafTemplate.Conf},
-	}
-
-	container := corev1.Container{
-		Name:            "telegraf",
-		Image:           telegrafTemplate.Image,
-		ImagePullPolicy: telegrafTemplate.ImagePullPolicy,
-		Resources:       telegrafTemplate.Resources,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      cm.Name,
-				MountPath: "/etc/telegraf/telegraf.conf",
-				SubPath:   "telegraf.conf",
-				ReadOnly:  true,
-			},
-			{
-				Name:      names.Log(),
-				MountPath: "/opt/emqx/log",
-			},
-		},
-	}
-
-	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, container)
-
-	sts.Spec.Template.Spec.Volumes = append(
-		sts.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: cm.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cm.Name,
-					},
-				},
-			},
-		},
-	)
-
-	return cm, sts
 }
 
 func generateRBAC(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, *appsv1.StatefulSet) {

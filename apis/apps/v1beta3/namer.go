@@ -46,7 +46,3 @@ func (n Names) MQTTSCertificate() string {
 func (n Names) WSSCertificate() string {
 	return fmt.Sprintf("%s-%s-%s", n.Object.GetName(), "wss", "cert")
 }
-
-func (n Names) Telegraf() string {
-	return fmt.Sprintf("%s-%s", n.Object.GetName(), "telegraf")
-}

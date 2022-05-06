@@ -74,7 +74,6 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.EmqxTemplate.ExtraVolumes = src.Spec.ExtraVolumes
 	dst.Spec.EmqxTemplate.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
 	dst.Spec.EmqxTemplate.Env = src.Spec.Env
-	dst.Spec.TelegrafTemplate = src.Spec.TelegrafTemplate
 
 	// Status
 	for _, condition := range src.Status.Conditions {
@@ -135,7 +134,6 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.ExtraVolumes = src.Spec.EmqxTemplate.ExtraVolumes
 	dst.Spec.ExtraVolumeMounts = src.Spec.EmqxTemplate.ExtraVolumeMounts
 	dst.Spec.Env = src.Spec.EmqxTemplate.Env
-	dst.Spec.TelegrafTemplate = src.Spec.TelegrafTemplate
 
 	// Status
 	for _, condition := range src.Status.Conditions {

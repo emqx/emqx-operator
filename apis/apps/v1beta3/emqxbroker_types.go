@@ -59,9 +59,8 @@ type EmqxBrokerSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
-	InitContainers   []corev1.Container `json:"initContainers,omitempty"`
-	EmqxTemplate     EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
-	TelegrafTemplate *TelegrafTemplate  `json:"telegrafTemplate,omitempty"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	EmqxTemplate   EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -220,11 +219,4 @@ func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
 func (emqx *EmqxBroker) GetModules() []EmqxBrokerModule { return emqx.Spec.EmqxTemplate.Modules }
 func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModule) {
 	emqx.Spec.EmqxTemplate.Modules = modules
-}
-
-func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {
-	return emqx.Spec.TelegrafTemplate
-}
-func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
-	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }
