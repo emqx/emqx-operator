@@ -32,28 +32,15 @@ type Condition struct {
 type ConditionType string
 
 const (
-	ClusterConditionAvailable   ConditionType = "Available"
-	ClusterConditionHealthy     ConditionType = "Healthy"
-	ClusterConditionRunning     ConditionType = "Running"
-	ClusterConditionCreating    ConditionType = "Creating"
-	ClusterConditionRecovering  ConditionType = "Recovering"
-	ClusterConditionScaling     ConditionType = "Scaling"
-	ClusterConditionScalingDown ConditionType = "ScalingDown"
-	ClusterConditionUpgrading   ConditionType = "Upgrading"
-	ClusterConditionUpdating    ConditionType = "Updating"
-	ClusterConditionFailed      ConditionType = "Failed"
+	ClusterConditionRunning ConditionType = "Running"
+	ClusterConditionFailed  ConditionType = "Failed"
 )
 
 //+kubebuilder:object:generate=false
 type EmqxStatus interface {
 	DescConditionsByTime()
 	GetConditions() []Condition
-	SetScalingUpCondition(message string)
-	SetCreateCondition(message string)
-	SetScalingDownCondition(message string)
-	SetUpgradingCondition(message string)
-	SetUpdatingCondition(message string)
-	SetReadyCondition(message string)
+	SetRunningCondition(message string)
 	SetFailedCondition(message string)
 	setClusterCondition(c Condition)
 	ClearCondition(t ConditionType)
@@ -78,38 +65,13 @@ func (ecs *Status) GetConditions() []Condition {
 	return ecs.Conditions
 }
 
-func (ecs *Status) SetScalingUpCondition(message string) {
-	c := newClusterCondition(ClusterConditionScaling, corev1.ConditionTrue, "Scaling up", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) SetCreateCondition(message string) {
-	c := newClusterCondition(ClusterConditionCreating, corev1.ConditionTrue, "Creating", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) SetScalingDownCondition(message string) {
-	c := newClusterCondition(ClusterConditionScaling, corev1.ConditionTrue, "Scaling down", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) SetUpgradingCondition(message string) {
-	c := newClusterCondition(ClusterConditionUpgrading, corev1.ConditionTrue, "Cluster upgrading", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) SetUpdatingCondition(message string) {
-	c := newClusterCondition(ClusterConditionUpdating, corev1.ConditionTrue, "Cluster updating", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) SetReadyCondition(message string) {
-	c := newClusterCondition(ClusterConditionHealthy, corev1.ConditionTrue, "Cluster available", message)
+func (ecs *Status) SetRunningCondition(message string) {
+	c := newClusterCondition(ClusterConditionRunning, corev1.ConditionTrue, "Running", message)
 	ecs.setClusterCondition(*c)
 }
 
 func (ecs *Status) SetFailedCondition(message string) {
-	c := newClusterCondition(ClusterConditionFailed, corev1.ConditionTrue, "Cluster failed", message)
+	c := newClusterCondition(ClusterConditionFailed, corev1.ConditionTrue, "Failed", message)
 	ecs.setClusterCondition(*c)
 }
 
