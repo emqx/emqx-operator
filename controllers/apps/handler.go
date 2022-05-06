@@ -46,7 +46,7 @@ func (handler *Handler) Do(emqx v1beta3.Emqx) error {
 		return err
 	}
 
-	emqx.SetReadyCondition("Cluster ok")
+	emqx.SetRunningCondition("Cluster ok")
 	return handler.updateEmqxStatus(emqx)
 }
 
