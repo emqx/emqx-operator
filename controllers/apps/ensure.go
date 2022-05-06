@@ -173,12 +173,6 @@ func (handler *Handler) postUpdate(obj client.Object, emqx v1beta3.Emqx) error {
 			return err
 		}
 	}
-	if obj.GetName() == names.Telegraf() {
-		err := handler.execToPods(emqx, "telegraf", "/bin/kill 1")
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

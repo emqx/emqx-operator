@@ -48,14 +48,13 @@ var _ = Describe("", func() {
 				}, timeout, interval).Should(Succeed())
 
 				Expect(sts.Spec.Replicas).Should(Equal(emqx.GetReplicas()))
-				Expect(sts.Spec.Template.Spec.Containers).Should(HaveLen(2))
+				Expect(sts.Spec.Template.Spec.Containers).Should(HaveLen(1))
 				Expect(sts.Spec.Template.Labels).Should(Equal(emqx.GetLabels()))
 				Expect(sts.Spec.Template.Spec.Affinity).Should(Equal(emqx.GetAffinity()))
 				Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 				Expect(sts.Spec.Template.Spec.Containers[0].Resources).Should(Equal(emqx.GetResource()))
 				Expect(sts.Spec.Template.Spec.Containers[0].Args).Should(Equal(emqx.GetArgs()))
 				Expect(sts.Spec.Template.Spec.SecurityContext.FSGroup).Should(Equal(emqx.GetSecurityContext().FSGroup))
-				// Expect(sts.Spec.Template.Spec.SecurityContext.FSGroupChangePolicy).Should(Equal(emqx.GetSecurityContext().FSGroupChangePolicy)) Expect(sts.Spec.Template.Spec.SecurityContext.RunAsNonRoot).Should(Equal(emqx.GetSecurityContext().RunAsNonRoot))
 				Expect(sts.Spec.Template.Spec.SecurityContext.RunAsUser).Should(Equal(emqx.GetSecurityContext().RunAsUser))
 				Expect(sts.Spec.Template.Spec.SecurityContext.SupplementalGroups).Should(Equal(emqx.GetSecurityContext().SupplementalGroups))
 				if emqx.GetInitContainers() != nil {

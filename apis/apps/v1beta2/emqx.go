@@ -79,8 +79,8 @@ type EmqxSpec interface {
 	GetSecurityContext() *corev1.PodSecurityContext
 	SetSecurityContext(securityContext *corev1.PodSecurityContext)
 
-	GetTelegrafTemplate() *v1beta3.TelegrafTemplate
-	SetTelegrafTemplate(telegraftedTemplate *v1beta3.TelegrafTemplate)
+	GetTelegrafTemplate() *TelegrafTemplate
+	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
 }
 
 // +kubebuilder:object:generate=false

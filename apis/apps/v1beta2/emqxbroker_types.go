@@ -73,7 +73,7 @@ type EmqxBrokerSpec struct {
 
 	EmqxTemplate EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 
-	TelegrafTemplate *v1beta3.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
+	TelegrafTemplate *TelegrafTemplate `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -207,9 +207,9 @@ func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityCo
 	emqx.Spec.SecurityContext = securityContext
 }
 
-func (emqx *EmqxBroker) GetTelegrafTemplate() *v1beta3.TelegrafTemplate {
+func (emqx *EmqxBroker) GetTelegrafTemplate() *TelegrafTemplate {
 	return emqx.Spec.TelegrafTemplate
 }
-func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *v1beta3.TelegrafTemplate) {
+func (emqx *EmqxBroker) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
 	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

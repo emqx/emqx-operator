@@ -61,12 +61,6 @@ func (r *EmqxBroker) Default() {
 		Items: r.Spec.EmqxTemplate.Plugins,
 	}
 	plugins.Default()
-	if r.Spec.TelegrafTemplate != nil {
-		_, index := plugins.Lookup("emqx_prometheus")
-		if index == -1 {
-			plugins.Items = append(plugins.Items, Plugin{Name: "emqx_prometheus", Enable: true})
-		}
-	}
 	r.Spec.EmqxTemplate.Plugins = plugins.Items
 
 	modules := &EmqxBrokerModuleList{
@@ -91,11 +85,6 @@ func (r *EmqxBroker) Default() {
 		}
 	} else {
 		env.ClusterForK8S(r)
-	}
-	if r.Spec.TelegrafTemplate != nil {
-		env.Append([]corev1.EnvVar{
-			{Name: "EMQX_PROMETHEUS__PUSH__GATEWAY__SERVER", Value: ""},
-		})
 	}
 
 	r.Spec.EmqxTemplate.Env = env.Items

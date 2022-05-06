@@ -74,8 +74,8 @@ type EmqxEnterpriseSpec struct {
 
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
 
-	EmqxTemplate     EmqxEnterpriseTemplate    `json:"emqxTemplate,omitempty"`
-	TelegrafTemplate *v1beta3.TelegrafTemplate `json:"telegrafTemplate,omitempty"`
+	EmqxTemplate     EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
+	TelegrafTemplate *TelegrafTemplate      `json:"telegrafTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -219,9 +219,9 @@ func (emqx *EmqxEnterprise) SetSecurityContext(securityContext *corev1.PodSecuri
 	emqx.Spec.SecurityContext = securityContext
 }
 
-func (emqx *EmqxEnterprise) GetTelegrafTemplate() *v1beta3.TelegrafTemplate {
+func (emqx *EmqxEnterprise) GetTelegrafTemplate() *TelegrafTemplate {
 	return emqx.Spec.TelegrafTemplate
 }
-func (emqx *EmqxEnterprise) SetTelegrafTemplate(telegrafTemplate *v1beta3.TelegrafTemplate) {
+func (emqx *EmqxEnterprise) SetTelegrafTemplate(telegrafTemplate *TelegrafTemplate) {
 	emqx.Spec.TelegrafTemplate = telegrafTemplate
 }

@@ -89,9 +89,6 @@ type EmqxSpec interface {
 
 	GetListener() Listener
 	SetListener(Listener)
-
-	GetTelegrafTemplate() *TelegrafTemplate
-	SetTelegrafTemplate(telegraftedTemplate *TelegrafTemplate)
 }
 
 // +kubebuilder:object:generate=false
