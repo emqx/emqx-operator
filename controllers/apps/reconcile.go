@@ -69,7 +69,7 @@ var (
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Fetch the EMQX Cluster instance
-	instance, err := handler.getEmqx(req.Namespace, req.Name)
+	emqx, err := handler.getEmqx(req.Namespace, req.Name)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -78,14 +78,17 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return reconcile.Result{}, err
 	}
 
-	if err := handler.Do(instance); err != nil {
+	if err := handler.Ensure(emqx); err != nil {
 		if err.Error() == "need requeue" {
 			return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 		}
-		handler.eventsCli.Event(instance, corev1.EventTypeWarning, "Reconcile", err.Error())
+		handler.eventsCli.Event(emqx, corev1.EventTypeWarning, "Reconcile", err.Error())
+		emqx.SetFailedCondition(err.Error())
+		_ = handler.updateEmqxStatus(emqx)
 		return reconcile.Result{}, err
 	}
 
+	emqx.SetRunningCondition("Cluster ok")
 	return reconcile.Result{RequeueAfter: reconcileTime}, nil
 }
 
@@ -112,4 +115,27 @@ func (handler *Handler) getEmqx(Namespace, Name string) (v1beta3.Emqx, error) {
 		return enterprise, err
 	}
 	return broker, err
+}
+
+func (handler *Handler) updateEmqxStatus(emqx v1beta3.Emqx) error {
+	emqx.DescConditionsByTime()
+	err := handler.client.Status().Update(context.TODO(), emqx)
+	if err != nil {
+		handler.logger.WithValues(
+			"kind", emqx.GetKind(),
+			"apiVersion", emqx.GetAPIVersion(),
+			"namespace", emqx.GetNamespace(),
+			"name", emqx.GetName(),
+			"conditions", emqx.GetConditions(),
+		).Error(err, "Update emqx broker status unsuccessfully")
+		return err
+	}
+	handler.logger.WithValues(
+		"kind", emqx.GetKind(),
+		"apiVersion", emqx.GetAPIVersion(),
+		"namespace", emqx.GetNamespace(),
+		"name", emqx.GetName(),
+		"conditions", emqx.GetConditions(),
+	).V(3).Info("Update emqx broker status successfully")
+	return nil
 }
