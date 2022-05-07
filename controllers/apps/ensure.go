@@ -117,38 +117,28 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta3.Emqx) err
 }
 
 func (handler *Handler) doCreate(obj client.Object) error {
-	logger := handler.logger.WithValues(
-		"groupVersionKind", obj.GetObjectKind().GroupVersionKind().String(),
-		"namespace", obj.GetNamespace(),
-		"name", obj.GetName(),
-	)
 	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-		logger.Error(err, "unable to patch emqx with comparison object")
+		handler.eventsCli.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
 		return err
 	}
 	if err := handler.client.Create(context.TODO(), obj); err != nil {
-		logger.Error(err, "create resource failed")
+		handler.eventsCli.Event(obj, corev1.EventTypeWarning, "Created", err.Error())
 		return err
 	}
-	logger.Info("create resource successfully")
+	handler.eventsCli.Event(obj, corev1.EventTypeNormal, "Created", "Create resource successfully")
 	return nil
 }
 
 func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
-	logger := handler.logger.WithValues(
-		"groupVersionKind", obj.GetObjectKind().GroupVersionKind().String(),
-		"namespace", obj.GetNamespace(),
-		"name", obj.GetName(),
-	)
 	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-		logger.Error(err, "unable to patch emqx with comparison object")
+		handler.eventsCli.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
 		return err
 	}
 	if err := handler.client.Update(context.TODO(), obj); err != nil {
-		logger.Error(err, "update resource failed")
+		handler.eventsCli.Event(obj, corev1.EventTypeWarning, "Updated", err.Error())
 		return err
 	}
-	logger.Info("update resource successfully")
+	handler.eventsCli.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
 	return nil
 }
 func (handler *Handler) postUpdate(obj client.Object, emqx v1beta3.Emqx) error {
