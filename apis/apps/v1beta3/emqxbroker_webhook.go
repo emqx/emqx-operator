@@ -68,25 +68,12 @@ func (r *EmqxBroker) Default() {
 	}
 	modules.Default()
 	r.Spec.EmqxTemplate.Modules = modules.Items
-
 	r.Spec.EmqxTemplate.Listener.Default()
 
 	env := &EnvList{
 		Items: r.Spec.EmqxTemplate.Env,
 	}
-	str := strings.Split(r.GetImage(), ":")
-	if len(str) > 1 {
-		match, _ := regexp.MatchString("^[4-9].[4-9]+.[0-9]+$", str[1])
-		if match {
-			// 4.4.x uses dns clustering by default
-			env.ClusterForDNS(r)
-		} else {
-			env.ClusterForK8S(r)
-		}
-	} else {
-		env.ClusterForK8S(r)
-	}
-
+	env.ClusterForDNS(r)
 	r.Spec.EmqxTemplate.Env = env.Items
 
 	if r.Spec.EmqxTemplate.SecurityContext == nil {
@@ -140,13 +127,9 @@ func (r *EmqxBroker) ValidateDelete() error {
 func validateTag(image string) error {
 	str := strings.Split(image, ":")
 	if len(str) > 1 {
-		match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[1])
-		if !match {
-			match, _ := regexp.MatchString("^latest$", str[1])
-			if match {
-				return nil
-			}
-			return errors.New("the tag of the image must match '^[0-9]+.[0-9]+.[0-9]+$'")
+		match, _ := regexp.MatchString("^[0-4]+.[0-3]+.*$", str[1])
+		if match {
+			return errors.New("EMQX Operator only support EMQX 4.4 and higher version")
 		}
 	}
 	return nil

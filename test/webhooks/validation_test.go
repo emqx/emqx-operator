@@ -65,7 +65,7 @@ var _ = Describe("EMQX Enterprise", func() {
 })
 
 func checkValidation(emqx v1beta3.Emqx) {
-	emqx.SetImage("emqx/emqx:fake")
+	emqx.SetImage("emqx/emqx:4.3.3")
 	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())
 
 	emqx.SetImage("emqx/emqx:latest")
@@ -98,8 +98,8 @@ func checkValidation(emqx v1beta3.Emqx) {
 	obj.SetCreationTimestamp(emqx.GetCreationTimestamp())
 	obj.SetManagedFields(emqx.GetManagedFields())
 
-	obj.SetImage("emqx/emqx:fake")
+	obj.SetImage("emqx:4.3")
 	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
-	obj.SetImage("emqx/emqx:latest")
+	obj.SetImage("emqx:4")
 	Expect(k8sClient.Update(context.Background(), obj)).Should(Succeed())
 }

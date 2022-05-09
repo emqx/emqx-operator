@@ -17,9 +17,6 @@ limitations under the License.
 package v1beta3
 
 import (
-	"regexp"
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -73,19 +70,7 @@ func (r *EmqxEnterprise) Default() {
 	env := &EnvList{
 		Items: r.Spec.EmqxTemplate.Env,
 	}
-	str := strings.Split(r.GetImage(), ":")
-	if len(str) > 1 {
-		match, _ := regexp.MatchString("^[4-9].[4-9]+.[0-9]+$", str[1])
-		if match {
-			// 4.4.x uses dns clustering by default
-			env.ClusterForDNS(r)
-		} else {
-			env.ClusterForK8S(r)
-		}
-	} else {
-		env.ClusterForK8S(r)
-	}
-
+	env.ClusterForDNS(r)
 	r.Spec.EmqxTemplate.Env = env.Items
 
 	if r.Spec.EmqxTemplate.SecurityContext == nil {

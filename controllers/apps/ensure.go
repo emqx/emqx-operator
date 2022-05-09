@@ -78,11 +78,6 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta3.Emqx) err
 			patch.IgnoreStatusFields(),
 			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
 		)
-	case *corev1.ServiceAccount:
-		opts = append(opts,
-			patch.IgnoreField("metadata"), // ignore metadata.managedFields
-			patch.IgnoreField("secret"),
-		)
 	case *corev1.Service:
 		storageResource := &corev1.Service{}
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.UnstructuredContent(), storageResource)
