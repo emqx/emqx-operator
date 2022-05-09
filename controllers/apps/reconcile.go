@@ -89,6 +89,7 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	emqx.SetRunningCondition("Cluster ok")
+	_ = handler.updateEmqxStatus(emqx)
 	return reconcile.Result{RequeueAfter: reconcileTime}, nil
 }
 
