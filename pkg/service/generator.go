@@ -10,7 +10,6 @@ import (
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -21,11 +20,6 @@ func Generate(emqx v1beta3.Emqx) []client.Object {
 	var resources []client.Object
 
 	sts := generateStatefulSetDef(emqx)
-
-	sa, role, roleBinding, sts := generateRBAC(emqx, sts)
-	if sa != nil {
-		resources = append(resources, sa, role, roleBinding)
-	}
 
 	headlessSvc, svc, sts := generateSvc(emqx, sts)
 	resources = append(resources, headlessSvc, svc)
@@ -127,61 +121,6 @@ func generateStatefulSetDef(emqx v1beta3.Emqx) *appsv1.StatefulSet {
 	sts.Spec.Template.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
 
 	return generateVolume(emqx, sts)
-}
-
-func generateRBAC(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, *appsv1.StatefulSet) {
-	meta := metav1.ObjectMeta{
-		Name:      emqx.GetName(),
-		Namespace: emqx.GetNamespace(),
-		Labels:    emqx.GetLabels(),
-	}
-
-	sa := &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: meta,
-	}
-
-	role := &rbacv1.Role{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "Role",
-		},
-		ObjectMeta: meta,
-		Rules: []rbacv1.PolicyRule{
-			{
-				Verbs:     []string{"get", "watch", "list"},
-				APIGroups: []string{""},
-				Resources: []string{"endpoints"},
-			},
-		},
-	}
-
-	roleBinding := &rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "RoleBinding",
-		},
-		ObjectMeta: meta,
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      sa.Kind,
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     role.Kind,
-			Name:     role.Name,
-		},
-	}
-
-	sts.Spec.Template.Spec.ServiceAccountName = sa.Name
-
-	return sa, role, roleBinding, sts
 }
 
 func generateSvc(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *corev1.Service, *appsv1.StatefulSet) {

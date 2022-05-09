@@ -12,19 +12,6 @@ rules:
   - configmaps
   verbs:
   - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - endpoints
-  verbs:
-  - create
-  - delete
   - get
   - list
   - patch
@@ -36,7 +23,6 @@ rules:
   - events
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
@@ -48,7 +34,6 @@ rules:
   - persistentvolumeclaims
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
@@ -60,7 +45,6 @@ rules:
   - persistentvolumes
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
@@ -72,7 +56,6 @@ rules:
   - pods
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
@@ -84,7 +67,6 @@ rules:
   - pods/exec
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
@@ -96,21 +78,7 @@ rules:
   - secrets
   verbs:
   - create
-  - delete
   - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - create
-  - delete
-  - get
-  - impersonate
   - list
   - patch
   - update
@@ -121,19 +89,6 @@ rules:
   - services
   verbs:
   - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - create
-  - delete
   - get
   - list
   - patch
@@ -145,7 +100,6 @@ rules:
   - statefulsets
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
@@ -157,7 +111,6 @@ rules:
   - emqxbrokers
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
@@ -183,7 +136,6 @@ rules:
   - emqxenterprises
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
@@ -212,27 +164,3 @@ rules:
   - get
   - list
   - update
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - rolebindings
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - roles
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
