@@ -73,7 +73,7 @@ func (handler *Handler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return reconcile.Result{}, err
 	}
 
-	if err := handler.Ensure(emqx); err != nil {
+	if err := handler.ensure(emqx); err != nil {
 		if err.Error() == "need requeue" {
 			return reconcile.Result{RequeueAfter: 20 * time.Second}, nil
 		}
