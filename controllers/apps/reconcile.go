@@ -36,22 +36,22 @@ var (
 	reconcileTime = time.Duration(30) * time.Second
 )
 
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;create;update
+//+kubebuilder:rbac:groups="",resources=events,verbs=get;create;update
+//+kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;create;update
+//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;create;update
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;create;update
+//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;create;update
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;create;update
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;create;update
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;create;update
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers,verbs=get;watch;create;update
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/status,verbs=get;update
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/finalizers,verbs=update
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;watch;create;update
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/status,verbs=get;update
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/finalizers,verbs=update
-//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;create;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

@@ -26,10 +26,7 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -37,10 +34,7 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -48,10 +42,7 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -59,10 +50,7 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -71,9 +59,7 @@ rules:
   - create
   - get
   - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -81,10 +67,7 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -92,10 +75,7 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -103,21 +83,7 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - apps
   resources:
@@ -125,10 +91,7 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - apps.emqx.io
   resources:
@@ -136,8 +99,6 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -152,7 +113,6 @@ rules:
   - emqxbrokers/status
   verbs:
   - get
-  - patch
   - update
 - apiGroups:
   - apps.emqx.io
@@ -161,8 +121,6 @@ rules:
   verbs:
   - create
   - get
-  - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -177,7 +135,6 @@ rules:
   - emqxenterprises/status
   verbs:
   - get
-  - patch
   - update
 - apiGroups:
   - coordination.k8s.io
@@ -186,6 +143,6 @@ rules:
   verbs:
   - create
   - get
-  - list
   - update
+
 {{- end }}
