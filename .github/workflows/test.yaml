@@ -107,7 +107,7 @@ jobs:
           done
       - name: Deployment emqx
         timeout-minutes: 5
-        uses: ./.github/actions/deployment
+        uses: ./.github/actions/deploy-emqx
         with:
           apiVersion: ${{ matrix.apiVersion }}
           kind:  ${{ matrix.emqx[0] }}

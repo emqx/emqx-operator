@@ -1,0 +1,43 @@
+name: Deployment operator
+description: "Deployment operator"
+inputs:
+  repository:
+    description: "operator controller image repository"
+    required: true
+    default: "emqx/emqx-operator-controller"
+  tag:
+    description: "operator controller image tag"
+    required: true
+    default: "latest"
+
+runs:
+  using: "composite"
+  steps:
+  - name: Install cert-manager
+    shell: bash
+    run: |
+      helm repo add jetstack https://charts.jetstack.io
+      helm repo update
+      helm install \
+        cert-manager jetstack/cert-manager \
+        --namespace cert-manager \
+        --create-namespace \
+        --version v1.6.1 \
+        --set installCRDs=true
+  - name: Deploy operator by helm
+    shell: bash
+    run: |
+      helm install emqx-operator deploy/charts/emqx-operator\
+        --set installCRDs=true \
+        --set image.repository=${{ inputs.repository }} \
+        --set image.tag=${{ inputs.tag }} \
+        --namespace emqx-operator-system \
+        --create-namespace
+  - name: Check operator
+    shell: bash
+    run: |
+      set -euo pipefail
+      while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
+        echo "waiting operator controller pod running"
+        sleep 1
+      done
