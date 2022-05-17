@@ -170,14 +170,14 @@ func (handler *Handler) postUpdate(obj client.Object, emqx v1beta3.Emqx) error {
 		}
 	}
 	if obj.GetName() == names.MQTTSCertificate() {
-		err := handler.execToPods(emqx, "emqx", "listeners restart mqtt:ssl:external")
+		err := handler.execToPods(emqx, "emqx", "emqx_ctl listeners restart mqtt:ssl:external")
 		if err != nil {
 			return err
 		}
 	}
 
 	if obj.GetName() == names.WSSCertificate() {
-		err := handler.execToPods(emqx, "emqx", "listeners restart mqtt:wss:external")
+		err := handler.execToPods(emqx, "emqx", "emqx_ctl listeners restart mqtt:wss:external")
 		if err != nil {
 			return err
 		}
@@ -211,11 +211,8 @@ func (handler *Handler) execToPods(emqx v1beta3.Emqx, containerName, command str
 		if stderr != "" {
 			return fmt.Errorf("exec %s container %s in pod %s stderr: %v", command, containerName, pod.GetName(), stderr)
 		}
-		handler.logger.WithValues(
-			"groupVersionKind", pod.GetObjectKind().GroupVersionKind().String(),
-			"namespace", pod.GetNamespace(),
-			"name", pod.GetName(),
-		).Info(fmt.Sprintf("exec %s to container %s successfully", command, containerName))
+		str := fmt.Sprintf("Exec %s to container %s successfully", command, containerName)
+		handler.eventsCli.Event(emqx, corev1.EventTypeNormal, "Exec", str)
 	}
 	return nil
 }
