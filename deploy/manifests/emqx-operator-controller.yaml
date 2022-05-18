@@ -8787,7 +8787,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.1.6
+        image: emqx/emqx-operator-controller:1.1.7
         livenessProbe:
           httpGet:
             path: /healthz
@@ -8796,11 +8796,11 @@ spec:
           periodSeconds: 20
         name: manager
         ports:
-        - containerPort: 8080
-          name: metrics
-          protocol: TCP
         - containerPort: 9443
           name: webhook-server
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
           protocol: TCP
         readinessProbe:
           httpGet:
