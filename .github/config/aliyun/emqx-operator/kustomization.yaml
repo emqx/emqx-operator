@@ -1,0 +1,4 @@
+resources:
+  - ../../../../config/default
+patches:
+  - eci-with-eip.yaml
