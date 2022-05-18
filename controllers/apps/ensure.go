@@ -161,14 +161,14 @@ func (handler *Handler) postUpdate(obj client.Object, emqx v1beta2.Emqx) error {
 		}
 	}
 	if obj.GetName() == names.MQTTSCertificate() {
-		err := handler.execToPods(emqx, "emqx", "listeners restart mqtt:ssl:external")
+		err := handler.execToPods(emqx, "emqx", "emqx_ctl listeners restart mqtt:ssl:external")
 		if err != nil {
 			return err
 		}
 	}
 
 	if obj.GetName() == names.WSSCertificate() {
-		err := handler.execToPods(emqx, "emqx", "listeners restart mqtt:wss:external")
+		err := handler.execToPods(emqx, "emqx", "emqx_ctl listeners restart mqtt:wss:external")
 		if err != nil {
 			return err
 		}
