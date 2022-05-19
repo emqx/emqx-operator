@@ -24,9 +24,7 @@ jobs:
     - uses: docker/metadata-action@v3
       id: meta
       with:
-        images: ghcr.io/${{ github.repository }}/emqx-operator-controller
-        flavor: |
-          latest=true
+        images: ghcr.io/${{ github.repository }}
         tags: |
           type=ref,event=branch
     - uses: docker/build-push-action@v2

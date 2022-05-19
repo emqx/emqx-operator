@@ -60,7 +60,7 @@ jobs:
         timeout-minutes: 5
         uses: ./.github/actions/deploy-operator
         with:
-          repository: ghcr.io/${{ github.repository }}/emqx-operator-controller
+          repository: ghcr.io/${{ github.repository }}
           tag: latest
       - name: Deploy emqx
         timeout-minutes: 5
