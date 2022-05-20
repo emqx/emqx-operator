@@ -173,10 +173,11 @@ func (r *EmqxBroker) ValidateDelete() error {
 
 func validateTag(image string) error {
 	str := strings.Split(image, ":")
-	if len(str) > 1 {
-		match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[1])
+	l := len(str)
+	if l > 1 {
+		match, _ := regexp.MatchString("^[0-9]+.[0-9]+.[0-9]+$", str[l-1])
 		if !match {
-			match, _ := regexp.MatchString("^latest$", str[1])
+			match, _ := regexp.MatchString("^latest$", str[l-1])
 			if match {
 				return nil
 			}
