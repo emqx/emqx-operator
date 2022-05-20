@@ -2,4 +2,4 @@
 
 ### Fixes 🛠
 
-- Fixed restart listener is not working when update `.spec.listener.certificate` for EMQX Custom Resource
+- fix regex to validate image tag which contains `ip:port`
