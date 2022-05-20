@@ -41,7 +41,6 @@ type EmqxBrokerTemplate struct {
 
 	Listener Listener           `json:"listener,omitempty"`
 	ACL      []ACL              `json:"acl,omitempty"`
-	Plugins  []Plugin           `json:"plugins,omitempty"`
 	Modules  []EmqxBrokerModule `json:"modules,omitempty"`
 }
 
@@ -209,11 +208,6 @@ func (emqx *EmqxBroker) SetListener(listener Listener) {
 func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
 func (emqx *EmqxBroker) SetACL(acl []ACL) {
 	emqx.Spec.EmqxTemplate.ACL = acl
-}
-
-func (emqx *EmqxBroker) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
-func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
-	emqx.Spec.EmqxTemplate.Plugins = plugins
 }
 
 func (emqx *EmqxBroker) GetModules() []EmqxBrokerModule { return emqx.Spec.EmqxTemplate.Modules }

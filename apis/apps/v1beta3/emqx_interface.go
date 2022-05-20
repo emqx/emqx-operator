@@ -84,9 +84,6 @@ type EmqxSpec interface {
 	GetACL() []ACL
 	SetACL(acl []ACL)
 
-	GetPlugins() []Plugin
-	SetPlugins(plugins []Plugin)
-
 	GetListener() Listener
 	SetListener(Listener)
 }

@@ -1,15 +1,15 @@
-package v1beta3_test
+package v1beta2_test
 
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPluginsDefault(t *testing.T) {
-	plugins := &v1beta3.PluginList{
-		Items: []v1beta3.Plugin{
+	plugins := &v1beta2.PluginList{
+		Items: []v1beta2.Plugin{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -23,7 +23,7 @@ func TestPluginsDefault(t *testing.T) {
 
 	plugins.Default()
 	assert.ElementsMatch(t, plugins.Items,
-		[]v1beta3.Plugin{
+		[]v1beta2.Plugin{
 			{
 				Name:   "foo",
 				Enable: true,
@@ -41,8 +41,8 @@ func TestPluginsDefault(t *testing.T) {
 }
 
 func TestPluginsString(t *testing.T) {
-	plugins := &v1beta3.PluginList{
-		Items: []v1beta3.Plugin{
+	plugins := &v1beta2.PluginList{
+		Items: []v1beta2.Plugin{
 			{
 				Name:   "foo",
 				Enable: true,

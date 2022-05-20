@@ -59,7 +59,6 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	dst.Spec.EmqxTemplate.ACL = src.Spec.EmqxTemplate.ACL
-	dst.Spec.EmqxTemplate.Plugins = src.Spec.EmqxTemplate.Plugins
 	dst.Spec.EmqxTemplate.Modules = src.Spec.EmqxTemplate.Modules
 
 	// Spec
@@ -119,7 +118,6 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 		dst.Spec.Storage = src.Spec.Persistent
 	}
 	dst.Spec.EmqxTemplate.ACL = src.Spec.EmqxTemplate.ACL
-	dst.Spec.EmqxTemplate.Plugins = src.Spec.EmqxTemplate.Plugins
 	dst.Spec.EmqxTemplate.Modules = src.Spec.EmqxTemplate.Modules
 
 	// Spec

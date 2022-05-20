@@ -11,7 +11,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -26,9 +25,6 @@ func Generate(emqx v1beta3.Emqx) []client.Object {
 
 	acl, sts := generateConfigMapForAcl(emqx, sts)
 	resources = append(resources, acl)
-
-	plugins, sts := generateConfigMapForPlugins(emqx, sts)
-	resources = append(resources, plugins)
 
 	module, sts := generateConfigMapForModules(emqx, sts)
 	resources = append(resources, module)
@@ -292,67 +288,6 @@ func generateConfigMapForAcl(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev
 		},
 	)
 
-	return cm, sts
-}
-
-func generateConfigMapForPlugins(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
-	names := v1beta3.Names{Object: emqx}
-	plugins := &v1beta3.PluginList{
-		Items: emqx.GetPlugins(),
-	}
-	loadedPluginsString := plugins.String()
-
-	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:    emqx.GetLabels(),
-			Namespace: emqx.GetNamespace(),
-			Name:      names.Plugins(),
-		},
-		Data: map[string]string{"loaded_plugins": loadedPluginsString},
-	}
-	cm.SetGroupVersionKind(schema.GroupVersionKind{Kind: "ConfigMap", Version: "v1"})
-
-	annotations := sts.Annotations
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	annotations["LoadedPlugins/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(loadedPluginsString))
-	sts.Annotations = annotations
-
-	container := sts.Spec.Template.Spec.Containers[0]
-	container.VolumeMounts = append(
-		container.VolumeMounts,
-		corev1.VolumeMount{
-			Name:      cm.Name,
-			MountPath: "/mounted/plugins",
-		},
-	)
-	container.Env = append(
-		container.Env,
-		corev1.EnvVar{
-			Name:  "EMQX_PLUGINS__LOADED_FILE",
-			Value: "/mounted/plugins/loaded_plugins",
-		},
-	)
-	sts.Spec.Template.Spec.Containers = []corev1.Container{container}
-
-	sts.Spec.Template.Spec.Volumes = append(
-		sts.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: cm.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cm.Name,
-					},
-				},
-			},
-		},
-	)
 	return cm, sts
 }
 
