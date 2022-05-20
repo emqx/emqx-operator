@@ -144,6 +144,9 @@ func TestValidateCreateBroker(t *testing.T) {
 
 	emqx.Spec.Image = "emqx/emqx:fake"
 	assert.Error(t, emqx.ValidateCreate())
+
+	emqx.Spec.Image = "127.0.0.1:8443/emqx/emqx:4.3.11"
+	assert.Nil(t, emqx.ValidateCreate())
 }
 
 func TestValidateUpdateBroker(t *testing.T) {
@@ -165,5 +168,8 @@ func TestValidateUpdateBroker(t *testing.T) {
 	assert.Error(t, emqx.ValidateUpdate(new))
 
 	new.Spec.Image = "emqx/emqx:latest"
+	assert.Nil(t, emqx.ValidateUpdate(new))
+
+	emqx.Spec.Image = "127.0.0.1:8443/emqx/emqx:4.3.11"
 	assert.Nil(t, emqx.ValidateUpdate(new))
 }
