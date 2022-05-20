@@ -28,8 +28,8 @@ import (
 type EmqxBrokerTemplate struct {
 	Listener Listener                   `json:"listener,omitempty"`
 	ACL      []v1beta3.ACL              `json:"acl,omitempty"`
-	Plugins  []v1beta3.Plugin           `json:"plugins,omitempty"`
 	Modules  []v1beta3.EmqxBrokerModule `json:"modules,omitempty"`
+	Plugins  []Plugin                   `json:"plugins,omitempty"`
 }
 
 // EmqxBrokerSpec defines the desired state of EmqxBroker
@@ -188,8 +188,8 @@ func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {
 	emqx.Spec.Env = env
 }
 
-func (emqx *EmqxBroker) GetPlugins() []v1beta3.Plugin { return emqx.Spec.EmqxTemplate.Plugins }
-func (emqx *EmqxBroker) SetPlugins(plugins []v1beta3.Plugin) {
+func (emqx *EmqxBroker) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
+func (emqx *EmqxBroker) SetPlugins(plugins []Plugin) {
 	emqx.Spec.EmqxTemplate.Plugins = plugins
 }
 

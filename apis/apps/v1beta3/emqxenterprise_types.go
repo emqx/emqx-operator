@@ -46,7 +46,6 @@ type EmqxEnterpriseTemplate struct {
 
 	Listener Listener               `json:"listener,omitempty"`
 	ACL      []ACL                  `json:"acl,omitempty"`
-	Plugins  []Plugin               `json:"plugins,omitempty"`
 	Modules  []EmqxEnterpriseModule `json:"modules,omitempty"`
 	License  License                `json:"license,omitempty"`
 }
@@ -217,11 +216,6 @@ func (emqx *EmqxEnterprise) SetListener(listener Listener) {
 func (emqx *EmqxEnterprise) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
 func (emqx *EmqxEnterprise) SetACL(acl []ACL) {
 	emqx.Spec.EmqxTemplate.ACL = acl
-}
-
-func (emqx *EmqxEnterprise) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
-func (emqx *EmqxEnterprise) SetPlugins(plugins []Plugin) {
-	emqx.Spec.EmqxTemplate.Plugins = plugins
 }
 
 func (emqx *EmqxEnterprise) GetModules() []EmqxEnterpriseModule {

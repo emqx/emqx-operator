@@ -57,12 +57,6 @@ func (r *EmqxBroker) Default() {
 		r.Spec.EmqxTemplate.ACL = acls.Items
 	}
 
-	plugins := &PluginList{
-		Items: r.Spec.EmqxTemplate.Plugins,
-	}
-	plugins.Default()
-	r.Spec.EmqxTemplate.Plugins = plugins.Items
-
 	modules := &EmqxBrokerModuleList{
 		Items: r.Spec.EmqxTemplate.Modules,
 	}

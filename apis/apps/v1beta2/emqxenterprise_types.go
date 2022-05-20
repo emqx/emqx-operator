@@ -31,8 +31,8 @@ type EmqxEnterpriseTemplate struct {
 	License  string                         `json:"license,omitempty"`
 	Listener Listener                       `json:"listener,omitempty"`
 	ACL      []v1beta3.ACL                  `json:"acl,omitempty"`
-	Plugins  []v1beta3.Plugin               `json:"plugins,omitempty"`
 	Modules  []v1beta3.EmqxEnterpriseModule `json:"modules,omitempty"`
+	Plugins  []Plugin                       `json:"plugins,omitempty"`
 }
 
 // EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
@@ -200,8 +200,8 @@ func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) {
 	emqx.Spec.Env = env
 }
 
-func (emqx *EmqxEnterprise) GetPlugins() []v1beta3.Plugin { return emqx.Spec.EmqxTemplate.Plugins }
-func (emqx *EmqxEnterprise) SetPlugins(plugins []v1beta3.Plugin) {
+func (emqx *EmqxEnterprise) GetPlugins() []Plugin { return emqx.Spec.EmqxTemplate.Plugins }
+func (emqx *EmqxEnterprise) SetPlugins(plugins []Plugin) {
 	emqx.Spec.EmqxTemplate.Plugins = plugins
 }
 

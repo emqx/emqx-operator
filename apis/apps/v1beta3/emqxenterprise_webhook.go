@@ -53,12 +53,6 @@ func (r *EmqxEnterprise) Default() {
 		r.Spec.EmqxTemplate.ACL = acls.Items
 	}
 
-	plugins := &PluginList{
-		Items: r.Spec.EmqxTemplate.Plugins,
-	}
-	plugins.Default()
-	r.Spec.EmqxTemplate.Plugins = plugins.Items
-
 	modules := &EmqxEnterpriseModuleList{
 		Items: r.Spec.EmqxTemplate.Modules,
 	}

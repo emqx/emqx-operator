@@ -73,8 +73,8 @@ type EmqxSpec interface {
 	GetEnv() []corev1.EnvVar
 	SetEnv(env []corev1.EnvVar)
 
-	GetPlugins() []v1beta3.Plugin
-	SetPlugins(plugins []v1beta3.Plugin)
+	GetPlugins() []Plugin
+	SetPlugins(plugins []Plugin)
 
 	GetSecurityContext() *corev1.PodSecurityContext
 	SetSecurityContext(securityContext *corev1.PodSecurityContext)

@@ -405,12 +405,6 @@ RFY7JjluKcVkp/zCDeUxTU3O6sS+v6/3VE11Cob6OYQx3lN5wrZ3
 						Permission: "allow",
 					},
 				},
-				Plugins: []v1beta3.Plugin{
-					{
-						Name:   "emqx_management",
-						Enable: true,
-					},
-				},
 				Modules: []v1beta3.EmqxBrokerModule{
 					{
 						Name:   "emqx_mod_acl_internal",
