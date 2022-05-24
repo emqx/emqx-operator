@@ -2,7 +2,7 @@ name: Compatibility Test Suite For Cloud
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 0 * * *'
   push:
     tags:
       - "*"
@@ -10,6 +10,8 @@ on:
 jobs:
   Aliyun:
     runs-on: ubuntu-latest
+
+    if: github.repository_owner == 'emqx'
 
     strategy:
       fail-fast: false
