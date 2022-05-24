@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,12 +108,22 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	newEmqxBroker := controllers.NewEmqxBrokerReconciler(k8sManager)
-	err = newEmqxBroker.SetupWithManager(k8sManager)
+	clientset, _ := kubernetes.NewForConfig(cfg)
+	handler := controllers.Handler{
+		Client:        k8sClient,
+		Clientset:     *clientset,
+		Config:        *cfg,
+		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
+	}
+
+	err = (&controllers.EmqxBrokerReconciler{
+		Handler: handler,
+	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	newEmqxEnterprise := controllers.NewEmqxEnterpriseReconciler(k8sManager)
-	err = newEmqxEnterprise.SetupWithManager(k8sManager)
+	err = (&controllers.EmqxEnterpriseReconciler{
+		Handler: handler,
+	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = k8sManager.AddHealthzCheck("healthz", healthz.Ping)

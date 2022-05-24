@@ -25,6 +25,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	"go.uber.org/zap/zapcore"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,6 +54,16 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -89,16 +100,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	newEmqxBrokerReconciler := controllers.NewEmqxBrokerReconciler(mgr)
+	config := mgr.GetConfig()
+	clientset, _ := kubernetes.NewForConfig(config)
+	handler := controllers.Handler{
+		Client:        mgr.GetClient(),
+		Clientset:     *clientset,
+		Config:        *config,
+		EventRecorder: mgr.GetEventRecorderFor("emqx-operator"),
+	}
 
-	if err := newEmqxBrokerReconciler.SetupWithManager(mgr); err != nil {
+	if err := (&controllers.EmqxBrokerReconciler{
+		Handler: handler,
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX Broker")
 		os.Exit(1)
 	}
 
-	newEmqxEnterpriseReconciler := controllers.NewEmqxEnterpriseReconciler(mgr)
-
-	if err = newEmqxEnterpriseReconciler.SetupWithManager(mgr); err != nil {
+	if err := (&controllers.EmqxEnterpriseReconciler{
+		Handler: handler,
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX Enterprise")
 		os.Exit(1)
 	}
