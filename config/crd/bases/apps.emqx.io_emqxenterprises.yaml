@@ -6158,15 +6158,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                  plugins:
-                    items:
-                      properties:
-                        enable:
-                          type: boolean
-                        name:
-                          type: string
-                      type: object
-                    type: array
                   readinessProbe:
                     description: Probe describes a health check to be performed against
                       a container to determine whether it is alive or ready to receive

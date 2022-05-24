@@ -1,34 +1,20 @@
-
----
+# permissions for end users to view emqxplugins.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
-  name: manager-role
+  name: emqxplugin-viewer-role
 rules:
 - apiGroups:
   - apps.emqx.io
   resources:
   - emqxplugins
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxplugins/finalizers
-  verbs:
-  - update
 - apiGroups:
   - apps.emqx.io
   resources:
   - emqxplugins/status
   verbs:
   - get
-  - patch
-  - update

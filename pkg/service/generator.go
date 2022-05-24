@@ -15,10 +15,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func Generate(emqx v1beta3.Emqx) []client.Object {
+func Generate(emqx v1beta3.Emqx) ([]client.Object, *appsv1.StatefulSet) {
 	var resources []client.Object
 
 	sts := generateStatefulSetDef(emqx)
+
+	emptyPluginsConfig, sts := generateEmptyPlugins(emqx, sts)
+	loadedPlugins, sts := generateLoadedPlugins(emqx, sts)
+	resources = append(resources, emptyPluginsConfig, loadedPlugins)
 
 	headlessSvc, svc, sts := generateSvc(emqx, sts)
 	resources = append(resources, headlessSvc, svc)
@@ -44,14 +48,7 @@ func Generate(emqx v1beta3.Emqx) []client.Object {
 		resources = append(resources, license)
 	}
 
-	resources = append(resources, sts)
-
-	ownerRef := metav1.NewControllerRef(emqx, emqx.GetObjectKind().GroupVersionKind())
-	for _, resource := range resources {
-		addOwnerRefToObject(resource, *ownerRef)
-	}
-
-	return resources
+	return resources, sts
 }
 
 func generateStatefulSetDef(emqx v1beta3.Emqx) *appsv1.StatefulSet {
@@ -117,6 +114,105 @@ func generateStatefulSetDef(emqx v1beta3.Emqx) *appsv1.StatefulSet {
 	sts.Spec.Template.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
 
 	return generateVolume(emqx, sts)
+}
+
+func generateEmptyPlugins(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+	names := v1beta3.Names{Object: emqx}
+
+	cm := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    emqx.GetLabels(),
+			Namespace: emqx.GetNamespace(),
+			Name:      names.PluginsConfig(),
+		},
+	}
+
+	container := sts.Spec.Template.Spec.Containers[0]
+	container.Env = append(
+		container.Env,
+		corev1.EnvVar{
+			Name:  "EMQX_PLUGINS__ETC_DIR",
+			Value: "/mounted/plugins/etc",
+		},
+	)
+	container.VolumeMounts = append(
+		container.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      cm.Name,
+			MountPath: "/mounted/plugins/etc",
+		},
+	)
+	sts.Spec.Template.Spec.Containers = []corev1.Container{container}
+
+	sts.Spec.Template.Spec.Volumes = append(
+		sts.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: cm.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cm.Name,
+					},
+				},
+			},
+		},
+	)
+	return cm, sts
+}
+
+func generateLoadedPlugins(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+	names := v1beta3.Names{Object: emqx}
+	loadedPlugins := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:    emqx.GetLabels(),
+			Namespace: emqx.GetNamespace(),
+			Name:      names.LoadedPlugins(),
+		},
+		Data: map[string]string{
+			"loaded_plugins": "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.",
+		},
+	}
+
+	container := sts.Spec.Template.Spec.Containers[0]
+	container.VolumeMounts = append(
+		container.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      loadedPlugins.Name,
+			MountPath: "/mounted/plugins/data",
+		},
+	)
+	container.Env = append(
+		container.Env,
+		corev1.EnvVar{
+			Name:  "EMQX_PLUGINS__LOADED_FILE",
+			Value: "/mounted/plugins/data/loaded_plugins",
+		},
+	)
+	sts.Spec.Template.Spec.Containers = []corev1.Container{container}
+
+	sts.Spec.Template.Spec.Volumes = append(
+		sts.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: loadedPlugins.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: loadedPlugins.Name,
+					},
+				},
+			},
+		},
+	)
+	return loadedPlugins, sts
+
 }
 
 func generateSvc(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *corev1.Service, *appsv1.StatefulSet) {
@@ -312,7 +408,7 @@ func generateConfigMapForModules(emqx v1beta3.Emqx, sts *appsv1.StatefulSet) (*c
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:    emqx.GetLabels(),
 			Namespace: emqx.GetNamespace(),
-			Name:      names.Modules(),
+			Name:      names.LoadedModules(),
 		},
 		Data: map[string]string{"loaded_modules": loadedModulesString},
 	}
@@ -638,8 +734,4 @@ func generateVolumeClaimTemplate(emqx v1beta3.Emqx, Name string) corev1.Persiste
 		pvc.Spec.VolumeMode = &fileSystem
 	}
 	return pvc
-}
-
-func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
-	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
 }

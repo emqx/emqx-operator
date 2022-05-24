@@ -25,7 +25,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
@@ -39,20 +39,20 @@ type EmqxBrokerReconciler struct {
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/finalizers,verbs=update
 func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	obj := &v1beta3.EmqxBroker{}
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+	instance := &appsv1beta3.EmqxBroker{}
+	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	obj.SetAPIVersion(v1beta3.GroupVersion.Group + "/" + v1beta3.GroupVersion.Version)
-	obj.SetKind("EmqxBroker")
+	instance.SetAPIVersion(appsv1beta3.GroupVersion.Group + "/" + appsv1beta3.GroupVersion.Version)
+	instance.SetKind("EmqxBroker")
 
 	if err := (&EmqxReconciler{
 		Handler: r.Handler,
-	}).DoReconcile(ctx, obj); err != nil {
+	}).Do(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -62,6 +62,6 @@ func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *EmqxBrokerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1beta3.EmqxBroker{}).
+		For(&appsv1beta3.EmqxBroker{}).
 		Complete(r)
 }

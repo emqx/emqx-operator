@@ -214,3 +214,5 @@ func (emqx *EmqxBroker) GetModules() []EmqxBrokerModule { return emqx.Spec.EmqxT
 func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModule) {
 	emqx.Spec.EmqxTemplate.Modules = modules
 }
+
+func (emqx *EmqxBroker) GetStatus() Status { return emqx.Status }

@@ -37,7 +37,7 @@ import (
 
 	appsv1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	controllers "github.com/emqx/emqx-operator/controllers/apps"
+	appscontrollers "github.com/emqx/emqx-operator/controllers/apps"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -102,26 +102,34 @@ func main() {
 
 	config := mgr.GetConfig()
 	clientset, _ := kubernetes.NewForConfig(config)
-	handler := controllers.Handler{
+	handler := appscontrollers.Handler{
 		Client:        mgr.GetClient(),
 		Clientset:     *clientset,
 		Config:        *config,
 		EventRecorder: mgr.GetEventRecorderFor("emqx-operator"),
 	}
 
-	if err := (&controllers.EmqxBrokerReconciler{
+	if err := (&appscontrollers.EmqxBrokerReconciler{
 		Handler: handler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX Broker")
 		os.Exit(1)
 	}
 
-	if err := (&controllers.EmqxEnterpriseReconciler{
+	if err := (&appscontrollers.EmqxEnterpriseReconciler{
 		Handler: handler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX Enterprise")
 		os.Exit(1)
 	}
+
+	if err = (&appscontrollers.EmqxPluginReconciler{
+		Handler: handler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
+		os.Exit(1)
+	}
+	//+kubebuilder:scaffold:builder
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&appsv1beta3.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
@@ -133,7 +141,6 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
