@@ -1,70 +1,98 @@
 package apps
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	"github.com/emqx/emqx-operator/pkg/manager"
-	"github.com/emqx/emqx-operator/pkg/service"
-	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/client-go/tools/remotecommand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	mgr "sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-type EmqxHandler interface {
-	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
-}
-
 type Handler struct {
-	client    client.Client
-	executor  manager.Executor
-	eventsCli record.EventRecorder
-	logger    logr.Logger
+	client.Client
+	kubernetes.Clientset
+	record.EventRecorder
+	rest.Config
 }
 
-func NewHandler(mgr mgr.Manager) *Handler {
-	return &Handler{
-		client:    mgr.GetClient(),
-		executor:  *manager.NewExecutor(mgr.GetConfig()),
-		eventsCli: mgr.GetEventRecorderFor("emqx-operator"),
-		logger:    log,
+func (handler *Handler) ExecToPods(obj client.Object, containerName, command string) error {
+	pods := &corev1.PodList{}
+	if err := handler.Client.List(context.TODO(), pods, client.InNamespace(obj.GetNamespace()), client.MatchingLabels(obj.GetLabels())); err != nil {
+		return err
 	}
-}
-
-func (handler *Handler) ensure(emqx v1beta3.Emqx) error {
-	resources := service.Generate(emqx)
-
-	for _, resource := range resources {
-		err := handler.createOrUpdate(resource, emqx)
+	for _, pod := range pods.Items {
+		_, stderr, err := handler.execToPod(pod.GetNamespace(), pod.GetName(), containerName, command, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("exec %s container %s in pod %s error: %v", command, containerName, pod.GetName(), err)
 		}
+		if stderr != "" {
+			return fmt.Errorf("exec %s container %s in pod %s stderr: %v", command, containerName, pod.GetName(), stderr)
+		}
+		str := fmt.Sprintf("Exec %s to container %s successfully", command, containerName)
+		handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Exec", str)
 	}
-
 	return nil
 }
 
-func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta3.Emqx) error {
-	logger := handler.logger.WithValues(
-		"groupVersionKind", obj.GetObjectKind().GroupVersionKind().String(),
-		"namespace", obj.GetNamespace(),
-		"name", obj.GetName(),
-	)
+func (handler *Handler) execToPod(namespace, podName, containerName, command string, stdin io.Reader) (string, string, error) {
+	cmd := []string{
+		"sh",
+		"-c",
+		command,
+	}
 
+	req := handler.Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podName).
+		Namespace(namespace).SubResource("exec")
+	option := &v1.PodExecOptions{
+		// Command:   strings.Fields(command),
+		Command:   cmd,
+		Container: containerName,
+		Stdin:     stdin != nil,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       false,
+	}
+	req.VersionedParams(
+		option,
+		scheme.ParameterCodec,
+	)
+	exec, err := remotecommand.NewSPDYExecutor(&handler.Config, "POST", req.URL())
+	if err != nil {
+		return "", "", fmt.Errorf("error while creating Executor: %v", err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  stdin,
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("error in Stream: %v", err)
+	}
+
+	return stdout.String(), stderr.String(), nil
+}
+
+func (handler *Handler) CreateOrUpdate(obj client.Object, postUpdate func() error) error {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-	err := handler.client.Get(
+	err := handler.Client.Get(
 		context.TODO(),
 		types.NamespacedName{
 			Name:      obj.GetName(),
@@ -115,20 +143,20 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta3.Emqx) err
 		obj = resource
 	}
 
-	if err := client.NewDryRunClient(handler.client).Update(context.TODO(), obj); err != nil {
+	if err := client.NewDryRunClient(handler.Client).Update(context.TODO(), obj); err != nil {
 		return err
 	}
 
 	patchResult, err := patch.DefaultPatchMaker.Calculate(u, obj, opts...)
 	if err != nil {
-		logger.Error(err, "unable to patch with comparison object")
+		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
 		return err
 	}
 	if !patchResult.IsEmpty() {
 		if err := handler.doUpdate(obj, u); err != nil {
 			return err
 		}
-		if err := handler.postUpdate(obj, emqx); err != nil {
+		if err := postUpdate(); err != nil {
 			return err
 		}
 	}
@@ -137,82 +165,26 @@ func (handler *Handler) createOrUpdate(obj client.Object, emqx v1beta3.Emqx) err
 
 func (handler *Handler) doCreate(obj client.Object) error {
 	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-		handler.eventsCli.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
+		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
 		return err
 	}
-	if err := handler.client.Create(context.TODO(), obj); err != nil {
-		handler.eventsCli.Event(obj, corev1.EventTypeWarning, "Created", err.Error())
+	if err := handler.Client.Create(context.TODO(), obj); err != nil {
+		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Created", err.Error())
 		return err
 	}
-	handler.eventsCli.Event(obj, corev1.EventTypeNormal, "Created", "Create resource successfully")
+	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Created", "Create resource successfully")
 	return nil
 }
 
 func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
 	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-		handler.eventsCli.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
+		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
 		return err
 	}
-	if err := handler.client.Update(context.TODO(), obj); err != nil {
-		handler.eventsCli.Event(obj, corev1.EventTypeWarning, "Updated", err.Error())
+	if err := handler.Client.Update(context.TODO(), obj); err != nil {
+		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Updated", err.Error())
 		return err
 	}
-	handler.eventsCli.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
-	return nil
-}
-
-func (handler *Handler) postUpdate(obj client.Object, emqx v1beta3.Emqx) error {
-	names := v1beta3.Names{Object: emqx}
-	if obj.GetName() == names.License() {
-		err := handler.execToPods(emqx, "emqx", "emqx_ctl license reload /mounted/license/emqx.lic")
-		if err != nil {
-			return err
-		}
-	}
-	if obj.GetName() == names.MQTTSCertificate() {
-		err := handler.execToPods(emqx, "emqx", "emqx_ctl listeners restart mqtt:ssl:external")
-		if err != nil {
-			return err
-		}
-	}
-
-	if obj.GetName() == names.WSSCertificate() {
-		err := handler.execToPods(emqx, "emqx", "emqx_ctl listeners restart mqtt:wss:external")
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (handler *Handler) getPods(emqx v1beta3.Emqx) (*corev1.PodList, error) {
-	pods := &corev1.PodList{}
-	err := handler.client.List(
-		context.TODO(),
-		pods,
-		&client.ListOptions{
-			Namespace:     emqx.GetNamespace(),
-			LabelSelector: labels.SelectorFromSet(emqx.GetLabels()),
-		},
-	)
-	return pods, err
-}
-
-func (handler *Handler) execToPods(emqx v1beta3.Emqx, containerName, command string) error {
-	pods, err := handler.getPods(emqx)
-	if err != nil {
-		return err
-	}
-	for _, pod := range pods.Items {
-		_, stderr, err := handler.executor.ExecToPod(pod.GetNamespace(), pod.GetName(), containerName, command, nil)
-		if err != nil {
-			return fmt.Errorf("exec %s container %s in pod %s error: %v", command, containerName, pod.GetName(), err)
-		}
-		if stderr != "" {
-			return fmt.Errorf("exec %s container %s in pod %s stderr: %v", command, containerName, pod.GetName(), stderr)
-		}
-		str := fmt.Sprintf("Exec %s to container %s successfully", command, containerName)
-		handler.eventsCli.Event(emqx, corev1.EventTypeNormal, "Exec", str)
-	}
+	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
 	return nil
 }

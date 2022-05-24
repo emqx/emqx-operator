@@ -17,11 +17,14 @@ limitations under the License.
 package apps
 
 import (
+	"context"
+	"time"
+
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
@@ -31,13 +34,33 @@ type EmqxEnterpriseReconciler struct {
 	Handler
 }
 
-func NewEmqxEnterpriseReconciler(mgr manager.Manager) *EmqxEnterpriseReconciler {
-	return &EmqxEnterpriseReconciler{*NewHandler(mgr)}
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/finalizers,verbs=update
+func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	obj := &v1beta3.EmqxEnterprise{}
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
+	obj.SetAPIVersion(v1beta3.GroupVersion.Group + "/" + v1beta3.GroupVersion.Version)
+	obj.SetKind("EmqxEnterprise")
+
+	if err := (&EmqxReconciler{
+		Handler: r.Handler,
+	}).DoReconcile(ctx, obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *EmqxEnterpriseReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv1beta3.EmqxEnterprise{}).
+		For(&v1beta3.EmqxEnterprise{}).
 		Complete(r)
 }
