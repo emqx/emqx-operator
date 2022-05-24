@@ -231,3 +231,5 @@ func (emqx *EmqxEnterprise) GetLicense() License {
 func (emqx *EmqxEnterprise) SetLicense(license License) {
 	emqx.Spec.EmqxTemplate.License = license
 }
+
+func (emqx *EmqxEnterprise) GetStatus() Status { return emqx.Status }

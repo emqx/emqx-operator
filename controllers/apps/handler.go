@@ -12,11 +12,9 @@ import (
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -38,6 +36,14 @@ func (handler *Handler) ExecToPods(obj client.Object, containerName, command str
 		return err
 	}
 	for _, pod := range pods.Items {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if containerStatus.Name == containerName {
+				if !containerStatus.Ready {
+					return fmt.Errorf("container %s is not ready", containerName)
+				}
+			}
+		}
+
 		_, stderr, err := handler.execToPod(pod.GetNamespace(), pod.GetName(), containerName, command, nil)
 		if err != nil {
 			return fmt.Errorf("exec %s container %s in pod %s error: %v", command, containerName, pod.GetName(), err)
@@ -60,7 +66,7 @@ func (handler *Handler) execToPod(namespace, podName, containerName, command str
 
 	req := handler.Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podName).
 		Namespace(namespace).SubResource("exec")
-	option := &v1.PodExecOptions{
+	option := &corev1.PodExecOptions{
 		// Command:   strings.Fields(command),
 		Command:   cmd,
 		Container: containerName,
@@ -92,21 +98,14 @@ func (handler *Handler) execToPod(namespace, podName, containerName, command str
 	return stdout.String(), stderr.String(), nil
 }
 
-func (handler *Handler) CreateOrUpdate(obj client.Object, postUpdate func() error) error {
+func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Object) error) error {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-	err := handler.Client.Get(
-		context.TODO(),
-		types.NamespacedName{
-			Name:      obj.GetName(),
-			Namespace: obj.GetNamespace(),
-		},
-		u,
-	)
+	err := handler.Client.Get(context.TODO(), client.ObjectKeyFromObject(obj), u)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return handler.doCreate(obj)
+			return handler.doCreate(obj, postFun)
 		}
 		return err
 	}
@@ -157,17 +156,12 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postUpdate func() erro
 		return err
 	}
 	if !patchResult.IsEmpty() {
-		if err := handler.doUpdate(obj, u); err != nil {
-			return err
-		}
-		if err := postUpdate(); err != nil {
-			return err
-		}
+		return handler.doUpdate(obj, postFun)
 	}
 	return nil
 }
 
-func (handler *Handler) doCreate(obj client.Object) error {
+func (handler *Handler) doCreate(obj client.Object, postCreated func(client.Object) error) error {
 	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
 		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
 		return err
@@ -177,10 +171,10 @@ func (handler *Handler) doCreate(obj client.Object) error {
 		return err
 	}
 	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Created", "Create resource successfully")
-	return nil
+	return postCreated(obj)
 }
 
-func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
+func (handler *Handler) doUpdate(obj client.Object, postUpdated func(client.Object) error) error {
 	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
 		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
 		return err
@@ -190,7 +184,7 @@ func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
 		return err
 	}
 	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
-	return nil
+	return postUpdated(obj)
 }
 
 func IgnoreOtherContainers() patch.CalculateOption {

@@ -86,6 +86,8 @@ type EmqxSpec interface {
 
 	GetListener() Listener
 	SetListener(Listener)
+
+	GetStatus() Status
 }
 
 // +kubebuilder:object:generate=false
