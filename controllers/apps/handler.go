@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 
+	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
+	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -129,6 +132,7 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postUpdate func() erro
 			opts,
 			patch.IgnoreStatusFields(),
 			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
+			IgnoreOtherContainers(),
 		)
 	case *corev1.Service:
 		storageResource := &corev1.Service{}
@@ -187,4 +191,29 @@ func (handler *Handler) doUpdate(obj, storageObj client.Object) error {
 	}
 	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
 	return nil
+}
+
+func IgnoreOtherContainers() patch.CalculateOption {
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := selectEmqxContainer(current)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
+		}
+
+		modified, err = selectEmqxContainer(modified)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+func selectEmqxContainer(obj []byte) ([]byte, error) {
+	containers := gjson.GetBytes(obj, `spec.template.spec.containers.#(name=="emqx")#`)
+	newObj, err := sjson.SetBytes(obj, "spec.template.spec.containers", containers.String())
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not set byte sequence")
+	}
+	return newObj, nil
 }
