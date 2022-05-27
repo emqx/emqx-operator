@@ -102,4 +102,9 @@ func checkValidation(emqx v1beta3.Emqx) {
 	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
 	obj.SetImage("emqx:4")
 	Expect(k8sClient.Update(context.Background(), obj)).Should(Succeed())
+
+	obj.SetImage("127.0.0.1:8443/emqx/emqx:4.3.3")
+	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
+	obj.SetImage("127.0.0.1:8443/emqx/emqx:4.4.11")
+	Expect(k8sClient.Update(context.Background(), obj)).Should(Succeed())
 }
