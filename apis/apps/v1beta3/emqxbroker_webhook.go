@@ -126,8 +126,9 @@ func (r *EmqxBroker) ValidateDelete() error {
 
 func validateTag(image string) error {
 	str := strings.Split(image, ":")
-	if len(str) > 1 {
-		match, _ := regexp.MatchString("^[0-4]+.[0-3]+.*$", str[1])
+	l := len(str)
+	if l > 1 {
+		match, _ := regexp.MatchString("^[0-4]+.[0-3]+.*$", str[l-1])
 		if match {
 			return errors.New("EMQX Operator only support EMQX 4.4 and higher version")
 		}
