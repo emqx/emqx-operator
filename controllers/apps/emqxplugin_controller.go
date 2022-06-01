@@ -19,6 +19,7 @@ package apps
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	json "github.com/json-iterator/go"
@@ -94,7 +95,6 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if err := r.loadPluginToEmqx(instance); err != nil {
-
 		return ctrl.Result{}, err
 	}
 
@@ -111,7 +111,7 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func generateConfigStr(plugin *appsv1beta3.EmqxPlugin) string {
 	var config string
 	for key, value := range plugin.Spec.Config {
-		config += key + " = " + value + "\n"
+		config += fmt.Sprintln(key, " = ", value)
 	}
 	return config
 }
@@ -125,7 +125,7 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin) 
 	}
 
 	for _, emqx := range emqxList {
-		configMap, err := r.getPluginsConfig(emqx)
+		pluginsConfig, err := r.getPluginsConfig(emqx)
 		if err != nil {
 			if k8sErrors.IsNotFound(err) {
 				return nil
@@ -133,7 +133,7 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin) 
 			return err
 		}
 
-		configMapStr, err := json.ConfigCompatibleWithStandardLibrary.Marshal(configMap.Data)
+		configMapStr, err := json.ConfigCompatibleWithStandardLibrary.Marshal(pluginsConfig.Data)
 		if err != nil {
 			return err
 		}
@@ -142,7 +142,7 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin) 
 		storePluginConfig := gjson.GetBytes(configMapStr, path)
 		if storePluginConfig.Exists() {
 			if storePluginConfig.String() == pluginConfigStr {
-				break
+				continue
 			}
 		}
 		newConfigMapStr, err := sjson.SetBytes(configMapStr, path, pluginConfigStr)
@@ -154,17 +154,36 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin) 
 		if err := json.Unmarshal(newConfigMapStr, &configData); err != nil {
 			return err
 		}
-		configMap.Data = configData
+		pluginsConfig.Data = configData
 
+		// Update plugin config
 		postFun := func(_ client.Object) error { return nil }
-		if err := r.doUpdate(configMap, postFun); err != nil {
+		if err := r.doUpdate(pluginsConfig, postFun); err != nil {
 			return err
 		}
+
+		// Reload plugin
 		if err := r.ExecToPods(emqx, "emqx", "emqx_ctl plugins reload "+plugin.Spec.PluginName); err != nil {
 			if err.Error() == "container emqx is not ready" {
 				return nil
 			}
 			return err
+		}
+
+		// Update loaded plugins
+		loadedPlugins, err := r.getLoadedPlugins(emqx)
+		if err != nil {
+			return err
+		}
+		loadedPluginsStr := loadedPlugins.Data["loaded_plugins"]
+		loadedPluginLine := fmt.Sprintf("{%s, true}.\n", plugin.Spec.PluginName)
+		index := strings.Index(loadedPluginsStr, loadedPluginLine)
+		if index == -1 {
+			loadedPluginsStr += loadedPluginLine
+			loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
+			if err := r.doUpdate(loadedPlugins, postFun); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -178,12 +197,12 @@ func (r *EmqxPluginReconciler) unloadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin
 	}
 
 	for _, emqx := range emqxList {
-		configMap, err := r.getPluginsConfig(emqx)
+		pluginsConfig, err := r.getPluginsConfig(emqx)
 		if err != nil {
 			return err
 		}
 
-		configMapStr, err := json.ConfigCompatibleWithStandardLibrary.Marshal(configMap.Data)
+		configMapStr, err := json.ConfigCompatibleWithStandardLibrary.Marshal(pluginsConfig.Data)
 		if err != nil {
 			return err
 		}
@@ -191,17 +210,46 @@ func (r *EmqxPluginReconciler) unloadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin
 		path := plugin.Spec.PluginName + "\\.conf"
 		storePluginConfig := gjson.GetBytes(configMapStr, path)
 		if !storePluginConfig.Exists() {
-			break
+			continue
 		}
 
+		// Unload plugin
 		err = r.ExecToPods(emqx, "emqx", "emqx_ctl plugins unload "+plugin.Spec.PluginName)
 		if err != nil {
 			return err
 		}
 
-		_, err = sjson.DeleteBytes(configMapStr, path)
+		// Update plugin config
+		newConfigMapStr, err := sjson.DeleteBytes(configMapStr, path)
 		if err != nil {
 			return err
+		}
+
+		configData := map[string]string{}
+		if err := json.Unmarshal(newConfigMapStr, &configData); err != nil {
+			return err
+		}
+		pluginsConfig.Data = configData
+
+		postfun := func(_ client.Object) error { return nil }
+		if err := r.doUpdate(pluginsConfig, postfun); err != nil {
+			return err
+		}
+
+		// Update loaded plugins
+		loadedPlugins, err := r.getLoadedPlugins(emqx)
+		if err != nil {
+			return err
+		}
+		loadedPluginsStr := loadedPlugins.Data["loaded_plugins"]
+		loadedPluginLine := fmt.Sprintf("{%s, true}.\n", plugin.Spec.PluginName)
+		index := strings.Index(loadedPluginsStr, loadedPluginLine)
+		if index != -1 {
+			loadedPluginsStr = loadedPluginsStr[:index] + loadedPluginsStr[index+len(loadedPluginLine):]
+			loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
+			if err := r.doUpdate(loadedPlugins, postfun); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -235,6 +283,21 @@ func (r *EmqxPluginReconciler) getPluginsConfig(emqx appsv1beta3.Emqx) (*corev1.
 		context.TODO(),
 		client.ObjectKey{
 			Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "plugins-config"),
+			Namespace: emqx.GetNamespace(),
+		},
+		configMap,
+	); err != nil {
+		return nil, err
+	}
+	return configMap, nil
+}
+
+func (r *EmqxPluginReconciler) getLoadedPlugins(emqx appsv1beta3.Emqx) (*corev1.ConfigMap, error) {
+	configMap := &corev1.ConfigMap{}
+	if err := r.Get(
+		context.TODO(),
+		client.ObjectKey{
+			Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
 			Namespace: emqx.GetNamespace(),
 		},
 		configMap,

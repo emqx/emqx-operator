@@ -37,6 +37,7 @@ type EmqxEnterpriseReconciler struct {
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/finalizers,verbs=update
+
 func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	instance := &appsv1beta3.EmqxEnterprise{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {

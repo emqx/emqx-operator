@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,7 +79,13 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) erro
 
 	// First reconcile
 	if len(instance.GetStatus().Conditions) == 0 {
-		pluginResourceList := generateDefaultPluginList(instance)
+		pluginsList := &appsv1beta3.EmqxPluginList{}
+		err := r.Client.List(ctx, pluginsList, client.InNamespace(instance.GetNamespace()))
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return err
+		}
+
+		pluginResourceList := generateInitPluginList(instance, pluginsList)
 		resources = append(resources, pluginResourceList...)
 
 		// StateFulSet should be created last
@@ -202,87 +209,114 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 	return generateVolume(instance, sts)
 }
 
-func generateDefaultPluginList(instance appsv1beta3.Emqx) []client.Object {
+func generateInitPluginList(instance appsv1beta3.Emqx, exitsPluginList *appsv1beta3.EmqxPluginList) []client.Object {
+	matchedPluginList := []appsv1beta3.EmqxPlugin{}
+	for _, exitsPlugin := range exitsPluginList.Items {
+		selector, _ := labels.ValidatedSelectorFromSet(exitsPlugin.Spec.Selector)
+		if selector.Empty() || !selector.Matches(labels.Set(instance.GetLabels())) {
+			continue
+		}
+		matchedPluginList = append(matchedPluginList, exitsPlugin)
+	}
+
+	isExitsPlugin := func(pluginName string, pluginList []appsv1beta3.EmqxPlugin) bool {
+		for _, plugin := range pluginList {
+			if plugin.Spec.PluginName == pluginName {
+				return true
+			}
+		}
+		return false
+	}
+
 	pluginList := []client.Object{}
-
 	// Default plugins
-	emqxManagement := &appsv1beta3.EmqxPlugin{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta3",
-			Kind:       "EmqxPlugin",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-management", instance.GetName()),
-			Namespace: instance.GetNamespace(),
-			Labels:    instance.GetLabels(),
-		},
-		Spec: appsv1beta3.EmqxPluginSpec{
-			PluginName: "emqx_management",
-			Selector:   instance.GetLabels(),
-			Config: map[string]string{
-				"management.listener.http":              "8081",
-				"management.default_application.id":     "admin",
-				"management.default_application.secret": "public",
+	if !isExitsPlugin("emqx_management", matchedPluginList) {
+		emqxManagement := &appsv1beta3.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta3",
+				Kind:       "EmqxPlugin",
 			},
-		},
-	}
-
-	emqxDashboard := &appsv1beta3.EmqxPlugin{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta3",
-			Kind:       "EmqxPlugin",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-dashboard", instance.GetName()),
-			Namespace: instance.GetNamespace(),
-			Labels:    instance.GetLabels(),
-		},
-		Spec: appsv1beta3.EmqxPluginSpec{
-			PluginName: "emqx_dashboard",
-			Selector:   instance.GetLabels(),
-			Config: map[string]string{
-				"dashboard.listener.http":         "18083",
-				"dashboard.default_user.login":    "admin",
-				"dashboard.default_user.password": "public",
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-management", instance.GetName()),
+				Namespace: instance.GetNamespace(),
+				Labels:    instance.GetLabels(),
 			},
-		},
+			Spec: appsv1beta3.EmqxPluginSpec{
+				PluginName: "emqx_management",
+				Selector:   instance.GetLabels(),
+				Config: map[string]string{
+					"management.listener.http":              "8081",
+					"management.default_application.id":     "admin",
+					"management.default_application.secret": "public",
+				},
+			},
+		}
+		pluginList = append(pluginList, emqxManagement)
 	}
 
-	emqxRuleEngine := &appsv1beta3.EmqxPlugin{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta3",
-			Kind:       "EmqxPlugin",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-rule-engine", instance.GetName()),
-			Namespace: instance.GetNamespace(),
-			Labels:    instance.GetLabels(),
-		},
-		Spec: appsv1beta3.EmqxPluginSpec{
-			PluginName: "emqx_rule_engine",
-			Selector:   instance.GetLabels(),
-			Config:     map[string]string{},
-		},
+	if !isExitsPlugin("emqx_dashboard", matchedPluginList) {
+		emqxDashboard := &appsv1beta3.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta3",
+				Kind:       "EmqxPlugin",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-dashboard", instance.GetName()),
+				Namespace: instance.GetNamespace(),
+				Labels:    instance.GetLabels(),
+			},
+			Spec: appsv1beta3.EmqxPluginSpec{
+				PluginName: "emqx_dashboard",
+				Selector:   instance.GetLabels(),
+				Config: map[string]string{
+					"dashboard.listener.http":         "18083",
+					"dashboard.default_user.login":    "admin",
+					"dashboard.default_user.password": "public",
+				},
+			},
+		}
+		pluginList = append(pluginList, emqxDashboard)
 	}
 
-	emqxRetainer := &appsv1beta3.EmqxPlugin{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps.emqx.io/v1beta3",
-			Kind:       "EmqxPlugin",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-retainer", instance.GetName()),
-			Namespace: instance.GetNamespace(),
-			Labels:    instance.GetLabels(),
-		},
-		Spec: appsv1beta3.EmqxPluginSpec{
-			PluginName: "emqx_retainer",
-			Selector:   instance.GetLabels(),
-			Config:     map[string]string{},
-		},
+	if !isExitsPlugin("emqx_rule_engine", matchedPluginList) {
+		emqxRuleEngine := &appsv1beta3.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta3",
+				Kind:       "EmqxPlugin",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-rule-engine", instance.GetName()),
+				Namespace: instance.GetNamespace(),
+				Labels:    instance.GetLabels(),
+			},
+			Spec: appsv1beta3.EmqxPluginSpec{
+				PluginName: "emqx_rule_engine",
+				Selector:   instance.GetLabels(),
+				Config:     map[string]string{},
+			},
+		}
+		pluginList = append(pluginList, emqxRuleEngine)
 	}
 
-	pluginList = append(pluginList, emqxManagement, emqxDashboard, emqxRuleEngine, emqxRetainer)
+	if !isExitsPlugin("emqx_retainer", matchedPluginList) {
+		emqxRetainer := &appsv1beta3.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta3",
+				Kind:       "EmqxPlugin",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-retainer", instance.GetName()),
+				Namespace: instance.GetNamespace(),
+				Labels:    instance.GetLabels(),
+			},
+			Spec: appsv1beta3.EmqxPluginSpec{
+				PluginName: "emqx_retainer",
+				Selector:   instance.GetLabels(),
+				Config:     map[string]string{},
+			},
+		}
+		pluginList = append(pluginList, emqxRetainer)
+	}
 
 	return pluginList
 }
@@ -348,7 +382,7 @@ func generateLoadedPlugins(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (
 			Name:      names.LoadedPlugins(),
 		},
 		Data: map[string]string{
-			"loaded_plugins": "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.",
+			"loaded_plugins": "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.\n",
 		},
 	}
 
