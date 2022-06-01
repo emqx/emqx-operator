@@ -163,12 +163,7 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin) 
 		}
 
 		// Reload plugin
-		if err := r.ExecToPods(emqx, "emqx", "emqx_ctl plugins reload "+plugin.Spec.PluginName); err != nil {
-			if err.Error() == "container emqx is not ready" {
-				return nil
-			}
-			return err
-		}
+		_ = r.ExecToPods(emqx, "emqx", "emqx_ctl plugins reload "+plugin.Spec.PluginName)
 
 		// Update loaded plugins
 		loadedPlugins, err := r.getLoadedPlugins(emqx)
@@ -214,10 +209,7 @@ func (r *EmqxPluginReconciler) unloadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin
 		}
 
 		// Unload plugin
-		err = r.ExecToPods(emqx, "emqx", "emqx_ctl plugins unload "+plugin.Spec.PluginName)
-		if err != nil {
-			return err
-		}
+		_ = r.ExecToPods(emqx, "emqx", "emqx_ctl plugins unload "+plugin.Spec.PluginName)
 
 		// Update plugin config
 		newConfigMapStr, err := sjson.DeleteBytes(configMapStr, path)

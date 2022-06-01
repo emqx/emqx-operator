@@ -36,6 +36,9 @@ func (handler *Handler) ExecToPods(obj client.Object, containerName, command str
 		return err
 	}
 	for _, pod := range pods.Items {
+		if pod.Status.Phase != corev1.PodRunning {
+			return fmt.Errorf("pod %s is not running", pod.Name)
+		}
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			if containerStatus.Name == containerName {
 				if !containerStatus.Ready {
@@ -44,14 +47,11 @@ func (handler *Handler) ExecToPods(obj client.Object, containerName, command str
 			}
 		}
 
-		_, stderr, err := handler.execToPod(pod.GetNamespace(), pod.GetName(), containerName, command, nil)
-		if err != nil {
-			return fmt.Errorf("exec %s container %s in pod %s error: %v", command, containerName, pod.GetName(), err)
+		stdout, stderr, err := handler.execToPod(pod.GetNamespace(), pod.GetName(), containerName, command, nil)
+		if stderr != "" || err != nil {
+			return fmt.Errorf("exec %s container %s in pod %s failed, stdout: %v, stderr: %v, error: %v", command, containerName, pod.GetName(), stdout, stderr, err)
 		}
-		if stderr != "" {
-			return fmt.Errorf("exec %s container %s in pod %s stderr: %v", command, containerName, pod.GetName(), stderr)
-		}
-		str := fmt.Sprintf("Exec %s to container %s successfully", command, containerName)
+		str := fmt.Sprintf("exec %s to container %s successfully", command, containerName)
 		handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Exec", str)
 	}
 	return nil
@@ -92,7 +92,7 @@ func (handler *Handler) execToPod(namespace, podName, containerName, command str
 		Tty:    false,
 	})
 	if err != nil {
-		return "", "", fmt.Errorf("error in Stream: %v", err)
+		return stdout.String(), stderr.String(), fmt.Errorf("error in Stream: %v", err)
 	}
 
 	return stdout.String(), stderr.String(), nil
