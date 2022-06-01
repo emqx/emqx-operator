@@ -79,7 +79,7 @@ var _ = BeforeSuite(func() {
 
 	if os.Getenv("CI") == "true" {
 		Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
-		timeout = time.Minute * 5
+		timeout = time.Minute * 10
 	}
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
@@ -122,6 +122,11 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&controllers.EmqxEnterpriseReconciler{
+		Handler: handler,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&controllers.EmqxPluginReconciler{
 		Handler: handler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
