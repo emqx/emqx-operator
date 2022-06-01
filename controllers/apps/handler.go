@@ -152,7 +152,6 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postUpdate func() erro
 	}
 
 	patchResult, err := patch.DefaultPatchMaker.Calculate(u, obj, opts...)
-
 	if err != nil {
 		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
 		return err
