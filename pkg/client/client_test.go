@@ -22,8 +22,10 @@ func TestGetBrokers(t *testing.T) {
 	// Start a local HTTP server
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		// Send response to be tested
-		rw.Write([]byte(expected))
+		// ignore for lint check
+		_, _ = rw.Write([]byte(expected))
 	}))
+
 	// Close the server when test finishes
 	defer server.Close()
 
