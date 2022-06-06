@@ -1,0 +1,9 @@
+processor:
+  ignoreTypes:
+    - "(EmqxBroker|EmqxEnterprise|ACL)List$"
+  ignoreFields:
+    - "Status$"
+    - "TypeMeta$"
+
+render:
+  kubernetesVersion: 1.22
