@@ -39,12 +39,12 @@
       "title": "reference",
       "children": [
         {
-          "title": "EMQX Broker",
-          "path": "reference/emqxBroker"
+          "title": "V1Beta2 Reference",
+          "path": "reference/v1beta2-reference"
         },
         {
-          "title": "EMQX Enterprise",
-          "path": "reference/emqxEnterprise"
+          "title": "V1Beta3 Reference",
+          "path": "reference/v1beta3-reference"
         }
       ]
     },
@@ -91,19 +91,6 @@
         {
           "title": "配置",
           "path": "configuration/configuration"
-        }
-      ]
-    },
-    {
-      "title": "参考",
-      "children": [
-        {
-          "title": "EMQX Broker",
-          "path": "reference/emqxBroker"
-        },
-        {
-          "title": "EMQX Enterprise",
-          "path": "reference/emqxEnterprise"
         }
       ]
     },
