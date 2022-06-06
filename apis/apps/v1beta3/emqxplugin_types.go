@@ -29,9 +29,16 @@ type EmqxPluginSpec struct {
 	Config   map[string]string `json:"config,omitempty"`
 }
 
+type phase string
+
+const (
+	EmqxPluginStatusConfigured = "configured"
+	EmqxPluginStatusLoaded     = "loaded"
+)
+
 // EmqxPluginStatus defines the observed state of EmqxPlugin
 type EmqxPluginStatus struct {
-	Conditions []Condition `json:"conditions,omitempty"`
+	Phase phase `json:"phase,omitempty"`
 }
 
 //+kubebuilder:object:root=true
