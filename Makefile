@@ -50,7 +50,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 test: manifests generate fmt vet envtest ## Run tests.
-	go test ./... -coverprofile cover.out --timeout 20m
+	go test ./... -coverprofile cover.out
 
 ##@ Build
 

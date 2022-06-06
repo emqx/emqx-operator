@@ -32,8 +32,8 @@ type EmqxPluginSpec struct {
 type phase string
 
 const (
-	EmqxPluginStatusConfigured = "configured"
-	EmqxPluginStatusLoaded     = "loaded"
+	EmqxPluginStatusConfigured phase = "configured"
+	EmqxPluginStatusLoaded     phase = "loaded"
 )
 
 // EmqxPluginStatus defines the observed state of EmqxPlugin
