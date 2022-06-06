@@ -18,7 +18,6 @@ package controller_test
 
 import (
 	"context"
-	"encoding/base64"
 	"reflect"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
@@ -77,21 +76,22 @@ func check_cert(cert v1beta3.CertConf, namespacedName types.NamespacedName) {
 			Expect(secret.Data).Should(HaveKeyWithValue("tls.crt", cert.Data.TLSCert))
 			Expect(secret.Data).Should(HaveKeyWithValue("tls.key", cert.Data.TLSKey))
 		}
+		// Any []byte slices will be converted to a base64-encoded string when encoding them to JSON.
 		if !reflect.ValueOf(cert.StringData).IsZero() {
 			Expect(secret.Data).Should(
 				HaveKeyWithValue(
 					"ca.crt",
-					[]byte(base64.StdEncoding.EncodeToString([]byte(cert.StringData.CaCert)))),
+					[]byte(cert.StringData.CaCert)),
 			)
 			Expect(secret.Data).Should(
 				HaveKeyWithValue(
 					"tls.crt",
-					[]byte(base64.StdEncoding.EncodeToString([]byte(cert.StringData.TLSCert)))),
+					[]byte(cert.StringData.TLSCert)),
 			)
 			Expect(secret.Data).Should(
 				HaveKeyWithValue(
 					"tls.key",
-					[]byte(base64.StdEncoding.EncodeToString([]byte(cert.StringData.TLSKey)))),
+					[]byte(cert.StringData.TLSKey)),
 			)
 		}
 	}

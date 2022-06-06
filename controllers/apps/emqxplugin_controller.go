@@ -117,7 +117,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	for _, emqx := range emqxList {
 		if err := r.loadPluginToEmqx(instance, emqx); err != nil {
 			if err.Error() == "need requeue" {
-				logger.V(1).Info("Loaded plugin to emqx failed, need requeue")
+				logger.V(1).Info("Load plugin to emqx failed, need requeue")
 				return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
 			}
 			return ctrl.Result{}, err
