@@ -86,7 +86,7 @@ func TestEmqxEnterpriseModulesDefault(t *testing.T) {
 				Configs: runtime.RawExtension{Raw: []byte(`{"foo": "bar"}`)},
 			},
 			{
-				Name:    "internal_cal",
+				Name:    "internal_acl",
 				Enable:  true,
 				Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
 			},
