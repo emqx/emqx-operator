@@ -48,7 +48,7 @@ var v1beta1Enterprise = &v1beta1.EmqxEnterprise{
 		},
 		Modules: []v1beta2.EmqxEnterpriseModules{
 			{
-				Name:    "internal_cal",
+				Name:    "internal_acl",
 				Enable:  true,
 				Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
 			},
@@ -105,7 +105,7 @@ var v1beta2Enterprise = &v1beta2.EmqxEnterprise{
 			},
 			Modules: []v1beta2.EmqxEnterpriseModules{
 				{
-					Name:    "internal_cal",
+					Name:    "internal_acl",
 					Enable:  true,
 					Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
 				},

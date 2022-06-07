@@ -59,7 +59,7 @@ var _ = Describe("", func() {
 				case *v1beta2.EmqxEnterprise:
 					modules := []v1beta2.EmqxEnterpriseModules{
 						{
-							Name:    "internal_cal",
+							Name:    "internal_acl",
 							Enable:  true,
 							Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
 						},
