@@ -28,7 +28,7 @@ import (
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -39,7 +39,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -57,9 +56,13 @@ var timeout, interval time.Duration
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Webhook Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	// fetch the current config
+	suiteConfig, reporterConfig := GinkgoConfiguration()
+	// adjust it
+	suiteConfig.SkipStrings = []string{"NEVER-RUN"}
+	reporterConfig.FullTrace = true
+	// pass it in to RunSpecs
+	RunSpecs(t, "Controller Suite", suiteConfig, reporterConfig)
 }
 
 var _ = BeforeSuite(func() {
@@ -139,7 +142,7 @@ var _ = BeforeSuite(func() {
 		conn.Close()
 		return nil
 	}).Should(Succeed())
-}, 60)
+})
 
 var _ = AfterSuite(func() {
 	cancel()
