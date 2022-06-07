@@ -13,8 +13,8 @@ type Plugins struct {
 	Items []Plugin
 }
 
-func (p *Plugins) Default() {
-	defultPlugins := []Plugin{
+func (p *Plugins) Default(emqx Emqx) {
+	defaultPlugins := []Plugin{
 		{
 			Name:   "emqx_management",
 			Enable: true,
@@ -41,12 +41,18 @@ func (p *Plugins) Default() {
 		},
 	}
 	if p.Items == nil {
-		p.Items = defultPlugins
+		p.Items = defaultPlugins
+	} else {
+		if _, index := p.Lookup("emqx_management"); index == -1 {
+			p.Items = append(p.Items, Plugin{Name: "emqx_management", Enable: true})
+		}
 	}
-	_, index := p.Lookup("emqx_management")
-	if index == -1 {
-		p.Items = append(p.Items, Plugin{Name: "emqx_management", Enable: true})
+	if _, ok := emqx.(*EmqxEnterprise); ok {
+		if _, index := p.Lookup("emqx_modules"); index == -1 {
+			p.Items = append(p.Items, Plugin{Name: "emqx_modules", Enable: true})
+		}
 	}
+
 }
 
 func (p *Plugins) Lookup(name string) (*Plugin, int) {

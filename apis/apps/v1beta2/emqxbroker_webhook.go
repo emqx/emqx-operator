@@ -73,7 +73,7 @@ func (r *EmqxBroker) Default() {
 	plugins := &Plugins{
 		Items: r.Spec.EmqxTemplate.Plugins,
 	}
-	plugins.Default()
+	plugins.Default(r)
 	r.Spec.EmqxTemplate.Plugins = plugins.Items
 
 	modules := &EmqxBrokerModulesList{

@@ -64,7 +64,7 @@ func (r *EmqxEnterprise) Default() {
 	plugins := &v1beta2.Plugins{
 		Items: r.Spec.Plugins,
 	}
-	plugins.Default()
+	plugins.Default(&v1beta2.EmqxEnterprise{})
 	r.Spec.Plugins = plugins.Items
 
 	modules := &v1beta2.EmqxEnterpriseModulesList{

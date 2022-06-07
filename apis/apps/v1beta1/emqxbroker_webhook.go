@@ -74,7 +74,7 @@ func (r *EmqxBroker) Default() {
 	plugins := &v1beta2.Plugins{
 		Items: r.Spec.Plugins,
 	}
-	plugins.Default()
+	plugins.Default(&v1beta2.EmqxBroker{})
 	if r.Spec.TelegrafTemplate != nil {
 		_, index := plugins.Lookup("emqx_prometheus")
 		if index == -1 {
