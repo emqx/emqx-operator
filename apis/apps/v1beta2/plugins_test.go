@@ -21,7 +21,7 @@ func TestPluginsDefault(t *testing.T) {
 		},
 	}
 
-	plugins.Default()
+	plugins.Default(&v1beta2.EmqxEnterprise{})
 	assert.ElementsMatch(t, plugins.Items,
 		[]v1beta2.Plugin{
 			{
@@ -34,6 +34,10 @@ func TestPluginsDefault(t *testing.T) {
 			},
 			{
 				Name:   "emqx_management",
+				Enable: true,
+			},
+			{
+				Name:   "emqx_modules",
 				Enable: true,
 			},
 		},
