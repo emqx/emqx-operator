@@ -2,4 +2,4 @@
 
 ### Fixes 🛠
 
-- fix regex to validate image tag which contains `ip:port`
+- When deploy emqx enterprise, default load `emqx_modules` plugin

@@ -17,7 +17,7 @@
 安装默认静态配置文件
 
 ```bash
-$ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.1.8/emqx-operator-controller.yaml" | kubectl apply -f -
+$ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.1.9/emqx-operator-controller.yaml" | kubectl apply -f -
 ```
 
 ### 通过 Helm 安装
