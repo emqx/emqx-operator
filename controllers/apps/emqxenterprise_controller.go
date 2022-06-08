@@ -18,7 +18,6 @@ package apps
 
 import (
 	"context"
-	"time"
 
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,13 +49,7 @@ func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	instance.SetAPIVersion(appsv1beta3.GroupVersion.Group + "/" + appsv1beta3.GroupVersion.Version)
 	instance.SetKind("EmqxEnterprise")
 
-	if err := (&EmqxReconciler{
-		Handler: r.Handler,
-	}).Do(ctx, instance); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
+	return (&EmqxReconciler{Handler: r.Handler}).Do(ctx, instance)
 }
 
 // SetupWithManager sets up the controller with the Manager.

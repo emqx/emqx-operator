@@ -51,8 +51,8 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	// License
 	dst.Spec.EmqxTemplate.License.StringData = src.Spec.EmqxTemplate.License
 
-	// Listener
-	dst.Spec.EmqxTemplate.Listener = convertToListener(src.Spec.EmqxTemplate.Listener)
+	// ServiceTemplate
+	dst.Spec.EmqxTemplate.ServiceTemplate = convertToListener(src.Spec.EmqxTemplate.Listener)
 
 	if !reflect.ValueOf(src.Spec.Storage).IsZero() {
 		dst.Spec.Persistent = src.Spec.Storage
@@ -112,7 +112,7 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 
 	// Listener
-	dst.Spec.EmqxTemplate.Listener = convertFromListener(src.Spec.EmqxTemplate.Listener)
+	dst.Spec.EmqxTemplate.Listener = convertFromListener(src)
 
 	if !reflect.ValueOf(src.Spec.Persistent).IsZero() {
 		dst.Spec.Storage = src.Spec.Persistent

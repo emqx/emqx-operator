@@ -23,6 +23,7 @@ import (
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
@@ -50,8 +51,8 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	}
 	dst.ObjectMeta.Annotations = annotations
 
-	// Listener
-	dst.Spec.EmqxTemplate.Listener = convertToListener(src.Spec.EmqxTemplate.Listener)
+	// ServiceTemplate
+	dst.Spec.EmqxTemplate.ServiceTemplate = convertToListener(src.Spec.EmqxTemplate.Listener)
 
 	dst.Spec.Persistent = src.Spec.Storage
 
@@ -100,7 +101,7 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.Annotations = src.Annotations
 
 	// Listener
-	dst.Spec.EmqxTemplate.Listener = convertFromListener(src.Spec.EmqxTemplate.Listener)
+	dst.Spec.EmqxTemplate.Listener = convertFromListener(src)
 
 	if !reflect.ValueOf(src.Spec.Persistent).IsZero() {
 		dst.Spec.Storage = src.Spec.Persistent
@@ -142,83 +143,119 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 	return nil
 }
 
-func convertToListener(src Listener) v1beta3.Listener {
-	var dst v1beta3.Listener
+func convertToListener(src Listener) v1beta3.ServiceTemplate {
+	var dst v1beta3.ServiceTemplate
 
 	dst.Labels = src.Labels
 	dst.Annotations = src.Annotations
-	dst.Type = src.Type
-	dst.LoadBalancerIP = src.LoadBalancerIP
-	dst.LoadBalancerSourceRanges = src.LoadBalancerSourceRanges
-	dst.ExternalIPs = src.ExternalIPs
+	dst.Spec.Type = src.Type
+	dst.Spec.LoadBalancerIP = src.LoadBalancerIP
+	dst.Spec.LoadBalancerSourceRanges = src.LoadBalancerSourceRanges
+	dst.Spec.ExternalIPs = src.ExternalIPs
 
-	dst.API.Port = src.Ports.API
-	dst.Dashboard.Port = src.Ports.Dashboard
-	dst.MQTT.Port = src.Ports.MQTT
-	dst.MQTTS.Port = src.Ports.MQTTS
-	dst.WS.Port = src.Ports.WS
-	dst.WSS.Port = src.Ports.WSS
+	ports := []corev1.ServicePort{
+		{
+			Name:       "management-listener-http",
+			Port:       src.Ports.API,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.API},
+			NodePort:   src.NodePorts.API,
+		},
+		{
+			Name:       "dashboard-listener-http",
+			Port:       src.Ports.Dashboard,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.Dashboard},
+			NodePort:   src.NodePorts.Dashboard,
+		},
+		{
+			Name:       "listener-tcp-external",
+			Port:       src.Ports.MQTT,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.MQTT},
+			NodePort:   src.NodePorts.MQTT,
+		},
+		{
+			Name:       "listener-ssl-external",
+			Port:       src.Ports.MQTTS,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.MQTTS},
+			NodePort:   src.NodePorts.MQTTS,
+		},
+		{
+			Name:       "listener-ws-external",
+			Port:       src.Ports.WS,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.WS},
+			NodePort:   src.NodePorts.WS,
+		},
+		{
+			Name:       "listener-wss-external",
+			Port:       src.Ports.WSS,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.WSS},
+			NodePort:   src.NodePorts.WSS,
+		},
+	}
 
-	dst.API.NodePort = src.NodePorts.API
-	dst.Dashboard.NodePort = src.NodePorts.Dashboard
-	dst.MQTT.NodePort = src.NodePorts.MQTT
-	dst.MQTTS.NodePort = src.NodePorts.MQTTS
-	dst.WS.NodePort = src.NodePorts.WS
-	dst.WSS.NodePort = src.NodePorts.WSS
-
-	dst.MQTTS.Cert.Data.CaCert = src.Certificate.MQTTS.Data.CaCert
-	dst.MQTTS.Cert.Data.TLSCert = src.Certificate.MQTTS.Data.TLSCert
-	dst.MQTTS.Cert.Data.TLSKey = src.Certificate.MQTTS.Data.TLSKey
-	dst.MQTTS.Cert.StringData.CaCert = src.Certificate.MQTTS.StringData.CaCert
-	dst.MQTTS.Cert.StringData.TLSCert = src.Certificate.MQTTS.StringData.TLSCert
-	dst.MQTTS.Cert.StringData.TLSKey = src.Certificate.MQTTS.StringData.TLSKey
-
-	dst.WSS.Cert.Data.CaCert = src.Certificate.WSS.Data.CaCert
-	dst.WSS.Cert.Data.TLSCert = src.Certificate.WSS.Data.TLSCert
-	dst.WSS.Cert.Data.TLSKey = src.Certificate.WSS.Data.TLSKey
-	dst.WSS.Cert.StringData.CaCert = src.Certificate.WSS.StringData.CaCert
-	dst.WSS.Cert.StringData.TLSCert = src.Certificate.WSS.StringData.TLSCert
-	dst.WSS.Cert.StringData.TLSKey = src.Certificate.WSS.StringData.TLSKey
-
+	dst.Spec.Ports = append(dst.Spec.Ports, ports...)
 	return dst
 }
 
-func convertFromListener(src v1beta3.Listener) Listener {
+func convertFromListener(src v1beta3.Emqx) Listener {
 	var dst Listener
 
-	dst.Labels = src.Labels
-	dst.Annotations = src.Annotations
-	dst.Type = src.Type
-	dst.LoadBalancerIP = src.LoadBalancerIP
-	dst.LoadBalancerSourceRanges = src.LoadBalancerSourceRanges
-	dst.ExternalIPs = src.ExternalIPs
+	serviceTemplate := src.GetServiceTemplate()
 
-	dst.Ports.API = src.API.Port
-	dst.Ports.Dashboard = src.Dashboard.Port
-	dst.Ports.MQTT = src.MQTT.Port
-	dst.Ports.MQTTS = src.MQTTS.Port
-	dst.Ports.WS = src.WS.Port
-	dst.Ports.WSS = src.WSS.Port
-	dst.NodePorts.API = src.API.NodePort
-	dst.NodePorts.Dashboard = src.Dashboard.NodePort
-	dst.NodePorts.MQTT = src.MQTT.NodePort
-	dst.NodePorts.MQTTS = src.MQTTS.NodePort
-	dst.NodePorts.WS = src.WS.NodePort
-	dst.NodePorts.WSS = src.WSS.NodePort
+	dst.Labels = serviceTemplate.Labels
+	dst.Annotations = serviceTemplate.Annotations
+	dst.Type = serviceTemplate.Spec.Type
+	dst.LoadBalancerIP = serviceTemplate.Spec.LoadBalancerIP
+	dst.LoadBalancerSourceRanges = serviceTemplate.Spec.LoadBalancerSourceRanges
+	dst.ExternalIPs = serviceTemplate.Spec.ExternalIPs
 
-	dst.Certificate.MQTTS.Data.CaCert = src.MQTTS.Cert.Data.CaCert
-	dst.Certificate.MQTTS.Data.TLSCert = src.MQTTS.Cert.Data.TLSCert
-	dst.Certificate.MQTTS.Data.TLSKey = src.MQTTS.Cert.Data.TLSKey
-	dst.Certificate.MQTTS.StringData.CaCert = src.MQTTS.Cert.StringData.CaCert
-	dst.Certificate.MQTTS.StringData.TLSCert = src.MQTTS.Cert.StringData.TLSCert
-	dst.Certificate.MQTTS.StringData.TLSKey = src.MQTTS.Cert.StringData.TLSKey
+	lookup := func(port string) corev1.ServicePort {
+		for _, p := range serviceTemplate.Spec.Ports {
+			if p.TargetPort.String() == port {
+				return p
+			}
+		}
+		return corev1.ServicePort{}
+	}
 
-	dst.Certificate.WSS.Data.CaCert = src.WSS.Cert.Data.CaCert
-	dst.Certificate.WSS.Data.TLSCert = src.WSS.Cert.Data.TLSCert
-	dst.Certificate.WSS.Data.TLSKey = src.WSS.Cert.Data.TLSKey
-	dst.Certificate.WSS.StringData.CaCert = src.WSS.Cert.StringData.CaCert
-	dst.Certificate.WSS.StringData.TLSCert = src.WSS.Cert.StringData.TLSCert
-	dst.Certificate.WSS.StringData.TLSKey = src.WSS.Cert.StringData.TLSKey
+	for _, env := range src.GetEnv() {
+		if env.Name == "EMQX_MANAGEMENT_LISTENER__HTTP" {
+			svcPort := lookup(env.Value)
+			dst.Ports.API = svcPort.Port
+			dst.NodePorts.API = svcPort.NodePort
+		}
+		if env.Name == "EMQX_DASHBOARD__LISTENER__HTTP" {
+			svcPort := lookup(env.Value)
+			dst.Ports.Dashboard = svcPort.Port
+			dst.NodePorts.Dashboard = svcPort.NodePort
+		}
+		if env.Name == "EMQX_LISTENER__TCP__EXTERNAL" {
+			svcPort := lookup(env.Value)
+			dst.Ports.MQTT = svcPort.Port
+			dst.NodePorts.MQTT = svcPort.NodePort
+		}
+		if env.Name == "EMQX_LISTENER__SSL__EXTERNAL" {
+			svcPort := lookup(env.Value)
+			dst.Ports.MQTTS = svcPort.Port
+			dst.NodePorts.MQTTS = svcPort.NodePort
+		}
+		if env.Name == "EMQX_WS__LISTENER__TCP" {
+			svcPort := lookup(env.Value)
+			dst.Ports.WS = svcPort.Port
+			dst.NodePorts.WS = svcPort.NodePort
+		}
+		if env.Name == "EMQX_WSS__LISTENER__TCP" {
+			svcPort := lookup(env.Value)
+			dst.Ports.WSS = svcPort.Port
+			dst.NodePorts.WSS = svcPort.NodePort
+		}
+
+	}
 
 	return dst
 }

@@ -19,6 +19,11 @@ package apps
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/url"
+	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +32,7 @@ import (
 	"github.com/tidwall/sjson"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -108,6 +114,9 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	for _, emqx := range emqxList {
 		if err := r.configurePluginToEmqx(instance, emqx); err != nil {
+			if k8sErrors.IsNotFound(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, err
 		}
 	}
@@ -118,7 +127,10 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if err := r.loadPluginToEmqx(instance, emqx); err != nil {
 			if err.Error() == "need requeue" {
 				logger.V(1).Info("Load plugin to emqx failed, need requeue")
-				return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
+				return ctrl.Result{Requeue: true}, nil
+			}
+			if k8sErrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, err
 			}
 			return ctrl.Result{}, err
 		}
@@ -206,11 +218,22 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, 
 		}
 	}
 
+	// Insert service ports
+	serviceTemplate := emqx.GetServiceTemplate()
+	servicePorts := InsertServicePorts(plugin, serviceTemplate.Spec.Ports)
+
+	if !reflect.DeepEqual(servicePorts, serviceTemplate.Spec.Ports) {
+		serviceTemplate.Spec.Ports = servicePorts
+		emqx.SetServiceTemplate(serviceTemplate)
+		if err := r.doUpdate(emqx, func(_ client.Object) error { return nil }); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (r *EmqxPluginReconciler) unloadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
-
 	pluginsConfig, err := r.getPluginsConfig(emqx)
 	if err != nil {
 		return err
@@ -259,6 +282,18 @@ func (r *EmqxPluginReconciler) unloadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin
 		loadedPluginsStr = loadedPluginsStr[:index] + loadedPluginsStr[index+len(loadedPluginLine):]
 		loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
 		if err := r.doUpdate(loadedPlugins, postfun); err != nil {
+			return err
+		}
+	}
+
+	// Remove service ports
+	serviceTemplate := emqx.GetServiceTemplate()
+	servicePorts := RemoveServicePorts(plugin, serviceTemplate.Spec.Ports)
+
+	if !reflect.DeepEqual(servicePorts, serviceTemplate.Spec.Ports) {
+		serviceTemplate.Spec.Ports = servicePorts
+		emqx.SetServiceTemplate(serviceTemplate)
+		if err := r.doUpdate(emqx, func(_ client.Object) error { return nil }); err != nil {
 			return err
 		}
 	}
@@ -319,4 +354,165 @@ func (r *EmqxPluginReconciler) getLoadedPlugins(emqx appsv1beta3.Emqx) (*corev1.
 		return nil, err
 	}
 	return configMap, nil
+}
+
+func InsertServicePorts(plugin *appsv1beta3.EmqxPlugin, servicePorts []corev1.ServicePort) []corev1.ServicePort {
+	return UpdateServicePorts(plugin, servicePorts, insertServicePortForConfig)
+}
+
+func RemoveServicePorts(plugin *appsv1beta3.EmqxPlugin, servicePorts []corev1.ServicePort) []corev1.ServicePort {
+	return UpdateServicePorts(plugin, servicePorts, removeServicePortForConfig)
+}
+
+func UpdateServicePorts(plugin *appsv1beta3.EmqxPlugin, servicePorts []corev1.ServicePort, handler func(string, string, []corev1.ServicePort) []corev1.ServicePort) []corev1.ServicePort {
+	switch plugin.Spec.PluginName {
+	case "emqx_management":
+		compile := regexp.MustCompile("^management.listener.(http|https)$")
+		for k, v := range plugin.Spec.Config {
+			if compile.MatchString(k) {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	case "emqx_dashboard":
+		compile := regexp.MustCompile("^dashboard.listener.(http|https)$")
+		for k, v := range plugin.Spec.Config {
+			if compile.MatchString(k) {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	case "emqx_lwm2m":
+		compile := regexp.MustCompile("^lwm2m.bind.(udp|dtls).[0-9]+$")
+		for k, v := range plugin.Spec.Config {
+			if compile.Match([]byte(k)) {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	case "emqx_coap":
+		compile := regexp.MustCompile("^coap.bind.(udp|dtls).[0-9]+$")
+		for k, v := range plugin.Spec.Config {
+			if compile.MatchString(k) {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	case "emqx_sn":
+		for k, v := range plugin.Spec.Config {
+			if k == "mqtt.sn.port" {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	case "emqx_exproto":
+		compileHTTP := regexp.MustCompile("^exproto.server.(http|https).port$")
+		compileProto := regexp.MustCompile("^exproto.listener.[A-Za-z0-9_-]*$")
+		for k, v := range plugin.Spec.Config {
+			if compileHTTP.MatchString(k) || compileProto.MatchString(k) {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	case "emqx_stomp":
+		for k, v := range plugin.Spec.Config {
+			if k == "stomp.listener" {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+
+	// The following are the Enterprise plugins
+	case "emqx_jt808":
+		compile := regexp.MustCompile("^jt808.listener.(tcp|ssl)$")
+		for k, v := range plugin.Spec.Config {
+			if compile.MatchString(k) {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	case "emqx_tcp":
+		compileTCP := regexp.MustCompile("^tcp.listener.[a-z]+$")
+		compileSSL := regexp.MustCompile("^tcp.listener.ssl.[a-z]+$")
+		for k, v := range plugin.Spec.Config {
+			if compileTCP.MatchString(k) || compileSSL.MatchString(k) {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	case "emqx_gbt32960":
+		compile := regexp.MustCompile("^gbt32960.listener.(tcp|ssl)$")
+		for k, v := range plugin.Spec.Config {
+			if compile.MatchString(k) {
+				servicePorts = handler(k, v, servicePorts)
+			}
+		}
+	}
+	return servicePorts
+}
+
+func insertServicePortForConfig(configName, configValue string, servicePorts []corev1.ServicePort) []corev1.ServicePort {
+	var protocol corev1.Protocol
+	var strPort string
+	var intPort int
+
+	compile := regexp.MustCompile(".*(udp|dtls|sn).*")
+	if compile.MatchString(configName) {
+		protocol = corev1.ProtocolUDP
+	} else {
+		protocol = corev1.ProtocolTCP
+	}
+
+	if strings.Contains(configValue, ":") {
+		u, err := url.Parse(configValue)
+		if err == nil {
+			protocol = corev1.Protocol(strings.ToUpper(u.Scheme))
+			strPort = u.Port()
+		} else {
+			_, strPort, err = net.SplitHostPort(configValue)
+			if err != nil {
+				strPort = configValue
+			}
+		}
+	} else {
+		strPort = configValue
+	}
+
+	intPort, _ = strconv.Atoi(strPort)
+	if index := findPort(intPort, servicePorts); index == -1 {
+		servicePorts = append(servicePorts, corev1.ServicePort{
+			Name:       strings.Replace(configName, ".", "-", -1),
+			Port:       int32(intPort),
+			TargetPort: intstr.FromInt(intPort),
+			Protocol:   protocol,
+		})
+	}
+
+	return servicePorts
+}
+
+func removeServicePortForConfig(configName, configValue string, servicePorts []corev1.ServicePort) []corev1.ServicePort {
+	var strPort string
+	var intPort int
+
+	if strings.Contains(configValue, ":") {
+		u, err := url.Parse(configValue)
+		if err == nil {
+			strPort = u.Port()
+		} else {
+			_, strPort, err = net.SplitHostPort(configValue)
+			if err != nil {
+				strPort = configValue
+			}
+		}
+	} else {
+		strPort = configValue
+	}
+
+	intPort, _ = strconv.Atoi(strPort)
+	if index := findPort(intPort, servicePorts); index != -1 {
+		servicePorts = append(servicePorts[:index], servicePorts[index+1:]...)
+	}
+	return servicePorts
+}
+
+func findPort(port int, ports []corev1.ServicePort) int {
+	for i := 0; i <= (len(ports) - 1); {
+		if ports[i].TargetPort.IntValue() == port {
+			return i
+		}
+		i++
+	}
+	return -1
 }

@@ -45,10 +45,10 @@ type EmqxEnterpriseTemplate struct {
 	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
 	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
 
-	Listener Listener               `json:"listener,omitempty"`
-	ACL      []ACL                  `json:"acl,omitempty"`
-	Modules  []EmqxEnterpriseModule `json:"modules,omitempty"`
-	License  License                `json:"license,omitempty"`
+	ServiceTemplate ServiceTemplate        `json:"serviceTemplate,omitempty"`
+	ACL             []ACL                  `json:"acl,omitempty"`
+	Modules         []EmqxEnterpriseModule `json:"modules,omitempty"`
+	License         License                `json:"license,omitempty"`
 }
 
 // EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
@@ -211,9 +211,11 @@ func (emqx *EmqxEnterprise) SetStartupProbe(probe *corev1.Probe) {
 	emqx.Spec.EmqxTemplate.StartupProbe = probe
 }
 
-func (emqx *EmqxEnterprise) GetListener() Listener { return emqx.Spec.EmqxTemplate.Listener }
-func (emqx *EmqxEnterprise) SetListener(listener Listener) {
-	emqx.Spec.EmqxTemplate.Listener = listener
+func (emqx *EmqxEnterprise) GetServiceTemplate() ServiceTemplate {
+	return emqx.Spec.EmqxTemplate.ServiceTemplate
+}
+func (emqx *EmqxEnterprise) SetServiceTemplate(serviceTemplate ServiceTemplate) {
+	emqx.Spec.EmqxTemplate.ServiceTemplate = serviceTemplate
 }
 
 func (emqx *EmqxEnterprise) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }

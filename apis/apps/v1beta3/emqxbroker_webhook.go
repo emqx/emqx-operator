@@ -62,7 +62,7 @@ func (r *EmqxBroker) Default() {
 	}
 	modules.Default()
 	r.Spec.EmqxTemplate.Modules = modules.Items
-	r.Spec.EmqxTemplate.Listener.Default()
+	r.Spec.EmqxTemplate.ServiceTemplate.Default(r)
 
 	config := &ConfigList{
 		Items: r.Spec.EmqxTemplate.EmqxConfig,
