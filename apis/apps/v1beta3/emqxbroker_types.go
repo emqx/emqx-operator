@@ -40,9 +40,9 @@ type EmqxBrokerTemplate struct {
 	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
 	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
 
-	Listener Listener           `json:"listener,omitempty"`
-	ACL      []ACL              `json:"acl,omitempty"`
-	Modules  []EmqxBrokerModule `json:"modules,omitempty"`
+	ServiceTemplate ServiceTemplate    `json:"serviceTemplate,omitempty"`
+	ACL             []ACL              `json:"acl,omitempty"`
+	Modules         []EmqxBrokerModule `json:"modules,omitempty"`
 }
 
 // EmqxBrokerSpec defines the desired state of EmqxBroker
@@ -203,9 +203,11 @@ func (emqx *EmqxBroker) SetStartupProbe(probe *corev1.Probe) {
 	emqx.Spec.EmqxTemplate.StartupProbe = probe
 }
 
-func (emqx *EmqxBroker) GetListener() Listener { return emqx.Spec.EmqxTemplate.Listener }
-func (emqx *EmqxBroker) SetListener(listener Listener) {
-	emqx.Spec.EmqxTemplate.Listener = listener
+func (emqx *EmqxBroker) GetServiceTemplate() ServiceTemplate {
+	return emqx.Spec.EmqxTemplate.ServiceTemplate
+}
+func (emqx *EmqxBroker) SetServiceTemplate(serviceTemplate ServiceTemplate) {
+	emqx.Spec.EmqxTemplate.ServiceTemplate = serviceTemplate
 }
 
 func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }

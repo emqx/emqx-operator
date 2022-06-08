@@ -48,7 +48,7 @@ func (handler *Handler) ExecToPods(obj client.Object, containerName, command str
 		}
 
 		stdout, stderr, err := handler.execToPod(pod.GetNamespace(), pod.GetName(), containerName, command, nil)
-		if stderr != "" || err != nil {
+		if err != nil {
 			return fmt.Errorf("exec %s container %s in pod %s failed, stdout: %v, stderr: %v, error: %v", command, containerName, pod.GetName(), stdout, stderr, err)
 		}
 		str := fmt.Sprintf("exec %s to container %s successfully", command, containerName)

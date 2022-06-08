@@ -86,8 +86,8 @@ type EmqxSpec interface {
 	GetACL() []ACL
 	SetACL(acl []ACL)
 
-	GetListener() Listener
-	SetListener(Listener)
+	GetServiceTemplate() ServiceTemplate
+	SetServiceTemplate(ServiceTemplate)
 
 	GetStatus() Status
 }

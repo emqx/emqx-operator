@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -88,6 +89,32 @@ var _ = Describe("", func() {
 		It("Check lwm2m plugin", func() {
 			for _, emqx := range emqxList() {
 				// Create plugin
+				lwm2mPorts := []corev1.ServicePort{
+					{
+						Name:       "lwm2m-bind-udp-1",
+						Protocol:   corev1.ProtocolUDP,
+						Port:       5683,
+						TargetPort: intstr.FromInt(5683),
+					},
+					{
+						Name:       "lwm2m-bind-udp-2",
+						Protocol:   corev1.ProtocolUDP,
+						Port:       5684,
+						TargetPort: intstr.FromInt(5684),
+					},
+					{
+						Name:       "lwm2m-bind-dtls-1",
+						Protocol:   corev1.ProtocolUDP,
+						Port:       5685,
+						TargetPort: intstr.FromInt(5685),
+					},
+					{
+						Name:       "lwm2m-bind-dtls-2",
+						Protocol:   corev1.ProtocolUDP,
+						Port:       5686,
+						TargetPort: intstr.FromInt(5686),
+					},
+				}
 				lwm2m := &v1beta3.EmqxPlugin{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: "apps.emqx.io/v1beta3",
@@ -105,7 +132,8 @@ var _ = Describe("", func() {
 							"lwm2m.lifetime_max": "86400s",
 							"lwm2m.bind.udp.1":   "0.0.0.0:5683",
 							"lwm2m.bind.udp.2":   "0.0.0.0:5684",
-							"lwm2m.bind.udp.3":   "0.0.0.0:5685",
+							"lwm2m.bind.dtls.1":  "0.0.0.0:5685",
+							"lwm2m.bind.dtls.2":  "0.0.0.0:5686",
 							"lwm2m.xml_dir":      "/opt/emqx/etc/lwm2m_xml",
 						},
 					},
@@ -148,6 +176,19 @@ var _ = Describe("", func() {
 					return pluginConfig.Data
 				}, timeout, interval).Should(HaveKey("emqx_lwm2m.conf"))
 
+				Eventually(func() []corev1.ServicePort {
+					svc := &corev1.Service{}
+					_ = k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						svc,
+					)
+					return svc.Spec.Ports
+				}).Should(ContainElements(lwm2mPorts))
+
 				// Delete plugin
 				Expect(k8sClient.Delete(
 					context.Background(),
@@ -182,6 +223,20 @@ var _ = Describe("", func() {
 					)
 					return cm.Data
 				}, timeout, interval).ShouldNot(HaveKey("emqx_lwm2m.conf"))
+
+				Eventually(func() []corev1.ServicePort {
+					svc := &corev1.Service{}
+					_ = k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						svc,
+					)
+					return svc.Spec.Ports
+				}).ShouldNot(ContainElements(lwm2mPorts))
+
 			}
 		})
 	})
