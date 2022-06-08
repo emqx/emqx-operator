@@ -209,17 +209,17 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 	return generateVolume(instance, sts)
 }
 
-func generateInitPluginList(instance appsv1beta3.Emqx, exitsPluginList *appsv1beta3.EmqxPluginList) []client.Object {
+func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1beta3.EmqxPluginList) []client.Object {
 	matchedPluginList := []appsv1beta3.EmqxPlugin{}
-	for _, exitsPlugin := range exitsPluginList.Items {
-		selector, _ := labels.ValidatedSelectorFromSet(exitsPlugin.Spec.Selector)
+	for _, existPlugin := range existPluginList.Items {
+		selector, _ := labels.ValidatedSelectorFromSet(existPlugin.Spec.Selector)
 		if selector.Empty() || !selector.Matches(labels.Set(instance.GetLabels())) {
 			continue
 		}
-		matchedPluginList = append(matchedPluginList, exitsPlugin)
+		matchedPluginList = append(matchedPluginList, existPlugin)
 	}
 
-	isExitsPlugin := func(pluginName string, pluginList []appsv1beta3.EmqxPlugin) bool {
+	isExistPlugin := func(pluginName string, pluginList []appsv1beta3.EmqxPlugin) bool {
 		for _, plugin := range pluginList {
 			if plugin.Spec.PluginName == pluginName {
 				return true
@@ -230,7 +230,7 @@ func generateInitPluginList(instance appsv1beta3.Emqx, exitsPluginList *appsv1be
 
 	pluginList := []client.Object{}
 	// Default plugins
-	if !isExitsPlugin("emqx_management", matchedPluginList) {
+	if !isExistPlugin("emqx_management", matchedPluginList) {
 		emqxManagement := &appsv1beta3.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps.emqx.io/v1beta3",
@@ -254,7 +254,7 @@ func generateInitPluginList(instance appsv1beta3.Emqx, exitsPluginList *appsv1be
 		pluginList = append(pluginList, emqxManagement)
 	}
 
-	if !isExitsPlugin("emqx_dashboard", matchedPluginList) {
+	if !isExistPlugin("emqx_dashboard", matchedPluginList) {
 		emqxDashboard := &appsv1beta3.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps.emqx.io/v1beta3",
@@ -278,7 +278,7 @@ func generateInitPluginList(instance appsv1beta3.Emqx, exitsPluginList *appsv1be
 		pluginList = append(pluginList, emqxDashboard)
 	}
 
-	if !isExitsPlugin("emqx_rule_engine", matchedPluginList) {
+	if !isExistPlugin("emqx_rule_engine", matchedPluginList) {
 		emqxRuleEngine := &appsv1beta3.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps.emqx.io/v1beta3",
@@ -298,7 +298,7 @@ func generateInitPluginList(instance appsv1beta3.Emqx, exitsPluginList *appsv1be
 		pluginList = append(pluginList, emqxRuleEngine)
 	}
 
-	if !isExitsPlugin("emqx_retainer", matchedPluginList) {
+	if !isExistPlugin("emqx_retainer", matchedPluginList) {
 		emqxRetainer := &appsv1beta3.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps.emqx.io/v1beta3",
@@ -316,6 +316,29 @@ func generateInitPluginList(instance appsv1beta3.Emqx, exitsPluginList *appsv1be
 			},
 		}
 		pluginList = append(pluginList, emqxRetainer)
+	}
+
+	_, ok := instance.(*appsv1beta3.EmqxEnterprise)
+	if ok && !isExistPlugin("emqx_modules", matchedPluginList) {
+		emqxModules := &appsv1beta3.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta3",
+				Kind:       "EmqxPlugin",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-modules", instance.GetName()),
+				Namespace: instance.GetNamespace(),
+				Labels:    instance.GetLabels(),
+			},
+			Spec: appsv1beta3.EmqxPluginSpec{
+				PluginName: "emqx_modules",
+				Selector:   instance.GetLabels(),
+				Config: map[string]string{
+					"modules.loaded_file": "/mounted/modules/loaded_modules",
+				},
+			},
+		}
+		pluginList = append(pluginList, emqxModules)
 	}
 
 	return pluginList

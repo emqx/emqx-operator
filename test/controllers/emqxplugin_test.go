@@ -34,6 +34,12 @@ var _ = Describe("", func() {
 	Context("Check plugin", func() {
 		It("Check default plugin", func() {
 			for _, emqx := range emqxList() {
+				pluginList := []string{"emqx_management", "emqx_dashboard", "emqx_rule_engine", "emqx_retainer"}
+				loaded_plugins := "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.\n"
+				if _, ok := emqx.(*v1beta3.EmqxEnterprise); ok {
+					pluginList = append(pluginList, "emqx_modules")
+					loaded_plugins += "{emqx_modules, true}.\n"
+				}
 				Eventually(func() map[string]string {
 					cm := &corev1.ConfigMap{}
 					_ = k8sClient.Get(
@@ -46,11 +52,11 @@ var _ = Describe("", func() {
 					return cm.Data
 				}, timeout, interval).Should(Equal(
 					map[string]string{
-						"loaded_plugins": "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.\n",
+						"loaded_plugins": loaded_plugins,
 					},
 				))
 
-				for _, pluginName := range []string{"emqx_management", "emqx_dashboard", "emqx_rule_engine", "emqx_retainer"} {
+				for _, pluginName := range pluginList {
 					Eventually(func() error {
 						plugin := &v1beta3.EmqxPlugin{}
 						err := k8sClient.Get(
@@ -153,7 +159,7 @@ var _ = Describe("", func() {
 					},
 				)).Should(Succeed())
 
-				Eventually(func() map[string]string {
+				Eventually(func() string {
 					cm := &corev1.ConfigMap{}
 					_ = k8sClient.Get(
 						context.Background(),
@@ -162,12 +168,8 @@ var _ = Describe("", func() {
 							Namespace: emqx.GetNamespace(),
 						}, cm,
 					)
-					return cm.Data
-				}, timeout, interval).Should(Equal(
-					map[string]string{
-						"loaded_plugins": "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.\n",
-					},
-				))
+					return cm.Data["loaded_plugins"]
+				}, timeout, interval).ShouldNot(ContainSubstring("{emqx_lwm2m, true}"))
 
 				Eventually(func() map[string]string {
 					cm := &corev1.ConfigMap{}
