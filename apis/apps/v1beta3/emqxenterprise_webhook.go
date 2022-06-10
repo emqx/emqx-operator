@@ -61,11 +61,11 @@ func (r *EmqxEnterprise) Default() {
 
 	r.Spec.EmqxTemplate.Listener.Default()
 
-	env := &EnvList{
-		Items: r.Spec.EmqxTemplate.Env,
+	config := &ConfigList{
+		Items: r.Spec.EmqxTemplate.EmqxConfig,
 	}
-	env.ClusterForDNS(r)
-	r.Spec.EmqxTemplate.Env = env.Items
+	config.Default(r)
+	r.Spec.EmqxTemplate.Env = config.FormatItems2Env()
 
 	if r.Spec.EmqxTemplate.SecurityContext == nil {
 		emqxUserGroup := int64(1000)

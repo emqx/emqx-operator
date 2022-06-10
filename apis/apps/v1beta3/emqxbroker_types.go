@@ -29,8 +29,9 @@ type EmqxBrokerTemplate struct {
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
-	Env  []corev1.EnvVar `json:"env,omitempty"`
-	Args []string        `json:"args,omitempty"`
+	EmqxConfig EmqxConfig      `json:"config,omitempty"`
+	Env        []corev1.EnvVar `json:"env,omitempty"`
+	Args       []string        `json:"args,omitempty"`
 
 	SecurityContext *corev1.PodSecurityContext  `json:"securityContext,omitempty"`
 	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -168,6 +169,8 @@ func (emqx *EmqxBroker) GetSecurityContext() *corev1.PodSecurityContext {
 func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityContext) {
 	emqx.Spec.EmqxTemplate.SecurityContext = securityContext
 }
+
+func (emqx *EmqxBroker) GetEmqxConfig() EmqxConfig { return emqx.Spec.EmqxTemplate.EmqxConfig }
 
 func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.EmqxTemplate.Env }
 func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {

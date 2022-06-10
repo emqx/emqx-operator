@@ -132,6 +132,8 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.ExtraVolumes = src.Spec.EmqxTemplate.ExtraVolumes
 	dst.Spec.ExtraVolumeMounts = src.Spec.EmqxTemplate.ExtraVolumeMounts
 	dst.Spec.Env = src.Spec.EmqxTemplate.Env
+	//dst.Spec.Env = src.Spec.EmqxTemplate.Env
+	dst.Spec.Env = converFromEnvAndConfig(src.Spec.EmqxTemplate.Env, src.Spec.EmqxTemplate.EmqxConfig)
 
 	// Status
 	for _, condition := range src.Status.Conditions {

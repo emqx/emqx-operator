@@ -141,7 +141,14 @@ var v1beta3EmqxBroker = v1beta3.EmqxBroker{
 			},
 		},
 		EmqxTemplate: v1beta3.EmqxBrokerTemplate{
-			Image: "emqx/emqx:4.4.1",
+			Image:      "emqx/emqx:4.4.1",
+			EmqxConfig: map[string]string{"log.level": "debug"},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "EMQX_LOG__TO",
+					Value: "both",
+				},
+			},
 			Listener: v1beta3.Listener{
 				Type: corev1.ServiceTypeNodePort,
 				API: v1beta3.ListenerPort{
@@ -210,4 +217,16 @@ func TestConvertFromBroker(t *testing.T) {
 	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Certificate.MQTTS.Data.CaCert, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.MQTTS.Cert.Data.CaCert)
 	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Certificate.MQTTS.Data.TLSCert, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.MQTTS.Cert.Data.TLSCert)
 	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Certificate.MQTTS.Data.TLSKey, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.MQTTS.Cert.Data.TLSKey)
+	assert.True(t, len(emqx.Spec.Env) == 2)
+	assert.ElementsMatch(t, emqx.Spec.Env,
+		[]corev1.EnvVar{
+			{
+				Name:  "EMQX_LOG__TO",
+				Value: "both",
+			},
+			{
+				Name:  "EMQX_LOG__LEVEL",
+				Value: "debug",
+			},
+		})
 }

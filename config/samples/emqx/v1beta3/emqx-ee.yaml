@@ -64,21 +64,14 @@ spec:
       - |
         printenv | grep "^EMQX_"
         emqx foreground
-    env:
-      - name: "EMQX_LOG__LEVEL"
-        value: "debug"
-      - name: "EMQX_LOG__TO"
-        value: "both"
-      - name: "EMQX_NAME"
-        value: "emqx-ee"
-      - name: "EMQX_CLUSTER__DISCOVERY"
-        value: "dns"
-      - name: "EMQX_CLUSTER__DNS__TYPE"
-        value: "srv"
-      - name: "EMQX_CLUSTER__DNS__APP"
-        value: "emqx-ee"
-      - name: "EMQX_CLUSTER__DNS__NAME"
-        value: "emqx-ee-headless.default.svc.cluster.local"
+    config:
+      log.level: debug
+      log.to: both
+      name: emqx-ee
+      cluster.discovery: dns
+      cluster.dns.type: srv
+      cluster.dns.app: emqx-ee
+      cluster.dns.name: emqx-ee-headless.default.svc.cluster.local
     readinessProbe:
       httpGet:
         path: /status
