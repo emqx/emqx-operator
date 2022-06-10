@@ -76,6 +76,7 @@ type EmqxSpec interface {
 	SetStartupProbe(probe *corev1.Probe)
 
 	GetEmqxConfig() EmqxConfig
+	SetEmqxConfig(config EmqxConfig)
 
 	GetEnv() []corev1.EnvVar
 	SetEnv(env []corev1.EnvVar)

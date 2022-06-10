@@ -179,6 +179,9 @@ func (emqx *EmqxEnterprise) SetResource(resource corev1.ResourceRequirements) {
 }
 
 func (emqx *EmqxEnterprise) GetEmqxConfig() EmqxConfig { return emqx.Spec.EmqxTemplate.EmqxConfig }
+func (emqx *EmqxEnterprise) SetEmqxConfig(config EmqxConfig) {
+	emqx.Spec.EmqxTemplate.EmqxConfig = config
+}
 
 func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar { return emqx.Spec.EmqxTemplate.Env }
 func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) {

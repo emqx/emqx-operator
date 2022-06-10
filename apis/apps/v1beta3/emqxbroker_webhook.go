@@ -62,13 +62,12 @@ func (r *EmqxBroker) Default() {
 	}
 	modules.Default()
 	r.Spec.EmqxTemplate.Modules = modules.Items
-	r.Spec.EmqxTemplate.ServiceTemplate.Default(r)
 
-	config := &ConfigList{
-		Items: r.Spec.EmqxTemplate.EmqxConfig,
+	if r.Spec.EmqxTemplate.EmqxConfig == nil {
+		r.Spec.EmqxTemplate.EmqxConfig = make(EmqxConfig)
 	}
-	config.Default(r)
-	r.Spec.EmqxTemplate.Env = config.FormatItems2Env()
+	r.Spec.EmqxTemplate.EmqxConfig.Default(r)
+	r.Spec.EmqxTemplate.ServiceTemplate.Default(r)
 
 	if r.Spec.EmqxTemplate.SecurityContext == nil {
 		emqxUserGroup := int64(1000)

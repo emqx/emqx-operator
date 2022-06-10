@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -47,6 +48,38 @@ type EmqxReconciler struct {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
+	serviceTemplate := instance.GetServiceTemplate()
+	servicePorts := serviceTemplate.Spec.Ports
+	for k, v := range instance.GetEmqxConfig() {
+		compile := regexp.MustCompile("^listener.(tcp|ssl|ws|wss).[a-z]+$")
+		if compile.MatchString(k) {
+			_, strPort, err := net.SplitHostPort(v)
+			if err != nil {
+				strPort = v
+			}
+			intPort, _ := strconv.Atoi(strPort)
+			portName := strings.ReplaceAll(k, ".", "-")
+			if index := findPort(intPort, servicePorts); index == -1 {
+				// Delete duplicate names port
+				if index := findPortName(portName, servicePorts); index != -1 {
+					servicePorts = append(servicePorts[:index], servicePorts[index+1:]...)
+				}
+				servicePorts = append(servicePorts, corev1.ServicePort{
+					Name:       portName,
+					Port:       int32(intPort),
+					TargetPort: intstr.FromInt(intPort),
+					Protocol:   corev1.ProtocolTCP,
+				})
+			}
+		}
+	}
+	if !reflect.DeepEqual(servicePorts, serviceTemplate.Spec.Ports) {
+		serviceTemplate.Spec.Ports = servicePorts
+		instance.SetServiceTemplate(serviceTemplate)
+		_ = r.doUpdate(instance, func(_ client.Object) error { return nil })
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	var resources []client.Object
 
 	var sts *appsv1.StatefulSet
@@ -88,39 +121,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		resources = append(resources, sts)
 	}
 
-	findPort := func(port int, ports []corev1.ServicePort) bool {
-		for _, p := range ports {
-			if p.TargetPort.IntValue() == port {
-				return true
-			}
-		}
-		return false
-	}
-	serviceTemplate := instance.GetServiceTemplate()
-	servicePorts := serviceTemplate.Spec.Ports
-	for _, env := range instance.GetEnv() {
-		compile := regexp.MustCompile("^EMQX_LISTENER__.*$")
-		if compile.MatchString(env.Name) {
-			intPort, _ := strconv.Atoi(env.Value)
-			if !findPort(intPort, serviceTemplate.Spec.Ports) {
-				servicePorts = append(servicePorts, corev1.ServicePort{
-					Name:       strings.ToLower(strings.Replace(env.Name, "_", "-", -1)),
-					Port:       int32(intPort),
-					TargetPort: intstr.FromInt(intPort),
-					Protocol:   corev1.ProtocolTCP,
-				})
-			}
-		}
-	}
-	if !reflect.DeepEqual(servicePorts, serviceTemplate.Spec.Ports) {
-		serviceTemplate.Spec.Ports = servicePorts
-		instance.SetServiceTemplate(serviceTemplate)
-		_ = r.doUpdate(instance, func(_ client.Object) error { return nil })
-		return ctrl.Result{Requeue: true}, nil
-	}
-
 	ownerRef := metav1.NewControllerRef(instance, instance.GetObjectKind().GroupVersionKind())
-
 	for _, resource := range resources {
 		addOwnerRefToObject(resource, *ownerRef)
 
@@ -775,4 +776,24 @@ func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
 	}
 
 	return
+}
+
+func findPort(port int, ports []corev1.ServicePort) int {
+	for i := 0; i <= (len(ports) - 1); {
+		if ports[i].TargetPort.IntValue() == port {
+			return i
+		}
+		i++
+	}
+	return -1
+}
+
+func findPortName(name string, ports []corev1.ServicePort) int {
+	for i := 0; i <= (len(ports) - 1); {
+		if ports[i].Name == name {
+			return i
+		}
+		i++
+	}
+	return -1
 }
