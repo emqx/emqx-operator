@@ -85,6 +85,32 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	var sts *appsv1.StatefulSet
 	sts = generateStatefulSetDef(instance)
 
+	// First reconcile
+	if len(instance.GetStatus().Conditions) == 0 {
+		loadedPlugins, _ := generateLoadedPlugins(instance, sts)
+		emptyPluginsConfig, _ := generateEmptyPlugins(instance, sts)
+		resources = append(resources, emptyPluginsConfig, loadedPlugins)
+
+		pluginsList := &appsv1beta3.EmqxPluginList{}
+		err := r.Client.List(ctx, pluginsList, client.InNamespace(instance.GetNamespace()))
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+
+		pluginResourceList := generateInitPluginList(instance, pluginsList)
+		resources = append(resources, pluginResourceList...)
+
+		nothing := func(client.Object) error { return nil }
+		err = r.CreateOrUpdateList(instance, resources, nothing)
+		if err != nil {
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "Reconciled", err.Error())
+			return ctrl.Result{Requeue: true}, err
+		}
+	}
+
+	_, sts = generateLoadedPlugins(instance, sts)
+	_, sts = generateEmptyPlugins(instance, sts)
+
 	headlessSvc, svc, sts := generateSvc(instance, sts)
 	resources = append(resources, headlessSvc, svc)
 
@@ -98,58 +124,16 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	if license != nil {
 		resources = append(resources, license)
 	}
+	// StateFulSet should be created last
+	resources = append(resources, sts)
 
-	loadedPlugins, sts := generateLoadedPlugins(instance, sts)
-	emptyPluginsConfig, sts := generateEmptyPlugins(instance, sts)
-	resources = append(resources, emptyPluginsConfig, loadedPlugins)
-
-	// First reconcile
-	if len(instance.GetStatus().Conditions) == 0 {
-		pluginsList := &appsv1beta3.EmqxPluginList{}
-		err := r.Client.List(ctx, pluginsList, client.InNamespace(instance.GetNamespace()))
-		if err != nil && !k8sErrors.IsNotFound(err) {
-			return ctrl.Result{}, err
-		}
-
-		pluginResourceList := generateInitPluginList(instance, pluginsList)
-		resources = append(resources, pluginResourceList...)
-
-		// StateFulSet should be created last
-		resources = append(resources, sts)
-	} else {
-		// StateFulSet should be created last
-		resources = append(resources, sts)
-	}
-
-	ownerRef := metav1.NewControllerRef(instance, instance.GetObjectKind().GroupVersionKind())
-	for _, resource := range resources {
-		addOwnerRefToObject(resource, *ownerRef)
-
-		var err error
-		names := appsv1beta3.Names{Object: instance}
-		switch resource.GetName() {
-		case names.PluginsConfig(), names.LoadedPlugins():
-			// Only create plugins config and loaded plugins, do not update
-			configMap := &corev1.ConfigMap{}
-			err = r.Get(context.TODO(), client.ObjectKeyFromObject(resource), configMap)
-			if k8sErrors.IsNotFound(err) {
-				nothing := func(client.Object) error { return nil }
-				err = r.Handler.doCreate(resource, nothing)
-			} else {
-				err = nil
-			}
-		default:
-			nothing := func(client.Object) error { return nil }
-			err = r.Handler.CreateOrUpdate(resource, nothing)
-		}
-
-		if err != nil {
-			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "Reconciled", err.Error())
-			instance.SetFailedCondition(err.Error())
-			instance.DescConditionsByTime()
-			_ = r.Status().Update(ctx, instance)
-			return ctrl.Result{}, err
-		}
+	nothing := func(client.Object) error { return nil }
+	if err := r.CreateOrUpdateList(instance, resources, nothing); err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "Reconciled", err.Error())
+		instance.SetFailedCondition(err.Error())
+		instance.DescConditionsByTime()
+		_ = r.Status().Update(ctx, instance)
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	instance.SetRunningCondition("Reconciled")
@@ -757,22 +741,24 @@ func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
 }
 
 func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
+	lookup := func(name string, envs []corev1.EnvVar) bool {
+		for _, env := range envs {
+			if env.Name == name {
+				return true
+			}
+		}
+		return false
+
+	}
+
+	envs := instance.GetEnv()
 	emqxConfig := instance.GetEmqxConfig()
 
 	for k, v := range emqxConfig {
 		key := fmt.Sprintf("EMQX_%s", strings.ToUpper(strings.ReplaceAll(k, ".", "__")))
-		ret = append(ret, corev1.EnvVar{Name: key, Value: v})
-	}
-
-	envs := instance.GetEnv()
-	ret = append(ret, envs...)
-
-	tags := make(map[string]int)
-	for i := len(ret) - 1; i >= 0; i-- {
-		if _, ok := tags[ret[i].Name]; ok {
-			ret = append(ret[:i], ret[i+1:]...)
+		if !lookup(key, envs) {
+			ret = append(ret, corev1.EnvVar{Name: key, Value: v})
 		}
-		tags[ret[i].Name] = i
 	}
 
 	return
