@@ -55,6 +55,9 @@ func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}).Do(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
+	if !r.Handler.checkEmqxClusterHealthy(instance) {
+		return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
+	}
 
 	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
 }
