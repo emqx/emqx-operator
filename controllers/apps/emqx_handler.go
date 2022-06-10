@@ -180,7 +180,7 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 							Image:           instance.GetImage(),
 							ImagePullPolicy: instance.GetImagePullPolicy(),
 							Resources:       instance.GetResource(),
-							Env:             instance.GetEnv(),
+							Env:             mergeEnvAndConfig(instance),
 							Args:            instance.GetArgs(),
 							ReadinessProbe:  instance.GetReadinessProbe(),
 							LivenessProbe:   instance.GetLivenessProbe(),
@@ -965,4 +965,26 @@ func generateVolumeClaimTemplate(instance appsv1beta3.Emqx, Name string) corev1.
 
 func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
 	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
+}
+
+func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
+	emqxConfig := instance.GetEmqxConfig()
+
+	for k, v := range emqxConfig {
+		key := fmt.Sprintf("EMQX_%s", strings.ToUpper(strings.ReplaceAll(k, ".", "__")))
+		ret = append(ret, corev1.EnvVar{Name: key, Value: v})
+	}
+
+	envs := instance.GetEnv()
+	ret = append(ret, envs...)
+
+	tags := make(map[string]int)
+	for i := len(ret) - 1; i >= 0; i-- {
+		if _, ok := tags[ret[i].Name]; ok {
+			ret = append(ret[:i], ret[i+1:]...)
+		}
+		tags[ret[i].Name] = i
+	}
+
+	return
 }

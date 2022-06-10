@@ -10,18 +10,14 @@ import (
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 )
 
-func TestEnv(t *testing.T) {
-	envs := &v1beta3.EnvList{
-		Items: []corev1.EnvVar{
-			{
-				Name:  "EMQX_NAME",
-				Value: "foo",
-			},
-			{
-				Name:  "EMQX_FOO",
-				Value: "bar",
-			},
-		},
+func TestConfig(t *testing.T) {
+
+	info := make(v1beta3.EmqxConfig)
+	info["name"] = "foo"
+	info["foo"] = "bar"
+
+	config := &v1beta3.ConfigList{
+		Items: info,
 	}
 
 	emqx := &v1beta3.EmqxEnterprise{
@@ -30,9 +26,9 @@ func TestEnv(t *testing.T) {
 			Namespace: "emqx",
 		},
 	}
-	envs.ClusterForDNS(emqx)
+	config.Default(emqx)
 
-	assert.ElementsMatch(t, envs.Items,
+	assert.ElementsMatch(t, config.FormatItems2Env(),
 		[]corev1.EnvVar{
 			{
 				Name:  "EMQX_LOG__TO",

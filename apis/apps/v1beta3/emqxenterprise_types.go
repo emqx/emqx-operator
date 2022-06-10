@@ -34,8 +34,9 @@ type EmqxEnterpriseTemplate struct {
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
-	Env  []corev1.EnvVar `json:"env,omitempty"`
-	Args []string        `json:"args,omitempty"`
+	EmqxConfig EmqxConfig      `json:"config,omitempty"`
+	Env        []corev1.EnvVar `json:"env,omitempty"`
+	Args       []string        `json:"args,omitempty"`
 
 	SecurityContext *corev1.PodSecurityContext  `json:"securityContext,omitempty"`
 	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -176,6 +177,8 @@ func (emqx *EmqxEnterprise) GetResource() corev1.ResourceRequirements {
 func (emqx *EmqxEnterprise) SetResource(resource corev1.ResourceRequirements) {
 	emqx.Spec.EmqxTemplate.Resources = resource
 }
+
+func (emqx *EmqxEnterprise) GetEmqxConfig() EmqxConfig { return emqx.Spec.EmqxTemplate.EmqxConfig }
 
 func (emqx *EmqxEnterprise) GetEnv() []corev1.EnvVar { return emqx.Spec.EmqxTemplate.Env }
 func (emqx *EmqxEnterprise) SetEnv(env []corev1.EnvVar) {

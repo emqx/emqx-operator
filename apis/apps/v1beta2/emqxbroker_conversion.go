@@ -17,9 +17,12 @@ limitations under the License.
 package v1beta2
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
@@ -116,7 +119,8 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.ImagePullPolicy = src.Spec.EmqxTemplate.ImagePullPolicy
 	dst.Spec.ExtraVolumes = src.Spec.EmqxTemplate.ExtraVolumes
 	dst.Spec.ExtraVolumeMounts = src.Spec.EmqxTemplate.ExtraVolumeMounts
-	dst.Spec.Env = src.Spec.EmqxTemplate.Env
+	//dst.Spec.Env = src.Spec.EmqxTemplate.Env
+	dst.Spec.Env = converFromEnvAndConfig(src.Spec.EmqxTemplate.Env, src.Spec.EmqxTemplate.EmqxConfig)
 
 	// Status
 	for _, condition := range src.Status.Conditions {
@@ -217,4 +221,22 @@ func convertFromListener(src v1beta3.Listener) Listener {
 	dst.Certificate.WSS.StringData.TLSKey = src.WSS.Cert.StringData.TLSKey
 
 	return dst
+}
+
+func converFromEnvAndConfig(envs []corev1.EnvVar, emqxConfig v1beta3.EmqxConfig) (ret []corev1.EnvVar) {
+	for k, v := range emqxConfig {
+		key := fmt.Sprintf("EMQX_%s", strings.ToUpper(strings.ReplaceAll(k, ".", "__")))
+		ret = append(ret, corev1.EnvVar{Name: key, Value: v})
+	}
+
+	ret = append(ret, envs...)
+	tags := make(map[string]int)
+	for i := len(ret) - 1; i >= 0; i-- {
+		if _, ok := tags[ret[i].Name]; ok {
+			ret = append(ret[:i], ret[i+1:]...)
+		}
+		tags[ret[i].Name] = i
+	}
+
+	return
 }
