@@ -150,6 +150,10 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{Requeue: true}, err
 	}
 
+	if !r.Handler.checkEmqxClusterHealthy(instance) {
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	instance.SetRunningCondition("Reconciled")
 	instance.DescConditionsByTime()
 	_ = r.Status().Update(ctx, instance)
