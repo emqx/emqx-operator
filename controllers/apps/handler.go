@@ -13,6 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -96,6 +97,20 @@ func (handler *Handler) execToPod(namespace, podName, containerName, command str
 	}
 
 	return stdout.String(), stderr.String(), nil
+}
+
+func (handler *Handler) CreateOrUpdateList(instance client.Object, resources []client.Object, postFun func(client.Object) error) error {
+	ownerRef := metav1.NewControllerRef(instance, instance.GetObjectKind().GroupVersionKind())
+	for _, resource := range resources {
+		addOwnerRefToObject(resource, *ownerRef)
+
+		nothing := func(client.Object) error { return nil }
+		err := handler.CreateOrUpdate(resource, nothing)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Object) error) error {

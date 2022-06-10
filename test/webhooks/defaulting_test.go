@@ -102,7 +102,7 @@ func checkDefaulting(emqx v1beta3.Emqx) {
 	Expect(emqx.GetServiceTemplate().Spec.Selector).Should(HaveKeyWithValue("foo", "bar"))
 
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("log.to", "both"))
-	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("node.name", emqx.GetName()))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("name", emqx.GetName()))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.tcp.external", "1883"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.ssl.external", "8883"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.ws.external", "8083"))
