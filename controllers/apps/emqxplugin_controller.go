@@ -470,9 +470,14 @@ func insertServicePortForConfig(configName, configValue string, servicePorts []c
 	}
 
 	intPort, _ = strconv.Atoi(strPort)
+	portName := strings.ReplaceAll(configName, ".", "-")
 	if index := findPort(intPort, servicePorts); index == -1 {
+		// Delete duplicate names port
+		if index := findPortName(portName, servicePorts); index != -1 {
+			servicePorts = append(servicePorts[:index], servicePorts[index+1:]...)
+		}
 		servicePorts = append(servicePorts, corev1.ServicePort{
-			Name:       strings.Replace(configName, ".", "-", -1),
+			Name:       portName,
 			Port:       int32(intPort),
 			TargetPort: intstr.FromInt(intPort),
 			Protocol:   protocol,
@@ -505,14 +510,4 @@ func removeServicePortForConfig(configName, configValue string, servicePorts []c
 		servicePorts = append(servicePorts[:index], servicePorts[index+1:]...)
 	}
 	return servicePorts
-}
-
-func findPort(port int, ports []corev1.ServicePort) int {
-	for i := 0; i <= (len(ports) - 1); {
-		if ports[i].TargetPort.IntValue() == port {
-			return i
-		}
-		i++
-	}
-	return -1
 }

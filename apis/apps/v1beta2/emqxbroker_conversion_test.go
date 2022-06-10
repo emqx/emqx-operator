@@ -224,13 +224,7 @@ func TestConvertFromBroker(t *testing.T) {
 
 	assert.Equal(t, emqx.Spec.Storage, v1beta3EmqxBroker.Spec.Persistent)
 
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Type, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.Type)
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Ports.API, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.API.Port)
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.NodePorts.API, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.API.NodePort)
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Certificate.MQTTS.Data.CaCert, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.MQTTS.Cert.Data.CaCert)
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Certificate.MQTTS.Data.TLSCert, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.MQTTS.Cert.Data.TLSCert)
-	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Certificate.MQTTS.Data.TLSKey, v1beta3EmqxBroker.Spec.EmqxTemplate.Listener.MQTTS.Cert.Data.TLSKey)
-	assert.ElementsMatch(t, emqx.Spec.Env,
+	assert.Subset(t, emqx.Spec.Env,
 		[]corev1.EnvVar{
 			{
 				Name:  "EMQX_LOG__TO",

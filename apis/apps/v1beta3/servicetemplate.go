@@ -3,7 +3,6 @@ package v1beta3
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type ServiceTemplate struct {
@@ -20,36 +19,18 @@ func (s *ServiceTemplate) Default(emqx Emqx) {
 		s.ObjectMeta.Labels = make(map[string]string)
 	}
 	for key, value := range emqx.GetLabels() {
-		s.ObjectMeta.Labels[key] = value
+		if _, ok := s.ObjectMeta.Labels[key]; !ok {
+			s.ObjectMeta.Labels[key] = value
+		}
+	}
+	if s.ObjectMeta.Annotations == nil {
+		s.ObjectMeta.Annotations = map[string]string{}
+	}
+	for key, value := range emqx.GetAnnotations() {
+		if _, ok := s.ObjectMeta.Annotations[key]; !ok {
+			s.ObjectMeta.Annotations[key] = value
+		}
 	}
 
 	s.Spec.Selector = emqx.GetLabels()
-	if s.Spec.Ports == nil {
-		s.Spec.Ports = []corev1.ServicePort{
-			{
-				Name:       "listener-tcp-external",
-				Port:       1883,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(1883),
-			},
-			{
-				Name:       "listener-ssl-external",
-				Port:       8883,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(8883),
-			},
-			{
-				Name:       "listener-ws-external",
-				Port:       8083,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(8083),
-			},
-			{
-				Name:       "listener-wss-external",
-				Port:       8084,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(8084),
-			},
-		}
-	}
 }

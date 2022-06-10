@@ -170,7 +170,8 @@ func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityCo
 	emqx.Spec.EmqxTemplate.SecurityContext = securityContext
 }
 
-func (emqx *EmqxBroker) GetEmqxConfig() EmqxConfig { return emqx.Spec.EmqxTemplate.EmqxConfig }
+func (emqx *EmqxBroker) GetEmqxConfig() EmqxConfig       { return emqx.Spec.EmqxTemplate.EmqxConfig }
+func (emqx *EmqxBroker) SetEmqxConfig(config EmqxConfig) { emqx.Spec.EmqxTemplate.EmqxConfig = config }
 
 func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.EmqxTemplate.Env }
 func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {

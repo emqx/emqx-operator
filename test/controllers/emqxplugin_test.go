@@ -63,7 +63,7 @@ var _ = Describe("", func() {
 						err := k8sClient.Get(
 							context.Background(),
 							types.NamespacedName{
-								Name:      strings.Replace(strings.Replace(pluginName, "emqx", emqx.GetName(), 1), "_", "-", -1),
+								Name:      strings.ReplaceAll(strings.Replace(pluginName, "emqx", emqx.GetName(), 1), "_", "-"),
 								Namespace: emqx.GetNamespace(),
 							}, plugin,
 						)

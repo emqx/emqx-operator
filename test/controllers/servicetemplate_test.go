@@ -74,22 +74,16 @@ var _ = Describe("", func() {
 			emqx := generateEmqxBroker(brokerName, brokerNameSpace)
 			servicePorts := []corev1.ServicePort{
 				{
-					Name:       "emqx-listener--tcp--external",
+					Name:       "listener-tcp-external",
 					Port:       21883,
 					Protocol:   "TCP",
 					TargetPort: intstr.FromInt(21883),
 				},
 			}
 
-			env := []corev1.EnvVar{
-				{
-					Name:  "EMQX_LISTENER__TCP__EXTERNAL",
-					Value: "21883",
-				},
-			}
-
-			emqx.SetEnv(env)
-			// emqx.SetServiceTemplate(serviceTemplate)
+			config := make(v1beta3.EmqxConfig)
+			config["listener.tcp.external"] = "21883"
+			emqx.SetEmqxConfig(config)
 			Expect(updateEmqx(emqx)).Should(Succeed())
 
 			svc := &corev1.Service{}

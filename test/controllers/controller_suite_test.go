@@ -78,7 +78,7 @@ func TestSuites(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	interval = time.Millisecond * 250
-	timeout = time.Minute * 1
+	timeout = time.Second * 30
 
 	if os.Getenv("CI") == "true" {
 		Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())

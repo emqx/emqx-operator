@@ -2,11 +2,11 @@ package webhook_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
@@ -20,6 +20,9 @@ var _ = Describe("EMQX Broker", func() {
 				Name:      "broker",
 				Namespace: "default",
 				Labels: map[string]string{
+					"foo": "bar",
+				},
+				Annotations: map[string]string{
 					"foo": "bar",
 				},
 			},
@@ -48,6 +51,9 @@ var _ = Describe("EMQX Enterprise", func() {
 				Name:      "enterprise",
 				Namespace: "default",
 				Labels: map[string]string{
+					"foo": "bar",
+				},
+				Annotations: map[string]string{
 					"foo": "bar",
 				},
 			},
@@ -89,12 +95,21 @@ func checkDefaulting(emqx v1beta3.Emqx) {
 	replicas := int32(3)
 	Expect(emqx.GetReplicas()).Should(Equal(&replicas))
 
-	Expect(emqx.GetEnv()).Should(
-		ContainElements(
-			corev1.EnvVar{
-				Name:  "EMQX_CLUSTER__DISCOVERY",
-				Value: "dns",
-			},
-		),
-	)
+	Expect(emqx.GetServiceTemplate().Name).Should(Equal(emqx.GetName()))
+	Expect(emqx.GetServiceTemplate().Namespace).Should(Equal(emqx.GetNamespace()))
+	Expect(emqx.GetServiceTemplate().Labels).Should(HaveKeyWithValue("foo", "bar"))
+	Expect(emqx.GetServiceTemplate().Annotations).Should(HaveKeyWithValue("foo", "bar"))
+	Expect(emqx.GetServiceTemplate().Spec.Selector).Should(HaveKeyWithValue("foo", "bar"))
+
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("log.to", "both"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("node.name", emqx.GetName()))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.tcp.external", "1883"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.ssl.external", "8883"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.ws.external", "8083"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.wss.external", "8084"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.discovery", "dns"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.dns.type", "srv"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.dns.app", emqx.GetName()))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.dns.name", fmt.Sprintf("%s-headless.%s.svc.cluster.local", emqx.GetName(), emqx.GetNamespace())))
+
 }
