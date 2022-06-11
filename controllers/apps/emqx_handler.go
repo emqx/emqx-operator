@@ -24,8 +24,10 @@ import (
 	"net"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -105,6 +107,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "Reconciled", err.Error())
 			return ctrl.Result{Requeue: true}, err
+		} else {
+			instance.SetRunningCondition("Init plugins config successfully")
+			instance.DescConditionsByTime()
+			_ = r.Status().Update(ctx, instance)
+			r.EventRecorder.Event(instance, corev1.EventTypeNormal, "Reconciled", "Init plugins config successfully")
+			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 		}
 	}
 
@@ -403,7 +411,8 @@ func generateLoadedPlugins(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (
 			Name:      names.LoadedPlugins(),
 		},
 		Data: map[string]string{
-			"loaded_plugins": "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.\n",
+			// "loaded_plugins": "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.\n",
+			"loaded_plugins": "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\n",
 		},
 	}
 
@@ -760,6 +769,10 @@ func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
 			ret = append(ret, corev1.EnvVar{Name: key, Value: v})
 		}
 	}
+
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].Name < ret[j].Name
+	})
 
 	return
 }

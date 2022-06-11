@@ -12,8 +12,8 @@ func (config EmqxConfig) Default(emqx client.Object) {
 	names := &Names{emqx}
 
 	clusterConfig := make(map[string]string)
+	clusterConfig["name"] = emqx.GetName()
 	clusterConfig["log.to"] = "both"
-	clusterConfig["node.name"] = emqx.GetName()
 	clusterConfig["listener.tcp.external"] = "1883"
 	clusterConfig["listener.ssl.external"] = "8883"
 	clusterConfig["listener.ws.external"] = "8083"

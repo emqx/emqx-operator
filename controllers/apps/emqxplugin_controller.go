@@ -25,7 +25,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
@@ -78,7 +77,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			logger.V(1).Info("Not matched emqx")
-			return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
+			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -112,32 +111,48 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	for _, emqx := range emqxList {
-		if err := r.configurePluginToEmqx(instance, emqx); err != nil {
-			if k8sErrors.IsNotFound(err) {
-				return ctrl.Result{Requeue: true}, nil
+	if instance.Status.Phase != appsv1beta3.EmqxPluginStatusConfigured {
+		needUpdate := true
+		for _, emqx := range emqxList {
+			if err := r.loadPluginToEmqx(instance, emqx); err != nil {
+				if err.Error() == "plugin config is same" {
+					if instance.Status.Phase == appsv1beta3.EmqxPluginStatusLoaded {
+						needUpdate = false
+					}
+					continue
+				}
+				if k8sErrors.IsNotFound(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				if k8sErrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, err
+				}
+				return ctrl.Result{}, err
 			}
-			return ctrl.Result{}, err
 		}
-	}
-	instance.Status.Phase = appsv1beta3.EmqxPluginStatusConfigured
-	_ = r.Status().Update(ctx, instance)
-
-	for _, emqx := range emqxList {
-		if err := r.loadPluginToEmqx(instance, emqx); err != nil {
-			if err.Error() == "need requeue" {
-				logger.V(1).Info("Load plugin to emqx failed, need requeue")
-				return ctrl.Result{Requeue: true}, nil
-			}
-			if k8sErrors.IsConflict(err) {
+		if needUpdate {
+			instance.Status.Phase = appsv1beta3.EmqxPluginStatusConfigured
+			if err := r.Status().Update(ctx, instance); err != nil {
 				return ctrl.Result{Requeue: true}, err
 			}
-			return ctrl.Result{}, err
+			return ctrl.Result{Requeue: true}, nil
 		}
 	}
-	instance.Status.Phase = appsv1beta3.EmqxPluginStatusLoaded
-	_ = r.Status().Update(ctx, instance)
-	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
+
+	if instance.Status.Phase != appsv1beta3.EmqxPluginStatusLoaded {
+		for _, emqx := range emqxList {
+			err := r.ExecToPods(emqx, "emqx", "emqx_ctl plugins reload "+instance.Spec.PluginName)
+			if err != nil {
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+		instance.Status.Phase = appsv1beta3.EmqxPluginStatusLoaded
+		if err := r.Status().Update(ctx, instance); err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+	return ctrl.Result{Requeue: true}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -154,7 +169,7 @@ func generateConfigStr(plugin *appsv1beta3.EmqxPlugin) string {
 	}
 	return config
 }
-func (r *EmqxPluginReconciler) configurePluginToEmqx(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
+func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
 	pluginConfigStr := generateConfigStr(plugin)
 
 	pluginsConfig, err := r.getPluginsConfig(emqx)
@@ -174,7 +189,8 @@ func (r *EmqxPluginReconciler) configurePluginToEmqx(plugin *appsv1beta3.EmqxPlu
 	storePluginConfig := gjson.GetBytes(configMapStr, path)
 	if storePluginConfig.Exists() {
 		if storePluginConfig.String() == pluginConfigStr {
-			return nil
+			// Do not need update
+			return fmt.Errorf("plugin config is same")
 		}
 	}
 	newConfigMapStr, err := sjson.SetBytes(configMapStr, path, pluginConfigStr)
@@ -192,15 +208,6 @@ func (r *EmqxPluginReconciler) configurePluginToEmqx(plugin *appsv1beta3.EmqxPlu
 	if err := r.doUpdate(pluginsConfig, func(_ client.Object) error { return nil }); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
-	// Reload plugin
-	err := r.ExecToPods(emqx, "emqx", "emqx_ctl plugins reload "+plugin.Spec.PluginName)
-	if err != nil {
-		return fmt.Errorf("need requeue")
-	}
 
 	// Update loaded plugins
 	loadedPlugins, err := r.getLoadedPlugins(emqx)
@@ -208,7 +215,8 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, 
 		return err
 	}
 	loadedPluginsStr := loadedPlugins.Data["loaded_plugins"]
-	loadedPluginLine := fmt.Sprintf("{%s, true}.\n", plugin.Spec.PluginName)
+	// loadedPluginLine := fmt.Sprintf("{%s, true}.\n", plugin.Spec.PluginName)
+	loadedPluginLine := plugin.Spec.PluginName + ".\n"
 	index := strings.Index(loadedPluginsStr, loadedPluginLine)
 	if index == -1 {
 		loadedPluginsStr += loadedPluginLine
@@ -229,7 +237,6 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, 
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -276,7 +283,8 @@ func (r *EmqxPluginReconciler) unloadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin
 		return err
 	}
 	loadedPluginsStr := loadedPlugins.Data["loaded_plugins"]
-	loadedPluginLine := fmt.Sprintf("{%s, true}.\n", plugin.Spec.PluginName)
+	// loadedPluginLine := fmt.Sprintf("{%s, true}.\n", plugin.Spec.PluginName)
+	loadedPluginLine := plugin.Spec.PluginName + ".\n"
 	index := strings.Index(loadedPluginsStr, loadedPluginLine)
 	if index != -1 {
 		loadedPluginsStr = loadedPluginsStr[:index] + loadedPluginsStr[index+len(loadedPluginLine):]
