@@ -136,8 +136,8 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 		if _, present := annotations[key]; !present {
 			annotations[key] = value
 		}
-		obj.SetAnnotations(annotations)
 	}
+	obj.SetAnnotations(annotations)
 
 	opts := []patch.CalculateOption{}
 	switch resource := obj.(type) {
