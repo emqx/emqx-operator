@@ -212,7 +212,6 @@ var _ = Describe("", func() {
 					plugin.Spec.Config["lwm2m.bind.udp.2"] = "5688"
 					return k8sClient.Update(context.Background(), plugin)
 				}, timeout, interval).Should(Succeed())
-
 				Eventually(func() []corev1.ServicePort {
 					svc := &corev1.Service{}
 					_ = k8sClient.Get(
@@ -224,7 +223,7 @@ var _ = Describe("", func() {
 						svc,
 					)
 					return svc.Spec.Ports
-				}).Should(ContainElements([]corev1.ServicePort{
+				}, timeout, interval).Should(ContainElements([]corev1.ServicePort{
 					{
 						Name:       "lwm2m-bind-udp-1",
 						Protocol:   corev1.ProtocolUDP,
