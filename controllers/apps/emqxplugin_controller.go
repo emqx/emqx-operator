@@ -111,35 +111,26 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	if instance.Status.Phase != appsv1beta3.EmqxPluginStatusConfigured {
-		needUpdate := true
-		for _, emqx := range emqxList {
-			if err := r.loadPluginToEmqx(instance, emqx); err != nil {
-				if err.Error() == "plugin config is same" {
-					if instance.Status.Phase == appsv1beta3.EmqxPluginStatusLoaded {
-						needUpdate = false
-					}
-					continue
+	needLoad := true
+	for _, emqx := range emqxList {
+		if err := r.loadPluginToEmqx(instance, emqx); err != nil {
+			if err.Error() == "plugin config is same" {
+				if instance.Status.Phase == appsv1beta3.EmqxPluginStatusLoaded {
+					needLoad = false
 				}
-				if k8sErrors.IsNotFound(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				if k8sErrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, err
-				}
-				return ctrl.Result{}, err
+				continue
 			}
-		}
-		if needUpdate {
-			instance.Status.Phase = appsv1beta3.EmqxPluginStatusConfigured
-			if err := r.Status().Update(ctx, instance); err != nil {
+			if k8sErrors.IsNotFound(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			if k8sErrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, err
 			}
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, err
 		}
 	}
 
-	if instance.Status.Phase != appsv1beta3.EmqxPluginStatusLoaded {
+	if needLoad || instance.Status.Phase != appsv1beta3.EmqxPluginStatusLoaded {
 		for _, emqx := range emqxList {
 			err := r.ExecToPods(emqx, "emqx", "emqx_ctl plugins reload "+instance.Spec.PluginName)
 			if err != nil {
@@ -226,9 +217,12 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, 
 		}
 	}
 
-	// Insert service ports
 	serviceTemplate := emqx.GetServiceTemplate()
-	servicePorts := InsertServicePorts(plugin, serviceTemplate.Spec.Ports)
+
+	var servicePorts []corev1.ServicePort
+	// Insert service ports
+	servicePorts = append(servicePorts, serviceTemplate.Spec.Ports...)
+	servicePorts = InsertServicePorts(plugin, servicePorts)
 
 	if !reflect.DeepEqual(servicePorts, serviceTemplate.Spec.Ports) {
 		serviceTemplate.Spec.Ports = servicePorts

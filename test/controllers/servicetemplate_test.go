@@ -33,8 +33,6 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 var _ = Describe("", func() {
 	Context("Check service", func() {
-		servicePorts := ports()
-
 		It("Check headless service", func() {
 			for _, emqx := range emqxList() {
 				names := v1beta3.Names{Object: emqx}
@@ -49,7 +47,12 @@ var _ = Describe("", func() {
 						svc,
 					)
 					return svc.Spec.Ports
-				}, timeout, interval).Should(ConsistOf([]corev1.ServicePort{servicePorts[0]}))
+				}, timeout, interval).Should(ConsistOf([]corev1.ServicePort{{
+					Name:       "management-listener-http",
+					Port:       8081,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8081),
+				}}))
 			}
 		})
 
@@ -66,20 +69,49 @@ var _ = Describe("", func() {
 						svc,
 					)
 					return svc.Spec.Ports
-				}, timeout, interval).Should(ConsistOf(servicePorts))
+				}, timeout, interval).Should(ConsistOf([]corev1.ServicePort{
+					{
+						Name:       "management-listener-http",
+						Port:       8081,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(8081),
+					},
+					{
+						Name:       "dashboard-listener-http",
+						Port:       18083,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(18083),
+					},
+					{
+						Name:       "listener-tcp-external",
+						Port:       1883,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(1883),
+					},
+					{
+						Name:       "listener-ssl-external",
+						Port:       8883,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(8883),
+					},
+					{
+						Name:       "listener-ws-external",
+						Port:       8083,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(8083),
+					},
+					{
+						Name:       "listener-wss-external",
+						Port:       8084,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(8084),
+					},
+				}))
 			}
 		})
 
 		It("Update listener service", func() {
 			emqx := generateEmqxBroker(brokerName, brokerNameSpace)
-			servicePorts := []corev1.ServicePort{
-				{
-					Name:       "listener-tcp-external",
-					Port:       21883,
-					Protocol:   "TCP",
-					TargetPort: intstr.FromInt(21883),
-				},
-			}
 
 			config := make(v1beta3.EmqxConfig)
 			config["listener.tcp.external"] = "21883"
@@ -97,50 +129,14 @@ var _ = Describe("", func() {
 					svc,
 				)
 				return svc.Spec.Ports
-			}, timeout, interval).Should(ContainElements(servicePorts))
+			}, timeout, interval).Should(ContainElements([]corev1.ServicePort{
+				{
+					Name:       "listener-tcp-external",
+					Port:       21883,
+					Protocol:   "TCP",
+					TargetPort: intstr.FromInt(21883),
+				},
+			}))
 		})
 	})
 })
-
-func ports() []corev1.ServicePort {
-	servicePorts := []corev1.ServicePort{
-		{
-			Name:       "management-listener-http",
-			Port:       8081,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(8081),
-		},
-		{
-			Name:       "dashboard-listener-http",
-			Port:       18083,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(18083),
-		},
-		{
-			Name:       "listener-tcp-external",
-			Port:       1883,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(1883),
-		},
-		{
-			Name:       "listener-ssl-external",
-			Port:       8883,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(8883),
-		},
-		{
-			Name:       "listener-ws-external",
-			Port:       8083,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(8083),
-		},
-		{
-			Name:       "listener-wss-external",
-			Port:       8084,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(8084),
-		},
-	}
-
-	return servicePorts
-}
