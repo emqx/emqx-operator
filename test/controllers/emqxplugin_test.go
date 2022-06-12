@@ -32,7 +32,7 @@ import (
 )
 
 var _ = Describe("", func() {
-	Context("Check plugin", func() {
+	Context("Check default plugin", func() {
 		It("Check default plugin", func() {
 			for _, emqx := range emqxList() {
 				pluginList := []string{"emqx_management", "emqx_dashboard", "emqx_rule_engine", "emqx_retainer"}
@@ -81,40 +81,42 @@ var _ = Describe("", func() {
 						)
 						return cm.Data
 					}, timeout, interval).Should(HaveKey(pluginName + ".conf"))
-
 				}
 			}
 		})
+	})
 
-		It("Check lwm2m plugin", func() {
+	Context("Check lwm2m plugin", func() {
+		lwm2mPorts := []corev1.ServicePort{
+			{
+				Name:       "lwm2m-bind-udp-1",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       5683,
+				TargetPort: intstr.FromInt(5683),
+			},
+			{
+				Name:       "lwm2m-bind-udp-2",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       5684,
+				TargetPort: intstr.FromInt(5684),
+			},
+			{
+				Name:       "lwm2m-bind-dtls-1",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       5685,
+				TargetPort: intstr.FromInt(5685),
+			},
+			{
+				Name:       "lwm2m-bind-dtls-2",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       5686,
+				TargetPort: intstr.FromInt(5686),
+			},
+		}
+
+		It("Check create plugin", func() {
 			for _, emqx := range emqxList() {
 				// Create plugin
-				lwm2mPorts := []corev1.ServicePort{
-					{
-						Name:       "lwm2m-bind-udp-1",
-						Protocol:   corev1.ProtocolUDP,
-						Port:       5683,
-						TargetPort: intstr.FromInt(5683),
-					},
-					{
-						Name:       "lwm2m-bind-udp-2",
-						Protocol:   corev1.ProtocolUDP,
-						Port:       5684,
-						TargetPort: intstr.FromInt(5684),
-					},
-					{
-						Name:       "lwm2m-bind-dtls-1",
-						Protocol:   corev1.ProtocolUDP,
-						Port:       5685,
-						TargetPort: intstr.FromInt(5685),
-					},
-					{
-						Name:       "lwm2m-bind-dtls-2",
-						Protocol:   corev1.ProtocolUDP,
-						Port:       5686,
-						TargetPort: intstr.FromInt(5686),
-					},
-				}
 				lwm2m := &v1beta3.EmqxPlugin{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: "apps.emqx.io/v1beta3",
@@ -164,8 +166,8 @@ var _ = Describe("", func() {
 					return cm.Data["loaded_plugins"]
 				}, timeout, interval).Should(ContainSubstring("emqx_lwm2m."))
 
-				pluginConfig := &corev1.ConfigMap{}
 				Eventually(func() map[string]string {
+					pluginConfig := &corev1.ConfigMap{}
 					_ = k8sClient.Get(
 						context.Background(),
 						types.NamespacedName{
@@ -188,7 +190,59 @@ var _ = Describe("", func() {
 					)
 					return svc.Spec.Ports
 				}).Should(ContainElements(lwm2mPorts))
+			}
+		})
 
+		It("Check update plugin", func() {
+			for _, emqx := range emqxList() {
+				// Update plugin
+				Eventually(func() error {
+					plugin := &v1beta3.EmqxPlugin{}
+					err := k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "lwm2m"),
+							Namespace: emqx.GetNamespace(),
+						}, plugin,
+					)
+					if err != nil {
+						return err
+					}
+					plugin.Spec.Config["lwm2m.bind.udp.1"] = "5687"
+					plugin.Spec.Config["lwm2m.bind.udp.2"] = "5688"
+					return k8sClient.Update(context.Background(), plugin)
+				}, timeout, interval).Should(Succeed())
+
+				Eventually(func() []corev1.ServicePort {
+					svc := &corev1.Service{}
+					_ = k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						svc,
+					)
+					return svc.Spec.Ports
+				}).Should(ContainElements([]corev1.ServicePort{
+					{
+						Name:       "lwm2m-bind-udp-1",
+						Protocol:   corev1.ProtocolUDP,
+						Port:       5687,
+						TargetPort: intstr.FromInt(5687),
+					},
+					{
+						Name:       "lwm2m-bind-udp-2",
+						Protocol:   corev1.ProtocolUDP,
+						Port:       5688,
+						TargetPort: intstr.FromInt(5688),
+					},
+				}))
+			}
+		})
+
+		It("Check delete plugin", func() {
+			for _, emqx := range emqxList() {
 				// Delete plugin
 				Expect(k8sClient.Delete(
 					context.Background(),
@@ -236,7 +290,6 @@ var _ = Describe("", func() {
 					)
 					return svc.Spec.Ports
 				}).ShouldNot(ContainElements(lwm2mPorts))
-
 			}
 		})
 	})
