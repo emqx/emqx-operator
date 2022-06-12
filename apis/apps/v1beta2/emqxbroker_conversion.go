@@ -19,6 +19,7 @@ package v1beta2
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
@@ -52,7 +53,10 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	dst.ObjectMeta.Annotations = annotations
 
 	// ServiceTemplate
-	dst.Spec.EmqxTemplate.ServiceTemplate = convertToListener(src.Spec.EmqxTemplate.Listener)
+	dst.Spec.EmqxTemplate.ServiceTemplate = convertToListener(src)
+
+	// EmqxConfig
+	dst.Spec.EmqxTemplate.EmqxConfig, dst.Spec.EmqxTemplate.Env = conversionToEmqxConfig(src.Spec.Env)
 
 	dst.Spec.Persistent = src.Spec.Storage
 
@@ -70,7 +74,6 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.EmqxTemplate.ImagePullPolicy = src.Spec.ImagePullPolicy
 	dst.Spec.EmqxTemplate.ExtraVolumes = src.Spec.ExtraVolumes
 	dst.Spec.EmqxTemplate.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
-	dst.Spec.EmqxTemplate.Env = src.Spec.Env
 
 	// Status
 	for _, condition := range src.Status.Conditions {
@@ -143,62 +146,75 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 	return nil
 }
 
-func convertToListener(src Listener) v1beta3.ServiceTemplate {
+func convertToListener(src Emqx) v1beta3.ServiceTemplate {
 	var dst v1beta3.ServiceTemplate
+	srcListener := src.GetListener()
 
-	dst.Labels = src.Labels
-	dst.Annotations = src.Annotations
-	dst.Spec.Type = src.Type
-	dst.Spec.LoadBalancerIP = src.LoadBalancerIP
-	dst.Spec.LoadBalancerSourceRanges = src.LoadBalancerSourceRanges
-	dst.Spec.ExternalIPs = src.ExternalIPs
+	dst.Name = src.GetName()
+	dst.Namespace = src.GetNamespace()
+	dst.Labels = srcListener.Labels
+	dst.Annotations = srcListener.Annotations
+	dst.Spec.Selector = src.GetLabels()
+	dst.Spec.Type = srcListener.Type
+	dst.Spec.LoadBalancerIP = srcListener.LoadBalancerIP
+	dst.Spec.LoadBalancerSourceRanges = srcListener.LoadBalancerSourceRanges
+	dst.Spec.ExternalIPs = srcListener.ExternalIPs
 
-	ports := []corev1.ServicePort{
-		{
+	if srcListener.Ports.API != 0 {
+		dst.Spec.Ports = append(dst.Spec.Ports, corev1.ServicePort{
 			Name:       "management-listener-http",
-			Port:       src.Ports.API,
+			Port:       srcListener.Ports.API,
 			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.API},
-			NodePort:   src.NodePorts.API,
-		},
-		{
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: srcListener.Ports.API},
+			NodePort:   srcListener.NodePorts.API,
+		})
+	}
+	if srcListener.Ports.Dashboard != 0 {
+		dst.Spec.Ports = append(dst.Spec.Ports, corev1.ServicePort{
 			Name:       "dashboard-listener-http",
-			Port:       src.Ports.Dashboard,
+			Port:       srcListener.Ports.Dashboard,
 			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.Dashboard},
-			NodePort:   src.NodePorts.Dashboard,
-		},
-		{
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: srcListener.Ports.Dashboard},
+			NodePort:   srcListener.NodePorts.Dashboard,
+		})
+	}
+	if srcListener.Ports.MQTT != 0 {
+		dst.Spec.Ports = append(dst.Spec.Ports, corev1.ServicePort{
 			Name:       "listener-tcp-external",
-			Port:       src.Ports.MQTT,
+			Port:       srcListener.Ports.MQTT,
 			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.MQTT},
-			NodePort:   src.NodePorts.MQTT,
-		},
-		{
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: srcListener.Ports.MQTT},
+			NodePort:   srcListener.NodePorts.MQTT,
+		})
+	}
+	if srcListener.Ports.MQTTS != 0 {
+		dst.Spec.Ports = append(dst.Spec.Ports, corev1.ServicePort{
 			Name:       "listener-ssl-external",
-			Port:       src.Ports.MQTTS,
+			Port:       srcListener.Ports.MQTTS,
 			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.MQTTS},
-			NodePort:   src.NodePorts.MQTTS,
-		},
-		{
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: srcListener.Ports.MQTTS},
+			NodePort:   srcListener.NodePorts.MQTTS,
+		})
+	}
+	if srcListener.Ports.WS != 0 {
+		dst.Spec.Ports = append(dst.Spec.Ports, corev1.ServicePort{
 			Name:       "listener-ws-external",
-			Port:       src.Ports.WS,
+			Port:       srcListener.Ports.WS,
 			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.WS},
-			NodePort:   src.NodePorts.WS,
-		},
-		{
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: srcListener.Ports.WS},
+			NodePort:   srcListener.NodePorts.WS,
+		})
+	}
+	if srcListener.Ports.WSS != 0 {
+		dst.Spec.Ports = append(dst.Spec.Ports, corev1.ServicePort{
 			Name:       "listener-wss-external",
-			Port:       src.Ports.WSS,
+			Port:       srcListener.Ports.WSS,
 			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.IntOrString{Type: 0, IntVal: src.Ports.WSS},
-			NodePort:   src.NodePorts.WSS,
-		},
+			TargetPort: intstr.IntOrString{Type: 0, IntVal: srcListener.Ports.WSS},
+			NodePort:   srcListener.NodePorts.WSS,
+		})
 	}
 
-	dst.Spec.Ports = append(dst.Spec.Ports, ports...)
 	return dst
 }
 
@@ -214,50 +230,51 @@ func convertFromListener(src v1beta3.Emqx) Listener {
 	dst.LoadBalancerSourceRanges = serviceTemplate.Spec.LoadBalancerSourceRanges
 	dst.ExternalIPs = serviceTemplate.Spec.ExternalIPs
 
-	lookup := func(port string) corev1.ServicePort {
-		for _, p := range serviceTemplate.Spec.Ports {
-			if p.TargetPort.String() == port {
-				return p
-			}
+	for _, port := range serviceTemplate.Spec.Ports {
+		if port.Name == "management-listener-http" {
+			dst.Ports.API = port.Port
+			dst.NodePorts.API = port.NodePort
 		}
-		return corev1.ServicePort{}
-	}
-
-	for _, env := range src.GetEnv() {
-		if env.Name == "EMQX_MANAGEMENT_LISTENER__HTTP" {
-			svcPort := lookup(env.Value)
-			dst.Ports.API = svcPort.Port
-			dst.NodePorts.API = svcPort.NodePort
+		if port.Name == "dashboard-listener-http" {
+			dst.Ports.Dashboard = port.Port
+			dst.NodePorts.Dashboard = port.NodePort
 		}
-		if env.Name == "EMQX_DASHBOARD__LISTENER__HTTP" {
-			svcPort := lookup(env.Value)
-			dst.Ports.Dashboard = svcPort.Port
-			dst.NodePorts.Dashboard = svcPort.NodePort
+		if port.Name == "listener-tcp-external" {
+			dst.Ports.MQTT = port.Port
+			dst.NodePorts.MQTT = port.NodePort
 		}
-		if env.Name == "EMQX_LISTENER__TCP__EXTERNAL" {
-			svcPort := lookup(env.Value)
-			dst.Ports.MQTT = svcPort.Port
-			dst.NodePorts.MQTT = svcPort.NodePort
+		if port.Name == "listener-ssl-external" {
+			dst.Ports.MQTTS = port.Port
+			dst.NodePorts.MQTTS = port.NodePort
 		}
-		if env.Name == "EMQX_LISTENER__SSL__EXTERNAL" {
-			svcPort := lookup(env.Value)
-			dst.Ports.MQTTS = svcPort.Port
-			dst.NodePorts.MQTTS = svcPort.NodePort
+		if port.Name == "listener-ws-external" {
+			dst.Ports.WS = port.Port
+			dst.NodePorts.WS = port.NodePort
 		}
-		if env.Name == "EMQX_WS__LISTENER__TCP" {
-			svcPort := lookup(env.Value)
-			dst.Ports.WS = svcPort.Port
-			dst.NodePorts.WS = svcPort.NodePort
+		if port.Name == "listener-wss-external" {
+			dst.Ports.WSS = port.Port
+			dst.NodePorts.WSS = port.NodePort
 		}
-		if env.Name == "EMQX_WSS__LISTENER__TCP" {
-			svcPort := lookup(env.Value)
-			dst.Ports.WSS = svcPort.Port
-			dst.NodePorts.WSS = svcPort.NodePort
-		}
-
 	}
 
 	return dst
+}
+
+func conversionToEmqxConfig(evns []corev1.EnvVar) (v1beta3.EmqxConfig, []corev1.EnvVar) {
+	config := make(v1beta3.EmqxConfig)
+
+	otherEnv := []corev1.EnvVar{}
+
+	emqxEnv, _ := regexp.Compile("^EMQX_")
+	for _, env := range evns {
+		if emqxEnv.MatchString(env.Name) {
+			configName := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(env.Name, "EMQX_"), "__", "."))
+			config[configName] = env.Value
+		} else {
+			otherEnv = append(otherEnv, env)
+		}
+	}
+	return config, otherEnv
 }
 
 func converFromEnvAndConfig(envs []corev1.EnvVar, emqxConfig v1beta3.EmqxConfig) (ret []corev1.EnvVar) {

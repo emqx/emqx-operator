@@ -52,7 +52,10 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.EmqxTemplate.License.StringData = src.Spec.EmqxTemplate.License
 
 	// ServiceTemplate
-	dst.Spec.EmqxTemplate.ServiceTemplate = convertToListener(src.Spec.EmqxTemplate.Listener)
+	dst.Spec.EmqxTemplate.ServiceTemplate = convertToListener(src)
+
+	// EmqxConfig
+	dst.Spec.EmqxTemplate.EmqxConfig, dst.Spec.EmqxTemplate.Env = conversionToEmqxConfig(src.Spec.Env)
 
 	if !reflect.ValueOf(src.Spec.Storage).IsZero() {
 		dst.Spec.Persistent = src.Spec.Storage
@@ -72,7 +75,6 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.EmqxTemplate.ImagePullPolicy = src.Spec.ImagePullPolicy
 	dst.Spec.EmqxTemplate.ExtraVolumes = src.Spec.ExtraVolumes
 	dst.Spec.EmqxTemplate.ExtraVolumeMounts = src.Spec.ExtraVolumeMounts
-	dst.Spec.EmqxTemplate.Env = src.Spec.Env
 
 	// Status
 	for _, condition := range src.Status.Conditions {
