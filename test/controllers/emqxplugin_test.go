@@ -36,10 +36,10 @@ var _ = Describe("", func() {
 		It("Check default plugin", func() {
 			for _, emqx := range emqxList() {
 				pluginList := []string{"emqx_management", "emqx_dashboard", "emqx_rule_engine", "emqx_retainer"}
-				loaded_plugins := "{emqx_management, true}.\n{emqx_dashboard, true}.\n{emqx_retainer, true}.\n{emqx_rule_engine, true}.\n"
+				loaded_plugins := "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\n"
 				if _, ok := emqx.(*v1beta3.EmqxEnterprise); ok {
 					pluginList = append(pluginList, "emqx_modules")
-					loaded_plugins += "{emqx_modules, true}.\n"
+					loaded_plugins += "emqx_modules.\n"
 				}
 				Eventually(func() map[string]string {
 					cm := &corev1.ConfigMap{}
@@ -162,7 +162,7 @@ var _ = Describe("", func() {
 						}, cm,
 					)
 					return cm.Data["loaded_plugins"]
-				}, timeout, interval).Should(ContainSubstring("{emqx_lwm2m, true}"))
+				}, timeout, interval).Should(ContainSubstring("emqx_lwm2m."))
 
 				pluginConfig := &corev1.ConfigMap{}
 				Eventually(func() map[string]string {

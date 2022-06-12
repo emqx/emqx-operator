@@ -35,6 +35,28 @@ var v1beta2EmqxBroker = v1beta2.EmqxBroker{
 				"ReadWriteOnce",
 			},
 		},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "foo",
+				Value: "bar",
+			},
+			{
+				Name:  "EMQX_LOG__TO",
+				Value: "both",
+			},
+			{
+				Name:  "EMQX_LOG__LEVEL",
+				Value: "debug",
+			},
+			{
+				Name:  "EMQX_MANAGEMENT_LISTENER__HTTP",
+				Value: "8081",
+			},
+			{
+				Name:  "EMQX_LISTENER__SSL__EXTERNAL",
+				Value: "8885",
+			},
+		},
 		EmqxTemplate: v1beta2.EmqxBrokerTemplate{
 			Listener: v1beta2.Listener{
 				Type: corev1.ServiceTypeNodePort,
@@ -142,20 +164,17 @@ var v1beta3EmqxBroker = v1beta3.EmqxBroker{
 			},
 		},
 		EmqxTemplate: v1beta3.EmqxBrokerTemplate{
-			Image:      "emqx/emqx:4.4.1",
-			EmqxConfig: map[string]string{"log.level": "debug"},
+			Image: "emqx/emqx:4.4.1",
+			EmqxConfig: map[string]string{
+				"log.level":                "debug",
+				"log.to":                   "both",
+				"management_listener.http": "8081",
+				"listener.ssl.external":    "8885",
+			},
 			Env: []corev1.EnvVar{
 				{
-					Name:  "EMQX_LOG__TO",
-					Value: "both",
-				},
-				{
-					Name:  "EMQX_MANAGEMENT_LISTENER__HTTP",
-					Value: "8081",
-				},
-				{
-					Name:  "EMQX_LISTENER__SSL__EXTERNAL",
-					Value: "8885",
+					Name:  "foo",
+					Value: "bar",
 				},
 			},
 			ServiceTemplate: v1beta3.ServiceTemplate{
@@ -196,11 +215,18 @@ func TestConvertToBroker(t *testing.T) {
 
 	assert.Equal(t, emqx.Spec.Persistent, v1beta2EmqxBroker.Spec.Storage)
 
-	assert.Equal(t, emqx.Spec.EmqxTemplate.ServiceTemplate.Spec.Type, v1beta2EmqxBroker.Spec.EmqxTemplate.Listener.Type)
+	assert.Subset(t, emqx.Spec.EmqxTemplate.Env, []corev1.EnvVar{
+		{
+			Name:  "foo",
+			Value: "bar",
+		},
+	})
+	assert.Contains(t, emqx.Spec.EmqxTemplate.EmqxConfig["log.level"], "debug")
+	assert.Contains(t, emqx.Spec.EmqxTemplate.EmqxConfig["log.to"], "both")
 
+	assert.Equal(t, emqx.Spec.EmqxTemplate.ServiceTemplate.Spec.Type, v1beta2EmqxBroker.Spec.EmqxTemplate.Listener.Type)
 	assert.Equal(t, int32(8081), v1beta2EmqxBroker.Spec.EmqxTemplate.Listener.Ports.API)
 	assert.Equal(t, int32(8081), v1beta2EmqxBroker.Spec.EmqxTemplate.Listener.NodePorts.API)
-
 	assert.Equal(t, int32(8885), v1beta2EmqxBroker.Spec.EmqxTemplate.Listener.Ports.MQTTS)
 	assert.Equal(t, int32(8885), v1beta2EmqxBroker.Spec.EmqxTemplate.Listener.NodePorts.MQTTS)
 }
@@ -227,12 +253,24 @@ func TestConvertFromBroker(t *testing.T) {
 	assert.Subset(t, emqx.Spec.Env,
 		[]corev1.EnvVar{
 			{
+				Name:  "foo",
+				Value: "bar",
+			},
+			{
 				Name:  "EMQX_LOG__TO",
 				Value: "both",
 			},
 			{
 				Name:  "EMQX_LOG__LEVEL",
 				Value: "debug",
+			},
+			{
+				Name:  "EMQX_MANAGEMENT_LISTENER__HTTP",
+				Value: "8081",
+			},
+			{
+				Name:  "EMQX_LISTENER__SSL__EXTERNAL",
+				Value: "8885",
 			},
 		})
 	assert.Equal(t, emqx.Spec.EmqxTemplate.Listener.Type, v1beta3EmqxBroker.Spec.EmqxTemplate.ServiceTemplate.Spec.Type)

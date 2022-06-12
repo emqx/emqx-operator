@@ -78,11 +78,11 @@ func TestSuites(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	interval = time.Millisecond * 250
-	timeout = time.Second * 30
+	timeout = time.Minute * 1
 
 	if os.Getenv("CI") == "true" {
 		Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
-		timeout = time.Minute * 5
+		timeout = time.Minute * 10
 	}
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
