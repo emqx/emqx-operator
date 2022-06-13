@@ -32,14 +32,16 @@ type Condition struct {
 type ConditionType string
 
 const (
-	ClusterConditionRunning ConditionType = "Running"
-	ClusterConditionFailed  ConditionType = "Failed"
+	ClusterConditionPluginInitialized ConditionType = "PluginInitialized"
+	ClusterConditionRunning           ConditionType = "Running"
+	ClusterConditionFailed            ConditionType = "Failed"
 )
 
 //+kubebuilder:object:generate=false
 type EmqxStatus interface {
 	DescConditionsByTime()
 	GetConditions() []Condition
+	SetPluginInitializedCondition(message string)
 	SetRunningCondition(message string)
 	SetFailedCondition(message string)
 	setClusterCondition(c Condition)
@@ -63,6 +65,11 @@ func (ecs *Status) DescConditionsByTime() {
 
 func (ecs *Status) GetConditions() []Condition {
 	return ecs.Conditions
+}
+
+func (ecs *Status) SetPluginInitializedCondition(message string) {
+	c := newClusterCondition(ClusterConditionPluginInitialized, corev1.ConditionTrue, "PluginInitialized", message)
+	ecs.setClusterCondition(*c)
 }
 
 func (ecs *Status) SetRunningCondition(message string) {
