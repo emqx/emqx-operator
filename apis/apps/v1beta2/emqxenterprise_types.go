@@ -30,7 +30,7 @@ import (
 type EmqxEnterpriseTemplate struct {
 	License  string                         `json:"license,omitempty"`
 	Listener Listener                       `json:"listener,omitempty"`
-	ACL      []v1beta3.ACL                  `json:"acl,omitempty"`
+	ACL      []ACL                          `json:"acl,omitempty"`
 	Modules  []v1beta3.EmqxEnterpriseModule `json:"modules,omitempty"`
 	Plugins  []Plugin                       `json:"plugins,omitempty"`
 }
@@ -190,8 +190,8 @@ func (emqx *EmqxEnterprise) GetExtraVolumeMounts() []corev1.VolumeMount {
 	return emqx.Spec.ExtraVolumeMounts
 }
 
-func (emqx *EmqxEnterprise) GetACL() []v1beta3.ACL { return emqx.Spec.EmqxTemplate.ACL }
-func (emqx *EmqxEnterprise) SetACL(acl []v1beta3.ACL) {
+func (emqx *EmqxEnterprise) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxEnterprise) SetACL(acl []ACL) {
 	emqx.Spec.EmqxTemplate.ACL = acl
 }
 

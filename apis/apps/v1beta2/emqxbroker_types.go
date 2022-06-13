@@ -27,7 +27,7 @@ import (
 
 type EmqxBrokerTemplate struct {
 	Listener Listener                   `json:"listener,omitempty"`
-	ACL      []v1beta3.ACL              `json:"acl,omitempty"`
+	ACL      []ACL                      `json:"acl,omitempty"`
 	Modules  []v1beta3.EmqxBrokerModule `json:"modules,omitempty"`
 	Plugins  []Plugin                   `json:"plugins,omitempty"`
 }
@@ -178,8 +178,8 @@ func (emqx *EmqxBroker) GetExtraVolumeMounts() []corev1.VolumeMount {
 	return emqx.Spec.ExtraVolumeMounts
 }
 
-func (emqx *EmqxBroker) GetACL() []v1beta3.ACL { return emqx.Spec.EmqxTemplate.ACL }
-func (emqx *EmqxBroker) SetACL(acl []v1beta3.ACL) {
+func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxBroker) SetACL(acl []ACL) {
 	emqx.Spec.EmqxTemplate.ACL = acl
 }
 

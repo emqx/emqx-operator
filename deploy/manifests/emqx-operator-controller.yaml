@@ -2560,42 +2560,16 @@ spec:
                 properties:
                   acl:
                     items:
-                      properties:
-                        action:
-                          enum:
-                          - publish
-                          - subscribe
-                          type: string
-                        clientid:
-                          type: string
-                        ipaddress:
-                          type: string
-                        permission:
-                          enum:
-                          - allow
-                          - deny
-                          type: string
-                        topics:
-                          properties:
-                            equal:
-                              items:
-                                type: string
-                              type: array
-                            filter:
-                              items:
-                                type: string
-                              type: array
-                          type: object
-                        username:
-                          type: string
-                      required:
-                      - permission
-                      type: object
+                      type: string
                     type: array
                   args:
                     items:
                       type: string
                     type: array
+                  config:
+                    additionalProperties:
+                      type: string
+                    type: object
                   env:
                     items:
                       description: EnvVar represents an environment variable present in a Container.
@@ -7736,42 +7710,16 @@ spec:
                 properties:
                   acl:
                     items:
-                      properties:
-                        action:
-                          enum:
-                          - publish
-                          - subscribe
-                          type: string
-                        clientid:
-                          type: string
-                        ipaddress:
-                          type: string
-                        permission:
-                          enum:
-                          - allow
-                          - deny
-                          type: string
-                        topics:
-                          properties:
-                            equal:
-                              items:
-                                type: string
-                              type: array
-                            filter:
-                              items:
-                                type: string
-                              type: array
-                          type: object
-                        username:
-                          type: string
-                      required:
-                      - permission
-                      type: object
+                      type: string
                     type: array
                   args:
                     items:
                       type: string
                     type: array
+                  config:
+                    additionalProperties:
+                      type: string
+                    type: object
                   env:
                     items:
                       description: EnvVar represents an environment variable present in a Container.

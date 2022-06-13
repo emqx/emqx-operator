@@ -19,6 +19,7 @@ package controller_test
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo/v2"
@@ -42,10 +43,8 @@ var _ = Describe("", func() {
 
 		It("Update acl", func() {
 			for _, emqx := range emqxList() {
-				acl := []v1beta3.ACL{
-					{
-						Permission: "deny",
-					},
+				acl := []string{
+					`{deny, all}.`,
 				}
 				emqx.SetACL(acl)
 				Expect(updateEmqx(emqx)).Should(Succeed())
@@ -59,10 +58,10 @@ var _ = Describe("", func() {
 
 func check_acl(emqx v1beta3.Emqx) {
 	names := v1beta3.Names{Object: emqx}
-	acls := &v1beta3.ACLList{
-		Items: emqx.GetACL(),
+	var aclString string
+	for _, rule := range emqx.GetACL() {
+		aclString += fmt.Sprintf("%s\n", rule)
 	}
-	aclString := acls.String()
 
 	Eventually(func() map[string]string {
 		cm := &corev1.ConfigMap{}

@@ -46,7 +46,7 @@ type EmqxEnterpriseTemplate struct {
 	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
 
 	ServiceTemplate ServiceTemplate        `json:"serviceTemplate,omitempty"`
-	ACL             []ACL                  `json:"acl,omitempty"`
+	ACL             []string               `json:"acl,omitempty"`
 	Modules         []EmqxEnterpriseModule `json:"modules,omitempty"`
 	License         License                `json:"license,omitempty"`
 }
@@ -221,8 +221,8 @@ func (emqx *EmqxEnterprise) SetServiceTemplate(serviceTemplate ServiceTemplate) 
 	emqx.Spec.EmqxTemplate.ServiceTemplate = serviceTemplate
 }
 
-func (emqx *EmqxEnterprise) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
-func (emqx *EmqxEnterprise) SetACL(acl []ACL) {
+func (emqx *EmqxEnterprise) GetACL() []string { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxEnterprise) SetACL(acl []string) {
 	emqx.Spec.EmqxTemplate.ACL = acl
 }
 

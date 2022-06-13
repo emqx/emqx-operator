@@ -48,9 +48,12 @@ func (r *EmqxEnterprise) Default() {
 	r.Labels["apps.emqx.io/instance"] = r.GetName()
 
 	if r.Spec.EmqxTemplate.ACL == nil {
-		acls := &ACLList{}
-		acls.Default()
-		r.Spec.EmqxTemplate.ACL = acls.Items
+		r.Spec.EmqxTemplate.ACL = []string{
+			`{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.`,
+			`{allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.`,
+			`{deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.`,
+			`{allow, all}.`,
+		}
 	}
 
 	modules := &EmqxEnterpriseModuleList{

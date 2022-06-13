@@ -4049,37 +4049,7 @@ spec:
                 properties:
                   acl:
                     items:
-                      properties:
-                        action:
-                          enum:
-                          - publish
-                          - subscribe
-                          type: string
-                        clientid:
-                          type: string
-                        ipaddress:
-                          type: string
-                        permission:
-                          enum:
-                          - allow
-                          - deny
-                          type: string
-                        topics:
-                          properties:
-                            equal:
-                              items:
-                                type: string
-                              type: array
-                            filter:
-                              items:
-                                type: string
-                              type: array
-                          type: object
-                        username:
-                          type: string
-                      required:
-                      - permission
-                      type: object
+                      type: string
                     type: array
                   args:
                     items:
