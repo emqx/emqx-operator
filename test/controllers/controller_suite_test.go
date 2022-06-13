@@ -283,6 +283,12 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 					},
 				},
 			},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "EMQX_LOG__LEVEL",
+					Value: "debug",
+				},
+			},
 			InitContainers: []corev1.Container{
 				{
 					Name:  "busybox",
@@ -296,12 +302,6 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 			},
 			EmqxTemplate: v1beta3.EmqxBrokerTemplate{
 				Image: "emqx/emqx:4.4.3",
-				Env: []corev1.EnvVar{
-					{
-						Name:  "EMQX_LOG__LEVEL",
-						Value: "debug",
-					},
-				},
 				Args: []string{
 					"bash",
 					"-c",

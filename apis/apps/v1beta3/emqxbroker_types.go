@@ -29,9 +29,8 @@ type EmqxBrokerTemplate struct {
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
-	EmqxConfig EmqxConfig      `json:"config,omitempty"`
-	Env        []corev1.EnvVar `json:"env,omitempty"`
-	Args       []string        `json:"args,omitempty"`
+	EmqxConfig EmqxConfig `json:"config,omitempty"`
+	Args       []string   `json:"args,omitempty"`
 
 	SecurityContext *corev1.PodSecurityContext  `json:"securityContext,omitempty"`
 	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -53,6 +52,7 @@ type EmqxBrokerSpec struct {
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
+	Env        []corev1.EnvVar                  `json:"env,omitempty"`
 
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
@@ -173,9 +173,9 @@ func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityCo
 func (emqx *EmqxBroker) GetEmqxConfig() EmqxConfig       { return emqx.Spec.EmqxTemplate.EmqxConfig }
 func (emqx *EmqxBroker) SetEmqxConfig(config EmqxConfig) { emqx.Spec.EmqxTemplate.EmqxConfig = config }
 
-func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.EmqxTemplate.Env }
+func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.Env }
 func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {
-	emqx.Spec.EmqxTemplate.Env = env
+	emqx.Spec.Env = env
 }
 
 func (emqx *EmqxBroker) GetArgs() []string { return emqx.Spec.EmqxTemplate.Args }

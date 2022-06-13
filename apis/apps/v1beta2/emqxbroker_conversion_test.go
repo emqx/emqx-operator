@@ -196,6 +196,12 @@ var v1beta3EmqxBroker = v1beta3.EmqxBroker{
 				"ReadWriteOnce",
 			},
 		},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "foo",
+				Value: "bar",
+			},
+		},
 		EmqxTemplate: v1beta3.EmqxBrokerTemplate{
 			Image: "emqx/emqx:4.4.1",
 			EmqxConfig: map[string]string{
@@ -203,12 +209,6 @@ var v1beta3EmqxBroker = v1beta3.EmqxBroker{
 				"log.to":                   "both",
 				"management_listener.http": "8081",
 				"listener.ssl.external":    "8885",
-			},
-			Env: []corev1.EnvVar{
-				{
-					Name:  "foo",
-					Value: "bar",
-				},
 			},
 			ACL: []string{
 				`{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.`,
@@ -259,7 +259,7 @@ func TestConvertToBroker(t *testing.T) {
 	}
 	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.ACL, aclList.Strings())
 
-	assert.Subset(t, emqx.Spec.EmqxTemplate.Env, []corev1.EnvVar{
+	assert.Subset(t, emqx.Spec.Env, []corev1.EnvVar{
 		{
 			Name:  "foo",
 			Value: "bar",
