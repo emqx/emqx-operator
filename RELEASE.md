@@ -1,21 +1,20 @@
 ## Release Note 🍻
 
-Now we remove the v1beta1 in release-1.2.0 and add the v1beta3.
-
 ### Features 🌈
 
-- Remove `.spec.emqxTemplate.env` and add the `.spec.env` in v1beta3
-- Change acl type to []string
-- Add new condition for init plugin
-- Supply more logical plugin loaded
-- Update service ports by emqx config
-- Adjust emqx configuration（spec.emqxTemplate.env->spec.emqxTemplate.config) (#226)
-- Update emqx plugin status
-- Add new CRD for emqx plugin
-- Add emqx client (#216)
-- Add probe for `.spec.emqxTemplate`
-- Add args for `.spec.emqxTemplate`
-- Add initContainers for `.spec`
-- Update kubebuilder marker and yaml file
-- Update api version for controllers
-- Add v1beta3 and delete v1beta1
+- New Custom Resource Define: `EmqxPlugin`, for managing EMQX plugins and auto bind service port
+  - After deploy EMQX Custom Resource, EMQX Operator will auto create default EMQX plugin by `EmqxPlugin` CRD, and you can manage it.
+  - You can create you own plugin by `EmqxPlugin` CRD, and user-define them config, and EMQX Operator will load them to EMQX Custom Resource.
+  - If the EMQX Plugin Custom Resource need listener port, EMQX Operator will bind the port to service.
+  - If you delete some EMQX Plugin Custom Resource, EMQX Operator will unbind the port to service, and unload them to EMQX Custom Resource.
+
+- New API version: `apps.emqx.io/v1beta3`, please check out reference docs
+  - Now you can set up any EMQX configure via `spec.emqxTemplate.config`, if you set some listener configure, EMQX Operator will auto bind the listening port to the service
+  - Now we support set up `readinessProbe/livenessProbe/startupProbe` by `.spec.emqxTemplate` in EMQX Custom Resource
+  - Now we support set up container `agrs` by `.spec.emqxTemplate ` in EMQX Custom Resource
+  - Now we support set up `initContainers ` by `.spec` in EMQX Custom Resource
+  - The format of our `.spec.emqxTemplate.acl` settings is now the same as the original emqx format, no additional conversions are needed
+
+### Broken Change 🚫
+
+- We not longer support API version: `apps.emqx.io/v1beta1`
