@@ -307,10 +307,8 @@ func generateEmqxBroker(name, namespace string) *v1beta3.EmqxBroker {
 					"-c",
 					"echo 'Hello World' && emqx foreground",
 				},
-				ACL: []v1beta3.ACL{
-					{
-						Permission: "allow",
-					},
+				ACL: []string{
+					`{allow, all}`,
 				},
 				Modules: []v1beta3.EmqxBrokerModule{
 					{

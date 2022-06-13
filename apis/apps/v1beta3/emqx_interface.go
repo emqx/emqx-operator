@@ -84,8 +84,8 @@ type EmqxSpec interface {
 	GetArgs() []string
 	SetArgs(args []string)
 
-	GetACL() []ACL
-	SetACL(acl []ACL)
+	GetACL() []string
+	SetACL(acl []string)
 
 	GetServiceTemplate() ServiceTemplate
 	SetServiceTemplate(ServiceTemplate)

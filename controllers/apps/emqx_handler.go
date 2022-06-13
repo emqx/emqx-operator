@@ -499,10 +499,11 @@ func generateSvc(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Se
 
 func generateAcl(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	names := appsv1beta3.Names{Object: instance}
-	acls := &appsv1beta3.ACLList{
-		Items: instance.GetACL(),
+
+	var aclString string
+	for _, rule := range instance.GetACL() {
+		aclString += fmt.Sprintf("%s\n", rule)
 	}
-	aclString := acls.String()
 
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{

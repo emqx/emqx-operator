@@ -1,4 +1,4 @@
-package v1beta3
+package v1beta2
 
 import (
 	"fmt"
@@ -63,6 +63,19 @@ func (list *ACLList) Default() {
 			Permission: "allow",
 		},
 	}
+}
+
+func (list *ACLList) Strings() []string {
+	var s []string
+
+	for _, acl := range list.Items {
+		who := getWho(acl)
+		action := getAction(acl)
+		topics := getTopics(acl)
+		s = append(s, fmt.Sprintf("{%s, %s, %s, %s}.\n", acl.Permission, who, action, topics))
+	}
+
+	return s
 }
 
 func (list *ACLList) String() string {

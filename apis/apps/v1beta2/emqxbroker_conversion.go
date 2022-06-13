@@ -60,7 +60,10 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst.Spec.Persistent = src.Spec.Storage
 
-	dst.Spec.EmqxTemplate.ACL = src.Spec.EmqxTemplate.ACL
+	aclList := &ACLList{
+		Items: src.Spec.EmqxTemplate.ACL,
+	}
+	dst.Spec.EmqxTemplate.ACL = aclList.Strings()
 	dst.Spec.EmqxTemplate.Modules = src.Spec.EmqxTemplate.Modules
 
 	// Spec
@@ -109,7 +112,7 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 	if !reflect.ValueOf(src.Spec.Persistent).IsZero() {
 		dst.Spec.Storage = src.Spec.Persistent
 	}
-	dst.Spec.EmqxTemplate.ACL = src.Spec.EmqxTemplate.ACL
+	// dst.Spec.EmqxTemplate.ACL = src.Spec.EmqxTemplate.ACL
 	dst.Spec.EmqxTemplate.Modules = src.Spec.EmqxTemplate.Modules
 
 	// Spec

@@ -41,7 +41,7 @@ type EmqxBrokerTemplate struct {
 	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
 
 	ServiceTemplate ServiceTemplate    `json:"serviceTemplate,omitempty"`
-	ACL             []ACL              `json:"acl,omitempty"`
+	ACL             []string           `json:"acl,omitempty"`
 	Modules         []EmqxBrokerModule `json:"modules,omitempty"`
 }
 
@@ -211,8 +211,8 @@ func (emqx *EmqxBroker) SetServiceTemplate(serviceTemplate ServiceTemplate) {
 	emqx.Spec.EmqxTemplate.ServiceTemplate = serviceTemplate
 }
 
-func (emqx *EmqxBroker) GetACL() []ACL { return emqx.Spec.EmqxTemplate.ACL }
-func (emqx *EmqxBroker) SetACL(acl []ACL) {
+func (emqx *EmqxBroker) GetACL() []string { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxBroker) SetACL(acl []string) {
 	emqx.Spec.EmqxTemplate.ACL = acl
 }
 

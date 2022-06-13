@@ -58,6 +58,39 @@ var v1beta2EmqxBroker = v1beta2.EmqxBroker{
 			},
 		},
 		EmqxTemplate: v1beta2.EmqxBrokerTemplate{
+			ACL: []v1beta2.ACL{
+				{
+					Permission: "allow",
+					Username:   "dashboard",
+					Action:     "subscribe",
+					Topics: v1beta2.Topics{
+						Filter: []string{
+							"$STS?#",
+						},
+					},
+				},
+				{
+					Permission: "allow",
+					IPAddress:  "127.0.0.1",
+					Topics: v1beta2.Topics{
+						Filter: []string{
+							"$SYS/#",
+							"#",
+						},
+					},
+				},
+				{
+					Permission: "deny",
+					Action:     "subscribe",
+					Topics: v1beta2.Topics{
+						Filter: []string{"$SYS/#"},
+						Equal:  []string{"#"},
+					},
+				},
+				{
+					Permission: "allow",
+				},
+			},
 			Listener: v1beta2.Listener{
 				Type: corev1.ServiceTypeNodePort,
 				Ports: v1beta2.Ports{
@@ -177,6 +210,12 @@ var v1beta3EmqxBroker = v1beta3.EmqxBroker{
 					Value: "bar",
 				},
 			},
+			ACL: []string{
+				`{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.`,
+				`{allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.`,
+				`{deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.`,
+				`{allow, all}.`,
+			},
 			ServiceTemplate: v1beta3.ServiceTemplate{
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeNodePort,
@@ -214,6 +253,11 @@ func TestConvertToBroker(t *testing.T) {
 	assert.Contains(t, emqx.Annotations, "foo")
 
 	assert.Equal(t, emqx.Spec.Persistent, v1beta2EmqxBroker.Spec.Storage)
+
+	aclList := &v1beta2.ACLList{
+		Items: v1beta2EmqxBroker.Spec.EmqxTemplate.ACL,
+	}
+	assert.ElementsMatch(t, emqx.Spec.EmqxTemplate.ACL, aclList.Strings())
 
 	assert.Subset(t, emqx.Spec.EmqxTemplate.Env, []corev1.EnvVar{
 		{
