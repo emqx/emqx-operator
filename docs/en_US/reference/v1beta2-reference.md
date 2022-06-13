@@ -14,6 +14,26 @@ Package v1beta2 contains API Schema definitions for the apps v1beta2 API group
 
 
 
+#### ACL
+
+
+
+
+
+_Appears in:_
+- [EmqxBrokerTemplate](#emqxbrokertemplate)
+- [EmqxEnterpriseTemplate](#emqxenterprisetemplate)
+
+| Field | Description |
+| --- | --- |
+| `permission` _string_ |  |
+| `username` _string_ |  |
+| `clientid` _string_ |  |
+| `ipaddress` _string_ |  |
+| `action` _string_ |  |
+| `topics` _[Topics](#topics)_ |  |
+
+
 #### Certificate
 
 
@@ -169,8 +189,8 @@ _Appears in:_
 | --- | --- |
 | `listener` _[Listener](#listener)_ |  |
 | `acl` _[ACL](#acl) array_ |  |
-| `plugins` _[Plugin](#plugin) array_ |  |
 | `modules` _[EmqxBrokerModule](#emqxbrokermodule) array_ |  |
+| `plugins` _[Plugin](#plugin) array_ |  |
 
 
 #### EmqxEnterprise
@@ -236,8 +256,8 @@ _Appears in:_
 | `license` _string_ |  |
 | `listener` _[Listener](#listener)_ |  |
 | `acl` _[ACL](#acl) array_ |  |
-| `plugins` _[Plugin](#plugin) array_ |  |
 | `modules` _[EmqxEnterpriseModule](#emqxenterprisemodule) array_ |  |
+| `plugins` _[Plugin](#plugin) array_ |  |
 
 
 
@@ -265,6 +285,25 @@ _Appears in:_
 | `ports` _[Ports](#ports)_ |  |
 | `nodePorts` _[Ports](#ports)_ |  |
 | `certificate` _[Certificate](#certificate)_ |  |
+
+
+
+
+#### Plugin
+
+
+
+
+
+_Appears in:_
+- [EmqxBrokerTemplate](#emqxbrokertemplate)
+- [EmqxEnterpriseTemplate](#emqxenterprisetemplate)
+- [PluginList](#pluginlist)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+| `enable` _boolean_ |  |
 
 
 
@@ -319,5 +358,20 @@ _Appears in:_
 | `conf` _string_ |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
+
+
+#### Topics
+
+
+
+
+
+_Appears in:_
+- [ACL](#acl)
+
+| Field | Description |
+| --- | --- |
+| `filter` _string array_ |  |
+| `equal` _string array_ |  |
 
 
