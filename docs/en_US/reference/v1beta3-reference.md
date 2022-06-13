@@ -11,78 +11,9 @@ Package v1beta3 contains API Schema definitions for the apps v1beta3 API group
 ### Resource Types
 - [EmqxBroker](#emqxbroker)
 - [EmqxEnterprise](#emqxenterprise)
+- [EmqxPlugin](#emqxplugin)
+- [EmqxPluginList](#emqxpluginlist)
 
-
-
-#### ACL
-
-
-
-
-
-_Appears in:_
-- [EmqxBrokerTemplate](#emqxbrokertemplate)
-- [EmqxEnterpriseTemplate](#emqxenterprisetemplate)
-
-| Field | Description |
-| --- | --- |
-| `permission` _string_ |  |
-| `username` _string_ |  |
-| `clientid` _string_ |  |
-| `ipaddress` _string_ |  |
-| `action` _string_ |  |
-| `topics` _[Topics](#topics)_ |  |
-
-
-
-
-#### CertConf
-
-
-
-
-
-_Appears in:_
-- [ListenerPort](#listenerport)
-
-| Field | Description |
-| --- | --- |
-| `data` _[CertData](#certdata)_ |  |
-| `stringData` _[CertStringData](#certstringdata)_ |  |
-
-
-#### CertData
-
-
-
-
-
-_Appears in:_
-- [Cert](#cert)
-- [CertConf](#certconf)
-
-| Field | Description |
-| --- | --- |
-| `ca.crt` _integer array_ |  |
-| `tls.crt` _integer array_ |  |
-| `tls.key` _integer array_ |  |
-
-
-#### CertStringData
-
-
-
-
-
-_Appears in:_
-- [Cert](#cert)
-- [CertConf](#certconf)
-
-| Field | Description |
-| --- | --- |
-| `ca.crt` _string_ |  |
-| `tls.crt` _string_ |  |
-| `tls.key` _string_ |  |
 
 
 #### Condition
@@ -165,6 +96,7 @@ _Appears in:_
 | `replicas` _integer_ |  |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ |  |
 | `persistent` _[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimspec-v1-core)_ |  |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core) array_ |  |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#affinity-v1-core)_ |  |
 | `toleRations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#toleration-v1-core) array_ |  |
 | `nodeName` _string_ |  |
@@ -188,17 +120,18 @@ _Appears in:_
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
 | `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ |  |
 | `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ |  |
-| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core) array_ |  |
+| `config` _object (keys:string, values:string)_ |  |
 | `args` _string array_ |  |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podsecuritycontext-v1-core)_ |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ |  |
 | `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ |  |
 | `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ |  |
 | `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ |  |
-| `listener` _[Listener](#listener)_ |  |
-| `acl` _[ACL](#acl) array_ |  |
-| `plugins` _[Plugin](#plugin) array_ |  |
+| `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ |  |
+| `acl` _string array_ |  |
 | `modules` _[EmqxBrokerModule](#emqxbrokermodule) array_ |  |
+
+
 
 
 #### EmqxEnterprise
@@ -251,6 +184,7 @@ _Appears in:_
 | `replicas` _integer_ |  |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ |  |
 | `persistent` _[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimspec-v1-core)_ |  |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core) array_ |  |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#affinity-v1-core)_ |  |
 | `toleRations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#toleration-v1-core) array_ |  |
 | `nodeName` _string_ |  |
@@ -274,18 +208,66 @@ _Appears in:_
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
 | `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ |  |
 | `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ |  |
-| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core) array_ |  |
+| `config` _object (keys:string, values:string)_ |  |
 | `args` _string array_ |  |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podsecuritycontext-v1-core)_ |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ |  |
 | `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ |  |
 | `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ |  |
 | `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ |  |
-| `listener` _[Listener](#listener)_ |  |
-| `acl` _[ACL](#acl) array_ |  |
-| `plugins` _[Plugin](#plugin) array_ |  |
+| `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ |  |
+| `acl` _string array_ |  |
 | `modules` _[EmqxEnterpriseModule](#emqxenterprisemodule) array_ |  |
 | `license` _[License](#license)_ |  |
+
+
+#### EmqxPlugin
+
+
+
+EmqxPlugin is the Schema for the emqxplugins API
+
+_Appears in:_
+- [EmqxPluginList](#emqxpluginlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta3`
+| `kind` _string_ | `EmqxPlugin`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EmqxPluginSpec](#emqxpluginspec)_ |  |
+
+
+#### EmqxPluginList
+
+
+
+EmqxPluginList contains a list of EmqxPlugin
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta3`
+| `kind` _string_ | `EmqxPluginList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[EmqxPlugin](#emqxplugin) array_ |  |
+
+
+#### EmqxPluginSpec
+
+
+
+EmqxPluginSpec defines the desired state of EmqxPlugin
+
+_Appears in:_
+- [EmqxPlugin](#emqxplugin)
+
+| Field | Description |
+| --- | --- |
+| `pluginName` _string_ |  |
+| `selector` _object (keys:string, values:string)_ |  |
+| `config` _object (keys:string, values:string)_ |  |
 
 
 
@@ -309,7 +291,9 @@ _Appears in:_
 | `stringData` _string_ |  |
 
 
-#### Listener
+
+
+#### ServiceTemplate
 
 
 
@@ -321,55 +305,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `labels` _object (keys:string, values:string)_ |  |
-| `annotations` _object (keys:string, values:string)_ |  |
-| `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicetype-v1-core)_ |  |
-| `loadBalancerIP` _string_ |  |
-| `loadBalancerSourceRanges` _string array_ |  |
-| `externalIPs` _string array_ |  |
-| `api` _[ListenerPort](#listenerport)_ |  |
-| `dashboard` _[ListenerPort](#listenerport)_ |  |
-| `mqtt` _[ListenerPort](#listenerport)_ |  |
-| `mqtts` _[ListenerPort](#listenerport)_ |  |
-| `ws` _[ListenerPort](#listenerport)_ |  |
-| `wss` _[ListenerPort](#listenerport)_ |  |
-
-
-#### ListenerPort
-
-
-
-
-
-_Appears in:_
-- [Listener](#listener)
-
-| Field | Description |
-| --- | --- |
-| `port` _integer_ |  |
-| `nodePort` _integer_ |  |
-| `cert` _[CertConf](#certconf)_ |  |
-
-
-
-
-#### Plugin
-
-
-
-
-
-_Appears in:_
-- [EmqxBrokerTemplate](#emqxbrokertemplate)
-- [EmqxEnterpriseTemplate](#emqxenterprisetemplate)
-- [PluginList](#pluginlist)
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ |  |
-| `enable` _boolean_ |  |
-
-
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[ServiceSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicespec-v1-core)_ |  |
 
 
 #### Status
@@ -385,20 +322,5 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `conditions` _[Condition](#condition) array_ | INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html |
-
-
-#### Topics
-
-
-
-
-
-_Appears in:_
-- [ACL](#acl)
-
-| Field | Description |
-| --- | --- |
-| `filter` _string array_ |  |
-| `equal` _string array_ |  |
 
 
