@@ -87,8 +87,14 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	var sts *appsv1.StatefulSet
 	sts = generateStatefulSetDef(instance)
 
-	// First reconcile
-	if len(instance.GetStatus().Conditions) == 0 {
+	// Init Plugin
+	initPlugin := false
+	for _, c := range instance.GetStatus().Conditions {
+		if c.Type == appsv1beta3.ClusterConditionPluginInitialized {
+			initPlugin = true
+		}
+	}
+	if len(instance.GetStatus().Conditions) == 0 || !initPlugin {
 		loadedPlugins, _ := generateLoadedPlugins(instance, sts)
 		emptyPluginsConfig, _ := generateEmptyPlugins(instance, sts)
 		resources = append(resources, emptyPluginsConfig, loadedPlugins)
@@ -108,10 +114,10 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "Reconciled", err.Error())
 			return ctrl.Result{Requeue: true}, err
 		} else {
-			instance.SetRunningCondition("Init plugins config successfully")
+			instance.SetPluginInitializedCondition("Plugin initialized")
 			instance.DescConditionsByTime()
 			_ = r.Status().Update(ctx, instance)
-			r.EventRecorder.Event(instance, corev1.EventTypeNormal, "Reconciled", "Init plugins config successfully")
+			r.EventRecorder.Event(instance, corev1.EventTypeNormal, "Reconciled", "Plugin initialized successfully")
 			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 		}
 	}
