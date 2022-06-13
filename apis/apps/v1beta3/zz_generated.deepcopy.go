@@ -130,6 +130,13 @@ func (in *EmqxBrokerSpec) DeepCopyInto(out *EmqxBrokerSpec) {
 		copy(*out, *in)
 	}
 	in.Persistent.DeepCopyInto(&out.Persistent)
+	if in.Env != nil {
+		in, out := &in.Env, &out.Env
+		*out = make([]v1.EnvVar, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
 		*out = new(v1.Affinity)
@@ -191,13 +198,6 @@ func (in *EmqxBrokerTemplate) DeepCopyInto(out *EmqxBrokerTemplate) {
 		*out = make(EmqxConfig, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
-		}
-	}
-	if in.Env != nil {
-		in, out := &in.Env, &out.Env
-		*out = make([]v1.EnvVar, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Args != nil {
@@ -359,6 +359,13 @@ func (in *EmqxEnterpriseSpec) DeepCopyInto(out *EmqxEnterpriseSpec) {
 		copy(*out, *in)
 	}
 	in.Persistent.DeepCopyInto(&out.Persistent)
+	if in.Env != nil {
+		in, out := &in.Env, &out.Env
+		*out = make([]v1.EnvVar, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
 		*out = new(v1.Affinity)
@@ -420,13 +427,6 @@ func (in *EmqxEnterpriseTemplate) DeepCopyInto(out *EmqxEnterpriseTemplate) {
 		*out = make(EmqxConfig, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
-		}
-	}
-	if in.Env != nil {
-		in, out := &in.Env, &out.Env
-		*out = make([]v1.EnvVar, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Args != nil {

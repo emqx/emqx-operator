@@ -56,7 +56,7 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.EmqxTemplate.ServiceTemplate = convertToListener(src)
 
 	// EmqxConfig
-	dst.Spec.EmqxTemplate.EmqxConfig, dst.Spec.EmqxTemplate.Env = conversionToEmqxConfig(src.Spec.Env)
+	dst.Spec.EmqxTemplate.EmqxConfig, dst.Spec.Env = conversionToEmqxConfig(src.Spec.Env)
 
 	dst.Spec.Persistent = src.Spec.Storage
 
@@ -127,7 +127,7 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.ExtraVolumes = src.Spec.EmqxTemplate.ExtraVolumes
 	dst.Spec.ExtraVolumeMounts = src.Spec.EmqxTemplate.ExtraVolumeMounts
 	//dst.Spec.Env = src.Spec.EmqxTemplate.Env
-	dst.Spec.Env = converFromEnvAndConfig(src.Spec.EmqxTemplate.Env, src.Spec.EmqxTemplate.EmqxConfig)
+	dst.Spec.Env = converFromEnvAndConfig(src.Spec.Env, src.Spec.EmqxTemplate.EmqxConfig)
 
 	// Status
 	for _, condition := range src.Status.Conditions {
