@@ -197,17 +197,6 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 							ReadinessProbe:  instance.GetReadinessProbe(),
 							LivenessProbe:   instance.GetLivenessProbe(),
 							StartupProbe:    instance.GetStartupProbe(),
-							Lifecycle: &corev1.Lifecycle{
-								PreStop: &corev1.LifecycleHandler{
-									Exec: &corev1.ExecAction{
-										Command: []string{
-											"/opt/emqx/bin/emqx_ctl",
-											"cluster",
-											"leave",
-										},
-									},
-								},
-							},
 						},
 					},
 				},
