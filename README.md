@@ -4,7 +4,7 @@ A Kubernetes Operator for EMQX Broker and EMQX Enterprise
 
 ## Overview
 
-The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/) includes EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of EMQX cluster.
+The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/) including EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of the EMQX cluster.
 
 The EMQX Operator includes, but is not limited to, the following features:
 
@@ -23,24 +23,24 @@ The EMQX Operator requires a Kubernetes cluster of version `>=1.20.0`.
 A core feature of the EMQX Operator is to monitor the Kubernetes API server for changes to specific objects and ensure that the running EMQX deployments match these objects.
 The Operator acts on the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/).
 
-The example of EMQX Broker see the [emqx.yaml](config/samples/emqx/v1beta2/emqx.yaml) and the example of EMQX Enterprise see the [emqx-ee.yaml](config/samples/emqx/v1beta2/emqx-ee.yaml).
+For the example of EMQX Broker see the [`emqx.yaml`](config/samples/emqx/v1beta2/emqx.yaml) and for the example of EMQX Enterprise see the [emqx-ee.yaml](config/samples/emqx/v1beta2/emqx-ee.yaml).
 
-The EMQX Operator automatically detects changes on any of the above custom resource objects, and ensures that running deployments are kept in sync with the changes.
+The EMQX Operator automatically detects changes on any of the above custom resource objects and ensures that running deployments are kept in sync with the changes.
 
 ## Getting Start
 
-For more information on get started, see the [getting started](docs/en_US/getting-started/getting-started.md)
+For more information on getting started, see the [getting started](docs/en_US/getting-started/getting-started.md)
 
 ## Development
 
 ### Prerequisites
 
-- golang environment
+- Golang environment
 - docker (used for creating container images, etc.)
 - Kubernetes cluster
 
 ## Contributing
-Many files (api, config, controller, hack,...) in this repository are auto-generated.
+Many files (API, config, controller, hack,...) in this repository are auto-generated.
 Before proposing a pull request:
 
 1. Commit your changes.
