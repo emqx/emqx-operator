@@ -40,6 +40,7 @@ if type crd-ref-docs >/dev/null 2>&1
 then
     updateCrdReference
 else
-    echo “crd-ref-docs not exist \n
-          please refer to the documentation https://github.com/elastic/crd-ref-docs for installation“ 
+    echo "crd-ref-docs not exist"
+    echo "please refer to the documentation https://github.com/elastic/crd-ref-docs for installation"
+    exit 1
 fi

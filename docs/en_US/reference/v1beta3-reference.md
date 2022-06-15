@@ -12,7 +12,6 @@ Package v1beta3 contains API Schema definitions for the apps v1beta3 API group
 - [EmqxBroker](#emqxbroker)
 - [EmqxEnterprise](#emqxenterprise)
 - [EmqxPlugin](#emqxplugin)
-- [EmqxPluginList](#emqxpluginlist)
 
 
 
@@ -227,8 +226,7 @@ _Appears in:_
 
 EmqxPlugin is the Schema for the emqxplugins API
 
-_Appears in:_
-- [EmqxPluginList](#emqxpluginlist)
+
 
 | Field | Description |
 | --- | --- |
@@ -236,22 +234,6 @@ _Appears in:_
 | `kind` _string_ | `EmqxPlugin`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EmqxPluginSpec](#emqxpluginspec)_ |  |
-
-
-#### EmqxPluginList
-
-
-
-EmqxPluginList contains a list of EmqxPlugin
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `apps.emqx.io/v1beta3`
-| `kind` _string_ | `EmqxPluginList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` _[EmqxPlugin](#emqxplugin) array_ |  |
 
 
 #### EmqxPluginSpec
