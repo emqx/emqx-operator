@@ -42,7 +42,7 @@ jobs:
       - name: Install storage operator
         if: matrix.install == 'static'
         run: |
-          curl -f -L "https://github.com/emqx/emqx-operator/releases/download/$(git describe --abbrev=0 --tags)/emqx-operator-controller.yaml" | kubectl apply -f -
+          kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/$(git describe --abbrev=0 --tags)/emqx-operator-controller.yaml" --server-side --force-conflicts
       - name: Install storage operator
         if: matrix.install == 'helm'
         run: |
