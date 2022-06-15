@@ -105,17 +105,6 @@ func generateStatefulSetDef(emqx v1beta2.Emqx) *appsv1.StatefulSet {
 							ImagePullPolicy: emqx.GetImagePullPolicy(),
 							Resources:       emqx.GetResource(),
 							Env:             emqx.GetEnv(),
-							Lifecycle: &corev1.Lifecycle{
-								PreStop: &corev1.LifecycleHandler{
-									Exec: &corev1.ExecAction{
-										Command: []string{
-											"/opt/emqx/bin/emqx_ctl",
-											"cluster",
-											"leave",
-										},
-									},
-								},
-							},
 						},
 					},
 				},
