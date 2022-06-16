@@ -17,7 +17,7 @@
 安装默认静态配置文件
 
 ```bash
-$ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.2.0/emqx-operator-controller.yaml" | kubectl apply -f -
+curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.2.0/emqx-operator-controller.yaml" | kubectl apply -f -
 ```
 
 ### 通过 Helm 安装
@@ -25,8 +25,8 @@ $ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.2.0/emqx
 1. 添加 EMQX Helm 仓库
 
 ```bash
-$ helm repo add emqx https://repos.emqx.io/charts
-$ helm repo update
+helm repo add emqx https://repos.emqx.io/charts
+helm repo update
 ```
 
 1. 用 Helm 安装 EMQX Operator 控制器
@@ -49,18 +49,23 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 ## 部署 EMQX Broker
 
 1. 部署 EMQX Custom Resource
+
    ```
    cat << "EOF" | kubectl apply -f -
-   apiVersion: apps.emqx.io/v1beta2
+   apiVersion: apps.emqx.io/v1beta3
    kind: EmqxBroker
    metadata:
      name: emqx
+     labels:
+       "foo": "bar"
    spec:
-     image: emqx/emqx:4.4.0
+     emqxTemplate:
+       image: emqx/emqx:4.4.3
    EOF
    ```
 
 2. 检查 EMQX 状态
+
    ```bash
    $ kubectl get pods
    NAME              READY   STATUS    RESTARTS   AGE
