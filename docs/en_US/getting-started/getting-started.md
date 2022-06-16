@@ -21,17 +21,20 @@ We using [cert manager](https://github.com/jetstack/cert-manager) for provisioni
 The default static configuration can be installed as follows:
 
 ```shell
-$ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.2.0/emqx-operator-controller.yaml" | kubectl apply -f -
+curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.2.0/emqx-operator-controller.yaml" | kubectl apply -f -
 ```
 
 ### Installing with Helm
 
-1.  Add the EMQX Helm repository:
+1. Add the EMQX Helm repository:
+
    ```
-   $ helm repo add emqx https://repos.emqx.io/charts
-   $ helm repo update
+   helm repo add emqx https://repos.emqx.io/charts
+   helm repo update
    ```
+
 2. Install EMQX Operator Controller by helm
+
    ```
    $ helm install emqx-operator emqx/emqx-operator \
       --set installCRDs=true \
@@ -50,18 +53,23 @@ $ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.2.0/emqx
 ## Deploy the EMQX Broker
 
 1. Deploy EMQX Custom Resource
+
    ```
    cat << "EOF" | kubectl apply -f -
-   apiVersion: apps.emqx.io/v1beta2
+   apiVersion: apps.emqx.io/v1beta3
    kind: EmqxBroker
    metadata:
      name: emqx
+     labels:
+       "foo": "bar"
    spec:
-     image: emqx/emqx:4.4.0
+     emqxTemplate:
+       image: emqx/emqx:4.4.3
    EOF
    ```
 
 2. Check EMQX status
+
    ```bash
    $ kubectl get pods
    NAME              READY   STATUS    RESTARTS   AGE

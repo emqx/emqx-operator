@@ -36,6 +36,19 @@
       ]
     },
     {
+      "title": "Tasks",
+      "children": [
+        {
+          "title": "Install EMQX plugin",
+          "path": "tasks/install-emqx-prometheus-plugin"
+        },
+        {
+          "title": "Handle EMQX metrics and logs with telegraf",
+          "path": "tasks/handle-emqx-metrics-and-logs"
+        }
+      ]
+    },
+    {
       "title": "reference",
       "children": [
         {
@@ -91,6 +104,19 @@
         {
           "title": "配置",
           "path": "configuration/configuration"
+        }
+      ]
+    },
+    {
+      "title": "任务",
+      "children": [
+        {
+          "title": "部署 EMQX 插件",
+          "path": "tasks/install-emqx-prometheus-plugin"
+        },
+        {
+          "title": "利用 telegtaf 处理 EMQX metrics 和 logs",
+          "path": "tasks/handle-emqx-metrics-and-logs"
         }
       ]
     },
