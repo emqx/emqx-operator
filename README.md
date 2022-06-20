@@ -27,6 +27,13 @@ For the example of EMQX Broker see the [`emqx.yaml`](config/samples/emqx/v1beta2
 
 The EMQX Operator automatically detects changes on any of the above custom resource objects and ensures that running deployments are kept in sync with the changes.
 
+## EMQX Operator compatibility 
+
+|                        | EMQX 4.2.x | EMQX 4.3.x | EMQX 4.4.X |
+|------------------------|------------|------------|------------|
+| EMQX Operator 1.1.x    | ✓          | ✓          | ✓          |
+| EMQX Operator 1.2.x    |            |            | ✓          |
+
 ## Getting Start
 
 For more information on getting started, see the [getting started](docs/en_US/getting-started/getting-started.md)
