@@ -33,7 +33,6 @@ ${SED_REPLACE} -r "s|^appVersion:.*|appVersion: ${tag}|g" deploy/charts/emqx-ope
 
 function updateCrdReference {
     crd-ref-docs --source-path=${PWD}/${V1BETA3_DIR} --config=${REFERENCE_CONFIG} --output-path=${PWD}/${REFERENCE_OUTPUT} --renderer=markdown && mv ${PWD}/${REFERENCE_OUTPUT}/out.md ${PWD}/${REFERENCE_OUTPUT}/v1beta3-reference.md
-    crd-ref-docs --source-path=${PWD}/${V1BETA2_DIR} --config=${REFERENCE_CONFIG} --output-path=${PWD}/${REFERENCE_OUTPUT} --renderer=markdown && mv ${PWD}/${REFERENCE_OUTPUT}/out.md ${PWD}/${REFERENCE_OUTPUT}/v1beta2-reference.md
 }
 
 if type crd-ref-docs >/dev/null 2>&1
