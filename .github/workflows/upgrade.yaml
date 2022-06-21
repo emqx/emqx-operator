@@ -1,3 +1,4 @@
+
 name: Upgrade emqx operator
 
 concurrency:
@@ -17,7 +18,7 @@ jobs:
           - static
           - helm
         apiVersion:
-          - v1beta2
+          - v1beta3
         emqx:
           - [EmqxBroker, "emqx/emqx:4.4.1"]
           - [EmqxEnterprise, "emqx/emqx-ee:4.4.0"]
@@ -70,7 +71,8 @@ jobs:
             labels:
               cluster: emqx
           spec:
-            image: ${{ matrix.emqx[1] }}
+            emqxTemplate:
+              image: ${{ matrix.emqx[1] }}
           EOF
       - name: Check emqx pods status
         run: |

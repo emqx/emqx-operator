@@ -4,7 +4,7 @@ inputs:
   apiVersion:
     description: "API version"
     required: true
-    default: "v1beta2"
+    default: "v1beta3"
   kind:
     description: "Kind name, must use short name"
     required: true

@@ -52,10 +52,6 @@
       "title": "reference",
       "children": [
         {
-          "title": "V1Beta2 Reference",
-          "path": "reference/v1beta2-reference"
-        },
-        {
           "title": "V1Beta3 Reference",
           "path": "reference/v1beta3-reference"
         }

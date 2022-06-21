@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -88,9 +87,6 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	scheme := runtime.NewScheme()
-
-	err = v1beta2.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
 
 	err = v1beta3.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())

@@ -8,24 +8,6 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
-  controller: true
-  domain: emqx.io
-  group: apps
-  kind: EmqxBroker
-  path: github.com/emqx/emqx-operator/apis/apps/v1beta2
-  version: v1beta2
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: emqx.io
-  group: apps
-  kind: EmqxEnterprise
-  path: github.com/emqx/emqx-operator/apis/apps/v1beta2
-  version: v1beta2
-- api:
-    crdVersion: v1
-    namespaced: true
   domain: emqx.io
   group: apps
   kind: EmqxBroker

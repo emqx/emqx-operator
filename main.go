@@ -35,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	appsv1beta2 "github.com/emqx/emqx-operator/apis/apps/v1beta2"
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	appscontrollers "github.com/emqx/emqx-operator/controllers/apps"
 	//+kubebuilder:scaffold:imports
@@ -49,7 +48,6 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(appsv1beta2.AddToScheme(scheme))
 	utilruntime.Must(appsv1beta3.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
