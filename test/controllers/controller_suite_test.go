@@ -39,6 +39,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -163,6 +164,10 @@ var _ = AfterSuite(func() {
 })
 
 func cleanAll() error {
+	if err := removePluginsFinalizer(brokerNameSpace); err != nil {
+		return err
+	}
+
 	broker := &v1beta3.EmqxBroker{}
 	if err := k8sClient.Get(
 		context.Background(),
@@ -196,14 +201,17 @@ func cleanAll() error {
 				return err
 			}
 		}
-		if err := k8sClient.Delete(
-			context.Background(),
-			generateEmqxNamespace(brokerNameSpace),
-		); err != nil {
-			return err
-		}
+		// if err := k8sClient.Delete(
+		// 	context.Background(),
+		// 	generateEmqxNamespace(brokerNameSpace),
+		// ); err != nil {
+		// 	return err
+		// }
 	}
 
+	if err := removePluginsFinalizer(enterpriseNameSpace); err != nil {
+		return err
+	}
 	enterprise := &v1beta3.EmqxEnterprise{}
 	if err := k8sClient.Get(
 		context.Background(),
@@ -237,14 +245,33 @@ func cleanAll() error {
 				return err
 			}
 		}
-		if err := k8sClient.Delete(
-			context.Background(),
-			generateEmqxNamespace(enterpriseNameSpace),
-		); err != nil {
+		// if err := k8sClient.Delete(
+		// 	context.Background(),
+		// 	generateEmqxNamespace(enterpriseNameSpace),
+		// ); err != nil {
+		// 	return err
+		// }
+	}
+
+	return nil
+}
+
+func removePluginsFinalizer(namespace string) error {
+	finalizer := "apps.emqx.io/finalizer"
+
+	plugins := &v1beta3.EmqxPluginList{}
+	_ = k8sClient.List(
+		context.Background(),
+		plugins,
+		client.InNamespace(namespace),
+	)
+	for _, plugin := range plugins.Items {
+		controllerutil.RemoveFinalizer(&plugin, finalizer)
+		err := k8sClient.Update(context.Background(), &plugin)
+		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
