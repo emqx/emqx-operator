@@ -50,6 +50,19 @@ func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*
 		return nil, fmt.Errorf("not found pods")
 	}
 
+	var podName string
+	for _, pod := range pods.Items {
+		for _, status := range pod.Status.ContainerStatuses {
+			if status.Name == "emqx" && status.Ready {
+				podName = pod.Name
+			}
+		}
+	}
+
+	if podName == "" {
+		return nil, fmt.Errorf("pods not ready")
+	}
+
 	configMap := &corev1.ConfigMap{}
 	if err := handler.Get(
 		context.TODO(),
