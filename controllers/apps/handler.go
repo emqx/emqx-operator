@@ -5,22 +5,20 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
-	"strconv"
-	"strings"
+	"net/http"
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	emqxclient "github.com/emqx/emqx-operator/pkg/client"
+	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -35,6 +33,84 @@ type Handler struct {
 	kubernetes.Clientset
 	record.EventRecorder
 	rest.Config
+}
+
+func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*http.Response, error) {
+	pods := &corev1.PodList{}
+	if err := handler.Client.List(
+		context.TODO(),
+		pods,
+		client.InNamespace(obj.GetNamespace()),
+		client.MatchingLabels(obj.GetLabels()),
+	); err != nil {
+		return nil, err
+	}
+
+	if len(pods.Items) == 0 {
+		return nil, fmt.Errorf("not found pods")
+	}
+
+	configMap := &corev1.ConfigMap{}
+	if err := handler.Get(
+		context.TODO(),
+		client.ObjectKey{
+			Name:      fmt.Sprintf("%s-%s", obj.GetName(), "plugins-config"),
+			Namespace: obj.GetNamespace(),
+		},
+		configMap,
+	); err != nil {
+		return nil, err
+	}
+
+	pluginsList := &appsv1beta3.EmqxPluginList{}
+	if err := handler.Client.List(context.TODO(), pluginsList, client.InNamespace(obj.GetNamespace())); err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return nil, err
+		}
+	}
+
+	apiPort := "8081"
+	username := "admin"
+	password := "public"
+
+	for _, plugin := range pluginsList.Items {
+		selector, _ := labels.ValidatedSelectorFromSet(plugin.Spec.Selector)
+		if selector.Empty() || !selector.Matches(labels.Set(obj.GetLabels())) {
+			continue
+		}
+		if plugin.Spec.PluginName == "emqx_management" {
+			if _, ok := plugin.Spec.Config["management.listener.http"]; ok {
+				apiPort = plugin.Spec.Config["management.listener.http"]
+			}
+			if _, ok := plugin.Spec.Config["management.default_application.id"]; ok {
+				username = plugin.Spec.Config["management.default_application.id"]
+			}
+			if _, ok := plugin.Spec.Config["management.default_application.secret"]; ok {
+				password = plugin.Spec.Config["management.default_application.secret"]
+			}
+		}
+	}
+
+	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
+
+	apiClient := apiClient.APIClient{
+		Username: username,
+		Password: password,
+		PortForwardOptions: apiClient.PortForwardOptions{
+			Namespace: obj.GetNamespace(),
+			PodName:   pods.Items[0].GetName(),
+			PodPorts: []string{
+				fmt.Sprintf(":%s", apiPort),
+				// apiPort,
+			},
+			Clientset:    handler.Clientset,
+			Config:       &handler.Config,
+			ReadyChannel: readyChan,
+			StopChannel:  stopChan,
+		},
+	}
+
+	return apiClient.Do(method, path)
 }
 
 func (handler *Handler) ExecToPods(obj client.Object, containerName, command string) error {
@@ -124,7 +200,7 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 	u.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
 	err := handler.Client.Get(context.TODO(), client.ObjectKeyFromObject(obj), u)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8sErrors.IsNotFound(err) {
 			return handler.doCreate(obj, postFun)
 		}
 		return err
@@ -217,87 +293,6 @@ func (handler *Handler) doUpdate(obj client.Object, postUpdated func(client.Obje
 	}
 	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
 	return postUpdated(obj)
-}
-
-func (handler *Handler) checkEmqxClusterHealthy(emqx v1beta3.Emqx) bool {
-	available, err := handler.getNodeNumberFromEmqxApi(emqx)
-	if err != nil || available < *v1beta3.Emqx(emqx).GetReplicas() {
-		handler.EventRecorder.Event(emqx, corev1.EventTypeWarning, "Checked", err.Error())
-		return false
-	}
-	handler.EventRecorder.Event(emqx, corev1.EventTypeNormal, "Checked", "Check emqx cluster healthy")
-	return true
-}
-
-func (handler *Handler) getNodeNumberFromEmqxApi(emqx v1beta3.Emqx) (int32, error) {
-	id := "admin"
-	secret := "public"
-	env := v1beta3.EnvList{
-		Items: emqx.GetEnv(),
-	}
-	if item, idx := env.Lookup("EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID"); idx != -1 {
-		id = item.Value
-	}
-	if item, idx := env.Lookup("EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET"); idx != -1 {
-		secret = item.Value
-	}
-	address, err := handler.getAddress(emqx)
-	if err != nil {
-		return -1, err
-	}
-
-	targetPort, err := handler.getEmqxApiTargetPort(emqx)
-	if err != nil {
-		return -1, err
-	}
-	addr := net.JoinHostPort(address, strconv.FormatInt(int64(targetPort), 10))
-	data, err := emqxclient.New(addr, id, secret).Get("brokers", 10)
-	if err != nil {
-		return -1, err
-	}
-	respData := string(data[:])
-	nodeNum := len(gjson.Get(respData, "data").Array())
-	return int32(nodeNum), nil
-}
-
-func (handler *Handler) getEmqxApiTargetPort(emqx v1beta3.Emqx) (int32, error) {
-	getTargetPortOfApi := func(ports []corev1.ServicePort) int32 {
-		for _, item := range ports {
-			if item.Name == "api" {
-				if emqx.GetListener().Type == corev1.ServiceTypeNodePort {
-					return item.NodePort
-				} else {
-					return item.TargetPort.IntVal
-				}
-			}
-		}
-		return int32(8081)
-	}
-	svc, err := handler.Clientset.CoreV1().Services(emqx.GetNamespace()).Get(context.TODO(), emqx.GetName(), metav1.GetOptions{})
-	if err != nil {
-		// if error happens return -1 for targetPort
-		return -1, err
-	}
-	targetPortForApi := getTargetPortOfApi(svc.Spec.Ports)
-	return targetPortForApi, nil
-}
-
-func (handler *Handler) getAddress(emqx v1beta3.Emqx) (string, error) {
-	var address string
-	svcType := emqx.GetListener().Type
-	switch svcType {
-	case corev1.ServiceTypeClusterIP:
-		address = fmt.Sprintf("%s.%s.svc.cluster.local", emqx.GetName(), emqx.GetNamespace())
-	case corev1.ServiceTypeNodePort:
-		address = strings.Split(strings.Split(handler.Config.Host, "//")[1], ":")[0]
-	case corev1.ServiceTypeLoadBalancer:
-		svc, err := handler.Clientset.CoreV1().Services(emqx.GetNamespace()).Get(context.TODO(), emqx.GetName(), metav1.GetOptions{})
-		if err != nil {
-			return "", err
-		}
-		address = svc.Status.LoadBalancer.Ingress[0].IP
-	}
-	return address, nil
 }
 
 func IgnoreOtherContainers() patch.CalculateOption {

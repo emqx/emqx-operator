@@ -34,6 +34,7 @@ type ConditionType string
 const (
 	ClusterConditionPluginInitialized ConditionType = "PluginInitialized"
 	ClusterConditionRunning           ConditionType = "Running"
+	ClusterConditionUnhealthy         ConditionType = "Unhealthy"
 	ClusterConditionFailed            ConditionType = "Failed"
 )
 
@@ -43,6 +44,7 @@ type EmqxStatus interface {
 	GetConditions() []Condition
 	SetPluginInitializedCondition(message string)
 	SetRunningCondition(message string)
+	SetUnhealthyCondition(message string)
 	SetFailedCondition(message string)
 	setClusterCondition(c Condition)
 	ClearCondition(t ConditionType)
@@ -74,6 +76,11 @@ func (ecs *Status) SetPluginInitializedCondition(message string) {
 
 func (ecs *Status) SetRunningCondition(message string) {
 	c := newClusterCondition(ClusterConditionRunning, corev1.ConditionTrue, "Running", message)
+	ecs.setClusterCondition(*c)
+}
+
+func (ecs *Status) SetUnhealthyCondition(message string) {
+	c := newClusterCondition(ClusterConditionUnhealthy, corev1.ConditionTrue, "Unhealthy", message)
 	ecs.setClusterCondition(*c)
 }
 

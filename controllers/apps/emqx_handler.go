@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"reflect"
 	"regexp"
@@ -41,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/tidwall/gjson"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
@@ -150,8 +152,28 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	if !r.Handler.checkEmqxClusterHealthy(instance) {
+	resp, err := r.Handler.requestAPI(instance, "Get", "api/v4/brokers")
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+	if resp.StatusCode != 200 {
+		instance.SetUnhealthyCondition(fmt.Sprintf("Get broker status failed: %s", resp.Status))
+		instance.DescConditionsByTime()
+		_ = r.Status().Update(ctx, instance)
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+	if len(gjson.GetBytes(body, "data").Array()) != int(*instance.GetReplicas()) {
+		instance.SetUnhealthyCondition("Cluster not ready")
+		instance.DescConditionsByTime()
+		_ = r.Status().Update(ctx, instance)
+		return ctrl.Result{Requeue: true}, nil
+
 	}
 
 	instance.SetRunningCondition("Reconciled")
