@@ -8,6 +8,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
+	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
@@ -117,7 +118,6 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
 	err := handler.Client.Get(context.TODO(), client.ObjectKeyFromObject(obj), u)
-
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return handler.doCreate(obj, postFun)
@@ -177,10 +177,16 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 }
 
 func (handler *Handler) doCreate(obj client.Object, postCreated func(client.Object) error) error {
-	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
-		return err
+	switch obj.(type) {
+	case *appsv1beta3.EmqxBroker:
+	case *appsv1beta3.EmqxEnterprise:
+	default:
+		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
+			handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
+			return err
+		}
 	}
+
 	if err := handler.Client.Create(context.TODO(), obj); err != nil {
 		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Created", err.Error())
 		return err
@@ -190,10 +196,16 @@ func (handler *Handler) doCreate(obj client.Object, postCreated func(client.Obje
 }
 
 func (handler *Handler) doUpdate(obj client.Object, postUpdated func(client.Object) error) error {
-	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
-		return err
+	switch obj.(type) {
+	case *appsv1beta3.EmqxBroker:
+	case *appsv1beta3.EmqxEnterprise:
+	default:
+		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
+			handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Patched", err.Error())
+			return err
+		}
 	}
+
 	if err := handler.Client.Update(context.TODO(), obj); err != nil {
 		handler.EventRecorder.Event(obj, corev1.EventTypeWarning, "Updated", err.Error())
 		return err
