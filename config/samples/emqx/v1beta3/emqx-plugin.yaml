@@ -5,7 +5,7 @@ metadata:
   namespace: default
 spec:
   selector:
-      "foo": "bar"
+      "apps.emqx.io/instance": "emqx-ee"
   pluginName: emqx_lwm2m
   config:
       "lwm2m.lifetime_min": "1s"
