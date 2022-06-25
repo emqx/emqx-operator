@@ -152,7 +152,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	resp, err := r.Handler.requestAPI(instance, "Get", "api/v4/brokers")
+	resp, err := r.Handler.requestAPI(instance, "GET", "api/v4/brokers")
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}

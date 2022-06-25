@@ -147,12 +147,43 @@ var _ = BeforeSuite(func() {
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 
+	emqxReady := make(chan string)
 	for _, emqx := range emqxList() {
-		namespace := generateEmqxNamespace(emqx.GetNamespace())
-		Expect(k8sClient.Create(context.Background(), namespace)).Should(Succeed())
+		go func(emqx v1beta3.Emqx) {
+			namespace := generateEmqxNamespace(emqx.GetNamespace())
+			Expect(k8sClient.Create(context.Background(), namespace)).Should(Succeed())
+			Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
 
-		Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
+			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
+				var instance v1beta3.Emqx
+				switch emqx.(type) {
+				case *v1beta3.EmqxBroker:
+					instance = &v1beta3.EmqxBroker{}
+				case *v1beta3.EmqxEnterprise:
+					instance = &v1beta3.EmqxEnterprise{}
+				}
+				Eventually(func() []v1beta3.ConditionType {
+					_ = k8sClient.Get(
+						context.TODO(),
+						types.NamespacedName{
+							Name:      emqx.GetName(),
+							Namespace: emqx.GetNamespace(),
+						},
+						instance,
+					)
+					list := []v1beta3.ConditionType{}
+					for _, c := range instance.GetStatus().Conditions {
+						list = append(list, c.Type)
+					}
+					return list
+				}, timeout, interval).Should(ContainElement(v1beta3.ClusterConditionRunning))
+			}
+			emqxReady <- "ready"
+		}(emqx)
 	}
+
+	// // wait emqx custom resource ready
+	_, _ = <-emqxReady, <-emqxReady
 })
 
 var _ = AfterSuite(func() {
@@ -201,12 +232,12 @@ func cleanAll() error {
 				return err
 			}
 		}
-		// if err := k8sClient.Delete(
-		// 	context.Background(),
-		// 	generateEmqxNamespace(brokerNameSpace),
-		// ); err != nil {
-		// 	return err
-		// }
+		if err := k8sClient.Delete(
+			context.Background(),
+			generateEmqxNamespace(brokerNameSpace),
+		); err != nil {
+			return err
+		}
 	}
 
 	if err := removePluginsFinalizer(enterpriseNameSpace); err != nil {

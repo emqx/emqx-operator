@@ -59,10 +59,10 @@ func (c *APIClient) Do(method, path string) (*http.Response, error) {
 	}
 
 	httpClient := http.Client{}
-	req, err := http.NewRequest("GET", url.String(), nil)
+	req, err := http.NewRequest(method, url.String(), nil)
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth("admin", "public")
+	req.SetBasicAuth(c.Username, c.Password)
 	return httpClient.Do(req)
 }

@@ -51,10 +51,12 @@ func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*
 	}
 
 	var podName string
+findPod:
 	for _, pod := range pods.Items {
 		for _, status := range pod.Status.ContainerStatuses {
 			if status.Name == "emqx" && status.Ready {
 				podName = pod.Name
+				break findPod
 			}
 		}
 	}
@@ -111,10 +113,9 @@ func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*
 		Password: password,
 		PortForwardOptions: apiClient.PortForwardOptions{
 			Namespace: obj.GetNamespace(),
-			PodName:   pods.Items[0].GetName(),
+			PodName:   podName,
 			PodPorts: []string{
 				fmt.Sprintf(":%s", apiPort),
-				// apiPort,
 			},
 			Clientset:    handler.Clientset,
 			Config:       &handler.Config,
