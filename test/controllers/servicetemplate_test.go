@@ -111,11 +111,20 @@ var _ = Describe("", func() {
 		})
 
 		It("Update listener service", func() {
-			emqx := generateEmqxBroker(brokerName, brokerNameSpace)
-
-			config := make(v1beta3.EmqxConfig)
+			emqx := &v1beta3.EmqxBroker{}
+			Expect(k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Namespace: "broker",
+					Name:      "emqx",
+				},
+				emqx,
+			)).Should(Succeed())
+			config := emqx.GetEmqxConfig()
 			config["listener.tcp.external"] = "21883"
 			emqx.SetEmqxConfig(config)
+			emqx.SetKind("EmqxBroker")
+			emqx.SetAPIVersion("apps.emqx.io/v1beta3")
 			Expect(updateEmqx(emqx)).Should(Succeed())
 
 			svc := &corev1.Service{}
