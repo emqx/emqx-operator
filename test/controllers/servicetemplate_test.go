@@ -31,121 +31,99 @@ import (
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
-var _ = Describe("", func() {
+var _ = Describe("Check service", func() {
 	Context("Check service", func() {
-		It("Check headless service", func() {
-			for _, emqx := range emqxList() {
-				names := v1beta3.Names{Object: emqx}
-				Eventually(func() []corev1.ServicePort {
-					svc := &corev1.Service{}
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      names.HeadlessSvc(),
-							Namespace: emqx.GetNamespace(),
-						},
-						svc,
-					)
-					return svc.Spec.Ports
-				}, timeout, interval).Should(ConsistOf([]corev1.ServicePort{{
-					Name:       "management-listener-http",
-					Port:       8081,
+		ports := []corev1.ServicePort{
+			{
+				Name:       "listener-tcp-external",
+				Port:       1883,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(1883),
+			},
+			{
+				Name:       "listener-ssl-external",
+				Port:       8883,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(8883),
+			},
+			{
+				Name:       "listener-ws-external",
+				Port:       8083,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(8083),
+			},
+			{
+				Name:       "listener-wss-external",
+				Port:       8084,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(8084),
+			},
+		}
+		It("should create a service", func() {
+			check_service_ports(types.NamespacedName{Name: "emqx", Namespace: broker.Namespace}, ports)
+			check_service_ports(types.NamespacedName{Name: "emqx-ee", Namespace: enterprise.Namespace}, ports)
+		})
+	})
+
+	Context("Check update service", func() {
+		var ports []corev1.ServicePort
+		JustBeforeEach(func() {
+			ports = []corev1.ServicePort{
+				{
+					Name:       "listener-tcp-internal",
+					Port:       11883,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8081),
-				}}))
-			}
-		})
-
-		It("Check listener service", func() {
-			for _, emqx := range emqxList() {
-				Eventually(func() []corev1.ServicePort {
-					svc := &corev1.Service{}
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      emqx.GetName(),
-							Namespace: emqx.GetNamespace(),
-						},
-						svc,
-					)
-					return svc.Spec.Ports
-				}, timeout, interval).Should(ConsistOf([]corev1.ServicePort{
-					{
-						Name:       "management-listener-http",
-						Port:       8081,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(8081),
-					},
-					{
-						Name:       "dashboard-listener-http",
-						Port:       18083,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(18083),
-					},
-					{
-						Name:       "listener-tcp-external",
-						Port:       1883,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(1883),
-					},
-					{
-						Name:       "listener-ssl-external",
-						Port:       8883,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(8883),
-					},
-					{
-						Name:       "listener-ws-external",
-						Port:       8083,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(8083),
-					},
-					{
-						Name:       "listener-wss-external",
-						Port:       8084,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromInt(8084),
-					},
-				}))
-			}
-		})
-
-		It("Update listener service", func() {
-			emqx := &v1beta3.EmqxBroker{}
-			Expect(k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Namespace: "broker",
-					Name:      "emqx",
+					TargetPort: intstr.FromInt(11883),
 				},
-				emqx,
-			)).Should(Succeed())
-			config := emqx.GetEmqxConfig()
-			config["listener.tcp.external"] = "21883"
-			emqx.SetEmqxConfig(config)
-			emqx.SetKind("EmqxBroker")
-			emqx.SetAPIVersion("apps.emqx.io/v1beta3")
-			Expect(updateEmqx(emqx)).Should(Succeed())
-
-			svc := &corev1.Service{}
-			Eventually(func() []corev1.ServicePort {
-				_ = k8sClient.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      emqx.GetName(),
-						Namespace: emqx.GetNamespace(),
-					},
-					svc,
-				)
-				return svc.Spec.Ports
-			}, timeout, interval).Should(ContainElements([]corev1.ServicePort{
 				{
 					Name:       "listener-tcp-external",
 					Port:       21883,
-					Protocol:   "TCP",
+					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(21883),
 				},
-			}))
+				{
+					Name:       "listener-ssl-external",
+					Port:       8883,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8883),
+				},
+				{
+					Name:       "listener-ws-external",
+					Port:       8083,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8083),
+				},
+				{
+					Name:       "listener-wss-external",
+					Port:       8084,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8084),
+				},
+			}
+			for _, emqx := range []v1beta3.Emqx{broker, enterprise} {
+				config := emqx.GetEmqxConfig()
+				config["listener.tcp.internal"] = "11883"
+				config["listener.tcp.external"] = "21883"
+				emqx.SetEmqxConfig(config)
+				updateEmqx(emqx)
+			}
+		})
+
+		It("should create a service", func() {
+			check_service_ports(types.NamespacedName{Name: "emqx", Namespace: broker.Namespace}, ports)
+			check_service_ports(types.NamespacedName{Name: "emqx-ee", Namespace: enterprise.Namespace}, ports)
 		})
 	})
 })
+
+func check_service_ports(namespacedName types.NamespacedName, ports []corev1.ServicePort) {
+	Eventually(func() []corev1.ServicePort {
+		svc := &corev1.Service{}
+		_ = k8sClient.Get(
+			context.Background(),
+			namespacedName,
+			svc,
+		)
+		return svc.Spec.Ports
+	}, timeout, interval).Should(ContainElements(ports))
+}
