@@ -33,42 +33,53 @@ import (
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
-var _ = Describe("", func() {
-	Context("Check acl", func() {
-		It("Check acl", func() {
-			for _, emqx := range emqxList() {
-				check_acl(emqx)
-			}
+var _ = Describe("Check ACL", func() {
+	aclString := "{allow, {user, \"dashboard\"}, subscribe, [\"$SYS/#\"]}.\n{allow, {ipaddr, \"127.0.0.1\"}, pubsub, [\"$SYS/#\", \"#\"]}.\n{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n{allow, all}.\n"
+
+	Context("Check default ACL", func() {
+
+		It("check acl config", func() {
+			check_acl_config(broker, aclString)
+			check_acl_config(enterprise, aclString)
 		})
 
-		It("Update acl", func() {
-			for _, emqx := range emqxList() {
-				acl := []string{
-					`{deny, all}.`,
-				}
-				emqx.SetACL(acl)
-				Expect(updateEmqx(emqx)).Should(Succeed())
+		It("check acl annotation", func() {
+			check_acl_annotation(broker, aclString)
+			check_acl_annotation(enterprise, aclString)
+		})
 
-				check_acl(emqx)
-			}
+		// TODO: check acl status by emqx api
+		// TODO: test acl by mqtt pubsub
+	})
+	Context("Check update ACL", func() {
+		JustBeforeEach(func() {
+			aclString = "{deny, all}.\n"
 
+			broker.SetACL([]string{`{deny, all}.`})
+			updateEmqx(broker)
+			enterprise.SetACL([]string{`{deny, all}.`})
+			updateEmqx(enterprise)
+		})
+
+		It("check acl config", func() {
+			check_acl_config(broker, aclString)
+			check_acl_config(enterprise, aclString)
+		})
+
+		It("check acl annotation", func() {
+			check_acl_annotation(broker, aclString)
+			check_acl_annotation(enterprise, aclString)
 		})
 	})
 })
 
-func check_acl(emqx v1beta3.Emqx) {
-	names := v1beta3.Names{Object: emqx}
-	var aclString string
-	for _, rule := range emqx.GetACL() {
-		aclString += fmt.Sprintf("%s\n", rule)
-	}
-
+func check_acl_config(emqx v1beta3.Emqx, aclString string) {
 	Eventually(func() map[string]string {
 		cm := &corev1.ConfigMap{}
 		_ = k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
-				Name:      names.ACL(),
+				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
 				Namespace: emqx.GetNamespace(),
 			},
 			cm,
@@ -77,7 +88,9 @@ func check_acl(emqx v1beta3.Emqx) {
 	}, timeout, interval).Should(Equal(
 		map[string]string{"acl.conf": aclString},
 	))
+}
 
+func check_acl_annotation(emqx v1beta3.Emqx, aclString string) {
 	Eventually(func() map[string]string {
 		sts := &appsv1.StatefulSet{}
 		_ = k8sClient.Get(
@@ -95,6 +108,4 @@ func check_acl(emqx v1beta3.Emqx) {
 			base64.StdEncoding.EncodeToString([]byte(aclString)),
 		),
 	)
-	// TODO: check acl status by emqx api
-	// TODO: test acl by mqtt pubsub
 }

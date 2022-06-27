@@ -19,7 +19,6 @@ package controller_test
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
@@ -35,121 +34,105 @@ import (
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
-var _ = Describe("", func() {
-	Context("Check modules", func() {
-		It("Check loaded modles", func() {
-			for _, emqx := range emqxList() {
-				check_modules(emqx)
-			}
+var _ = Describe("Check broker modules", func() {
+	loadedModulesString := "{emqx_mod_acl_internal, true}.\n"
+	Context("Check default modules", func() {
+		It("should create a configMap with loaded modules", func() {
+			check_modules_config(broker, loadedModulesString)
+		})
+		It("should create a annotation for sts with loaded modules", func() {
+			check_modules_annotation(broker, loadedModulesString)
 		})
 
-		It("Check update modules", func() {
-			for _, emqx := range emqxList() {
-				switch obj := emqx.(type) {
-				case *v1beta3.EmqxBroker:
-					modules := []v1beta3.EmqxBrokerModule{
-						{
-							Name:   "emqx_mod_presence",
-							Enable: false,
-						},
-					}
-					obj.Spec.EmqxTemplate.Modules = modules
-					Expect(updateEmqx(obj)).Should(Succeed())
-					check_modules(obj)
-				case *v1beta3.EmqxEnterprise:
-					modules := []v1beta3.EmqxEnterpriseModule{
-						{
-							Name:    "internal_acl",
-							Enable:  true,
-							Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
-						},
-					}
-					obj.Spec.EmqxTemplate.Modules = modules
-					Expect(updateEmqx(obj)).Should(Succeed())
-					check_modules(obj)
-				default:
-					Fail("Type of emqx not found")
-				}
+	})
+	Context("Check update modules", func() {
+		JustBeforeEach(func() {
+			loadedModulesString = "{emqx_mod_presence, false}.\n"
+			modules := []v1beta3.EmqxBrokerModule{
+				{
+					Name:   "emqx_mod_presence",
+					Enable: false,
+				},
 			}
+			broker.Spec.EmqxTemplate.Modules = modules
+			updateEmqx(broker)
+		})
+
+		It("should create a configMap with loaded modules", func() {
+			check_modules_config(broker, loadedModulesString)
+		})
+		It("should create a annotation for sts with loaded modules", func() {
+			check_modules_annotation(broker, loadedModulesString)
 		})
 	})
 })
 
-func check_modules(emqx v1beta3.Emqx) {
-	switch obj := emqx.(type) {
-	case *v1beta3.EmqxBroker:
-		modules := &v1beta3.EmqxBrokerModuleList{
-			Items: obj.Spec.EmqxTemplate.Modules,
-		}
-		loadedModulesString := modules.String()
+var _ = Describe("Check enterprise modules", func() {
+	loadedModulesString := `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}},{"name":"retainer","enable":true,"configs":{"expiry_interval":0,"max_payload_size":"1MB","max_retained_messages":0,"storage_type":"ram"}}]`
+	Context("Check default modules", func() {
+		It("should create a configMap with loaded modules", func() {
+			check_modules_config(enterprise, loadedModulesString)
+		})
+		It("should create a annotation for sts with loaded modules", func() {
+			check_modules_annotation(enterprise, loadedModulesString)
+		})
 
-		Eventually(func() map[string]string {
-			cm := &corev1.ConfigMap{}
-			_ = k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      fmt.Sprintf("%s-%s", obj.GetName(), "loaded-modules"),
-					Namespace: obj.GetNamespace(),
-				}, cm,
-			)
-			return cm.Data
-		}, timeout, interval).Should(Equal(
-			map[string]string{"loaded_modules": loadedModulesString},
-		))
-
-		Eventually(func() map[string]string {
-			sts := &appsv1.StatefulSet{}
-			_ = k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      obj.GetName(),
-					Namespace: obj.GetNamespace(),
+	})
+	Context("Check update modules", func() {
+		JustBeforeEach(func() {
+			loadedModulesString = `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}}]`
+			modules := []v1beta3.EmqxEnterpriseModule{
+				{
+					Name:    "internal_acl",
+					Enable:  true,
+					Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
 				},
-				sts,
-			)
-			return sts.Annotations
-		}, timeout, interval).Should(
-			HaveKeyWithValue(
-				"LoadedModules/Base64EncodeConfig",
-				base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
-			),
-		)
-	case *v1beta3.EmqxEnterprise:
-		data, _ := json.Marshal(obj.Spec.EmqxTemplate.Modules)
-		loadedModulesString := string(data)
+			}
+			enterprise.Spec.EmqxTemplate.Modules = modules
+			updateEmqx(enterprise)
+		})
 
-		Eventually(func() map[string]string {
-			cm := &corev1.ConfigMap{}
-			_ = k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      fmt.Sprintf("%s-%s", obj.GetName(), "loaded-modules"),
-					Namespace: obj.GetNamespace(),
-				}, cm,
-			)
-			return cm.Data
-		}, timeout, interval).Should(Equal(
-			map[string]string{"loaded_modules": loadedModulesString},
-		))
+		It("should create a configMap with loaded modules", func() {
+			check_modules_config(enterprise, loadedModulesString)
+		})
+		It("should create a annotation for sts with loaded modules", func() {
+			check_modules_annotation(enterprise, loadedModulesString)
+		})
+	})
+})
 
-		Eventually(func() map[string]string {
-			sts := &appsv1.StatefulSet{}
-			_ = k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      obj.GetName(),
-					Namespace: obj.GetNamespace(),
-				},
-				sts,
-			)
-			return sts.Annotations
-		}, timeout, interval).Should(
-			HaveKeyWithValue(
-				"LoadedModules/Base64EncodeConfig",
-				base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
-			),
+func check_modules_config(emqx v1beta3.Emqx, loadedModulesString string) {
+	Eventually(func() map[string]string {
+		cm := &corev1.ConfigMap{}
+		_ = k8sClient.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-modules"),
+				Namespace: emqx.GetNamespace(),
+			}, cm,
 		)
-	default:
-		Fail("Type of emqx not found")
-	}
+		return cm.Data
+	}, timeout, interval).Should(Equal(
+		map[string]string{"loaded_modules": loadedModulesString},
+	))
+}
+
+func check_modules_annotation(emqx v1beta3.Emqx, loadedModulesString string) {
+	Eventually(func() map[string]string {
+		sts := &appsv1.StatefulSet{}
+		_ = k8sClient.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      emqx.GetName(),
+				Namespace: emqx.GetNamespace(),
+			},
+			sts,
+		)
+		return sts.Annotations
+	}, timeout, interval).Should(
+		HaveKeyWithValue(
+			"LoadedModules/Base64EncodeConfig",
+			base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
+		),
+	)
 }
