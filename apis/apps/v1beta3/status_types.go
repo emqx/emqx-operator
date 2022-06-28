@@ -32,21 +32,14 @@ type Condition struct {
 type ConditionType string
 
 const (
-	ClusterConditionPluginInitialized ConditionType = "PluginInitialized"
-	ClusterConditionRunning           ConditionType = "Running"
-	ClusterConditionUnhealthy         ConditionType = "Unhealthy"
-	ClusterConditionFailed            ConditionType = "Failed"
+	ConditionPluginInitialized ConditionType = "PluginInitialized"
+	ConditionRunning           ConditionType = "Running"
 )
 
 //+kubebuilder:object:generate=false
 type EmqxStatus interface {
-	DescConditionsByTime()
 	GetConditions() []Condition
-	SetPluginInitializedCondition(message string)
-	SetRunningCondition(message string)
-	SetUnhealthyCondition(message string)
-	SetFailedCondition(message string)
-	setClusterCondition(c Condition)
+	SetCondition(c Condition)
 	ClearCondition(t ConditionType)
 }
 
@@ -58,73 +51,7 @@ type Status struct {
 	Conditions []Condition `json:"conditions,omitempty"`
 }
 
-func (ecs *Status) DescConditionsByTime() {
-	sort.Slice(ecs.Conditions, func(i, j int) bool {
-		// return ecs.Conditions[i].LastUpdateAt.After(ecs.Conditions[j].LastUpdateAt)
-		return ecs.Conditions[j].LastUpdateAt.Before(&ecs.Conditions[i].LastUpdateAt)
-	})
-}
-
-func (ecs *Status) GetConditions() []Condition {
-	return ecs.Conditions
-}
-
-func (ecs *Status) SetPluginInitializedCondition(message string) {
-	c := newClusterCondition(ClusterConditionPluginInitialized, corev1.ConditionTrue, "PluginInitialized", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) SetRunningCondition(message string) {
-	c := newClusterCondition(ClusterConditionRunning, corev1.ConditionTrue, "Running", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) SetUnhealthyCondition(message string) {
-	c := newClusterCondition(ClusterConditionUnhealthy, corev1.ConditionTrue, "Unhealthy", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) SetFailedCondition(message string) {
-	c := newClusterCondition(ClusterConditionFailed, corev1.ConditionTrue, "Failed", message)
-	ecs.setClusterCondition(*c)
-}
-
-func (ecs *Status) setClusterCondition(c Condition) {
-	pos, cp := getClusterCondition(ecs, c.Type)
-	if cp != nil &&
-		cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
-		now := metav1.Now()
-		nowString := now.Format(time.RFC3339)
-		ecs.Conditions[pos].LastUpdateAt = now
-		ecs.Conditions[pos].LastUpdateTime = nowString
-		return
-	}
-
-	if cp != nil {
-		ecs.Conditions[pos] = c
-	} else {
-		ecs.Conditions = append(ecs.Conditions, c)
-	}
-}
-
-func (ecs *Status) ClearCondition(t ConditionType) {
-	pos, _ := getClusterCondition(ecs, t)
-	if pos == -1 {
-		return
-	}
-	ecs.Conditions = append(ecs.Conditions[:pos], ecs.Conditions[pos+1:]...)
-}
-
-func getClusterCondition(status *Status, t ConditionType) (int, *Condition) {
-	for i, c := range status.Conditions {
-		if t == c.Type {
-			return i, &c
-		}
-	}
-	return -1, nil
-}
-
-func newClusterCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
+func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
 	now := metav1.Now()
 	nowString := now.Format(time.RFC3339)
 	return &Condition{
@@ -136,4 +63,52 @@ func newClusterCondition(condType ConditionType, status corev1.ConditionStatus, 
 		Reason:             reason,
 		Message:            message,
 	}
+}
+
+func (s *Status) GetConditions() []Condition {
+	return s.Conditions
+}
+
+func (s *Status) SetCondition(c Condition) {
+	pos, cp := getCondition(s, c.Type)
+	if cp != nil &&
+		cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
+		now := metav1.Now()
+		nowString := now.Format(time.RFC3339)
+		s.Conditions[pos].LastUpdateAt = now
+		s.Conditions[pos].LastUpdateTime = nowString
+		s.sortConditions(s.Conditions)
+		return
+	}
+
+	if cp != nil {
+		s.Conditions[pos] = c
+	} else {
+		s.Conditions = append(s.Conditions, c)
+	}
+
+	s.sortConditions(s.Conditions)
+}
+
+func (s *Status) ClearCondition(t ConditionType) {
+	pos, _ := getCondition(s, t)
+	if pos == -1 {
+		return
+	}
+	s.Conditions = append(s.Conditions[:pos], s.Conditions[pos+1:]...)
+}
+
+func (s *Status) sortConditions(conditions []Condition) {
+	sort.Slice(conditions, func(i, j int) bool {
+		return s.Conditions[j].LastUpdateAt.Before(&s.Conditions[i].LastUpdateAt)
+	})
+}
+
+func getCondition(status *Status, t ConditionType) (int, *Condition) {
+	for i, c := range status.Conditions {
+		if t == c.Type {
+			return i, &c
+		}
+	}
+	return -1, nil
 }

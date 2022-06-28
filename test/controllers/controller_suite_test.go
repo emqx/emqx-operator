@@ -178,7 +178,7 @@ var _ = BeforeSuite(func() {
 				case *v1beta3.EmqxEnterprise:
 					instance = &v1beta3.EmqxEnterprise{}
 				}
-				Eventually(func() []v1beta3.ConditionType {
+				Eventually(func() corev1.ConditionStatus {
 					_ = k8sClient.Get(
 						context.TODO(),
 						types.NamespacedName{
@@ -187,12 +187,14 @@ var _ = BeforeSuite(func() {
 						},
 						instance,
 					)
-					list := []v1beta3.ConditionType{}
+					running := corev1.ConditionFalse
 					for _, c := range instance.GetStatus().Conditions {
-						list = append(list, c.Type)
+						if c.Type == v1beta3.ConditionRunning {
+							running = c.Status
+						}
 					}
-					return list
-				}, timeout, interval).Should(ContainElement(v1beta3.ClusterConditionRunning))
+					return running
+				}, timeout, interval).Should(Equal(corev1.ConditionTrue))
 			}
 			emqxReady <- "ready"
 		}(emqx)
