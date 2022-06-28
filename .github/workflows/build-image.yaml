@@ -25,6 +25,8 @@ jobs:
       id: meta
       with:
         images: ghcr.io/${{ github.repository }}
+        flavor: |
+          latest=true
         tags: |
           type=ref,event=branch
     - uses: docker/build-push-action@v2
