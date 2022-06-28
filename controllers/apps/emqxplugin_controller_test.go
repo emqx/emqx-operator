@@ -17,11 +17,7 @@ limitations under the License.
 package apps_test
 
 import (
-	"testing"
-
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	appscontrollers "github.com/emqx/emqx-operator/controllers/apps"
-	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -221,18 +217,18 @@ var servicePorts = []corev1.ServicePort{
 	},
 }
 
-func TestInsertServicePorts(t *testing.T) {
-	ports := []corev1.ServicePort{}
-	for _, plugin := range plugins {
-		ports = appscontrollers.InsertServicePorts(&plugin, ports)
-	}
-	assert.ElementsMatch(t, ports, servicePorts)
-}
+// func TestInsertServicePorts(t *testing.T) {
+// 	ports := []corev1.ServicePort{}
+// 	for _, plugin := range plugins {
+// 		ports = appscontrollers.InsertServicePorts(&plugin, ports)
+// 	}
+// 	assert.ElementsMatch(t, ports, servicePorts)
+// }
 
-func TestRemoveServicePorts(t *testing.T) {
-	ports := servicePorts
-	for _, plugin := range plugins {
-		ports = appscontrollers.RemoveServicePorts(&plugin, ports)
-	}
-	assert.Empty(t, ports)
-}
+// func TestRemoveServicePorts(t *testing.T) {
+// 	ports := servicePorts
+// 	for _, plugin := range plugins {
+// 		ports = appscontrollers.RemoveServicePorts(&plugin, ports)
+// 	}
+// 	assert.Empty(t, ports)
+// }

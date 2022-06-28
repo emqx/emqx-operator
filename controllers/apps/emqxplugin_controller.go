@@ -19,11 +19,6 @@ package apps
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/url"
-	"reflect"
-	"regexp"
-	"strconv"
 	"strings"
 
 	json "github.com/json-iterator/go"
@@ -31,7 +26,6 @@ import (
 	"github.com/tidwall/sjson"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -143,7 +137,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -216,21 +210,6 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, 
 			return err
 		}
 	}
-
-	serviceTemplate := emqx.GetServiceTemplate()
-
-	var servicePorts []corev1.ServicePort
-	// Insert service ports
-	servicePorts = append(servicePorts, serviceTemplate.Spec.Ports...)
-	servicePorts = InsertServicePorts(plugin, servicePorts)
-
-	if !reflect.DeepEqual(servicePorts, serviceTemplate.Spec.Ports) {
-		serviceTemplate.Spec.Ports = servicePorts
-		emqx.SetServiceTemplate(serviceTemplate)
-		if err := r.doUpdate(emqx, func(_ client.Object) error { return nil }); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -284,18 +263,6 @@ func (r *EmqxPluginReconciler) unloadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin
 		loadedPluginsStr = loadedPluginsStr[:index] + loadedPluginsStr[index+len(loadedPluginLine):]
 		loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
 		if err := r.doUpdate(loadedPlugins, postfun); err != nil {
-			return err
-		}
-	}
-
-	// Remove service ports
-	serviceTemplate := emqx.GetServiceTemplate()
-	servicePorts := RemoveServicePorts(plugin, serviceTemplate.Spec.Ports)
-
-	if !reflect.DeepEqual(servicePorts, serviceTemplate.Spec.Ports) {
-		serviceTemplate.Spec.Ports = servicePorts
-		emqx.SetServiceTemplate(serviceTemplate)
-		if err := r.doUpdate(emqx, func(_ client.Object) error { return nil }); err != nil {
 			return err
 		}
 	}
@@ -358,6 +325,7 @@ func (r *EmqxPluginReconciler) getLoadedPlugins(emqx appsv1beta3.Emqx) (*corev1.
 	return configMap, nil
 }
 
+/*
 func InsertServicePorts(plugin *appsv1beta3.EmqxPlugin, servicePorts []corev1.ServicePort) []corev1.ServicePort {
 	return UpdateServicePorts(plugin, servicePorts, insertServicePortForConfig)
 }
@@ -513,3 +481,4 @@ func removeServicePortForConfig(configName, configValue string, servicePorts []c
 	}
 	return servicePorts
 }
+*/

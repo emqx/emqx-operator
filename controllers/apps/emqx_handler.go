@@ -53,34 +53,14 @@ type EmqxReconciler struct {
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
 	serviceTemplate := instance.GetServiceTemplate()
-	servicePorts := serviceTemplate.Spec.Ports
-	for k, v := range instance.GetEmqxConfig() {
-		compile := regexp.MustCompile("^listener.(tcp|ssl|ws|wss).[a-z]+$")
-		if compile.MatchString(k) {
-			_, strPort, err := net.SplitHostPort(v)
-			if err != nil {
-				strPort = v
-			}
-			intPort, _ := strconv.Atoi(strPort)
-			portName := strings.ReplaceAll(k, ".", "-")
-			if index := findPort(intPort, servicePorts); index == -1 {
-				// Delete duplicate names port
-				if index := findPortName(portName, servicePorts); index != -1 {
-					servicePorts = append(servicePorts[:index], servicePorts[index+1:]...)
-				}
-				servicePorts = append(servicePorts, corev1.ServicePort{
-					Name:       portName,
-					Port:       int32(intPort),
-					TargetPort: intstr.FromInt(intPort),
-					Protocol:   corev1.ProtocolTCP,
-				})
-			}
-		}
-	}
-	if !reflect.DeepEqual(servicePorts, serviceTemplate.Spec.Ports) {
-		serviceTemplate.Spec.Ports = servicePorts
+	ports := r.getListenerPortsByAPI(instance)
+	if ports != nil && !reflect.DeepEqual(ports, serviceTemplate.Spec.Ports) {
+		serviceTemplate.Spec.Ports = ports
 		instance.SetServiceTemplate(serviceTemplate)
-		_ = r.doUpdate(instance, func(_ client.Object) error { return nil })
+		err := r.doUpdate(instance, func(_ client.Object) error { return nil })
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -168,26 +148,106 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	resp, err := r.Handler.requestAPI(instance, "GET", "api/v4/brokers")
+	var condition *appsv1beta3.Condition
+	condition, err := r.getClusterStatusByAPI(instance)
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
+	}
+	if condition != nil {
+		instance.SetCondition(*condition)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	condition = appsv1beta3.NewCondition(
+		appsv1beta3.ConditionRunning,
+		corev1.ConditionTrue,
+		"ClusterReady",
+		"All resources are ready",
+	)
+	instance.SetCondition(*condition)
+	_ = r.Status().Update(ctx, instance)
+	return ctrl.Result{RequeueAfter: time.Second * 30}, nil
+}
+
+func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []corev1.ServicePort {
+	resp, err := r.Handler.requestAPI(instance, "GET", "api/v4/listeners")
+	if err != nil {
+		return nil
+	}
+	if resp.StatusCode != 200 {
+		return nil
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+
+	ports := []corev1.ServicePort{}
+	listeners := gjson.GetBytes(body, "data.0.listeners")
+	for _, l := range listeners.Array() {
+		var name string
+		var protocol corev1.Protocol
+		var strPort string
+		var intPort int
+
+		compile := regexp.MustCompile(".*(udp|dtls|sn).*")
+		proto := gjson.Get(l.Raw, "protocol").String()
+		if compile.MatchString(proto) {
+			protocol = corev1.ProtocolUDP
+		} else {
+			protocol = corev1.ProtocolTCP
+		}
+
+		listenOn := gjson.Get(l.Raw, "listen_on").String()
+		if strings.Contains(listenOn, ":") {
+			_, strPort, err = net.SplitHostPort(listenOn)
+			if err != nil {
+				strPort = listenOn
+			}
+		} else {
+			strPort = listenOn
+		}
+		intPort, _ = strconv.Atoi(strPort)
+
+		// Get name by protocol and port from API
+		// protocol maybe like mqtt:wss:8084
+		// protocol maybe like mqtt:tcp
+		// We had to do something with the "protocol" to make it conform to the kubernetes service port name specification
+		name = regexp.MustCompile(`[\d]`).ReplaceAllString(proto, "")
+		name = strings.Trim(name, ":")
+		name = strings.ReplaceAll(name, ":", "-")
+		name = fmt.Sprintf("%s-%s", name, strPort)
+
+		ports = append(ports, corev1.ServicePort{
+			Name:       name,
+			Protocol:   protocol,
+			Port:       int32(intPort),
+			TargetPort: intstr.FromInt(intPort),
+		})
+	}
+	return ports
+}
+
+func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) (*appsv1beta3.Condition, error) {
+	resp, err := r.Handler.requestAPI(instance, "GET", "api/v4/brokers")
+	if err != nil {
+		return nil, err
 	}
 	if resp.StatusCode != 200 {
 		condition := appsv1beta3.NewCondition(
 			appsv1beta3.ConditionRunning,
 			corev1.ConditionFalse,
-			"BrokerNotFound",
+			"AccessAPIFailed",
 			resp.Status,
 		)
-		instance.SetCondition(*condition)
-		_ = r.Status().Update(ctx, instance)
-		return ctrl.Result{Requeue: true}, nil
+		return condition, nil
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return ctrl.Result{Requeue: true}, err
+		return nil, err
 	}
 	clusterData := gjson.GetBytes(body, "data")
 	if len(clusterData.Array()) != int(*instance.GetReplicas()) {
@@ -197,21 +257,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 			"ClusterNotReady",
 			clusterData.String(),
 		)
-		instance.SetCondition(*condition)
-		_ = r.Status().Update(ctx, instance)
-		return ctrl.Result{Requeue: true}, nil
-
+		return condition, nil
 	}
-
-	condition := appsv1beta3.NewCondition(
-		appsv1beta3.ConditionRunning,
-		corev1.ConditionTrue,
-		"ClusterReady",
-		"All resources are ready",
-	)
-	instance.SetCondition(*condition)
-	_ = r.Status().Update(ctx, instance)
-	return ctrl.Result{}, nil
+	return nil, nil
 }
 
 func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
@@ -357,48 +405,48 @@ func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1be
 		pluginList = append(pluginList, emqxRuleEngine)
 	}
 
-	if !isExistPlugin("emqx_retainer", matchedPluginList) {
-		emqxRetainer := &appsv1beta3.EmqxPlugin{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps.emqx.io/v1beta3",
-				Kind:       "EmqxPlugin",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-retainer", instance.GetName()),
-				Namespace: instance.GetNamespace(),
-				Labels:    instance.GetLabels(),
-			},
-			Spec: appsv1beta3.EmqxPluginSpec{
-				PluginName: "emqx_retainer",
-				Selector:   instance.GetLabels(),
-				Config:     map[string]string{},
-			},
-		}
-		pluginList = append(pluginList, emqxRetainer)
-	}
+	// if !isExistPlugin("emqx_retainer", matchedPluginList) {
+	// 	emqxRetainer := &appsv1beta3.EmqxPlugin{
+	// 		TypeMeta: metav1.TypeMeta{
+	// 			APIVersion: "apps.emqx.io/v1beta3",
+	// 			Kind:       "EmqxPlugin",
+	// 		},
+	// 		ObjectMeta: metav1.ObjectMeta{
+	// 			Name:      fmt.Sprintf("%s-retainer", instance.GetName()),
+	// 			Namespace: instance.GetNamespace(),
+	// 			Labels:    instance.GetLabels(),
+	// 		},
+	// 		Spec: appsv1beta3.EmqxPluginSpec{
+	// 			PluginName: "emqx_retainer",
+	// 			Selector:   instance.GetLabels(),
+	// 			Config:     map[string]string{},
+	// 		},
+	// 	}
+	// 	pluginList = append(pluginList, emqxRetainer)
+	// }
 
-	_, ok := instance.(*appsv1beta3.EmqxEnterprise)
-	if ok && !isExistPlugin("emqx_modules", matchedPluginList) {
-		emqxModules := &appsv1beta3.EmqxPlugin{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps.emqx.io/v1beta3",
-				Kind:       "EmqxPlugin",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-modules", instance.GetName()),
-				Namespace: instance.GetNamespace(),
-				Labels:    instance.GetLabels(),
-			},
-			Spec: appsv1beta3.EmqxPluginSpec{
-				PluginName: "emqx_modules",
-				Selector:   instance.GetLabels(),
-				Config: map[string]string{
-					"modules.loaded_file": "/mounted/modules/loaded_modules",
-				},
-			},
-		}
-		pluginList = append(pluginList, emqxModules)
-	}
+	// _, ok := instance.(*appsv1beta3.EmqxEnterprise)
+	// if ok && !isExistPlugin("emqx_modules", matchedPluginList) {
+	// 	emqxModules := &appsv1beta3.EmqxPlugin{
+	// 		TypeMeta: metav1.TypeMeta{
+	// 			APIVersion: "apps.emqx.io/v1beta3",
+	// 			Kind:       "EmqxPlugin",
+	// 		},
+	// 		ObjectMeta: metav1.ObjectMeta{
+	// 			Name:      fmt.Sprintf("%s-modules", instance.GetName()),
+	// 			Namespace: instance.GetNamespace(),
+	// 			Labels:    instance.GetLabels(),
+	// 		},
+	// 		Spec: appsv1beta3.EmqxPluginSpec{
+	// 			PluginName: "emqx_modules",
+	// 			Selector:   instance.GetLabels(),
+	// 			Config: map[string]string{
+	// 				"modules.loaded_file": "/mounted/modules/loaded_modules",
+	// 			},
+	// 		},
+	// 	}
+	// 	pluginList = append(pluginList, emqxModules)
+	// }
 
 	return pluginList
 }
@@ -417,6 +465,10 @@ func generateEmptyPlugins(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*
 			Name:      names.PluginsConfig(),
 		},
 		Data: map[string]string{
+			"emqx_management.conf":        "management.listener.http = 8081\nmanagement.default_application.id = admin\nmanagement.default_application.secret = public",
+			"emqx_dashboard.conf":         "dashboard.listener.http = 18083\ndashboard.default_user.login = admin\ndashboard.default_user.password = public",
+			"emqx_rule_engine.conf":       "",
+			"emqx_retainer.conf":          "",
 			"emqx_auth_http.conf":         "auth.http.auth_req.url = http://127.0.0.1:80/mqtt/auth\nauth.http.auth_req.method = post\nauth.http.auth_req.headers.content_type = application/x-www-form-urlencoded\nauth.http.auth_req.params = clientid=%c,username=%u,password=%P\nauth.http.acl_req.url = http://127.0.0.1:80/mqtt/acl\nauth.http.acl_req.method = post\nauth.http.acl_req.headers.content-type = application/x-www-form-urlencoded\nauth.http.acl_req.params = access=%A,username=%u,clientid=%c,ipaddr=%a,topic=%t,mountpoint=%m\nauth.http.timeout = 5s\nauth.http.connect_timeout = 5s\nauth.http.pool_size = 32\nauth.http.enable_pipelining = true",
 			"emqx_auth_jwt.conf":          "auth.jwt.secret = emqxsecret\nauth.jwt.from = password\nauth.jwt.verify_claims = off",
 			"emqx_auth_ldap.conf":         "auth.ldap.servers = 127.0.0.1\nauth.ldap.port = 389\nauth.ldap.pool = 8\nauth.ldap.bind_dn = cn=root,dc=emqx,dc=io\nauth.ldap.bind_password = public\nauth.ldap.timeout = 30s\nauth.ldap.device_dn = ou=device,dc=emqx,dc=io\nauth.ldap.match_objectclass = mqttUser\nauth.ldap.username.attributetype = uid\nauth.ldap.password.attributetype = userPassword\nauth.ldap.ssl = false",
@@ -574,7 +626,7 @@ func generateSvc(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Se
 		},
 	}
 
-	compile := regexp.MustCompile("^management.*$")
+	compile := regexp.MustCompile(".*management.*")
 	for _, port := range svc.Spec.Ports {
 		if compile.MatchString(port.Name) {
 			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, port)

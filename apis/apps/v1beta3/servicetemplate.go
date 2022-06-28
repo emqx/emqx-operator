@@ -3,6 +3,7 @@ package v1beta3
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type ServiceTemplate struct {
@@ -33,4 +34,12 @@ func (s *ServiceTemplate) Default(emqx Emqx) {
 	}
 
 	s.Spec.Selector = emqx.GetLabels()
+	s.Spec.Ports = []corev1.ServicePort{
+		{
+			Name:       "http-management-8081",
+			Port:       8081,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.FromInt(8081),
+		},
+	}
 }

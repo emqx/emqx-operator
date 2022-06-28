@@ -217,7 +217,7 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 		if k8sErrors.IsNotFound(err) {
 			return handler.doCreate(obj, postFun)
 		}
-		return fmt.Errorf("failed to get %s %s: %v", obj.GetObjectKind().GroupVersionKind().String(), obj.GetName(), err)
+		return fmt.Errorf("failed to get %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
 
 	obj.SetResourceVersion(u.GetResourceVersion())
@@ -257,12 +257,12 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 	}
 
 	if err := client.NewDryRunClient(handler.Client).Update(context.TODO(), obj); err != nil {
-		return fmt.Errorf("failed to dry update %s %s: %v", obj.GetObjectKind().GroupVersionKind().String(), obj.GetName(), err)
+		return fmt.Errorf("failed to dry update %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
 
 	patchResult, err := patch.DefaultPatchMaker.Calculate(u, obj, opts...)
 	if err != nil {
-		return fmt.Errorf("failed to calculate patch for %s %s: %v", obj.GetObjectKind().GroupVersionKind().String(), obj.GetName(), err)
+		return fmt.Errorf("failed to calculate patch for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
 	if !patchResult.IsEmpty() {
 		return handler.doUpdate(obj, postFun)
@@ -276,12 +276,12 @@ func (handler *Handler) doCreate(obj client.Object, postCreated func(client.Obje
 	case *appsv1beta3.EmqxEnterprise:
 	default:
 		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-			return fmt.Errorf("failed to set last applied annotation for %s %s: %v", obj.GetObjectKind().GroupVersionKind().String(), obj.GetName(), err)
+			return fmt.Errorf("failed to set last applied annotation for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 		}
 	}
 
 	if err := handler.Client.Create(context.TODO(), obj); err != nil {
-		return fmt.Errorf("failed to create %s %s: %v", obj.GetObjectKind().GroupVersionKind().String(), obj.GetName(), err)
+		return fmt.Errorf("failed to create %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
 	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Created", "Create resource successfully")
 	return postCreated(obj)
@@ -293,12 +293,12 @@ func (handler *Handler) doUpdate(obj client.Object, postUpdated func(client.Obje
 	case *appsv1beta3.EmqxEnterprise:
 	default:
 		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-			return fmt.Errorf("failed to set last applied annotation for %s %s: %v", obj.GetObjectKind().GroupVersionKind().String(), obj.GetName(), err)
+			return fmt.Errorf("failed to set last applied annotation for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 		}
 	}
 
 	if err := handler.Client.Update(context.TODO(), obj); err != nil {
-		return fmt.Errorf("failed to update %s %s: %v", obj.GetObjectKind().GroupVersionKind().String(), obj.GetName(), err)
+		return fmt.Errorf("failed to update %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
 	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
 	return postUpdated(obj)
