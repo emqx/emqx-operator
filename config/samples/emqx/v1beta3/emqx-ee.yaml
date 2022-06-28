@@ -3,7 +3,7 @@ kind: EmqxEnterprise
 metadata:
   name: emqx-ee
   labels:
-    foo: "bar"
+    "apps.emqx.io/instance": "emqx-ee"
 spec:
   replicas: 3
   # persistent:
@@ -95,8 +95,13 @@ spec:
         name: emqx-ee
         namespace: default
         labels:
-          foo: "bar"
+          "apps.emqx.io/instance": "emqx-ee"
       spec:
         type: ClusterIP
         selector:
-          foo: "bar"
+          "apps.emqx.io/instance": "emqx-ee"
+        ports:
+          - name: "http-management-8081"
+            port: 8081
+            protocol: "TCP"
+            targetPort: 8081
