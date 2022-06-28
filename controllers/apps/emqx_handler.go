@@ -92,8 +92,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	// Init Plugin
 	initPlugin := false
 	for _, c := range instance.GetStatus().Conditions {
-		if c.Type == appsv1beta3.ClusterConditionPluginInitialized {
+		if c.Type == appsv1beta3.ConditionPluginInitialized && c.Status == corev1.ConditionTrue {
 			initPlugin = true
+			break
 		}
 	}
 	if len(instance.GetStatus().Conditions) == 0 || !initPlugin {
@@ -113,13 +114,24 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		nothing := func(client.Object) error { return nil }
 		err = r.CreateOrUpdateList(instance, resources, nothing)
 		if err != nil {
-			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "Reconciled", err.Error())
+			condition := appsv1beta3.NewCondition(
+				appsv1beta3.ConditionPluginInitialized,
+				corev1.ConditionFalse,
+				"PluginInitializeFailed",
+				err.Error(),
+			)
+			instance.SetCondition(*condition)
+			_ = r.Status().Update(ctx, instance)
 			return ctrl.Result{Requeue: true}, err
 		} else {
-			instance.SetPluginInitializedCondition("Plugin initialized")
-			instance.DescConditionsByTime()
+			condition := appsv1beta3.NewCondition(
+				appsv1beta3.ConditionPluginInitialized,
+				corev1.ConditionTrue,
+				"PluginInitializeSuccessfully",
+				"All default plugins initialized",
+			)
+			instance.SetCondition(*condition)
 			_ = r.Status().Update(ctx, instance)
-			r.EventRecorder.Event(instance, corev1.EventTypeNormal, "Reconciled", "Plugin initialized successfully")
 			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 		}
 	}
@@ -145,9 +157,13 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 
 	nothing := func(client.Object) error { return nil }
 	if err := r.CreateOrUpdateList(instance, resources, nothing); err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "Reconciled", err.Error())
-		instance.SetFailedCondition(err.Error())
-		instance.DescConditionsByTime()
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"CreateOrUpdateResourceFailed",
+			err.Error(),
+		)
+		instance.SetCondition(*condition)
 		_ = r.Status().Update(ctx, instance)
 		return ctrl.Result{Requeue: true}, err
 	}
@@ -157,8 +173,13 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{Requeue: true}, err
 	}
 	if resp.StatusCode != 200 {
-		instance.SetUnhealthyCondition(fmt.Sprintf("Get broker status failed: %s", resp.Status))
-		instance.DescConditionsByTime()
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"BrokerNotFound",
+			resp.Status,
+		)
+		instance.SetCondition(*condition)
 		_ = r.Status().Update(ctx, instance)
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -168,16 +189,27 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	if err != nil {
 		return ctrl.Result{Requeue: true}, err
 	}
-	if len(gjson.GetBytes(body, "data").Array()) != int(*instance.GetReplicas()) {
-		instance.SetUnhealthyCondition("Cluster not ready")
-		instance.DescConditionsByTime()
+	clusterData := gjson.GetBytes(body, "data")
+	if len(clusterData.Array()) != int(*instance.GetReplicas()) {
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"ClusterNotReady",
+			clusterData.String(),
+		)
+		instance.SetCondition(*condition)
 		_ = r.Status().Update(ctx, instance)
 		return ctrl.Result{Requeue: true}, nil
 
 	}
 
-	instance.SetRunningCondition("Reconciled")
-	instance.DescConditionsByTime()
+	condition := appsv1beta3.NewCondition(
+		appsv1beta3.ConditionRunning,
+		corev1.ConditionTrue,
+		"ClusterReady",
+		"All resources are ready",
+	)
+	instance.SetCondition(*condition)
 	_ = r.Status().Update(ctx, instance)
 	return ctrl.Result{}, nil
 }
