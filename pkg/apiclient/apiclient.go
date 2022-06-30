@@ -34,7 +34,7 @@ func (c *APIClient) Do(method, path string) (*http.Response, error) {
 		return nil, err
 	}
 
-	defer close(c.StopChannel)
+	// defer close(c.StopChannel)
 
 	go func() {
 		if err := c.ForwardPorts(); err != nil {

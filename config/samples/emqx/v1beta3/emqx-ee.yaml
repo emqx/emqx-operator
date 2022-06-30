@@ -73,6 +73,18 @@ spec:
       cluster.dns.app: emqx-ee
       cluster.dns.name: emqx-ee-headless.default.svc.cluster.local
       listener.tcp.external: "1883"
+    modules:
+      - name: "internal_acl"
+        enable: true
+        configs:
+          acl_rule_file: "etc/acl.conf"
+      - name: "retainer"
+        enable: true
+        configs:
+          expiry_interval: 0
+          max_payload_size: "1MB"
+          max_retained_messages: 0
+          storage_type: "ram"
     readinessProbe:
       httpGet:
         path: /status

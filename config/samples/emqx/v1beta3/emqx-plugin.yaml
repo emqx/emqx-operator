@@ -12,5 +12,6 @@ spec:
       "lwm2m.lifetime_max": "86400s"
       "lwm2m.bind.udp.1": "0.0.0.0:5683"
       "lwm2m.bind.udp.2": "0.0.0.0:5684"
-      "lwm2m.bind.udp.3": "0.0.0.0:5685"
+      "lwm2m.bind.dtls.1":  "0.0.0.0:5685"
+      "lwm2m.bind.dtls.2":  "0.0.0.0:5686"
       "lwm2m.xml_dir": "/opt/emqx/etc/lwm2m_xml"

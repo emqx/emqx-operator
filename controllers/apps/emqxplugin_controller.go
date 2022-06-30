@@ -19,7 +19,10 @@ package apps
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"sort"
 	"strings"
+	"time"
 
 	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
@@ -33,6 +36,19 @@ import (
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 )
+
+type pluginByAPIReturn struct {
+	Name        string
+	Version     string
+	Description string
+	Active      bool
+	Type        string
+}
+
+type pluginListByAPIReturn struct {
+	Node    string
+	Plugins []pluginByAPIReturn
+}
 
 // EmqxPluginReconciler reconciles a EmqxPlugin object
 type EmqxPluginReconciler struct {
@@ -69,10 +85,6 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	emqxList, err := r.getEmqxList(instance.Namespace, instance.Spec.Selector)
 	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			logger.V(1).Info("Not matched emqx")
-			return ctrl.Result{Requeue: true}, nil
-		}
 		return ctrl.Result{}, err
 	}
 
@@ -80,7 +92,10 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
-				if err := r.unloadPluginToEmqx(instance, emqx); err != nil {
+				if err := r.checkPluginStatus(emqx, instance.Spec.PluginName, true, "unload"); err != nil {
+					return ctrl.Result{}, err
+				}
+				if err := r.unloadPluginConfig(instance, emqx); err != nil {
 					return ctrl.Result{}, err
 				}
 			}
@@ -105,39 +120,42 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	needLoad := true
 	for _, emqx := range emqxList {
-		if err := r.loadPluginToEmqx(instance, emqx); err != nil {
-			if err.Error() == "plugin config is same" {
-				if instance.Status.Phase == appsv1beta3.EmqxPluginStatusLoaded {
-					needLoad = false
-				}
-				continue
+		ready := false
+		for _, c := range emqx.GetStatus().Conditions {
+			if c.Type == appsv1beta3.ConditionRunning && c.Status == corev1.ConditionTrue {
+				ready = true
 			}
-			if k8sErrors.IsNotFound(err) {
-				return ctrl.Result{Requeue: true}, nil
+		}
+		if !ready {
+			break
+		}
+
+		equalPluginConfig, err := r.checkPluginConfig(instance, emqx)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if !equalPluginConfig {
+			if err := r.loadPluginConfig(instance, emqx); err != nil {
+				return ctrl.Result{}, err
 			}
-			if k8sErrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, err
-			}
+			return ctrl.Result{RequeueAfter: time.Duration(120) * time.Second}, nil
+		}
+
+		needReloadPlugin := !equalPluginConfig
+		err = r.checkPluginStatus(emqx, instance.Spec.PluginName, needReloadPlugin, "reload")
+		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	if needLoad || instance.Status.Phase != appsv1beta3.EmqxPluginStatusLoaded {
-		for _, emqx := range emqxList {
-			err := r.ExecToPods(emqx, "emqx", "emqx_ctl plugins reload "+instance.Spec.PluginName)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, nil
-			}
-		}
+	if instance.Status.Phase != appsv1beta3.EmqxPluginStatusLoaded {
 		instance.Status.Phase = appsv1beta3.EmqxPluginStatusLoaded
 		if err := r.Status().Update(ctx, instance); err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{Requeue: true}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -147,14 +165,87 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func generateConfigStr(plugin *appsv1beta3.EmqxPlugin) string {
-	var config string
-	for key, value := range plugin.Spec.Config {
-		config += fmt.Sprintln(key, " = ", value)
+func (r *EmqxPluginReconciler) checkPluginStatus(emqx appsv1beta3.Emqx, pluginName string, needUpdate bool, reloadOrUnload string) error {
+	list, err := r.getPluginsByAPI(emqx)
+	if err != nil {
+		return err
 	}
-	return config
+	for _, node := range list {
+		for _, plugin := range node.Plugins {
+			if plugin.Name == pluginName {
+				if !plugin.Active || needUpdate {
+					err := r.loadPluginByAPI(emqx, node.Node, plugin.Name, reloadOrUnload)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
-func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
+
+func (r *EmqxPluginReconciler) loadPluginByAPI(emqx appsv1beta3.Emqx, nodeName, pluginName, reloadOrUnload string) error {
+	resp, err := r.Handler.requestAPI(emqx, "PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("request api failed: %s", resp.Status)
+	}
+	return nil
+}
+
+func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta3.Emqx) ([]pluginListByAPIReturn, error) {
+	var data []pluginListByAPIReturn
+
+	resp, err := r.Handler.requestAPI(emqx, "GET", "api/v4/plugins")
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("request api failed: %s", resp.Status)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal([]byte(gjson.GetBytes(body, "data").String()), &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (r *EmqxPluginReconciler) checkPluginConfig(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) (bool, error) {
+	pluginConfigStr := generateConfigStr(plugin)
+
+	pluginsConfig, err := r.getPluginsConfig(emqx)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	configMapStr, err := json.ConfigCompatibleWithStandardLibrary.Marshal(pluginsConfig.Data)
+	if err != nil {
+		return false, err
+	}
+
+	path := plugin.Spec.PluginName + "\\.conf"
+	storePluginConfig := gjson.GetBytes(configMapStr, path)
+	if storePluginConfig.Exists() {
+		if storePluginConfig.String() == pluginConfigStr {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (r *EmqxPluginReconciler) loadPluginConfig(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
 	pluginConfigStr := generateConfigStr(plugin)
 
 	pluginsConfig, err := r.getPluginsConfig(emqx)
@@ -171,13 +262,7 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, 
 	}
 
 	path := plugin.Spec.PluginName + "\\.conf"
-	storePluginConfig := gjson.GetBytes(configMapStr, path)
-	if storePluginConfig.Exists() {
-		if storePluginConfig.String() == pluginConfigStr {
-			// Do not need update
-			return fmt.Errorf("plugin config is same")
-		}
-	}
+
 	newConfigMapStr, err := sjson.SetBytes(configMapStr, path, pluginConfigStr)
 	if err != nil {
 		return err
@@ -200,10 +285,9 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, 
 		return err
 	}
 	loadedPluginsStr := loadedPlugins.Data["loaded_plugins"]
-	// loadedPluginLine := fmt.Sprintf("{%s, true}.\n", plugin.Spec.PluginName)
-	loadedPluginLine := plugin.Spec.PluginName + ".\n"
-	index := strings.Index(loadedPluginsStr, loadedPluginLine)
+	index := strings.Index(loadedPluginsStr, plugin.Spec.PluginName)
 	if index == -1 {
+		loadedPluginLine := plugin.Spec.PluginName + ".\n"
 		loadedPluginsStr += loadedPluginLine
 		loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
 		if err := r.doUpdate(loadedPlugins, func(_ client.Object) error { return nil }); err != nil {
@@ -213,53 +297,46 @@ func (r *EmqxPluginReconciler) loadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, 
 	return nil
 }
 
-func (r *EmqxPluginReconciler) unloadPluginToEmqx(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
-	pluginsConfig, err := r.getPluginsConfig(emqx)
-	if err != nil {
-		return err
-	}
+func (r *EmqxPluginReconciler) unloadPluginConfig(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
+	// pluginsConfig, err := r.getPluginsConfig(emqx)
+	// if err != nil {
+	// 	return err
+	// }
 
-	configMapStr, err := json.ConfigCompatibleWithStandardLibrary.Marshal(pluginsConfig.Data)
-	if err != nil {
-		return err
-	}
+	// configMapStr, err := json.ConfigCompatibleWithStandardLibrary.Marshal(pluginsConfig.Data)
+	// if err != nil {
+	// 	return err
+	// }
 
-	path := plugin.Spec.PluginName + "\\.conf"
-	storePluginConfig := gjson.GetBytes(configMapStr, path)
-	if !storePluginConfig.Exists() {
-		return nil
-	}
+	// path := plugin.Spec.PluginName + "\\.conf"
 
-	// Unload plugin
-	_ = r.ExecToPods(emqx, "emqx", "emqx_ctl plugins unload "+plugin.Spec.PluginName)
+	// // Update plugin config
+	// newConfigMapStr, err := sjson.DeleteBytes(configMapStr, path)
+	// if err != nil {
+	// 	return err
+	// }
 
-	// Update plugin config
-	newConfigMapStr, err := sjson.DeleteBytes(configMapStr, path)
-	if err != nil {
-		return err
-	}
+	// configData := map[string]string{}
+	// if err := json.Unmarshal(newConfigMapStr, &configData); err != nil {
+	// 	return err
+	// }
+	// pluginsConfig.Data = configData
 
-	configData := map[string]string{}
-	if err := json.Unmarshal(newConfigMapStr, &configData); err != nil {
-		return err
-	}
-	pluginsConfig.Data = configData
-
-	postfun := func(_ client.Object) error { return nil }
-	if err := r.doUpdate(pluginsConfig, postfun); err != nil {
-		return err
-	}
+	// postfun := func(_ client.Object) error { return nil }
+	// if err := r.doUpdate(pluginsConfig, postfun); err != nil {
+	// 	return err
+	// }
 
 	// Update loaded plugins
+	postfun := func(_ client.Object) error { return nil }
 	loadedPlugins, err := r.getLoadedPlugins(emqx)
 	if err != nil {
 		return err
 	}
 	loadedPluginsStr := loadedPlugins.Data["loaded_plugins"]
-	// loadedPluginLine := fmt.Sprintf("{%s, true}.\n", plugin.Spec.PluginName)
-	loadedPluginLine := plugin.Spec.PluginName + ".\n"
-	index := strings.Index(loadedPluginsStr, loadedPluginLine)
+	index := strings.Index(loadedPluginsStr, plugin.Spec.PluginName)
 	if index != -1 {
+		loadedPluginLine := plugin.Spec.PluginName + ".\n"
 		loadedPluginsStr = loadedPluginsStr[:index] + loadedPluginsStr[index+len(loadedPluginLine):]
 		loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
 		if err := r.doUpdate(loadedPlugins, postfun); err != nil {
@@ -323,6 +400,20 @@ func (r *EmqxPluginReconciler) getLoadedPlugins(emqx appsv1beta3.Emqx) (*corev1.
 		return nil, err
 	}
 	return configMap, nil
+}
+
+func generateConfigStr(plugin *appsv1beta3.EmqxPlugin) string {
+	keys := make([]string, 0)
+	for k, _ := range plugin.Spec.Config {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var config string
+	for _, k := range keys {
+		config += fmt.Sprintln(k, " = ", plugin.Spec.Config[k])
+	}
+	return config
 }
 
 /*

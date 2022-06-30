@@ -35,25 +35,25 @@ var _ = Describe("Check service", func() {
 	Context("Check service", func() {
 		ports := []corev1.ServicePort{
 			{
-				Name:       "listener-tcp-external",
+				Name:       "mqtt-tcp-1883",
 				Port:       1883,
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt(1883),
 			},
 			{
-				Name:       "listener-ssl-external",
+				Name:       "mqtt-ssl-8883",
 				Port:       8883,
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt(8883),
 			},
 			{
-				Name:       "listener-ws-external",
+				Name:       "mqtt-ws-8083",
 				Port:       8083,
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt(8083),
 			},
 			{
-				Name:       "listener-wss-external",
+				Name:       "mqtt-wss-8084",
 				Port:       8084,
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt(8084),
@@ -70,31 +70,31 @@ var _ = Describe("Check service", func() {
 		JustBeforeEach(func() {
 			ports = []corev1.ServicePort{
 				{
-					Name:       "listener-tcp-internal",
+					Name:       "mqtt-tcp-11883",
 					Port:       11883,
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(11883),
 				},
 				{
-					Name:       "listener-tcp-external",
+					Name:       "mqtt-tcp-21883",
 					Port:       21883,
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(21883),
 				},
 				{
-					Name:       "listener-ssl-external",
+					Name:       "mqtt-ssl-8883",
 					Port:       8883,
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(8883),
 				},
 				{
-					Name:       "listener-ws-external",
+					Name:       "mqtt-ws-8083",
 					Port:       8083,
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(8083),
 				},
 				{
-					Name:       "listener-wss-external",
+					Name:       "mqtt-wss-8084",
 					Port:       8084,
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(8084),
