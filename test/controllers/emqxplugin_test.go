@@ -36,7 +36,7 @@ var _ = Describe("Check default plugin", func() {
 	pluginList := []string{"emqx_management", "emqx_dashboard", "emqx_rule_engine", "emqx_retainer"}
 	loadedPlugins := "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\n"
 	ports := []corev1.ServicePort{{
-		Name:       "management-listener-http",
+		Name:       "http-management-8081",
 		Port:       8081,
 		Protocol:   corev1.ProtocolTCP,
 		TargetPort: intstr.FromInt(8081),
@@ -65,29 +65,29 @@ var _ = Describe("Check default plugin", func() {
 	})
 })
 
-var _ = Describe("Check custom plugin", func() {
+var _ = Describe("Check custom plugin", Label("lwm2m"), func() {
 	pluginList := []string{"emqx_management", "emqx_dashboard", "emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
 	ports := []corev1.ServicePort{
 		{
-			Name:       "lwm2m-bind-udp-1",
+			Name:       "lwm2m-udp-5683",
 			Protocol:   corev1.ProtocolUDP,
 			Port:       5683,
 			TargetPort: intstr.FromInt(5683),
 		},
 		{
-			Name:       "lwm2m-bind-udp-2",
+			Name:       "lwm2m-udp-5684",
 			Protocol:   corev1.ProtocolUDP,
 			Port:       5684,
 			TargetPort: intstr.FromInt(5684),
 		},
 		{
-			Name:       "lwm2m-bind-dtls-1",
+			Name:       "lwm2m-dtls-5685",
 			Protocol:   corev1.ProtocolUDP,
 			Port:       5685,
 			TargetPort: intstr.FromInt(5685),
 		},
 		{
-			Name:       "lwm2m-bind-dtls-2",
+			Name:       "lwm2m-dtls-5686",
 			Protocol:   corev1.ProtocolUDP,
 			Port:       5686,
 			TargetPort: intstr.FromInt(5686),
@@ -133,25 +133,25 @@ var _ = Describe("Check custom plugin", func() {
 	It("check update external plugin", func() {
 		ports = []corev1.ServicePort{
 			{
-				Name:       "lwm2m-bind-dtls-1",
+				Name:       "lwm2m-dtls-5685",
 				Protocol:   corev1.ProtocolUDP,
 				Port:       5685,
 				TargetPort: intstr.FromInt(5685),
 			},
 			{
-				Name:       "lwm2m-bind-dtls-2",
+				Name:       "lwm2m-dtls-5686",
 				Protocol:   corev1.ProtocolUDP,
 				Port:       5686,
 				TargetPort: intstr.FromInt(5686),
 			},
 			{
-				Name:       "lwm2m-bind-udp-1",
+				Name:       "lwm2m-udp-5687",
 				Protocol:   corev1.ProtocolUDP,
 				Port:       5687,
 				TargetPort: intstr.FromInt(5687),
 			},
 			{
-				Name:       "lwm2m-bind-udp-2",
+				Name:       "lwm2m-udp-5688",
 				Protocol:   corev1.ProtocolUDP,
 				Port:       5688,
 				TargetPort: intstr.FromInt(5688),
@@ -180,25 +180,25 @@ var _ = Describe("Check custom plugin", func() {
 	JustAfterEach(func() {
 		ports = []corev1.ServicePort{
 			{
-				Name:       "lwm2m-bind-dtls-1",
+				Name:       "lwm2m-dtls-5685",
 				Protocol:   corev1.ProtocolUDP,
 				Port:       5685,
 				TargetPort: intstr.FromInt(5685),
 			},
 			{
-				Name:       "lwm2m-bind-dtls-2",
+				Name:       "lwm2m-dtls-5686",
 				Protocol:   corev1.ProtocolUDP,
 				Port:       5686,
 				TargetPort: intstr.FromInt(5686),
 			},
 			{
-				Name:       "lwm2m-bind-udp-1",
+				Name:       "lwm2m-udp-5687",
 				Protocol:   corev1.ProtocolUDP,
 				Port:       5687,
 				TargetPort: intstr.FromInt(5687),
 			},
 			{
-				Name:       "lwm2m-bind-udp-2",
+				Name:       "lwm2m-udp-5688",
 				Protocol:   corev1.ProtocolUDP,
 				Port:       5688,
 				TargetPort: intstr.FromInt(5688),
