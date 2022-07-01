@@ -1,6 +1,6 @@
 module github.com/emqx/emqx-operator/reloader
 
-go 1.17
+go 1.18
 
 require github.com/fsnotify/fsnotify v1.5.4
 

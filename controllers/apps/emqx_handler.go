@@ -136,7 +136,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	username, password, apiPort := r.getManagementField(instance)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, corev1.Container{
 		Name:            "reloader",
-		Image:           "emqx/emqx-operator-reloader:latest",
+		Image:           "emqx/emqx-operator-reloader:0.0.1",
 		ImagePullPolicy: instance.GetImagePullPolicy(),
 		Env:             sts.Spec.Template.Spec.Containers[0].Env,
 		VolumeMounts:    sts.Spec.Template.Spec.Containers[0].VolumeMounts,

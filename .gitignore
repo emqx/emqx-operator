@@ -18,6 +18,9 @@
 # vendor/
 bin/
 
+go.work
+go.work.sum
+
 cspell.config.yaml
 .vscode/
 .idea/
