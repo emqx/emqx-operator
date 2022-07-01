@@ -88,6 +88,17 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods/portforward
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   - create

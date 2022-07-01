@@ -59,7 +59,7 @@ func check_statefulset(emqx v1beta3.Emqx) {
 	Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 	Expect(sts.Spec.Template.Spec.Containers[0].Resources).Should(Equal(emqx.GetResource()))
 	Expect(sts.Spec.Template.Spec.Containers[0].Args).Should(Equal(emqx.GetArgs()))
-	Expect(sts.Spec.Template.Spec.Containers[1].Args).Should(Equal([]string{"-u", "admin", "-p", "password", "-P", "8081"}))
+	Expect(sts.Spec.Template.Spec.Containers[1].Args).Should(Equal([]string{"-u", "admin", "-p", "public", "-P", "8081"}))
 	Expect(sts.Spec.Template.Spec.SecurityContext.FSGroup).Should(Equal(emqx.GetSecurityContext().FSGroup))
 	Expect(sts.Spec.Template.Spec.SecurityContext.RunAsUser).Should(Equal(emqx.GetSecurityContext().RunAsUser))
 	Expect(sts.Spec.Template.Spec.SecurityContext.SupplementalGroups).Should(Equal(emqx.GetSecurityContext().SupplementalGroups))
