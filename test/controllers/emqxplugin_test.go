@@ -170,8 +170,8 @@ var _ = Describe("Check custom plugin", Label("lwm2m"), func() {
 			if err != nil {
 				return err
 			}
-			plugin.Spec.Config["lwm2m.bind.udp.1"] = "5687"
-			plugin.Spec.Config["lwm2m.bind.udp.2"] = "5688"
+			plugin.Spec.Config["lwm2m.bind.udp.1"] = "0.0.0.0:5687"
+			plugin.Spec.Config["lwm2m.bind.udp.2"] = "0.0.0.0:5688"
 			return k8sClient.Update(context.Background(), plugin)
 		}, timeout, interval).Should(Succeed())
 
@@ -232,19 +232,7 @@ var _ = Describe("Check custom plugin", Label("lwm2m"), func() {
 				}, cm,
 			)
 			return cm.Data["loaded_plugins"]
-		}, timeout, interval).ShouldNot(ContainSubstring("{emqx_lwm2m, true}"))
-
-		Eventually(func() map[string]string {
-			cm := &corev1.ConfigMap{}
-			_ = k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      fmt.Sprintf("%s-%s", broker.GetName(), "plugins-config"),
-					Namespace: broker.GetNamespace(),
-				}, cm,
-			)
-			return cm.Data
-		}, timeout, interval).ShouldNot(HaveKey("emqx_lwm2m.conf"))
+		}, timeout, interval).ShouldNot(ContainSubstring("emqx_lwm2m"))
 
 		Eventually(func() []corev1.ServicePort {
 			svc := &corev1.Service{}
@@ -257,7 +245,7 @@ var _ = Describe("Check custom plugin", Label("lwm2m"), func() {
 				svc,
 			)
 			return svc.Spec.Ports
-		}).ShouldNot(ContainElements(ports))
+		}, timeout, interval).ShouldNot(ContainElements(ports))
 	})
 })
 

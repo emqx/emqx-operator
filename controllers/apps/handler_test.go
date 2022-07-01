@@ -37,6 +37,9 @@ func TestIgnoreOtherContainer(t *testing.T) {
 						{
 							Name: "emqx",
 						},
+						{
+							Name: "reloader",
+						},
 					},
 				},
 			},
@@ -51,6 +54,9 @@ func TestIgnoreOtherContainer(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name: "emqx",
+						},
+						{
+							Name: "reloader",
 						},
 						{
 							Name: "fake",
@@ -68,7 +74,33 @@ func TestIgnoreOtherContainer(t *testing.T) {
 	}
 	assert.Equal(t, current, modified, "the current and modified byte sequence should be the same")
 
-	modifiedObject.Spec.Template.Spec.Containers[0] = corev1.Container{Name: "emqx", Args: []string{"--fake"}}
+	// modifiedObject.Spec.Template.Spec.Containers[0] = corev1.Container{Name: "emqx", Args: []string{"--fake"}}
+	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name: "emqx",
+			Args: []string{"--fake"},
+		},
+		{
+			Name: "reloader",
+		},
+	}
+	modified, _ = json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
+
+	current, modified, err = selectEmqxContainer(current, modified)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.NotEqual(t, current, modified, "the current and modified byte sequence should be the not same")
+
+	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name: "emqx",
+		},
+		{
+			Name: "reloader",
+			Args: []string{"--fake"},
+		},
+	}
 	modified, _ = json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
 
 	current, modified, err = selectEmqxContainer(current, modified)

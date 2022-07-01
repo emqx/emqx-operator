@@ -3,6 +3,7 @@ package apps
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,8 +12,6 @@ import (
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,6 +32,35 @@ type Handler struct {
 	kubernetes.Clientset
 	record.EventRecorder
 	rest.Config
+}
+
+func (handler *Handler) getManagementField(obj appsv1beta3.Emqx) (username, password, apiPort string) {
+	username = "admin"
+	password = "public"
+	apiPort = "8081"
+
+	pluginsList := &appsv1beta3.EmqxPluginList{}
+	_ = handler.Client.List(context.TODO(), pluginsList, client.InNamespace(obj.GetNamespace()))
+
+	for _, plugin := range pluginsList.Items {
+		selector, _ := labels.ValidatedSelectorFromSet(plugin.Spec.Selector)
+		if selector.Empty() || !selector.Matches(labels.Set(obj.GetLabels())) {
+			continue
+		}
+		if plugin.Spec.PluginName == "emqx_management" {
+			if _, ok := plugin.Spec.Config["management.listener.http"]; ok {
+				apiPort = plugin.Spec.Config["management.listener.http"]
+			}
+			if _, ok := plugin.Spec.Config["management.default_application.id"]; ok {
+				username = plugin.Spec.Config["management.default_application.id"]
+			}
+			if _, ok := plugin.Spec.Config["management.default_application.secret"]; ok {
+				password = plugin.Spec.Config["management.default_application.secret"]
+			}
+		}
+	}
+
+	return
 }
 
 func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*http.Response, error) {
@@ -77,34 +105,7 @@ findPod:
 		return nil, err
 	}
 
-	pluginsList := &appsv1beta3.EmqxPluginList{}
-	if err := handler.Client.List(context.TODO(), pluginsList, client.InNamespace(obj.GetNamespace())); err != nil {
-		if !k8sErrors.IsNotFound(err) {
-			return nil, err
-		}
-	}
-
-	apiPort := "8081"
-	username := "admin"
-	password := "public"
-
-	for _, plugin := range pluginsList.Items {
-		selector, _ := labels.ValidatedSelectorFromSet(plugin.Spec.Selector)
-		if selector.Empty() || !selector.Matches(labels.Set(obj.GetLabels())) {
-			continue
-		}
-		if plugin.Spec.PluginName == "emqx_management" {
-			if _, ok := plugin.Spec.Config["management.listener.http"]; ok {
-				apiPort = plugin.Spec.Config["management.listener.http"]
-			}
-			if _, ok := plugin.Spec.Config["management.default_application.id"]; ok {
-				username = plugin.Spec.Config["management.default_application.id"]
-			}
-			if _, ok := plugin.Spec.Config["management.default_application.secret"]; ok {
-				password = plugin.Spec.Config["management.default_application.secret"]
-			}
-		}
-	}
+	username, password, apiPort := handler.getManagementField(obj)
 
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
 
@@ -321,10 +322,21 @@ func IgnoreOtherContainers() patch.CalculateOption {
 }
 
 func selectEmqxContainer(obj []byte) ([]byte, error) {
-	containers := gjson.GetBytes(obj, `spec.template.spec.containers.#(name=="emqx")#`)
-	newObj, err := sjson.SetBytes(obj, "spec.template.spec.containers", containers.String())
-	if err != nil {
-		return []byte{}, emperror.Wrap(err, "could not set byte sequence")
+	sts := &appsv1.StatefulSet{}
+	_ = json.Unmarshal(obj, sts)
+
+	for i, container := range sts.Spec.Template.Spec.Containers {
+		if container.Name != "emqx" && container.Name != "reloader" {
+			sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers[:i], sts.Spec.Template.Spec.Containers[i+1:]...)
+		}
 	}
-	return newObj, nil
+
+	return json.Marshal(sts)
+
+	// containers := gjson.GetBytes(obj, `spec.template.spec.containers.#(name=="emqx")#`)
+	// newObj, err := sjson.SetBytes(obj, "spec.template.spec.containers", containers.String())
+	// if err != nil {
+	// 	return []byte{}, emperror.Wrap(err, "could not set byte sequence")
+	// }
+	// return newObj, nil
 }
