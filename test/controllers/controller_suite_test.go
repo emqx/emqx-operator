@@ -212,11 +212,11 @@ func cleanAll() {
 	Expect(removePluginsFinalizer(broker.GetNamespace())).Should(Succeed())
 	Expect(removePluginsFinalizer(enterprise.GetNamespace())).Should(Succeed())
 
-	// Expect(k8sClient.Delete(context.Background(), broker)).Should(Succeed())
-	// Expect(k8sClient.Delete(context.Background(), enterprise)).Should(Succeed())
+	Expect(k8sClient.Delete(context.Background(), broker)).Should(Succeed())
+	Expect(k8sClient.Delete(context.Background(), enterprise)).Should(Succeed())
 
-	// Expect(k8sClient.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: broker.GetNamespace()}})).Should(Succeed())
-	// Expect(k8sClient.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: enterprise.GetNamespace()}})).Should(Succeed())
+	Expect(k8sClient.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: broker.GetNamespace()}})).Should(Succeed())
+	Expect(k8sClient.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: enterprise.GetNamespace()}})).Should(Succeed())
 }
 
 func removePluginsFinalizer(namespace string) error {

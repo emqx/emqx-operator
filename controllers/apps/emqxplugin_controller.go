@@ -92,7 +92,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
-				if err := r.checkPluginStatus(emqx, instance.Spec.PluginName, true, "unload"); err != nil {
+				if err := r.unloadPluginByAPI(emqx, instance.Spec.PluginName); err != nil {
 					return ctrl.Result{}, err
 				}
 				if err := r.unloadPluginConfig(instance, emqx); err != nil {
@@ -142,8 +142,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{RequeueAfter: time.Duration(120) * time.Second}, nil
 		}
 
-		needReloadPlugin := !equalPluginConfig
-		err = r.checkPluginStatus(emqx, instance.Spec.PluginName, needReloadPlugin, "reload")
+		err = r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -164,8 +163,7 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&appsv1beta3.EmqxPlugin{}).
 		Complete(r)
 }
-
-func (r *EmqxPluginReconciler) checkPluginStatus(emqx appsv1beta3.Emqx, pluginName string, needUpdate bool, reloadOrUnload string) error {
+func (r *EmqxPluginReconciler) checkPluginStatusByAPI(emqx appsv1beta3.Emqx, pluginName string) error {
 	list, err := r.getPluginsByAPI(emqx)
 	if err != nil {
 		return err
@@ -173,8 +171,8 @@ func (r *EmqxPluginReconciler) checkPluginStatus(emqx appsv1beta3.Emqx, pluginNa
 	for _, node := range list {
 		for _, plugin := range node.Plugins {
 			if plugin.Name == pluginName {
-				if !plugin.Active || needUpdate {
-					err := r.loadPluginByAPI(emqx, node.Node, plugin.Name, reloadOrUnload)
+				if !plugin.Active {
+					err := r.doLoadPluginByAPI(emqx, node.Node, plugin.Name, "reload")
 					if err != nil {
 						return err
 					}
@@ -185,7 +183,25 @@ func (r *EmqxPluginReconciler) checkPluginStatus(emqx appsv1beta3.Emqx, pluginNa
 	return nil
 }
 
-func (r *EmqxPluginReconciler) loadPluginByAPI(emqx appsv1beta3.Emqx, nodeName, pluginName, reloadOrUnload string) error {
+func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta3.Emqx, pluginName string) error {
+	list, err := r.getPluginsByAPI(emqx)
+	if err != nil {
+		return err
+	}
+	for _, node := range list {
+		for _, plugin := range node.Plugins {
+			if plugin.Name == pluginName {
+				err := r.doLoadPluginByAPI(emqx, node.Node, plugin.Name, "unload")
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName, pluginName, reloadOrUnload string) error {
 	resp, err := r.Handler.requestAPI(emqx, "PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
 	if err != nil {
 		return err
@@ -298,35 +314,6 @@ func (r *EmqxPluginReconciler) loadPluginConfig(plugin *appsv1beta3.EmqxPlugin, 
 }
 
 func (r *EmqxPluginReconciler) unloadPluginConfig(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
-	// pluginsConfig, err := r.getPluginsConfig(emqx)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// configMapStr, err := json.ConfigCompatibleWithStandardLibrary.Marshal(pluginsConfig.Data)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// path := plugin.Spec.PluginName + "\\.conf"
-
-	// // Update plugin config
-	// newConfigMapStr, err := sjson.DeleteBytes(configMapStr, path)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// configData := map[string]string{}
-	// if err := json.Unmarshal(newConfigMapStr, &configData); err != nil {
-	// 	return err
-	// }
-	// pluginsConfig.Data = configData
-
-	// postfun := func(_ client.Object) error { return nil }
-	// if err := r.doUpdate(pluginsConfig, postfun); err != nil {
-	// 	return err
-	// }
-
 	// Update loaded plugins
 	postfun := func(_ client.Object) error { return nil }
 	loadedPlugins, err := r.getLoadedPlugins(emqx)
@@ -404,7 +391,7 @@ func (r *EmqxPluginReconciler) getLoadedPlugins(emqx appsv1beta3.Emqx) (*corev1.
 
 func generateConfigStr(plugin *appsv1beta3.EmqxPlugin) string {
 	keys := make([]string, 0)
-	for k, _ := range plugin.Spec.Config {
+	for k := range plugin.Spec.Config {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
