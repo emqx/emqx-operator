@@ -63,7 +63,7 @@ func TestSuites(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	timeout = time.Minute * 5
+	timeout = time.Minute * 7
 	interval = time.Second * 1
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
