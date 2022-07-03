@@ -103,17 +103,16 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 			instance.SetCondition(*condition)
 			_ = r.Status().Update(ctx, instance)
 			return ctrl.Result{Requeue: true}, err
-		} else {
-			condition := appsv1beta3.NewCondition(
-				appsv1beta3.ConditionPluginInitialized,
-				corev1.ConditionTrue,
-				"PluginInitializeSuccessfully",
-				"All default plugins initialized",
-			)
-			instance.SetCondition(*condition)
-			_ = r.Status().Update(ctx, instance)
-			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 		}
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionPluginInitialized,
+			corev1.ConditionTrue,
+			"PluginInitializeSuccessfully",
+			"All default plugins initialized",
+		)
+		instance.SetCondition(*condition)
+		_ = r.Status().Update(ctx, instance)
+		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
 
 	_, sts = generateLoadedPlugins(instance, sts)
@@ -163,10 +162,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	}
 
 	var condition *appsv1beta3.Condition
-	condition, err := r.getClusterStatusByAPI(instance)
-	if err != nil {
-		return ctrl.Result{Requeue: true}, err
-	}
+	condition = r.getClusterStatusByAPI(instance)
 	if condition != nil {
 		instance.SetCondition(*condition)
 		return ctrl.Result{Requeue: true}, nil
@@ -242,10 +238,16 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []core
 	return ports
 }
 
-func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) (*appsv1beta3.Condition, error) {
+func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) *appsv1beta3.Condition {
 	resp, err := r.Handler.requestAPI(instance, "GET", "api/v4/brokers")
 	if err != nil {
-		return nil, err
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"AccessAPIFailed",
+			err.Error(),
+		)
+		return condition
 	}
 	if resp.StatusCode != 200 {
 		condition := appsv1beta3.NewCondition(
@@ -254,13 +256,19 @@ func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) (*apps
 			"AccessAPIFailed",
 			resp.Status,
 		)
-		return condition, nil
+		return condition
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"AccessAPIFailed",
+			err.Error(),
+		)
+		return condition
 	}
 	clusterData := gjson.GetBytes(body, "data")
 	if len(clusterData.Array()) != int(*instance.GetReplicas()) {
@@ -270,9 +278,9 @@ func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) (*apps
 			"ClusterNotReady",
 			clusterData.String(),
 		)
-		return condition, nil
+		return condition
 	}
-	return nil, nil
+	return nil
 }
 
 func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {

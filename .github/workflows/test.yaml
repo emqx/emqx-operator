@@ -128,6 +128,10 @@ jobs:
           kind:  ${{ matrix.emqx[0] }}
           image: ${{ matrix.emqx[1] }}
       - if: failure()
+        run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
+      - if: failure()
+        run: kubectl get  ${{ matrix.emqx[0] }}  ${{ matrix.emqx[0] }} -o json
+      - if: failure()
         run: kubectl describe sts ${{ matrix.emqx[0]}}
       - if: failure()
         run: kubectl describe pods -l "cluster=emqx"
@@ -143,5 +147,3 @@ jobs:
         run: kubectl logs ${{ matrix.emqx[0] }}-3 -c emqx --tail=1000
       - if: failure()
         run: kubectl logs ${{ matrix.emqx[0] }}-4 -c emqx --tail=1000
-      - if: failure()
-        run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
