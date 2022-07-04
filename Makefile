@@ -52,6 +52,7 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	go test -coverpkg=./... -coverprofile=covprofile ./...
 
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
