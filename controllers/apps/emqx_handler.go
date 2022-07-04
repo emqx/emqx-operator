@@ -52,18 +52,6 @@ type EmqxReconciler struct {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
-	serviceTemplate := instance.GetServiceTemplate()
-	ports := r.getListenerPortsByAPI(instance)
-	if ports != nil && !reflect.DeepEqual(ports, serviceTemplate.Spec.Ports) {
-		serviceTemplate.Spec.Ports = ports
-		instance.SetServiceTemplate(serviceTemplate)
-		err := r.doUpdate(instance, func(_ client.Object) error { return nil })
-		if err != nil {
-			return ctrl.Result{Requeue: true}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
-	}
-
 	var resources []client.Object
 
 	var sts *appsv1.StatefulSet
@@ -102,7 +90,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 			)
 			instance.SetCondition(*condition)
 			_ = r.Status().Update(ctx, instance)
-			return ctrl.Result{Requeue: true}, err
+			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, err
 		}
 		condition := appsv1beta3.NewCondition(
 			appsv1beta3.ConditionPluginInitialized,
@@ -118,9 +106,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	_, sts = generateLoadedPlugins(instance, sts)
 	_, sts = generateDefaultPluginsConfig(instance, sts)
 
-	headlessSvc, svc, sts := generateSvc(instance, sts)
-	resources = append(resources, headlessSvc, svc)
-
 	acl, sts := generateAcl(instance, sts)
 	resources = append(resources, acl)
 
@@ -131,6 +116,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	if license != nil {
 		resources = append(resources, license)
 	}
+
+	serviceTemplate := instance.GetServiceTemplate()
+	serviceTemplate.Spec.Ports = mergePorts(serviceTemplate.Spec.Ports, r.getListenerPortsByAPI(instance))
+	instance.SetServiceTemplate(serviceTemplate)
+	headlessSvc, svc, sts := generateSvc(instance, sts)
+	resources = append(resources, headlessSvc, svc)
 
 	username, password, apiPort := r.getManagementField(instance)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, corev1.Container{
@@ -150,22 +141,15 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 
 	nothing := func(client.Object) error { return nil }
 	if err := r.CreateOrUpdateList(instance, resources, nothing); err != nil {
-		condition := appsv1beta3.NewCondition(
-			appsv1beta3.ConditionRunning,
-			corev1.ConditionFalse,
-			"CreateOrUpdateResourceFailed",
-			err.Error(),
-		)
-		instance.SetCondition(*condition)
-		_ = r.Status().Update(ctx, instance)
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{}, err
 	}
 
 	var condition *appsv1beta3.Condition
 	condition = r.getClusterStatusByAPI(instance)
 	if condition != nil {
 		instance.SetCondition(*condition)
-		return ctrl.Result{Requeue: true}, nil
+		_ = r.Status().Update(ctx, instance)
+		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
 
 	condition = appsv1beta3.NewCondition(
@@ -270,7 +254,7 @@ func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) *appsv
 		)
 		return condition
 	}
-	clusterData := gjson.GetBytes(body, "data")
+	clusterData := gjson.GetBytes(body, "data.#.node")
 	if len(clusterData.Array()) != int(*instance.GetReplicas()) {
 		condition := appsv1beta3.NewCondition(
 			appsv1beta3.ConditionRunning,
@@ -922,6 +906,21 @@ func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
 	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
 }
 
+func mergePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
+	ports := append(ports1, ports2...)
+
+	result := make([]corev1.ServicePort, 0, len(ports))
+	temp := map[string]struct{}{}
+
+	for _, item := range ports {
+		if _, ok := temp[item.Name]; !ok {
+			temp[item.Name] = struct{}{}
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
 func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
 	lookup := func(name string, envs []corev1.EnvVar) bool {
 		for _, env := range envs {
@@ -930,7 +929,6 @@ func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
 			}
 		}
 		return false
-
 	}
 
 	envs := instance.GetEnv()
