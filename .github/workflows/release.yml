@@ -80,3 +80,32 @@ jobs:
         run: |
           sudo mv $(find deploy/charts/emqx-operator -name "*.tgz") /repos/charts
           sudo helm repo index /repos/charts
+
+  build-reloader-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - id: version
+        run: echo "::set-output name=version::$(cat sidecar/reloader/VERSION)"
+      - uses: docker/setup-qemu-action@v1
+      - uses: docker/setup-buildx-action@v1
+      - uses: docker/metadata-action@v3
+        id: meta
+        with:
+          images: ${{ github.repository_owner }}/emqx-operator-reloader
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,pattern={{version}},value={{ steps.version.outputs.version }}
+      - uses: docker/login-action@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: ${{ startsWith(github.ref, 'refs/tags/') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

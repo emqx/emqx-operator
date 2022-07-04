@@ -42,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - id: version
+      run: echo "::set-output name=version::$(cat sidecar/reloader/VERSION)"
     - uses: docker/setup-buildx-action@v1
     - uses: docker/setup-qemu-action@v1
       with:
@@ -59,7 +61,7 @@ jobs:
         flavor: |
           latest=true
         tags: |
-          type=semver,pattern={{version}},value=0.0.1
+          type=semver,pattern={{version}},value={{ steps.version.outputs.version }}
     - uses: docker/build-push-action@v2
       with:
         push: true
