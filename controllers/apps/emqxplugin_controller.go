@@ -139,7 +139,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			if err := r.loadPluginConfig(instance, emqx); err != nil {
 				return ctrl.Result{}, err
 			}
-			return ctrl.Result{RequeueAfter: time.Duration(120) * time.Second}, nil
+			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 		}
 
 		err = r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName)
@@ -151,10 +151,10 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.Status.Phase != appsv1beta3.EmqxPluginStatusLoaded {
 		instance.Status.Phase = appsv1beta3.EmqxPluginStatusLoaded
 		if err := r.Status().Update(ctx, instance); err != nil {
-			return ctrl.Result{Requeue: true}, err
+			return ctrl.Result{}, err
 		}
 	}
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(40) * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
