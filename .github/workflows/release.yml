@@ -57,6 +57,16 @@ jobs:
           generate_release_notes: true
           files: |
             deploy/manifests/emqx-operator-controller.yaml
+      - name: Update operator CI
+        run: |
+            curl --location --request POST ${{ secrets.EMQX_IO_RELEASE_API }} \
+              --header 'token: ${{ secrets.EMQX_IO_TOKEN }}' \
+              --header 'Content-Type: application/json' \
+              --data-raw '{
+                  "OperatorVersion": "${{ github.ref_name }}",
+                  "EmqxVersion": ["4.4.x"]
+              }'
+
 
   helm:
     runs-on: self-hosted
