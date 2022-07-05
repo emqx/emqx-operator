@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"reflect"
 	"regexp"
@@ -164,16 +163,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 }
 
 func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []corev1.ServicePort {
-	resp, err := r.Handler.requestAPI(instance, "GET", "api/v4/listeners")
+	resp, body, err := r.Handler.requestAPI(instance, "GET", "api/v4/listeners")
 	if err != nil {
 		return nil
 	}
 	if resp.StatusCode != 200 {
-		return nil
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
 		return nil
 	}
 
@@ -223,7 +217,7 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []core
 }
 
 func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) *appsv1beta3.Condition {
-	resp, err := r.Handler.requestAPI(instance, "GET", "api/v4/brokers")
+	resp, body, err := r.Handler.requestAPI(instance, "GET", "api/v4/brokers")
 	if err != nil {
 		condition := appsv1beta3.NewCondition(
 			appsv1beta3.ConditionRunning,
@@ -243,17 +237,6 @@ func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) *appsv
 		return condition
 	}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		condition := appsv1beta3.NewCondition(
-			appsv1beta3.ConditionRunning,
-			corev1.ConditionFalse,
-			"AccessAPIFailed",
-			err.Error(),
-		)
-		return condition
-	}
 	clusterData := gjson.GetBytes(body, "data.#.node")
 	if len(clusterData.Array()) != int(*instance.GetReplicas()) {
 		condition := appsv1beta3.NewCondition(
