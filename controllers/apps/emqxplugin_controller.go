@@ -19,7 +19,6 @@ package apps
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"sort"
 	"strings"
 	"time"
@@ -202,7 +201,7 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta3.Emqx, pluginNa
 }
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName, pluginName, reloadOrUnload string) error {
-	resp, err := r.Handler.requestAPI(emqx, "PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
+	resp, _, err := r.Handler.requestAPI(emqx, "PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
 	if err != nil {
 		return err
 	}
@@ -215,18 +214,14 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName
 func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta3.Emqx) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
 
-	resp, err := r.Handler.requestAPI(emqx, "GET", "api/v4/plugins")
+	resp, body, err := r.Handler.requestAPI(emqx, "GET", "api/v4/plugins")
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("request api failed: %s", resp.Status)
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
+
 	err = json.Unmarshal([]byte(gjson.GetBytes(body, "data").String()), &data)
 	if err != nil {
 		return nil, err
@@ -402,161 +397,3 @@ func generateConfigStr(plugin *appsv1beta3.EmqxPlugin) string {
 	}
 	return config
 }
-
-/*
-func InsertServicePorts(plugin *appsv1beta3.EmqxPlugin, servicePorts []corev1.ServicePort) []corev1.ServicePort {
-	return UpdateServicePorts(plugin, servicePorts, insertServicePortForConfig)
-}
-
-func RemoveServicePorts(plugin *appsv1beta3.EmqxPlugin, servicePorts []corev1.ServicePort) []corev1.ServicePort {
-	return UpdateServicePorts(plugin, servicePorts, removeServicePortForConfig)
-}
-
-func UpdateServicePorts(plugin *appsv1beta3.EmqxPlugin, servicePorts []corev1.ServicePort, handler func(string, string, []corev1.ServicePort) []corev1.ServicePort) []corev1.ServicePort {
-	switch plugin.Spec.PluginName {
-	case "emqx_management":
-		compile := regexp.MustCompile("^management.listener.(http|https)$")
-		for k, v := range plugin.Spec.Config {
-			if compile.MatchString(k) {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	case "emqx_dashboard":
-		compile := regexp.MustCompile("^dashboard.listener.(http|https)$")
-		for k, v := range plugin.Spec.Config {
-			if compile.MatchString(k) {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	case "emqx_lwm2m":
-		compile := regexp.MustCompile("^lwm2m.bind.(udp|dtls).[0-9]+$")
-		for k, v := range plugin.Spec.Config {
-			if compile.Match([]byte(k)) {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	case "emqx_coap":
-		compile := regexp.MustCompile("^coap.bind.(udp|dtls).[0-9]+$")
-		for k, v := range plugin.Spec.Config {
-			if compile.MatchString(k) {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	case "emqx_sn":
-		for k, v := range plugin.Spec.Config {
-			if k == "mqtt.sn.port" {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	case "emqx_exproto":
-		compileHTTP := regexp.MustCompile("^exproto.server.(http|https).port$")
-		compileProto := regexp.MustCompile("^exproto.listener.[A-Za-z0-9_-]*$")
-		for k, v := range plugin.Spec.Config {
-			if compileHTTP.MatchString(k) || compileProto.MatchString(k) {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	case "emqx_stomp":
-		for k, v := range plugin.Spec.Config {
-			if k == "stomp.listener" {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-
-	// The following are the Enterprise plugins
-	case "emqx_jt808":
-		compile := regexp.MustCompile("^jt808.listener.(tcp|ssl)$")
-		for k, v := range plugin.Spec.Config {
-			if compile.MatchString(k) {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	case "emqx_tcp":
-		compileTCP := regexp.MustCompile("^tcp.listener.[a-z]+$")
-		compileSSL := regexp.MustCompile("^tcp.listener.ssl.[a-z]+$")
-		for k, v := range plugin.Spec.Config {
-			if compileTCP.MatchString(k) || compileSSL.MatchString(k) {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	case "emqx_gbt32960":
-		compile := regexp.MustCompile("^gbt32960.listener.(tcp|ssl)$")
-		for k, v := range plugin.Spec.Config {
-			if compile.MatchString(k) {
-				servicePorts = handler(k, v, servicePorts)
-			}
-		}
-	}
-	return servicePorts
-}
-
-func insertServicePortForConfig(configName, configValue string, servicePorts []corev1.ServicePort) []corev1.ServicePort {
-	var protocol corev1.Protocol
-	var strPort string
-	var intPort int
-
-	compile := regexp.MustCompile(".*(udp|dtls|sn).*")
-	if compile.MatchString(configName) {
-		protocol = corev1.ProtocolUDP
-	} else {
-		protocol = corev1.ProtocolTCP
-	}
-
-	if strings.Contains(configValue, ":") {
-		u, err := url.Parse(configValue)
-		if err == nil {
-			protocol = corev1.Protocol(strings.ToUpper(u.Scheme))
-			strPort = u.Port()
-		} else {
-			_, strPort, err = net.SplitHostPort(configValue)
-			if err != nil {
-				strPort = configValue
-			}
-		}
-	} else {
-		strPort = configValue
-	}
-
-	intPort, _ = strconv.Atoi(strPort)
-	portName := strings.ReplaceAll(configName, ".", "-")
-	if index := findPort(intPort, servicePorts); index == -1 {
-		// Delete duplicate names port
-		if index := findPortName(portName, servicePorts); index != -1 {
-			servicePorts = append(servicePorts[:index], servicePorts[index+1:]...)
-		}
-		servicePorts = append(servicePorts, corev1.ServicePort{
-			Name:       portName,
-			Port:       int32(intPort),
-			TargetPort: intstr.FromInt(intPort),
-			Protocol:   protocol,
-		})
-	}
-
-	return servicePorts
-}
-
-func removeServicePortForConfig(configName, configValue string, servicePorts []corev1.ServicePort) []corev1.ServicePort {
-	var strPort string
-	var intPort int
-
-	if strings.Contains(configValue, ":") {
-		u, err := url.Parse(configValue)
-		if err == nil {
-			strPort = u.Port()
-		} else {
-			_, strPort, err = net.SplitHostPort(configValue)
-			if err != nil {
-				strPort = configValue
-			}
-		}
-	} else {
-		strPort = configValue
-	}
-
-	intPort, _ = strconv.Atoi(strPort)
-	if index := findPort(intPort, servicePorts); index != -1 {
-		servicePorts = append(servicePorts[:index], servicePorts[index+1:]...)
-	}
-	return servicePorts
-}
-*/

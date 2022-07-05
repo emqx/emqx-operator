@@ -18,6 +18,7 @@ package apiclient
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 )
@@ -28,10 +29,10 @@ type APIClient struct {
 	PortForwardOptions
 }
 
-func (c *APIClient) Do(method, path string) (*http.Response, error) {
+func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
 	err := c.PortForwardOptions.New()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	defer close(c.StopChannel)
@@ -46,10 +47,10 @@ func (c *APIClient) Do(method, path string) (*http.Response, error) {
 
 	ports, err := c.GetPorts()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(ports) == 0 {
-		return nil, fmt.Errorf("not found listener port")
+		return nil, nil, fmt.Errorf("not found listener port")
 	}
 
 	url := url.URL{
@@ -61,9 +62,18 @@ func (c *APIClient) Do(method, path string) (*http.Response, error) {
 	httpClient := http.Client{}
 	req, err := http.NewRequest(method, url.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.SetBasicAuth(c.Username, c.Password)
 	resp, err := httpClient.Do(req)
-	return resp, err
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return resp, nil, err
+	}
+	return resp, body, err
 }

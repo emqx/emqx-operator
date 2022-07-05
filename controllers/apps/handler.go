@@ -63,7 +63,7 @@ func (handler *Handler) getManagementField(obj appsv1beta3.Emqx) (username, pass
 	return
 }
 
-func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*http.Response, error) {
+func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*http.Response, []byte, error) {
 	pods := &corev1.PodList{}
 	if err := handler.Client.List(
 		context.TODO(),
@@ -71,11 +71,11 @@ func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(obj.GetLabels()),
 	); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(pods.Items) == 0 {
-		return nil, fmt.Errorf("not found pods")
+		return nil, nil, fmt.Errorf("not found pods")
 	}
 
 	var podName string
@@ -90,7 +90,7 @@ findPod:
 	}
 
 	if podName == "" {
-		return nil, fmt.Errorf("pods not ready")
+		return nil, nil, fmt.Errorf("pods not ready")
 	}
 
 	configMap := &corev1.ConfigMap{}
@@ -102,7 +102,7 @@ findPod:
 		},
 		configMap,
 	); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	username, password, apiPort := handler.getManagementField(obj)
