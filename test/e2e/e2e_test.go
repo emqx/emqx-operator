@@ -13,10 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller_test
+package e2e_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -167,32 +168,62 @@ var _ = BeforeSuite(func() {
 			Expect(k8sClient.Create(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: emqx.GetNamespace()}})).Should(Succeed())
 			Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
 
-			if os.Getenv("USE_EXISTING_CLUSTER") == "true" {
-				var instance v1beta3.Emqx
-				switch emqx.(type) {
-				case *v1beta3.EmqxBroker:
-					instance = &v1beta3.EmqxBroker{}
-				case *v1beta3.EmqxEnterprise:
-					instance = &v1beta3.EmqxEnterprise{}
-				}
-				Eventually(func() corev1.ConditionStatus {
-					_ = k8sClient.Get(
-						context.TODO(),
-						types.NamespacedName{
-							Name:      emqx.GetName(),
-							Namespace: emqx.GetNamespace(),
-						},
-						instance,
-					)
-					running := corev1.ConditionFalse
-					for _, c := range instance.GetStatus().Conditions {
-						if c.Type == v1beta3.ConditionRunning {
-							running = c.Status
-						}
-					}
-					return running
-				}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+			var instance v1beta3.Emqx
+			switch emqx.(type) {
+			case *v1beta3.EmqxBroker:
+				instance = &v1beta3.EmqxBroker{}
+			case *v1beta3.EmqxEnterprise:
+				instance = &v1beta3.EmqxEnterprise{}
 			}
+			Eventually(func() corev1.ConditionStatus {
+				_ = k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Name:      emqx.GetName(),
+						Namespace: emqx.GetNamespace(),
+					},
+					instance,
+				)
+				running := corev1.ConditionFalse
+				for _, c := range instance.GetStatus().Conditions {
+					if c.Type == v1beta3.ConditionRunning {
+						running = c.Status
+					}
+				}
+				return running
+			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+
+			lwm2m := &v1beta3.EmqxPlugin{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps.emqx.io/v1beta3",
+					Kind:       "EmqxPlugin",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "lwm2m"),
+					Namespace: emqx.GetNamespace(),
+					Labels:    emqx.GetLabels(),
+				},
+				Spec: v1beta3.EmqxPluginSpec{
+					PluginName: "emqx_lwm2m",
+					Selector:   emqx.GetLabels(),
+					Config: map[string]string{
+						"lwm2m.lifetime_min": "1s",
+						"lwm2m.lifetime_max": "86400s",
+						"lwm2m.bind.udp.1":   "0.0.0.0:5683",
+						"lwm2m.bind.udp.2":   "0.0.0.0:5684",
+						"lwm2m.bind.dtls.1":  "0.0.0.0:5685",
+						"lwm2m.bind.dtls.2":  "0.0.0.0:5686",
+						"lwm2m.xml_dir":      "/opt/emqx/etc/lwm2m_xml",
+					},
+				},
+			}
+			Expect(k8sClient.Create(context.Background(), lwm2m)).Should(Succeed())
+
+			Eventually(func() bool {
+				_ = k8sClient.Get(context.Background(), types.NamespacedName{Name: lwm2m.GetName(), Namespace: lwm2m.GetNamespace()}, lwm2m)
+				return lwm2m.Status.Phase == v1beta3.EmqxPluginStatusLoaded
+			}, timeout, interval).Should(BeTrue())
+
 			emqxReady <- "ready"
 		}(emqx)
 	}
