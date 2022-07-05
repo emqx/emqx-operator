@@ -4,15 +4,15 @@
 
 ## Background
 
-This article was deployed using minikube v1.20.0
+This article was deployed using Minikube v1.20.0
 
 ## Deployment Operator Controller
 
-This project can be run inside a kubernetes cluster
+This project can be run inside a Kubernetes cluster
 
 ### Prepare
 
-We using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it.
+We use a [cert-manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert-manager documentation](https://cert-manager.io/docs/installation/) to install it.
 
 ### Default static install
 
@@ -21,7 +21,7 @@ We using [cert manager](https://github.com/jetstack/cert-manager) for provisioni
 The default static configuration can be installed as follows:
 
 ```shell
-curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.2.0/emqx-operator-controller.yaml" | kubectl apply -f -
+kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.1/emqx-operator-controller.yaml"
 ```
 
 ### Installing with Helm
@@ -33,7 +33,7 @@ curl -f -L "https://github.com/emqx/emqx-operator/releases/download/1.2.0/emqx-o
    helm repo update
    ```
 
-2. Install EMQX Operator Controller by helm
+2. Install EMQX Operator Controller by helm:
 
    ```
    $ helm install emqx-operator emqx/emqx-operator \
