@@ -37,43 +37,48 @@ func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
 
 	defer close(c.StopChannel)
 
+	errChan := make(chan error)
 	go func() {
 		if err := c.ForwardPorts(); err != nil {
-			panic(err)
+			errChan <- err
+			// panic(err)
 		}
 	}()
 
-	<-c.PortForwardOptions.ReadyChannel
-
-	ports, err := c.GetPorts()
-	if err != nil {
+	select {
+	case err := <-errChan:
 		return nil, nil, err
-	}
-	if len(ports) == 0 {
-		return nil, nil, fmt.Errorf("not found listener port")
-	}
+	case <-c.PortForwardOptions.ReadyChannel:
+		ports, err := c.GetPorts()
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(ports) == 0 {
+			return nil, nil, fmt.Errorf("not found listener port")
+		}
 
-	url := url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("localhost:%d", ports[0].Local),
-		Path:   path,
-	}
+		url := url.URL{
+			Scheme: "http",
+			Host:   fmt.Sprintf("localhost:%d", ports[0].Local),
+			Path:   path,
+		}
 
-	httpClient := http.Client{}
-	req, err := http.NewRequest(method, url.String(), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	req.SetBasicAuth(c.Username, c.Password)
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, nil, err
-	}
+		httpClient := http.Client{}
+		req, err := http.NewRequest(method, url.String(), nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		req.SetBasicAuth(c.Username, c.Password)
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return nil, nil, err
+		}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return resp, nil, err
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return resp, nil, err
+		}
+		return resp, body, err
 	}
-	return resp, body, err
 }
