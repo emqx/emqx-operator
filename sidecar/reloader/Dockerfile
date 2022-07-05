@@ -19,6 +19,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -o reloader main.go
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/reloader .
-# USER 65532:65532
+USER 65532:65532
 
 ENTRYPOINT ["/reloader"]
