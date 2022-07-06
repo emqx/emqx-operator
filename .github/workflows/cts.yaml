@@ -32,7 +32,6 @@ jobs:
           tar -zxvf kubebuilder-tools
           sudo mv kubebuilder/ /usr/local/kubebuilder
       - run: make test
-      - run: go tool cover -func=cover.out
 
   deployment:
     runs-on: ubuntu-latest
