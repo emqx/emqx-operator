@@ -7,7 +7,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"k8s.io/apimachinery/pkg/types"
@@ -100,6 +102,14 @@ func checkDefaulting(emqx v1beta3.Emqx) {
 	Expect(emqx.GetServiceTemplate().Labels).Should(HaveKeyWithValue("foo", "bar"))
 	Expect(emqx.GetServiceTemplate().Annotations).Should(HaveKeyWithValue("foo", "bar"))
 	Expect(emqx.GetServiceTemplate().Spec.Selector).Should(HaveKeyWithValue("foo", "bar"))
+	Expect(emqx.GetServiceTemplate().Spec.Ports).Should(ConsistOf([]corev1.ServicePort{
+		{
+			Name:       "http-management-8081",
+			Port:       8081,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.FromInt(8081),
+		},
+	}))
 
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("log.to", "both"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("name", emqx.GetName()))
