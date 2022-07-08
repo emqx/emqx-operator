@@ -34,12 +34,28 @@ func (s *ServiceTemplate) Default(emqx Emqx) {
 	}
 
 	s.Spec.Selector = emqx.GetLabels()
-	s.Spec.Ports = []corev1.ServicePort{
+	s.MergePorts([]corev1.ServicePort{
 		{
 			Name:       "http-management-8081",
 			Port:       8081,
 			Protocol:   corev1.ProtocolTCP,
 			TargetPort: intstr.FromInt(8081),
 		},
+	})
+}
+
+func (s *ServiceTemplate) MergePorts(ports []corev1.ServicePort) {
+	ports = append(s.Spec.Ports, ports...)
+
+	result := make([]corev1.ServicePort, 0, len(ports))
+	temp := map[string]struct{}{}
+
+	for _, item := range ports {
+		if _, ok := temp[item.Name]; !ok {
+			temp[item.Name] = struct{}{}
+			result = append(result, item)
+		}
 	}
+
+	s.Spec.Ports = result
 }

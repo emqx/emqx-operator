@@ -117,7 +117,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	}
 
 	serviceTemplate := instance.GetServiceTemplate()
-	serviceTemplate.Spec.Ports = mergePorts(serviceTemplate.Spec.Ports, r.getListenerPortsByAPI(instance))
+	serviceTemplate.MergePorts(r.getListenerPortsByAPI(instance))
 	instance.SetServiceTemplate(serviceTemplate)
 	headlessSvc, svc, sts := generateSvc(instance, sts)
 	resources = append(resources, headlessSvc, svc)
@@ -887,21 +887,6 @@ func generateVolumeClaimTemplate(instance appsv1beta3.Emqx, Name string) corev1.
 
 func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
 	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
-}
-
-func mergePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
-	ports := append(ports1, ports2...)
-
-	result := make([]corev1.ServicePort, 0, len(ports))
-	temp := map[string]struct{}{}
-
-	for _, item := range ports {
-		if _, ok := temp[item.Name]; !ok {
-			temp[item.Name] = struct{}{}
-			result = append(result, item)
-		}
-	}
-	return result
 }
 
 func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
