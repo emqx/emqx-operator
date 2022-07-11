@@ -27,7 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	appscontrollers "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
+	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -96,24 +96,24 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	clientset, _ := kubernetes.NewForConfig(cfg)
-	handler := appscontrollers.Handler{
+	handler := appscontrollersv1beta3.Handler{
 		Client:        k8sClient,
 		Clientset:     *clientset,
 		Config:        *cfg,
 		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
 	}
 
-	err = (&appscontrollers.EmqxBrokerReconciler{
+	err = (&appscontrollersv1beta3.EmqxBrokerReconciler{
 		Handler: handler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&appscontrollers.EmqxEnterpriseReconciler{
+	err = (&appscontrollersv1beta3.EmqxEnterpriseReconciler{
 		Handler: handler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&appscontrollers.EmqxPluginReconciler{
+	err = (&appscontrollersv1beta3.EmqxPluginReconciler{
 		Handler: handler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
