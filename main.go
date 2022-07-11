@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	appscontrollers "github.com/emqx/emqx-operator/controllers/apps"
+	appscontrollers "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
 	//+kubebuilder:scaffold:imports
 )
 

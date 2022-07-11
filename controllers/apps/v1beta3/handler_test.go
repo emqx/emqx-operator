@@ -19,7 +19,7 @@ package apps_test
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/controllers/apps"
+	appscontrollers "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
 	json "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,7 +27,7 @@ import (
 )
 
 func TestIgnoreOtherContainer(t *testing.T) {
-	selectEmqxContainer := apps.IgnoreOtherContainers()
+	selectEmqxContainer := appscontrollers.IgnoreOtherContainers()
 
 	currentObject := &appsv1.StatefulSet{
 		Spec: appsv1.StatefulSetSpec{
