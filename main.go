@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	appscontrollers "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
+	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -102,28 +102,28 @@ func main() {
 
 	config := mgr.GetConfig()
 	clientset, _ := kubernetes.NewForConfig(config)
-	handler := appscontrollers.Handler{
+	handler := appscontrollersv1beta3.Handler{
 		Client:        mgr.GetClient(),
 		Clientset:     *clientset,
 		Config:        *config,
 		EventRecorder: mgr.GetEventRecorderFor("emqx-operator"),
 	}
 
-	if err := (&appscontrollers.EmqxBrokerReconciler{
+	if err := (&appscontrollersv1beta3.EmqxBrokerReconciler{
 		Handler: handler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX Broker")
 		os.Exit(1)
 	}
 
-	if err := (&appscontrollers.EmqxEnterpriseReconciler{
+	if err := (&appscontrollersv1beta3.EmqxEnterpriseReconciler{
 		Handler: handler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX Enterprise")
 		os.Exit(1)
 	}
 
-	if err = (&appscontrollers.EmqxPluginReconciler{
+	if err = (&appscontrollersv1beta3.EmqxPluginReconciler{
 		Handler: handler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
