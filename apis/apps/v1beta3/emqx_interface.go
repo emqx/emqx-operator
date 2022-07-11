@@ -48,6 +48,9 @@ type EmqxSpec interface {
 	GetInitContainers() []corev1.Container
 	SetInitContainers(containers []corev1.Container)
 
+	GetAdditionalContainers() []corev1.Container
+	SetAdditionalContainers(containers []corev1.Container)
+
 	GetImage() string
 	SetImage(image string)
 

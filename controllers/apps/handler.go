@@ -27,6 +27,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	emqxContainerName      = "emqx"
+	reloaderContainerName  = "reloader"
+	reloaderContainerImage = "emqx/emqx-operator-reloader:0.0.1"
+
+	// managermentUsername = "admin"
+	// managermentPassword = "public"
+	// managermentApiPort = "8081"
+
+)
+
 type Handler struct {
 	client.Client
 	kubernetes.Clientset
@@ -64,31 +75,21 @@ func (handler *Handler) getManagementField(obj appsv1beta3.Emqx) (username, pass
 }
 
 func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*http.Response, []byte, error) {
-	pods := &corev1.PodList{}
+	podList := &corev1.PodList{}
 	if err := handler.Client.List(
 		context.TODO(),
-		pods,
+		podList,
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(obj.GetLabels()),
 	); err != nil {
 		return nil, nil, err
 	}
 
-	if len(pods.Items) == 0 {
+	if len(podList.Items) == 0 {
 		return nil, nil, fmt.Errorf("not found pods")
 	}
 
-	var podName string
-findPod:
-	for _, pod := range pods.Items {
-		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == "emqx" && status.Ready {
-				podName = pod.Name
-				break findPod
-			}
-		}
-	}
-
+	podName := findReadyEmqxPod(podList)
 	if podName == "" {
 		return nil, nil, fmt.Errorf("pods not ready")
 	}
@@ -200,9 +201,7 @@ func (handler *Handler) CreateOrUpdateList(instance client.Object, resources []c
 	ownerRef := metav1.NewControllerRef(instance, instance.GetObjectKind().GroupVersionKind())
 	for _, resource := range resources {
 		addOwnerRefToObject(resource, *ownerRef)
-
-		nothing := func(client.Object) error { return nil }
-		err := handler.CreateOrUpdate(resource, nothing)
+		err := handler.CreateOrUpdate(resource, postFun)
 		if err != nil {
 			return err
 		}
@@ -321,12 +320,13 @@ func selectEmqxContainer(obj []byte) ([]byte, error) {
 	sts := &appsv1.StatefulSet{}
 	_ = json.Unmarshal(obj, sts)
 
-	for i, container := range sts.Spec.Template.Spec.Containers {
-		if container.Name != "emqx" && container.Name != "reloader" {
-			sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers[:i], sts.Spec.Template.Spec.Containers[i+1:]...)
+	containers := []corev1.Container{}
+	for _, container := range sts.Spec.Template.Spec.Containers {
+		if _, ok := sts.Annotations[container.Name]; ok {
+			containers = append(containers, container)
 		}
 	}
-
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, containers...)
 	return json.Marshal(sts)
 
 	// containers := gjson.GetBytes(obj, `spec.template.spec.containers.#(name=="emqx")#`)
@@ -335,4 +335,15 @@ func selectEmqxContainer(obj []byte) ([]byte, error) {
 	// 	return []byte{}, emperror.Wrap(err, "could not set byte sequence")
 	// }
 	// return newObj, nil
+}
+
+func findReadyEmqxPod(pods *corev1.PodList) string {
+	for _, pod := range pods.Items {
+		for _, status := range pod.Status.ContainerStatuses {
+			if status.Name == emqxContainerName && status.Ready {
+				return pod.Name
+			}
+		}
+	}
+	return ""
 }

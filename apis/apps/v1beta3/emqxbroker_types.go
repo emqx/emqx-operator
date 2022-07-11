@@ -54,13 +54,13 @@ type EmqxBrokerSpec struct {
 	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
 	Env        []corev1.EnvVar                  `json:"env,omitempty"`
 
-	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeName     string              `json:"nodeName,omitempty"`
-	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
-
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
-	EmqxTemplate   EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
+	Affinity             *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations          []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeName             string              `json:"nodeName,omitempty"`
+	NodeSelector         map[string]string   `json:"nodeSelector,omitempty"`
+	AdditionalContainers []corev1.Container  `json:"additionalContainers,omitempty"`
+	InitContainers       []corev1.Container  `json:"initContainers,omitempty"`
+	EmqxTemplate         EmqxBrokerTemplate  `json:"emqxTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -132,6 +132,13 @@ func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affin
 func (emqx *EmqxBroker) GetToleRations() []corev1.Toleration { return emqx.Spec.ToleRations }
 func (emqx *EmqxBroker) SetToleRations(tolerations []corev1.Toleration) {
 	emqx.Spec.ToleRations = tolerations
+}
+
+func (emqx *EmqxBroker) GetAdditionalContainers() []corev1.Container {
+	return emqx.Spec.InitContainers
+}
+func (emqx *EmqxBroker) SetAdditionalContainers(containers []corev1.Container) {
+	emqx.Spec.InitContainers = containers
 }
 
 func (emqx *EmqxBroker) GetInitContainers() []corev1.Container {
