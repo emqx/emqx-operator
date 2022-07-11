@@ -27,15 +27,6 @@
       ]
     },
     {
-      "title": "configuration",
-      "children": [
-        {
-          "title": "configuration",
-          "path": "configuration/configuration"
-        }
-      ]
-    },
-    {
       "title": "Tasks",
       "children": [
         {
@@ -91,15 +82,6 @@
         {
           "title": "快速开始",
           "path": "getting-started/getting-started"
-        }
-      ]
-    },
-    {
-      "title": "配置",
-      "children": [
-        {
-          "title": "配置",
-          "path": "configuration/configuration"
         }
       ]
     },
