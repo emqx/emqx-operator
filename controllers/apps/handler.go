@@ -257,10 +257,6 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 		obj = resource
 	}
 
-	if err := client.NewDryRunClient(handler.Client).Update(context.TODO(), obj); err != nil {
-		return fmt.Errorf("failed to dry update %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
-	}
-
 	patchResult, err := patch.DefaultPatchMaker.Calculate(u, obj, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to calculate patch for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
