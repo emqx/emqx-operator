@@ -1,17 +1,9 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.1 is released.
-
-### Features 🌈
-
-- When updating EMQX Plugin Custom Resources, it will not restart Pods.
-
-- EMQX Operator automatically binds ports to Service resources even if plugins or modules are enabled via EMQX Dashboard
+EMQX Operator 1.2.2 is released.
 
 ### Fix 🛠
 
-- We have added sidecar containers to reload the EMQX plugins when their configuration is updated
+- Fix the issue that the service template default port will overwrite the user set port error.
 
-### Broken Change 🚫
-
-- We no longer support the API version: `apps.emqx.io/v1beta2`
+- Fix the issue that service nodePort is out of range when updating EMQX Custom Resources.

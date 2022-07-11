@@ -6618,7 +6618,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.2.1
+        image: emqx/emqx-operator-controller:1.2.2
         livenessProbe:
           httpGet:
             path: /healthz
