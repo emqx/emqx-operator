@@ -89,9 +89,9 @@ kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.2/
    ```
 
 
-## 部署 EMQX 开源版
+## Deploy the EMQX Broker
 
-1. 部署 EMQX Broker Custom Resource
+1. Deploy EMQX Broker Custom Resource
 
    ```bash
    cat << "EOF" | kubectl apply -f -

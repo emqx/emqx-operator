@@ -53,14 +53,14 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
    ```
    cat << "EOF" | kubectl apply -f -
    apiVersion: apps.emqx.io/v1beta3
-   kind: EmqxBroker
+   kind: EmqxEnterprise
    metadata:
-     name: emqx
+     name: emqx-ee
      labels:
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx:4.4.5
+       image: emqx/emqx-ee:4.4.5
    EOF
    ```
 
@@ -102,7 +102,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
    EOF
    ```
 
-2. Check EMQX status
+2. 检查 EMQX 状态
 
    ```bash
    $ kubectl get pods
