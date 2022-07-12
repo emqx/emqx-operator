@@ -37,6 +37,7 @@ import (
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
+	"github.com/emqx/emqx-operator/pkg/handler"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -102,7 +103,7 @@ func main() {
 
 	config := mgr.GetConfig()
 	clientset, _ := kubernetes.NewForConfig(config)
-	handler := appscontrollersv1beta3.Handler{
+	handler := handler.Handler{
 		Client:        mgr.GetClient(),
 		Clientset:     *clientset,
 		Config:        *config,

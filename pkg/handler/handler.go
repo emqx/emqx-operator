@@ -1,4 +1,4 @@
-package apps
+package handler
 
 import (
 	"bytes"
@@ -17,7 +17,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -34,36 +33,7 @@ type Handler struct {
 	rest.Config
 }
 
-func (handler *Handler) getManagementField(obj appsv1beta3.Emqx) (username, password, apiPort string) {
-	username = "admin"
-	password = "public"
-	apiPort = "8081"
-
-	pluginsList := &appsv1beta3.EmqxPluginList{}
-	_ = handler.Client.List(context.TODO(), pluginsList, client.InNamespace(obj.GetNamespace()))
-
-	for _, plugin := range pluginsList.Items {
-		selector, _ := labels.ValidatedSelectorFromSet(plugin.Spec.Selector)
-		if selector.Empty() || !selector.Matches(labels.Set(obj.GetLabels())) {
-			continue
-		}
-		if plugin.Spec.PluginName == "emqx_management" {
-			if _, ok := plugin.Spec.Config["management.listener.http"]; ok {
-				apiPort = plugin.Spec.Config["management.listener.http"]
-			}
-			if _, ok := plugin.Spec.Config["management.default_application.id"]; ok {
-				username = plugin.Spec.Config["management.default_application.id"]
-			}
-			if _, ok := plugin.Spec.Config["management.default_application.secret"]; ok {
-				password = plugin.Spec.Config["management.default_application.secret"]
-			}
-		}
-	}
-
-	return
-}
-
-func (handler *Handler) requestAPI(obj appsv1beta3.Emqx, method, path string) (*http.Response, []byte, error) {
+func (handler *Handler) RequestAPI(obj appsv1beta3.Emqx, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
 	pods := &corev1.PodList{}
 	if err := handler.Client.List(
 		context.TODO(),
@@ -104,8 +74,6 @@ findPod:
 	); err != nil {
 		return nil, nil, err
 	}
-
-	username, password, apiPort := handler.getManagementField(obj)
 
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
 
@@ -216,7 +184,7 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 	err := handler.Client.Get(context.TODO(), client.ObjectKeyFromObject(obj), u)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return handler.doCreate(obj, postFun)
+			return handler.Create(obj, postFun)
 		}
 		return fmt.Errorf("failed to get %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
@@ -262,12 +230,12 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 		return fmt.Errorf("failed to calculate patch for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
 	if !patchResult.IsEmpty() {
-		return handler.doUpdate(obj, postFun)
+		return handler.Update(obj, postFun)
 	}
 	return nil
 }
 
-func (handler *Handler) doCreate(obj client.Object, postCreated func(client.Object) error) error {
+func (handler *Handler) Create(obj client.Object, postCreated func(client.Object) error) error {
 	switch obj.(type) {
 	case *appsv1beta3.EmqxBroker:
 	case *appsv1beta3.EmqxEnterprise:
@@ -284,7 +252,7 @@ func (handler *Handler) doCreate(obj client.Object, postCreated func(client.Obje
 	return postCreated(obj)
 }
 
-func (handler *Handler) doUpdate(obj client.Object, postUpdated func(client.Object) error) error {
+func (handler *Handler) Update(obj client.Object, postUpdated func(client.Object) error) error {
 	switch obj.(type) {
 	case *appsv1beta3.EmqxBroker:
 	case *appsv1beta3.EmqxEnterprise:
@@ -328,11 +296,8 @@ func selectEmqxContainer(obj []byte) ([]byte, error) {
 	}
 
 	return json.Marshal(sts)
+}
 
-	// containers := gjson.GetBytes(obj, `spec.template.spec.containers.#(name=="emqx")#`)
-	// newObj, err := sjson.SetBytes(obj, "spec.template.spec.containers", containers.String())
-	// if err != nil {
-	// 	return []byte{}, emperror.Wrap(err, "could not set byte sequence")
-	// }
-	// return newObj, nil
+func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
+	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
 }

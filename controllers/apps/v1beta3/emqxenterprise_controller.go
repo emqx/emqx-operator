@@ -24,13 +24,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/emqx/emqx-operator/pkg/handler"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 // EmqxEnterpriseReconciler reconciles a EmqxEnterprise object
 type EmqxEnterpriseReconciler struct {
-	Handler
+	handler.Handler
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch

@@ -28,6 +28,7 @@ import (
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
+	"github.com/emqx/emqx-operator/pkg/handler"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -96,7 +97,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	clientset, _ := kubernetes.NewForConfig(cfg)
-	handler := appscontrollersv1beta3.Handler{
+	handler := handler.Handler{
 		Client:        k8sClient,
 		Clientset:     *clientset,
 		Config:        *cfg,

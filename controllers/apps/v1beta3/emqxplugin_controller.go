@@ -28,12 +28,14 @@ import (
 	"github.com/tidwall/sjson"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/emqx/emqx-operator/pkg/handler"
 )
 
 type pluginByAPIReturn struct {
@@ -51,7 +53,7 @@ type pluginListByAPIReturn struct {
 
 // EmqxPluginReconciler reconciles a EmqxPlugin object
 type EmqxPluginReconciler struct {
-	Handler
+	handler.Handler
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxplugins,verbs=get;list;watch;create;update;patch;delete
@@ -102,7 +104,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			// Remove Finalizer. Once all finalizers have been
 			// removed, the object will be deleted.
 			controllerutil.RemoveFinalizer(instance, finalizer)
-			err := r.Update(ctx, instance)
+			err := r.Client.Update(ctx, instance)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -113,7 +115,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Add finalizer for this CR
 	if !controllerutil.ContainsFinalizer(instance, finalizer) {
 		controllerutil.AddFinalizer(instance, finalizer)
-		err := r.Update(ctx, instance)
+		err := r.Client.Update(ctx, instance)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -162,6 +164,36 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&appsv1beta3.EmqxPlugin{}).
 		Complete(r)
 }
+
+func (r *EmqxPluginReconciler) getManagementField(obj appsv1beta3.Emqx) (username, password, apiPort string) {
+	username = "admin"
+	password = "public"
+	apiPort = "8081"
+
+	pluginsList := &appsv1beta3.EmqxPluginList{}
+	_ = r.Client.List(context.TODO(), pluginsList, client.InNamespace(obj.GetNamespace()))
+
+	for _, plugin := range pluginsList.Items {
+		selector, _ := labels.ValidatedSelectorFromSet(plugin.Spec.Selector)
+		if selector.Empty() || !selector.Matches(labels.Set(obj.GetLabels())) {
+			continue
+		}
+		if plugin.Spec.PluginName == "emqx_management" {
+			if _, ok := plugin.Spec.Config["management.listener.http"]; ok {
+				apiPort = plugin.Spec.Config["management.listener.http"]
+			}
+			if _, ok := plugin.Spec.Config["management.default_application.id"]; ok {
+				username = plugin.Spec.Config["management.default_application.id"]
+			}
+			if _, ok := plugin.Spec.Config["management.default_application.secret"]; ok {
+				password = plugin.Spec.Config["management.default_application.secret"]
+			}
+		}
+	}
+
+	return
+}
+
 func (r *EmqxPluginReconciler) checkPluginStatusByAPI(emqx appsv1beta3.Emqx, pluginName string) error {
 	list, err := r.getPluginsByAPI(emqx)
 	if err != nil {
@@ -201,7 +233,8 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta3.Emqx, pluginNa
 }
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName, pluginName, reloadOrUnload string) error {
-	resp, _, err := r.Handler.requestAPI(emqx, "PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
+	username, password, apiPort := r.getManagementField(emqx)
+	resp, _, err := r.Handler.RequestAPI(emqx, "PUT", username, password, apiPort, fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
 	if err != nil {
 		return err
 	}
@@ -214,7 +247,8 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName
 func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta3.Emqx) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
 
-	resp, body, err := r.Handler.requestAPI(emqx, "GET", "api/v4/plugins")
+	username, password, apiPort := r.getManagementField(emqx)
+	resp, body, err := r.Handler.RequestAPI(emqx, "GET", username, password, apiPort, "api/v4/plugins")
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +320,7 @@ func (r *EmqxPluginReconciler) loadPluginConfig(plugin *appsv1beta3.EmqxPlugin, 
 	pluginsConfig.Data = configData
 
 	// Update plugin config
-	if err := r.doUpdate(pluginsConfig, func(_ client.Object) error { return nil }); err != nil {
+	if err := r.Handler.Update(pluginsConfig, func(_ client.Object) error { return nil }); err != nil {
 		return err
 	}
 
@@ -301,7 +335,7 @@ func (r *EmqxPluginReconciler) loadPluginConfig(plugin *appsv1beta3.EmqxPlugin, 
 		loadedPluginLine := plugin.Spec.PluginName + ".\n"
 		loadedPluginsStr += loadedPluginLine
 		loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
-		if err := r.doUpdate(loadedPlugins, func(_ client.Object) error { return nil }); err != nil {
+		if err := r.Handler.Update(loadedPlugins, func(_ client.Object) error { return nil }); err != nil {
 			return err
 		}
 	}
@@ -321,7 +355,7 @@ func (r *EmqxPluginReconciler) unloadPluginConfig(plugin *appsv1beta3.EmqxPlugin
 		loadedPluginLine := plugin.Spec.PluginName + ".\n"
 		loadedPluginsStr = loadedPluginsStr[:index] + loadedPluginsStr[index+len(loadedPluginLine):]
 		loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
-		if err := r.doUpdate(loadedPlugins, postfun); err != nil {
+		if err := r.Handler.Update(loadedPlugins, postfun); err != nil {
 			return err
 		}
 	}
