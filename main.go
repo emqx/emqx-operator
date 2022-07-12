@@ -36,7 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
+	appscontrollersv2alpha1 "github.com/emqx/emqx-operator/controllers/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	//+kubebuilder:scaffold:imports
 )
@@ -50,6 +52,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(appsv1beta3.AddToScheme(scheme))
+	utilruntime.Must(appsv2alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -134,6 +137,13 @@ func main() {
 		Handler: handler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
+		os.Exit(1)
+	}
+	if err = (&appscontrollersv2alpha1.EMQXReconciler{
+		Handler: handler,
+		Scheme:  mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EMQX")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

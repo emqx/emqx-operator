@@ -148,7 +148,6 @@ type EmqxEnterpriseSpec struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=emqx-ee
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
 //+kubebuilder:storageversion
 
