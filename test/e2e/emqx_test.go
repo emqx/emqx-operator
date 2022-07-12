@@ -19,7 +19,6 @@ package e2e_test
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"

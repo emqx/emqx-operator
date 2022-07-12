@@ -24,12 +24,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestIgnoreOtherContainer(t *testing.T) {
 	selectEmqxContainer := handler.IgnoreOtherContainers()
 
 	currentObject := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				handler.ManageContainersAnnotation: "emqx,reloader",
+			},
+		},
 		Spec: appsv1.StatefulSetSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
@@ -48,6 +54,11 @@ func TestIgnoreOtherContainer(t *testing.T) {
 	current, _ := json.ConfigCompatibleWithStandardLibrary.Marshal(currentObject)
 
 	modifiedObject := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				handler.ManageContainersAnnotation: "emqx,reloader",
+			},
+		},
 		Spec: appsv1.StatefulSetSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{

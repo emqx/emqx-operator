@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
@@ -26,6 +27,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	EmqxContainerName          = "emqx"
+	ReloaderContainerName      = "reloader"
+	ReloaderContainerImage     = "emqx/emqx-operator-reloader:0.0.1"
+	ManageContainersAnnotation = "apps.emqx.io/manage-containers"
+)
+
 type Handler struct {
 	client.Client
 	kubernetes.Clientset
@@ -33,7 +41,7 @@ type Handler struct {
 	rest.Config
 }
 
-func (handler *Handler) RequestAPI(obj appsv1beta3.Emqx, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
+func (handler *Handler) RequestAPI(obj client.Object, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
 	podList := &corev1.PodList{}
 	if err := handler.Client.List(
 		context.TODO(),
@@ -276,14 +284,14 @@ func IgnoreOtherContainers() patch.CalculateOption {
 func selectEmqxContainer(obj []byte) ([]byte, error) {
 	sts := &appsv1.StatefulSet{}
 	_ = json.Unmarshal(obj, sts)
-
+	containerNames := sts.Annotations[ManageContainersAnnotation]
 	containers := []corev1.Container{}
 	for _, container := range sts.Spec.Template.Spec.Containers {
-		if _, ok := sts.Annotations[container.Name]; ok {
+		if strings.Contains(containerNames, container.Name) {
 			containers = append(containers, container)
 		}
 	}
-	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, containers...)
+	sts.Spec.Template.Spec.Containers = containers
 	return json.Marshal(sts)
 }
 
@@ -294,7 +302,7 @@ func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
 func findReadyEmqxPod(pods *corev1.PodList) string {
 	for _, pod := range pods.Items {
 		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == "emqx" && status.Ready {
+			if status.Name == EmqxContainerName && status.Ready {
 				return pod.Name
 			}
 		}
