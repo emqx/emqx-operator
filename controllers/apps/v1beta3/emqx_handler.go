@@ -41,13 +41,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/emqx/emqx-operator/pkg/handler"
 	"github.com/tidwall/gjson"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 type EmqxReconciler struct {
-	Handler
+	handler.Handler
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
@@ -162,8 +163,38 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
 
+func (r *EmqxReconciler) getManagementField(obj appsv1beta3.Emqx) (username, password, apiPort string) {
+	username = "admin"
+	password = "public"
+	apiPort = "8081"
+
+	pluginsList := &appsv1beta3.EmqxPluginList{}
+	_ = r.Client.List(context.TODO(), pluginsList, client.InNamespace(obj.GetNamespace()))
+
+	for _, plugin := range pluginsList.Items {
+		selector, _ := labels.ValidatedSelectorFromSet(plugin.Spec.Selector)
+		if selector.Empty() || !selector.Matches(labels.Set(obj.GetLabels())) {
+			continue
+		}
+		if plugin.Spec.PluginName == "emqx_management" {
+			if _, ok := plugin.Spec.Config["management.listener.http"]; ok {
+				apiPort = plugin.Spec.Config["management.listener.http"]
+			}
+			if _, ok := plugin.Spec.Config["management.default_application.id"]; ok {
+				username = plugin.Spec.Config["management.default_application.id"]
+			}
+			if _, ok := plugin.Spec.Config["management.default_application.secret"]; ok {
+				password = plugin.Spec.Config["management.default_application.secret"]
+			}
+		}
+	}
+
+	return
+}
+
 func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []corev1.ServicePort {
-	resp, body, err := r.Handler.requestAPI(instance, "GET", "api/v4/listeners")
+	username, password, apiPort := r.getManagementField(instance)
+	resp, body, err := r.Handler.RequestAPI(instance, "GET", username, password, apiPort, "api/v4/listeners")
 	if err != nil {
 		return nil
 	}
@@ -217,7 +248,8 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []core
 }
 
 func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) *appsv1beta3.Condition {
-	resp, body, err := r.Handler.requestAPI(instance, "GET", "api/v4/brokers")
+	username, password, apiPort := r.getManagementField(instance)
+	resp, body, err := r.Handler.RequestAPI(instance, "GET", username, password, apiPort, "api/v4/brokers")
 	if err != nil {
 		condition := appsv1beta3.NewCondition(
 			appsv1beta3.ConditionRunning,
@@ -883,10 +915,6 @@ func generateVolumeClaimTemplate(instance appsv1beta3.Emqx, Name string) corev1.
 		pvc.Spec.VolumeMode = &fileSystem
 	}
 	return pvc
-}
-
-func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
-	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
 }
 
 func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
