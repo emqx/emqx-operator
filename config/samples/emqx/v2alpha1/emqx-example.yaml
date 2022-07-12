@@ -1,0 +1,71 @@
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
+metadata:
+  name: emqx-sample
+  labels:
+    "apps.emqx.io/instance": "emqx"
+spec:
+  imagePullSecrets:
+  securityContext:
+  emqxConfig:
+
+  coreTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: emqx
+        emqx.node.db_role: core
+      annotations:
+    spec:
+      affinity:
+      toleRations:
+      nodeName:
+      nodeSelector:
+
+      replicas:
+      image:
+      imagePullPolicy:
+      initContainers:
+      containers:
+
+      persistent:
+
+      extraVolumes:
+      extraVolumeMounts:
+      args:
+      resources:
+      readinessProbe:
+      livenessProbe:
+      startupProbe:
+
+      serviceTemplate:
+        metadata:
+        spec:
+
+
+  replicantTemplate:
+    metadata:
+      labels:
+      annotations:
+    spec:
+      affinity:
+      toleRations:
+      nodeName:
+      nodeSelector:
+
+      replicas:
+      image:
+      imagePullPolicy:
+      initContainers:
+      containers:
+
+      extraVolumes:
+      extraVolumeMounts:
+      args:
+      resources:
+      readinessProbe:
+      livenessProbe:
+      startupProbe:
+
+      serviceTemplate:
+        metadata:
+        spec:
