@@ -1,0 +1,58 @@
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
+metadata:
+  name: emqx-sample
+  labels:
+    "apps.emqx.io/instance": "emqx"
+spec:
+  coreTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: emqx
+        apps.emqx.io/db-role: core
+      annotations:
+    spec:
+      replicas: 3
+      image: "emqx/emqx:5.0.3"
+      serviceTemplate:
+        spec:
+          type: ClusterIP
+          selector:
+            app.kubernetes.io/instance: emqx
+            apps.emqx.io/db-role: core
+
+  replicantTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: emqx
+        apps.emqx.io/db-role: replicant
+    spec:
+      replicas: 5
+      image: "emqx/emqx:5.0.3"
+      serviceTemplate:
+        spec:
+         type: ClusterIP
+         ports:
+         - name: mqtt
+           port: 1883
+           protocol: TCP
+           targetPort: 1883
+           nodePort: null
+         - name: mqttssl
+           port: 8883
+           protocol: TCP
+           targetPort: 8883
+           nodePort: null
+         - name: ws
+           port: 8083
+           protocol: TCP
+           targetPort: 8083
+           nodePort: null
+         - name: wss
+           port: 8084
+           protocol: TCP
+           targetPort: 8084
+           nodePort: null
+         selector:
+           app.kubernetes.io/instance: emqx
+           apps.emqx.io/db-role: replicant

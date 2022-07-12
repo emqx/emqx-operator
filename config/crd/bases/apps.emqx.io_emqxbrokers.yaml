@@ -13,8 +13,6 @@ spec:
     kind: EmqxBroker
     listKind: EmqxBrokerList
     plural: emqxbrokers
-    shortNames:
-    - emqx
     singular: emqxbroker
   scope: Namespaced
   versions:

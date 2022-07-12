@@ -169,6 +169,32 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
+  - emqxes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.emqx.io
+  resources:
   - emqxplugins
   verbs:
   - create
