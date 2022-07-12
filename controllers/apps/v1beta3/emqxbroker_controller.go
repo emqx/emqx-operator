@@ -21,24 +21,26 @@ import (
 
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
+
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/emqx/emqx-operator/pkg/handler"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
-// EmqxEnterpriseReconciler reconciles a EmqxEnterprise object
-type EmqxEnterpriseReconciler struct {
-	Handler
+// EmqxBrokerReconciler reconciles a EmqxBroker object
+type EmqxBrokerReconciler struct {
+	handler.Handler
 }
 
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers/finalizers,verbs=update
 
-func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	instance := &appsv1beta3.EmqxEnterprise{}
+func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	instance := &appsv1beta3.EmqxBroker{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -47,14 +49,14 @@ func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	instance.SetAPIVersion(appsv1beta3.GroupVersion.Group + "/" + appsv1beta3.GroupVersion.Version)
-	instance.SetKind("EmqxEnterprise")
+	instance.SetKind("EmqxBroker")
 
 	return (&EmqxReconciler{Handler: r.Handler}).Do(ctx, instance)
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *EmqxEnterpriseReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *EmqxBrokerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv1beta3.EmqxEnterprise{}).
+		For(&appsv1beta3.EmqxBroker{}).
 		Complete(r)
 }

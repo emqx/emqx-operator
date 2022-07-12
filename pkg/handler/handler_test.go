@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apps_test
+package handler_test
 
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/controllers/apps"
+	"github.com/emqx/emqx-operator/pkg/handler"
 	json "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,7 +27,7 @@ import (
 )
 
 func TestIgnoreOtherContainer(t *testing.T) {
-	selectEmqxContainer := apps.IgnoreOtherContainers()
+	selectEmqxContainer := handler.IgnoreOtherContainers()
 
 	currentObject := &appsv1.StatefulSet{
 		Spec: appsv1.StatefulSetSpec{
