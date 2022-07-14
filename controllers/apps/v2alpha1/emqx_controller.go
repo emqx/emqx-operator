@@ -80,6 +80,17 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	// Check cluster status
+
+	condition := appsv2alpha1.NewCondition(
+		appsv2alpha1.ConditionRunning,
+		corev1.ConditionTrue,
+		"ClusterReady",
+		"All resources are ready",
+	)
+	instance.Status.SetCondition(*condition)
+	_ = r.Status().Update(ctx, instance)
+
 	return ctrl.Result{}, nil
 }
 
