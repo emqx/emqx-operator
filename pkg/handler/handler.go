@@ -33,7 +33,7 @@ type Handler struct {
 	rest.Config
 }
 
-func (handler *Handler) RequestAPI(obj appsv1beta3.Emqx, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
+func (handler *Handler) RequestAPI(obj client.Object, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
 	pods := &corev1.PodList{}
 	if err := handler.Client.List(
 		context.TODO(),
