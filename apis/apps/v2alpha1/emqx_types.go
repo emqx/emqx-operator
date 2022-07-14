@@ -17,6 +17,9 @@ limitations under the License.
 package v2alpha1
 
 import (
+	"sort"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -120,4 +123,55 @@ type EMQXList struct {
 
 func init() {
 	SchemeBuilder.Register(&EMQX{}, &EMQXList{})
+}
+
+// EMQX Status
+func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
+	now := metav1.Now()
+	nowString := now.Format(time.RFC3339)
+	return &Condition{
+		Type:               condType,
+		Status:             status,
+		LastUpdateTime:     nowString,
+		LastUpdateAt:       now,
+		LastTransitionTime: nowString,
+		Reason:             reason,
+		Message:            message,
+	}
+}
+
+func (s *EMQXStatus) SetCondition(c Condition) {
+	pos, cp := getCondition(s, c.Type)
+	if cp != nil &&
+		cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
+		now := metav1.Now()
+		nowString := now.Format(time.RFC3339)
+		s.Conditions[pos].LastUpdateAt = now
+		s.Conditions[pos].LastUpdateTime = nowString
+		s.sortConditions(s.Conditions)
+		return
+	}
+
+	if cp != nil {
+		s.Conditions[pos] = c
+	} else {
+		s.Conditions = append(s.Conditions, c)
+	}
+
+	s.sortConditions(s.Conditions)
+}
+
+func (s *EMQXStatus) sortConditions(conditions []Condition) {
+	sort.Slice(conditions, func(i, j int) bool {
+		return s.Conditions[j].LastUpdateAt.Before(&s.Conditions[i].LastUpdateAt)
+	})
+}
+
+func getCondition(status *EMQXStatus, t ConditionType) (int, *Condition) {
+	for i, c := range status.Conditions {
+		if t == c.Type {
+			return i, &c
+		}
+	}
+	return -1, nil
 }
