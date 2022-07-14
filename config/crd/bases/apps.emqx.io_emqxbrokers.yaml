@@ -6266,8 +6266,6 @@ spec:
                       type: string
                   type: object
                 type: array
-            required:
-            - replicas
             type: object
           status:
             description: Emqx Status defines the observed state of EMQX

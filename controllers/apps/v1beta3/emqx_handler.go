@@ -948,15 +948,6 @@ func generateEmqxContainer(instance appsv1beta3.Emqx) corev1.Container {
 	}
 }
 
-// func findEmqxContainer(containers []corev1.Container) corev1.Container {
-// 	for _, c := range containers {
-// 		if c.Name == handler.EmqxContainerName {
-// 			return c
-// 		}
-// 	}
-// 	return corev1.Container{}
-// }
-
 func generateAnnotationByContainers(containers []corev1.Container) string {
 	containerNames := []string{}
 	for _, c := range containers {

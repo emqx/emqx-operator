@@ -47,7 +47,7 @@ type EmqxBrokerTemplate struct {
 // EmqxBrokerSpec defines the desired state of EmqxBroker
 type EmqxBrokerSpec struct {
 	//+kubebuilder:default:=3
-	Replicas *int32 `json:"replicas,omitemptÔy"`
+	Replicas *int32 `json:"replicas,omitempty"`
 
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
