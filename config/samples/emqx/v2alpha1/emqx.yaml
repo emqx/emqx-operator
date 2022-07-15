@@ -32,27 +32,6 @@ spec:
       serviceTemplate:
         spec:
          type: ClusterIP
-         ports:
-         - name: mqtt
-           port: 1883
-           protocol: TCP
-           targetPort: 1883
-           nodePort: null
-         - name: mqttssl
-           port: 8883
-           protocol: TCP
-           targetPort: 8883
-           nodePort: null
-         - name: ws
-           port: 8083
-           protocol: TCP
-           targetPort: 8083
-           nodePort: null
-         - name: wss
-           port: 8084
-           protocol: TCP
-           targetPort: 8084
-           nodePort: null
          selector:
            apps.emqx.io/instance: emqx
            apps.emqx.io/db-role: replicant
