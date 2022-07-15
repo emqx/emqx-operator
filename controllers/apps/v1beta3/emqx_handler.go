@@ -34,6 +34,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,6 +50,7 @@ var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 type EmqxReconciler struct {
 	handler.Handler
+	Scheme *runtime.Scheme
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
@@ -80,7 +82,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		resources = append(resources, pluginResourceList...)
 
 		nothing := func(client.Object) error { return nil }
-		err = r.CreateOrUpdateList(instance, resources, nothing)
+		err = r.CreateOrUpdateList(instance, r.Scheme, resources, nothing)
 		if err != nil {
 			condition := appsv1beta3.NewCondition(
 				appsv1beta3.ConditionPluginInitialized,
@@ -140,7 +142,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	resources = append(resources, sts)
 
 	nothing := func(client.Object) error { return nil }
-	if err := r.CreateOrUpdateList(instance, resources, nothing); err != nil {
+	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, nothing); err != nil {
 		return ctrl.Result{}, err
 	}
 

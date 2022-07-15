@@ -15,7 +15,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -23,6 +22,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/remotecommand"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -164,10 +164,11 @@ func (handler *Handler) execToPod(namespace, podName, containerName, command str
 	return stdout.String(), stderr.String(), nil
 }
 
-func (handler *Handler) CreateOrUpdateList(instance client.Object, resources []client.Object, postFun func(client.Object) error) error {
-	ownerRef := metav1.NewControllerRef(instance, instance.GetObjectKind().GroupVersionKind())
+func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runtime.Scheme, resources []client.Object, postFun func(client.Object) error) error {
 	for _, resource := range resources {
-		addOwnerRefToObject(resource, *ownerRef)
+		if err := ctrl.SetControllerReference(instance, resource, scheme); err != nil {
+			return err
+		}
 
 		nothing := func(client.Object) error { return nil }
 		err := handler.CreateOrUpdate(resource, nothing)
@@ -296,8 +297,4 @@ func selectEmqxContainer(obj []byte) ([]byte, error) {
 	}
 
 	return json.Marshal(sts)
-}
-
-func addOwnerRefToObject(obj metav1.Object, ownerRef metav1.OwnerReference) {
-	obj.SetOwnerReferences(append(obj.GetOwnerReferences(), ownerRef))
 }

@@ -110,15 +110,20 @@ func main() {
 		EventRecorder: mgr.GetEventRecorderFor("emqx-operator"),
 	}
 
-	if err := (&appscontrollersv1beta3.EmqxBrokerReconciler{
+	emqxReconciler := appscontrollersv1beta3.EmqxReconciler{
 		Handler: handler,
+		Scheme:  mgr.GetScheme(),
+	}
+
+	if err := (&appscontrollersv1beta3.EmqxBrokerReconciler{
+		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX Broker")
 		os.Exit(1)
 	}
 
 	if err := (&appscontrollersv1beta3.EmqxEnterpriseReconciler{
-		Handler: handler,
+		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX Enterprise")
 		os.Exit(1)

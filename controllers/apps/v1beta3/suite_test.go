@@ -103,13 +103,18 @@ var _ = BeforeSuite(func() {
 		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
 	}
 
-	err = (&EmqxBrokerReconciler{
+	emqxReconciler := EmqxReconciler{
 		Handler: handler,
+		Scheme:  k8sManager.GetScheme(),
+	}
+
+	err = (&EmqxBrokerReconciler{
+		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&EmqxEnterpriseReconciler{
-		Handler: handler,
+		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

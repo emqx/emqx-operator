@@ -24,14 +24,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	"github.com/emqx/emqx-operator/pkg/handler"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 // EmqxEnterpriseReconciler reconciles a EmqxEnterprise object
 type EmqxEnterpriseReconciler struct {
-	handler.Handler
+	EmqxReconciler
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch
@@ -46,11 +45,7 @@ func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 		return ctrl.Result{}, err
 	}
-
-	instance.SetAPIVersion(appsv1beta3.GroupVersion.Group + "/" + appsv1beta3.GroupVersion.Version)
-	instance.SetKind("EmqxEnterprise")
-
-	return (&EmqxReconciler{Handler: r.Handler}).Do(ctx, instance)
+	return r.Do(ctx, instance)
 }
 
 // SetupWithManager sets up the controller with the Manager.

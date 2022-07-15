@@ -81,9 +81,6 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	instance.APIVersion = appsv1beta3.GroupVersion.Group + "/" + appsv1beta3.GroupVersion.Version
-	instance.Kind = "EmqxPlugin"
-
 	emqxList, err := r.getEmqxList(instance.Namespace, instance.Spec.Selector)
 	if err != nil {
 		return ctrl.Result{}, err
