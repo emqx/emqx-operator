@@ -63,18 +63,6 @@ findPod:
 		return nil, nil, fmt.Errorf("pods not ready")
 	}
 
-	configMap := &corev1.ConfigMap{}
-	if err := handler.Get(
-		context.TODO(),
-		client.ObjectKey{
-			Name:      fmt.Sprintf("%s-%s", obj.GetName(), "plugins-config"),
-			Namespace: obj.GetNamespace(),
-		},
-		configMap,
-	); err != nil {
-		return nil, nil, err
-	}
-
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
 
 	apiClient := apiClient.APIClient{
