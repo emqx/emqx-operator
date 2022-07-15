@@ -52,7 +52,7 @@ spec:
           sysctl -w net.netfilter.nf_conntrack_max=1000000
           sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.3
+    image: emqx/emqx-ee:4.4.5
     securityContext:
       runAsUser: 1000
       runAsGroup: 1000
