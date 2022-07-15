@@ -4,4 +4,4 @@ metadata:
   name: emqx
 spec:
   emqxTemplate:
-    image: emqx/emqx:4.4.1
+    image: emqx/emqx:4.4.5

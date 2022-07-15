@@ -46,8 +46,8 @@ jobs:
         apiVersion:
           - v1beta3
         emqx:
-          - [emqx, "emqx/emqx:4.4.1"]
-          - [emqx-ee, "emqx/emqx-ee:4.4.0"]
+          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqx.yaml"]
+          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqx-ee.yaml"]
     steps:
       - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
       - uses: actions/checkout@v2
@@ -66,7 +66,8 @@ jobs:
         with:
           apiVersion: ${{ matrix.apiVersion }}
           kind:  ${{ matrix.emqx[0] }}
-          image: ${{ matrix.emqx[1] }}
+          name: ${{ matrix.emqx[1] }}
+          file: ${{ matrix.emqx[2] }}
       - if: failure()
         run: kubectl describe sts ${{ matrix.emqx[0]}}
       - if: failure()
