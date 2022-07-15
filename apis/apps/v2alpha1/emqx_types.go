@@ -77,8 +77,7 @@ type EMQXSpec struct {
 type ConditionType string
 
 const (
-	ConditionPluginInitialized ConditionType = "PluginInitialized"
-	ConditionRunning           ConditionType = "Running"
+	ClusterRunning ConditionType = "Running"
 )
 
 type Condition struct {

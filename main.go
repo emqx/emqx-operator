@@ -139,6 +139,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
 		os.Exit(1)
 	}
+
 	if err = (&appscontrollersv2alpha1.EMQXReconciler{
 		Handler: handler,
 		Scheme:  mgr.GetScheme(),
