@@ -1,4 +1,4 @@
-package v1beta3_test
+package v1beta3
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -17,7 +16,7 @@ var _ = Describe("EMQX Broker", func() {
 		AfterEach(func() {
 			Expect(k8sClient.Delete(
 				context.Background(),
-				&v1beta3.EmqxBroker{
+				&EmqxBroker{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "broker",
 						Namespace: "default",
@@ -27,7 +26,7 @@ var _ = Describe("EMQX Broker", func() {
 		})
 		It("Check validate", func() {
 			checkValidation(
-				&v1beta3.EmqxBroker{
+				&EmqxBroker{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "broker",
 						Namespace: "default",
@@ -43,7 +42,7 @@ var _ = Describe("EMQX Enterprise", func() {
 		AfterEach(func() {
 			Expect(k8sClient.Delete(
 				context.Background(),
-				&v1beta3.EmqxEnterprise{
+				&EmqxEnterprise{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "enterprise",
 						Namespace: "default",
@@ -53,7 +52,7 @@ var _ = Describe("EMQX Enterprise", func() {
 		})
 		It("Check validation", func() {
 			checkValidation(
-				&v1beta3.EmqxEnterprise{
+				&EmqxEnterprise{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "enterprise",
 						Namespace: "default",
@@ -64,7 +63,7 @@ var _ = Describe("EMQX Enterprise", func() {
 	})
 })
 
-func checkValidation(emqx v1beta3.Emqx) {
+func checkValidation(emqx Emqx) {
 	emqx.SetImage("emqx/emqx:4.3.3")
 	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())
 
@@ -83,13 +82,13 @@ func checkValidation(emqx v1beta3.Emqx) {
 		return err
 	}, timeout, interval).Should(Succeed())
 
-	var obj v1beta3.Emqx
+	var obj Emqx
 
 	switch emqx.(type) {
-	case *v1beta3.EmqxBroker:
-		obj = &v1beta3.EmqxBroker{}
-	case *v1beta3.EmqxEnterprise:
-		obj = &v1beta3.EmqxEnterprise{}
+	case *EmqxBroker:
+		obj = &EmqxBroker{}
+	case *EmqxEnterprise:
+		obj = &EmqxEnterprise{}
 	}
 
 	obj.SetName(emqx.GetName())
