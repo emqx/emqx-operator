@@ -115,7 +115,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
    Node 'emqx@emqx-0.emqx-headless.default.svc.cluster.local' 4.4.5 is started
 
    $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl cluster status
-  Cluster status: #{running_nodes =>
+   Cluster status: #{running_nodes =>
                       ['emqx@emqx-0.emqx-headless.default.svc.cluster.local',
                        'emqx@emqx-1.emqx-headless.default.svc.cluster.local',
                        'emqx@emqx-2.emqx-headless.default.svc.cluster.local'],
