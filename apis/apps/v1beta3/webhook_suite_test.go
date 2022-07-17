@@ -1,4 +1,4 @@
-package v1beta3_test
+package v1beta3
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -72,7 +71,7 @@ var _ = BeforeSuite(func() {
 
 	scheme := runtime.NewScheme()
 
-	err = v1beta3.AddToScheme(scheme)
+	err = AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = admissionv1beta1.AddToScheme(scheme)
@@ -96,10 +95,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&v1beta3.EmqxBroker{}).SetupWebhookWithManager(mgr)
+	err = (&EmqxBroker{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&v1beta3.EmqxEnterprise{}).SetupWebhookWithManager(mgr)
+	err = (&EmqxEnterprise{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook

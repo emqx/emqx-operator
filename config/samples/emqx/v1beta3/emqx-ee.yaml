@@ -51,8 +51,12 @@ spec:
           sysctl -w net.ipv4.tcp_mem='378150000  504200000  756300000'
           sysctl -w net.netfilter.nf_conntrack_max=1000000
           sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
+  extraContainers:
+    - name: echoserver
+      image: cilium/echoserver:latest
+      imagePullPolicy: Always
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.3
+    image: emqx/emqx-ee:4.4.5
     securityContext:
       runAsUser: 1000
       runAsGroup: 1000

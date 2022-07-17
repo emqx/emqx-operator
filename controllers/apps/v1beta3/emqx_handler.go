@@ -34,6 +34,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,6 +50,7 @@ var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 type EmqxReconciler struct {
 	handler.Handler
+	Scheme *runtime.Scheme
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
@@ -57,7 +59,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	var loadedPlugins, defaultPluginsConfig *corev1.ConfigMap
 	var err error
 	var postFn func(client.Object) error
-	sts = generateStatefulSetDef(r, instance)
+	sts = generateStatefulSetDef(instance)
 	postFn = func(client.Object) error { return nil }
 	loadedPlugins, _ = generateLoadedPlugins(instance, sts)
 	defaultPluginsConfig, _ = generateDefaultPluginsConfig(instance, sts)
@@ -68,11 +70,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		if err != nil && !k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
-
+		var condition *appsv1beta3.Condition
 		pluginResourceList := generateInitPluginList(instance, pluginsList)
 		resources = append(resources, pluginResourceList...)
-		var condition *appsv1beta3.Condition
-		if err = r.CreateOrUpdateList(instance, resources, postFn); err != nil {
+		err = r.CreateOrUpdateList(instance, r.Scheme, resources, postFn)
+		if err != nil {
 			condition = appsv1beta3.NewCondition(
 				appsv1beta3.ConditionPluginInitialized,
 				corev1.ConditionFalse,
@@ -94,7 +96,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 
 	}
-
 	//add acl
 	acl, _ := generateAcl(instance, sts)
 	resources = append(resources, acl)
@@ -114,13 +115,14 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	headlessSvc, svc, _ := generateSvc(instance, sts)
 	resources = append(resources, headlessSvc, svc)
 
+	//add reloader container
 	reloaderContainer := generateReloaderContainer(r, instance, sts)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, reloaderContainer)
 	// add container annotation
 	sts.Annotations[handler.ManageContainersAnnotation] = generateAnnotationByContainers(sts.Spec.Template.Spec.Containers)
 	// StateFulSet should be created last
 	resources = append(resources, sts)
-	if err = r.CreateOrUpdateList(instance, resources, postFn); err != nil {
+	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, postFn); err != nil {
 		return ctrl.Result{}, err
 	}
 	condition := r.getClusterStatusByAPI(instance)
@@ -255,7 +257,7 @@ func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx) *appsv
 	)
 }
 
-func generateStatefulSetDef(r *EmqxReconciler, instance appsv1beta3.Emqx) *appsv1.StatefulSet {
+func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -292,7 +294,7 @@ func generateStatefulSetDef(r *EmqxReconciler, instance appsv1beta3.Emqx) *appsv
 	}
 	emqxContainer := generateEmqxContainer(instance)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, emqxContainer)
-	//add other container
+	//add extra container
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, instance.GetExtraContainers()...)
 	terminationGracePeriodSeconds := int64(60)
 	sts.Spec.Template.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
@@ -830,7 +832,6 @@ func generateVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) *appsv1.
 			MountPath: "/opt/emqx/log",
 		},
 	)
-	sts.Spec.Template.Spec.Containers[0] = container
 
 	if reflect.ValueOf(instance.GetPersistent()).IsZero() {
 		sts.Spec.Template.Spec.Volumes = append(
@@ -848,6 +849,7 @@ func generateVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) *appsv1.
 	}
 
 	container.VolumeMounts = append(container.VolumeMounts, instance.GetExtraVolumeMounts()...)
+	sts.Spec.Template.Spec.Containers[0] = container
 	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, instance.GetExtraVolumes()...)
 	return sts
 }

@@ -1,4 +1,4 @@
-package v1beta3_test
+package v1beta3
 
 import (
 	"context"
@@ -11,13 +11,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("EMQX Broker", func() {
 	Context("Check EMQX Broker", func() {
-		v1beta3EmqxBroker := &v1beta3.EmqxBroker{
+		v1beta3EmqxBroker := &EmqxBroker{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "broker",
 				Namespace: "default",
@@ -28,8 +27,8 @@ var _ = Describe("EMQX Broker", func() {
 					"foo": "bar",
 				},
 			},
-			Spec: v1beta3.EmqxBrokerSpec{
-				EmqxTemplate: v1beta3.EmqxBrokerTemplate{
+			Spec: EmqxBrokerSpec{
+				EmqxTemplate: EmqxBrokerTemplate{
 					Image: "emqx/emqx:4.4.3",
 				},
 			},
@@ -48,7 +47,7 @@ var _ = Describe("EMQX Broker", func() {
 
 var _ = Describe("EMQX Enterprise", func() {
 	Context("Check EMQX Enterprise", func() {
-		v1beta3EmqxEnterprise := &v1beta3.EmqxEnterprise{
+		v1beta3EmqxEnterprise := &EmqxEnterprise{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "enterprise",
 				Namespace: "default",
@@ -59,8 +58,8 @@ var _ = Describe("EMQX Enterprise", func() {
 					"foo": "bar",
 				},
 			},
-			Spec: v1beta3.EmqxEnterpriseSpec{
-				EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
+			Spec: EmqxEnterpriseSpec{
+				EmqxTemplate: EmqxEnterpriseTemplate{
 					Image: "emqx/emqx-ee:4.4.3",
 				},
 			},
@@ -77,7 +76,7 @@ var _ = Describe("EMQX Enterprise", func() {
 	})
 })
 
-func checkDefaulting(emqx v1beta3.Emqx) {
+func checkDefaulting(emqx Emqx) {
 	Eventually(func() error {
 		err := k8sClient.Get(
 			context.TODO(),

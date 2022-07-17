@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e_test
+package apps
 
 import (
 	"context"
@@ -27,7 +27,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,7 +73,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -104,17 +103,22 @@ var _ = BeforeSuite(func() {
 		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
 	}
 
-	err = (&appscontrollersv1beta3.EmqxBrokerReconciler{
+	emqxReconciler := EmqxReconciler{
 		Handler: handler,
+		Scheme:  k8sManager.GetScheme(),
+	}
+
+	err = (&EmqxBrokerReconciler{
+		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&appscontrollersv1beta3.EmqxEnterpriseReconciler{
-		Handler: handler,
+	err = (&EmqxEnterpriseReconciler{
+		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&appscontrollersv1beta3.EmqxPluginReconciler{
+	err = (&EmqxPluginReconciler{
 		Handler: handler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
