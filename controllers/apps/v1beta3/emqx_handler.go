@@ -73,7 +73,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		var condition *appsv1beta3.Condition
 		pluginResourceList := generateInitPluginList(instance, pluginsList)
 		resources = append(resources, pluginResourceList...)
-		err = r.CreateOrUpdateList(instance, r.Scheme, resources, postFn)
+
+		nothing := func(client.Object) error { return nil }
+		err = r.CreateOrUpdateList(instance, r.Scheme, resources, nothing)
 		if err != nil {
 			condition = appsv1beta3.NewCondition(
 				appsv1beta3.ConditionPluginInitialized,
