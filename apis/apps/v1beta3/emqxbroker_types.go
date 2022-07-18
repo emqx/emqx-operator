@@ -97,9 +97,7 @@ func (emqx *EmqxBroker) SetAPIVersion(version string) { emqx.APIVersion = versio
 func (emqx *EmqxBroker) GetKind() string     { return emqx.Kind }
 func (emqx *EmqxBroker) SetKind(kind string) { emqx.Kind = kind }
 
-func (emqx *EmqxBroker) GetReplicas() *int32 {
-	return emqx.Spec.Replicas
-}
+func (emqx *EmqxBroker) GetReplicas() *int32         { return emqx.Spec.Replicas }
 func (emqx *EmqxBroker) SetReplicas(replicas *int32) { emqx.Spec.Replicas = replicas }
 
 func (emqx *EmqxBroker) GetImagePullSecrets() []corev1.LocalObjectReference {
@@ -109,17 +107,13 @@ func (emqx *EmqxBroker) SetImagePullSecrets(imagePullSecrets []corev1.LocalObjec
 	emqx.Spec.ImagePullSecrets = imagePullSecrets
 }
 
-func (emqx *EmqxBroker) GetPersistent() corev1.PersistentVolumeClaimSpec {
-	return emqx.Spec.Persistent
-}
+func (emqx *EmqxBroker) GetPersistent() corev1.PersistentVolumeClaimSpec { return emqx.Spec.Persistent }
 func (emqx *EmqxBroker) SetPersistent(persistent corev1.PersistentVolumeClaimSpec) {
 	emqx.Spec.Persistent = persistent
 }
 
-func (emqx *EmqxBroker) GetNodeName() string { return emqx.Spec.NodeName }
-func (emqx *EmqxBroker) SetNodeName(nodeName string) {
-	emqx.Spec.NodeName = nodeName
-}
+func (emqx *EmqxBroker) GetNodeName() string         { return emqx.Spec.NodeName }
+func (emqx *EmqxBroker) SetNodeName(nodeName string) { emqx.Spec.NodeName = nodeName }
 
 func (emqx *EmqxBroker) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
 func (emqx *EmqxBroker) SetNodeSelector(nodeSelector map[string]string) {
@@ -134,16 +128,12 @@ func (emqx *EmqxBroker) SetToleRations(tolerations []corev1.Toleration) {
 	emqx.Spec.ToleRations = tolerations
 }
 
-func (emqx *EmqxBroker) GetExtraContainers() []corev1.Container {
-	return emqx.Spec.ExtraContainers
-}
+func (emqx *EmqxBroker) GetExtraContainers() []corev1.Container { return emqx.Spec.ExtraContainers }
 func (emqx *EmqxBroker) SetExtraContainers(containers []corev1.Container) {
 	emqx.Spec.ExtraContainers = containers
 }
 
-func (emqx *EmqxBroker) GetInitContainers() []corev1.Container {
-	return emqx.Spec.InitContainers
-}
+func (emqx *EmqxBroker) GetInitContainers() []corev1.Container { return emqx.Spec.InitContainers }
 func (emqx *EmqxBroker) SetInitContainers(containers []corev1.Container) {
 	emqx.Spec.InitContainers = containers
 }
@@ -180,15 +170,11 @@ func (emqx *EmqxBroker) SetSecurityContext(securityContext *corev1.PodSecurityCo
 func (emqx *EmqxBroker) GetEmqxConfig() EmqxConfig       { return emqx.Spec.EmqxTemplate.EmqxConfig }
 func (emqx *EmqxBroker) SetEmqxConfig(config EmqxConfig) { emqx.Spec.EmqxTemplate.EmqxConfig = config }
 
-func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar { return emqx.Spec.Env }
-func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) {
-	emqx.Spec.Env = env
-}
+func (emqx *EmqxBroker) GetEnv() []corev1.EnvVar    { return emqx.Spec.Env }
+func (emqx *EmqxBroker) SetEnv(env []corev1.EnvVar) { emqx.Spec.Env = env }
 
-func (emqx *EmqxBroker) GetArgs() []string { return emqx.Spec.EmqxTemplate.Args }
-func (emqx *EmqxBroker) SetArgs(args []string) {
-	emqx.Spec.EmqxTemplate.Args = args
-}
+func (emqx *EmqxBroker) GetArgs() []string     { return emqx.Spec.EmqxTemplate.Args }
+func (emqx *EmqxBroker) SetArgs(args []string) { emqx.Spec.EmqxTemplate.Args = args }
 
 func (emqx *EmqxBroker) GetReadinessProbe() *corev1.Probe {
 	return emqx.Spec.EmqxTemplate.ReadinessProbe
@@ -197,16 +183,12 @@ func (emqx *EmqxBroker) SetReadinessProbe(probe *corev1.Probe) {
 	emqx.Spec.EmqxTemplate.ReadinessProbe = probe
 }
 
-func (emqx *EmqxBroker) GetLivenessProbe() *corev1.Probe {
-	return emqx.Spec.EmqxTemplate.LivenessProbe
-}
+func (emqx *EmqxBroker) GetLivenessProbe() *corev1.Probe { return emqx.Spec.EmqxTemplate.LivenessProbe }
 func (emqx *EmqxBroker) SetLivenessProbe(probe *corev1.Probe) {
 	emqx.Spec.EmqxTemplate.LivenessProbe = probe
 }
 
-func (emqx *EmqxBroker) GetStartupProbe() *corev1.Probe {
-	return emqx.Spec.EmqxTemplate.StartupProbe
-}
+func (emqx *EmqxBroker) GetStartupProbe() *corev1.Probe { return emqx.Spec.EmqxTemplate.StartupProbe }
 func (emqx *EmqxBroker) SetStartupProbe(probe *corev1.Probe) {
 	emqx.Spec.EmqxTemplate.StartupProbe = probe
 }
@@ -218,10 +200,8 @@ func (emqx *EmqxBroker) SetServiceTemplate(serviceTemplate ServiceTemplate) {
 	emqx.Spec.EmqxTemplate.ServiceTemplate = serviceTemplate
 }
 
-func (emqx *EmqxBroker) GetACL() []string { return emqx.Spec.EmqxTemplate.ACL }
-func (emqx *EmqxBroker) SetACL(acl []string) {
-	emqx.Spec.EmqxTemplate.ACL = acl
-}
+func (emqx *EmqxBroker) GetACL() []string    { return emqx.Spec.EmqxTemplate.ACL }
+func (emqx *EmqxBroker) SetACL(acl []string) { emqx.Spec.EmqxTemplate.ACL = acl }
 
 func (emqx *EmqxBroker) GetModules() []EmqxBrokerModule { return emqx.Spec.EmqxTemplate.Modules }
 func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModule) {

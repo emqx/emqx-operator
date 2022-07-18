@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/record"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,9 +49,15 @@ import (
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
+const (
+	ReloaderContainerName  = "reloader"
+	ReloaderContainerImage = "emqx/emqx-operator-reloader:0.0.1"
+)
+
 type EmqxReconciler struct {
 	handler.Handler
 	Scheme *runtime.Scheme
+	record.EventRecorder
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
@@ -74,9 +81,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		pluginResourceList := generateInitPluginList(instance, pluginsList)
 		resources = append(resources, pluginResourceList...)
 
-		nothing := func(client.Object) error { return nil }
-		err = r.CreateOrUpdateList(instance, r.Scheme, resources, nothing)
+		err = r.CreateOrUpdateList(instance, r.Scheme, resources, postFn)
 		if err != nil {
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 			condition = appsv1beta3.NewCondition(
 				appsv1beta3.ConditionPluginInitialized,
 				corev1.ConditionFalse,
@@ -125,6 +132,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	// StateFulSet should be created last
 	resources = append(resources, sts)
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, postFn); err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		return ctrl.Result{}, err
 	}
 	condition := r.getClusterStatusByAPI(instance)
@@ -132,7 +140,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	if err = r.Status().Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
-	if condition.Reason != "ClusterReady" {
+	if !(condition.Type == appsv1beta3.ConditionRunning && condition.Status == corev1.ConditionTrue) {
 		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
@@ -269,7 +277,7 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 			Name:        instance.GetName(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: map[string]string{},
+			Annotations: instance.GetAnnotations(),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: instance.GetReplicas(),
@@ -925,8 +933,8 @@ func generateReloaderContainer(r *EmqxReconciler, instance appsv1beta3.Emqx, sts
 	username, password, apiPort := r.getManagementField(instance)
 	container := sts.Spec.Template.Spec.Containers[0]
 	return corev1.Container{
-		Name:            handler.ReloaderContainerName,
-		Image:           handler.ReloaderContainerImage,
+		Name:            ReloaderContainerName,
+		Image:           ReloaderContainerImage,
 		ImagePullPolicy: instance.GetImagePullPolicy(),
 		Env:             container.Env,
 		VolumeMounts:    container.VolumeMounts,

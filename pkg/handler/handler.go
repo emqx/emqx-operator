@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
@@ -22,23 +21,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/remotecommand"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	EmqxContainerName          = "emqx"
-	ReloaderContainerName      = "reloader"
-	ReloaderContainerImage     = "emqx/emqx-operator-reloader:0.0.1"
 	ManageContainersAnnotation = "apps.emqx.io/manage-containers"
+	EmqxContainerName          = "emqx"
 )
 
 type Handler struct {
 	client.Client
 	kubernetes.Clientset
-	record.EventRecorder
 	rest.Config
 }
 
@@ -60,18 +55,6 @@ func (handler *Handler) RequestAPI(obj client.Object, method, username, password
 	podName := findReadyEmqxPod(podList)
 	if podName == "" {
 		return nil, nil, fmt.Errorf("pods not ready")
-	}
-
-	configMap := &corev1.ConfigMap{}
-	if err := handler.Get(
-		context.TODO(),
-		client.ObjectKey{
-			Name:      fmt.Sprintf("%s-%s", obj.GetName(), "plugins-config"),
-			Namespace: obj.GetNamespace(),
-		},
-		configMap,
-	); err != nil {
-		return nil, nil, err
 	}
 
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
@@ -116,8 +99,6 @@ func (handler *Handler) ExecToPods(obj client.Object, containerName, command str
 		if err != nil {
 			return fmt.Errorf("exec %s container %s in pod %s failed, stdout: %v, stderr: %v, error: %v", command, containerName, pod.GetName(), stdout, stderr, err)
 		}
-		str := fmt.Sprintf("exec %s to container %s successfully", command, containerName)
-		handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Exec", str)
 	}
 	return nil
 }
@@ -169,7 +150,6 @@ func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runti
 			return err
 		}
 		err := handler.CreateOrUpdate(resource, postFun)
-		log.Printf("handler create or update list er:%v", err)
 		if err != nil {
 			return err
 		}
@@ -247,7 +227,6 @@ func (handler *Handler) Create(obj client.Object, postCreated func(client.Object
 	if err := handler.Client.Create(context.TODO(), obj); err != nil {
 		return fmt.Errorf("failed to create %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
-	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Created", "Create resource successfully")
 	return postCreated(obj)
 }
 
@@ -264,18 +243,17 @@ func (handler *Handler) Update(obj client.Object, postUpdated func(client.Object
 	if err := handler.Client.Update(context.TODO(), obj); err != nil {
 		return fmt.Errorf("failed to update %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
-	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
 	return postUpdated(obj)
 }
 
 func IgnoreOtherContainers() patch.CalculateOption {
 	return func(current, modified []byte) ([]byte, []byte, error) {
-		current, err := selectEmqxContainer(current)
+		current, err := selectManagerContainer(current)
 		if err != nil {
 			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
 		}
 
-		modified, err = selectEmqxContainer(modified)
+		modified, err = selectManagerContainer(modified)
 		if err != nil {
 			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
 		}
@@ -284,7 +262,7 @@ func IgnoreOtherContainers() patch.CalculateOption {
 	}
 }
 
-func selectEmqxContainer(obj []byte) ([]byte, error) {
+func selectManagerContainer(obj []byte) ([]byte, error) {
 	sts := &appsv1.StatefulSet{}
 	_ = json.Unmarshal(obj, sts)
 	containerNames := sts.Annotations[ManageContainersAnnotation]

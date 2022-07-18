@@ -97,15 +97,15 @@ var _ = BeforeSuite(func() {
 
 	clientset, _ := kubernetes.NewForConfig(cfg)
 	handler := handler.Handler{
-		Client:        k8sClient,
-		Clientset:     *clientset,
-		Config:        *cfg,
-		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
+		Client:    k8sClient,
+		Clientset: *clientset,
+		Config:    *cfg,
 	}
 
 	emqxReconciler := EmqxReconciler{
-		Handler: handler,
-		Scheme:  k8sManager.GetScheme(),
+		Handler:       handler,
+		Scheme:        k8sManager.GetScheme(),
+		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
 	}
 
 	err = (&EmqxBrokerReconciler{
