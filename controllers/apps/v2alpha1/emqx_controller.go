@@ -93,7 +93,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	listenerPorts, err := r.getListenerPortsByAPI(sts)
 	if err != nil {
-		r.EventRecorder.Event(sts, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 	}
 
 	svcList := generateService(instance, listenerPorts)
@@ -125,15 +125,51 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
+	readyCoreReplicas := int32(0)
+	readyReplicantReplicas := int32(0)
+	nodeStatuses, err := r.getNodeStatuesByAPI(sts)
+	if err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
+	}
+	if nodeStatuses != nil {
+		instance.Status.NodeStatuses = nodeStatuses
+
+		for _, node := range nodeStatuses {
+			if node.NodeStatus == "Running" {
+				if node.Role == "core" {
+					readyCoreReplicas++
+				}
+				if node.Role == "replicant" {
+					readyReplicantReplicas++
+				}
+			}
+		}
+	}
+
+	if isExistReplicant(instance) {
+		instance.Status.ReplicantReplicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
+		instance.Status.ReadyReplicantReplicas = readyReplicantReplicas
+	} else {
+		instance.Status.ReplicantReplicas = 0
+		instance.Status.ReadyReplicantReplicas = 0
+	}
+	instance.Status.CoreReplicas = *instance.Spec.CoreTemplate.Spec.Replicas
+	instance.Status.ReadyCoreReplicas = readyCoreReplicas
+
+	if instance.Status.CoreReplicas == instance.Status.ReadyCoreReplicas && instance.Status.ReplicantReplicas == instance.Status.ReadyReplicantReplicas {
+		condition := appsv2alpha1.NewCondition(
+			appsv2alpha1.ClusterRunning,
+			corev1.ConditionTrue,
+			"ClusterReady",
+			"All node are ready",
+		)
+		instance.Status.SetCondition(*condition)
+	}
+
 	// Check cluster status
-	condition := appsv2alpha1.NewCondition(
-		appsv2alpha1.ClusterRunning,
-		corev1.ConditionTrue,
-		"ClusterReady",
-		"All resources are ready",
-	)
-	instance.Status.SetCondition(*condition)
-	_ = r.Status().Update(ctx, instance)
+	if err := r.Status().Update(ctx, instance); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
@@ -143,6 +179,22 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv2alpha1.EMQX{}).
 		Complete(r)
+}
+
+func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNodeStatus, error) {
+	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, "api/v5/nodes")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get listeners: %v", err)
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to get listener, status : %s, body: %s", resp.Status, body)
+	}
+
+	nodeStatuses := []appsv2alpha1.EMQXNodeStatus{}
+	if err := json.Unmarshal(body, &nodeStatuses); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
+	}
+	return nodeStatuses, nil
 }
 
 type emqxListener struct {

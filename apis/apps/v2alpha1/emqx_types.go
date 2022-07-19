@@ -92,9 +92,22 @@ type Condition struct {
 	Message string `json:"message,omitempty"`
 }
 
+type EMQXNodeStatus struct {
+	Node       string `json:"node,omitempty"`
+	NodeStatus string `json:"node_status,omitempty"`
+	OTPRelease string `json:"otp_release,omitempty"`
+	Version    string `json:"version,omitempty"`
+	Role       string `json:"role,omitempty"`
+}
+
 // EMQXStatus defines the observed state of EMQX
 type EMQXStatus struct {
-	Conditions []Condition `json:"conditions,omitempty"`
+	CoreReplicas           int32            `json:"coreReplicas,omitempty"`
+	ReadyCoreReplicas      int32            `json:"readyCoreReplicas,omitempty"`
+	ReplicantReplicas      int32            `json:"replicantReplicas,omitempty"`
+	ReadyReplicantReplicas int32            `json:"readyReplicantReplicas,omitempty"`
+	NodeStatuses           []EMQXNodeStatus `json:"nodes,omitempty"`
+	Conditions             []Condition      `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
