@@ -52,8 +52,13 @@ spec:
           sysctl -w net.netfilter.nf_conntrack_max=1000000
           sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
   extraContainers:
-    - name: helloword
-      image: hello-world
+    - name: extrabusybox
+      image: busybox
+      command:
+        - /bin/sh
+        - -c
+        - |
+          tail -f /dev/null
   emqxTemplate:
     image: emqx/emqx-ee:4.4.5
     securityContext:
