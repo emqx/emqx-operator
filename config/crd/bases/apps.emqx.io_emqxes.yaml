@@ -12970,6 +12970,33 @@ spec:
                   - type
                   type: object
                 type: array
+              coreReplicas:
+                format: int32
+                type: integer
+              nodes:
+                items:
+                  properties:
+                    node:
+                      type: string
+                    node_status:
+                      type: string
+                    otp_release:
+                      type: string
+                    role:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                type: array
+              readyCoreReplicas:
+                format: int32
+                type: integer
+              readyReplicantReplicas:
+                format: int32
+                type: integer
+              replicantReplicas:
+                format: int32
+                type: integer
             type: object
         type: object
     served: true
