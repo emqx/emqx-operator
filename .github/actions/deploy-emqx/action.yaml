@@ -1,10 +1,6 @@
 name: Deployment emqx by operator
 description: "Deployment emqx by operator, scale pod number, and check emqx cluster status"
 inputs:
-  apiVersion:
-    description: "API version"
-    required: true
-    default: "v1beta3"
   kind:
     description: "Kind name"
     required: true
@@ -24,79 +20,12 @@ runs:
     - name: Deployment emqx
       shell: bash
       run: kubectl apply -f ${{ inputs.file }}
-    - name: Check emqx pods status
+    - name: Check emqx custom resource status
       shell: bash
       run: |
-        set -euo pipefail
-        while ! kubectl describe sts ${{ inputs.name }} | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
-          echo "waiting ${{ inputs.name }} pod running"
-          sleep 1
-        done
-        echo "==========================="
-        echo "${{ inputs.name }} pod run successfully"
-    - name: Check emqx broker status
-      shell: bash
-      run: |
-        set -euo pipefail
-        while ! kubectl exec -i ${{ inputs.name}}-0 -c emqx -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
-          echo "waiting ${{ inputs.name}} broker running"
-          sleep 1
-        done
-        echo "==========================="
-        echo "${{ inputs.name }} run successfully"
-    - name: Check emqx cluster status
-      shell: bash
-      run: |
-        set -euo pipefail
         while
-          nodes="$(kubectl exec -i ${{ inputs.name}}-0 -c emqx -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
-          [ "$nodes" != "3" ];
+          [ -z "$(kubectl get ${{ inputs.kind }} ${{ inputs.name }} -o json | jq '.status.conditions[] | select((.type == "Running") and (.status == "True"))')" ];
         do
-          echo "waiting ${{ inputs.name}} cluster scale"
+          echo "waiting ${{ inputs.name}}"
           sleep 1
         done
-        echo "==========================="
-        echo "${{ inputs.name }} cluster successfully"
-    - name: Scale emqx replicas
-      shell: bash
-      run: kubectl scale --replicas=5 ${{ inputs.kind }}/${{ inputs.name }}
-      # run: |
-      #   kubectl patch ${{ inputs.kind }}/${{ inputs.name }} -p '{"spec":{"replicas": 5}}' --type merge
-    - name: Check scale
-      shell: bash
-      run: |
-        set -euo pipefail
-        while ! kubectl describe sts ${{ inputs.name}} | grep -qE '^Pods[ \t]+Status:[ \t]+5 Running.*'; do
-          echo "waiting scale ${{ inputs.name}} to 5"
-          sleep 1
-        done
-        echo "==========================="
-        echo "${{ inputs.name }} scale successfully"
-    - name: Check emqx broker status
-      shell: bash
-      run: |
-        set -euo pipefail
-        while ! kubectl exec -i ${{ inputs.name}}-4 -c emqx -- emqx_ctl status | grep -qE 'Node\s.*@.*\sis\sstarted'; do
-          echo "waiting ${{ inputs.name}} broker running"
-          sleep 1
-        done
-        echo "${{ inputs.name }} broker run successfully"
-    - name: Check emqx cluster status
-      shell: bash
-      run: |
-        set -euo pipefail
-        while
-          nodes="$(kubectl exec -i ${{ inputs.name}}-4 -c emqx -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
-          [ "$nodes" != "5" ];
-        do
-          echo "waiting ${{ inputs.name}} cluster scale"
-          sleep 1
-        done
-        echo "==========================="
-        echo "${{ inputs.name }} cluster successfully"
-    - if: success()
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "==========================="
-        echo "all check successfully"
