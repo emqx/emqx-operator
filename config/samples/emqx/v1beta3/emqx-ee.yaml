@@ -53,7 +53,7 @@ spec:
           sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
   extraContainers:
     - name: helloword
-      image: rancher/hello-world:latest
+      image: hello-world
   emqxTemplate:
     image: emqx/emqx-ee:4.4.5
     securityContext:
