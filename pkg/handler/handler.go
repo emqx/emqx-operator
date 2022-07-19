@@ -20,7 +20,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/remotecommand"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +28,6 @@ import (
 type Handler struct {
 	client.Client
 	kubernetes.Clientset
-	record.EventRecorder
 	rest.Config
 }
 
@@ -105,8 +103,6 @@ func (handler *Handler) ExecToPods(obj client.Object, containerName, command str
 		if err != nil {
 			return fmt.Errorf("exec %s container %s in pod %s failed, stdout: %v, stderr: %v, error: %v", command, containerName, pod.GetName(), stdout, stderr, err)
 		}
-		str := fmt.Sprintf("exec %s to container %s successfully", command, containerName)
-		handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Exec", str)
 	}
 	return nil
 }
@@ -237,7 +233,6 @@ func (handler *Handler) Create(obj client.Object, postCreated func(client.Object
 	if err := handler.Client.Create(context.TODO(), obj); err != nil {
 		return fmt.Errorf("failed to create %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
-	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Created", "Create resource successfully")
 	return postCreated(obj)
 }
 
@@ -254,7 +249,6 @@ func (handler *Handler) Update(obj client.Object, postUpdated func(client.Object
 	if err := handler.Client.Update(context.TODO(), obj); err != nil {
 		return fmt.Errorf("failed to update %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
-	handler.EventRecorder.Event(obj, corev1.EventTypeNormal, "Updated", "Update resource successfully")
 	return postUpdated(obj)
 }
 
