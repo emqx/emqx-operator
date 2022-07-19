@@ -185,6 +185,7 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 	opts := []patch.CalculateOption{}
 	switch resource := obj.(type) {
 	case *appsv1.StatefulSet:
+		_ = client.NewDryRunClient(handler.Client).Update(context.TODO(), obj)
 		opts = append(
 			opts,
 			patch.IgnoreStatusFields(),
