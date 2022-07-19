@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
@@ -25,6 +26,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	ManageContainersAnnotation = "apps.emqx.io/manage-containers"
+	EmqxContainerName          = "emqx"
+)
+
 type Handler struct {
 	client.Client
 	kubernetes.Clientset
@@ -32,31 +38,21 @@ type Handler struct {
 }
 
 func (handler *Handler) RequestAPI(obj client.Object, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
-	pods := &corev1.PodList{}
+	podList := &corev1.PodList{}
 	if err := handler.Client.List(
 		context.TODO(),
-		pods,
+		podList,
 		client.InNamespace(obj.GetNamespace()),
 		client.MatchingLabels(obj.GetLabels()),
 	); err != nil {
 		return nil, nil, err
 	}
 
-	if len(pods.Items) == 0 {
+	if len(podList.Items) == 0 {
 		return nil, nil, fmt.Errorf("not found pods")
 	}
 
-	var podName string
-findPod:
-	for _, pod := range pods.Items {
-		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == "emqx" && status.Ready {
-				podName = pod.Name
-				break findPod
-			}
-		}
-	}
-
+	podName := findReadyEmqxPod(podList)
 	if podName == "" {
 		return nil, nil, fmt.Errorf("pods not ready")
 	}
@@ -153,9 +149,7 @@ func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runti
 		if err := ctrl.SetControllerReference(instance, resource, scheme); err != nil {
 			return err
 		}
-
-		nothing := func(client.Object) error { return nil }
-		err := handler.CreateOrUpdate(resource, nothing)
+		err := handler.CreateOrUpdate(resource, postFun)
 		if err != nil {
 			return err
 		}
@@ -254,12 +248,12 @@ func (handler *Handler) Update(obj client.Object, postUpdated func(client.Object
 
 func IgnoreOtherContainers() patch.CalculateOption {
 	return func(current, modified []byte) ([]byte, []byte, error) {
-		current, err := selectEmqxContainer(current)
+		current, err := selectManagerContainer(current)
 		if err != nil {
 			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
 		}
 
-		modified, err = selectEmqxContainer(modified)
+		modified, err = selectManagerContainer(modified)
 		if err != nil {
 			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
 		}
@@ -268,15 +262,27 @@ func IgnoreOtherContainers() patch.CalculateOption {
 	}
 }
 
-func selectEmqxContainer(obj []byte) ([]byte, error) {
+func selectManagerContainer(obj []byte) ([]byte, error) {
 	sts := &appsv1.StatefulSet{}
 	_ = json.Unmarshal(obj, sts)
-
-	for i, container := range sts.Spec.Template.Spec.Containers {
-		if container.Name != "emqx" && container.Name != "reloader" {
-			sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers[:i], sts.Spec.Template.Spec.Containers[i+1:]...)
+	containerNames := sts.Annotations[ManageContainersAnnotation]
+	containers := []corev1.Container{}
+	for _, container := range sts.Spec.Template.Spec.Containers {
+		if strings.Contains(containerNames, container.Name) {
+			containers = append(containers, container)
 		}
 	}
-
+	sts.Spec.Template.Spec.Containers = containers
 	return json.Marshal(sts)
+}
+
+func findReadyEmqxPod(pods *corev1.PodList) string {
+	for _, pod := range pods.Items {
+		for _, status := range pod.Status.ContainerStatuses {
+			if status.Name == EmqxContainerName && status.Ready {
+				return pod.Name
+			}
+		}
+	}
+	return ""
 }

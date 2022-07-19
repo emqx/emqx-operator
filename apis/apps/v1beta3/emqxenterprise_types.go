@@ -65,8 +65,9 @@ type EmqxEnterpriseSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
-	InitContainers []corev1.Container     `json:"initContainers,omitempty"`
-	EmqxTemplate   EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
+	ExtraContainers []corev1.Container     `json:"extraContainers,omitempty"`
+	InitContainers  []corev1.Container     `json:"initContainers,omitempty"`
+	EmqxTemplate    EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -145,6 +146,13 @@ func (emqx *EmqxEnterprise) GetInitContainers() []corev1.Container {
 }
 func (emqx *EmqxEnterprise) SetInitContainers(containers []corev1.Container) {
 	emqx.Spec.InitContainers = containers
+}
+
+func (emqx *EmqxEnterprise) GetExtraContainers() []corev1.Container {
+	return emqx.Spec.ExtraContainers
+}
+func (emqx *EmqxEnterprise) SetExtraContainers(containers []corev1.Container) {
+	emqx.Spec.ExtraContainers = containers
 }
 
 func (emqx *EmqxEnterprise) GetImage() string      { return emqx.Spec.EmqxTemplate.Image }

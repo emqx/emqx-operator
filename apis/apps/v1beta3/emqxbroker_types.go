@@ -54,13 +54,13 @@ type EmqxBrokerSpec struct {
 	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
 	Env        []corev1.EnvVar                  `json:"env,omitempty"`
 
-	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeName     string              `json:"nodeName,omitempty"`
-	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
-
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
-	EmqxTemplate   EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
+	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeName        string              `json:"nodeName,omitempty"`
+	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
+	ExtraContainers []corev1.Container  `json:"extraContainers,omitempty"`
+	InitContainers  []corev1.Container  `json:"initContainers,omitempty"`
+	EmqxTemplate    EmqxBrokerTemplate  `json:"emqxTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -91,7 +91,9 @@ func init() {
 	SchemeBuilder.Register(&EmqxBroker{}, &EmqxBrokerList{})
 }
 
-func (emqx *EmqxBroker) GetAPIVersion() string        { return emqx.APIVersion }
+func (emqx *EmqxBroker) GetAPIVersion() string {
+	return emqx.APIVersion
+}
 func (emqx *EmqxBroker) SetAPIVersion(version string) { emqx.APIVersion = version }
 
 func (emqx *EmqxBroker) GetKind() string     { return emqx.Kind }
@@ -121,17 +123,28 @@ func (emqx *EmqxBroker) SetNodeName(nodeName string) {
 	emqx.Spec.NodeName = nodeName
 }
 
-func (emqx *EmqxBroker) GetNodeSelector() map[string]string { return emqx.Spec.NodeSelector }
+func (emqx *EmqxBroker) GetNodeSelector() map[string]string {
+	return emqx.Spec.NodeSelector
+}
 func (emqx *EmqxBroker) SetNodeSelector(nodeSelector map[string]string) {
 	emqx.Spec.NodeSelector = nodeSelector
 }
 
-func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity         { return emqx.Spec.Affinity }
-func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) { emqx.Spec.Affinity = affinity }
+func (emqx *EmqxBroker) GetAffinity() *corev1.Affinity {
+	return emqx.Spec.Affinity
+}
+func (emqx *EmqxBroker) SetAffinity(affinity *corev1.Affinity) {
+	emqx.Spec.Affinity = affinity
+}
 
 func (emqx *EmqxBroker) GetToleRations() []corev1.Toleration { return emqx.Spec.ToleRations }
 func (emqx *EmqxBroker) SetToleRations(tolerations []corev1.Toleration) {
 	emqx.Spec.ToleRations = tolerations
+}
+
+func (emqx *EmqxBroker) GetExtraContainers() []corev1.Container { return emqx.Spec.ExtraContainers }
+func (emqx *EmqxBroker) SetExtraContainers(containers []corev1.Container) {
+	emqx.Spec.ExtraContainers = containers
 }
 
 func (emqx *EmqxBroker) GetInitContainers() []corev1.Container {

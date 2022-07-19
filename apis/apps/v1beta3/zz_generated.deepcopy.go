@@ -156,6 +156,13 @@ func (in *EmqxBrokerSpec) DeepCopyInto(out *EmqxBrokerSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.ExtraContainers != nil {
+		in, out := &in.ExtraContainers, &out.ExtraContainers
+		*out = make([]v1.Container, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.InitContainers != nil {
 		in, out := &in.InitContainers, &out.InitContainers
 		*out = make([]v1.Container, len(*in))
@@ -383,6 +390,13 @@ func (in *EmqxEnterpriseSpec) DeepCopyInto(out *EmqxEnterpriseSpec) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.ExtraContainers != nil {
+		in, out := &in.ExtraContainers, &out.ExtraContainers
+		*out = make([]v1.Container, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.InitContainers != nil {
