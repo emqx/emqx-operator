@@ -117,31 +117,22 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 	}
+	ready, emqx := findReadyEmqx(emqxList)
 
-	for _, emqx := range emqxList {
-		ready := false
-		for _, c := range emqx.GetStatus().Conditions {
-			if c.Type == appsv1beta3.ConditionRunning && c.Status == corev1.ConditionTrue {
-				ready = true
-			}
-		}
-		if !ready {
-			break
-		}
-
-		equalPluginConfig, err := r.checkPluginConfig(instance, emqx)
-		if err != nil {
+	if ready {
+		var err error
+		var equalPluginConfig bool
+		if equalPluginConfig, err = r.checkPluginConfig(instance, emqx); err != nil {
 			return ctrl.Result{}, err
 		}
 		if !equalPluginConfig {
-			if err := r.loadPluginConfig(instance, emqx); err != nil {
+			if err = r.loadPluginConfig(instance, emqx); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 		}
 
-		err = r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName)
-		if err != nil {
+		if err = r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -427,4 +418,15 @@ func generateConfigStr(plugin *appsv1beta3.EmqxPlugin) string {
 		config += fmt.Sprintln(k, " = ", plugin.Spec.Config[k])
 	}
 	return config
+}
+
+func findReadyEmqx(emqxs []appsv1beta3.Emqx) (bool, appsv1beta3.Emqx) {
+	for _, emqx := range emqxs {
+		for _, c := range emqx.GetStatus().Conditions {
+			if c.Type == appsv1beta3.ConditionRunning && c.Status == corev1.ConditionTrue {
+				return true, emqx
+			}
+		}
+	}
+	return false, nil
 }

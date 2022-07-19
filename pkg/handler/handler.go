@@ -1,11 +1,9 @@
 package handler
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -19,9 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/remotecommand"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -76,72 +72,6 @@ func (handler *Handler) RequestAPI(obj client.Object, method, username, password
 	}
 
 	return apiClient.Do(method, path)
-}
-
-func (handler *Handler) ExecToPods(obj client.Object, containerName, command string) error {
-	pods := &corev1.PodList{}
-	if err := handler.Client.List(context.TODO(), pods, client.InNamespace(obj.GetNamespace()), client.MatchingLabels(obj.GetLabels())); err != nil {
-		return err
-	}
-	for _, pod := range pods.Items {
-		if pod.Status.Phase != corev1.PodRunning {
-			return fmt.Errorf("pod %s is not running", pod.Name)
-		}
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if containerStatus.Name == containerName {
-				if !containerStatus.Ready {
-					return fmt.Errorf("container %s is not ready", containerName)
-				}
-			}
-		}
-
-		stdout, stderr, err := handler.execToPod(pod.GetNamespace(), pod.GetName(), containerName, command, nil)
-		if err != nil {
-			return fmt.Errorf("exec %s container %s in pod %s failed, stdout: %v, stderr: %v, error: %v", command, containerName, pod.GetName(), stdout, stderr, err)
-		}
-	}
-	return nil
-}
-
-func (handler *Handler) execToPod(namespace, podName, containerName, command string, stdin io.Reader) (string, string, error) {
-	cmd := []string{
-		"sh",
-		"-c",
-		command,
-	}
-
-	req := handler.Clientset.CoreV1().RESTClient().Post().Resource("pods").Name(podName).
-		Namespace(namespace).SubResource("exec")
-	option := &corev1.PodExecOptions{
-		// Command:   strings.Fields(command),
-		Command:   cmd,
-		Container: containerName,
-		Stdin:     stdin != nil,
-		Stdout:    true,
-		Stderr:    true,
-		TTY:       false,
-	}
-	req.VersionedParams(
-		option,
-		scheme.ParameterCodec,
-	)
-	exec, err := remotecommand.NewSPDYExecutor(&handler.Config, "POST", req.URL())
-	if err != nil {
-		return "", "", fmt.Errorf("error while creating Executor: %v", err)
-	}
-
-	var stdout, stderr bytes.Buffer
-	err = exec.Stream(remotecommand.StreamOptions{
-		Stdin:  stdin,
-		Stdout: &stdout,
-		Stderr: &stderr,
-		Tty:    false,
-	})
-	if err != nil {
-		return stdout.String(), stderr.String(), fmt.Errorf("error in Stream: %v", err)
-	}
-
-	return stdout.String(), stderr.String(), nil
 }
 
 func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runtime.Scheme, resources []client.Object, postFun func(client.Object) error) error {
