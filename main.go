@@ -104,15 +104,15 @@ func main() {
 	config := mgr.GetConfig()
 	clientset, _ := kubernetes.NewForConfig(config)
 	handler := handler.Handler{
-		Client:        mgr.GetClient(),
-		Clientset:     *clientset,
-		Config:        *config,
-		EventRecorder: mgr.GetEventRecorderFor("emqx-operator"),
+		Client:    mgr.GetClient(),
+		Clientset: *clientset,
+		Config:    *config,
 	}
 
 	emqxReconciler := appscontrollersv1beta3.EmqxReconciler{
-		Handler: handler,
-		Scheme:  mgr.GetScheme(),
+		Handler:       handler,
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}
 
 	if err := (&appscontrollersv1beta3.EmqxBrokerReconciler{

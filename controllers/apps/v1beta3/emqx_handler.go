@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/record"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,6 +52,7 @@ var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 type EmqxReconciler struct {
 	handler.Handler
 	Scheme *runtime.Scheme
+	record.EventRecorder
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
@@ -84,6 +86,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		nothing := func(client.Object) error { return nil }
 		err = r.CreateOrUpdateList(instance, r.Scheme, resources, nothing)
 		if err != nil {
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 			condition := appsv1beta3.NewCondition(
 				appsv1beta3.ConditionPluginInitialized,
 				corev1.ConditionFalse,
@@ -143,6 +146,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 
 	nothing := func(client.Object) error { return nil }
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, nothing); err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		return ctrl.Result{}, err
 	}
 
