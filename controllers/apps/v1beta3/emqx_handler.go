@@ -128,6 +128,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	reloaderContainer := generateReloaderContainer(r, instance, sts)
 	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, reloaderContainer)
 	// add container annotation
+	if sts.Annotations == nil {
+		sts.Annotations = map[string]string{}
+	}
 	sts.Annotations[handler.ManageContainersAnnotation] = generateAnnotationByContainers(sts.Spec.Template.Spec.Containers)
 	// StateFulSet should be created last
 	resources = append(resources, sts)
