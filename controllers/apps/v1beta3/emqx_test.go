@@ -20,8 +20,10 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"reflect"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/emqx/emqx-operator/pkg/handler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -103,7 +105,6 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 					TargetPort: intstr.FromInt(5686),
 				},
 			}
-
 			pluginList = []string{"emqx_management", "emqx_dashboard", "emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
 		})
 
@@ -124,6 +125,10 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 				check_statefulset(broker)
 				check_statefulset(enterprise)
 			})
+
+			By("should mount volume correctly")
+			check_sts_volume(broker)
+			check_sts_volume(enterprise)
 
 			By("should create EMQX Plugins")
 			check_plugin(broker, pluginList)
@@ -381,6 +386,7 @@ func check_statefulset(emqx v1beta3.Emqx) {
 	Expect(sts.Spec.Replicas).Should(Equal(emqx.GetReplicas()))
 	Expect(sts.Spec.Template.Labels).Should(Equal(emqx.GetLabels()))
 	Expect(sts.Spec.Template.Spec.Affinity).Should(Equal(emqx.GetAffinity()))
+	Expect(sts.Spec.Template.Spec.Tolerations).Should(Equal(emqx.GetToleRations()))
 	Expect(sts.Spec.Template.Spec.Containers).Should(HaveLen(2))
 	Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
 	Expect(sts.Spec.Template.Spec.Containers[0].Resources).Should(Equal(emqx.GetResource()))
@@ -533,4 +539,61 @@ func check_plugin(emqx v1beta3.Emqx, pluginList []string) {
 			return cm.Data["loaded_plugins"]
 		}, timeout, interval).Should(ContainSubstring(pluginName))
 	}
+}
+
+func check_sts_volume(emqx v1beta3.Emqx) {
+	names := v1beta3.Names{Object: emqx}
+	LoadedPlugins := names.LoadedPlugins()
+	PluginsConfig := names.PluginsConfig()
+	acl, module, data, log := names.ACL(), names.LoadedModules(), names.Data(), names.Log()
+	defaultVolumeList := []string{LoadedPlugins, PluginsConfig, acl, module, data, log}
+	if emqxEnterprise, ok := emqx.(*v1beta3.EmqxEnterprise); ok {
+		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
+			defaultVolumeList = append(defaultVolumeList, names.License())
+		}
+	}
+	Eventually(func() []string {
+		sts := &appsv1.StatefulSet{}
+		_ = k8sClient.Get(
+			context.TODO(),
+			types.NamespacedName{
+				Name:      emqx.GetName(),
+				Namespace: emqx.GetNamespace(),
+			},
+			sts,
+		)
+		volumeList := []string{}
+		for _, v := range sts.Spec.Template.Spec.Volumes {
+			volumeList = append(volumeList, v.Name)
+		}
+		return volumeList
+	}, timeout, interval).Should(ContainElements(defaultVolumeList))
+
+	Eventually(func() []string {
+		sts := &appsv1.StatefulSet{}
+		_ = k8sClient.Get(
+			context.TODO(),
+			types.NamespacedName{
+				Name:      emqx.GetName(),
+				Namespace: emqx.GetNamespace(),
+			},
+			sts,
+		)
+		emqxContainer := findEmqxContainer(sts.Spec.Template.Spec.Containers)
+		volumeMountList := []string{}
+		for _, v := range emqxContainer.VolumeMounts {
+			volumeMountList = append(volumeMountList, v.Name)
+		}
+
+		return volumeMountList
+	}, timeout, interval).Should(ContainElements(defaultVolumeList))
+}
+
+func findEmqxContainer(containers []corev1.Container) corev1.Container {
+	for _, c := range containers {
+		if c.Name == handler.EmqxContainerName {
+			return c
+		}
+	}
+	return corev1.Container{}
 }

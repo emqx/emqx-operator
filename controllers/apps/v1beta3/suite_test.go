@@ -29,6 +29,7 @@ import (
 	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,6 +47,7 @@ import (
 
 var timeout, interval time.Duration
 var k8sClient client.Client
+var clientset *kubernetes.Clientset
 var testEnv *envtest.Environment
 
 var broker *v1beta3.EmqxBroker = new(v1beta3.EmqxBroker)
@@ -95,12 +97,14 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	clientset, _ := kubernetes.NewForConfig(cfg)
+	clientset, err = kubernetes.NewForConfig(cfg)
 	handler := handler.Handler{
 		Client:    k8sClient,
 		Clientset: *clientset,
 		Config:    *cfg,
 	}
+	Expect(err).NotTo(HaveOccurred())
+	Expect(clientset).NotTo(BeNil())
 
 	emqxReconciler := EmqxReconciler{
 		Handler:       handler,
@@ -166,7 +170,6 @@ var _ = BeforeSuite(func() {
 		},
 	}
 	enterprise.Default()
-
 	emqxReady := make(chan string)
 	for _, emqx := range []v1beta3.Emqx{broker, enterprise} {
 		go func(emqx v1beta3.Emqx) {
@@ -253,6 +256,16 @@ func cleanAll() {
 
 	Expect(k8sClient.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: broker.GetNamespace()}})).Should(Succeed())
 	Expect(k8sClient.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: enterprise.GetNamespace()}})).Should(Succeed())
+
+	Eventually(func() bool {
+		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: broker.GetNamespace()}, &corev1.Namespace{})
+		return k8sErrors.IsNotFound(err)
+	}, timeout, interval).Should(BeTrue())
+
+	Eventually(func() bool {
+		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: enterprise.GetNamespace()}, &corev1.Namespace{})
+		return k8sErrors.IsNotFound(err)
+	}, timeout, interval).Should(BeTrue())
 }
 
 func removePluginsFinalizer(namespace string) error {
