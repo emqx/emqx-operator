@@ -28,7 +28,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,6 +53,7 @@ var (
 type EMQXReconciler struct {
 	handler.Handler
 	Scheme *runtime.Scheme
+	record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxes,verbs=get;list;watch;create;update;patch;delete
@@ -67,7 +70,7 @@ type EMQXReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	_ = log.FromContext(ctx)
 
 	instance := &appsv2alpha1.EMQX{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
@@ -88,9 +91,9 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		resources = append(resources, deploy)
 	}
 
-	listenerPorts, err := r.getListenerPortsByAPI(instance)
+	listenerPorts, err := r.getListenerPortsByAPI(sts)
 	if err != nil {
-		logger.Error(err, "failed to get listener ports")
+		r.EventRecorder.Event(sts, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 	}
 
 	svcList := generateService(instance, listenerPorts)
@@ -102,8 +105,27 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// Check cluster status
+	if !isExistReplicant(instance) {
+		name := fmt.Sprintf("%s-%s", instance.Name, "replicant")
+		deploy := &appsv1.Deployment{}
+		svc := &corev1.Service{}
 
+		if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: instance.Namespace}, deploy); !k8sErrors.IsNotFound(err) {
+			if deploy.OwnerReferences[0].UID == instance.UID {
+				r.Delete(ctx, deploy)
+				return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
+			}
+		}
+
+		if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: instance.Namespace}, svc); !k8sErrors.IsNotFound(err) {
+			if svc.OwnerReferences[0].UID == instance.UID {
+				r.Delete(ctx, svc)
+				return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
+			}
+		}
+	}
+
+	// Check cluster status
 	condition := appsv2alpha1.NewCondition(
 		appsv2alpha1.ClusterRunning,
 		corev1.ConditionTrue,
@@ -129,8 +151,8 @@ type emqxListener struct {
 	ID     string `json:"id"`
 }
 
-func (r *EMQXReconciler) getListenerPortsByAPI(instance *appsv2alpha1.EMQX) ([]corev1.ServicePort, error) {
-	resp, body, err := r.Handler.RequestAPI(instance, "GET", username, password, dashboardPort, "api/v5/listeners")
+func (r *EMQXReconciler) getListenerPortsByAPI(obj client.Object) ([]corev1.ServicePort, error) {
+	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, "api/v5/listeners")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get listeners: %v", err)
 	}
@@ -337,6 +359,40 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 	if !isExistReplicant(instance) {
 		return nil
+		// replicas := int32(0)
+		// return &appsv1.Deployment{
+		// 	TypeMeta: metav1.TypeMeta{
+		// 		APIVersion: "apps/v1",
+		// 		Kind:       "Deployment",
+		// 	},
+		// 	ObjectMeta: metav1.ObjectMeta{
+		// 		Name:      fmt.Sprintf("%s-replicant", instance.Name),
+		// 		Namespace: instance.GetNamespace(),
+		// 	},
+		// 	Spec: appsv1.DeploymentSpec{
+		// 		Replicas: &replicas,
+		// 		Selector: &metav1.LabelSelector{
+		// 			MatchLabels: map[string]string{
+		// 				"apps.emqx.io/instance": "emqx",
+		// 			},
+		// 		},
+		// 		Template: corev1.PodTemplateSpec{
+		// 			ObjectMeta: metav1.ObjectMeta{
+		// 				Labels: map[string]string{
+		// 					"apps.emqx.io/instance": "emqx",
+		// 				},
+		// 			},
+		// 			Spec: corev1.PodSpec{
+		// 				Containers: []corev1.Container{
+		// 					{
+		// 						Name:  "emqx",
+		// 						Image: "emqx",
+		// 					},
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// }
 	}
 
 	hostSuffix := fmt.Sprintf("%s.%s.svc.cluster.local", fmt.Sprintf("%s-headless", instance.Name), instance.Namespace)

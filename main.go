@@ -141,8 +141,9 @@ func main() {
 	}
 
 	if err = (&appscontrollersv2alpha1.EMQXReconciler{
-		Handler: handler,
-		Scheme:  mgr.GetScheme(),
+		Handler:       handler,
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX")
 		os.Exit(1)
