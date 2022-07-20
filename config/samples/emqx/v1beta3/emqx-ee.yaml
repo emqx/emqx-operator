@@ -6,16 +6,16 @@ metadata:
     "apps.emqx.io/instance": "emqx-ee"
 spec:
   replicas: 3
-  # persistent:
-  #   storageClassName: standard
-  #   resources:
-  #     requests:
-  #       storage: 20Mi
-  #   accessModes:
-  #   - ReadWriteOnce
+  persistent:
+     storageClassName: standard
+     resources:
+       requests:
+         storage: 20Mi
+     accessModes:
+     - ReadWriteOnce
   initContainers:
     - name: busybox
-      image: busybox
+      image: busybox:stable
       securityContext:
         runAsUser: 0
         runAsGroup: 0
@@ -52,8 +52,8 @@ spec:
           sysctl -w net.netfilter.nf_conntrack_max=1000000
           sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
   extraContainers:
-    - name: extrabusybox
-      image: busybox
+    - name: extra
+      image: busybox:stable
       command:
         - /bin/sh
         - -c

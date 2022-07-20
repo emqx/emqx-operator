@@ -30,6 +30,7 @@ import (
 	"github.com/emqx/emqx-operator/pkg/handler"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -49,6 +50,8 @@ var timeout, interval time.Duration
 var k8sClient client.Client
 var clientset *kubernetes.Clientset
 var testEnv *envtest.Environment
+
+var storageClassName string = "standard"
 
 var broker *v1beta3.EmqxBroker = new(v1beta3.EmqxBroker)
 var enterprise *v1beta3.EmqxEnterprise = new(v1beta3.EmqxEnterprise)
@@ -149,7 +152,7 @@ var _ = BeforeSuite(func() {
 		},
 		Spec: v1beta3.EmqxBrokerSpec{
 			EmqxTemplate: v1beta3.EmqxBrokerTemplate{
-				Image: "emqx/emqx:4.4.4",
+				Image: "emqx/emqx:4.4.5",
 			},
 		},
 	}
@@ -164,8 +167,47 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		Spec: v1beta3.EmqxEnterpriseSpec{
+			Persistent: corev1.PersistentVolumeClaimSpec{
+				StorageClassName: &storageClassName,
+				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse("20Mi"),
+					},
+				},
+			},
 			EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
-				Image: "emqx/emqx-ee:4.4.4",
+				Image: "emqx/emqx-ee:4.4.5",
+				// Any []byte slices will be converted to a base64-encoded string when encoding them to JSON.
+				// If we create it via kubectl, then the `.spec.emqxTemplate.license.data` needs to be base64
+				// If we create it via code, then the `.spec.emqxTemplate.license.data` doesn't needs to be base64
+				License: v1beta3.License{
+					Data: []byte(`-----BEGIN CERTIFICATE-----
+MIIENzCCAx+gAwIBAgIDdMvVMA0GCSqGSIb3DQEBBQUAMIGDMQswCQYDVQQGEwJD
+TjERMA8GA1UECAwIWmhlamlhbmcxETAPBgNVBAcMCEhhbmd6aG91MQwwCgYDVQQK
+DANFTVExDDAKBgNVBAsMA0VNUTESMBAGA1UEAwwJKi5lbXF4LmlvMR4wHAYJKoZI
+hvcNAQkBFg96aGFuZ3doQGVtcXguaW8wHhcNMjAwNjIwMDMwMjUyWhcNNDkwMTAx
+MDMwMjUyWjBjMQswCQYDVQQGEwJDTjEZMBcGA1UECgwQRU1RIFggRXZhbHVhdGlv
+bjEZMBcGA1UEAwwQRU1RIFggRXZhbHVhdGlvbjEeMBwGCSqGSIb3DQEJARYPY29u
+dGFjdEBlbXF4LmlvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArw+3
+2w9B7Rr3M7IOiMc7OD3Nzv2KUwtK6OSQ07Y7ikDJh0jynWcw6QamTiRWM2Ale8jr
+0XAmKgwUSI42+f4w84nPpAH4k1L0zupaR10VYKIowZqXVEvSyV8G2N7091+6Jcon
+DcaNBqZLRe1DiZXMJlhXnDgq14FPAxffKhCXiCgYtluLDDLKv+w9BaQGZVjxlFe5
+cw32+z/xHU366npHBpafCbxBtWsNvchMVtLBqv9yPmrMqeBROyoJaI3nL78xDgpd
+cRorqo+uQ1HWdcM6InEFET6pwkeuAF8/jJRlT12XGgZKKgFQTCkZi4hv7aywkGBE
+JruPif/wlK0YuPJu6QIDAQABo4HSMIHPMBEGCSsGAQQBg5odAQQEDAIxMDCBlAYJ
+KwYBBAGDmh0CBIGGDIGDZW1xeF9iYWNrZW5kX3JlZGlzLGVtcXhfYmFja2VuZF9t
+eXNxbCxlbXF4X2JhY2tlbmRfcGdzcWwsZW1xeF9iYWNrZW5kX21vbmdvLGVtcXhf
+YmFja2VuZF9jYXNzYSxlbXF4X2JyaWRnZV9rYWZrYSxlbXF4X2JyaWRnZV9yYWJi
+aXQwEAYJKwYBBAGDmh0DBAMMATEwEQYJKwYBBAGDmh0EBAQMAjEwMA0GCSqGSIb3
+DQEBBQUAA4IBAQDHUe6+P2U4jMD23u96vxCeQrhc/rXWvpmU5XB8Q/VGnJTmv3yU
+EPyTFKtEZYVX29z16xoipUE6crlHhETOfezYsm9K0DxF3fNilOLRKkg9VEWcb5hj
+iL3a2tdZ4sq+h/Z1elIXD71JJBAImjr6BljTIdUCfVtNvxlE8M0D/rKSn2jwzsjI
+UrW88THMtlz9sb56kmM3JIOoIJoep6xNEajIBnoChSGjtBYFNFwzdwSTCodYkgPu
+JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
+EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
+-----END CERTIFICATE-----`),
+				},
 			},
 		},
 	}
