@@ -67,6 +67,26 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	username, password, apiPort := r.getManagementField(instance)
 
 	sts := generateStatefulSetDef(instance)
+	storeSts := &appsv1.StatefulSet{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+	}
+	// store statefulSet is exit
+	if storeSts.Spec.PodManagementPolicy != "" {
+		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
+	} else {
+		// if sts is not exist, and the pvc is exist, then PodManagementPolicy = "Parallel"
+		if !reflect.ValueOf(instance.GetPersistent()).IsZero() {
+			pvcList := &corev1.PersistentVolumeClaimList{}
+			_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
+			if len(pvcList.Items) != 0 {
+				sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
+			}
+		}
+	}
+
 	emqxContainer := generateEmqxContainer(instance)
 	reloaderContainer := generateReloaderContainer(instance)
 
@@ -434,7 +454,7 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: instance.GetLabels(),
 			},
-			PodManagementPolicy: appsv1.ParallelPodManagement,
+			PodManagementPolicy: appsv1.OrderedReadyPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      instance.GetLabels(),

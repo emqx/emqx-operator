@@ -135,7 +135,7 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 			check_plugin(enterprise, append(pluginList, "emqx_modules"))
 
 			By("should not create secret with license")
-			Eventually(func() bool {
+			Eventually(func() error {
 				secret := &corev1.Secret{}
 				err := k8sClient.Get(
 					context.Background(),
@@ -145,8 +145,8 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 					},
 					secret,
 				)
-				return k8sErrors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
+				return err
+			}, timeout, interval).ShouldNot(HaveOccurred())
 		})
 	})
 
