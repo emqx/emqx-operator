@@ -101,6 +101,9 @@ var _ = BeforeSuite(func() {
 	err = (&EmqxEnterprise{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&EmqxPlugin{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:webhook
 
 	go func() {

@@ -63,6 +63,78 @@ var _ = Describe("EMQX Enterprise", func() {
 	})
 })
 
+var _ = Describe("EMQX Plugin", func() {
+	Context("Check EMQX Plugin", func() {
+		namespace := "default"
+		management := &EmqxPlugin{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "emqx-management",
+				Namespace: namespace,
+			},
+			Spec: EmqxPluginSpec{
+				PluginName: "emqx_management",
+			},
+		}
+		retainer := &EmqxPlugin{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "emqx-retainer",
+				Namespace: namespace,
+			},
+			Spec: EmqxPluginSpec{
+				PluginName: "emqx_retainer",
+			},
+		}
+		dashboard := &EmqxPlugin{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "emqx-dashboard",
+				Namespace: namespace,
+			},
+			Spec: EmqxPluginSpec{
+				PluginName: "emqx_dashboard",
+			},
+		}
+		BeforeEach(func() {
+			Expect(k8sClient.Create(context.Background(), management)).Should(Succeed())
+			Expect(k8sClient.Create(context.Background(), retainer)).Should(Succeed())
+			Expect(k8sClient.Create(context.Background(), dashboard)).Should(Succeed())
+		})
+		AfterEach(func() {
+			Expect(k8sClient.Delete(context.Background(), management)).Should(Succeed())
+			Expect(k8sClient.Delete(context.Background(), retainer)).Should(Succeed())
+			Expect(k8sClient.Delete(context.Background(), dashboard)).Should(Succeed())
+		})
+		It("Check Plugin validateUpdate ", func() {
+			checkValidationUpdate(management)
+			checkValidationUpdate(retainer)
+			checkValidationUpdate(dashboard)
+		})
+	})
+})
+
+func checkValidationUpdate(plugin *EmqxPlugin) {
+	Eventually(func() error {
+		err := k8sClient.Get(
+			context.TODO(),
+			types.NamespacedName{
+				Name:      plugin.Name,
+				Namespace: plugin.Namespace,
+			},
+			plugin,
+		)
+		return err
+	}, timeout, interval).Should(Succeed())
+
+	if plugin.Spec.Config == nil {
+		plugin.Spec.Config = map[string]string{}
+	}
+	plugin.Spec.Config["test"] = "test"
+	if filerEmqxPlugin(plugin.Spec.PluginName) {
+		Expect(k8sClient.Update(context.Background(), plugin)).ShouldNot(Succeed())
+	} else {
+		Expect(k8sClient.Update(context.Background(), plugin)).Should(Succeed())
+	}
+}
+
 func checkValidation(emqx Emqx) {
 	emqx.SetImage("emqx/emqx:4.3.3")
 	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())

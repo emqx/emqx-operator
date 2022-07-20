@@ -48,6 +48,27 @@ webhooks:
     resources:
     - emqxenterprises
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-apps-emqx-io-v1beta3-emqxplugin
+  failurePolicy: Fail
+  name: mutating.emqxplugin.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta3
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxplugins
+  sideEffects: None
 
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -97,4 +118,25 @@ webhooks:
     - UPDATE
     resources:
     - emqxenterprises
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-apps-emqx-io-v1beta3-emqxplugin
+  failurePolicy: Fail
+  name: validator.emqxplugin.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta3
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxplugins
   sideEffects: None

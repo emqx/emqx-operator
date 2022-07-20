@@ -50,3 +50,24 @@ webhooks:
     resources:
     - emqxenterprises
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: {{ include "emqx-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-apps-emqx-io-v1beta3-emqxplugin
+  failurePolicy: Fail
+  name: mutating.emqxplugin.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta3
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxplugins
+  sideEffects: None
