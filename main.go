@@ -138,6 +138,11 @@ func main() {
 	//+kubebuilder:scaffold:builder
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&appsv1beta3.EmqxPlugin{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxPlugin")
+			os.Exit(1)
+		}
+
 		if err = (&appsv1beta3.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
 			os.Exit(1)
