@@ -14,12 +14,6 @@ spec:
     spec:
       replicas: 3
       image: "emqx/emqx:5.0.3"
-      serviceTemplate:
-        spec:
-          type: ClusterIP
-          selector:
-            apps.emqx.io/instance: emqx
-            apps.emqx.io/db-role: core
 
   replicantTemplate:
     metadata:
@@ -29,9 +23,3 @@ spec:
     spec:
       replicas: 5
       image: "emqx/emqx:5.0.3"
-      serviceTemplate:
-        spec:
-         type: ClusterIP
-         selector:
-           apps.emqx.io/instance: emqx
-           apps.emqx.io/db-role: replicant
