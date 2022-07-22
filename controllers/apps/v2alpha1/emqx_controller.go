@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -82,6 +83,25 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	headlessSvc := generateHeadlessService(instance)
 	sts := generateStatefulSet(instance)
+	storeSts := &appsv1.StatefulSet{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+	}
+	// store statefulSet is exit
+	if storeSts.Spec.PodManagementPolicy != "" {
+		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
+	} else {
+		// if sts is not exist, and the pvc is exist, then PodManagementPolicy = "Parallel"
+		if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.Persistent).IsZero() {
+			pvcList := &corev1.PersistentVolumeClaimList{}
+			_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
+			if len(pvcList.Items) != 0 {
+				sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
+			}
+		}
+	}
 
 	resources := []client.Object{
 		headlessSvc, sts,
@@ -409,17 +429,43 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 									Value: instance.Namespace,
 								},
 							},
-							Args:           instance.Spec.CoreTemplate.Spec.Args,
-							Resources:      instance.Spec.CoreTemplate.Spec.Resources,
-							ReadinessProbe: instance.Spec.CoreTemplate.Spec.ReadinessProbe,
-							LivenessProbe:  instance.Spec.CoreTemplate.Spec.LivenessProbe,
-							StartupProbe:   instance.Spec.CoreTemplate.Spec.StartupProbe,
+							Args:            instance.Spec.CoreTemplate.Spec.Args,
+							Resources:       instance.Spec.CoreTemplate.Spec.Resources,
+							ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
+							LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
+							StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
+							SecurityContext: instance.Spec.CoreTemplate.Spec.SecurityContext,
+							VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
+								Name:      fmt.Sprintf("%s-core-data", instance.Name),
+								MountPath: "/opt/emqx/data",
+							}),
 						},
 					}, instance.Spec.CoreTemplate.Spec.ExtraContainers...),
+					Volumes: instance.Spec.CoreTemplate.Spec.ExtraVolumes,
 				},
 			},
 		},
 	}
+	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.Persistent).IsZero() {
+		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-core-data", instance.Name),
+					Namespace: instance.GetNamespace(),
+					Labels:    instance.Spec.CoreTemplate.Labels,
+				},
+				Spec: instance.Spec.CoreTemplate.Spec.Persistent,
+			},
+		}
+	} else {
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: fmt.Sprintf("%s-core-data", instance.Name),
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+	}
+
 	return sts
 }
 
@@ -497,27 +543,24 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 									Value: string(coreNodesStr),
 								},
 							},
-							Args:           instance.Spec.ReplicantTemplate.Spec.Args,
-							Resources:      instance.Spec.ReplicantTemplate.Spec.Resources,
-							ReadinessProbe: instance.Spec.ReplicantTemplate.Spec.ReadinessProbe,
-							LivenessProbe:  instance.Spec.ReplicantTemplate.Spec.LivenessProbe,
-							StartupProbe:   instance.Spec.ReplicantTemplate.Spec.StartupProbe,
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "emqx-data",
-									MountPath: "/opt/emqx/data",
-								},
-							},
+							Args:            instance.Spec.ReplicantTemplate.Spec.Args,
+							Resources:       instance.Spec.ReplicantTemplate.Spec.Resources,
+							ReadinessProbe:  instance.Spec.ReplicantTemplate.Spec.ReadinessProbe,
+							LivenessProbe:   instance.Spec.ReplicantTemplate.Spec.LivenessProbe,
+							StartupProbe:    instance.Spec.ReplicantTemplate.Spec.StartupProbe,
+							SecurityContext: instance.Spec.ReplicantTemplate.Spec.SecurityContext,
+							VolumeMounts: append(instance.Spec.ReplicantTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
+								Name:      fmt.Sprintf("%s-replicant-data", instance.Name),
+								MountPath: "/opt/emqx/data",
+							}),
 						},
 					}, instance.Spec.ReplicantTemplate.Spec.ExtraContainers...),
-					Volumes: []corev1.Volume{
-						{
-							Name: "emqx-data",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
+					Volumes: append(instance.Spec.ReplicantTemplate.Spec.ExtraVolumes, corev1.Volume{
+						Name: fmt.Sprintf("%s-replicant-data", instance.Name),
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
-					},
+					}),
 				},
 			},
 		},
