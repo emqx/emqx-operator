@@ -55,8 +55,6 @@ type EMQXReplicantTemplateSpec struct {
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
 	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
-
-	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
 }
 
 type EMQXCoreTemplateSpec struct {
@@ -83,8 +81,6 @@ type EMQXCoreTemplateSpec struct {
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
 	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
-
-	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
 }
 
 type EMQXCoreTemplate struct {
@@ -99,6 +95,9 @@ type EMQXSpec struct {
 
 	CoreTemplate      EMQXCoreTemplate      `json:"coreTemplate,omitempty"`
 	ReplicantTemplate EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
+
+	DashboardServiceTemplate corev1.Service `json:"dashboardServiceTemplate,omitempty"`
+	ListenerServiceTemplate  corev1.Service `json:"listenerServiceTemplate,omitempty"`
 }
 
 type ConditionType string
