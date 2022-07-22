@@ -81,7 +81,18 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	resources := []client.Object{}
+
 	headlessSvc := generateHeadlessService(instance)
+	resources = append(resources, headlessSvc)
+
+	dashboardSvc := generateDashboardService(instance)
+	resources = append(resources, dashboardSvc)
+
+	if deploy := generateDeployment(instance); deploy != nil {
+		resources = append(resources, deploy)
+	}
+
 	sts := generateStatefulSet(instance)
 	storeSts := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
@@ -103,22 +114,14 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
-	resources := []client.Object{
-		headlessSvc, sts,
-	}
-
-	if deploy := generateDeployment(instance); deploy != nil {
-		resources = append(resources, deploy)
-	}
+	resources = append(resources, sts)
 
 	listenerPorts, err := r.getListenerPortsByAPI(sts)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 	}
-
-	svcList := generateService(instance, listenerPorts)
-	for _, svc := range svcList {
-		resources = append(resources, svc)
+	if listenerSvc := generateListenerService(instance, listenerPorts); listenerSvc != nil {
+		resources = append(resources, listenerSvc)
 	}
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
@@ -266,22 +269,6 @@ func (r *EMQXReconciler) getListenerPortsByAPI(obj client.Object) ([]corev1.Serv
 	return ports, nil
 }
 
-func mergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
-	ports := append(ports1, ports2...)
-
-	result := make([]corev1.ServicePort, 0, len(ports))
-	temp := map[string]struct{}{}
-
-	for _, item := range ports {
-		if _, ok := temp[item.Name]; !ok {
-			temp[item.Name] = struct{}{}
-			result = append(result, item)
-		}
-	}
-
-	return result
-}
-
 func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 	headlessSvc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -311,9 +298,10 @@ func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 	return headlessSvc
 }
 
-func generateService(instance *appsv2alpha1.EMQX, listenerPorts []corev1.ServicePort) (svcList []*corev1.Service) {
-	instance.Spec.CoreTemplate.Spec.ServiceTemplate.Spec.Ports = mergeServicePorts(
-		instance.Spec.CoreTemplate.Spec.ServiceTemplate.Spec.Ports,
+func generateDashboardService(instance *appsv2alpha1.EMQX) *corev1.Service {
+	instance.Spec.DashboardServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
+	instance.Spec.DashboardServiceTemplate.Spec.Ports = mergeServicePorts(
+		instance.Spec.DashboardServiceTemplate.Spec.Ports,
 		[]corev1.ServicePort{
 			{
 				Name:       "dashboard",
@@ -324,46 +312,50 @@ func generateService(instance *appsv2alpha1.EMQX, listenerPorts []corev1.Service
 		},
 	)
 
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        fmt.Sprintf("%s-dashboard", instance.Name),
+			Namespace:   instance.Namespace,
+			Labels:      instance.Spec.DashboardServiceTemplate.Labels,
+			Annotations: instance.Spec.DashboardServiceTemplate.Annotations,
+		},
+		Spec: instance.Spec.DashboardServiceTemplate.Spec,
+	}
+}
+
+func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1.ServicePort) *corev1.Service {
+	instance.Spec.ListenerServiceTemplate.Spec.Ports = mergeServicePorts(
+		instance.Spec.ListenerServiceTemplate.Spec.Ports,
+		listenerPorts,
+	)
+
+	if len(instance.Spec.ListenerServiceTemplate.Spec.Ports) == 0 {
+		return nil
+	}
+
 	if isExistReplicant(instance) {
-		instance.Spec.ReplicantTemplate.Spec.ServiceTemplate.Spec.Ports = mergeServicePorts(instance.Spec.ReplicantTemplate.Spec.ServiceTemplate.Spec.Ports, listenerPorts)
+		instance.Spec.ListenerServiceTemplate.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
 	} else {
-		instance.Spec.CoreTemplate.Spec.ServiceTemplate.Spec.Ports = mergeServicePorts(instance.Spec.CoreTemplate.Spec.ServiceTemplate.Spec.Ports, listenerPorts)
+		instance.Spec.ListenerServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
 	}
 
-	coreSvc := &corev1.Service{
+	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-core", instance.Name),
+			Name:        fmt.Sprintf("%s-listener", instance.Name),
 			Namespace:   instance.Namespace,
-			Labels:      instance.Spec.CoreTemplate.Spec.ServiceTemplate.Labels,
-			Annotations: instance.Spec.CoreTemplate.Spec.ServiceTemplate.Annotations,
+			Labels:      instance.Spec.ListenerServiceTemplate.Labels,
+			Annotations: instance.Spec.ListenerServiceTemplate.Annotations,
 		},
-		Spec: instance.Spec.CoreTemplate.Spec.ServiceTemplate.Spec,
+		Spec: instance.Spec.ListenerServiceTemplate.Spec,
 	}
-	svcList = append(svcList, coreSvc)
-
-	if len(instance.Spec.ReplicantTemplate.Spec.ServiceTemplate.Spec.Ports) == 0 {
-		return svcList
-	}
-
-	replicantSvc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-replicant", instance.Name),
-			Namespace:   instance.Namespace,
-			Labels:      instance.Spec.ReplicantTemplate.Spec.ServiceTemplate.Labels,
-			Annotations: instance.Spec.ReplicantTemplate.Spec.ServiceTemplate.Annotations,
-		},
-		Spec: instance.Spec.ReplicantTemplate.Spec.ServiceTemplate.Spec,
-	}
-
-	return []*corev1.Service{coreSvc, replicantSvc}
 }
 
 func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
@@ -568,6 +560,21 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 	return deploy
 }
 
+func mergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
+	ports := append(ports1, ports2...)
+
+	result := make([]corev1.ServicePort, 0, len(ports))
+	temp := map[string]struct{}{}
+
+	for _, item := range ports {
+		if _, ok := temp[item.Name]; !ok {
+			temp[item.Name] = struct{}{}
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
 func isExistReplicant(instance *appsv2alpha1.EMQX) bool {
 	return instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
 }

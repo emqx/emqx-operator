@@ -51,14 +51,7 @@ func (r *EMQX) Default() {
 	r.Spec.CoreTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Spec.CoreTemplate.Labels["apps.emqx.io/db-role"] = "core"
 
-	if r.Spec.CoreTemplate.Spec.ServiceTemplate.Labels == nil {
-		r.Spec.CoreTemplate.Spec.ServiceTemplate.Labels = make(map[string]string)
-	}
-	r.Spec.CoreTemplate.Spec.ServiceTemplate.Labels["apps.emqx.io/instance"] = r.Name
-	r.Spec.CoreTemplate.Spec.ServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Spec.CoreTemplate.Spec.ServiceTemplate.Labels["apps.emqx.io/db-role"] = "core"
-
-	if reflect.DeepEqual(r.Spec.ReplicantTemplate, EMQXReplicantTemplate{}) {
+	if reflect.ValueOf(r.Spec.ReplicantTemplate).IsZero() {
 		return
 	}
 
@@ -68,13 +61,6 @@ func (r *EMQX) Default() {
 	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/instance"] = r.Name
 	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/db-role"] = "replicant"
-
-	if r.Spec.ReplicantTemplate.Spec.ServiceTemplate.Labels == nil {
-		r.Spec.ReplicantTemplate.Spec.ServiceTemplate.Labels = make(map[string]string)
-	}
-	r.Spec.ReplicantTemplate.Spec.ServiceTemplate.Labels["apps.emqx.io/instance"] = r.Name
-	r.Spec.ReplicantTemplate.Spec.ServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Spec.ReplicantTemplate.Spec.ServiceTemplate.Labels["apps.emqx.io/db-role"] = "replicant"
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
