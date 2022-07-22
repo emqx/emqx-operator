@@ -47,6 +47,7 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 			aclString = "{allow, {user, \"dashboard\"}, subscribe, [\"$SYS/#\"]}.\n{allow, {ipaddr, \"127.0.0.1\"}, pubsub, [\"$SYS/#\", \"#\"]}.\n{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n{allow, all}.\n"
 			brokerModulesString = "{emqx_mod_acl_internal, true}.\n"
 			enterpriseModulesString = `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}},{"name":"retainer","enable":true,"configs":{"expiry_interval":0,"max_payload_size":"1MB","max_retained_messages":0,"storage_type":"ram"}}]`
+
 			headlessPort = corev1.ServicePort{
 				Name:       "http-management-8081",
 				Port:       8081,
@@ -105,7 +106,7 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 					TargetPort: intstr.FromInt(5686),
 				},
 			}
-			pluginList = []string{"emqx_management", "emqx_dashboard", "emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
+			pluginList = []string{"emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
 		})
 
 		It("check default resource", func() {
@@ -419,7 +420,28 @@ func check_statefulset(emqx v1beta3.Emqx) {
 		Expect(sts.Spec.VolumeClaimTemplates).Should(ContainElements(HaveField("ObjectMeta", HaveField("Name", names.Data()))))
 		Expect(sts.Spec.VolumeClaimTemplates).Should(ContainElements(HaveField("ObjectMeta", HaveField("Name", names.Log()))))
 	}
-
+	//Env
+	EnvVars := []corev1.EnvVar{
+		{Name: "EMQX_CLUSTER__DISCOVERY", Value: "dns"},
+		{Name: "EMQX_CLUSTER__DNS__APP", Value: emqx.GetName()},
+		{Name: "EMQX_CLUSTER__DNS__NAME", Value: fmt.Sprintf("%s-headless.%s.svc.cluster.local", emqx.GetName(), emqx.GetNamespace())},
+		{Name: "EMQX_CLUSTER__DNS__TYPE", Value: "srv"},
+		{Name: "EMQX_LISTENER__SSL__EXTERNAL", Value: "8883"},
+		{Name: "EMQX_LISTENER__TCP__EXTERNAL", Value: "1883"},
+		{Name: "EMQX_LISTENER__WSS__EXTERNAL", Value: "8084"},
+		{Name: "EMQX_LISTENER__WS__EXTERNAL", Value: "8083"},
+		{Name: "EMQX_LOG__TO", Value: "both"},
+		{Name: "EMQX_NAME", Value: emqx.GetName()},
+		{Name: "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID", Value: emqx.GetUsername()},
+		{Name: "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET", Value: emqx.GetPassword()},
+		{Name: "EMQX_DASHBOARD__DEFAULT_USER__LOGIN", Value: emqx.GetUsername()},
+		{Name: "EMQX_DASHBOARD__DEFAULT_USER__PASSWORD", Value: emqx.GetPassword()},
+		{Name: "EMQX_PLUGINS__LOADED_FILE", Value: "/mounted/plugins/data/loaded_plugins"},
+		{Name: "EMQX_PLUGINS__ETC_DIR", Value: "/mounted/plugins/etc"},
+		{Name: "EMQX_ACL_FILE", Value: "/mounted/acl/acl.conf"},
+		{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"},
+	}
+	Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ConsistOf(EnvVars))
 	// Volume
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
@@ -444,7 +466,6 @@ func check_statefulset(emqx v1beta3.Emqx) {
 			Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.License())))
 		}
 	}
-
 }
 
 func check_service_ports(emqx v1beta3.Emqx, ports []corev1.ServicePort, headlessPort corev1.ServicePort) {

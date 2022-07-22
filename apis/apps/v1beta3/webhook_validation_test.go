@@ -94,19 +94,15 @@ var _ = Describe("EMQX Plugin", func() {
 			},
 		}
 		BeforeEach(func() {
-			Expect(k8sClient.Create(context.Background(), management)).Should(Succeed())
+			Expect(k8sClient.Create(context.Background(), management)).ShouldNot(Succeed())
 			Expect(k8sClient.Create(context.Background(), retainer)).Should(Succeed())
-			Expect(k8sClient.Create(context.Background(), dashboard)).Should(Succeed())
+			Expect(k8sClient.Create(context.Background(), dashboard)).ShouldNot(Succeed())
 		})
 		AfterEach(func() {
-			Expect(k8sClient.Delete(context.Background(), management)).Should(Succeed())
 			Expect(k8sClient.Delete(context.Background(), retainer)).Should(Succeed())
-			Expect(k8sClient.Delete(context.Background(), dashboard)).Should(Succeed())
 		})
 		It("Check Plugin validateUpdate ", func() {
-			checkValidationUpdate(management)
 			checkValidationUpdate(retainer)
-			checkValidationUpdate(dashboard)
 		})
 	})
 })
@@ -128,11 +124,9 @@ func checkValidationUpdate(plugin *EmqxPlugin) {
 		plugin.Spec.Config = map[string]string{}
 	}
 	plugin.Spec.Config["test"] = "test"
-	if filerEmqxPlugin(plugin.Spec.PluginName) {
-		Expect(k8sClient.Update(context.Background(), plugin)).ShouldNot(Succeed())
-	} else {
-		Expect(k8sClient.Update(context.Background(), plugin)).Should(Succeed())
-	}
+	Expect(k8sClient.Update(context.Background(), plugin)).Should(Succeed())
+	plugin.Spec.PluginName = "test"
+	Expect(k8sClient.Update(context.Background(), plugin)).ShouldNot(Succeed())
 }
 
 func checkValidation(emqx Emqx) {
@@ -178,4 +172,10 @@ func checkValidation(emqx Emqx) {
 	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
 	obj.SetImage("127.0.0.1:8443/emqx/emqx:4.4.11")
 	Expect(k8sClient.Update(context.Background(), obj)).Should(Succeed())
+
+	obj.SetPassword("test")
+	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
+
+	obj.SetUsername("test")
+	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
 }

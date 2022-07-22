@@ -57,19 +57,22 @@ var _ webhook.Validator = &EmqxPlugin{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *EmqxPlugin) ValidateCreate() error {
 	emqxpluginlog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
+	if err := filerEmqxPlugin(r.Spec.PluginName); err != nil {
+		emqxpluginlog.Error(err, "validate create failed")
+		return err
+	}
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *EmqxPlugin) ValidateUpdate(old runtime.Object) error {
 	emqxpluginlog.Info("validate update", "name", r.Name)
-	if filerEmqxPlugin(r.Spec.PluginName) {
-		err := errors.New("refuse to update this EmqxPlugin")
-		emqxpluginlog.Error(err, "validate update failed")
-		return err
+
+	oldEmqxPlugin := old.(*EmqxPlugin)
+	if oldEmqxPlugin.Spec.PluginName != r.Spec.PluginName {
+		return errors.New("refuse to update pluginName")
 	}
+
 	return nil
 }
 
@@ -81,11 +84,11 @@ func (r *EmqxPlugin) ValidateDelete() error {
 	return nil
 }
 
-func filerEmqxPlugin(s string) bool {
+func filerEmqxPlugin(s string) error {
 	for _, plugin := range notAllowedPlugin {
 		if plugin == s {
-			return true
+			return errors.New("refuse to update this EmqxPlugin")
 		}
 	}
-	return false
+	return nil
 }

@@ -32,6 +32,12 @@ import (
 // log is for logging in this package.
 var emqxbrokerlog = logf.Log.WithName("emqxbroker-resource")
 
+const (
+	DefaultUsername       = "admin"
+	DefaultPassword       = "public"
+	DefaultManagementPort = "8081"
+)
+
 func (r *EmqxBroker) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
@@ -99,6 +105,13 @@ func (r *EmqxBroker) Default() {
 			SupplementalGroups:  []int64{emqxUserGroup},
 		}
 	}
+
+	if len(r.Spec.EmqxTemplate.Username) == 0 {
+		r.Spec.EmqxTemplate.Username = DefaultUsername
+	}
+	if len(r.Spec.EmqxTemplate.Password) == 0 {
+		r.Spec.EmqxTemplate.Password = DefaultPassword
+	}
 }
 
 //+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta3-emqxbroker,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta3,name=validator.broker.emqx.io,admissionReviewVersions={v1,v1beta1}
@@ -121,6 +134,11 @@ func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 	emqxbrokerlog.Info("validate update", "name", r.Name)
 
 	if err := validateTag(r.Spec.EmqxTemplate.Image); err != nil {
+		emqxbrokerlog.Error(err, "validate update failed")
+		return err
+	}
+	oldEmqx := old.(*EmqxBroker)
+	if err := validateUsernameAndPassword(r, oldEmqx); err != nil {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}

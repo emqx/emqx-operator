@@ -64,7 +64,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	var resources []client.Object
 	var err error
 	postFn := func(client.Object) error { return nil }
-	username, password, apiPort := r.getManagementField(instance)
+	username, password, apiPort := instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort
 
 	sts := generateStatefulSetDef(instance)
 	storeSts := &appsv1.StatefulSet{}
@@ -318,35 +318,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
 
-func (r *EmqxReconciler) getManagementField(obj appsv1beta3.Emqx) (username, password, apiPort string) {
-	username = "admin"
-	password = "public"
-	apiPort = "8081"
-
-	pluginsList := &appsv1beta3.EmqxPluginList{}
-	_ = r.Client.List(context.TODO(), pluginsList, client.InNamespace(obj.GetNamespace()))
-
-	for _, plugin := range pluginsList.Items {
-		selector, _ := labels.ValidatedSelectorFromSet(plugin.Spec.Selector)
-		if selector.Empty() || !selector.Matches(labels.Set(obj.GetLabels())) {
-			continue
-		}
-		if plugin.Spec.PluginName == "emqx_management" {
-			if _, ok := plugin.Spec.Config["management.listener.http"]; ok {
-				apiPort = plugin.Spec.Config["management.listener.http"]
-			}
-			if _, ok := plugin.Spec.Config["management.default_application.id"]; ok {
-				username = plugin.Spec.Config["management.default_application.id"]
-			}
-			if _, ok := plugin.Spec.Config["management.default_application.secret"]; ok {
-				password = plugin.Spec.Config["management.default_application.secret"]
-			}
-		}
-	}
-
-	return
-}
-
 func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx, username, password, apiPort string) []corev1.ServicePort {
 	resp, body, err := r.Handler.RequestAPI(instance, "GET", username, password, apiPort, "api/v4/listeners")
 	if err != nil {
@@ -501,54 +472,6 @@ func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1be
 
 	pluginList := []client.Object{}
 	// Default plugins
-	if !isExistPlugin("emqx_management", matchedPluginList) {
-		emqxManagement := &appsv1beta3.EmqxPlugin{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps.emqx.io/v1beta3",
-				Kind:       "EmqxPlugin",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-management", instance.GetName()),
-				Namespace: instance.GetNamespace(),
-				Labels:    instance.GetLabels(),
-			},
-			Spec: appsv1beta3.EmqxPluginSpec{
-				PluginName: "emqx_management",
-				Selector:   instance.GetLabels(),
-				Config: map[string]string{
-					"management.listener.http":              "8081",
-					"management.default_application.id":     "admin",
-					"management.default_application.secret": "public",
-				},
-			},
-		}
-		pluginList = append(pluginList, emqxManagement)
-	}
-
-	if !isExistPlugin("emqx_dashboard", matchedPluginList) {
-		emqxDashboard := &appsv1beta3.EmqxPlugin{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps.emqx.io/v1beta3",
-				Kind:       "EmqxPlugin",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-dashboard", instance.GetName()),
-				Namespace: instance.GetNamespace(),
-				Labels:    instance.GetLabels(),
-			},
-			Spec: appsv1beta3.EmqxPluginSpec{
-				PluginName: "emqx_dashboard",
-				Selector:   instance.GetLabels(),
-				Config: map[string]string{
-					"dashboard.listener.http":         "18083",
-					"dashboard.default_user.login":    "admin",
-					"dashboard.default_user.password": "public",
-				},
-			},
-		}
-		pluginList = append(pluginList, emqxDashboard)
-	}
-
 	if !isExistPlugin("emqx_rule_engine", matchedPluginList) {
 		emqxRuleEngine := &appsv1beta3.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
@@ -630,8 +553,8 @@ func generateDefaultPluginsConfig(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 		},
 		Data: map[string]string{
 			"emqx_modules.conf":           "",
-			"emqx_management.conf":        "management.listener.http = 8081\nmanagement.default_application.id = admin\nmanagement.default_application.secret = public\n",
-			"emqx_dashboard.conf":         "dashboard.listener.http = 18083\ndashboard.default_user.login = admin\ndashboard.default_user.password = public\n",
+			"emqx_management.conf":        "management.listener.http = 8081\n",
+			"emqx_dashboard.conf":         "dashboard.listener.http = 18083\n",
 			"emqx_rule_engine.conf":       "",
 			"emqx_retainer.conf":          "",
 			"emqx_auth_http.conf":         "auth.http.auth_req.url = http://127.0.0.1:80/mqtt/auth\nauth.http.auth_req.method = post\nauth.http.auth_req.headers.content_type = application/x-www-form-urlencoded\nauth.http.auth_req.params = clientid=%c,username=%u,password=%P\nauth.http.acl_req.url = http://127.0.0.1:80/mqtt/acl\nauth.http.acl_req.method = post\nauth.http.acl_req.headers.content-type = application/x-www-form-urlencoded\nauth.http.acl_req.params = access=%A,username=%u,clientid=%c,ipaddr=%a,topic=%t,mountpoint=%m\nauth.http.timeout = 5s\nauth.http.connect_timeout = 5s\nauth.http.pool_size = 32\nauth.http.enable_pipelining = true\n",
@@ -899,17 +822,35 @@ func generateReloaderContainer(instance appsv1beta3.Emqx) *corev1.Container {
 }
 
 func generateEmqxContainer(instance appsv1beta3.Emqx) *corev1.Container {
+	username, password := instance.GetUsername(), instance.GetPassword()
 	return &corev1.Container{
 		Name:            handler.EmqxContainerName,
 		Image:           instance.GetImage(),
 		ImagePullPolicy: instance.GetImagePullPolicy(),
 		Resources:       instance.GetResource(),
-		Env:             mergeEnvAndConfig(instance),
-		Args:            instance.GetArgs(),
-		ReadinessProbe:  instance.GetReadinessProbe(),
-		LivenessProbe:   instance.GetLivenessProbe(),
-		StartupProbe:    instance.GetStartupProbe(),
-		VolumeMounts:    instance.GetExtraVolumeMounts(),
+		Env: append(mergeEnvAndConfig(instance), []corev1.EnvVar{
+			{
+				Name:  "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID",
+				Value: username,
+			},
+			{
+				Name:  "EMQX_DASHBOARD__DEFAULT_USER__LOGIN",
+				Value: username,
+			},
+			{
+				Name:  "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET",
+				Value: password,
+			},
+			{
+				Name:  "EMQX_DASHBOARD__DEFAULT_USER__PASSWORD",
+				Value: password,
+			},
+		}...),
+		Args:           instance.GetArgs(),
+		ReadinessProbe: instance.GetReadinessProbe(),
+		LivenessProbe:  instance.GetLivenessProbe(),
+		StartupProbe:   instance.GetStartupProbe(),
+		VolumeMounts:   instance.GetExtraVolumeMounts(),
 	}
 }
 

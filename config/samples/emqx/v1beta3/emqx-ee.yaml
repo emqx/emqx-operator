@@ -60,6 +60,8 @@ spec:
         - |
           tail -f /dev/null
   emqxTemplate:
+    username: "test"
+    password: "test"
     image: emqx/emqx-ee:4.4.5
     securityContext:
       runAsUser: 1000

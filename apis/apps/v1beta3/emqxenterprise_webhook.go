@@ -17,6 +17,8 @@ limitations under the License.
 package v1beta3
 
 import (
+	"errors"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -95,6 +97,13 @@ func (r *EmqxEnterprise) Default() {
 			SupplementalGroups:  []int64{emqxUserGroup},
 		}
 	}
+
+	if len(r.Spec.EmqxTemplate.Username) == 0 {
+		r.Spec.EmqxTemplate.Username = DefaultUsername
+	}
+	if len(r.Spec.EmqxTemplate.Password) == 0 {
+		r.Spec.EmqxTemplate.Password = DefaultPassword
+	}
 }
 
 //+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta3-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta3,name=validator.enterprise.emqx.io,admissionReviewVersions={v1,v1beta1}
@@ -120,6 +129,13 @@ func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 		emqxenterpriselog.Error(err, "validate update failed")
 		return err
 	}
+
+	oldEmqx := old.(*EmqxEnterprise)
+	if err := validateUsernameAndPassword(r, oldEmqx); err != nil {
+		emqxenterpriselog.Error(err, "validate update failed")
+		return err
+	}
+
 	return nil
 }
 
@@ -128,5 +144,16 @@ func (r *EmqxEnterprise) ValidateDelete() error {
 	emqxenterpriselog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
+	return nil
+}
+
+func validateUsernameAndPassword(new, old Emqx) error {
+	if new.GetUsername() != old.GetUsername() {
+		return errors.New("refuse to update username ")
+	}
+
+	if new.GetPassword() != old.GetPassword() {
+		return errors.New("refuse to update password")
+	}
 	return nil
 }

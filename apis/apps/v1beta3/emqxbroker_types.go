@@ -26,6 +26,9 @@ type EmqxBrokerTemplate struct {
 	Image           string            `json:"image,omitempty"`
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
@@ -235,3 +238,15 @@ func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModule) {
 }
 
 func (emqx *EmqxBroker) GetStatus() Status { return emqx.Status }
+
+func (emqx *EmqxBroker) GetUsername() string { return emqx.Spec.EmqxTemplate.Username }
+
+func (emqx *EmqxBroker) SetUsername(username string) {
+	emqx.Spec.EmqxTemplate.Username = username
+}
+
+func (emqx *EmqxBroker) GetPassword() string { return emqx.Spec.EmqxTemplate.Password }
+
+func (emqx *EmqxBroker) SetPassword(password string) {
+	emqx.Spec.EmqxTemplate.Password = password
+}
