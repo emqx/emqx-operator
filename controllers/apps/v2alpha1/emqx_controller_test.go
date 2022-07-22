@@ -83,11 +83,67 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 	assert.Equal(t, expect, generateHeadlessService(instance))
 }
 
-func TestGenerateService(t *testing.T) {
+func TestGenerateDashboardService(t *testing.T) {
+	instance := &appsv2alpha1.EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+		Spec: appsv2alpha1.EMQXSpec{
+			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: coreLabels,
+				},
+			},
+			DashboardServiceTemplate: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"apps.emqx.io/instance": "emqx",
+					},
+					Annotations: map[string]string{
+						"foo": "bar",
+					},
+				},
+				Spec: corev1.ServiceSpec{},
+			},
+		},
+	}
+
+	expect := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx-dashboard",
+			Namespace: "emqx",
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx",
+			},
+			Annotations: map[string]string{
+				"foo": "bar",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: coreLabels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "dashboard",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       18083,
+					TargetPort: intstr.FromInt(18083),
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, expect, generateDashboardService(instance))
+}
+
+func TestGenerateListenerService(t *testing.T) {
 	var replicas int32 = 3
-	var instance *appsv2alpha1.EMQX
-	var expectCoreSvc, exceptReplicantSvc *corev1.Service
-	var listenerPorts = []corev1.ServicePort{
+
+	listenerPorts := []corev1.ServicePort{
 		{
 			Name:       "mqtt",
 			Protocol:   corev1.ProtocolTCP,
@@ -96,149 +152,65 @@ func TestGenerateService(t *testing.T) {
 		},
 	}
 
-	instance = &appsv2alpha1.EMQX{
+	instance := &appsv2alpha1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha1.EMQXSpec{
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-					ServiceTemplate: appsv2alpha1.ServiceTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: coreLabels,
-							Annotations: map[string]string{
-								"foo": "bar",
-							},
-						},
-						Spec: corev1.ServiceSpec{
-							Type: corev1.ServiceTypeClusterIP,
-						},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: coreLabels,
+				},
+			},
+			ListenerServiceTemplate: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"apps.emqx.io/instance": "emqx",
+					},
+					Annotations: map[string]string{
+						"foo": "bar",
 					},
 				},
+				Spec: corev1.ServiceSpec{},
 			},
 		},
 	}
 
-	expectCoreSvc = &corev1.Service{
+	expect := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-core",
+			Name:      "emqx-listener",
 			Namespace: "emqx",
-			Labels:    coreLabels,
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx",
+			},
 			Annotations: map[string]string{
 				"foo": "bar",
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "dashboard",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       18083,
-					TargetPort: intstr.FromInt(18083),
-				},
-				{
-					Name:       "mqtt",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       1883,
-					TargetPort: intstr.FromInt(1883),
-				},
-			},
+			Selector: coreLabels,
+			Ports:    listenerPorts,
 		},
 	}
 
-	assert.Equal(t, []*corev1.Service{expectCoreSvc}, generateService(instance, listenerPorts))
+	assert.Equal(t, expect, generateListenerService(instance, listenerPorts))
 
-	instance = &appsv2alpha1.EMQX{
+	instance.Spec.ReplicantTemplate = appsv2alpha1.EMQXReplicantTemplate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx",
-			Namespace: "emqx",
+			Labels: replicantLabels,
 		},
-		Spec: appsv2alpha1.EMQXSpec{
-			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-					ServiceTemplate: appsv2alpha1.ServiceTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: coreLabels,
-							Annotations: map[string]string{
-								"foo": "bar",
-							},
-						},
-						Spec: corev1.ServiceSpec{
-							Type: corev1.ServiceTypeClusterIP,
-						},
-					},
-				},
-			},
-			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
-				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
-					Replicas: &replicas,
-					ServiceTemplate: appsv2alpha1.ServiceTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: replicantLabels,
-							Annotations: map[string]string{
-								"bar": "foo",
-							},
-						},
-						Spec: corev1.ServiceSpec{
-							Type: corev1.ServiceTypeClusterIP,
-						},
-					},
-				},
-			},
+		Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
+			Replicas: &replicas,
 		},
 	}
+	expect.Spec.Selector = replicantLabels
 
-	expectCoreSvc = &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-core",
-			Namespace: "emqx",
-			Labels:    coreLabels,
-			Annotations: map[string]string{
-				"foo": "bar",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "dashboard",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       18083,
-					TargetPort: intstr.FromInt(18083),
-				},
-			},
-		},
-	}
-
-	exceptReplicantSvc = &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-replicant",
-			Namespace: "emqx",
-			Labels:    replicantLabels,
-			Annotations: map[string]string{
-				"bar": "foo",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Type:  corev1.ServiceTypeClusterIP,
-			Ports: listenerPorts,
-		},
-	}
-	assert.Equal(t, []*corev1.Service{expectCoreSvc, exceptReplicantSvc}, generateService(instance, listenerPorts))
+	assert.Equal(t, expect, generateListenerService(instance, listenerPorts))
 }
 
 func TestGenerateStatefulSet(t *testing.T) {
@@ -322,17 +294,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 						{
 							Name:  "extra",
 							Image: "busybox",
-						},
-					},
-					ServiceTemplate: appsv2alpha1.ServiceTemplate{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: coreLabels,
-							Annotations: map[string]string{
-								"foo": "bar",
-							},
-						},
-						Spec: corev1.ServiceSpec{
-							Type: corev1.ServiceTypeClusterIP,
 						},
 					},
 				},
@@ -690,4 +651,65 @@ func TestGenerateDeployment(t *testing.T) {
 	}
 
 	assert.Equal(t, expect, generateDeployment(instance))
+}
+
+func TestMergeServicePorts(t *testing.T) {
+	ports1 := []corev1.ServicePort{
+		{
+			Name:       "mqtt",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       1883,
+			TargetPort: intstr.FromInt(1883),
+		},
+		{
+			Name:       "mqtts",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       8883,
+			TargetPort: intstr.FromInt(8883),
+		},
+	}
+
+	ports2 := []corev1.ServicePort{
+		{
+			Name:       "mqtt",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       11883,
+			TargetPort: intstr.FromInt(11883),
+		},
+		{
+			Name:       "ws",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       8083,
+			TargetPort: intstr.FromInt(8083),
+		},
+	}
+
+	expect := []corev1.ServicePort{
+		{
+			Name:       "mqtt",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       1883,
+			TargetPort: intstr.FromInt(1883),
+		},
+		{
+			Name:       "mqtts",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       8883,
+			TargetPort: intstr.FromInt(8883),
+		},
+		{
+			Name:       "ws",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       8083,
+			TargetPort: intstr.FromInt(8083),
+		},
+	}
+
+	assert.Equal(t, expect, mergeServicePorts(ports1, ports2))
+}
+
+func TestIsExistReplicant(t *testing.T) {
+	instance := &appsv2alpha1.EMQX{}
+
+	assert.False(t, isExistReplicant(instance))
 }
