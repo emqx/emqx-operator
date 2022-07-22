@@ -40,11 +40,10 @@ type EMQXReplicantTemplateSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
-	Replicas        *int32                      `json:"replicas,omitempty"`
-	ImagePullPolicy corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
-	Image           string                      `json:"image,omitempty"`
-	Args            []string                    `json:"args,omitempty"`
-	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
+	//+kubebuilder:default:=0
+	Replicas  *int32                      `json:"replicas,omitempty"`
+	Args      []string                    `json:"args,omitempty"`
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	SecurityContext   *corev1.SecurityContext `json:"securityContext,omitempty"`
 	InitContainers    []corev1.Container      `json:"initContainers,omitempty"`
@@ -66,11 +65,10 @@ type EMQXCoreTemplateSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
-	Replicas        *int32                      `json:"replicas,omitempty"`
-	ImagePullPolicy corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
-	Image           string                      `json:"image,omitempty"`
-	Args            []string                    `json:"args,omitempty"`
-	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
+	//+kubebuilder:default:=3
+	Replicas  *int32                      `json:"replicas,omitempty"`
+	Args      []string                    `json:"args,omitempty"`
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	SecurityContext   *corev1.SecurityContext `json:"securityContext,omitempty"`
 	InitContainers    []corev1.Container      `json:"initContainers,omitempty"`
@@ -90,6 +88,8 @@ type EMQXCoreTemplate struct {
 
 // EMQXSpec defines the desired state of EMQX
 type EMQXSpec struct {
+	Image            string                        `json:"image,omitempty"`
+	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	SecurityContext  *corev1.PodSecurityContext    `json:"securityContext,omitempty"`
 

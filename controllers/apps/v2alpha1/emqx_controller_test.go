@@ -224,6 +224,8 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha1.EMQXSpec{
+			Image:           "emqx/emqx:5.0",
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			ImagePullSecrets: []corev1.LocalObjectReference{
 				{
 					Name: "fake-secret",
@@ -232,6 +234,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			SecurityContext: &corev1.PodSecurityContext{
 				RunAsUser:  &user,
 				RunAsGroup: &group,
+				FSGroup:    &group,
 			},
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
@@ -241,6 +244,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 					},
 				},
 				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
+					Args: []string{"hello world"},
+					SecurityContext: &corev1.SecurityContext{
+						RunAsUser:  &user,
+						RunAsGroup: &group,
+					},
+
 					Persistent: corev1.PersistentVolumeClaimSpec{
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
@@ -260,9 +269,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 					NodeSelector: map[string]string{
 						"kubernetes.io/hostname": "emqx-node",
 					},
-					Image:           "emqx/emqx:5.0",
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Args:            []string{"hello world"},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -335,6 +341,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser:  &user,
 						RunAsGroup: &group,
+						FSGroup:    &group,
 					},
 					Affinity:    &corev1.Affinity{},
 					Tolerations: []corev1.Toleration{},
@@ -380,6 +387,10 @@ func TestGenerateStatefulSet(t *testing.T) {
 								},
 							},
 							Args: []string{"hello world"},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser:  &user,
+								RunAsGroup: &group,
+							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -461,12 +472,15 @@ func TestGenerateDeployment(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha1.EMQXSpec{
+			Image:           "emqx/emqx:5.0",
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			ImagePullSecrets: []corev1.LocalObjectReference{
 				{Name: "fake-secret"},
 			},
 			SecurityContext: &corev1.PodSecurityContext{
 				RunAsUser:  &user,
 				RunAsGroup: &group,
+				FSGroup:    &group,
 			},
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
 				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
@@ -489,9 +503,11 @@ func TestGenerateDeployment(t *testing.T) {
 					InitContainers: []corev1.Container{
 						{Name: "init", Image: "busybox"},
 					},
-					Image:           "emqx/emqx:5.0",
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Args:            []string{"hello world"},
+					Args: []string{"hello world"},
+					SecurityContext: &corev1.SecurityContext{
+						RunAsUser:  &user,
+						RunAsGroup: &group,
+					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -559,6 +575,7 @@ func TestGenerateDeployment(t *testing.T) {
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser:  &user,
 						RunAsGroup: &group,
+						FSGroup:    &group,
 					},
 					NodeName: "emqx-node",
 					NodeSelector: map[string]string{
@@ -604,6 +621,10 @@ func TestGenerateDeployment(t *testing.T) {
 									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser:  &user,
+								RunAsGroup: &group,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{

@@ -393,8 +393,8 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 					Containers: append([]corev1.Container{
 						{
 							Name:            EMQXContainerName,
-							Image:           instance.Spec.CoreTemplate.Spec.Image,
-							ImagePullPolicy: corev1.PullPolicy(instance.Spec.CoreTemplate.Spec.ImagePullPolicy),
+							Image:           instance.Spec.Image,
+							ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
 							Env: []corev1.EnvVar{
 								{
 									Name:  "EMQX_NODE__DB_ROLE",
@@ -511,8 +511,8 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 					Containers: append([]corev1.Container{
 						{
 							Name:            EMQXContainerName,
-							Image:           instance.Spec.ReplicantTemplate.Spec.Image,
-							ImagePullPolicy: instance.Spec.ReplicantTemplate.Spec.ImagePullPolicy,
+							Image:           instance.Spec.Image,
+							ImagePullPolicy: instance.Spec.ImagePullPolicy,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "EMQX_NODE__DB_ROLE",

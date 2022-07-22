@@ -3931,12 +3931,6 @@ spec:
                           - name
                           type: object
                         type: array
-                      image:
-                        type: string
-                      imagePullPolicy:
-                        description: PullPolicy describes a policy for if/when to
-                          pull a container image
-                        type: string
                       initContainers:
                         items:
                           description: A single application container that you want
@@ -5703,6 +5697,7 @@ spec:
                             type: integer
                         type: object
                       replicas:
+                        default: 3
                         format: int32
                         type: integer
                       resources:
@@ -6611,6 +6606,12 @@ spec:
                         type: object
                     type: object
                 type: object
+              image:
+                type: string
+              imagePullPolicy:
+                description: PullPolicy describes a policy for if/when to pull a container
+                  image
+                type: string
               imagePullSecrets:
                 items:
                   description: LocalObjectReference contains enough information to
@@ -11021,12 +11022,6 @@ spec:
                           - name
                           type: object
                         type: array
-                      image:
-                        type: string
-                      imagePullPolicy:
-                        description: PullPolicy describes a policy for if/when to
-                          pull a container image
-                        type: string
                       initContainers:
                         items:
                           description: A single application container that you want
@@ -12627,6 +12622,7 @@ spec:
                             type: integer
                         type: object
                       replicas:
+                        default: 0
                         format: int32
                         type: integer
                       resources:
