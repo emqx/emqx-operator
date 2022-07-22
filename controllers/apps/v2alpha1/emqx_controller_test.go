@@ -103,7 +103,7 @@ func TestGenerateService(t *testing.T) {
 		},
 		Spec: appsv2alpha1.EMQXSpec{
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-				Spec: appsv2alpha1.EMQXTemplateSpec{
+				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
 					ServiceTemplate: appsv2alpha1.ServiceTemplate{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: coreLabels,
@@ -161,7 +161,7 @@ func TestGenerateService(t *testing.T) {
 		},
 		Spec: appsv2alpha1.EMQXSpec{
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-				Spec: appsv2alpha1.EMQXTemplateSpec{
+				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
 					ServiceTemplate: appsv2alpha1.ServiceTemplate{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: coreLabels,
@@ -176,7 +176,7 @@ func TestGenerateService(t *testing.T) {
 				},
 			},
 			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
-				Spec: appsv2alpha1.EMQXTemplateSpec{
+				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
 					Replicas: &replicas,
 					ServiceTemplate: appsv2alpha1.ServiceTemplate{
 						ObjectMeta: metav1.ObjectMeta{
@@ -244,6 +244,7 @@ func TestGenerateService(t *testing.T) {
 func TestGenerateStatefulSet(t *testing.T) {
 	var replicas int32 = 3
 	var user, group int64 = 1001, 1001
+	var storageClass string = "emqx-storage"
 
 	instance := &appsv2alpha1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
@@ -267,7 +268,19 @@ func TestGenerateStatefulSet(t *testing.T) {
 						"foo": "bar",
 					},
 				},
-				Spec: appsv2alpha1.EMQXTemplateSpec{
+				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
+					Persistent: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: resource.MustParse("20Mi"),
+							},
+						},
+						StorageClassName: &storageClass,
+					},
+
 					Replicas:    &replicas,
 					Affinity:    &corev1.Affinity{},
 					ToleRations: []corev1.Toleration{},
@@ -427,10 +440,36 @@ func TestGenerateStatefulSet(t *testing.T) {
 								PeriodSeconds:       int32(5),
 								FailureThreshold:    int32(30),
 							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "emqx-core-data",
+									MountPath: "/opt/emqx/data",
+								},
+							},
 						},
 						{
 							Name:  "extra",
 							Image: "busybox",
+						},
+					},
+				},
+			},
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "emqx-core-data",
+						Namespace: "emqx",
+						Labels:    coreLabels,
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						StorageClassName: &storageClass,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: resource.MustParse("20Mi"),
+							},
 						},
 					},
 				},
@@ -469,7 +508,7 @@ func TestGenerateDeployment(t *testing.T) {
 				RunAsGroup: &group,
 			},
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-				Spec: appsv2alpha1.EMQXTemplateSpec{
+				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
 					Replicas: &replicas,
 				},
 			},
@@ -480,7 +519,7 @@ func TestGenerateDeployment(t *testing.T) {
 						"foo": "bar",
 					},
 				},
-				Spec: appsv2alpha1.EMQXTemplateSpec{
+				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
 					Replicas: &replicas,
 					NodeName: "emqx-node",
 					NodeSelector: map[string]string{
@@ -515,6 +554,12 @@ func TestGenerateDeployment(t *testing.T) {
 					},
 					ExtraContainers: []corev1.Container{
 						{Name: "extra", Image: "busybox"},
+					},
+					ExtraVolumeMounts: []corev1.VolumeMount{
+						{Name: "extra", MountPath: "/extra"},
+					},
+					ExtraVolumes: []corev1.Volume{
+						{Name: "extra", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "extra"}}}},
 					},
 				},
 			},
@@ -612,7 +657,11 @@ func TestGenerateDeployment(t *testing.T) {
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "emqx-data",
+									Name:      "extra",
+									MountPath: "/extra",
+								},
+								{
+									Name:      "emqx-replicant-data",
 									MountPath: "/opt/emqx/data",
 								},
 							},
@@ -621,7 +670,15 @@ func TestGenerateDeployment(t *testing.T) {
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: "emqx-data",
+							Name: "extra",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: "extra"},
+								},
+							},
+						},
+						{
+							Name: "emqx-replicant-data",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},

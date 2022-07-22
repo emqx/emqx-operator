@@ -29,24 +29,28 @@ type ServiceTemplate struct {
 	Spec              corev1.ServiceSpec `json:"spec,omitempty"`
 }
 
-type EMQXTemplateSpec struct {
+type EMQXReplicantTemplate struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              EMQXReplicantTemplateSpec `json:"spec,omitempty"`
+}
+
+type EMQXReplicantTemplateSpec struct {
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
 	Replicas        *int32                      `json:"replicas,omitempty"`
-	SecurityContext *corev1.PodSecurityContext  `json:"securityContext,omitempty"`
 	ImagePullPolicy corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Image           string                      `json:"image,omitempty"`
 	Args            []string                    `json:"args,omitempty"`
 	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
-
-	ExtraContainers   []corev1.Container   `json:"Containers,omitempty"`
-	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
-	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
+	SecurityContext   *corev1.SecurityContext `json:"securityContext,omitempty"`
+	InitContainers    []corev1.Container      `json:"initContainers,omitempty"`
+	ExtraContainers   []corev1.Container      `json:"Containers,omitempty"`
+	ExtraVolumes      []corev1.Volume         `json:"extraVolumes,omitempty"`
+	ExtraVolumeMounts []corev1.VolumeMount    `json:"extraVolumeMounts,omitempty"`
 
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
@@ -55,23 +59,46 @@ type EMQXTemplateSpec struct {
 	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
 }
 
-type EMQXReplicantTemplate struct {
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              EMQXTemplateSpec `json:"spec,omitempty"`
+type EMQXCoreTemplateSpec struct {
+	// More Persistent field than EMQXReplicantTemplateSpec
+	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
+
+	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeName     string              `json:"nodeName,omitempty"`
+	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
+
+	Replicas        *int32                      `json:"replicas,omitempty"`
+	ImagePullPolicy corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
+	Image           string                      `json:"image,omitempty"`
+	Args            []string                    `json:"args,omitempty"`
+	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	SecurityContext   *corev1.SecurityContext `json:"securityContext,omitempty"`
+	InitContainers    []corev1.Container      `json:"initContainers,omitempty"`
+	ExtraContainers   []corev1.Container      `json:"Containers,omitempty"`
+	ExtraVolumes      []corev1.Volume         `json:"extraVolumes,omitempty"`
+	ExtraVolumeMounts []corev1.VolumeMount    `json:"extraVolumeMounts,omitempty"`
+
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
+	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
+
+	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
 }
 
 type EMQXCoreTemplate struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              EMQXTemplateSpec `json:"spec,omitempty"`
+	Spec              EMQXCoreTemplateSpec `json:"spec,omitempty"`
 }
 
 // EMQXSpec defines the desired state of EMQX
 type EMQXSpec struct {
-	ImagePullSecrets  []corev1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
-	SecurityContext   *corev1.PodSecurityContext       `json:"securityContext,omitempty"`
-	Persistent        corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
-	CoreTemplate      EMQXCoreTemplate                 `json:"coreTemplate,omitempty"`
-	ReplicantTemplate EMQXReplicantTemplate            `json:"replicantTemplate,omitempty"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	SecurityContext  *corev1.PodSecurityContext    `json:"securityContext,omitempty"`
+
+	CoreTemplate      EMQXCoreTemplate      `json:"coreTemplate,omitempty"`
+	ReplicantTemplate EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
 }
 
 type ConditionType string
