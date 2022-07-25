@@ -28,7 +28,6 @@ import (
 	"github.com/tidwall/sjson"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -153,35 +152,6 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EmqxPluginReconciler) getManagementField(obj appsv1beta3.Emqx) (username, password, apiPort string) {
-	username = "admin"
-	password = "public"
-	apiPort = "8081"
-
-	pluginsList := &appsv1beta3.EmqxPluginList{}
-	_ = r.Client.List(context.TODO(), pluginsList, client.InNamespace(obj.GetNamespace()))
-
-	for _, plugin := range pluginsList.Items {
-		selector, _ := labels.ValidatedSelectorFromSet(plugin.Spec.Selector)
-		if selector.Empty() || !selector.Matches(labels.Set(obj.GetLabels())) {
-			continue
-		}
-		if plugin.Spec.PluginName == "emqx_management" {
-			if _, ok := plugin.Spec.Config["management.listener.http"]; ok {
-				apiPort = plugin.Spec.Config["management.listener.http"]
-			}
-			if _, ok := plugin.Spec.Config["management.default_application.id"]; ok {
-				username = plugin.Spec.Config["management.default_application.id"]
-			}
-			if _, ok := plugin.Spec.Config["management.default_application.secret"]; ok {
-				password = plugin.Spec.Config["management.default_application.secret"]
-			}
-		}
-	}
-
-	return
-}
-
 func (r *EmqxPluginReconciler) checkPluginStatusByAPI(emqx appsv1beta3.Emqx, pluginName string) error {
 	list, err := r.getPluginsByAPI(emqx)
 	if err != nil {
@@ -221,7 +191,7 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta3.Emqx, pluginNa
 }
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName, pluginName, reloadOrUnload string) error {
-	username, password, apiPort := r.getManagementField(emqx)
+	username, password, apiPort := emqx.GetUsername(), emqx.GetPassword(), appsv1beta3.DefaultManagementPort
 	resp, _, err := r.Handler.RequestAPI(emqx, "PUT", username, password, apiPort, fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
 	if err != nil {
 		return err
@@ -235,7 +205,7 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName
 func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta3.Emqx) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
 
-	username, password, apiPort := r.getManagementField(emqx)
+	username, password, apiPort := emqx.GetUsername(), emqx.GetPassword(), appsv1beta3.DefaultManagementPort
 	resp, body, err := r.Handler.RequestAPI(emqx, "GET", username, password, apiPort, "api/v4/plugins")
 	if err != nil {
 		return nil, err

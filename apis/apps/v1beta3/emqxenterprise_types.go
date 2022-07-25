@@ -31,6 +31,9 @@ type EmqxEnterpriseTemplate struct {
 	Image           string            `json:"image,omitempty"`
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+
 	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
@@ -55,10 +58,9 @@ type EmqxEnterpriseSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
-
-	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
-	Env        []corev1.EnvVar                  `json:"env,omitempty"`
+	ImagePullSecrets []corev1.LocalObjectReference    `json:"imagePullSecrets,omitempty"`
+	Persistent       corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
+	Env              []corev1.EnvVar                  `json:"env,omitempty"`
 
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
 	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
@@ -249,3 +251,15 @@ func (emqx *EmqxEnterprise) SetLicense(license License) {
 }
 
 func (emqx *EmqxEnterprise) GetStatus() Status { return emqx.Status }
+
+func (emqx *EmqxEnterprise) GetUsername() string { return emqx.Spec.EmqxTemplate.Username }
+
+func (emqx *EmqxEnterprise) SetUsername(username string) {
+	emqx.Spec.EmqxTemplate.Username = username
+}
+
+func (emqx *EmqxEnterprise) GetPassword() string { return emqx.Spec.EmqxTemplate.Password }
+
+func (emqx *EmqxEnterprise) SetPassword(password string) {
+	emqx.Spec.EmqxTemplate.Password = password
+}

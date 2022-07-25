@@ -2656,6 +2656,8 @@ spec:
                           type: string
                       type: object
                     type: array
+                  password:
+                    type: string
                   readinessProbe:
                     description: Probe describes a health check to be performed against
                       a container to determine whether it is alive or ready to receive
@@ -3519,6 +3521,8 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  username:
+                    type: string
                 type: object
               env:
                 items:
