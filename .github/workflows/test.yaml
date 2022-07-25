@@ -26,6 +26,15 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+        - apis
+        - controllers
+        - pkg
+        - e2e/v1beta3
+
     steps:
       - run: minikube start
       - uses: actions/setup-go@v2
@@ -48,13 +57,13 @@ jobs:
           tar -zxvf kubebuilder-tools
           sudo mv kubebuilder/ /usr/local/kubebuilder
       - name: Run unit tests
-        run: make test 
-      - name: Install goveralls 
+        run: go test -coverpkg=./... -coverprofile=cover.out --timeout=20m ./${{ matrix.dir }}/...
+      - name: Install goveralls
         run: go install github.com/mattn/goveralls@latest
       - name: Send coverage
         env:
           COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goveralls -coverprofile=cover.out -service=github
+        run: goveralls -coverprofile=cover.out -service=github -parallel -flagname=go-test-${{ matrix.dir }}
   
   finish:
     needs: test
@@ -128,4 +137,4 @@ jobs:
       - if: failure()
         run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
       - if: failure()
-        run: kubectl get  ${{ matrix.emqx[0] }}  ${{ matrix.emqx[1] }} -o json
+        run: kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json

@@ -68,4 +68,4 @@ jobs:
       - if: failure()
         run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
       - if: failure()
-        run: kubectl get  ${{ matrix.emqx[0] }}  ${{ matrix.emqx[1] }} -o json
+        run: kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json
