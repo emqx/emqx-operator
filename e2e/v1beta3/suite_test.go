@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apps
+package e2e
 
 import (
 	"context"
@@ -26,7 +26,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,8 +54,8 @@ var testEnv *envtest.Environment
 
 var storageClassName string = "standard"
 
-var broker *v1beta3.EmqxBroker = new(v1beta3.EmqxBroker)
-var enterprise *v1beta3.EmqxEnterprise = new(v1beta3.EmqxEnterprise)
+var broker *appsv1beta3.EmqxBroker = new(appsv1beta3.EmqxBroker)
+var enterprise *appsv1beta3.EmqxEnterprise = new(appsv1beta3.EmqxEnterprise)
 
 func TestSuites(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -78,7 +79,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -86,7 +87,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = v1beta3.AddToScheme(scheme.Scheme)
+	err = appsv1beta3.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -96,7 +97,8 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).NotTo(BeNil())
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme:             scheme.Scheme,
+		MetricsBindAddress: "0",
 	})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -109,23 +111,23 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(clientset).NotTo(BeNil())
 
-	emqxReconciler := EmqxReconciler{
+	emqxReconciler := appscontrollersv1beta3.EmqxReconciler{
 		Handler:       handler,
 		Scheme:        k8sManager.GetScheme(),
 		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
 	}
 
-	err = (&EmqxBrokerReconciler{
+	err = (&appscontrollersv1beta3.EmqxBrokerReconciler{
 		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&EmqxEnterpriseReconciler{
+	err = (&appscontrollersv1beta3.EmqxEnterpriseReconciler{
 		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&EmqxPluginReconciler{
+	err = (&appscontrollersv1beta3.EmqxPluginReconciler{
 		Handler: handler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -142,7 +144,7 @@ var _ = BeforeSuite(func() {
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 
-	broker = &v1beta3.EmqxBroker{
+	broker = &appsv1beta3.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "broker",
@@ -150,15 +152,15 @@ var _ = BeforeSuite(func() {
 				"cluster": "emqx",
 			},
 		},
-		Spec: v1beta3.EmqxBrokerSpec{
-			EmqxTemplate: v1beta3.EmqxBrokerTemplate{
+		Spec: appsv1beta3.EmqxBrokerSpec{
+			EmqxTemplate: appsv1beta3.EmqxBrokerTemplate{
 				Image: "emqx/emqx:4.4.5",
 			},
 		},
 	}
 	broker.Default()
 
-	enterprise = &v1beta3.EmqxEnterprise{
+	enterprise = &appsv1beta3.EmqxEnterprise{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx-ee",
 			Namespace: "enterprise",
@@ -166,7 +168,7 @@ var _ = BeforeSuite(func() {
 				"cluster": "emqx",
 			},
 		},
-		Spec: v1beta3.EmqxEnterpriseSpec{
+		Spec: appsv1beta3.EmqxEnterpriseSpec{
 			Persistent: corev1.PersistentVolumeClaimSpec{
 				StorageClassName: &storageClassName,
 				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
@@ -176,24 +178,24 @@ var _ = BeforeSuite(func() {
 					},
 				},
 			},
-			EmqxTemplate: v1beta3.EmqxEnterpriseTemplate{
+			EmqxTemplate: appsv1beta3.EmqxEnterpriseTemplate{
 				Image: "emqx/emqx-ee:4.4.5",
 			},
 		},
 	}
 	enterprise.Default()
 	emqxReady := make(chan string)
-	for _, emqx := range []v1beta3.Emqx{broker, enterprise} {
-		go func(emqx v1beta3.Emqx) {
+	for _, emqx := range []appsv1beta3.Emqx{broker, enterprise} {
+		go func(emqx appsv1beta3.Emqx) {
 			Expect(k8sClient.Create(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: emqx.GetNamespace()}})).Should(Succeed())
 			Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
 
-			var instance v1beta3.Emqx
+			var instance appsv1beta3.Emqx
 			switch emqx.(type) {
-			case *v1beta3.EmqxBroker:
-				instance = &v1beta3.EmqxBroker{}
-			case *v1beta3.EmqxEnterprise:
-				instance = &v1beta3.EmqxEnterprise{}
+			case *appsv1beta3.EmqxBroker:
+				instance = &appsv1beta3.EmqxBroker{}
+			case *appsv1beta3.EmqxEnterprise:
+				instance = &appsv1beta3.EmqxEnterprise{}
 			}
 			Eventually(func() corev1.ConditionStatus {
 				_ = k8sClient.Get(
@@ -206,14 +208,14 @@ var _ = BeforeSuite(func() {
 				)
 				running := corev1.ConditionFalse
 				for _, c := range instance.GetStatus().Conditions {
-					if c.Type == v1beta3.ConditionRunning {
+					if c.Type == appsv1beta3.ConditionRunning {
 						running = c.Status
 					}
 				}
 				return running
 			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
 
-			lwm2m := &v1beta3.EmqxPlugin{
+			lwm2m := &appsv1beta3.EmqxPlugin{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "apps.emqx.io/v1beta3",
 					Kind:       "EmqxPlugin",
@@ -223,7 +225,7 @@ var _ = BeforeSuite(func() {
 					Namespace: emqx.GetNamespace(),
 					Labels:    emqx.GetLabels(),
 				},
-				Spec: v1beta3.EmqxPluginSpec{
+				Spec: appsv1beta3.EmqxPluginSpec{
 					PluginName: "emqx_lwm2m",
 					Selector:   emqx.GetLabels(),
 					Config: map[string]string{
@@ -241,7 +243,7 @@ var _ = BeforeSuite(func() {
 
 			Eventually(func() bool {
 				_ = k8sClient.Get(context.Background(), types.NamespacedName{Name: lwm2m.GetName(), Namespace: lwm2m.GetNamespace()}, lwm2m)
-				return lwm2m.Status.Phase == v1beta3.EmqxPluginStatusLoaded
+				return lwm2m.Status.Phase == appsv1beta3.EmqxPluginStatusLoaded
 			}, timeout, interval).Should(BeTrue())
 
 			emqxReady <- "ready"
@@ -283,7 +285,7 @@ func cleanAll() {
 func removePluginsFinalizer(namespace string) error {
 	finalizer := "apps.emqx.io/finalizer"
 
-	plugins := &v1beta3.EmqxPluginList{}
+	plugins := &appsv1beta3.EmqxPluginList{}
 	_ = k8sClient.List(
 		context.Background(),
 		plugins,
@@ -299,17 +301,17 @@ func removePluginsFinalizer(namespace string) error {
 	return nil
 }
 
-func updateEmqx(emqx v1beta3.Emqx) {
+func updateEmqx(emqx appsv1beta3.Emqx) {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(emqx.GetObjectKind().GroupVersionKind())
 	switch emqx.(type) {
-	case *v1beta3.EmqxBroker:
+	case *appsv1beta3.EmqxBroker:
 		u.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   "apps.emqx.io",
 			Version: "v1beta3",
 			Kind:    "EmqxBroker",
 		})
-	case *v1beta3.EmqxEnterprise:
+	case *appsv1beta3.EmqxEnterprise:
 		u.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   "apps.emqx.io",
 			Version: "v1beta3",
