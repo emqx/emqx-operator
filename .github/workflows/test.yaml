@@ -31,6 +31,7 @@ jobs:
         - controllers
         - pkg
         - e2e/v1beta3
+        - e2e/v2alpha1
 
     steps:
       - run: minikube start
@@ -83,6 +84,11 @@ jobs:
         emqx:
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqx.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqx-ee.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx.yaml"]
+        exclude:
+          - install: helm
+            emqx: [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx.yaml"]
+
     steps:
       - run: minikube start
       - name: install cert-manager
