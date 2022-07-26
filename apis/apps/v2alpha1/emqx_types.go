@@ -97,7 +97,7 @@ type EMQXSpec struct {
 	ReplicantTemplate EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
 
 	DashboardServiceTemplate corev1.Service `json:"dashboardServiceTemplate,omitempty"`
-	ListenerServiceTemplate  corev1.Service `json:"listenerServiceTemplate,omitempty"`
+	ListenersServiceTemplate corev1.Service `json:"listenersServiceTemplate,omitempty"`
 }
 
 type ConditionType string
