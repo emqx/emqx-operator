@@ -211,37 +211,38 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	)
 	resources = append(resources, acl)
 
-	//add module
-	module := generateLoadedModules(instance)
-	annotations["LoadedModules/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(module.Data["loaded_modules"]))
-	emqxContainer.VolumeMounts = append(
-		emqxContainer.VolumeMounts,
-		corev1.VolumeMount{
-			Name:      module.Name,
-			MountPath: "/mounted/modules",
-		},
-	)
-	emqxContainer.Env = append(
-		emqxContainer.Env,
-		corev1.EnvVar{
-			Name:  "EMQX_MODULES__LOADED_FILE",
-			Value: "/mounted/modules/loaded_modules",
-		},
-	)
-	sts.Spec.Template.Spec.Volumes = append(
-		sts.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: module.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: module.Name,
+	//add module when module isn't nil
+	if module := generateLoadedModules(instance); module != nil {
+		annotations["LoadedModules/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(module.Data["loaded_modules"]))
+		emqxContainer.VolumeMounts = append(
+			emqxContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      module.Name,
+				MountPath: "/mounted/modules",
+			},
+		)
+		emqxContainer.Env = append(
+			emqxContainer.Env,
+			corev1.EnvVar{
+				Name:  "EMQX_MODULES__LOADED_FILE",
+				Value: "/mounted/modules/loaded_modules",
+			},
+		)
+		sts.Spec.Template.Spec.Volumes = append(
+			sts.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: module.Name,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: module.Name,
+						},
 					},
 				},
 			},
-		},
-	)
-	resources = append(resources, module)
+		)
+		resources = append(resources, module)
+	}
 
 	if license := generateLicense(instance); license != nil {
 		emqxContainer.VolumeMounts = append(
@@ -704,6 +705,9 @@ func generateLoadedModules(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 	case *appsv1beta3.EmqxEnterprise:
 		data, _ := json.Marshal(obj.Spec.EmqxTemplate.Modules)
 		loadedModulesString = string(data)
+	}
+	if loadedModulesString == "" || loadedModulesString == "null" {
+		return nil
 	}
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{

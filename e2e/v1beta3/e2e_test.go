@@ -45,8 +45,8 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 	Context("check resource", func() {
 		BeforeEach(func() {
 			aclString = "{allow, {user, \"dashboard\"}, subscribe, [\"$SYS/#\"]}.\n{allow, {ipaddr, \"127.0.0.1\"}, pubsub, [\"$SYS/#\", \"#\"]}.\n{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n{allow, all}.\n"
-			brokerModulesString = "{emqx_mod_acl_internal, true}.\n"
-			enterpriseModulesString = `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}},{"name":"retainer","enable":true,"configs":{"expiry_interval":0,"max_payload_size":"1MB","max_retained_messages":0,"storage_type":"ram"}}]`
+			brokerModulesString = ""
+			enterpriseModulesString = ""
 
 			headlessPort = corev1.ServicePort{
 				Name:       "http-management-8081",
@@ -114,7 +114,7 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 			check_acl(broker, aclString)
 			check_acl(enterprise, aclString)
 
-			By("should create a configMap with loaded modules")
+			// By("should create a configMap with loaded modules")
 			check_modules(broker, brokerModulesString)
 			check_modules(enterprise, enterpriseModulesString)
 
@@ -123,8 +123,8 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 			check_service_ports(enterprise, append(ports, pluginPorts...), headlessPort)
 
 			By("should create a statefulSet", func() {
-				check_statefulset(broker)
-				check_statefulset(enterprise)
+				check_statefulset(broker, brokerModulesString)
+				check_statefulset(enterprise, enterpriseModulesString)
 			})
 
 			By("should create EMQX Plugins")
@@ -365,7 +365,7 @@ func update_lwm2m(emqx v1beta3.Emqx) {
 	}, timeout, interval).Should(Succeed())
 }
 
-func check_statefulset(emqx v1beta3.Emqx) {
+func check_statefulset(emqx v1beta3.Emqx, loadedModulesString string) {
 	sts := &appsv1.StatefulSet{}
 	Eventually(func() error {
 		err := k8sClient.Get(
@@ -439,14 +439,19 @@ func check_statefulset(emqx v1beta3.Emqx) {
 		{Name: "EMQX_PLUGINS__LOADED_FILE", Value: "/mounted/plugins/data/loaded_plugins"},
 		{Name: "EMQX_PLUGINS__ETC_DIR", Value: "/mounted/plugins/etc"},
 		{Name: "EMQX_ACL_FILE", Value: "/mounted/acl/acl.conf"},
-		{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"},
+	}
+	if len(loadedModulesString) > 0 {
+		EnvVars = append(EnvVars, corev1.EnvVar{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"})
 	}
 	Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ConsistOf(EnvVars))
+
 	// Volume
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
-	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedModules())))
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.ACL())))
+	if len(loadedModulesString) > 0 {
+		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedModules())))
+	}
 	if emqxEnterprise, ok := emqx.(*v1beta3.EmqxEnterprise); ok {
 		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
 			Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.License())))
@@ -459,8 +464,10 @@ func check_statefulset(emqx v1beta3.Emqx) {
 	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.Log())))
 	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
 	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
-	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedModules())))
 	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.ACL())))
+	if len(loadedModulesString) > 0 {
+		Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedModules())))
+	}
 	if emqxEnterprise, ok := emqx.(*v1beta3.EmqxEnterprise); ok {
 		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
 			Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.License())))
@@ -531,7 +538,7 @@ func check_acl(emqx v1beta3.Emqx, aclString string) {
 }
 
 func check_modules(emqx v1beta3.Emqx, loadedModulesString string) {
-	Eventually(func() map[string]string {
+	Eventually(func() bool {
 		cm := &corev1.ConfigMap{}
 		_ = k8sClient.Get(
 			context.Background(),
@@ -540,12 +547,12 @@ func check_modules(emqx v1beta3.Emqx, loadedModulesString string) {
 				Namespace: emqx.GetNamespace(),
 			}, cm,
 		)
-		return cm.Data
-	}, timeout, interval).Should(Equal(
-		map[string]string{"loaded_modules": loadedModulesString},
-	))
-
-	Eventually(func() map[string]string {
+		if cm.Data == nil {
+			cm.Data = map[string]string{}
+		}
+		return loadedModulesString == cm.Data["loaded_modules"]
+	}, timeout, interval).Should(BeTrue())
+	Eventually(func() bool {
 		sts := &appsv1.StatefulSet{}
 		_ = k8sClient.Get(
 			context.Background(),
@@ -555,13 +562,11 @@ func check_modules(emqx v1beta3.Emqx, loadedModulesString string) {
 			},
 			sts,
 		)
-		return sts.Annotations
-	}, timeout, interval).Should(
-		HaveKeyWithValue(
-			"LoadedModules/Base64EncodeConfig",
-			base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
-		),
-	)
+		if sts.Annotations == nil {
+			sts.Annotations = map[string]string{}
+		}
+		return sts.Annotations["LoadedModules/Base64EncodeConfig"] == base64.StdEncoding.EncodeToString([]byte(loadedModulesString))
+	}, timeout, interval).Should(BeTrue())
 }
 
 func check_plugin(emqx v1beta3.Emqx, pluginList []string) {
