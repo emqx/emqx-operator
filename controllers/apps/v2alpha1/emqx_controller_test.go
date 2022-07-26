@@ -163,7 +163,7 @@ func TestGenerateListenerService(t *testing.T) {
 					Labels: coreLabels,
 				},
 			},
-			ListenerServiceTemplate: corev1.Service{
+			ListenersServiceTemplate: corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"apps.emqx.io/instance": "emqx",
@@ -183,7 +183,7 @@ func TestGenerateListenerService(t *testing.T) {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-listener",
+			Name:      "emqx-listeners",
 			Namespace: "emqx",
 			Labels: map[string]string{
 				"apps.emqx.io/instance": "emqx",
