@@ -89,7 +89,7 @@ var _ = Describe("E2E Test", func() {
 
 			svc := &corev1.Service{}
 			Eventually(func() error {
-				return k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listener", Namespace: "default"}, svc)
+				return k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "default"}, svc)
 			}, timeout, interval).Should(Succeed())
 
 			Expect(svc.Spec.Ports).Should(ConsistOf(listenerPorts))
@@ -140,7 +140,7 @@ var _ = Describe("E2E Test", func() {
 
 			svc := &corev1.Service{}
 			Eventually(func() error {
-				return k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listener", Namespace: "default"}, svc)
+				return k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "default"}, svc)
 			}, timeout, interval).Should(Succeed())
 
 			Expect(svc.Spec.Ports).Should(ConsistOf(listenerPorts))

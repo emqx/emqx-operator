@@ -120,8 +120,8 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 	}
-	if listenerSvc := generateListenerService(instance, listenerPorts); listenerSvc != nil {
-		resources = append(resources, listenerSvc)
+	if listenersSvc := generateListenerService(instance, listenerPorts); listenersSvc != nil {
+		resources = append(resources, listenersSvc)
 	}
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
@@ -328,19 +328,19 @@ func generateDashboardService(instance *appsv2alpha1.EMQX) *corev1.Service {
 }
 
 func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1.ServicePort) *corev1.Service {
-	instance.Spec.ListenerServiceTemplate.Spec.Ports = mergeServicePorts(
-		instance.Spec.ListenerServiceTemplate.Spec.Ports,
+	instance.Spec.ListenersServiceTemplate.Spec.Ports = mergeServicePorts(
+		instance.Spec.ListenersServiceTemplate.Spec.Ports,
 		listenerPorts,
 	)
 
-	if len(instance.Spec.ListenerServiceTemplate.Spec.Ports) == 0 {
+	if len(instance.Spec.ListenersServiceTemplate.Spec.Ports) == 0 {
 		return nil
 	}
 
 	if isExistReplicant(instance) {
-		instance.Spec.ListenerServiceTemplate.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
+		instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
 	} else {
-		instance.Spec.ListenerServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
+		instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
 	}
 
 	return &corev1.Service{
@@ -349,12 +349,12 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-listener", instance.Name),
+			Name:        fmt.Sprintf("%s-listeners", instance.Name),
 			Namespace:   instance.Namespace,
-			Labels:      instance.Spec.ListenerServiceTemplate.Labels,
-			Annotations: instance.Spec.ListenerServiceTemplate.Annotations,
+			Labels:      instance.Spec.ListenersServiceTemplate.Labels,
+			Annotations: instance.Spec.ListenersServiceTemplate.Annotations,
 		},
-		Spec: instance.Spec.ListenerServiceTemplate.Spec,
+		Spec: instance.Spec.ListenersServiceTemplate.Spec,
 	}
 }
 
