@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,8 +45,8 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 	Context("check resource", func() {
 		BeforeEach(func() {
 			aclString = "{allow, {user, \"dashboard\"}, subscribe, [\"$SYS/#\"]}.\n{allow, {ipaddr, \"127.0.0.1\"}, pubsub, [\"$SYS/#\", \"#\"]}.\n{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n{allow, all}.\n"
-			brokerModulesString = "{emqx_mod_acl_internal, true}.\n"
-			enterpriseModulesString = `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}},{"name":"retainer","enable":true,"configs":{"expiry_interval":0,"max_payload_size":"1MB","max_retained_messages":0,"storage_type":"ram"}}]`
+			brokerModulesString = ""
+			enterpriseModulesString = ""
 
 			headlessPort = corev1.ServicePort{
 				Name:       "http-management-8081",
@@ -114,7 +114,7 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 			check_acl(broker, aclString)
 			check_acl(enterprise, aclString)
 
-			By("should create a configMap with loaded modules")
+			By("should not create a configMap with loaded modules")
 			check_modules(broker, brokerModulesString)
 			check_modules(enterprise, enterpriseModulesString)
 
@@ -122,10 +122,9 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 			check_service_ports(broker, append(ports, pluginPorts...), headlessPort)
 			check_service_ports(enterprise, append(ports, pluginPorts...), headlessPort)
 
-			By("should create a statefulSet", func() {
-				check_statefulset(broker)
-				check_statefulset(enterprise)
-			})
+			By("should create a statefulSet")
+			check_statefulset(broker)
+			check_statefulset(enterprise)
 
 			By("should create EMQX Plugins")
 			check_plugin(broker, pluginList)
@@ -235,14 +234,14 @@ JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
 EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 -----END CERTIFICATE-----`)
 
-			var config v1beta3.EmqxConfig
+			var config appsv1beta3.EmqxConfig
 
 			config = broker.GetEmqxConfig()
 			config["listener.tcp.internal"] = "11883"
 			config["listener.tcp.external"] = "21883"
 			broker.SetEmqxConfig(config)
 			broker.SetACL([]string{`{deny, all}.`})
-			broker.SetModules([]v1beta3.EmqxBrokerModule{
+			broker.SetModules([]appsv1beta3.EmqxBrokerModule{
 				{
 					Name:   "emqx_mod_presence",
 					Enable: false,
@@ -256,7 +255,7 @@ EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 			config["listener.tcp.external"] = "21883"
 			enterprise.SetEmqxConfig(config)
 			enterprise.SetACL([]string{`{deny, all}.`})
-			enterprise.SetModules([]v1beta3.EmqxEnterpriseModule{
+			enterprise.SetModules([]appsv1beta3.EmqxEnterpriseModule{
 				{
 					Name:    "internal_acl",
 					Enable:  true,
@@ -299,7 +298,7 @@ EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 
 		AfterEach(func() {
 			Eventually(func() error {
-				plugin := &v1beta3.EmqxPlugin{}
+				plugin := &appsv1beta3.EmqxPlugin{}
 				err := k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
@@ -346,9 +345,9 @@ EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 	})
 })
 
-func update_lwm2m(emqx v1beta3.Emqx) {
+func update_lwm2m(emqx appsv1beta3.Emqx) {
 	Eventually(func() error {
-		plugin := &v1beta3.EmqxPlugin{}
+		plugin := &appsv1beta3.EmqxPlugin{}
 		err := k8sClient.Get(
 			context.Background(),
 			types.NamespacedName{
@@ -365,7 +364,21 @@ func update_lwm2m(emqx v1beta3.Emqx) {
 	}, timeout, interval).Should(Succeed())
 }
 
-func check_statefulset(emqx v1beta3.Emqx) {
+func check_statefulset(emqx appsv1beta3.Emqx) {
+	var loadedModulesString string
+	switch obj := emqx.(type) {
+	case *appsv1beta3.EmqxBroker:
+		modules := &appsv1beta3.EmqxBrokerModuleList{
+			Items: obj.Spec.EmqxTemplate.Modules,
+		}
+		loadedModulesString = modules.String()
+	case *appsv1beta3.EmqxEnterprise:
+		modules := &appsv1beta3.EmqxEnterpriseModuleList{
+			Items: obj.Spec.EmqxTemplate.Modules,
+		}
+		loadedModulesString = modules.String()
+	}
+
 	sts := &appsv1.StatefulSet{}
 	Eventually(func() error {
 		err := k8sClient.Get(
@@ -397,7 +410,7 @@ func check_statefulset(emqx v1beta3.Emqx) {
 		Expect(sts.Spec.Template.Spec.InitContainers[0].Args).Should(Equal(emqx.GetInitContainers()[0].Args))
 	}
 
-	names := v1beta3.Names{Object: emqx}
+	names := appsv1beta3.Names{Object: emqx}
 	// Persistent
 	if reflect.ValueOf(emqx.GetPersistent()).IsZero() {
 		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(
@@ -439,15 +452,20 @@ func check_statefulset(emqx v1beta3.Emqx) {
 		{Name: "EMQX_PLUGINS__LOADED_FILE", Value: "/mounted/plugins/data/loaded_plugins"},
 		{Name: "EMQX_PLUGINS__ETC_DIR", Value: "/mounted/plugins/etc"},
 		{Name: "EMQX_ACL_FILE", Value: "/mounted/acl/acl.conf"},
-		{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"},
+	}
+	if loadedModulesString != "" {
+		EnvVars = append(EnvVars, corev1.EnvVar{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"})
 	}
 	Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ConsistOf(EnvVars))
+
 	// Volume
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
-	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedModules())))
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.ACL())))
-	if emqxEnterprise, ok := emqx.(*v1beta3.EmqxEnterprise); ok {
+	if loadedModulesString != "" {
+		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedModules())))
+	}
+	if emqxEnterprise, ok := emqx.(*appsv1beta3.EmqxEnterprise); ok {
 		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
 			Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.License())))
 		}
@@ -459,16 +477,18 @@ func check_statefulset(emqx v1beta3.Emqx) {
 	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.Log())))
 	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
 	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
-	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedModules())))
 	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.ACL())))
-	if emqxEnterprise, ok := emqx.(*v1beta3.EmqxEnterprise); ok {
+	if loadedModulesString != "" {
+		Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedModules())))
+	}
+	if emqxEnterprise, ok := emqx.(*appsv1beta3.EmqxEnterprise); ok {
 		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
 			Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.License())))
 		}
 	}
 }
 
-func check_service_ports(emqx v1beta3.Emqx, ports []corev1.ServicePort, headlessPort corev1.ServicePort) {
+func check_service_ports(emqx appsv1beta3.Emqx, ports []corev1.ServicePort, headlessPort corev1.ServicePort) {
 	Eventually(func() []corev1.ServicePort {
 		svc := &corev1.Service{}
 		_ = k8sClient.Get(
@@ -495,7 +515,7 @@ func check_service_ports(emqx v1beta3.Emqx, ports []corev1.ServicePort, headless
 	}, timeout, interval).Should(ContainElements(append(ports, headlessPort)))
 }
 
-func check_acl(emqx v1beta3.Emqx, aclString string) {
+func check_acl(emqx appsv1beta3.Emqx, aclString string) {
 	Eventually(func() map[string]string {
 		cm := &corev1.ConfigMap{}
 		_ = k8sClient.Get(
@@ -530,43 +550,63 @@ func check_acl(emqx v1beta3.Emqx, aclString string) {
 	)
 }
 
-func check_modules(emqx v1beta3.Emqx, loadedModulesString string) {
-	Eventually(func() map[string]string {
-		cm := &corev1.ConfigMap{}
-		_ = k8sClient.Get(
-			context.Background(),
-			types.NamespacedName{
-				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-modules"),
-				Namespace: emqx.GetNamespace(),
-			}, cm,
-		)
-		return cm.Data
-	}, timeout, interval).Should(Equal(
-		map[string]string{"loaded_modules": loadedModulesString},
-	))
+func check_modules(emqx appsv1beta3.Emqx, loadedModulesString string) {
+	if loadedModulesString == "" {
+		Eventually(func() bool {
+			err := k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-modules"),
+					Namespace: emqx.GetNamespace(),
+				}, &corev1.ConfigMap{},
+			)
+			return k8sErrors.IsNotFound(err)
+		}, timeout, interval).Should(BeTrue())
 
-	Eventually(func() map[string]string {
-		sts := &appsv1.StatefulSet{}
-		_ = k8sClient.Get(
-			context.Background(),
-			types.NamespacedName{
-				Name:      emqx.GetName(),
-				Namespace: emqx.GetNamespace(),
-			},
-			sts,
-		)
-		return sts.Annotations
-	}, timeout, interval).Should(
-		HaveKeyWithValue(
-			"LoadedModules/Base64EncodeConfig",
-			base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
-		),
-	)
+		Eventually(func() map[string]string {
+			sts := &appsv1.StatefulSet{}
+			_ = k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Name:      emqx.GetName(),
+					Namespace: emqx.GetNamespace(),
+				},
+				sts,
+			)
+			return sts.Annotations
+		}, timeout, interval).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
+	} else {
+		Eventually(func() map[string]string {
+			cm := &corev1.ConfigMap{}
+			_ = k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-modules"),
+					Namespace: emqx.GetNamespace(),
+				}, cm,
+			)
+			return cm.Data
+		}, timeout, interval).Should(HaveKeyWithValue("loaded_modules", loadedModulesString))
+
+		Eventually(func() map[string]string {
+			sts := &appsv1.StatefulSet{}
+			_ = k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Name:      emqx.GetName(),
+					Namespace: emqx.GetNamespace(),
+				},
+				sts,
+			)
+			return sts.Annotations
+		}, timeout, interval).Should(HaveKeyWithValue("LoadedModules/Base64EncodeConfig", base64.StdEncoding.EncodeToString([]byte(loadedModulesString))))
+	}
+
 }
 
-func check_plugin(emqx v1beta3.Emqx, pluginList []string) {
+func check_plugin(emqx appsv1beta3.Emqx, pluginList []string) {
 	Eventually(func() []string {
-		list := v1beta3.EmqxPluginList{}
+		list := appsv1beta3.EmqxPluginList{}
 		_ = k8sClient.List(
 			context.Background(),
 			&list,

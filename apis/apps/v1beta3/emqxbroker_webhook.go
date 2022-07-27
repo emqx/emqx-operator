@@ -67,12 +67,6 @@ func (r *EmqxBroker) Default() {
 		}
 	}
 
-	modules := &EmqxBrokerModuleList{
-		Items: r.Spec.EmqxTemplate.Modules,
-	}
-	modules.Default()
-	r.Spec.EmqxTemplate.Modules = modules.Items
-
 	if r.Spec.EmqxTemplate.EmqxConfig == nil {
 		r.Spec.EmqxTemplate.EmqxConfig = make(EmqxConfig)
 	}
