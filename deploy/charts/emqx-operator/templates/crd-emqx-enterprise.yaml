@@ -6330,6 +6330,27 @@ spec:
                   - type
                   type: object
                 type: array
+              nodeStatuses:
+                items:
+                  properties:
+                    node:
+                      type: string
+                    node_status:
+                      type: string
+                    otp_release:
+                      type: string
+                    uptime:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                type: array
+              readyReplicas:
+                format: int32
+                type: integer
+              replicas:
+                format: int32
+                type: integer
             type: object
         type: object
     served: true

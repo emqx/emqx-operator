@@ -6,13 +6,13 @@ metadata:
     "apps.emqx.io/instance": "emqx-ee"
 spec:
   replicas: 3
-  persistent:
-     storageClassName: standard
-     resources:
-       requests:
-         storage: 20Mi
-     accessModes:
-     - ReadWriteOnce
+  # persistent:
+  #    storageClassName: standard
+  #    resources:
+  #      requests:
+  #        storage: 20Mi
+  #    accessModes:
+  #    - ReadWriteOnce
   initContainers:
     - name: busybox
       image: busybox:stable
