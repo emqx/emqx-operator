@@ -93,13 +93,14 @@ type EmqxSpec interface {
 	GetServiceTemplate() ServiceTemplate
 	SetServiceTemplate(ServiceTemplate)
 
-	GetStatus() Status
-
 	GetUsername() string
 	SetUsername(username string)
 
 	GetPassword() string
 	SetPassword(password string)
+
+	GetStatus() Status
+	SetStatus(status Status)
 }
 
 // +kubebuilder:object:generate=false

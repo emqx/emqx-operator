@@ -43,6 +43,7 @@ import (
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/emqx/emqx-operator/pkg/handler"
+	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
 )
 
@@ -66,6 +67,14 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	username, password, apiPort := instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort
 
 	sts := generateStatefulSetDef(instance)
+	if !reflect.ValueOf(instance.GetPersistent()).IsZero() {
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
+		if len(pvcList.Items) != 0 {
+			sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
+		}
+	}
+
 	storeSts := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
 		if !k8sErrors.IsNotFound(err) {
@@ -75,15 +84,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	// store statefulSet is exit
 	if storeSts.Spec.PodManagementPolicy != "" {
 		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
-	} else {
-		// if sts is not exist, and the pvc is exist, then PodManagementPolicy = "Parallel"
-		if !reflect.ValueOf(instance.GetPersistent()).IsZero() {
-			pvcList := &corev1.PersistentVolumeClaimList{}
-			_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
-			if len(pvcList.Items) != 0 {
-				sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
-			}
-		}
 	}
 
 	emqxContainer := generateEmqxContainer(instance)
@@ -287,11 +287,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 
 	reloaderContainer.Env = emqxContainer.Env
 	reloaderContainer.VolumeMounts = emqxContainer.VolumeMounts
-	reloaderContainer.Args = []string{
-		"-u", username,
-		"-p", password,
-		"-P", apiPort,
-	}
 
 	// StateFulSet should be created last
 	sts.Spec.Template.Spec.Containers = append(
@@ -309,12 +304,48 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		return ctrl.Result{}, err
 	}
-	condition := r.getClusterStatusByAPI(instance, username, password, apiPort)
-	instance.SetCondition(*condition)
+
+	nodeStatuses, err := r.getNodeStatusesByAPI(instance)
+	if err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
+	}
+
+	status := instance.GetStatus()
+	status.Replicas = *instance.GetReplicas()
+	if nodeStatuses != nil {
+		readyReplicas := int32(0)
+		for _, nodeStatus := range nodeStatuses {
+			if nodeStatus.NodeStatus == "Running" {
+				readyReplicas++
+			}
+		}
+		status.ReadyReplicas = readyReplicas
+		status.NodeStatuses = nodeStatuses
+	}
+
+	var cond *appsv1beta3.Condition
+	if status.Replicas == status.ReadyReplicas {
+		cond = appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionTrue,
+			"ClusterReady",
+			"All resources are ready",
+		)
+	} else {
+		cond = appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"ClusterNotReady",
+			"Some nodes are not ready",
+		)
+	}
+	status.SetCondition(*cond)
+	instance.SetStatus(status)
+
 	if err = r.Status().Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
-	if !(condition.Type == appsv1beta3.ConditionRunning && condition.Status == corev1.ConditionTrue) {
+	if !(cond.Type == appsv1beta3.ConditionRunning && cond.Status == corev1.ConditionTrue) {
 		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
@@ -374,40 +405,21 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx, userna
 	return ports
 }
 
-func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx, username, password, apiPort string) *appsv1beta3.Condition {
-	resp, body, err := r.Handler.RequestAPI(instance, "GET", username, password, apiPort, "api/v4/brokers")
+func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]appsv1beta3.EMQXNodeStatus, error) {
+	resp, body, err := r.Handler.RequestAPI(instance, "GET", instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort, "api/v4/nodes")
 	if err != nil {
-		return appsv1beta3.NewCondition(
-			appsv1beta3.ConditionRunning,
-			corev1.ConditionFalse,
-			"AccessAPIFailed",
-			err.Error(),
-		)
+		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return appsv1beta3.NewCondition(
-			appsv1beta3.ConditionRunning,
-			corev1.ConditionFalse,
-			"AccessAPIFailed",
-			resp.Status,
-		)
+		return nil, fmt.Errorf("failed to get node statuses from API: %s", resp.Status)
 	}
 
-	clusterData := gjson.GetBytes(body, "data.#.node")
-	if len(clusterData.Array()) != int(*instance.GetReplicas()) {
-		return appsv1beta3.NewCondition(
-			appsv1beta3.ConditionRunning,
-			corev1.ConditionFalse,
-			"ClusterNotReady",
-			clusterData.String(),
-		)
+	nodeStatuses := []appsv1beta3.EMQXNodeStatus{}
+	data := gjson.GetBytes(body, "data")
+	if err := json.Unmarshal([]byte(data.Raw), &nodeStatuses); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
 	}
-	return appsv1beta3.NewCondition(
-		appsv1beta3.ConditionRunning,
-		corev1.ConditionTrue,
-		"ClusterReady",
-		"All resources are ready",
-	)
+	return nodeStatuses, nil
 }
 
 func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
@@ -828,6 +840,11 @@ func generateReloaderContainer(instance appsv1beta3.Emqx) *corev1.Container {
 		Name:            ReloaderContainerName,
 		Image:           ReloaderContainerImage,
 		ImagePullPolicy: instance.GetImagePullPolicy(),
+		Args: []string{
+			"-u", instance.GetUsername(),
+			"-p", instance.GetPassword(),
+			"-P", appsv1beta3.DefaultManagementPort,
+		},
 	}
 }
 

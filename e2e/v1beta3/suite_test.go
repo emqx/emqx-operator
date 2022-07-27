@@ -214,6 +214,9 @@ var _ = BeforeSuite(func() {
 				}
 				return running
 			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+			Expect(instance.GetStatus().Replicas).Should(Equal(int32(3)))
+			Expect(instance.GetStatus().ReadyReplicas).Should(Equal(int32(3)))
+			Expect(instance.GetStatus().NodeStatuses).Should(HaveLen(3))
 
 			lwm2m := &appsv1beta3.EmqxPlugin{
 				TypeMeta: metav1.TypeMeta{
