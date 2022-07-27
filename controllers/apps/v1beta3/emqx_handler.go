@@ -19,7 +19,6 @@ package apps
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -703,10 +702,12 @@ func generateLoadedModules(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 		}
 		loadedModulesString = modules.String()
 	case *appsv1beta3.EmqxEnterprise:
-		data, _ := json.Marshal(obj.Spec.EmqxTemplate.Modules)
-		loadedModulesString = string(data)
+		modules := &appsv1beta3.EmqxEnterpriseModuleList{
+			Items: obj.Spec.EmqxTemplate.Modules,
+		}
+		loadedModulesString = modules.String()
 	}
-	if loadedModulesString == "" || loadedModulesString == "null" {
+	if loadedModulesString == "" {
 		return nil
 	}
 	cm := &corev1.ConfigMap{

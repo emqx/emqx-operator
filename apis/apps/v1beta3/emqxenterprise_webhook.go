@@ -59,11 +59,6 @@ func (r *EmqxEnterprise) Default() {
 		}
 	}
 
-	modules := &EmqxEnterpriseModuleList{
-		Items: r.Spec.EmqxTemplate.Modules,
-	}
-	r.Spec.EmqxTemplate.Modules = modules.Items
-
 	if r.Spec.EmqxTemplate.EmqxConfig == nil {
 		r.Spec.EmqxTemplate.EmqxConfig = make(EmqxConfig)
 	}
