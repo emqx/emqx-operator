@@ -50,15 +50,6 @@ func (r *EmqxEnterprise) Default() {
 	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Labels["apps.emqx.io/instance"] = r.GetName()
 
-	if r.Spec.EmqxTemplate.ACL == nil {
-		r.Spec.EmqxTemplate.ACL = []string{
-			`{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.`,
-			`{allow, {ipaddr, "127.0.0.1"}, pubsub, ["$SYS/#", "#"]}.`,
-			`{deny, all, subscribe, ["$SYS/#", {eq, "#"}]}.`,
-			`{allow, all}.`,
-		}
-	}
-
 	if r.Spec.EmqxTemplate.EmqxConfig == nil {
 		r.Spec.EmqxTemplate.EmqxConfig = make(EmqxConfig)
 	}

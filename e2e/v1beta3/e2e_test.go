@@ -44,10 +44,6 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 
 	Context("check resource", func() {
 		BeforeEach(func() {
-			aclString = "{allow, {user, \"dashboard\"}, subscribe, [\"$SYS/#\"]}.\n{allow, {ipaddr, \"127.0.0.1\"}, pubsub, [\"$SYS/#\", \"#\"]}.\n{deny, all, subscribe, [\"$SYS/#\", {eq, \"#\"}]}.\n{allow, all}.\n"
-			brokerModulesString = ""
-			enterpriseModulesString = ""
-
 			headlessPort = corev1.ServicePort{
 				Name:       "http-management-8081",
 				Port:       8081,
@@ -516,38 +512,65 @@ func check_service_ports(emqx appsv1beta3.Emqx, ports []corev1.ServicePort, head
 }
 
 func check_acl(emqx appsv1beta3.Emqx, aclString string) {
-	Eventually(func() map[string]string {
-		cm := &corev1.ConfigMap{}
-		_ = k8sClient.Get(
-			context.Background(),
-			types.NamespacedName{
-				Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
-				Namespace: emqx.GetNamespace(),
-			},
-			cm,
-		)
-		return cm.Data
-	}, timeout, interval).Should(Equal(
-		map[string]string{"acl.conf": aclString},
-	))
+	if aclString == "" {
+		Eventually(func() bool {
+			err := k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
+					Namespace: emqx.GetNamespace(),
+				},
+				&corev1.ConfigMap{},
+			)
+			return k8sErrors.IsNotFound(err)
+		}, timeout, interval).Should(BeTrue())
 
-	Eventually(func() map[string]string {
-		sts := &appsv1.StatefulSet{}
-		_ = k8sClient.Get(
-			context.Background(),
-			types.NamespacedName{
-				Name:      emqx.GetName(),
-				Namespace: emqx.GetNamespace(),
-			},
-			sts,
+		Eventually(func() map[string]string {
+			sts := &appsv1.StatefulSet{}
+			_ = k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Name:      emqx.GetName(),
+					Namespace: emqx.GetNamespace(),
+				},
+				sts,
+			)
+			return sts.Annotations
+		}, timeout, interval).ShouldNot(HaveKey("ACL/Base64EncodeConfig"))
+	} else {
+		Eventually(func() map[string]string {
+			cm := &corev1.ConfigMap{}
+			_ = k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
+					Namespace: emqx.GetNamespace(),
+				},
+				cm,
+			)
+			return cm.Data
+		}, timeout, interval).Should(Equal(
+			map[string]string{"acl.conf": aclString},
+		))
+
+		Eventually(func() map[string]string {
+			sts := &appsv1.StatefulSet{}
+			_ = k8sClient.Get(
+				context.Background(),
+				types.NamespacedName{
+					Name:      emqx.GetName(),
+					Namespace: emqx.GetNamespace(),
+				},
+				sts,
+			)
+			return sts.Annotations
+		}, timeout, interval).Should(
+			HaveKeyWithValue(
+				"ACL/Base64EncodeConfig",
+				base64.StdEncoding.EncodeToString([]byte(aclString)),
+			),
 		)
-		return sts.Annotations
-	}, timeout, interval).Should(
-		HaveKeyWithValue(
-			"ACL/Base64EncodeConfig",
-			base64.StdEncoding.EncodeToString([]byte(aclString)),
-		),
-	)
+	}
 }
 
 func check_modules(emqx appsv1beta3.Emqx, loadedModulesString string) {
