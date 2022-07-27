@@ -23,7 +23,6 @@ import (
 	"reflect"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	"github.com/emqx/emqx-operator/pkg/handler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -361,20 +360,6 @@ func update_lwm2m(emqx appsv1beta3.Emqx) {
 }
 
 func check_statefulset(emqx appsv1beta3.Emqx) {
-	var loadedModulesString string
-	switch obj := emqx.(type) {
-	case *appsv1beta3.EmqxBroker:
-		modules := &appsv1beta3.EmqxBrokerModuleList{
-			Items: obj.Spec.EmqxTemplate.Modules,
-		}
-		loadedModulesString = modules.String()
-	case *appsv1beta3.EmqxEnterprise:
-		modules := &appsv1beta3.EmqxEnterpriseModuleList{
-			Items: obj.Spec.EmqxTemplate.Modules,
-		}
-		loadedModulesString = modules.String()
-	}
-
 	sts := &appsv1.StatefulSet{}
 	Eventually(func() error {
 		err := k8sClient.Get(
@@ -447,20 +432,12 @@ func check_statefulset(emqx appsv1beta3.Emqx) {
 		{Name: "EMQX_DASHBOARD__DEFAULT_USER__PASSWORD", Value: emqx.GetPassword()},
 		{Name: "EMQX_PLUGINS__LOADED_FILE", Value: "/mounted/plugins/data/loaded_plugins"},
 		{Name: "EMQX_PLUGINS__ETC_DIR", Value: "/mounted/plugins/etc"},
-		{Name: "EMQX_ACL_FILE", Value: "/mounted/acl/acl.conf"},
 	}
-	if loadedModulesString != "" {
-		EnvVars = append(EnvVars, corev1.EnvVar{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"})
-	}
-	Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ConsistOf(EnvVars))
+	Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(EnvVars))
 
 	// Volume
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
 	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
-	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.ACL())))
-	if loadedModulesString != "" {
-		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedModules())))
-	}
 	if emqxEnterprise, ok := emqx.(*appsv1beta3.EmqxEnterprise); ok {
 		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
 			Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.License())))
@@ -468,18 +445,13 @@ func check_statefulset(emqx appsv1beta3.Emqx) {
 	}
 
 	// VolumeMount
-	emqxContainer := findEmqxContainer(sts.Spec.Template.Spec.Containers)
-	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.Data())))
-	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.Log())))
-	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
-	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
-	Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.ACL())))
-	if loadedModulesString != "" {
-		Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedModules())))
-	}
+	Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.Data())))
+	Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.Log())))
+	Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
+	Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
 	if emqxEnterprise, ok := emqx.(*appsv1beta3.EmqxEnterprise); ok {
 		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
-			Expect(emqxContainer.VolumeMounts).Should(ContainElements(HaveField("Name", names.License())))
+			Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.License())))
 		}
 	}
 }
@@ -512,6 +484,7 @@ func check_service_ports(emqx appsv1beta3.Emqx, ports []corev1.ServicePort, head
 }
 
 func check_acl(emqx appsv1beta3.Emqx, aclString string) {
+	names := appsv1beta3.Names{Object: emqx}
 	if aclString == "" {
 		Eventually(func() bool {
 			err := k8sClient.Get(
@@ -525,9 +498,9 @@ func check_acl(emqx appsv1beta3.Emqx, aclString string) {
 			return k8sErrors.IsNotFound(err)
 		}, timeout, interval).Should(BeTrue())
 
-		Eventually(func() map[string]string {
-			sts := &appsv1.StatefulSet{}
-			_ = k8sClient.Get(
+		sts := &appsv1.StatefulSet{}
+		Eventually(func() error {
+			err := k8sClient.Get(
 				context.Background(),
 				types.NamespacedName{
 					Name:      emqx.GetName(),
@@ -535,8 +508,15 @@ func check_acl(emqx appsv1beta3.Emqx, aclString string) {
 				},
 				sts,
 			)
-			return sts.Annotations
-		}, timeout, interval).ShouldNot(HaveKey("ACL/Base64EncodeConfig"))
+			return err
+		}, timeout, interval).Should(Succeed())
+
+		Expect(sts.Annotations).ShouldNot(HaveKey("ACL/Base64EncodeConfig"))
+		Expect(sts.Spec.Template.Spec.Containers[0].Env).ShouldNot(ContainElements(
+			corev1.EnvVar{Name: "EMQX_ACL_FILE", Value: "/mounted/acl/acl.conf"},
+		))
+		Expect(sts.Spec.Template.Spec.Volumes).ShouldNot(ContainElements(HaveField("Name", names.ACL())))
+		Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).ShouldNot(ContainElements(HaveField("Name", names.ACL())))
 	} else {
 		Eventually(func() map[string]string {
 			cm := &corev1.ConfigMap{}
@@ -553,9 +533,9 @@ func check_acl(emqx appsv1beta3.Emqx, aclString string) {
 			map[string]string{"acl.conf": aclString},
 		))
 
-		Eventually(func() map[string]string {
-			sts := &appsv1.StatefulSet{}
-			_ = k8sClient.Get(
+		sts := &appsv1.StatefulSet{}
+		Eventually(func() error {
+			err := k8sClient.Get(
 				context.Background(),
 				types.NamespacedName{
 					Name:      emqx.GetName(),
@@ -563,17 +543,23 @@ func check_acl(emqx appsv1beta3.Emqx, aclString string) {
 				},
 				sts,
 			)
-			return sts.Annotations
-		}, timeout, interval).Should(
-			HaveKeyWithValue(
-				"ACL/Base64EncodeConfig",
-				base64.StdEncoding.EncodeToString([]byte(aclString)),
-			),
-		)
+			return err
+		}, timeout, interval).Should(Succeed())
+
+		Expect(sts.Annotations).Should(HaveKeyWithValue(
+			"ACL/Base64EncodeConfig",
+			base64.StdEncoding.EncodeToString([]byte(aclString)),
+		))
+		Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(
+			corev1.EnvVar{Name: "EMQX_ACL_FILE", Value: "/mounted/acl/acl.conf"},
+		))
+		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.ACL())))
+		Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.ACL())))
 	}
 }
 
 func check_modules(emqx appsv1beta3.Emqx, loadedModulesString string) {
+	names := appsv1beta3.Names{Object: emqx}
 	if loadedModulesString == "" {
 		Eventually(func() bool {
 			err := k8sClient.Get(
@@ -586,9 +572,9 @@ func check_modules(emqx appsv1beta3.Emqx, loadedModulesString string) {
 			return k8sErrors.IsNotFound(err)
 		}, timeout, interval).Should(BeTrue())
 
-		Eventually(func() map[string]string {
-			sts := &appsv1.StatefulSet{}
-			_ = k8sClient.Get(
+		sts := &appsv1.StatefulSet{}
+		Eventually(func() error {
+			err := k8sClient.Get(
 				context.Background(),
 				types.NamespacedName{
 					Name:      emqx.GetName(),
@@ -596,8 +582,15 @@ func check_modules(emqx appsv1beta3.Emqx, loadedModulesString string) {
 				},
 				sts,
 			)
-			return sts.Annotations
-		}, timeout, interval).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
+			return err
+		}, timeout, interval).Should(Succeed())
+
+		Expect(sts.Annotations).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
+		Expect(sts.Spec.Template.Spec.Containers[0].Env).ShouldNot(ContainElements(
+			corev1.EnvVar{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"},
+		))
+		Expect(sts.Spec.Template.Spec.Volumes).ShouldNot(ContainElements(HaveField("Name", names.LoadedModules())))
+		Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).ShouldNot(ContainElements(HaveField("Name", names.LoadedModules())))
 	} else {
 		Eventually(func() map[string]string {
 			cm := &corev1.ConfigMap{}
@@ -611,9 +604,9 @@ func check_modules(emqx appsv1beta3.Emqx, loadedModulesString string) {
 			return cm.Data
 		}, timeout, interval).Should(HaveKeyWithValue("loaded_modules", loadedModulesString))
 
-		Eventually(func() map[string]string {
-			sts := &appsv1.StatefulSet{}
-			_ = k8sClient.Get(
+		sts := &appsv1.StatefulSet{}
+		Eventually(func() error {
+			err := k8sClient.Get(
 				context.Background(),
 				types.NamespacedName{
 					Name:      emqx.GetName(),
@@ -621,10 +614,19 @@ func check_modules(emqx appsv1beta3.Emqx, loadedModulesString string) {
 				},
 				sts,
 			)
-			return sts.Annotations
-		}, timeout, interval).Should(HaveKeyWithValue("LoadedModules/Base64EncodeConfig", base64.StdEncoding.EncodeToString([]byte(loadedModulesString))))
-	}
+			return err
+		}, timeout, interval).Should(Succeed())
 
+		Expect(sts.Annotations).Should(HaveKeyWithValue(
+			"LoadedModules/Base64EncodeConfig",
+			base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
+		))
+		Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(
+			corev1.EnvVar{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"},
+		))
+		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedModules())))
+		Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedModules())))
+	}
 }
 
 func check_plugin(emqx appsv1beta3.Emqx, pluginList []string) {
@@ -668,13 +670,4 @@ func check_plugin(emqx appsv1beta3.Emqx, pluginList []string) {
 			return cm.Data["loaded_plugins"]
 		}, timeout, interval).Should(ContainSubstring(pluginName))
 	}
-}
-
-func findEmqxContainer(containers []corev1.Container) corev1.Container {
-	for _, c := range containers {
-		if c.Name == handler.EmqxContainerName {
-			return c
-		}
-	}
-	return corev1.Container{}
 }
