@@ -178,37 +178,39 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		_ = r.Status().Update(ctx, instance)
 		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
-	//add acl
-	acl := generateAcl(instance)
-	annotations["ACL/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(acl.Data["acl.conf"]))
-	emqxContainer.VolumeMounts = append(
-		emqxContainer.VolumeMounts,
-		corev1.VolumeMount{
-			Name:      acl.Name,
-			MountPath: "/mounted/acl",
-		},
-	)
-	emqxContainer.Env = append(
-		emqxContainer.Env,
-		corev1.EnvVar{
-			Name:  "EMQX_ACL_FILE",
-			Value: "/mounted/acl/acl.conf",
-		},
-	)
-	sts.Spec.Template.Spec.Volumes = append(
-		sts.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: acl.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: acl.Name,
+
+	//add acl when module isn't nil
+	if acl := generateAcl(instance); acl != nil {
+		annotations["ACL/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(acl.Data["acl.conf"]))
+		emqxContainer.VolumeMounts = append(
+			emqxContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      acl.Name,
+				MountPath: "/mounted/acl",
+			},
+		)
+		emqxContainer.Env = append(
+			emqxContainer.Env,
+			corev1.EnvVar{
+				Name:  "EMQX_ACL_FILE",
+				Value: "/mounted/acl/acl.conf",
+			},
+		)
+		sts.Spec.Template.Spec.Volumes = append(
+			sts.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: acl.Name,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: acl.Name,
+						},
 					},
 				},
 			},
-		},
-	)
-	resources = append(resources, acl)
+		)
+		resources = append(resources, acl)
+	}
 
 	//add module when module isn't nil
 	if module := generateLoadedModules(instance); module != nil {
@@ -669,6 +671,9 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 }
 
 func generateAcl(instance appsv1beta3.Emqx) *corev1.ConfigMap {
+	if len(instance.GetACL()) == 0 {
+		return nil
+	}
 	names := appsv1beta3.Names{Object: instance}
 
 	var aclString string
