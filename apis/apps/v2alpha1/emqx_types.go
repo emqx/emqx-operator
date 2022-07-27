@@ -103,7 +103,10 @@ type EMQXSpec struct {
 type ConditionType string
 
 const (
-	ClusterRunning ConditionType = "Running"
+	ClusterCreating          ConditionType = "Creating"
+	ClusterRunning           ConditionType = "Running"
+	ClusterCoreUpdating      ConditionType = "CoreNodeUpdating"
+	ClusterReplicantUpdating ConditionType = "ReplicantNodeUpdating"
 )
 
 type Condition struct {
@@ -128,6 +131,8 @@ type EMQXNodeStatus struct {
 
 // EMQXStatus defines the observed state of EMQX
 type EMQXStatus struct {
+	CurrentImage           string           `json:"currentImage,omitempty"`
+	OriginalImage          string           `json:"originalImage,omitempty"`
 	CoreReplicas           int32            `json:"coreReplicas,omitempty"`
 	ReadyCoreReplicas      int32            `json:"readyCoreReplicas,omitempty"`
 	ReplicantReplicas      int32            `json:"replicantReplicas,omitempty"`
@@ -176,6 +181,22 @@ func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason,
 		Reason:             reason,
 		Message:            message,
 	}
+}
+
+func (s *EMQXStatus) IsCoreUpdating() bool {
+	cond := s.Conditions[0]
+	if cond.Type == ClusterCoreUpdating && cond.Status == corev1.ConditionTrue {
+		return true
+	}
+	return false
+}
+
+func (s *EMQXStatus) IsRunning() bool {
+	cond := s.Conditions[0]
+	if cond.Type == ClusterRunning && cond.Status == corev1.ConditionTrue {
+		return true
+	}
+	return false
 }
 
 func (s *EMQXStatus) SetCondition(c Condition) {
