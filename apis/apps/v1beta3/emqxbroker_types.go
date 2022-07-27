@@ -57,13 +57,14 @@ type EmqxBrokerSpec struct {
 	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
 	Env        []corev1.EnvVar                  `json:"env,omitempty"`
 
-	Affinity        *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations     []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeName        string              `json:"nodeName,omitempty"`
-	NodeSelector    map[string]string   `json:"nodeSelector,omitempty"`
-	ExtraContainers []corev1.Container  `json:"extraContainers,omitempty"`
-	InitContainers  []corev1.Container  `json:"initContainers,omitempty"`
-	EmqxTemplate    EmqxBrokerTemplate  `json:"emqxTemplate,omitempty"`
+	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
+	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeName     string              `json:"nodeName,omitempty"`
+	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
+
+	InitContainers  []corev1.Container `json:"initContainers,omitempty"`
+	ExtraContainers []corev1.Container `json:"extraContainers,omitempty"`
+	EmqxTemplate    EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true

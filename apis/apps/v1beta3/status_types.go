@@ -38,6 +38,8 @@ const (
 
 //+kubebuilder:object:generate=false
 type EmqxStatus interface {
+	IsRunning() bool
+	IsPluginInitialized() bool
 	GetConditions() []Condition
 	SetCondition(c Condition)
 	ClearCondition(t ConditionType)
@@ -74,6 +76,24 @@ func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason,
 		Reason:             reason,
 		Message:            message,
 	}
+}
+
+func (s *Status) IsRunning() bool {
+	c := s.Conditions[0]
+	if c.Type == ConditionRunning && c.Status == corev1.ConditionTrue {
+		return true
+	}
+	return false
+}
+
+func (s *Status) IsPluginInitialized() bool {
+	// Init Plugin
+	for _, c := range s.Conditions {
+		if c.Type == ConditionPluginInitialized && c.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Status) GetConditions() []Condition {
