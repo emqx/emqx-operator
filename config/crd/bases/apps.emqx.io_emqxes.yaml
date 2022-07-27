@@ -13221,6 +13221,8 @@ spec:
               coreReplicas:
                 format: int32
                 type: integer
+              currentImage:
+                type: string
               nodes:
                 items:
                   properties:
@@ -13236,6 +13238,8 @@ spec:
                       type: string
                   type: object
                 type: array
+              originalImage:
+                type: string
               readyCoreReplicas:
                 format: int32
                 type: integer

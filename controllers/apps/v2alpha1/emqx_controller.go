@@ -42,6 +42,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
+const requeueAfter time.Duration = time.Second * time.Duration(5)
 const EMQXContainerName string = "emqx"
 
 var (
@@ -81,47 +82,80 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	resources := []client.Object{}
-
-	headlessSvc := generateHeadlessService(instance)
-	resources = append(resources, headlessSvc)
-
 	dashboardSvc := generateDashboardService(instance)
-	resources = append(resources, dashboardSvc)
+	headlessSvc := generateHeadlessService(instance)
+	sts := generateStatefulSet(instance)
+
+	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.Persistent).IsZero() {
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
+		if len(pvcList.Items) != 0 {
+			sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
+		}
+	}
+
+	storeSts := &appsv1.StatefulSet{}
+	if err := r.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-core", instance.Name), Namespace: instance.Namespace}, storeSts); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			resources := []client.Object{headlessSvc, dashboardSvc, sts}
+			if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			instance.Status.CurrentImage = instance.Spec.Image
+			instance.Status.OriginalImage = instance.Spec.Image
+			condition := appsv2alpha1.NewCondition(
+				appsv2alpha1.ClusterCreating,
+				corev1.ConditionTrue,
+				"ClusterCreating",
+				"",
+			)
+			instance.Status.SetCondition(*condition)
+			if err := r.Status().Update(ctx, instance); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: requeueAfter}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
+
+	resources := []client.Object{headlessSvc, dashboardSvc, sts}
+
+	if instance.Status.CurrentImage != instance.Spec.Image {
+		if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		instance.Status.CurrentImage = instance.Spec.Image
+		condition := appsv2alpha1.NewCondition(
+			appsv2alpha1.ClusterCoreUpdating,
+			corev1.ConditionTrue,
+			"ClusterCoreUpdating",
+			"Updating core node in cluster",
+		)
+		instance.Status.SetCondition(*condition)
+		if err := r.Status().Update(ctx, instance); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
+	}
 
 	if deploy := generateDeployment(instance); deploy != nil {
+		if instance.Status.IsCoreUpdating() {
+			deploy.Spec.Template.Spec.Containers[0].Image = instance.Status.OriginalImage
+		}
 		resources = append(resources, deploy)
 	}
 
-	sts := generateStatefulSet(instance)
-	storeSts := &appsv1.StatefulSet{}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
-		if !k8sErrors.IsNotFound(err) {
-			return ctrl.Result{}, err
+	if instance.Status.IsRunning() {
+		listenerPorts, err := r.getListenerPortsByAPI(sts)
+		if err != nil {
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 		}
-	}
-	// store statefulSet is exit
-	if storeSts.Spec.PodManagementPolicy != "" {
-		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
-	} else {
-		// if sts is not exist, and the pvc is exist, then PodManagementPolicy = "Parallel"
-		if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.Persistent).IsZero() {
-			pvcList := &corev1.PersistentVolumeClaimList{}
-			_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
-			if len(pvcList.Items) != 0 {
-				sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
-			}
+		if listenersSvc := generateListenerService(instance, listenerPorts); listenersSvc != nil {
+			resources = append(resources, listenersSvc)
 		}
-	}
-
-	resources = append(resources, sts)
-
-	listenerPorts, err := r.getListenerPortsByAPI(sts)
-	if err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
-	}
-	if listenersSvc := generateListenerService(instance, listenerPorts); listenersSvc != nil {
-		resources = append(resources, listenersSvc)
 	}
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
@@ -131,20 +165,10 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if !isExistReplicant(instance) {
 		name := fmt.Sprintf("%s-%s", instance.Name, "replicant")
 		deploy := &appsv1.Deployment{}
-		svc := &corev1.Service{}
 
 		if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: instance.Namespace}, deploy); !k8sErrors.IsNotFound(err) {
 			if deploy.OwnerReferences[0].UID == instance.UID {
 				if err := r.Delete(ctx, deploy); err != nil {
-					return ctrl.Result{}, err
-				}
-				return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
-			}
-		}
-
-		if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: instance.Namespace}, svc); !k8sErrors.IsNotFound(err) {
-			if svc.OwnerReferences[0].UID == instance.UID {
-				if err := r.Delete(ctx, svc); err != nil {
 					return ctrl.Result{}, err
 				}
 				return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
@@ -173,32 +197,57 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
+	instance.Status.CoreReplicas = *instance.Spec.CoreTemplate.Spec.Replicas
+	instance.Status.ReadyCoreReplicas = readyCoreReplicas
 	if isExistReplicant(instance) {
 		instance.Status.ReplicantReplicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 		instance.Status.ReadyReplicantReplicas = readyReplicantReplicas
-	} else {
-		instance.Status.ReplicantReplicas = 0
-		instance.Status.ReadyReplicantReplicas = 0
 	}
-	instance.Status.CoreReplicas = *instance.Spec.CoreTemplate.Spec.Replicas
-	instance.Status.ReadyCoreReplicas = readyCoreReplicas
 
-	if instance.Status.CoreReplicas == instance.Status.ReadyCoreReplicas && instance.Status.ReplicantReplicas == instance.Status.ReadyReplicantReplicas {
-		condition := appsv2alpha1.NewCondition(
-			appsv2alpha1.ClusterRunning,
-			corev1.ConditionTrue,
-			"ClusterReady",
-			"All node are ready",
-		)
-		instance.Status.SetCondition(*condition)
-	} else {
-		condition := appsv2alpha1.NewCondition(
-			appsv2alpha1.ClusterRunning,
-			corev1.ConditionFalse,
-			"ClusterNotReady",
-			"Someone node are not ready",
-		)
-		instance.Status.SetCondition(*condition)
+	switch instance.Status.Conditions[0].Type {
+	case appsv2alpha1.ClusterCoreUpdating:
+		if instance.Status.ReadyCoreReplicas == instance.Status.CoreReplicas {
+			instance.Status.OriginalImage = instance.Status.CurrentImage
+			if isExistReplicant(instance) {
+				condition := appsv2alpha1.NewCondition(
+					appsv2alpha1.ClusterReplicantUpdating,
+					corev1.ConditionTrue,
+					"ClusterReplicantUpdating",
+					"Updating replicant node in cluster",
+				)
+				instance.Status.SetCondition(*condition)
+			} else {
+				condition := appsv2alpha1.NewCondition(
+					appsv2alpha1.ClusterRunning,
+					corev1.ConditionTrue,
+					"ClusterReady",
+					"All node are ready",
+				)
+				instance.Status.SetCondition(*condition)
+			}
+		}
+	case appsv2alpha1.ClusterRunning:
+		if instance.Status.CoreReplicas != instance.Status.ReadyCoreReplicas ||
+			instance.Status.ReadyCoreReplicas != instance.Status.ReadyReplicantReplicas {
+			condition := appsv2alpha1.NewCondition(
+				appsv2alpha1.ClusterRunning,
+				corev1.ConditionFalse,
+				"ClusterNotReady",
+				"Some node not ready",
+			)
+			instance.Status.SetCondition(*condition)
+		}
+	default:
+		if instance.Status.CoreReplicas == instance.Status.ReadyCoreReplicas &&
+			instance.Status.ReplicantReplicas == instance.Status.ReadyReplicantReplicas {
+			condition := appsv2alpha1.NewCondition(
+				appsv2alpha1.ClusterRunning,
+				corev1.ConditionTrue,
+				"ClusterReady",
+				"All node are ready",
+			)
+			instance.Status.SetCondition(*condition)
+		}
 	}
 
 	// Check cluster status
