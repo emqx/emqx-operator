@@ -176,78 +176,76 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
-	readyCoreReplicas := int32(0)
-	readyReplicantReplicas := int32(0)
-	nodeStatuses, err := r.getNodeStatuesByAPI(sts)
+	instance.Status.CoreReplicas = *instance.Spec.CoreTemplate.Spec.Replicas
+	if isExistReplicant(instance) {
+		instance.Status.ReplicantReplicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
+	} else {
+		instance.Status.ReplicantReplicas = int32(0)
+	}
+	instance.Status.ReadyCoreReplicas = int32(0)
+	instance.Status.ReadyReplicantReplicas = int32(0)
+
+	emqxNodes, err := r.getNodeStatuesByAPI(sts)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
 	}
-	if nodeStatuses != nil {
-		instance.Status.NodeStatuses = nodeStatuses
+	if emqxNodes != nil {
+		instance.Status.EmqxNodes = emqxNodes
 
-		for _, node := range nodeStatuses {
+		for _, node := range emqxNodes {
 			if node.NodeStatus == "Running" {
 				if node.Role == "core" {
-					readyCoreReplicas++
+					instance.Status.ReadyCoreReplicas++
 				}
 				if node.Role == "replicant" {
-					readyReplicantReplicas++
+					instance.Status.ReadyReplicantReplicas++
 				}
 			}
 		}
-	}
-
-	instance.Status.CoreReplicas = *instance.Spec.CoreTemplate.Spec.Replicas
-	instance.Status.ReadyCoreReplicas = readyCoreReplicas
-	if isExistReplicant(instance) {
-		instance.Status.ReplicantReplicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
-		instance.Status.ReadyReplicantReplicas = readyReplicantReplicas
 	}
 
 	switch instance.Status.Conditions[0].Type {
 	case appsv2alpha1.ClusterCoreUpdating:
 		if instance.Status.ReadyCoreReplicas == instance.Status.CoreReplicas {
 			instance.Status.OriginalImage = instance.Status.CurrentImage
+
+			var condition *appsv2alpha1.Condition
 			if isExistReplicant(instance) {
-				condition := appsv2alpha1.NewCondition(
+				condition = appsv2alpha1.NewCondition(
 					appsv2alpha1.ClusterReplicantUpdating,
 					corev1.ConditionTrue,
 					"ClusterReplicantUpdating",
 					"Updating replicant node in cluster",
 				)
-				instance.Status.SetCondition(*condition)
 			} else {
-				condition := appsv2alpha1.NewCondition(
+				condition = appsv2alpha1.NewCondition(
 					appsv2alpha1.ClusterRunning,
 					corev1.ConditionTrue,
 					"ClusterReady",
 					"All node are ready",
 				)
-				instance.Status.SetCondition(*condition)
 			}
-		}
-	case appsv2alpha1.ClusterRunning:
-		if instance.Status.CoreReplicas != instance.Status.ReadyCoreReplicas ||
-			instance.Status.ReadyCoreReplicas != instance.Status.ReadyReplicantReplicas {
-			condition := appsv2alpha1.NewCondition(
-				appsv2alpha1.ClusterRunning,
-				corev1.ConditionFalse,
-				"ClusterNotReady",
-				"Some node not ready",
-			)
 			instance.Status.SetCondition(*condition)
 		}
 	default:
+		var condition *appsv2alpha1.Condition
 		if instance.Status.CoreReplicas == instance.Status.ReadyCoreReplicas &&
 			instance.Status.ReplicantReplicas == instance.Status.ReadyReplicantReplicas {
-			condition := appsv2alpha1.NewCondition(
+			condition = appsv2alpha1.NewCondition(
 				appsv2alpha1.ClusterRunning,
 				corev1.ConditionTrue,
 				"ClusterReady",
 				"All node are ready",
 			)
-			instance.Status.SetCondition(*condition)
+		} else {
+			condition = appsv2alpha1.NewCondition(
+				appsv2alpha1.ClusterRunning,
+				corev1.ConditionFalse,
+				"ClusterNotReady",
+				"Some node not ready",
+			)
 		}
+		instance.Status.SetCondition(*condition)
 	}
 
 	// Check cluster status
@@ -265,7 +263,7 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNodeStatus, error) {
+func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EmqxNode, error) {
 	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, "api/v5/nodes")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get listeners: %v", err)
@@ -274,7 +272,7 @@ func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.
 		return nil, fmt.Errorf("failed to get listener, status : %s, body: %s", resp.Status, body)
 	}
 
-	nodeStatuses := []appsv2alpha1.EMQXNodeStatus{}
+	nodeStatuses := []appsv2alpha1.EmqxNode{}
 	if err := json.Unmarshal(body, &nodeStatuses); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
 	}
