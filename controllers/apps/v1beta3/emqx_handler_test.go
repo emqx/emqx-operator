@@ -1205,7 +1205,7 @@ func TestUpdateEmqxStatus(t *testing.T) {
 		},
 	}
 
-	nodeStatuses := []appsv1beta3.EMQXNodeStatus{
+	emqxNodes := []appsv1beta3.EmqxNode{
 		{
 			Node:       "node0",
 			NodeStatus: "Running",
@@ -1215,14 +1215,14 @@ func TestUpdateEmqxStatus(t *testing.T) {
 		},
 	}
 
-	re := updateEmqxStatus(broker, nodeStatuses)
+	re := updateEmqxStatus(broker, emqxNodes)
 	status := re.GetStatus()
 	assert.Equal(t, int32(3), status.Replicas)
 	assert.Equal(t, int32(1), status.ReadyReplicas)
-	assert.Equal(t, nodeStatuses, status.NodeStatuses)
+	assert.Equal(t, emqxNodes, status.EmqxNodes)
 	assert.False(t, status.IsRunning())
 
-	nodeStatuses = append(nodeStatuses, []appsv1beta3.EMQXNodeStatus{
+	emqxNodes = append(emqxNodes, []appsv1beta3.EmqxNode{
 		{
 			Node:       "node1",
 			NodeStatus: "Running",
@@ -1239,10 +1239,10 @@ func TestUpdateEmqxStatus(t *testing.T) {
 		},
 	}...)
 
-	re = updateEmqxStatus(broker, nodeStatuses)
+	re = updateEmqxStatus(broker, emqxNodes)
 	status = re.GetStatus()
 	assert.Equal(t, int32(3), status.Replicas)
 	assert.Equal(t, int32(3), status.ReadyReplicas)
-	assert.Equal(t, nodeStatuses, status.NodeStatuses)
+	assert.Equal(t, emqxNodes, status.EmqxNodes)
 	assert.True(t, status.IsRunning())
 }

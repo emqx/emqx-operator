@@ -164,12 +164,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{}, err
 	}
 
-	nodeStatuses, err := r.getNodeStatusesByAPI(instance)
+	emqxNodes, err := r.getNodeStatusesByAPI(instance)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
 	}
 
-	instance = updateEmqxStatus(instance, nodeStatuses)
+	instance = updateEmqxStatus(instance, emqxNodes)
 	if err = r.Status().Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -234,7 +234,7 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []core
 	return ports
 }
 
-func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]appsv1beta3.EMQXNodeStatus, error) {
+func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]appsv1beta3.EmqxNode, error) {
 	resp, body, err := r.Handler.RequestAPI(instance, "GET", instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort, "api/v4/nodes")
 	if err != nil {
 		return nil, err
@@ -243,12 +243,12 @@ func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]apps
 		return nil, fmt.Errorf("failed to get node statuses from API: %s", resp.Status)
 	}
 
-	nodeStatuses := []appsv1beta3.EMQXNodeStatus{}
+	emqxNodes := []appsv1beta3.EmqxNode{}
 	data := gjson.GetBytes(body, "data")
-	if err := json.Unmarshal([]byte(data.Raw), &nodeStatuses); err != nil {
+	if err := json.Unmarshal([]byte(data.Raw), &emqxNodes); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
 	}
-	return nodeStatuses, nil
+	return emqxNodes, nil
 }
 
 func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
@@ -879,18 +879,18 @@ func generateAnnotationByContainers(containers []corev1.Container) string {
 	return strings.Join(containerNames, ",")
 }
 
-func updateEmqxStatus(instance appsv1beta3.Emqx, nodeStatuses []appsv1beta3.EMQXNodeStatus) appsv1beta3.Emqx {
+func updateEmqxStatus(instance appsv1beta3.Emqx, emqxNodes []appsv1beta3.EmqxNode) appsv1beta3.Emqx {
 	status := instance.GetStatus()
 	status.Replicas = *instance.GetReplicas()
-	if nodeStatuses != nil {
+	if emqxNodes != nil {
 		readyReplicas := int32(0)
-		for _, nodeStatus := range nodeStatuses {
-			if nodeStatus.NodeStatus == "Running" {
+		for _, node := range emqxNodes {
+			if node.NodeStatus == "Running" {
 				readyReplicas++
 			}
 		}
 		status.ReadyReplicas = readyReplicas
-		status.NodeStatuses = nodeStatuses
+		status.EmqxNodes = emqxNodes
 	}
 
 	var cond *appsv1beta3.Condition
