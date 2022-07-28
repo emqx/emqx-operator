@@ -3889,9 +3889,6 @@ spec:
                     otp_release:
                       description: Erlang/OTP version used by EMQX
                       type: string
-                    uptime:
-                      description: EMQX runtime, in the format of "H hours, m minutes, s seconds"
-                      type: string
                     version:
                       description: EMQX version
                       type: string
@@ -7815,9 +7812,6 @@ spec:
                       type: string
                     otp_release:
                       description: Erlang/OTP version used by EMQX
-                      type: string
-                    uptime:
-                      description: EMQX runtime, in the format of "H hours, m minutes, s seconds"
                       type: string
                     version:
                       description: EMQX version

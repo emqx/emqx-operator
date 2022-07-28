@@ -1211,7 +1211,6 @@ func TestUpdateEmqxStatus(t *testing.T) {
 			NodeStatus: "Running",
 			OTPRelease: "",
 			Version:    "",
-			Uptime:     "",
 		},
 	}
 
@@ -1228,14 +1227,12 @@ func TestUpdateEmqxStatus(t *testing.T) {
 			NodeStatus: "Running",
 			OTPRelease: "",
 			Version:    "",
-			Uptime:     "",
 		},
 		{
 			Node:       "node2",
 			NodeStatus: "Running",
 			OTPRelease: "",
 			Version:    "",
-			Uptime:     "",
 		},
 	}...)
 

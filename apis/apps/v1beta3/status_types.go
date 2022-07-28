@@ -54,8 +54,6 @@ type EmqxNode struct {
 	OTPRelease string `json:"otp_release,omitempty"`
 	// EMQX version
 	Version string `json:"version,omitempty"`
-	// EMQX runtime, in the format of "H hours, m minutes, s seconds"
-	Uptime string `json:"uptime,omitempty"`
 }
 
 // Emqx Status defines the observed state of EMQX

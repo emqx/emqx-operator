@@ -242,7 +242,6 @@ _Appears in:_
 | `node_status` _string_ | EMQX node status |
 | `otp_release` _string_ | Erlang/OTP version used by EMQX |
 | `version` _string_ | EMQX version |
-| `uptime` _string_ | EMQX runtime, in the format of "H hours, m minutes, s seconds" |
 
 
 #### EmqxPlugin
