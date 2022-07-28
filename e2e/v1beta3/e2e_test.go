@@ -242,7 +242,7 @@ func check_emqx_status(emqx appsv1beta3.Emqx) {
 
 	Expect(emqx.GetStatus().Replicas).Should(Equal(int32(3)))
 	Expect(emqx.GetStatus().ReadyReplicas).Should(Equal(int32(3)))
-	Expect(emqx.GetStatus().NodeStatuses).Should(HaveLen(3))
+	Expect(emqx.GetStatus().EmqxNodes).Should(HaveLen(3))
 }
 
 func check_sts_annotations(emqx appsv1beta3.Emqx) {

@@ -45,7 +45,7 @@ type EmqxStatus interface {
 	ClearCondition(t ConditionType)
 }
 
-type EMQXNodeStatus struct {
+type EmqxNode struct {
 	Node       string `json:"node,omitempty"`
 	NodeStatus string `json:"node_status,omitempty"`
 	OTPRelease string `json:"otp_release,omitempty"`
@@ -58,10 +58,10 @@ type Status struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	Conditions    []Condition      `json:"conditions,omitempty"`
-	NodeStatuses  []EMQXNodeStatus `json:"nodeStatuses,omitempty"`
-	Replicas      int32            `json:"replicas,omitempty"`
-	ReadyReplicas int32            `json:"readyReplicas,omitempty"`
+	Conditions    []Condition `json:"conditions,omitempty"`
+	EmqxNodes     []EmqxNode  `json:"emqxNodes,omitempty"`
+	Replicas      int32       `json:"replicas,omitempty"`
+	ReadyReplicas int32       `json:"readyReplicas,omitempty"`
 }
 
 func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {

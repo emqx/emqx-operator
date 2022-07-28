@@ -6330,7 +6330,7 @@ spec:
                   - type
                   type: object
                 type: array
-              nodeStatuses:
+              emqxNodes:
                 items:
                   properties:
                     node:
