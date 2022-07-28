@@ -13199,8 +13199,11 @@ spec:
                 items:
                   properties:
                     lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
                       type: string
                     lastUpdateTime:
+                      description: The last time this condition was updated.
                       type: string
                     message:
                       description: A human readable message indicating details about
@@ -13210,8 +13213,10 @@ spec:
                       description: The reason for the condition's last transition.
                       type: string
                     status:
+                      description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
+                      description: Status of cluster condition.
                       type: string
                   required:
                   - status
@@ -13223,18 +13228,23 @@ spec:
                 type: integer
               currentImage:
                 type: string
-              nodes:
+              emqxNodes:
                 items:
                   properties:
                     node:
+                      description: 'EMQX node name, example: emqx@127.0.0.1'
                       type: string
                     node_status:
+                      description: 'EMQX node status, example: Running'
                       type: string
                     otp_release:
+                      description: 'Erlang/OTP version used by EMQX, example: 24.2/12.2'
                       type: string
                     role:
+                      description: EMQX cluster node role
                       type: string
                     version:
+                      description: EMQX version
                       type: string
                   type: object
                 type: array

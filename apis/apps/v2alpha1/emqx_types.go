@@ -110,35 +110,44 @@ const (
 )
 
 type Condition struct {
-	Type               ConditionType          `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	LastUpdateTime     string                 `json:"lastUpdateTime,omitempty"`
-	LastUpdateAt       metav1.Time            `json:"-"`
-	LastTransitionTime string                 `json:"lastTransitionTime,omitempty"`
+	// Status of cluster condition.
+	Type ConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
 	// The reason for the condition's last transition.
 	Reason string `json:"reason,omitempty"`
 	// A human readable message indicating details about the transition.
 	Message string `json:"message,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
+	// The last time this condition was updated.
+	LastUpdateTime string      `json:"lastUpdateTime,omitempty"`
+	LastUpdateAt   metav1.Time `json:"-"`
 }
 
-type EMQXNodeStatus struct {
-	Node       string `json:"node,omitempty"`
+type EmqxNode struct {
+	// EMQX node name, example: emqx@127.0.0.1
+	Node string `json:"node,omitempty"`
+	// EMQX node status, example: Running
 	NodeStatus string `json:"node_status,omitempty"`
+	// Erlang/OTP version used by EMQX, example: 24.2/12.2
 	OTPRelease string `json:"otp_release,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Role       string `json:"role,omitempty"`
+	// EMQX version
+	Version string `json:"version,omitempty"`
+	// EMQX cluster node role
+	Role string `json:"role,omitempty"`
 }
 
 // EMQXStatus defines the observed state of EMQX
 type EMQXStatus struct {
-	CurrentImage           string           `json:"currentImage,omitempty"`
-	OriginalImage          string           `json:"originalImage,omitempty"`
-	CoreReplicas           int32            `json:"coreReplicas,omitempty"`
-	ReadyCoreReplicas      int32            `json:"readyCoreReplicas,omitempty"`
-	ReplicantReplicas      int32            `json:"replicantReplicas,omitempty"`
-	ReadyReplicantReplicas int32            `json:"readyReplicantReplicas,omitempty"`
-	NodeStatuses           []EMQXNodeStatus `json:"nodes,omitempty"`
-	Conditions             []Condition      `json:"conditions,omitempty"`
+	CurrentImage           string      `json:"currentImage,omitempty"`
+	OriginalImage          string      `json:"originalImage,omitempty"`
+	CoreReplicas           int32       `json:"coreReplicas,omitempty"`
+	ReadyCoreReplicas      int32       `json:"readyCoreReplicas,omitempty"`
+	ReplicantReplicas      int32       `json:"replicantReplicas,omitempty"`
+	ReadyReplicantReplicas int32       `json:"readyReplicantReplicas,omitempty"`
+	EmqxNodes              []EmqxNode  `json:"emqxNodes,omitempty"`
+	Conditions             []Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -192,9 +201,11 @@ func (s *EMQXStatus) IsCoreUpdating() bool {
 }
 
 func (s *EMQXStatus) IsRunning() bool {
-	cond := s.Conditions[0]
-	if cond.Type == ClusterRunning && cond.Status == corev1.ConditionTrue {
-		return true
+	if len(s.Conditions) > 0 {
+		cond := s.Conditions[0]
+		if cond.Type == ClusterRunning && cond.Status == corev1.ConditionTrue {
+			return true
+		}
 	}
 	return false
 }

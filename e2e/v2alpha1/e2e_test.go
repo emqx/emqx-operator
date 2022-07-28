@@ -70,18 +70,12 @@ var _ = Describe("E2E Test", func() {
 			Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
 		})
 		It("Check EMQX Status", func() {
-			Eventually(func() corev1.ConditionStatus {
+			Eventually(func() bool {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
-				running := corev1.ConditionFalse
-				for _, c := range instance.Status.Conditions {
-					if c.Type == appsv2alpha1.ClusterRunning {
-						running = c.Status
-					}
-				}
-				return running
-			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+				return instance.Status.IsRunning()
+			}, timeout, interval).Should(BeTrue())
 
-			Expect(instance.Status.NodeStatuses).Should(HaveLen(3))
+			Expect(instance.Status.EmqxNodes).Should(HaveLen(3))
 			Expect(instance.Status.CoreReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReadyCoreReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReplicantReplicas).Should(Equal(int32(0)))
@@ -121,18 +115,12 @@ var _ = Describe("E2E Test", func() {
 			Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
 		})
 		It("Check EMQX Status", func() {
-			Eventually(func() corev1.ConditionStatus {
+			Eventually(func() bool {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
-				running := corev1.ConditionFalse
-				for _, c := range instance.Status.Conditions {
-					if c.Type == appsv2alpha1.ClusterRunning {
-						running = c.Status
-					}
-				}
-				return running
-			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+				return instance.Status.IsRunning()
+			}, timeout, interval).Should(BeTrue())
 
-			Expect(instance.Status.NodeStatuses).Should(HaveLen(6))
+			Expect(instance.Status.EmqxNodes).Should(HaveLen(6))
 			Expect(instance.Status.CoreReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReadyCoreReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReplicantReplicas).Should(Equal(int32(3)))
