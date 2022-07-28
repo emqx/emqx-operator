@@ -110,7 +110,7 @@ func checkDefaulting(emqx Emqx) {
 		},
 	}))
 
-	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("log.to", "both"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("log.to", "console"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("name", emqx.GetName()))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.tcp.external", "1883"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.ssl.external", "8883"))

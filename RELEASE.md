@@ -14,4 +14,4 @@ EMQX Operator 1.2.3 is released.
 
 - New fields for `.status` in EMQX Custom Resource.
 
-- Now we don't create `volume` and `volumeMount` for EMQX logs anymore
+- Now we don't create `volume` and `volumeMount` for EMQX logs anymore, EMQX logs will output to container stdout by default.
