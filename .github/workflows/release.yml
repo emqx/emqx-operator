@@ -51,12 +51,22 @@ jobs:
     - uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
+        prerelease: true
         token: ${{ github.token }}
         name: EMQX Operator ${{ github.ref_name }} Released
         body_path: RELEASE.md
         generate_release_notes: true
         files: |
           deploy/manifests/emqx-operator-controller.yaml
+    - name: Update helm repo
+      uses: emqx/push-helm-action@v1
+      with:
+        charts_dir: "${{ github.workspace }}/deploy/charts/emqx-operator"
+        version: ${{ github.ref_name }}
+        aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws_region: "us-west-2"
+        aws_bucket: "repos-emqx-io"
     - name: Update operator CI
       run: |
           curl --location --request POST ${{ secrets.EMQX_IO_RELEASE_API }} \
@@ -66,29 +76,6 @@ jobs:
                 "OperatorVersion": "${{ github.ref_name }}",
                 "EmqxVersion": ["4.4.x"]
             }'
-
-  helm:
-    runs-on: self-hosted
-    if: github.repository_owner == 'emqx'
-    needs:
-    - release
-    steps:
-    - uses: actions/checkout@v2
-    - name: Check appVersion for helm
-      working-directory: deploy/charts/emqx-operator
-      run: |
-        appVersion=$(egrep "^appVersion" Chart.yaml | sed -r 's|^appVersion:[[:space:]]([0-9]+.[0-9]+.[0-9]+)$|\1|g')
-        if [ "$appVersion" != "${GITHUB_REF##*/}" ]; then
-          echo "Need update appVersion for Chart.yaml"
-          exit 1
-        fi
-    - name: Create helm package
-      working-directory: deploy/charts/emqx-operator
-      run: helm package .
-    - name: Update helm repo
-      run: |
-        sudo mv $(find deploy/charts/emqx-operator -name "*.tgz") /repos/charts
-        sudo helm repo index /repos/charts
 
   build-reloader-image:
     runs-on: ubuntu-latest
