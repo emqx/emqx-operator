@@ -870,6 +870,7 @@ spec:
                       type: string
                     type: object
                   extraVolumeMounts:
+                    description: See https://github.com/emqx/emqx-operator/pull/72
                     items:
                       description: VolumeMount describes a mounting of a Volume within
                         a container.
@@ -909,6 +910,7 @@ spec:
                       type: object
                     type: array
                   extraVolumes:
+                    description: See https://github.com/emqx/emqx-operator/pull/72
                     items:
                       description: Volume represents a named volume in a pod that
                         may be accessed by any container in the pod.
@@ -2645,6 +2647,7 @@ spec:
                       type: object
                     type: array
                   password:
+                    description: Password for EMQX Dashboard and API
                     type: string
                   readinessProbe:
                     description: Probe describes a health check to be performed against
@@ -3510,6 +3513,7 @@ spec:
                         type: integer
                     type: object
                   username:
+                    description: Username for EMQX Dashboard and API
                     type: string
                 type: object
               env:
@@ -3617,6 +3621,7 @@ spec:
                   type: object
                 type: array
               extraContainers:
+                description: Extra Containers to be added to the pod. See https://github.com/emqx/emqx-operator/issues/252
                 items:
                   description: A single application container that you want to run
                     within a pod.
@@ -6275,10 +6280,8 @@ spec:
             description: Emqx Status defines the observed state of EMQX
             properties:
               conditions:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "operator-sdk generate k8s" to regenerate
-                  code after modifying this file Add custom validation using kubebuilder
-                  tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+                description: Represents the latest available observations of a EMQX
+                  current state.
                 items:
                   description: Condition saves the state information of the EMQX cluster
                   properties:
@@ -6308,24 +6311,35 @@ spec:
                   type: object
                 type: array
               emqxNodes:
+                description: Nodes of the EMQX cluster
                 items:
                   properties:
                     node:
+                      description: EMQX node name
                       type: string
                     node_status:
+                      description: EMQX node status
                       type: string
                     otp_release:
+                      description: Erlang/OTP version used by EMQX
                       type: string
                     uptime:
+                      description: EMQX runtime, in the format of "H hours, m minutes,
+                        s seconds"
                       type: string
                     version:
+                      description: EMQX version
                       type: string
                   type: object
                 type: array
               readyReplicas:
+                description: readyReplicas is the number of pods created for this
+                  EMQX Custom Resource with a EMQX Ready.
                 format: int32
                 type: integer
               replicas:
+                description: replicas is the number of Pods created by the EMQX Custom
+                  Resource controller.
                 format: int32
                 type: integer
             type: object

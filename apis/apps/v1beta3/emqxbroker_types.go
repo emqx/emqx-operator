@@ -26,10 +26,14 @@ type EmqxBrokerTemplate struct {
 	Image           string            `json:"image,omitempty"`
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
+	// Username for EMQX Dashboard and API
 	Username string `json:"username,omitempty"`
+	// Password for EMQX Dashboard and API
 	Password string `json:"password,omitempty"`
 
-	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
+	// See https://github.com/emqx/emqx-operator/pull/72
+	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
+	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
 	EmqxConfig EmqxConfig `json:"config,omitempty"`
@@ -62,7 +66,9 @@ type EmqxBrokerSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
-	InitContainers  []corev1.Container `json:"initContainers,omitempty"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	// Extra Containers to be added to the pod.
+	// See https://github.com/emqx/emqx-operator/issues/252
 	ExtraContainers []corev1.Container `json:"extraContainers,omitempty"`
 	EmqxTemplate    EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 }
