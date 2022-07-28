@@ -294,7 +294,7 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 			},
 		},
 	}
-	sts = generateDataAndLogVolume(instance, sts)
+	sts = generateDataVolume(instance, sts)
 
 	return sts
 }
@@ -708,23 +708,24 @@ func generateLicense(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev
 	return secret, sts
 }
 
-func generateDataAndLogVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
+func generateDataVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
 	names := appsv1beta3.Names{Object: instance}
-
 	dataName := names.Data()
-	logName := names.Log()
 
 	if reflect.ValueOf(instance.GetPersistent()).IsZero() {
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
-			generateEmptyDirVolume(dataName),
-			generateEmptyDirVolume(logName),
+			corev1.Volume{
+				Name: dataName,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
 		)
 	} else {
 		sts.Spec.VolumeClaimTemplates = append(
 			sts.Spec.VolumeClaimTemplates,
 			generateVolumeClaimTemplate(instance, dataName),
-			generateVolumeClaimTemplate(instance, logName),
 		)
 	}
 
@@ -735,24 +736,11 @@ func generateDataAndLogVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet
 			Name:      dataName,
 			MountPath: "/opt/emqx/data",
 		},
-		corev1.VolumeMount{
-			Name:      logName,
-			MountPath: "/opt/emqx/log",
-		},
 	)
 
 	ReloaderContainerIndex := findContinerIndex(sts, ReloaderContainerName)
 	sts.Spec.Template.Spec.Containers[ReloaderContainerIndex].VolumeMounts = sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts
 	return sts
-}
-
-func generateEmptyDirVolume(Name string) corev1.Volume {
-	return corev1.Volume{
-		Name: Name,
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{},
-		},
-	}
 }
 
 func generateVolumeClaimTemplate(instance appsv1beta3.Emqx, Name string) corev1.PersistentVolumeClaim {

@@ -38,15 +38,3 @@ func (n Names) LoadedModules() string {
 func (n Names) Data() string {
 	return fmt.Sprintf("%s-%s", n.Object.GetName(), "data")
 }
-
-func (n Names) Log() string {
-	return fmt.Sprintf("%s-%s", n.Object.GetName(), "log")
-}
-
-func (n Names) MQTTSCertificate() string {
-	return fmt.Sprintf("%s-%s-%s", n.Object.GetName(), "mqtts", "cert")
-}
-
-func (n Names) WSSCertificate() string {
-	return fmt.Sprintf("%s-%s-%s", n.Object.GetName(), "wss", "cert")
-}

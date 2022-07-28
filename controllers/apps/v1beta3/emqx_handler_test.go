@@ -133,23 +133,6 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 						},
 					},
 				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "emqx-log",
-						Namespace: "default",
-					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{
-							corev1.ReadWriteOnce,
-						},
-						StorageClassName: &storageClassName,
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("1Gi"),
-							},
-						},
-					},
-				},
 			},
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
@@ -281,7 +264,6 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "extra", MountPath: "/extra"},
 								{Name: "emqx-data", MountPath: "/opt/emqx/data"},
-								{Name: "emqx-log", MountPath: "/opt/emqx/log"},
 							},
 						},
 						{
@@ -296,7 +278,6 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "extra", MountPath: "/extra"},
 								{Name: "emqx-data", MountPath: "/opt/emqx/data"},
-								{Name: "emqx-log", MountPath: "/opt/emqx/log"},
 							},
 						},
 						{Name: "extra", Image: "extra"},
@@ -318,12 +299,6 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 		[]corev1.Volume{
 			{
 				Name: "emqx-data",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
-			{
-				Name: "emqx-log",
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
