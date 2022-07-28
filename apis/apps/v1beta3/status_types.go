@@ -79,6 +79,9 @@ func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason,
 }
 
 func (s *Status) IsRunning() bool {
+	if len(s.Conditions) == 0 {
+		return false
+	}
 	c := s.Conditions[0]
 	if c.Type == ConditionRunning && c.Status == corev1.ConditionTrue {
 		return true

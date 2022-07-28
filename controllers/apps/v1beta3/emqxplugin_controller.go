@@ -116,12 +116,14 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 	}
-	ready, emqx := findReadyEmqx(emqxList)
 
-	if ready {
-		var err error
-		var equalPluginConfig bool
-		if equalPluginConfig, err = r.checkPluginConfig(instance, emqx); err != nil {
+	for _, emqx := range emqxList {
+		if status := emqx.GetStatus(); !status.IsRunning() {
+			continue
+		}
+
+		equalPluginConfig, err := r.checkPluginConfig(instance, emqx)
+		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if !equalPluginConfig {
@@ -131,7 +133,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 		}
 
-		if err = r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName); err != nil {
+		if err := r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -388,15 +390,4 @@ func generateConfigStr(plugin *appsv1beta3.EmqxPlugin) string {
 		config += fmt.Sprintln(k, " = ", plugin.Spec.Config[k])
 	}
 	return config
-}
-
-func findReadyEmqx(emqxs []appsv1beta3.Emqx) (bool, appsv1beta3.Emqx) {
-	for _, emqx := range emqxs {
-		for _, c := range emqx.GetStatus().Conditions {
-			if c.Type == appsv1beta3.ConditionRunning && c.Status == corev1.ConditionTrue {
-				return true, emqx
-			}
-		}
-	}
-	return false, nil
 }
