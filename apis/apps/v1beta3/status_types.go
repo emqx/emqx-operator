@@ -46,22 +46,28 @@ type EmqxStatus interface {
 }
 
 type EmqxNode struct {
-	Node       string `json:"node,omitempty"`
+	// EMQX node name
+	Node string `json:"node,omitempty"`
+	// EMQX node status
 	NodeStatus string `json:"node_status,omitempty"`
+	// Erlang/OTP version used by EMQX
 	OTPRelease string `json:"otp_release,omitempty"`
-	Version    string `json:"version,omitempty"`
-	Uptime     string `json:"uptime,omitempty"`
+	// EMQX version
+	Version string `json:"version,omitempty"`
+	// EMQX runtime, in the format of "H hours, m minutes, s seconds"
+	Uptime string `json:"uptime,omitempty"`
 }
 
 // Emqx Status defines the observed state of EMQX
 type Status struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	Conditions    []Condition `json:"conditions,omitempty"`
-	EmqxNodes     []EmqxNode  `json:"emqxNodes,omitempty"`
-	Replicas      int32       `json:"replicas,omitempty"`
-	ReadyReplicas int32       `json:"readyReplicas,omitempty"`
+	// Represents the latest available observations of a EMQX current state.
+	Conditions []Condition `json:"conditions,omitempty"`
+	// Nodes of the EMQX cluster
+	EmqxNodes []EmqxNode `json:"emqxNodes,omitempty"`
+	// replicas is the number of Pods created by the EMQX Custom Resource controller.
+	Replicas int32 `json:"replicas,omitempty"`
+	// readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 }
 
 func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {

@@ -27,6 +27,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _[ConditionType](#conditiontype)_ | Status of cluster condition. |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |
 | `lastUpdateTime` _string_ | The last time this condition was updated. |
 | `lastTransitionTime` _string_ | Last time the condition transitioned from one status to another. |
 | `reason` _string_ | The reason for the condition's last transition. |
@@ -101,6 +102,7 @@ _Appears in:_
 | `nodeName` _string_ |  |
 | `nodeSelector` _object (keys:string, values:string)_ |  |
 | `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ |  |
+| `extraContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ | Extra Containers to be added to the pod. See https://github.com/emqx/emqx-operator/issues/252 |
 | `emqxTemplate` _[EmqxBrokerTemplate](#emqxbrokertemplate)_ |  |
 
 
@@ -117,8 +119,10 @@ _Appears in:_
 | --- | --- |
 | `image` _string_ |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
-| `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ |  |
-| `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ |  |
+| `username` _string_ | Username for EMQX Dashboard and API |
+| `password` _string_ | Password for EMQX Dashboard and API |
+| `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
+| `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
 | `config` _object (keys:string, values:string)_ |  |
 | `args` _string array_ |  |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podsecuritycontext-v1-core)_ |  |
@@ -189,6 +193,7 @@ _Appears in:_
 | `nodeName` _string_ |  |
 | `nodeSelector` _object (keys:string, values:string)_ |  |
 | `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ |  |
+| `extraContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ | Extra Containers to be added to the pod. See https://github.com/emqx/emqx-operator/issues/252 |
 | `emqxTemplate` _[EmqxEnterpriseTemplate](#emqxenterprisetemplate)_ |  |
 
 
@@ -205,8 +210,10 @@ _Appears in:_
 | --- | --- |
 | `image` _string_ |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ |  |
-| `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ |  |
-| `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ |  |
+| `username` _string_ | Username for EMQX Dashboard and API |
+| `password` _string_ | Password for EMQX Dashboard and API |
+| `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
+| `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
 | `config` _object (keys:string, values:string)_ |  |
 | `args` _string array_ |  |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podsecuritycontext-v1-core)_ |  |
@@ -218,6 +225,24 @@ _Appears in:_
 | `acl` _string array_ |  |
 | `modules` _[EmqxEnterpriseModule](#emqxenterprisemodule) array_ |  |
 | `license` _[License](#license)_ |  |
+
+
+#### EmqxNode
+
+
+
+
+
+_Appears in:_
+- [Status](#status)
+
+| Field | Description |
+| --- | --- |
+| `node` _string_ | EMQX node name |
+| `node_status` _string_ | EMQX node status |
+| `otp_release` _string_ | Erlang/OTP version used by EMQX |
+| `version` _string_ | EMQX version |
+| `uptime` _string_ | EMQX runtime, in the format of "H hours, m minutes, s seconds" |
 
 
 #### EmqxPlugin
@@ -234,6 +259,7 @@ EmqxPlugin is the Schema for the emqxplugins API
 | `kind` _string_ | `EmqxPlugin`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EmqxPluginSpec](#emqxpluginspec)_ |  |
+| `status` _[EmqxPluginStatus](#emqxpluginstatus)_ |  |
 
 
 #### EmqxPluginSpec
@@ -252,6 +278,18 @@ _Appears in:_
 | `config` _object (keys:string, values:string)_ |  |
 
 
+#### EmqxPluginStatus
+
+
+
+EmqxPluginStatus defines the observed state of EmqxPlugin
+
+_Appears in:_
+- [EmqxPlugin](#emqxplugin)
+
+| Field | Description |
+| --- | --- |
+| `phase` _[phase](#phase)_ |  |
 
 
 
@@ -303,6 +341,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](#condition) array_ | INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html |
+| `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX current state. |
+| `emqxNodes` _[EmqxNode](#emqxnode) array_ | Nodes of the EMQX cluster |
+| `replicas` _integer_ | replicas is the number of Pods created by the EMQX Custom Resource controller. |
+| `readyReplicas` _integer_ | readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready. |
 
 

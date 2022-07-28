@@ -21,7 +21,7 @@ We use a [cert-manager](https://github.com/jetstack/cert-manager) for provisioni
 The default static configuration can be installed as follows:
 
 ```shell
-kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.2/emqx-operator-controller.yaml"
+kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.3/emqx-operator-controller.yaml"
 ```
 
 ### Installing with Helm
