@@ -48,10 +48,17 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         context: .
+    - id: prerelease
+      run: |
+        if echo "${{ github.ref_name }}" |egrep -q "^[0-9].[0-9].[0-9]$"; then
+          echo "::set-output name=prerelease::true"
+        else
+          echo "::set-output name=prerelease::false"
+        fi
     - uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        prerelease: true
+        prerelease: ${{ steps.prerelease.outputs.prerelease }}
         token: ${{ github.token }}
         name: EMQX Operator ${{ github.ref_name }} Released
         body_path: RELEASE.md
@@ -66,16 +73,8 @@ jobs:
         aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws_region: "us-west-2"
-        aws_bucket: "repos-emqx-io"
-    - name: Update operator CI
-      run: |
-          curl --location --request POST ${{ secrets.EMQX_IO_RELEASE_API }} \
-            --header 'token: ${{ secrets.EMQX_IO_TOKEN }}' \
-            --header 'Content-Type: application/json' \
-            --data-raw '{
-                "OperatorVersion": "${{ github.ref_name }}",
-                "EmqxVersion": ["4.4.x"]
-            }'
+        aws_bucket_name: "repos-emqx-io"
+
 
   build-reloader-image:
     runs-on: ubuntu-latest
