@@ -62,7 +62,7 @@ var _ = Describe("E2E Test", func() {
 				Namespace: "default",
 			},
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0.3",
+				Image: "emqx/emqx:5.0.4",
 			},
 		}
 		BeforeEach(func() {
@@ -102,7 +102,7 @@ var _ = Describe("E2E Test", func() {
 				Namespace: "default",
 			},
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0.3",
+				Image: "emqx/emqx:5.0.4",
 				ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
 					Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
 						Replicas: &replicant,

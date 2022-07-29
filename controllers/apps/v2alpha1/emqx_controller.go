@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -149,7 +150,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	if instance.Status.IsRunning() {
-		listenerPorts, err := r.getListenerPortsByAPI(sts)
+		listenerPorts, err := r.getAllListenersByAPI(sts)
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 		}
@@ -193,7 +194,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		instance.Status.EmqxNodes = emqxNodes
 
 		for _, node := range emqxNodes {
-			if node.NodeStatus == "Running" {
+			if strings.ToLower(node.NodeStatus) == "running" {
 				if node.Role == "core" {
 					instance.Status.ReadyCoreReplicas++
 				}
@@ -279,19 +280,65 @@ func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.
 	return nodeStatuses, nil
 }
 
-type emqxListener struct {
-	Enable bool   `json:"enable"`
-	Bind   string `json:"bind"`
-	ID     string `json:"id"`
+type emqxGateway struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }
 
-func (r *EMQXReconciler) getListenerPortsByAPI(obj client.Object) ([]corev1.ServicePort, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, "api/v5/listeners")
+type emqxListener struct {
+	Enable bool   `json:"enable"`
+	ID     string `json:"id"`
+	Bind   string `json:"bind"`
+	Type   string `json:"type"`
+}
+
+func (r *EMQXReconciler) getAllListenersByAPI(obj client.Object) ([]corev1.ServicePort, error) {
+	ports, err := r.getListenerPortsByAPI(obj, "api/v5/listeners")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get listeners: %v", err)
+		return nil, err
+	}
+
+	gateways, err := r.getGatewaysByAPI(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, gateway := range gateways {
+		if strings.ToLower(gateway.Status) == "running" {
+			apiPath := fmt.Sprintf("api/v5/gateway/%s/listeners", gateway.Name)
+			gatewayPorts, err := r.getListenerPortsByAPI(obj, apiPath)
+			if err != nil {
+				return nil, err
+			}
+			ports = append(ports, gatewayPorts...)
+		}
+	}
+
+	return ports, nil
+}
+
+func (r *EMQXReconciler) getGatewaysByAPI(obj client.Object) ([]emqxGateway, error) {
+	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, "api/v5/gateway")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get API %s: %v", "api/v5/gateway", err)
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get listener, status : %s, body: %s", resp.Status, body)
+		return nil, fmt.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/gateway", resp.Status, body)
+	}
+	gateway := []emqxGateway{}
+	if err := json.Unmarshal(body, &gateway); err != nil {
+		return nil, fmt.Errorf("failed to parse gateway: %v", err)
+	}
+	return gateway, nil
+}
+
+func (r *EMQXReconciler) getListenerPortsByAPI(obj client.Object, apiPath string) ([]corev1.ServicePort, error) {
+	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, apiPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get API %s: %v", apiPath, err)
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("failed to get API %s, status : %s, body: %s", apiPath, resp.Status, body)
 	}
 	ports := []corev1.ServicePort{}
 	listeners := []emqxListener{}
@@ -303,13 +350,21 @@ func (r *EMQXReconciler) getListenerPortsByAPI(obj client.Object) ([]corev1.Serv
 			continue
 		}
 
+		var protocol corev1.Protocol
+		compile := regexp.MustCompile(".*(udp|dtls|quic).*")
+		if compile.MatchString(listener.Type) {
+			protocol = corev1.ProtocolUDP
+		} else {
+			protocol = corev1.ProtocolTCP
+		}
+
 		_, strPort, _ := net.SplitHostPort(listener.Bind)
 		intPort, _ := strconv.Atoi(strPort)
 
 		ports = append(ports, corev1.ServicePort{
 			Name:       strings.ReplaceAll(listener.ID, ":", "-"),
+			Protocol:   protocol,
 			Port:       int32(intPort),
-			Protocol:   corev1.ProtocolTCP,
 			TargetPort: intstr.FromInt(intPort),
 		})
 	}
