@@ -250,17 +250,6 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 							Args: []string{
 								"--log.level", "debug",
 							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/status",
-										Port: intstr.FromInt(8081),
-									},
-								},
-								InitialDelaySeconds: int32(10),
-								PeriodSeconds:       int32(5),
-								FailureThreshold:    int32(30),
-							},
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "extra", MountPath: "/extra"},
 								{Name: "emqx-data", MountPath: "/opt/emqx/data"},
