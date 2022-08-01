@@ -373,7 +373,7 @@ func TestGenerateInitPluginList(t *testing.T) {
 				"apps.emqx.io/instance": "emqx-ee",
 			},
 			Config: map[string]string{
-				"modules.loaded_file": "/mounted/modules/loaded_modules",
+				"modules.loaded_file": "data/loaded_modules",
 			},
 		},
 	}
@@ -463,6 +463,29 @@ func TestGenerateInitPluginList(t *testing.T) {
 		},
 	}
 	expect = []client.Object{}
+	assert.Equal(t, expect, generateInitPluginList(enterprise, extraPluginList))
+
+	enterprise.Spec.EmqxTemplate.Modules = []appsv1beta3.EmqxEnterpriseModule{
+		{
+			Name:    "internal_acl",
+			Enable:  true,
+			Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
+		},
+	}
+
+	emqxModules.Spec.Config = map[string]string{
+		"modules.loaded_file": "/mounted/modules/loaded_modules",
+	}
+
+	extraPluginList = &appsv1beta3.EmqxPluginList{
+		Items: []appsv1beta3.EmqxPlugin{
+			*emqxRuleEngine,
+			*emqxRetainer,
+		},
+	}
+	expect = []client.Object{
+		emqxModules,
+	}
 	assert.Equal(t, expect, generateInitPluginList(enterprise, extraPluginList))
 }
 

@@ -362,7 +362,7 @@ func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1be
 		pluginList = append(pluginList, emqxRetainer)
 	}
 
-	_, ok := instance.(*appsv1beta3.EmqxEnterprise)
+	enterprise, ok := instance.(*appsv1beta3.EmqxEnterprise)
 	if ok && !isExistPlugin("emqx_modules", matchedPluginList) {
 		emqxModules := &appsv1beta3.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
@@ -378,10 +378,17 @@ func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1be
 				PluginName: "emqx_modules",
 				Selector:   instance.GetLabels(),
 				Config: map[string]string{
-					"modules.loaded_file": "/mounted/modules/loaded_modules",
+					"modules.loaded_file": "data/loaded_modules",
 				},
 			},
 		}
+
+		if enterprise.Spec.EmqxTemplate.Modules != nil {
+			emqxModules.Spec.Config = map[string]string{
+				"modules.loaded_file": "/mounted/modules/loaded_modules",
+			}
+		}
+
 		pluginList = append(pluginList, emqxModules)
 	}
 
