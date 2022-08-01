@@ -626,11 +626,13 @@ func generateLoadedModules(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (
 		modules := &appsv1beta3.EmqxEnterpriseModuleList{
 			Items: obj.Spec.EmqxTemplate.Modules,
 		}
+		// for enterprise, if modules is empty, don't create configmap
 		loadedModulesString = modules.String()
+		if loadedModulesString == "" {
+			return nil, sts
+		}
 	}
-	if loadedModulesString == "" {
-		return nil, sts
-	}
+
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -816,16 +818,53 @@ func updateEnvAndVolumeForSts(sts *appsv1.StatefulSet, envVar corev1.EnvVar, vol
 	emqxContainerIndex := findContinerIndex(sts, handler.EmqxContainerName)
 	reloaderContainerIndex := findContinerIndex(sts, ReloaderContainerName)
 
-	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, volume)
+	isNotExistVolume := func(volume corev1.Volume) bool {
+		for _, v := range sts.Spec.Template.Spec.Volumes {
+			if v.Name == volume.Name {
+				return false
+			}
+		}
+		return true
+	}
 
-	sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts = append(
-		sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts,
-		volumeMount,
-	)
-	sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env = append(
-		sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env,
-		envVar,
-	)
+	isNotExistVolumeVolumeMount := func(volumeMount corev1.VolumeMount) bool {
+		for _, v := range sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts {
+			if v.Name == volumeMount.Name {
+				return false
+			}
+		}
+		return true
+	}
+
+	isNotExistEnv := func(envVar corev1.EnvVar) bool {
+		for _, v := range sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env {
+			if v.Name == envVar.Name {
+				return false
+			}
+		}
+		return true
+	}
+
+	if isNotExistVolume(volume) {
+		sts.Spec.Template.Spec.Volumes = append(
+			sts.Spec.Template.Spec.Volumes,
+			volume,
+		)
+	}
+
+	if isNotExistVolumeVolumeMount(volumeMount) {
+		sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts = append(
+			sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts,
+			volumeMount,
+		)
+	}
+
+	if isNotExistEnv(envVar) {
+		sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env = append(
+			sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env,
+			envVar,
+		)
+	}
 
 	sts.Spec.Template.Spec.Containers[reloaderContainerIndex].VolumeMounts = sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts
 	sts.Spec.Template.Spec.Containers[reloaderContainerIndex].Env = sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env

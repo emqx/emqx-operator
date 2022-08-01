@@ -57,6 +57,12 @@ func (r *EmqxBroker) Default() {
 	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Labels["apps.emqx.io/instance"] = r.GetName()
 
+	modules := &EmqxBrokerModuleList{
+		Items: r.Spec.EmqxTemplate.Modules,
+	}
+	modules.Default()
+	r.Spec.EmqxTemplate.Modules = modules.Items
+
 	if r.Spec.EmqxTemplate.EmqxConfig == nil {
 		r.Spec.EmqxTemplate.EmqxConfig = make(EmqxConfig)
 	}
