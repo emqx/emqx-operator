@@ -942,7 +942,7 @@ func TestGenerateLoadedModules(t *testing.T) {
 	}
 
 	modules, _ := generateLoadedModules(broker, sts)
-	assert.Nil(t, modules)
+	assert.NotNil(t, modules)
 
 	broker.Spec.EmqxTemplate.Modules = []appsv1beta3.EmqxBrokerModule{
 		{
@@ -1024,21 +1024,19 @@ func TestGenerateLoadedModules(t *testing.T) {
 	assert.Equal(t, expect, loadedBrokerModules)
 	assert.Equal(t, expectSts, sts)
 
-	enterpise := &appsv1beta3.EmqxEnterprise{
-		Spec: appsv1beta3.EmqxEnterpriseSpec{
-			EmqxTemplate: appsv1beta3.EmqxEnterpriseTemplate{
-				Modules: []appsv1beta3.EmqxEnterpriseModule{
-					{
-						Name:    "internal_acl",
-						Enable:  true,
-						Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
-					},
-				},
-			},
+	enterprise := &appsv1beta3.EmqxEnterprise{}
+	modules, _ = generateLoadedModules(enterprise, sts)
+	assert.Nil(t, modules)
+
+	enterprise.Spec.EmqxTemplate.Modules = []appsv1beta3.EmqxEnterpriseModule{
+		{
+			Name:    "internal_acl",
+			Enable:  true,
+			Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
 		},
 	}
 
-	loadedEnterpriseModules, _ := generateLoadedModules(enterpise, sts)
+	loadedEnterpriseModules, _ := generateLoadedModules(enterprise, sts)
 	assert.Equal(t, `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}}]`, loadedEnterpriseModules.Data["loaded_modules"])
 }
 

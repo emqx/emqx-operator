@@ -7,6 +7,48 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+func TestEmqxBrokerModulesDefault(t *testing.T) {
+	modules := &EmqxBrokerModuleList{
+		Items: []EmqxBrokerModule{
+			{
+				Name:   "foo",
+				Enable: true,
+			},
+			{
+				Name:   "bar",
+				Enable: false,
+			},
+			{
+				Name:   "emqx_mod_presence",
+				Enable: false,
+			},
+		},
+	}
+
+	modules.Default()
+	assert.ElementsMatch(t, modules.Items,
+		[]EmqxBrokerModule{
+			{
+				Name:   "foo",
+				Enable: true,
+			},
+			{
+				Name:   "bar",
+				Enable: false,
+			},
+			{
+				Name:   "emqx_mod_acl_internal",
+				Enable: true,
+			},
+			{
+				Name:   "emqx_mod_presence",
+				Enable: false,
+			},
+		},
+	)
+
+}
+
 func TestEmqxBrokerModulesString(t *testing.T) {
 	modules := &EmqxBrokerModuleList{
 		Items: []EmqxBrokerModule{
