@@ -377,9 +377,7 @@ func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1be
 			Spec: appsv1beta3.EmqxPluginSpec{
 				PluginName: "emqx_modules",
 				Selector:   instance.GetLabels(),
-				Config: map[string]string{
-					"modules.loaded_file": "data/loaded_modules",
-				},
+				Config:     map[string]string{},
 			},
 		}
 

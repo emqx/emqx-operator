@@ -372,9 +372,7 @@ func TestGenerateInitPluginList(t *testing.T) {
 			Selector: map[string]string{
 				"apps.emqx.io/instance": "emqx-ee",
 			},
-			Config: map[string]string{
-				"modules.loaded_file": "data/loaded_modules",
-			},
+			Config: map[string]string{},
 		},
 	}
 
