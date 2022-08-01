@@ -147,9 +147,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		resources = append(resources, license)
 	}
 
-	serviceTemplate := instance.GetServiceTemplate()
-	serviceTemplate.MergePorts(r.getListenerPortsByAPI(instance))
-	instance.SetServiceTemplate(serviceTemplate)
+	if status := instance.GetStatus(); status.IsRunning() {
+		serviceTemplate := instance.GetServiceTemplate()
+		serviceTemplate.MergePorts(r.getListenerPortsByAPI(instance))
+		instance.SetServiceTemplate(serviceTemplate)
+	}
 
 	headlessSvc, svc := generateSvc(instance)
 	sts.Spec.ServiceName = headlessSvc.Name
