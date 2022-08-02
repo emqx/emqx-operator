@@ -2659,6 +2659,7 @@ spec:
                       type: object
                     type: array
                   password:
+                    default: public
                     description: Password for EMQX Dashboard and API
                     type: string
                   readinessProbe:
@@ -3525,6 +3526,7 @@ spec:
                         type: integer
                     type: object
                   username:
+                    default: admin
                     description: Username for EMQX Dashboard and API
                     type: string
                 type: object

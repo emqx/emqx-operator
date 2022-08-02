@@ -32,8 +32,10 @@ type EmqxEnterpriseTemplate struct {
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// Username for EMQX Dashboard and API
+	//+kubebuilder:default:="admin"
 	Username string `json:"username,omitempty"`
 	// Password for EMQX Dashboard and API
+	//+kubebuilder:default:="public"
 	Password string `json:"password,omitempty"`
 
 	// See https://github.com/emqx/emqx-operator/pull/72
