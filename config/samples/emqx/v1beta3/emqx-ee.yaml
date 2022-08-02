@@ -62,7 +62,7 @@ spec:
   emqxTemplate:
     username: "test"
     password: "test"
-    image: emqx/emqx-ee:4.4.5
+    image: emqx/emqx-ee:4.4.6
     securityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -81,11 +81,13 @@ spec:
       cluster.dns.app: emqx-ee
       cluster.dns.name: emqx-ee-headless.default.svc.cluster.local
       listener.tcp.external: "1883"
+    acl:
+      - "{allow, all}"
     modules:
       - name: "internal_acl"
         enable: true
         configs:
-          acl_rule_file: "etc/acl.conf"
+          acl_rule_file: "/mounted/acl/acl.conf"
       - name: "retainer"
         enable: true
         configs:

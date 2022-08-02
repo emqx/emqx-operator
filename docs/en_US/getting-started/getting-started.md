@@ -64,7 +64,7 @@ kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.3/
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx-ee:4.4.5
+       image: emqx/emqx-ee:4.4.6
    EOF
    ```
 
@@ -103,7 +103,7 @@ kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.3/
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx:4.4.5
+       image: emqx/emqx:4.4.6
    EOF
    ```
 

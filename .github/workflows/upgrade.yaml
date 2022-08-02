@@ -20,8 +20,8 @@ jobs:
         apiVersion:
           - v1beta3
         emqx:
-          - [EmqxBroker, "emqx/emqx:4.4.4"]
-          - [EmqxEnterprise, "emqx/emqx-ee:4.4.4"]
+          - [EmqxBroker, "emqx/emqx:4.4.6"]
+          - [EmqxEnterprise, "emqx/emqx-ee:4.4.6"]
     steps:
       - run: minikube start
       - name: install cert-manager
