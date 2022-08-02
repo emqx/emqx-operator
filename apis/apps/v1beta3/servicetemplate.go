@@ -28,6 +28,9 @@ func (s *ServiceTemplate) Default(emqx Emqx) {
 		s.ObjectMeta.Annotations = map[string]string{}
 	}
 	for key, value := range emqx.GetAnnotations() {
+		if key == "kubectl.kubernetes.io/last-applied-configuration" {
+			continue
+		}
 		if _, ok := s.ObjectMeta.Annotations[key]; !ok {
 			s.ObjectMeta.Annotations[key] = value
 		}

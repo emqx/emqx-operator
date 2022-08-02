@@ -149,7 +149,8 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 						"apps.emqx.io/instance":   "emqx",
 					},
 					Annotations: map[string]string{
-						"foo": "bar",
+						"foo":                            "bar",
+						"apps.emqx.io/manage-containers": "emqx,reloader,extra",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -860,6 +861,11 @@ func TestGenerateAcl(t *testing.T) {
 	expectSts := &appsv1.StatefulSet{
 		Spec: appsv1.StatefulSetSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"ACL/Base64EncodeConfig": "e2FsbG93LCBhbGx9CntkZW55LCBhbGx9Cg==",
+					},
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
@@ -969,6 +975,11 @@ func TestGenerateLoadedModules(t *testing.T) {
 	expectSts := &appsv1.StatefulSet{
 		Spec: appsv1.StatefulSetSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"LoadedModules/Base64EncodeConfig": "e2VtcXhfbW9kdWxlLCB0cnVlfS4K",
+					},
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{

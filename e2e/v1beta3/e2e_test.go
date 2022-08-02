@@ -106,8 +106,8 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 			check_emqx_status(enterprise)
 
 			By("should check StatefulSet annotations")
-			check_sts_annotations(broker)
-			check_sts_annotations(enterprise)
+			check_pod_annotations(broker)
+			check_pod_annotations(enterprise)
 
 			By("should create EMQX Plugins")
 			check_plugin(broker, pluginList)
@@ -245,28 +245,28 @@ func check_emqx_status(emqx appsv1beta3.Emqx) {
 	Expect(emqx.GetStatus().EmqxNodes).Should(HaveLen(3))
 }
 
-func check_sts_annotations(emqx appsv1beta3.Emqx) {
+func check_pod_annotations(emqx appsv1beta3.Emqx) {
 	sts := &appsv1.StatefulSet{}
 	Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), sts)).Should(Succeed())
-	Expect(sts.Annotations).Should(HaveKey(handler.ManageContainersAnnotation))
+	Expect(sts.Spec.Template.Annotations).Should(HaveKey(handler.ManageContainersAnnotation))
 	if len(emqx.GetACL()) != 0 {
-		Expect(sts.Annotations).Should(HaveKey("ACL/Base64EncodeConfig"))
+		Expect(sts.Spec.Template.Annotations).Should(HaveKey("ACL/Base64EncodeConfig"))
 	} else {
-		Expect(sts.Annotations).ShouldNot(HaveKey("ACL/Base64EncodeConfig"))
+		Expect(sts.Spec.Template.Annotations).ShouldNot(HaveKey("ACL/Base64EncodeConfig"))
 	}
 
 	switch instance := emqx.(type) {
 	case *appsv1beta3.EmqxBroker:
 		if len(instance.GetModules()) != 0 {
-			Expect(sts.Annotations).Should(HaveKey("LoadedModules/Base64EncodeConfig"))
+			Expect(sts.Spec.Template.Annotations).Should(HaveKey("LoadedModules/Base64EncodeConfig"))
 		} else {
-			Expect(sts.Annotations).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
+			Expect(sts.Spec.Template.Annotations).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
 		}
 	case *appsv1beta3.EmqxEnterprise:
 		if len(instance.GetModules()) != 0 {
-			Expect(sts.Annotations).Should(HaveKey("LoadedModules/Base64EncodeConfig"))
+			Expect(sts.Spec.Template.Annotations).Should(HaveKey("LoadedModules/Base64EncodeConfig"))
 		} else {
-			Expect(sts.Annotations).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
+			Expect(sts.Spec.Template.Annotations).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
 		}
 	}
 }

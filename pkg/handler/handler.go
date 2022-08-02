@@ -115,7 +115,6 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 	opts := []patch.CalculateOption{}
 	switch resource := obj.(type) {
 	case *appsv1.StatefulSet:
-		_ = client.NewDryRunClient(handler.Client).Update(context.TODO(), obj)
 		opts = append(
 			opts,
 			patch.IgnoreStatusFields(),
@@ -196,7 +195,7 @@ func IgnoreOtherContainers() patch.CalculateOption {
 func selectManagerContainer(obj []byte) ([]byte, error) {
 	sts := &appsv1.StatefulSet{}
 	_ = json.Unmarshal(obj, sts)
-	containerNames := sts.Annotations[ManageContainersAnnotation]
+	containerNames := sts.Spec.Template.Annotations[ManageContainersAnnotation]
 	containers := []corev1.Container{}
 	for _, container := range sts.Spec.Template.Spec.Containers {
 		if strings.Contains(containerNames, container.Name) {
