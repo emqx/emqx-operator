@@ -73,10 +73,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 			sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
 		}
 	}
-	annotations := sts.Annotations
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
 
 	storeSts := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
@@ -87,6 +83,14 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	// store statefulSet is exit
 	if storeSts.Spec.PodManagementPolicy != "" {
 		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
+	}
+	// compatible with 1.2.2
+	if storeSts.Spec.VolumeClaimTemplates != nil {
+		sts.Spec.VolumeClaimTemplates = storeSts.Spec.VolumeClaimTemplates
+	}
+	// compatible with 1.2.2
+	if storeSts.Annotations != nil {
+		sts.Annotations = storeSts.Annotations
 	}
 
 	defaultPluginsConfig, sts := generateDefaultPluginsConfig(instance, sts)
@@ -131,14 +135,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	//add acl when module isn't nil
 	acl, sts := generateAcl(instance, sts)
 	if acl != nil {
-		annotations["ACL/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(acl.Data["acl.conf"]))
 		resources = append(resources, acl)
 	}
 
 	//add module when module isn't nil
 	module, sts := generateLoadedModules(instance, sts)
 	if module != nil {
-		annotations["LoadedModules/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(module.Data["loaded_modules"]))
 		resources = append(resources, module)
 	}
 
@@ -157,8 +159,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	sts.Spec.ServiceName = headlessSvc.Name
 	resources = append(resources, headlessSvc, svc)
 
-	annotations[handler.ManageContainersAnnotation] = generateAnnotationByContainers(sts.Spec.Template.Spec.Containers)
-	sts.Annotations = annotations
 	resources = append(resources, sts)
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, postFn); err != nil {
@@ -254,6 +254,40 @@ func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]apps
 }
 
 func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
+	annotations := instance.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
+	podTemplate := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      instance.GetLabels(),
+			Annotations: annotations,
+		},
+		Spec: corev1.PodSpec{
+			Affinity:         instance.GetAffinity(),
+			Tolerations:      instance.GetToleRations(),
+			NodeName:         instance.GetNodeName(),
+			NodeSelector:     instance.GetNodeSelector(),
+			ImagePullSecrets: instance.GetImagePullSecrets(),
+			SecurityContext:  instance.GetSecurityContext(),
+			InitContainers:   instance.GetInitContainers(),
+			Containers: append(
+				[]corev1.Container{
+					*generateEmqxContainer(instance),
+					*generateReloaderContainer(instance),
+				},
+				instance.GetExtraContainers()...,
+			),
+			Volumes: instance.GetExtraVolumes(),
+		},
+	}
+
+	podAnnotation := podTemplate.ObjectMeta.DeepCopy().Annotations
+	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(podTemplate.Spec.Containers)
+	podTemplate.Annotations = podAnnotation
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -263,7 +297,7 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 			Name:        instance.GetName(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: instance.GetAnnotations(),
+			Annotations: annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: instance.GetReplicas(),
@@ -271,31 +305,10 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 				MatchLabels: instance.GetLabels(),
 			},
 			PodManagementPolicy: appsv1.OrderedReadyPodManagement,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      instance.GetLabels(),
-					Annotations: instance.GetAnnotations(),
-				},
-				Spec: corev1.PodSpec{
-					Affinity:         instance.GetAffinity(),
-					Tolerations:      instance.GetToleRations(),
-					NodeName:         instance.GetNodeName(),
-					NodeSelector:     instance.GetNodeSelector(),
-					ImagePullSecrets: instance.GetImagePullSecrets(),
-					SecurityContext:  instance.GetSecurityContext(),
-					InitContainers:   instance.GetInitContainers(),
-					Containers: append(
-						[]corev1.Container{
-							*generateEmqxContainer(instance),
-							*generateReloaderContainer(instance),
-						},
-						instance.GetExtraContainers()...,
-					),
-					Volumes: instance.GetExtraVolumes(),
-				},
-			},
+			Template:            podTemplate,
 		},
 	}
+
 	sts = generateDataVolume(instance, sts)
 
 	return sts
@@ -587,6 +600,10 @@ func generateAcl(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Co
 		Data: map[string]string{"acl.conf": aclString},
 	}
 
+	if sts.Spec.Template.Annotations == nil {
+		sts.Spec.Template.Annotations = make(map[string]string)
+	}
+	sts.Spec.Template.Annotations["ACL/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(aclString))
 	sts = updateEnvAndVolumeForSts(sts,
 		corev1.EnvVar{
 			Name:  "EMQX_ACL_FILE",
@@ -644,6 +661,10 @@ func generateLoadedModules(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (
 		Data: map[string]string{"loaded_modules": loadedModulesString},
 	}
 
+	if sts.Spec.Template.Annotations == nil {
+		sts.Spec.Template.Annotations = make(map[string]string)
+	}
+	sts.Spec.Template.Annotations["LoadedModules/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(loadedModulesString))
 	sts = updateEnvAndVolumeForSts(sts,
 		corev1.EnvVar{
 			Name:  "EMQX_MODULES__LOADED_FILE",

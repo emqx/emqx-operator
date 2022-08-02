@@ -31,13 +31,13 @@ func TestIgnoreOtherContainer(t *testing.T) {
 	selectEmqxContainer := handler.IgnoreOtherContainers()
 
 	currentObject := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				handler.ManageContainersAnnotation: "emqx,reloader",
-			},
-		},
 		Spec: appsv1.StatefulSetSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						handler.ManageContainersAnnotation: "emqx,reloader",
+					},
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
@@ -54,13 +54,13 @@ func TestIgnoreOtherContainer(t *testing.T) {
 	current, _ := json.ConfigCompatibleWithStandardLibrary.Marshal(currentObject)
 
 	modifiedObject := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				handler.ManageContainersAnnotation: "emqx,reloader",
-			},
-		},
 		Spec: appsv1.StatefulSetSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						handler.ManageContainersAnnotation: "emqx,reloader",
+					},
+				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
