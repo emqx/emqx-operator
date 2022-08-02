@@ -1,6 +1,10 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.3 is released.
+EMQX Operator 1.2.4 is released.
+
+### Warning 🚨
+
+Only supported 4.4.6 and later versions of EMQX and EMQX Enterprise
 
 ### Features 🌈
 
@@ -10,7 +14,9 @@ EMQX Operator 1.2.3 is released.
 
 - Add `username` and `password` to `.spec.emqxTemplate` for EMQX Custom Resource, users can use them to set up the dashboard and API authentication, and also, users will no longer be able to create and modify `emqx_management` and `emqx_dashboard` plugins by EMQX Plugin Custom Resource.
 
-- If users didn't set `acl` and `modules` in `.spec.emqxTemplate`, the ConfigMap will not be created.
+- If users didn't set `acl` in `.spec.emqxTemplate`, the ConfigMap will not be created.
+
+- For EMQX Enterprise, if users didn't set `modules` in `.spec.emqxTemplate`, the ConfigMap will not be created.
 
 - New fields for `.status` in EMQX Custom Resource.
 

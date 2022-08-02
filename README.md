@@ -29,10 +29,10 @@ The EMQX Operator automatically detects changes on any of the above custom resou
 
 ## EMQX Operator compatibility 
 
-|                        | EMQX 4.2.x | EMQX 4.3.x | EMQX 4.4.x |
-|------------------------|------------|------------|------------|
-| EMQX Operator 1.1.x    | ✓          | ✓          | ✓          |
-| EMQX Operator 1.2.x    |            |            | ✓          |
+|                          | EMQX 4.2 latest | EMQX 4.3 latest | EMQX 4.4 latest |
+|--------------------------|-----------------|-----------------|-----------------|
+| EMQX Operator 1.1 latest | ✓               | ✓               | ✓               |
+| EMQX Operator 1.2 latest |                 |                 | ✓               |
 
 ## Getting Start
 
