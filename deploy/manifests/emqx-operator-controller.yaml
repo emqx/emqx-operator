@@ -1602,6 +1602,7 @@ spec:
                       type: object
                     type: array
                   password:
+                    default: public
                     description: Password for EMQX Dashboard and API
                     type: string
                   readinessProbe:
@@ -2060,6 +2061,7 @@ spec:
                         type: integer
                     type: object
                   username:
+                    default: admin
                     description: Username for EMQX Dashboard and API
                     type: string
                 type: object
@@ -5526,6 +5528,7 @@ spec:
                       type: object
                     type: array
                   password:
+                    default: public
                     description: Password for EMQX Dashboard and API
                     type: string
                   readinessProbe:
@@ -5984,6 +5987,7 @@ spec:
                         type: integer
                     type: object
                   username:
+                    default: admin
                     description: Username for EMQX Dashboard and API
                     type: string
                 type: object
@@ -8246,7 +8250,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.2.3
+        image: emqx/emqx-operator-controller:1.2.4
         livenessProbe:
           httpGet:
             path: /healthz
