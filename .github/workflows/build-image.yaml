@@ -29,6 +29,8 @@ jobs:
           latest=true
         tags: |
           type=ref,event=branch
+          type=ref,event=tag
+          type=semver,pattern={{version}}
     - uses: docker/build-push-action@v2
       with:
         push: true
