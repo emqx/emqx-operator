@@ -163,12 +163,28 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, postFn); err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-		return ctrl.Result{}, err
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedCreateOrUpdate",
+			err.Error(),
+		)
+		instance.SetCondition(*condition)
+		_ = r.Status().Update(ctx, instance)
+		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, err
 	}
 
 	emqxNodes, err := r.getNodeStatusesByAPI(instance)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedToGetNodeStatues",
+			err.Error(),
+		)
+		instance.SetCondition(*condition)
+		_ = r.Status().Update(ctx, instance)
 	}
 
 	instance = updateEmqxStatus(instance, emqxNodes)
