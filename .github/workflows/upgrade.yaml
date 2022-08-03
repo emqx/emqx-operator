@@ -89,9 +89,12 @@ jobs:
         timeout-minutes: 5
         run: |
           while
-            [ -z "$(kubectl get ${{ matrix.emqx[0] }} emqx -o json | jq '.status.conditions[] | select((.type == "Running") and (.status == "True"))')" ];
+            condition="$(kubectl get ${{ matrix.emqx[0] }} emqx -o json | jq '.status.conditions[0]')";
+            [[ "$condition" == "null" ]] \
+            || [[ "$(echo $condition | jq --raw-output '.type')" != "Running" ]] \
+            || [[ "$(echo $condition | jq --raw-output '.status')" != "True" ]]
           do
-            echo "waiting ${{ matrix.emqx[0] }}"
+            echo "waiting"
             sleep 1
           done
       - name: Build image
@@ -126,9 +129,12 @@ jobs:
         run: |
           sleep 30
           while
-            [ -z "$(kubectl get ${{ matrix.emqx[0] }} emqx -o json | jq '.status.conditions[] | select((.type == "Running") and (.status == "True"))')" ];
+            condition="$(kubectl get ${{ matrix.emqx[0] }} emqx -o json | jq '.status.conditions[0]')";
+            [[ "$condition" == "null" ]] \
+            || [[ "$(echo $condition | jq --raw-output '.type')" != "Running" ]] \
+            || [[ "$(echo $condition | jq --raw-output '.status')" != "True" ]]
           do
-            echo "waiting ${{ matrix.emqx[0] }}"
+            echo "waiting"
             sleep 1
           done
       - if: failure()
