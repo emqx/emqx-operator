@@ -14,10 +14,11 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - "v1.20.13"
-          - "v1.21.7"
-          - "v1.22.4"
-          - "v1.23.0"
+          - "v1.20.15"
+          - "v1.21.14"
+          - "v1.22.12"
+          - "v1.23.9"
+          - "v1.24.3"
     steps:
       - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
       - uses: actions/checkout@v2
@@ -39,10 +40,11 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - "v1.20.13"
-          - "v1.21.7"
-          - "v1.22.4"
-          - "v1.23.0"
+          - "v1.20.15"
+          - "v1.21.14"
+          - "v1.22.12"
+          - "v1.23.9"
+          - "v1.24.3"
         emqx:
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqx.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqx-ee.yaml"]
