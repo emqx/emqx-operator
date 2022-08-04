@@ -143,7 +143,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	if deploy := generateDeployment(instance); deploy != nil {
-		if instance.Status.IsCoreUpdating() {
+		if instance.Status.IsCoreUpdating() && instance.Status.OriginalImage != "" {
 			deploy.Spec.Template.Spec.Containers[0].Image = instance.Status.OriginalImage
 		}
 		resources = append(resources, deploy)
