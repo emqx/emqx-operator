@@ -22,6 +22,7 @@ import (
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,21 +56,29 @@ var _ = Describe("E2E Test", func() {
 			TargetPort: intstr.FromInt(8084),
 		},
 	}
-	Context("Replicant not exist", func() {
-		instance := &appsv2alpha1.EMQX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "e2e-test",
-				Namespace: "default",
-			},
-			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0.4",
-			},
-		}
-		BeforeEach(func() {
-			instance.Default()
-			Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
-		})
-		It("Check EMQX Status", func() {
+
+	emqx := &appsv2alpha1.EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "e2e-test",
+			Namespace: "default",
+		},
+		Spec: appsv2alpha1.EMQXSpec{
+			Image: "emqx/emqx:5.0.4",
+		},
+	}
+	BeforeEach(func() {
+		emqx.Default()
+		Expect(k8sClient.Create(context.TODO(), emqx)).Should(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(context.TODO(), emqx)).Should(Succeed())
+	})
+
+	Context("Check EMQX Custom Resource when replicant replicas == 0", func() {
+		instance := &appsv2alpha1.EMQX{}
+		It("", func() {
+			By("Checking the EMQX Custom Resource's Status")
 			Eventually(func() bool {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
 				return instance.Status.IsRunning()
@@ -81,6 +90,7 @@ var _ = Describe("E2E Test", func() {
 			Expect(instance.Status.ReplicantReplicas).Should(Equal(int32(0)))
 			Expect(instance.Status.ReadyReplicantReplicas).Should(Equal(int32(0)))
 
+			By("Checking the EMQX Custom Resource's Service")
 			svc := &corev1.Service{}
 			Eventually(func() error {
 				return k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "default"}, svc)
@@ -89,32 +99,20 @@ var _ = Describe("E2E Test", func() {
 			Expect(svc.Spec.Ports).Should(ConsistOf(listenerPorts))
 			Expect(svc.Spec.Selector).Should(HaveKeyWithValue("apps.emqx.io/db-role", "core"))
 		})
-		AfterEach(func() {
-			Expect(k8sClient.Delete(context.TODO(), instance)).Should(Succeed())
-		})
 	})
 
-	Context("Replicant exist", func() {
-		replicant := int32(3)
-		instance := &appsv2alpha1.EMQX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "e2e-test",
-				Namespace: "default",
-			},
-			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0.4",
-				ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
-					Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
-						Replicas: &replicant,
-					},
-				},
-			},
-		}
-		BeforeEach(func() {
-			instance.Default()
-			Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
+	Context("Check EMQX Custom Resource when replicant replicas != 0", func() {
+		instance := &appsv2alpha1.EMQX{}
+		JustBeforeEach(func() {
+			By("Update the EMQX Custom Resource, add replicant nodes")
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)).Should(Succeed())
+			replicant := int32(3)
+			instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
+			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})
-		It("Check EMQX Status", func() {
+
+		It("", func() {
+			By("Checking the EMQX Custom Resource's Status when replicant nodes exist")
 			Eventually(func() bool {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
 				return instance.Status.IsRunning()
@@ -126,6 +124,7 @@ var _ = Describe("E2E Test", func() {
 			Expect(instance.Status.ReplicantReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReadyReplicantReplicas).Should(Equal(int32(3)))
 
+			By("Checking the EMQX Custom Resource's Service when replicant nodes exist")
 			svc := &corev1.Service{}
 			Eventually(func() error {
 				return k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "default"}, svc)
@@ -134,8 +133,41 @@ var _ = Describe("E2E Test", func() {
 			Expect(svc.Spec.Ports).Should(ConsistOf(listenerPorts))
 			Expect(svc.Spec.Selector).Should(HaveKeyWithValue("apps.emqx.io/db-role", "replicant"))
 		})
-		AfterEach(func() {
-			Expect(k8sClient.Delete(context.TODO(), instance)).Should(Succeed())
+	})
+
+	Context("Update EMQX Custom Resource, change image version", func() {
+		instance := &appsv2alpha1.EMQX{}
+		JustBeforeEach(func() {
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)).Should(Succeed())
+			replicant := int32(3)
+			instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
+			instance.Spec.Image = "emqx/emqx:5.0.3"
+			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+		})
+
+		It("Checking the EMQX Custom Resource's Status when update image", func() {
+			Eventually(func() bool {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
+				return instance.Status.IsRunning()
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(instance.Status.Conditions).Should(ContainElement(HaveField("status", appsv2alpha1.ClusterCoreUpdating)))
+			Expect(instance.Status.Conditions).Should(ContainElement(HaveField("status", appsv2alpha1.ClusterReplicantUpdating)))
+			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.3"))
+			Expect(instance.Status.OriginalImage).Should(Equal("emqx/emqx:5.0.3"))
+
+			Eventually(func() string {
+				sts := &appsv1.StatefulSet{}
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-core", Namespace: "default"}, sts)
+				return sts.Spec.Template.Spec.Containers[0].Image
+			}, interval, timeout).Should(Equal("emqx/emqx:5.0.3"))
+
+			Eventually(func() string {
+				deploy := &appsv1.Deployment{}
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-replicant", Namespace: "default"}, deploy)
+				return deploy.Spec.Template.Spec.Containers[0].Image
+			}, interval, timeout).Should(Equal("emqx/emqx:5.0.3"))
 		})
 	})
+
 })
