@@ -17,8 +17,6 @@ limitations under the License.
 package v2alpha1
 
 import (
-	"reflect"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,16 +49,15 @@ func (r *EMQX) Default() {
 	r.Spec.CoreTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Spec.CoreTemplate.Labels["apps.emqx.io/db-role"] = "core"
 
-	if reflect.ValueOf(r.Spec.ReplicantTemplate).IsZero() {
-		return
-	}
-
 	if r.Spec.ReplicantTemplate.Labels == nil {
 		r.Spec.ReplicantTemplate.Labels = make(map[string]string)
 	}
 	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/instance"] = r.Name
 	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/db-role"] = "replicant"
+
+	defaultReplicas := int32(0)
+	r.Spec.ReplicantTemplate.Spec.Replicas = &defaultReplicas
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
