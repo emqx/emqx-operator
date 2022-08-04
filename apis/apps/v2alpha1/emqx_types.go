@@ -105,8 +105,8 @@ type ConditionType string
 const (
 	ClusterCreating          ConditionType = "Creating"
 	ClusterRunning           ConditionType = "Running"
-	ClusterCoreUpdating      ConditionType = "CoreNodeUpdating"
-	ClusterReplicantUpdating ConditionType = "ReplicantNodeUpdating"
+	ClusterCoreUpdating      ConditionType = "CoreNodesUpdating"
+	ClusterReplicantUpdating ConditionType = "ReplicantNodesUpdating"
 )
 
 type Condition struct {
