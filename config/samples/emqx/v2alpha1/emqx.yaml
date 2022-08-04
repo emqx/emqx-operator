@@ -21,4 +21,4 @@ spec:
         apps.emqx.io/instance: emqx
         apps.emqx.io/db-role: replicant
     spec:
-      replicas: 5
+      replicas: 0
