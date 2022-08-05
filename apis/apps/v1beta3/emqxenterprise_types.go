@@ -33,12 +33,16 @@ type EmqxEnterpriseTemplate struct {
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// Username for EMQX Dashboard and API
+	//+kubebuilder:default:="admin"
 	Username string `json:"username,omitempty"`
 	// Password for EMQX Dashboard and API
+	//+kubebuilder:default:="public"
 	Password string `json:"password,omitempty"`
 
 	// ExtraVolumes for mounting extra volumes like secrets and/or configmaps
-	ExtraVolumes      []corev1.Volume      `json:"extraVolumes,omitempty"`
+	// See https://github.com/emqx/emqx-operator/pull/72
+	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
+	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
 	// EmqxConfig for EMQX cluster configurations
