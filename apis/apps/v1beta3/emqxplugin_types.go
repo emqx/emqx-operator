@@ -24,9 +24,11 @@ import (
 type EmqxPluginSpec struct {
 	//+kubebuilder:validation:Required
 	PluginName string `json:"pluginName,omitempty"`
+	// Selector matches the labels of the EMQX broker
 	//+kubebuilder:validation:Required
 	Selector map[string]string `json:"selector,omitempty"`
-	Config   map[string]string `json:"config,omitempty"`
+	// Config defines the configurations of the EMQX plugins
+	Config map[string]string `json:"config,omitempty"`
 }
 
 type phase string
@@ -48,7 +50,9 @@ type EmqxPlugin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxPluginSpec   `json:"spec,omitempty"`
+	// Spec defines the desired state of EmqxPlugin
+	Spec EmqxPluginSpec `json:"spec,omitempty"`
+	// Status defines the observed state of EMQX plugin
 	Status EmqxPluginStatus `json:"status,omitempty"`
 }
 
