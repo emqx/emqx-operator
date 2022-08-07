@@ -33,24 +33,35 @@ type EmqxBrokerTemplate struct {
 	//+kubebuilder:default:="public"
 	Password string `json:"password,omitempty"`
 
+	// ExtraVolumes for mounting extra volumes like secrets and/or configmaps
 	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
 	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
+	// EmqxConfig for EMQX cluster configurations
 	EmqxConfig EmqxConfig `json:"config,omitempty"`
-	Args       []string   `json:"args,omitempty"`
+	// Args define arguments for the command
+	Args []string `json:"args,omitempty"`
 
-	SecurityContext *corev1.PodSecurityContext  `json:"securityContext,omitempty"`
-	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
+	// SecurityContext defines pod-level security attributes and common container settings
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+	// Resources specify cpu and memory resources
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
+	// ReadinessProbe indicates whether the application running in the container is ready to accept requests
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
-	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
-	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
+	// LivenessProbe indicates if the container is operating
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+	// StartupProbe indicates whether the application running in the container has started
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 
-	ServiceTemplate ServiceTemplate    `json:"serviceTemplate,omitempty"`
-	ACL             []string           `json:"acl,omitempty"`
-	Modules         []EmqxBrokerModule `json:"modules,omitempty"`
+	// ServiceTemplate defines a logical set of Pods and a policy by which to access them
+	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
+	// ACL defines ACL rules
+	ACL []string `json:"acl,omitempty"`
+	// Modules define functional modules for EMQX broker
+	Modules []EmqxBrokerModule `json:"modules,omitempty"`
 }
 
 // EmqxBrokerSpec defines the desired state of EmqxBroker
@@ -58,21 +69,29 @@ type EmqxBrokerSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
+	// ImagePullSecrets For pulling EMQX broker image
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
+	// Persistent describes the common attributes of storage devices
 	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
-	Env        []corev1.EnvVar                  `json:"env,omitempty"`
+	// Env represents an environment variable present in a Container
+	Env []corev1.EnvVar `json:"env,omitempty"`
 
-	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeName     string              `json:"nodeName,omitempty"`
-	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
+	// Affinity is a group of affinity scheduling rules
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// Tolerations allow the scheduler to schedule pods with matching taints
+	ToleRations []corev1.Toleration `json:"toleRations,omitempty"`
+	NodeName    string              `json:"nodeName,omitempty"`
+	// NodeSelector is the simplest way to constrain Pods to nodes with specific labels
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
+	// InitContainers are specialized containers that run before app containers in a Pod
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 	// Extra Containers to be added to the pod.
 	// See https://github.com/emqx/emqx-operator/issues/252
 	ExtraContainers []corev1.Container `json:"extraContainers,omitempty"`
-	EmqxTemplate    EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
+	// EmqxTemplate for spec.emqxTemplate
+	EmqxTemplate EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -86,7 +105,9 @@ type EmqxBroker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxBrokerSpec `json:"spec,omitempty"`
+	// Spec defines the desired state of EmqxBroker
+	Spec EmqxBrokerSpec `json:"spec,omitempty"`
+	// Status defines the observed state of EMQX
 	Status `json:"status,omitempty"`
 }
 

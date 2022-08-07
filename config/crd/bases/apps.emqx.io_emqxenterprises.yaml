@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.2
+    controller-gen.kubebuilder.io/version: v0.6.1
   creationTimestamp: null
   name: emqxenterprises.apps.emqx.io
 spec:
@@ -36,10 +36,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
+            description: Spec defines the desired state of EmqxEnterpriseSpec
             properties:
               affinity:
-                description: Affinity is a group of affinity scheduling rules.
+                description: Affinity is a group of affinity scheduling rules
                 properties:
                   nodeAffinity:
                     description: Describes node affinity scheduling rules for the
@@ -856,18 +856,22 @@ spec:
                     type: object
                 type: object
               emqxTemplate:
+                description: EmqxTemplate for spec.emqxTemplate
                 properties:
                   acl:
+                    description: ACL defines ACL rules
                     items:
                       type: string
                     type: array
                   args:
+                    description: Args define arguments for the command
                     items:
                       type: string
                     type: array
                   config:
                     additionalProperties:
                       type: string
+                    description: EmqxConfig for EMQX cluster configurations
                     type: object
                   extraVolumeMounts:
                     description: See https://github.com/emqx/emqx-operator/pull/72
@@ -2484,10 +2488,11 @@ spec:
                   image:
                     type: string
                   imagePullPolicy:
-                    description: PullPolicy describes a policy for if/when to pull
-                      a container image
+                    description: ImagePullPolicy represents pull policy for EMQX Enterprise
+                      broker image
                     type: string
                   license:
+                    description: License for EMQX Enterprise broker
                     properties:
                       data:
                         format: byte
@@ -2496,9 +2501,7 @@ spec:
                         type: string
                     type: object
                   livenessProbe:
-                    description: Probe describes a health check to be performed against
-                      a container to determine whether it is alive or ready to receive
-                      traffic.
+                    description: LivenessProbe indicates if the container is operating
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -2646,6 +2649,8 @@ spec:
                         type: integer
                     type: object
                   modules:
+                    description: Modules define functional modules for EMQX Enterprise
+                      broker
                     items:
                       properties:
                         configs:
@@ -2662,9 +2667,8 @@ spec:
                     description: Password for EMQX Dashboard and API
                     type: string
                   readinessProbe:
-                    description: Probe describes a health check to be performed against
-                      a container to determine whether it is alive or ready to receive
-                      traffic.
+                    description: ReadinessProbe indicates whether the application
+                      running in the container is ready to accept requests
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -2812,8 +2816,7 @@ spec:
                         type: integer
                     type: object
                   resources:
-                    description: ResourceRequirements describes the compute resource
-                      requirements.
+                    description: Resources specify cpu and memory resources
                     properties:
                       limits:
                         additionalProperties:
@@ -2839,10 +2842,8 @@ spec:
                         type: object
                     type: object
                   securityContext:
-                    description: PodSecurityContext holds pod-level security attributes
-                      and common container settings. Some fields are also present
-                      in container.securityContext.  Field values of container.securityContext
-                      take precedence over field values of PodSecurityContext.
+                    description: SecurityContext defines pod-level security attributes
+                      and common container settings
                     properties:
                       fsGroup:
                         description: "A special supplemental group that applies to
@@ -3012,6 +3013,8 @@ spec:
                         type: object
                     type: object
                   serviceTemplate:
+                    description: ServiceTemplate defines a logical set of Pods and
+                      a policy by which to access them
                     properties:
                       metadata:
                         properties:
@@ -3375,9 +3378,8 @@ spec:
                         type: object
                     type: object
                   startupProbe:
-                    description: Probe describes a health check to be performed against
-                      a container to determine whether it is alive or ready to receive
-                      traffic.
+                    description: StartupProbe indicates whether the application running
+                      in the container has started
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -3530,6 +3532,7 @@ spec:
                     type: string
                 type: object
               env:
+                description: Env represents an environment variable present in a Container
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.
@@ -4851,6 +4854,7 @@ spec:
                   type: object
                 type: array
               imagePullSecrets:
+                description: ImagePullSecrets For pulling EMQX Enterprise image
                 items:
                   description: LocalObjectReference contains enough information to
                     let you locate the referenced object inside the same namespace.
@@ -4862,6 +4866,8 @@ spec:
                   type: object
                 type: array
               initContainers:
+                description: InitContainers are specialized containers that run before
+                  app containers in a Pod
                 items:
                   description: A single application container that you want to run
                     within a pod.
@@ -6082,10 +6088,12 @@ spec:
               nodeSelector:
                 additionalProperties:
                   type: string
+                description: NodeSelector is the simplest way to constrain Pods to
+                  nodes with specific labels
                 type: object
               persistent:
-                description: PersistentVolumeClaimSpec describes the common attributes
-                  of storage devices and allows a Source for provider-specific attributes
+                description: Persistent describes the common attributes of storage
+                  devices
                 properties:
                   accessModes:
                     description: 'accessModes contains the desired access modes the
@@ -6250,6 +6258,8 @@ spec:
                 format: int32
                 type: integer
               toleRations:
+                description: Tolerations allow the scheduler to schedule pods with
+                  matching taints
                 items:
                   description: The pod this Toleration is attached to tolerates any
                     taint that matches the triple <key,value,effect> using the matching
@@ -6290,7 +6300,7 @@ spec:
                 type: array
             type: object
           status:
-            description: Emqx Status defines the observed state of EMQX
+            description: Status defines the observed state of EMQX
             properties:
               conditions:
                 description: Represents the latest available observations of a EMQX
