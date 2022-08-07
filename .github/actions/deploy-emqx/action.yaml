@@ -24,8 +24,11 @@ runs:
       shell: bash
       run: |
         while
-          [ -z "$(kubectl get ${{ inputs.kind }} ${{ inputs.name }} -o json | jq '.status.conditions[] | select((.type == "Running") and (.status == "True"))')" ];
+          condition="$(kubectl get ${{ inputs.kind }} ${{ inputs.name }} -o json | jq '.status.conditions[0]')";
+          [[ "$condition" == "null" ]] \
+          || [[ "$(echo $condition | jq --raw-output '.type')" != "Running" ]] \
+          || [[ "$(echo $condition | jq --raw-output '.status')" != "True" ]]
         do
-          echo "waiting ${{ inputs.name}}"
+          echo "waiting"
           sleep 1
         done

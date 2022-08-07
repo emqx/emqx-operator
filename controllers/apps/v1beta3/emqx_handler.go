@@ -43,6 +43,7 @@ import (
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	"github.com/emqx/emqx-operator/pkg/handler"
+	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
 )
 
@@ -63,9 +64,16 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	var resources []client.Object
 	var err error
 	postFn := func(client.Object) error { return nil }
-	username, password, apiPort := instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort
 
 	sts := generateStatefulSetDef(instance)
+	if !reflect.ValueOf(instance.GetPersistent()).IsZero() {
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
+		if len(pvcList.Items) != 0 {
+			sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
+		}
+	}
+
 	storeSts := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
 		if !k8sErrors.IsNotFound(err) {
@@ -75,75 +83,20 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	// store statefulSet is exit
 	if storeSts.Spec.PodManagementPolicy != "" {
 		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
-	} else {
-		// if sts is not exist, and the pvc is exist, then PodManagementPolicy = "Parallel"
-		if !reflect.ValueOf(instance.GetPersistent()).IsZero() {
-			pvcList := &corev1.PersistentVolumeClaimList{}
-			_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
-			if len(pvcList.Items) != 0 {
-				sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
-			}
-		}
+	}
+	// compatible with 1.2.2
+	if storeSts.Spec.VolumeClaimTemplates != nil {
+		sts.Spec.VolumeClaimTemplates = storeSts.Spec.VolumeClaimTemplates
+	}
+	// compatible with 1.2.2
+	if storeSts.Annotations != nil {
+		sts.Annotations = storeSts.Annotations
 	}
 
-	emqxContainer := generateEmqxContainer(instance)
-	reloaderContainer := generateReloaderContainer(instance)
+	defaultPluginsConfig, sts := generateDefaultPluginsConfig(instance, sts)
+	loadedPlugins, sts := generateLoadedPlugins(instance, sts)
 
-	annotations := sts.Annotations
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-
-	loadedPlugins := generateLoadedPlugins(instance)
-	emqxContainer.Env = append(emqxContainer.Env, corev1.EnvVar{
-		Name:  "EMQX_PLUGINS__LOADED_FILE",
-		Value: "/mounted/plugins/data/loaded_plugins",
-	})
-	emqxContainer.VolumeMounts = append(emqxContainer.VolumeMounts, corev1.VolumeMount{
-		Name:      loadedPlugins.Name,
-		MountPath: "/mounted/plugins/data",
-	})
-	sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
-		Name: loadedPlugins.Name,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: loadedPlugins.Name,
-				},
-			},
-		},
-	})
-
-	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
-	emqxContainer.Env = append(
-		emqxContainer.Env,
-		corev1.EnvVar{
-			Name:  "EMQX_PLUGINS__ETC_DIR",
-			Value: "/mounted/plugins/etc",
-		},
-	)
-	emqxContainer.VolumeMounts = append(
-		emqxContainer.VolumeMounts,
-		corev1.VolumeMount{
-			Name:      defaultPluginsConfig.Name,
-			MountPath: "/mounted/plugins/etc",
-		},
-	)
-	sts.Spec.Template.Spec.Volumes = append(
-		sts.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: defaultPluginsConfig.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: defaultPluginsConfig.Name,
-					},
-				},
-			},
-		},
-	)
-
-	if !isPluginInitialized(instance) {
+	if status := instance.GetStatus(); !status.IsPluginInitialized() {
 		resources = append(resources, loadedPlugins, defaultPluginsConfig)
 
 		pluginsList := &appsv1beta3.EmqxPluginList{}
@@ -180,148 +133,73 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	}
 
 	//add acl when module isn't nil
-	if acl := generateAcl(instance); acl != nil {
-		annotations["ACL/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(acl.Data["acl.conf"]))
-		emqxContainer.VolumeMounts = append(
-			emqxContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      acl.Name,
-				MountPath: "/mounted/acl",
-			},
-		)
-		emqxContainer.Env = append(
-			emqxContainer.Env,
-			corev1.EnvVar{
-				Name:  "EMQX_ACL_FILE",
-				Value: "/mounted/acl/acl.conf",
-			},
-		)
-		sts.Spec.Template.Spec.Volumes = append(
-			sts.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: acl.Name,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: acl.Name,
-						},
-					},
-				},
-			},
-		)
+	acl, sts := generateAcl(instance, sts)
+	if acl != nil {
 		resources = append(resources, acl)
 	}
 
 	//add module when module isn't nil
-	if module := generateLoadedModules(instance); module != nil {
-		annotations["LoadedModules/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(module.Data["loaded_modules"]))
-		emqxContainer.VolumeMounts = append(
-			emqxContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      module.Name,
-				MountPath: "/mounted/modules",
-			},
-		)
-		emqxContainer.Env = append(
-			emqxContainer.Env,
-			corev1.EnvVar{
-				Name:  "EMQX_MODULES__LOADED_FILE",
-				Value: "/mounted/modules/loaded_modules",
-			},
-		)
-		sts.Spec.Template.Spec.Volumes = append(
-			sts.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: module.Name,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: module.Name,
-						},
-					},
-				},
-			},
-		)
+	module, sts := generateLoadedModules(instance, sts)
+	if module != nil {
 		resources = append(resources, module)
 	}
 
-	if license := generateLicense(instance); license != nil {
-		emqxContainer.VolumeMounts = append(
-			emqxContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      license.Name,
-				MountPath: "/mounted/license",
-				ReadOnly:  true,
-			},
-		)
-		emqxContainer.Env = append(
-			emqxContainer.Env,
-			corev1.EnvVar{
-				Name:  "EMQX_LICENSE__FILE",
-				Value: "/mounted/license/emqx.lic",
-			},
-		)
-		sts.Spec.Template.Spec.Volumes = append(
-			sts.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: license.Name,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: license.Name,
-					},
-				},
-			},
-		)
+	license, sts := generateLicense(instance, sts)
+	if license != nil {
 		resources = append(resources, license)
 	}
 
-	serviceTemplate := instance.GetServiceTemplate()
-	serviceTemplate.MergePorts(r.getListenerPortsByAPI(instance, username, password, apiPort))
-	instance.SetServiceTemplate(serviceTemplate)
+	if status := instance.GetStatus(); status.IsRunning() {
+		serviceTemplate := instance.GetServiceTemplate()
+		serviceTemplate.MergePorts(r.getListenerPortsByAPI(instance))
+		instance.SetServiceTemplate(serviceTemplate)
+	}
 
 	headlessSvc, svc := generateSvc(instance)
 	sts.Spec.ServiceName = headlessSvc.Name
 	resources = append(resources, headlessSvc, svc)
 
-	sts, emqxContainer = generateDataAndLogVolume(instance, sts, emqxContainer)
-
-	reloaderContainer.Env = emqxContainer.Env
-	reloaderContainer.VolumeMounts = emqxContainer.VolumeMounts
-	reloaderContainer.Args = []string{
-		"-u", username,
-		"-p", password,
-		"-P", apiPort,
-	}
-
-	// StateFulSet should be created last
-	sts.Spec.Template.Spec.Containers = append(
-		[]corev1.Container{
-			*emqxContainer,
-			*reloaderContainer,
-		},
-		sts.Spec.Template.Spec.Containers...,
-	)
-	annotations[handler.ManageContainersAnnotation] = generateAnnotationByContainers(sts.Spec.Template.Spec.Containers)
-	sts.Annotations = annotations
 	resources = append(resources, sts)
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, postFn); err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-		return ctrl.Result{}, err
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedCreateOrUpdate",
+			err.Error(),
+		)
+		instance.SetCondition(*condition)
+		_ = r.Status().Update(ctx, instance)
+		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, err
 	}
-	condition := r.getClusterStatusByAPI(instance, username, password, apiPort)
-	instance.SetCondition(*condition)
+
+	emqxNodes, err := r.getNodeStatusesByAPI(instance)
+	if err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedToGetNodeStatues",
+			err.Error(),
+		)
+		instance.SetCondition(*condition)
+		_ = r.Status().Update(ctx, instance)
+	}
+
+	instance = updateEmqxStatus(instance, emqxNodes)
 	if err = r.Status().Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
-	if !(condition.Type == appsv1beta3.ConditionRunning && condition.Status == corev1.ConditionTrue) {
+
+	if status := instance.GetStatus(); !status.IsRunning() {
 		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
 
-func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx, username, password, apiPort string) []corev1.ServicePort {
-	resp, body, err := r.Handler.RequestAPI(instance, "GET", username, password, apiPort, "api/v4/listeners")
+func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []corev1.ServicePort {
+	resp, body, err := r.Handler.RequestAPI(instance, "GET", instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort, "api/v4/listeners")
 	if err != nil {
 		return nil
 	}
@@ -374,43 +252,58 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx, userna
 	return ports
 }
 
-func (r *EmqxReconciler) getClusterStatusByAPI(instance appsv1beta3.Emqx, username, password, apiPort string) *appsv1beta3.Condition {
-	resp, body, err := r.Handler.RequestAPI(instance, "GET", username, password, apiPort, "api/v4/brokers")
+func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]appsv1beta3.EmqxNode, error) {
+	resp, body, err := r.Handler.RequestAPI(instance, "GET", instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort, "api/v4/nodes")
 	if err != nil {
-		return appsv1beta3.NewCondition(
-			appsv1beta3.ConditionRunning,
-			corev1.ConditionFalse,
-			"AccessAPIFailed",
-			err.Error(),
-		)
+		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return appsv1beta3.NewCondition(
-			appsv1beta3.ConditionRunning,
-			corev1.ConditionFalse,
-			"AccessAPIFailed",
-			resp.Status,
-		)
+		return nil, fmt.Errorf("failed to get node statuses from API: %s", resp.Status)
 	}
 
-	clusterData := gjson.GetBytes(body, "data.#.node")
-	if len(clusterData.Array()) != int(*instance.GetReplicas()) {
-		return appsv1beta3.NewCondition(
-			appsv1beta3.ConditionRunning,
-			corev1.ConditionFalse,
-			"ClusterNotReady",
-			clusterData.String(),
-		)
+	emqxNodes := []appsv1beta3.EmqxNode{}
+	data := gjson.GetBytes(body, "data")
+	if err := json.Unmarshal([]byte(data.Raw), &emqxNodes); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
 	}
-	return appsv1beta3.NewCondition(
-		appsv1beta3.ConditionRunning,
-		corev1.ConditionTrue,
-		"ClusterReady",
-		"All resources are ready",
-	)
+	return emqxNodes, nil
 }
 
 func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
+	annotations := instance.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
+	podTemplate := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      instance.GetLabels(),
+			Annotations: annotations,
+		},
+		Spec: corev1.PodSpec{
+			Affinity:         instance.GetAffinity(),
+			Tolerations:      instance.GetToleRations(),
+			NodeName:         instance.GetNodeName(),
+			NodeSelector:     instance.GetNodeSelector(),
+			ImagePullSecrets: instance.GetImagePullSecrets(),
+			SecurityContext:  instance.GetSecurityContext(),
+			InitContainers:   instance.GetInitContainers(),
+			Containers: append(
+				[]corev1.Container{
+					*generateEmqxContainer(instance),
+					*generateReloaderContainer(instance),
+				},
+				instance.GetExtraContainers()...,
+			),
+			Volumes: instance.GetExtraVolumes(),
+		},
+	}
+
+	podAnnotation := podTemplate.ObjectMeta.DeepCopy().Annotations
+	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(podTemplate.Spec.Containers)
+	podTemplate.Annotations = podAnnotation
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -420,7 +313,7 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 			Name:        instance.GetName(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: instance.GetAnnotations(),
+			Annotations: annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: instance.GetReplicas(),
@@ -428,27 +321,11 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 				MatchLabels: instance.GetLabels(),
 			},
 			PodManagementPolicy: appsv1.OrderedReadyPodManagement,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      instance.GetLabels(),
-					Annotations: instance.GetAnnotations(),
-				},
-				Spec: corev1.PodSpec{
-					Affinity:         instance.GetAffinity(),
-					Tolerations:      instance.GetToleRations(),
-					NodeName:         instance.GetNodeName(),
-					NodeSelector:     instance.GetNodeSelector(),
-					ImagePullSecrets: instance.GetImagePullSecrets(),
-					SecurityContext:  instance.GetSecurityContext(),
-					InitContainers:   instance.GetInitContainers(),
-					Containers:       instance.GetExtraContainers(),
-					Volumes:          instance.GetExtraVolumes(),
-				},
-			},
+			Template:            podTemplate,
 		},
 	}
-	terminationGracePeriodSeconds := int64(60)
-	sts.Spec.Template.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
+
+	sts = generateDataVolume(instance, sts)
 
 	return sts
 }
@@ -514,7 +391,7 @@ func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1be
 		pluginList = append(pluginList, emqxRetainer)
 	}
 
-	_, ok := instance.(*appsv1beta3.EmqxEnterprise)
+	enterprise, ok := instance.(*appsv1beta3.EmqxEnterprise)
 	if ok && !isExistPlugin("emqx_modules", matchedPluginList) {
 		emqxModules := &appsv1beta3.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
@@ -529,18 +406,23 @@ func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1be
 			Spec: appsv1beta3.EmqxPluginSpec{
 				PluginName: "emqx_modules",
 				Selector:   instance.GetLabels(),
-				Config: map[string]string{
-					"modules.loaded_file": "/mounted/modules/loaded_modules",
-				},
+				Config:     map[string]string{},
 			},
 		}
+
+		if enterprise.Spec.EmqxTemplate.Modules != nil {
+			emqxModules.Spec.Config = map[string]string{
+				"modules.loaded_file": "/mounted/modules/loaded_modules",
+			}
+		}
+
 		pluginList = append(pluginList, emqxModules)
 	}
 
 	return pluginList
 }
 
-func generateDefaultPluginsConfig(instance appsv1beta3.Emqx) *corev1.ConfigMap {
+func generateDefaultPluginsConfig(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	names := appsv1beta3.Names{Object: instance}
 
 	cm := &corev1.ConfigMap{
@@ -601,12 +483,33 @@ func generateDefaultPluginsConfig(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 		},
 	}
 
-	return cm
+	sts = updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_PLUGINS__ETC_DIR",
+			Value: "/mounted/plugins/etc",
+		},
+		corev1.VolumeMount{
+			Name:      cm.Name,
+			MountPath: "/mounted/plugins/etc",
+		},
+		corev1.Volume{
+			Name: cm.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cm.Name,
+					},
+				},
+			},
+		},
+	)
+
+	return cm, sts
 }
 
-func generateLoadedPlugins(instance appsv1beta3.Emqx) *corev1.ConfigMap {
+func generateLoadedPlugins(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	names := appsv1beta3.Names{Object: instance}
-	loadedPlugins := &corev1.ConfigMap{
+	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ConfigMap",
@@ -621,12 +524,33 @@ func generateLoadedPlugins(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 
 	switch instance.(type) {
 	case *appsv1beta3.EmqxBroker:
-		loadedPlugins.Data["loaded_plugins"] = "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\n"
+		cm.Data["loaded_plugins"] = "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\n"
 	case *appsv1beta3.EmqxEnterprise:
-		loadedPlugins.Data["loaded_plugins"] = "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\nemqx_modules.\n"
+		cm.Data["loaded_plugins"] = "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\nemqx_modules.\n"
 	}
 
-	return loadedPlugins
+	sts = updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_PLUGINS__LOADED_FILE",
+			Value: "/mounted/plugins/data/loaded_plugins",
+		},
+		corev1.VolumeMount{
+			Name:      cm.Name,
+			MountPath: "/mounted/plugins/data",
+		},
+		corev1.Volume{
+			Name: cm.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cm.Name,
+					},
+				},
+			},
+		},
+	)
+
+	return cm, sts
 }
 
 func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
@@ -642,7 +566,6 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 		Spec:       serviceTemplate.Spec,
 	}
 
-	headlessSvcIPFamilyPolicy := corev1.IPFamilyPolicySingleStack
 	headlessSvc = &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -654,9 +577,8 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 			Namespace: instance.GetNamespace(),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector:       instance.GetLabels(),
-			ClusterIP:      corev1.ClusterIPNone,
-			IPFamilyPolicy: &headlessSvcIPFamilyPolicy,
+			Selector:  instance.GetLabels(),
+			ClusterIP: corev1.ClusterIPNone,
 		},
 	}
 
@@ -670,9 +592,9 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 	return headlessSvc, svc
 }
 
-func generateAcl(instance appsv1beta3.Emqx) *corev1.ConfigMap {
+func generateAcl(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	if len(instance.GetACL()) == 0 {
-		return nil
+		return nil, sts
 	}
 	names := appsv1beta3.Names{Object: instance}
 
@@ -694,10 +616,35 @@ func generateAcl(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 		Data: map[string]string{"acl.conf": aclString},
 	}
 
-	return cm
+	if sts.Spec.Template.Annotations == nil {
+		sts.Spec.Template.Annotations = make(map[string]string)
+	}
+	sts.Spec.Template.Annotations["ACL/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(aclString))
+	sts = updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_ACL_FILE",
+			Value: "/mounted/acl/acl.conf",
+		},
+		corev1.VolumeMount{
+			Name:      cm.Name,
+			MountPath: "/mounted/acl",
+		},
+		corev1.Volume{
+			Name: cm.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cm.Name,
+					},
+				},
+			},
+		},
+	)
+
+	return cm, sts
 }
 
-func generateLoadedModules(instance appsv1beta3.Emqx) *corev1.ConfigMap {
+func generateLoadedModules(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
 	names := appsv1beta3.Names{Object: instance}
 	var loadedModulesString string
 	switch obj := instance.(type) {
@@ -710,11 +657,13 @@ func generateLoadedModules(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 		modules := &appsv1beta3.EmqxEnterpriseModuleList{
 			Items: obj.Spec.EmqxTemplate.Modules,
 		}
+		// for enterprise, if modules is empty, don't create configmap
 		loadedModulesString = modules.String()
+		if loadedModulesString == "" {
+			return nil, sts
+		}
 	}
-	if loadedModulesString == "" {
-		return nil
-	}
+
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -728,17 +677,42 @@ func generateLoadedModules(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 		Data: map[string]string{"loaded_modules": loadedModulesString},
 	}
 
-	return cm
+	if sts.Spec.Template.Annotations == nil {
+		sts.Spec.Template.Annotations = make(map[string]string)
+	}
+	sts.Spec.Template.Annotations["LoadedModules/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(loadedModulesString))
+	sts = updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_MODULES__LOADED_FILE",
+			Value: "/mounted/modules/loaded_modules",
+		},
+		corev1.VolumeMount{
+			Name:      cm.Name,
+			MountPath: "/mounted/modules",
+		},
+		corev1.Volume{
+			Name: cm.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cm.Name,
+					},
+				},
+			},
+		},
+	)
+
+	return cm, sts
 }
 
-func generateLicense(instance appsv1beta3.Emqx) *corev1.Secret {
+func generateLicense(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
 	names := appsv1beta3.Names{Object: instance}
 	emqxEnterprise, ok := instance.(*appsv1beta3.EmqxEnterprise)
 	if !ok {
-		return nil
+		return nil, sts
 	}
 	if reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
-		return nil
+		return nil, sts
 	}
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -757,51 +731,62 @@ func generateLicense(instance appsv1beta3.Emqx) *corev1.Secret {
 		secret.StringData = map[string]string{"emqx.lic": emqxEnterprise.GetLicense().StringData}
 	}
 
-	return secret
+	sts = updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_LICENSE__FILE",
+			Value: "/mounted/license/emqx.lic",
+		},
+		corev1.VolumeMount{
+			Name:      secret.Name,
+			MountPath: "/mounted/license",
+			ReadOnly:  true,
+		},
+		corev1.Volume{
+			Name: secret.Name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secret.Name,
+				},
+			},
+		},
+	)
+
+	return secret, sts
 }
 
-func generateDataAndLogVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet, container *corev1.Container) (*appsv1.StatefulSet, *corev1.Container) {
+func generateDataVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
 	names := appsv1beta3.Names{Object: instance}
-
 	dataName := names.Data()
-	logName := names.Log()
 
 	if reflect.ValueOf(instance.GetPersistent()).IsZero() {
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
-			generateEmptyDirVolume(dataName),
-			generateEmptyDirVolume(logName),
+			corev1.Volume{
+				Name: dataName,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
 		)
 	} else {
 		sts.Spec.VolumeClaimTemplates = append(
 			sts.Spec.VolumeClaimTemplates,
 			generateVolumeClaimTemplate(instance, dataName),
-			generateVolumeClaimTemplate(instance, logName),
 		)
 	}
 
-	container.VolumeMounts = append(
-		container.VolumeMounts,
+	emqxContainerIndex := findContinerIndex(sts, handler.EmqxContainerName)
+	sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts = append(
+		sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts,
 		corev1.VolumeMount{
 			Name:      dataName,
 			MountPath: "/opt/emqx/data",
 		},
-		corev1.VolumeMount{
-			Name:      logName,
-			MountPath: "/opt/emqx/log",
-		},
 	)
 
-	return sts, container
-}
-
-func generateEmptyDirVolume(Name string) corev1.Volume {
-	return corev1.Volume{
-		Name: Name,
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{},
-		},
-	}
+	ReloaderContainerIndex := findContinerIndex(sts, ReloaderContainerName)
+	sts.Spec.Template.Spec.Containers[ReloaderContainerIndex].VolumeMounts = sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts
+	return sts
 }
 
 func generateVolumeClaimTemplate(instance appsv1beta3.Emqx, Name string) corev1.PersistentVolumeClaim {
@@ -816,10 +801,6 @@ func generateVolumeClaimTemplate(instance appsv1beta3.Emqx, Name string) corev1.
 	if pvc.Spec.AccessModes == nil {
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 	}
-	if pvc.Spec.VolumeMode == nil {
-		fileSystem := corev1.PersistentVolumeFilesystem
-		pvc.Spec.VolumeMode = &fileSystem
-	}
 	return pvc
 }
 
@@ -828,32 +809,36 @@ func generateReloaderContainer(instance appsv1beta3.Emqx) *corev1.Container {
 		Name:            ReloaderContainerName,
 		Image:           ReloaderContainerImage,
 		ImagePullPolicy: instance.GetImagePullPolicy(),
+		Args: []string{
+			"-u", instance.GetUsername(),
+			"-p", instance.GetPassword(),
+			"-P", appsv1beta3.DefaultManagementPort,
+		},
 	}
 }
 
 func generateEmqxContainer(instance appsv1beta3.Emqx) *corev1.Container {
-	username, password := instance.GetUsername(), instance.GetPassword()
 	return &corev1.Container{
 		Name:            handler.EmqxContainerName,
 		Image:           instance.GetImage(),
 		ImagePullPolicy: instance.GetImagePullPolicy(),
 		Resources:       instance.GetResource(),
-		Env: append(mergeEnvAndConfig(instance), []corev1.EnvVar{
+		Env: mergeEnvAndConfig(instance, []corev1.EnvVar{
 			{
 				Name:  "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID",
-				Value: username,
+				Value: instance.GetUsername(),
 			},
 			{
 				Name:  "EMQX_DASHBOARD__DEFAULT_USER__LOGIN",
-				Value: username,
+				Value: instance.GetUsername(),
 			},
 			{
 				Name:  "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET",
-				Value: password,
+				Value: instance.GetPassword(),
 			},
 			{
 				Name:  "EMQX_DASHBOARD__DEFAULT_USER__PASSWORD",
-				Value: password,
+				Value: instance.GetPassword(),
 			},
 		}...),
 		Args:           instance.GetArgs(),
@@ -864,15 +849,65 @@ func generateEmqxContainer(instance appsv1beta3.Emqx) *corev1.Container {
 	}
 }
 
-func generateAnnotationByContainers(containers []corev1.Container) string {
-	containerNames := []string{}
-	for _, c := range containers {
-		containerNames = append(containerNames, c.Name)
+func updateEnvAndVolumeForSts(sts *appsv1.StatefulSet, envVar corev1.EnvVar, volumeMount corev1.VolumeMount, volume corev1.Volume) *appsv1.StatefulSet {
+	emqxContainerIndex := findContinerIndex(sts, handler.EmqxContainerName)
+	reloaderContainerIndex := findContinerIndex(sts, ReloaderContainerName)
+
+	isNotExistVolume := func(volume corev1.Volume) bool {
+		for _, v := range sts.Spec.Template.Spec.Volumes {
+			if v.Name == volume.Name {
+				return false
+			}
+		}
+		return true
 	}
-	return strings.Join(containerNames, ",")
+
+	isNotExistVolumeVolumeMount := func(volumeMount corev1.VolumeMount) bool {
+		for _, v := range sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts {
+			if v.Name == volumeMount.Name {
+				return false
+			}
+		}
+		return true
+	}
+
+	isNotExistEnv := func(envVar corev1.EnvVar) bool {
+		for _, v := range sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env {
+			if v.Name == envVar.Name {
+				return false
+			}
+		}
+		return true
+	}
+
+	if isNotExistVolume(volume) {
+		sts.Spec.Template.Spec.Volumes = append(
+			sts.Spec.Template.Spec.Volumes,
+			volume,
+		)
+	}
+
+	if isNotExistVolumeVolumeMount(volumeMount) {
+		sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts = append(
+			sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts,
+			volumeMount,
+		)
+	}
+
+	if isNotExistEnv(envVar) {
+		sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env = append(
+			sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env,
+			envVar,
+		)
+	}
+
+	sts.Spec.Template.Spec.Containers[reloaderContainerIndex].VolumeMounts = sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts
+	sts.Spec.Template.Spec.Containers[reloaderContainerIndex].Env = sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env
+
+	return sts
 }
 
-func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
+func mergeEnvAndConfig(instance appsv1beta3.Emqx, extraEnvs ...corev1.EnvVar) []corev1.EnvVar {
 	lookup := func(name string, envs []corev1.EnvVar) bool {
 		for _, env := range envs {
 			if env.Name == name {
@@ -882,29 +917,70 @@ func mergeEnvAndConfig(instance appsv1beta3.Emqx) (ret []corev1.EnvVar) {
 		return false
 	}
 
-	envs := instance.GetEnv()
+	envs := append(instance.GetEnv(), extraEnvs...)
 	emqxConfig := instance.GetEmqxConfig()
 
 	for k, v := range emqxConfig {
 		key := fmt.Sprintf("EMQX_%s", strings.ToUpper(strings.ReplaceAll(k, ".", "__")))
 		if !lookup(key, envs) {
-			ret = append(ret, corev1.EnvVar{Name: key, Value: v})
+			envs = append(envs, corev1.EnvVar{Name: key, Value: v})
 		}
 	}
 
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].Name < ret[j].Name
+	sort.Slice(envs, func(i, j int) bool {
+		return envs[i].Name < envs[j].Name
 	})
-
-	return
+	return envs
 }
 
-func isPluginInitialized(instance appsv1beta3.Emqx) bool {
-	// Init Plugin
-	for _, c := range instance.GetStatus().Conditions {
-		if c.Type == appsv1beta3.ConditionPluginInitialized && c.Status == corev1.ConditionTrue {
-			return true
+func findContinerIndex(sts *appsv1.StatefulSet, containerName string) int {
+	for k, c := range sts.Spec.Template.Spec.Containers {
+		if c.Name == containerName {
+			return k
 		}
 	}
-	return false
+	return -1
+}
+
+func generateAnnotationByContainers(containers []corev1.Container) string {
+	containerNames := []string{}
+	for _, c := range containers {
+		containerNames = append(containerNames, c.Name)
+	}
+	return strings.Join(containerNames, ",")
+}
+
+func updateEmqxStatus(instance appsv1beta3.Emqx, emqxNodes []appsv1beta3.EmqxNode) appsv1beta3.Emqx {
+	status := instance.GetStatus()
+	status.Replicas = *instance.GetReplicas()
+	if emqxNodes != nil {
+		readyReplicas := int32(0)
+		for _, node := range emqxNodes {
+			if node.NodeStatus == "Running" {
+				readyReplicas++
+			}
+		}
+		status.ReadyReplicas = readyReplicas
+		status.EmqxNodes = emqxNodes
+	}
+
+	var cond *appsv1beta3.Condition
+	if status.Replicas == status.ReadyReplicas {
+		cond = appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionTrue,
+			"ClusterReady",
+			"All resources are ready",
+		)
+	} else {
+		cond = appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"ClusterNotReady",
+			"Some nodes are not ready",
+		)
+	}
+	status.SetCondition(*cond)
+	instance.SetStatus(status)
+	return instance
 }

@@ -269,8 +269,6 @@ func (emqx *EmqxBroker) SetModules(modules []EmqxBrokerModule) {
 	emqx.Spec.EmqxTemplate.Modules = modules
 }
 
-func (emqx *EmqxBroker) GetStatus() Status { return emqx.Status }
-
 func (emqx *EmqxBroker) GetUsername() string { return emqx.Spec.EmqxTemplate.Username }
 
 func (emqx *EmqxBroker) SetUsername(username string) {
@@ -282,3 +280,6 @@ func (emqx *EmqxBroker) GetPassword() string { return emqx.Spec.EmqxTemplate.Pas
 func (emqx *EmqxBroker) SetPassword(password string) {
 	emqx.Spec.EmqxTemplate.Password = password
 }
+
+func (emqx *EmqxBroker) GetStatus() Status       { return emqx.Status }
+func (emqx *EmqxBroker) SetStatus(status Status) { emqx.Status = status }

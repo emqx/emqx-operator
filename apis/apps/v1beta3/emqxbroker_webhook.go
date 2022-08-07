@@ -23,7 +23,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -58,25 +57,17 @@ func (r *EmqxBroker) Default() {
 	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Labels["apps.emqx.io/instance"] = r.GetName()
 
+	modules := &EmqxBrokerModuleList{
+		Items: r.Spec.EmqxTemplate.Modules,
+	}
+	modules.Default()
+	r.Spec.EmqxTemplate.Modules = modules.Items
+
 	if r.Spec.EmqxTemplate.EmqxConfig == nil {
 		r.Spec.EmqxTemplate.EmqxConfig = make(EmqxConfig)
 	}
 	r.Spec.EmqxTemplate.EmqxConfig.Default(r)
 	r.Spec.EmqxTemplate.ServiceTemplate.Default(r)
-
-	if r.Spec.EmqxTemplate.ReadinessProbe == nil {
-		r.Spec.EmqxTemplate.ReadinessProbe = &corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(8081),
-				},
-			},
-			InitialDelaySeconds: int32(10),
-			PeriodSeconds:       int32(5),
-			FailureThreshold:    int32(30),
-		}
-	}
 
 	if r.Spec.EmqxTemplate.SecurityContext == nil {
 		emqxUserGroup := int64(1000)

@@ -13,7 +13,7 @@ func (config EmqxConfig) Default(emqx client.Object) {
 
 	clusterConfig := make(map[string]string)
 	clusterConfig["name"] = emqx.GetName()
-	clusterConfig["log.to"] = "both"
+	clusterConfig["log.to"] = "console"
 	clusterConfig["listener.tcp.external"] = "1883"
 	clusterConfig["listener.ssl.external"] = "8883"
 	clusterConfig["listener.ws.external"] = "8083"

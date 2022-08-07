@@ -29,7 +29,7 @@ var _ = Describe("EMQX Broker", func() {
 			},
 			Spec: EmqxBrokerSpec{
 				EmqxTemplate: EmqxBrokerTemplate{
-					Image: "emqx/emqx:4.4.3",
+					Image: "emqx/emqx:4.4.6",
 				},
 			},
 		}
@@ -60,7 +60,7 @@ var _ = Describe("EMQX Enterprise", func() {
 			},
 			Spec: EmqxEnterpriseSpec{
 				EmqxTemplate: EmqxEnterpriseTemplate{
-					Image: "emqx/emqx-ee:4.4.3",
+					Image: "emqx/emqx-ee:4.4.6",
 				},
 			},
 		}
@@ -110,7 +110,7 @@ func checkDefaulting(emqx Emqx) {
 		},
 	}))
 
-	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("log.to", "both"))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("log.to", "console"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("name", emqx.GetName()))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.tcp.external", "1883"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.ssl.external", "8883"))

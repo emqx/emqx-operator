@@ -20,8 +20,8 @@ jobs:
         apiVersion:
           - v1beta3
         emqx:
-          - [EmqxBroker, "emqx/emqx:4.4.4"]
-          - [EmqxEnterprise, "emqx/emqx-ee:4.4.4"]
+          - [EmqxBroker, "emqx/emqx:4.4.6"]
+          - [EmqxEnterprise, "emqx/emqx-ee:4.4.6"]
     steps:
       - run: minikube start
       - name: install cert-manager
@@ -38,12 +38,15 @@ jobs:
         with:
           go-version: '1.18.3'
       - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
       - name: Install storage operator
         if: matrix.install == 'static'
         run: |
-          kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/$(git describe --abbrev=0 --tags)/emqx-operator-controller.yaml" --server-side --force-conflicts
+          browser_download_url="$(curl --silent --show-error \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ github.token }}" \
+            https://api.github.com/repos/emqx/emqx-operator/releases/latest \
+            | jq '.assets[0].browser_download_url')"
+          kubectl apply -f "$browser_download_url" --server-side --force-conflicts
       - name: Install storage operator
         if: matrix.install == 'helm'
         run: |
@@ -54,7 +57,7 @@ jobs:
             --namespace emqx-operator-system \
             --create-namespace
       - name: Check operator
-        timeout-minutes: 10
+        timeout-minutes: 5
         run: |
           set -euo pipefail
           while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
@@ -71,30 +74,29 @@ jobs:
             labels:
               cluster: emqx
           spec:
+            replicas: 3
+            persistent:
+              storageClassName: standard
+              resources:
+                requests:
+                  storage: 20Mi
+              accessModes:
+              - ReadWriteOnce
             emqxTemplate:
               image: ${{ matrix.emqx[1] }}
           EOF
-      - name: Check emqx pods status
+      - name: Check emqx status
+        timeout-minutes: 5
         run: |
-          set -euo pipefail
-          while ! kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
-            echo "waiting ${{ matrix.emqx[1] }} pod running"
-            sleep 1
-          done
-          echo "==========================="
-          echo "${{ matrix.emqx[1] }} pod run successfully"
-      - name: Check emqx cluster status
-        run: |
-          set -euo pipefail
           while
-            nodes="$(kubectl exec -i emqx-0 -c emqx -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
-            [ "$nodes" != "3" ];
+            condition="$(kubectl get ${{ matrix.emqx[0] }} emqx -o json | jq '.status.conditions[0]')";
+            [[ "$condition" == "null" ]] \
+            || [[ "$(echo $condition | jq --raw-output '.type')" != "Running" ]] \
+            || [[ "$(echo $condition | jq --raw-output '.status')" != "True" ]]
           do
-            echo "waiting ${{ matrix.emqx[1] }} cluster scale"
+            echo "waiting"
             sleep 1
           done
-          echo "==========================="
-          echo "${{ matrix.emqx[1] }} cluster successfully"
       - name: Build image
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
@@ -115,42 +117,27 @@ jobs:
       - name: Check operator
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
-        timeout-minutes: 10
+        timeout-minutes: 5
         run: |
           set -euo pipefail
           while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .image' | tr -d '"')" != "$IMG" ]; do
             echo "waiting operator controller pod running"
             sleep 1
           done
-      - run: kubectl exec -i emqx-0 -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data'
-      - name: Check emqx pods status
-        timeout-minutes: 10
+      - name: Check emqx status
+        timeout-minutes: 5
         run: |
-          set -euo pipefail
-          while ! kubectl describe sts emqx | grep -qE '^Pods[ \t]+Status:[ \t]+3 Running.*'; do
-            echo "waiting ${{ matrix.emqx[1] }} pod running"
-            sleep 1
-          done
-          echo "==========================="
-          echo "${{ matrix.emqx[1] }} pod run successfully"
-      - name: Check emqx cluster status
-        timeout-minutes: 10
-        run: |
-          set -euo pipefail
+          sleep 30
           while
-            nodes="$(kubectl exec -i emqx-0 -c emqx -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq '.data|length')";
-            [ "$nodes" != "3" ];
+            condition="$(kubectl get ${{ matrix.emqx[0] }} emqx -o json | jq '.status.conditions[0]')";
+            [[ "$condition" == "null" ]] \
+            || [[ "$(echo $condition | jq --raw-output '.type')" != "Running" ]] \
+            || [[ "$(echo $condition | jq --raw-output '.status')" != "True" ]]
           do
-            kubectl exec -i emqx-0 -c emqx -- curl --silent --basic -u admin:public -X GET http://localhost:8081/api/v4/brokers | jq
-            echo "waiting ${{ matrix.emqx[1] }} cluster scale"
+            echo "waiting"
             sleep 1
           done
-          echo "==========================="
-          echo "${{ matrix.emqx[1] }} cluster successfully"
-      - name: Check emqx restarts
-        run: |
-          restart=$(kubectl get pods -l "cluster=emqx" -o json | jq '.items[].status.containerStatuses[] | select(.restartCount != 0)')
-          if [ -n "$restart" ]; then
-            echo $restart
-            exit 1
-          fi
+      - if: failure()
+        run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
+      - if: failure()
+        run: kubectl get ${{ matrix.emqx[0] }} emqx -o json

@@ -2,7 +2,6 @@ processor:
   ignoreTypes:
     - "(EmqxBroker|EmqxEnterprise|EmqxPlugin|ACL)List$"
   ignoreFields:
-    - "Status$"
     - "TypeMeta$"
 
 render:

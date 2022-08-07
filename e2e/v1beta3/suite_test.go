@@ -33,8 +33,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -154,7 +153,7 @@ var _ = BeforeSuite(func() {
 		},
 		Spec: appsv1beta3.EmqxBrokerSpec{
 			EmqxTemplate: appsv1beta3.EmqxBrokerTemplate{
-				Image: "emqx/emqx:4.4.5",
+				Image: "emqx/emqx:4.4.6",
 			},
 		},
 	}
@@ -179,7 +178,44 @@ var _ = BeforeSuite(func() {
 				},
 			},
 			EmqxTemplate: appsv1beta3.EmqxEnterpriseTemplate{
-				Image: "emqx/emqx-ee:4.4.5",
+				Image: "emqx/emqx-ee:4.4.6",
+				ACL: []string{
+					"{allow, all}",
+				},
+				Modules: []appsv1beta3.EmqxEnterpriseModule{
+					{
+						Name:    "internal_acl",
+						Enable:  true,
+						Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
+					},
+				},
+				License: appsv1beta3.License{
+					Data: []byte(`-----BEGIN CERTIFICATE-----
+MIIENzCCAx+gAwIBAgIDdMvVMA0GCSqGSIb3DQEBBQUAMIGDMQswCQYDVQQGEwJD
+TjERMA8GA1UECAwIWmhlamlhbmcxETAPBgNVBAcMCEhhbmd6aG91MQwwCgYDVQQK
+DANFTVExDDAKBgNVBAsMA0VNUTESMBAGA1UEAwwJKi5lbXF4LmlvMR4wHAYJKoZI
+hvcNAQkBFg96aGFuZ3doQGVtcXguaW8wHhcNMjAwNjIwMDMwMjUyWhcNNDkwMTAx
+MDMwMjUyWjBjMQswCQYDVQQGEwJDTjEZMBcGA1UECgwQRU1RIFggRXZhbHVhdGlv
+bjEZMBcGA1UEAwwQRU1RIFggRXZhbHVhdGlvbjEeMBwGCSqGSIb3DQEJARYPY29u
+dGFjdEBlbXF4LmlvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArw+3
+2w9B7Rr3M7IOiMc7OD3Nzv2KUwtK6OSQ07Y7ikDJh0jynWcw6QamTiRWM2Ale8jr
+0XAmKgwUSI42+f4w84nPpAH4k1L0zupaR10VYKIowZqXVEvSyV8G2N7091+6Jcon
+DcaNBqZLRe1DiZXMJlhXnDgq14FPAxffKhCXiCgYtluLDDLKv+w9BaQGZVjxlFe5
+cw32+z/xHU366npHBpafCbxBtWsNvchMVtLBqv9yPmrMqeBROyoJaI3nL78xDgpd
+cRorqo+uQ1HWdcM6InEFET6pwkeuAF8/jJRlT12XGgZKKgFQTCkZi4hv7aywkGBE
+JruPif/wlK0YuPJu6QIDAQABo4HSMIHPMBEGCSsGAQQBg5odAQQEDAIxMDCBlAYJ
+KwYBBAGDmh0CBIGGDIGDZW1xeF9iYWNrZW5kX3JlZGlzLGVtcXhfYmFja2VuZF9t
+eXNxbCxlbXF4X2JhY2tlbmRfcGdzcWwsZW1xeF9iYWNrZW5kX21vbmdvLGVtcXhf
+YmFja2VuZF9jYXNzYSxlbXF4X2JyaWRnZV9rYWZrYSxlbXF4X2JyaWRnZV9yYWJi
+aXQwEAYJKwYBBAGDmh0DBAMMATEwEQYJKwYBBAGDmh0EBAQMAjEwMA0GCSqGSIb3
+DQEBBQUAA4IBAQDHUe6+P2U4jMD23u96vxCeQrhc/rXWvpmU5XB8Q/VGnJTmv3yU
+EPyTFKtEZYVX29z16xoipUE6crlHhETOfezYsm9K0DxF3fNilOLRKkg9VEWcb5hj
+iL3a2tdZ4sq+h/Z1elIXD71JJBAImjr6BljTIdUCfVtNvxlE8M0D/rKSn2jwzsjI
+UrW88THMtlz9sb56kmM3JIOoIJoep6xNEajIBnoChSGjtBYFNFwzdwSTCodYkgPu
+JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
+EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
+-----END CERTIFICATE-----`),
+				},
 			},
 		},
 	}
@@ -190,14 +226,14 @@ var _ = BeforeSuite(func() {
 			Expect(k8sClient.Create(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: emqx.GetNamespace()}})).Should(Succeed())
 			Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
 
-			var instance appsv1beta3.Emqx
-			switch emqx.(type) {
-			case *appsv1beta3.EmqxBroker:
-				instance = &appsv1beta3.EmqxBroker{}
-			case *appsv1beta3.EmqxEnterprise:
-				instance = &appsv1beta3.EmqxEnterprise{}
-			}
-			Eventually(func() corev1.ConditionStatus {
+			Eventually(func() bool {
+				var instance appsv1beta3.Emqx
+				switch emqx.(type) {
+				case *appsv1beta3.EmqxBroker:
+					instance = &appsv1beta3.EmqxBroker{}
+				case *appsv1beta3.EmqxEnterprise:
+					instance = &appsv1beta3.EmqxEnterprise{}
+				}
 				_ = k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
@@ -206,14 +242,9 @@ var _ = BeforeSuite(func() {
 					},
 					instance,
 				)
-				running := corev1.ConditionFalse
-				for _, c := range instance.GetStatus().Conditions {
-					if c.Type == appsv1beta3.ConditionRunning {
-						running = c.Status
-					}
-				}
-				return running
-			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+				status := instance.GetStatus()
+				return status.IsRunning()
+			}, timeout, interval).Should(BeTrue())
 
 			lwm2m := &appsv1beta3.EmqxPlugin{
 				TypeMeta: metav1.TypeMeta{
@@ -299,42 +330,4 @@ func removePluginsFinalizer(namespace string) error {
 		}
 	}
 	return nil
-}
-
-func updateEmqx(emqx appsv1beta3.Emqx) {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(emqx.GetObjectKind().GroupVersionKind())
-	switch emqx.(type) {
-	case *appsv1beta3.EmqxBroker:
-		u.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   "apps.emqx.io",
-			Version: "v1beta3",
-			Kind:    "EmqxBroker",
-		})
-	case *appsv1beta3.EmqxEnterprise:
-		u.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   "apps.emqx.io",
-			Version: "v1beta3",
-			Kind:    "EmqxEnterprise",
-		})
-	}
-
-	Eventually(func() error {
-		err := k8sClient.Get(
-			context.TODO(),
-			types.NamespacedName{
-				Name:      emqx.GetName(),
-				Namespace: emqx.GetNamespace(),
-			},
-			u,
-		)
-		if err != nil {
-			return err
-		}
-		emqx.SetResourceVersion(u.GetResourceVersion())
-		emqx.SetCreationTimestamp(u.GetCreationTimestamp())
-		emqx.SetManagedFields(u.GetManagedFields())
-
-		return k8sClient.Update(context.Background(), emqx)
-	}, timeout, interval).Should(Succeed())
 }

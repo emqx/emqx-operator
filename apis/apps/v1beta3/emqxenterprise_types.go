@@ -281,8 +281,6 @@ func (emqx *EmqxEnterprise) SetLicense(license License) {
 	emqx.Spec.EmqxTemplate.License = license
 }
 
-func (emqx *EmqxEnterprise) GetStatus() Status { return emqx.Status }
-
 func (emqx *EmqxEnterprise) GetUsername() string { return emqx.Spec.EmqxTemplate.Username }
 
 func (emqx *EmqxEnterprise) SetUsername(username string) {
@@ -294,3 +292,6 @@ func (emqx *EmqxEnterprise) GetPassword() string { return emqx.Spec.EmqxTemplate
 func (emqx *EmqxEnterprise) SetPassword(password string) {
 	emqx.Spec.EmqxTemplate.Password = password
 }
+
+func (emqx *EmqxEnterprise) GetStatus() Status       { return emqx.Status }
+func (emqx *EmqxEnterprise) SetStatus(status Status) { emqx.Status = status }

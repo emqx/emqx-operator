@@ -17,7 +17,7 @@
 安装默认静态配置文件
 
 ```bash
-kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.2/emqx-operator-controller.yaml"
+kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.4/emqx-operator-controller.yaml"
 ```
 
 ### 通过 Helm 安装
@@ -60,7 +60,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx-ee:4.4.5
+       image: emqx/emqx-ee:4.4.6
    EOF
    ```
 
@@ -98,7 +98,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx:4.4.5
+       image: emqx/emqx:4.4.6
    EOF
    ```
 

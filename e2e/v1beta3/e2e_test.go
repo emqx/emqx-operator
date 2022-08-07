@@ -18,30 +18,26 @@ package e2e
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"reflect"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	"github.com/emqx/emqx-operator/pkg/handler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Check EMQX Custom Resource", func() {
-	var aclString, brokerModulesString, enterpriseModulesString string
 	var headlessPort corev1.ServicePort
 	var ports, pluginPorts []corev1.ServicePort
 	var pluginList []string
-	var license []byte
 
-	Context("check resource", func() {
+	Context("check EMQX Custom Resources", func() {
 		BeforeEach(func() {
 			headlessPort = corev1.ServicePort{
 				Name:       "http-management-8081",
@@ -105,78 +101,27 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 		})
 
 		It("check default resource", func() {
-			By("should create a configMap with ACL")
-			check_acl(broker, aclString)
-			check_acl(enterprise, aclString)
+			By("should check EMQX CR Status")
+			check_emqx_status(broker)
+			check_emqx_status(enterprise)
 
-			By("should not create a configMap with loaded modules")
-			check_modules(broker, brokerModulesString)
-			check_modules(enterprise, enterpriseModulesString)
-
-			By("should create a service")
-			check_service_ports(broker, append(ports, pluginPorts...), headlessPort)
-			check_service_ports(enterprise, append(ports, pluginPorts...), headlessPort)
-
-			By("should create a statefulSet")
-			check_statefulset(broker)
-			check_statefulset(enterprise)
+			By("should check StatefulSet annotations")
+			check_pod_annotations(broker)
+			check_pod_annotations(enterprise)
 
 			By("should create EMQX Plugins")
 			check_plugin(broker, pluginList)
 			check_plugin(enterprise, append(pluginList, "emqx_modules"))
 
-			By("should not create secret with license")
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.Background(),
-					types.NamespacedName{
-						Namespace: enterprise.GetNamespace(),
-						Name:      fmt.Sprintf("%s-license", enterprise.GetName()),
-					},
-					&corev1.Secret{},
-				)
-				return k8sErrors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
+			By("should bind listener ports to service")
+			check_service_ports(broker, append(ports, pluginPorts...), headlessPort)
+			check_service_ports(enterprise, append(ports, pluginPorts...), headlessPort)
+
 		})
 	})
 
-	Context("check resource when update some filed", func() {
+	Context("check update EMQX Plugins", func() {
 		BeforeEach(func() {
-			aclString = "{deny, all}.\n"
-			brokerModulesString = "{emqx_mod_presence, false}.\n"
-			enterpriseModulesString = `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}}]`
-			ports = []corev1.ServicePort{
-				{
-					Name:       "mqtt-tcp-11883",
-					Port:       11883,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(11883),
-				},
-				{
-					Name:       "mqtt-tcp-21883",
-					Port:       21883,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(21883),
-				},
-				{
-					Name:       "mqtt-ssl-8883",
-					Port:       8883,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8883),
-				},
-				{
-					Name:       "mqtt-ws-8083",
-					Port:       8083,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8083),
-				},
-				{
-					Name:       "mqtt-wss-8084",
-					Port:       8084,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8084),
-				},
-			}
 			pluginPorts = []corev1.ServicePort{
 				{
 					Name:       "lwm2m-dtls-5685",
@@ -203,92 +148,14 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 					TargetPort: intstr.FromInt(5688),
 				},
 			}
-			license = []byte(`-----BEGIN CERTIFICATE-----
-MIIENzCCAx+gAwIBAgIDdMvVMA0GCSqGSIb3DQEBBQUAMIGDMQswCQYDVQQGEwJD
-TjERMA8GA1UECAwIWmhlamlhbmcxETAPBgNVBAcMCEhhbmd6aG91MQwwCgYDVQQK
-DANFTVExDDAKBgNVBAsMA0VNUTESMBAGA1UEAwwJKi5lbXF4LmlvMR4wHAYJKoZI
-hvcNAQkBFg96aGFuZ3doQGVtcXguaW8wHhcNMjAwNjIwMDMwMjUyWhcNNDkwMTAx
-MDMwMjUyWjBjMQswCQYDVQQGEwJDTjEZMBcGA1UECgwQRU1RIFggRXZhbHVhdGlv
-bjEZMBcGA1UEAwwQRU1RIFggRXZhbHVhdGlvbjEeMBwGCSqGSIb3DQEJARYPY29u
-dGFjdEBlbXF4LmlvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArw+3
-2w9B7Rr3M7IOiMc7OD3Nzv2KUwtK6OSQ07Y7ikDJh0jynWcw6QamTiRWM2Ale8jr
-0XAmKgwUSI42+f4w84nPpAH4k1L0zupaR10VYKIowZqXVEvSyV8G2N7091+6Jcon
-DcaNBqZLRe1DiZXMJlhXnDgq14FPAxffKhCXiCgYtluLDDLKv+w9BaQGZVjxlFe5
-cw32+z/xHU366npHBpafCbxBtWsNvchMVtLBqv9yPmrMqeBROyoJaI3nL78xDgpd
-cRorqo+uQ1HWdcM6InEFET6pwkeuAF8/jJRlT12XGgZKKgFQTCkZi4hv7aywkGBE
-JruPif/wlK0YuPJu6QIDAQABo4HSMIHPMBEGCSsGAQQBg5odAQQEDAIxMDCBlAYJ
-KwYBBAGDmh0CBIGGDIGDZW1xeF9iYWNrZW5kX3JlZGlzLGVtcXhfYmFja2VuZF9t
-eXNxbCxlbXF4X2JhY2tlbmRfcGdzcWwsZW1xeF9iYWNrZW5kX21vbmdvLGVtcXhf
-YmFja2VuZF9jYXNzYSxlbXF4X2JyaWRnZV9rYWZrYSxlbXF4X2JyaWRnZV9yYWJi
-aXQwEAYJKwYBBAGDmh0DBAMMATEwEQYJKwYBBAGDmh0EBAQMAjEwMA0GCSqGSIb3
-DQEBBQUAA4IBAQDHUe6+P2U4jMD23u96vxCeQrhc/rXWvpmU5XB8Q/VGnJTmv3yU
-EPyTFKtEZYVX29z16xoipUE6crlHhETOfezYsm9K0DxF3fNilOLRKkg9VEWcb5hj
-iL3a2tdZ4sq+h/Z1elIXD71JJBAImjr6BljTIdUCfVtNvxlE8M0D/rKSn2jwzsjI
-UrW88THMtlz9sb56kmM3JIOoIJoep6xNEajIBnoChSGjtBYFNFwzdwSTCodYkgPu
-JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
-EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
------END CERTIFICATE-----`)
 
-			var config appsv1beta3.EmqxConfig
-
-			config = broker.GetEmqxConfig()
-			config["listener.tcp.internal"] = "11883"
-			config["listener.tcp.external"] = "21883"
-			broker.SetEmqxConfig(config)
-			broker.SetACL([]string{`{deny, all}.`})
-			broker.SetModules([]appsv1beta3.EmqxBrokerModule{
-				{
-					Name:   "emqx_mod_presence",
-					Enable: false,
-				},
-			})
-			updateEmqx(broker)
 			update_lwm2m(broker)
-
-			config = enterprise.GetEmqxConfig()
-			config["listener.tcp.internal"] = "11883"
-			config["listener.tcp.external"] = "21883"
-			enterprise.SetEmqxConfig(config)
-			enterprise.SetACL([]string{`{deny, all}.`})
-			enterprise.SetModules([]appsv1beta3.EmqxEnterpriseModule{
-				{
-					Name:    "internal_acl",
-					Enable:  true,
-					Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
-				},
-			})
-			enterprise.Spec.EmqxTemplate.License.Data = license
-			updateEmqx(enterprise)
 			update_lwm2m(enterprise)
 		})
 		It("", func() {
-			By("should create a configMap with ACL")
-			check_acl(broker, aclString)
-			check_acl(enterprise, aclString)
-
-			By("should create a configMap with loaded modules")
-			check_modules(broker, brokerModulesString)
-			check_modules(enterprise, enterpriseModulesString)
-
-			By("should create a service")
+			By("should bind ports to service")
 			check_service_ports(broker, append(ports, pluginPorts...), headlessPort)
 			check_service_ports(enterprise, append(ports, pluginPorts...), headlessPort)
-
-			By("should create a secret with license")
-			Eventually(func() map[string][]byte {
-				secret := &corev1.Secret{}
-				_ = k8sClient.Get(
-					context.Background(),
-					types.NamespacedName{
-						Namespace: enterprise.GetNamespace(),
-						Name:      fmt.Sprintf("%s-license", enterprise.GetName()),
-					},
-					secret,
-				)
-				return secret.Data
-			}, timeout, interval).Should(Equal(
-				map[string][]byte{"emqx.lic": license}),
-			)
 		})
 
 		AfterEach(func() {
@@ -359,99 +226,47 @@ func update_lwm2m(emqx appsv1beta3.Emqx) {
 	}, timeout, interval).Should(Succeed())
 }
 
-func check_statefulset(emqx appsv1beta3.Emqx) {
-	sts := &appsv1.StatefulSet{}
-	Eventually(func() error {
-		err := k8sClient.Get(
+func check_emqx_status(emqx appsv1beta3.Emqx) {
+	Eventually(func() bool {
+		_ = k8sClient.Get(
 			context.TODO(),
 			types.NamespacedName{
 				Name:      emqx.GetName(),
 				Namespace: emqx.GetNamespace(),
 			},
-			sts,
+			emqx,
 		)
-		return err
-	}, timeout, interval).Should(Succeed())
+		status := emqx.GetStatus()
+		return status.IsRunning()
+	}, timeout, interval).Should(BeTrue())
 
-	Expect(sts.Spec.Replicas).Should(Equal(emqx.GetReplicas()))
-	Expect(sts.Spec.Template.Labels).Should(Equal(emqx.GetLabels()))
-	Expect(sts.Spec.Template.Spec.Affinity).Should(Equal(emqx.GetAffinity()))
-	Expect(sts.Spec.Template.Spec.Tolerations).Should(Equal(emqx.GetToleRations()))
-	Expect(sts.Spec.Template.Spec.Containers).Should(HaveLen(2))
-	Expect(sts.Spec.Template.Spec.Containers[0].ImagePullPolicy).Should(Equal(corev1.PullIfNotPresent))
-	Expect(sts.Spec.Template.Spec.Containers[0].Resources).Should(Equal(emqx.GetResource()))
-	Expect(sts.Spec.Template.Spec.Containers[0].Args).Should(Equal(emqx.GetArgs()))
-	Expect(sts.Spec.Template.Spec.Containers[1].Args).Should(Equal([]string{"-u", "admin", "-p", "public", "-P", "8081"}))
-	Expect(sts.Spec.Template.Spec.SecurityContext.FSGroup).Should(Equal(emqx.GetSecurityContext().FSGroup))
-	Expect(sts.Spec.Template.Spec.SecurityContext.RunAsUser).Should(Equal(emqx.GetSecurityContext().RunAsUser))
-	Expect(sts.Spec.Template.Spec.SecurityContext.SupplementalGroups).Should(Equal(emqx.GetSecurityContext().SupplementalGroups))
-	if emqx.GetInitContainers() != nil {
-		Expect(sts.Spec.Template.Spec.InitContainers[0].Name).Should(Equal(emqx.GetInitContainers()[0].Name))
-		Expect(sts.Spec.Template.Spec.InitContainers[0].Image).Should(Equal(emqx.GetInitContainers()[0].Image))
-		Expect(sts.Spec.Template.Spec.InitContainers[0].Args).Should(Equal(emqx.GetInitContainers()[0].Args))
-	}
+	Expect(emqx.GetStatus().Replicas).Should(Equal(int32(3)))
+	Expect(emqx.GetStatus().ReadyReplicas).Should(Equal(int32(3)))
+	Expect(emqx.GetStatus().EmqxNodes).Should(HaveLen(3))
+}
 
-	names := appsv1beta3.Names{Object: emqx}
-	// Persistent
-	if reflect.ValueOf(emqx.GetPersistent()).IsZero() {
-		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(
-			corev1.Volume{
-				Name: names.Data(),
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
-		))
-		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(
-			corev1.Volume{
-				Name: names.Log(),
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
-		))
+func check_pod_annotations(emqx appsv1beta3.Emqx) {
+	sts := &appsv1.StatefulSet{}
+	Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), sts)).Should(Succeed())
+	Expect(sts.Spec.Template.Annotations).Should(HaveKey(handler.ManageContainersAnnotation))
+	if len(emqx.GetACL()) != 0 {
+		Expect(sts.Spec.Template.Annotations).Should(HaveKey("ACL/Base64EncodeConfig"))
 	} else {
-		Expect(sts.Spec.VolumeClaimTemplates).Should(ContainElements(HaveField("ObjectMeta", HaveField("Name", names.Data()))))
-		Expect(sts.Spec.VolumeClaimTemplates).Should(ContainElements(HaveField("ObjectMeta", HaveField("Name", names.Log()))))
+		Expect(sts.Spec.Template.Annotations).ShouldNot(HaveKey("ACL/Base64EncodeConfig"))
 	}
-	//Env
-	EnvVars := []corev1.EnvVar{
-		{Name: "EMQX_CLUSTER__DISCOVERY", Value: "dns"},
-		{Name: "EMQX_CLUSTER__DNS__APP", Value: emqx.GetName()},
-		{Name: "EMQX_CLUSTER__DNS__NAME", Value: fmt.Sprintf("%s-headless.%s.svc.cluster.local", emqx.GetName(), emqx.GetNamespace())},
-		{Name: "EMQX_CLUSTER__DNS__TYPE", Value: "srv"},
-		{Name: "EMQX_LISTENER__SSL__EXTERNAL", Value: "8883"},
-		{Name: "EMQX_LISTENER__TCP__EXTERNAL", Value: "1883"},
-		{Name: "EMQX_LISTENER__WSS__EXTERNAL", Value: "8084"},
-		{Name: "EMQX_LISTENER__WS__EXTERNAL", Value: "8083"},
-		{Name: "EMQX_LOG__TO", Value: "both"},
-		{Name: "EMQX_NAME", Value: emqx.GetName()},
-		{Name: "EMQX_MANAGEMENT__DEFAULT_APPLICATION__ID", Value: emqx.GetUsername()},
-		{Name: "EMQX_MANAGEMENT__DEFAULT_APPLICATION__SECRET", Value: emqx.GetPassword()},
-		{Name: "EMQX_DASHBOARD__DEFAULT_USER__LOGIN", Value: emqx.GetUsername()},
-		{Name: "EMQX_DASHBOARD__DEFAULT_USER__PASSWORD", Value: emqx.GetPassword()},
-		{Name: "EMQX_PLUGINS__LOADED_FILE", Value: "/mounted/plugins/data/loaded_plugins"},
-		{Name: "EMQX_PLUGINS__ETC_DIR", Value: "/mounted/plugins/etc"},
-	}
-	Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(EnvVars))
 
-	// Volume
-	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
-	Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
-	if emqxEnterprise, ok := emqx.(*appsv1beta3.EmqxEnterprise); ok {
-		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
-			Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.License())))
+	switch instance := emqx.(type) {
+	case *appsv1beta3.EmqxBroker:
+		if len(instance.GetModules()) != 0 {
+			Expect(sts.Spec.Template.Annotations).Should(HaveKey("LoadedModules/Base64EncodeConfig"))
+		} else {
+			Expect(sts.Spec.Template.Annotations).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
 		}
-	}
-
-	// VolumeMount
-	Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.Data())))
-	Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.Log())))
-	Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.PluginsConfig())))
-	Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedPlugins())))
-	if emqxEnterprise, ok := emqx.(*appsv1beta3.EmqxEnterprise); ok {
-		if !reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
-			Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.License())))
+	case *appsv1beta3.EmqxEnterprise:
+		if len(instance.GetModules()) != 0 {
+			Expect(sts.Spec.Template.Annotations).Should(HaveKey("LoadedModules/Base64EncodeConfig"))
+		} else {
+			Expect(sts.Spec.Template.Annotations).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
 		}
 	}
 }
@@ -481,152 +296,6 @@ func check_service_ports(emqx appsv1beta3.Emqx, ports []corev1.ServicePort, head
 		)
 		return svc.Spec.Ports
 	}, timeout, interval).Should(ContainElements(append(ports, headlessPort)))
-}
-
-func check_acl(emqx appsv1beta3.Emqx, aclString string) {
-	names := appsv1beta3.Names{Object: emqx}
-	if aclString == "" {
-		Eventually(func() bool {
-			err := k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
-					Namespace: emqx.GetNamespace(),
-				},
-				&corev1.ConfigMap{},
-			)
-			return k8sErrors.IsNotFound(err)
-		}, timeout, interval).Should(BeTrue())
-
-		sts := &appsv1.StatefulSet{}
-		Eventually(func() error {
-			err := k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      emqx.GetName(),
-					Namespace: emqx.GetNamespace(),
-				},
-				sts,
-			)
-			return err
-		}, timeout, interval).Should(Succeed())
-
-		Expect(sts.Annotations).ShouldNot(HaveKey("ACL/Base64EncodeConfig"))
-		Expect(sts.Spec.Template.Spec.Containers[0].Env).ShouldNot(ContainElements(
-			corev1.EnvVar{Name: "EMQX_ACL_FILE", Value: "/mounted/acl/acl.conf"},
-		))
-		Expect(sts.Spec.Template.Spec.Volumes).ShouldNot(ContainElements(HaveField("Name", names.ACL())))
-		Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).ShouldNot(ContainElements(HaveField("Name", names.ACL())))
-	} else {
-		Eventually(func() map[string]string {
-			cm := &corev1.ConfigMap{}
-			_ = k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "acl"),
-					Namespace: emqx.GetNamespace(),
-				},
-				cm,
-			)
-			return cm.Data
-		}, timeout, interval).Should(Equal(
-			map[string]string{"acl.conf": aclString},
-		))
-
-		sts := &appsv1.StatefulSet{}
-		Eventually(func() error {
-			err := k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      emqx.GetName(),
-					Namespace: emqx.GetNamespace(),
-				},
-				sts,
-			)
-			return err
-		}, timeout, interval).Should(Succeed())
-
-		Expect(sts.Annotations).Should(HaveKeyWithValue(
-			"ACL/Base64EncodeConfig",
-			base64.StdEncoding.EncodeToString([]byte(aclString)),
-		))
-		Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(
-			corev1.EnvVar{Name: "EMQX_ACL_FILE", Value: "/mounted/acl/acl.conf"},
-		))
-		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.ACL())))
-		Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.ACL())))
-	}
-}
-
-func check_modules(emqx appsv1beta3.Emqx, loadedModulesString string) {
-	names := appsv1beta3.Names{Object: emqx}
-	if loadedModulesString == "" {
-		Eventually(func() bool {
-			err := k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-modules"),
-					Namespace: emqx.GetNamespace(),
-				}, &corev1.ConfigMap{},
-			)
-			return k8sErrors.IsNotFound(err)
-		}, timeout, interval).Should(BeTrue())
-
-		sts := &appsv1.StatefulSet{}
-		Eventually(func() error {
-			err := k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      emqx.GetName(),
-					Namespace: emqx.GetNamespace(),
-				},
-				sts,
-			)
-			return err
-		}, timeout, interval).Should(Succeed())
-
-		Expect(sts.Annotations).ShouldNot(HaveKey("LoadedModules/Base64EncodeConfig"))
-		Expect(sts.Spec.Template.Spec.Containers[0].Env).ShouldNot(ContainElements(
-			corev1.EnvVar{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"},
-		))
-		Expect(sts.Spec.Template.Spec.Volumes).ShouldNot(ContainElements(HaveField("Name", names.LoadedModules())))
-		Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).ShouldNot(ContainElements(HaveField("Name", names.LoadedModules())))
-	} else {
-		Eventually(func() map[string]string {
-			cm := &corev1.ConfigMap{}
-			_ = k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-modules"),
-					Namespace: emqx.GetNamespace(),
-				}, cm,
-			)
-			return cm.Data
-		}, timeout, interval).Should(HaveKeyWithValue("loaded_modules", loadedModulesString))
-
-		sts := &appsv1.StatefulSet{}
-		Eventually(func() error {
-			err := k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      emqx.GetName(),
-					Namespace: emqx.GetNamespace(),
-				},
-				sts,
-			)
-			return err
-		}, timeout, interval).Should(Succeed())
-
-		Expect(sts.Annotations).Should(HaveKeyWithValue(
-			"LoadedModules/Base64EncodeConfig",
-			base64.StdEncoding.EncodeToString([]byte(loadedModulesString)),
-		))
-		Expect(sts.Spec.Template.Spec.Containers[0].Env).Should(ContainElements(
-			corev1.EnvVar{Name: "EMQX_MODULES__LOADED_FILE", Value: "/mounted/modules/loaded_modules"},
-		))
-		Expect(sts.Spec.Template.Spec.Volumes).Should(ContainElements(HaveField("Name", names.LoadedModules())))
-		Expect(sts.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(HaveField("Name", names.LoadedModules())))
-	}
 }
 
 func check_plugin(emqx appsv1beta3.Emqx, pluginList []string) {

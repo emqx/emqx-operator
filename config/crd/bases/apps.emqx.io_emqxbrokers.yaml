@@ -6292,10 +6292,8 @@ spec:
             description: Status defines the observed state of EMQX
             properties:
               conditions:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "operator-sdk generate k8s" to regenerate
-                  code after modifying this file Add custom validation using kubebuilder
-                  tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html'
+                description: Represents the latest available observations of a EMQX
+                  current state.
                 items:
                   description: Condition saves the state information of the EMQX cluster
                   properties:
@@ -6324,6 +6322,34 @@ spec:
                   - type
                   type: object
                 type: array
+              emqxNodes:
+                description: Nodes of the EMQX cluster
+                items:
+                  properties:
+                    node:
+                      description: EMQX node name
+                      type: string
+                    node_status:
+                      description: EMQX node status
+                      type: string
+                    otp_release:
+                      description: Erlang/OTP version used by EMQX
+                      type: string
+                    version:
+                      description: EMQX version
+                      type: string
+                  type: object
+                type: array
+              readyReplicas:
+                description: readyReplicas is the number of pods created for this
+                  EMQX Custom Resource with a EMQX Ready.
+                format: int32
+                type: integer
+              replicas:
+                description: replicas is the number of Pods created by the EMQX Custom
+                  Resource controller.
+                format: int32
+                type: integer
             type: object
         type: object
     served: true
