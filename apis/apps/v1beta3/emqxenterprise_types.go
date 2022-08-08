@@ -44,7 +44,7 @@ type EmqxEnterpriseTemplate struct {
 	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
-	// EmqxConfig for EMQX cluster configurations
+	// EmqxConfig for EMQX configurations
 	EmqxConfig EmqxConfig `json:"config,omitempty"`
 	// Args define arguments for the command
 	Args []string `json:"args,omitempty"`
@@ -61,11 +61,13 @@ type EmqxEnterpriseTemplate struct {
 	// StartupProbe indicates whether the application running in the container has started
 	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 
-	// ServiceTemplate defines a logical set of Pods and a policy by which to access them
+	// ServiceTemplate defines a logical set of ports and a policy by which to access them
 	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
 	// ACL defines ACL rules
+	// refer to https://docs.emqx.com/en/enterprise/v4.4/modules/internal_acl.html#builtin-acl-file-2
 	ACL []string `json:"acl,omitempty"`
 	// Modules define functional modules for EMQX Enterprise broker
+	// refer to https://docs.emqx.com/en/enterprise/v4.4/modules/modules.html
 	Modules []EmqxEnterpriseModule `json:"modules,omitempty"`
 	// License for EMQX Enterprise broker
 	License License `json:"license,omitempty"`
@@ -76,7 +78,7 @@ type EmqxEnterpriseSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// ImagePullSecrets For pulling EMQX Enterprise image
+	// ImagePullSecrets For pulling image
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// Persistent describes the common attributes of storage devices
 	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
@@ -95,9 +97,8 @@ type EmqxEnterpriseSpec struct {
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 	// Extra Containers to be added to the pod.
 	// See https://github.com/emqx/emqx-operator/issues/252
-	ExtraContainers []corev1.Container `json:"extraContainers,omitempty"`
-	// EmqxTemplate for spec.emqxTemplate
-	EmqxTemplate EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
+	ExtraContainers []corev1.Container     `json:"extraContainers,omitempty"`
+	EmqxTemplate    EmqxEnterpriseTemplate `json:"emqxTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -111,9 +112,7 @@ type EmqxEnterprise struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of EmqxEnterpriseSpec
-	Spec EmqxEnterpriseSpec `json:"spec,omitempty"`
-	// Status defines the observed state of EMQX
+	Spec   EmqxEnterpriseSpec `json:"spec,omitempty"`
 	Status `json:"status,omitempty"`
 }
 

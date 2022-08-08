@@ -33,7 +33,6 @@ type EmqxBrokerTemplate struct {
 	//+kubebuilder:default:="public"
 	Password string `json:"password,omitempty"`
 
-	// ExtraVolumes for mounting extra volumes like secrets and/or configmaps
 	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
 	// See https://github.com/emqx/emqx-operator/pull/72
@@ -56,9 +55,10 @@ type EmqxBrokerTemplate struct {
 	// StartupProbe indicates whether the application running in the container has started
 	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 
-	// ServiceTemplate defines a logical set of Pods and a policy by which to access them
+	// ServiceTemplate defines a logical set of ports and a policy by which to access them
 	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
 	// ACL defines ACL rules
+	// refer to https://www.emqx.io/docs/en/v4.4/advanced/acl.html
 	ACL []string `json:"acl,omitempty"`
 	// Modules define functional modules for EMQX broker
 	Modules []EmqxBrokerModule `json:"modules,omitempty"`
@@ -69,7 +69,7 @@ type EmqxBrokerSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// ImagePullSecrets For pulling EMQX broker image
+	// ImagePullSecrets For pulling image
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	// Persistent describes the common attributes of storage devices
@@ -90,8 +90,7 @@ type EmqxBrokerSpec struct {
 	// Extra Containers to be added to the pod.
 	// See https://github.com/emqx/emqx-operator/issues/252
 	ExtraContainers []corev1.Container `json:"extraContainers,omitempty"`
-	// EmqxTemplate for spec.emqxTemplate
-	EmqxTemplate EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
+	EmqxTemplate    EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -105,9 +104,7 @@ type EmqxBroker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of EmqxBroker
-	Spec EmqxBrokerSpec `json:"spec,omitempty"`
-	// Status defines the observed state of EMQX
+	Spec   EmqxBrokerSpec `json:"spec,omitempty"`
 	Status `json:"status,omitempty"`
 }
 

@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.1
+    controller-gen.kubebuilder.io/version: v0.6.2
   creationTimestamp: null
   name: emqxplugins.apps.emqx.io
 spec:
@@ -46,7 +46,7 @@ spec:
               selector:
                 additionalProperties:
                   type: string
-                description: Selector matches the labels of the EMQX broker
+                description: Selector matches the labels of the EMQX
                 type: object
             type: object
           status:

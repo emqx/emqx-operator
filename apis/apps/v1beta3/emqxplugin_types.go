@@ -24,7 +24,7 @@ import (
 type EmqxPluginSpec struct {
 	//+kubebuilder:validation:Required
 	PluginName string `json:"pluginName,omitempty"`
-	// Selector matches the labels of the EMQX broker
+	// Selector matches the labels of the EMQX
 	//+kubebuilder:validation:Required
 	Selector map[string]string `json:"selector,omitempty"`
 	// Config defines the configurations of the EMQX plugins

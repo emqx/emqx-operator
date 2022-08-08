@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.1
+    controller-gen.kubebuilder.io/version: v0.6.2
   creationTimestamp: null
   name: emqxenterprises.apps.emqx.io
 spec:
@@ -36,7 +36,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec defines the desired state of EmqxEnterpriseSpec
+            description: EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
             properties:
               affinity:
                 description: Affinity is a group of affinity scheduling rules
@@ -856,10 +856,9 @@ spec:
                     type: object
                 type: object
               emqxTemplate:
-                description: EmqxTemplate for spec.emqxTemplate
                 properties:
                   acl:
-                    description: ACL defines ACL rules
+                    description: ACL defines ACL rules refer to https://docs.emqx.com/en/enterprise/v4.4/modules/internal_acl.html#builtin-acl-file-2
                     items:
                       type: string
                     type: array
@@ -871,7 +870,7 @@ spec:
                   config:
                     additionalProperties:
                       type: string
-                    description: EmqxConfig for EMQX cluster configurations
+                    description: EmqxConfig for EMQX configurations
                     type: object
                   extraVolumeMounts:
                     description: See https://github.com/emqx/emqx-operator/pull/72
@@ -2650,7 +2649,7 @@ spec:
                     type: object
                   modules:
                     description: Modules define functional modules for EMQX Enterprise
-                      broker
+                      broker refer to https://docs.emqx.com/en/enterprise/v4.4/modules/modules.html
                     items:
                       properties:
                         configs:
@@ -3013,7 +3012,7 @@ spec:
                         type: object
                     type: object
                   serviceTemplate:
-                    description: ServiceTemplate defines a logical set of Pods and
+                    description: ServiceTemplate defines a logical set of ports and
                       a policy by which to access them
                     properties:
                       metadata:
@@ -4854,7 +4853,7 @@ spec:
                   type: object
                 type: array
               imagePullSecrets:
-                description: ImagePullSecrets For pulling EMQX Enterprise image
+                description: ImagePullSecrets For pulling image
                 items:
                   description: LocalObjectReference contains enough information to
                     let you locate the referenced object inside the same namespace.
@@ -6300,7 +6299,7 @@ spec:
                 type: array
             type: object
           status:
-            description: Status defines the observed state of EMQX
+            description: Emqx Status defines the observed state of EMQX
             properties:
               conditions:
                 description: Represents the latest available observations of a EMQX
