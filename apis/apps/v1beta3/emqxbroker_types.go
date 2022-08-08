@@ -43,7 +43,8 @@ type EmqxBrokerTemplate struct {
 	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
-	// EmqxConfig for EMQX cluster configurations
+	// Config represents the configurations of EMQX cluster
+	// More info: https://www.emqx.io/docs/en/v4.4/configuration/configuration.html#cluster
 	EmqxConfig EmqxConfig `json:"config,omitempty"`
 	// Args define arguments for the command
 	Args []string `json:"args,omitempty"`
@@ -119,7 +120,7 @@ type EmqxBrokerSpec struct {
 	// Init containers cannot currently be added or removed.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
-	// Extra Containers to be added to the pod.
+	// ExtraContainers represents extra containers to be added to the pod.
 	// See https://github.com/emqx/emqx-operator/issues/252
 	ExtraContainers []corev1.Container `json:"extraContainers,omitempty"`
 	EmqxTemplate    EmqxBrokerTemplate `json:"emqxTemplate,omitempty"`

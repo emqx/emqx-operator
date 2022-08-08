@@ -870,7 +870,8 @@ spec:
                   config:
                     additionalProperties:
                       type: string
-                    description: EmqxConfig for EMQX cluster configurations
+                    description: 'Config represents the configurations of EMQX cluster
+                      More info: https://www.emqx.io/docs/en/v4.4/configuration/configuration.html#cluster'
                     type: object
                   extraVolumeMounts:
                     description: See https://github.com/emqx/emqx-operator/pull/72
@@ -3635,7 +3636,8 @@ spec:
                   type: object
                 type: array
               extraContainers:
-                description: Extra Containers to be added to the pod. See https://github.com/emqx/emqx-operator/issues/252
+                description: ExtraContainers represents extra containers to be added
+                  to the pod. See https://github.com/emqx/emqx-operator/issues/252
                 items:
                   description: A single application container that you want to run
                     within a pod.
