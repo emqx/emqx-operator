@@ -57,22 +57,27 @@ var _ = Describe("E2E Test", func() {
 		},
 	}
 
-	emqx := &appsv2alpha1.EMQX{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "e2e-test",
-			Namespace: "default",
-		},
-		Spec: appsv2alpha1.EMQXSpec{
-			Image: "emqx/emqx:5.0.4",
-		},
-	}
 	BeforeEach(func() {
+		emqx := &appsv2alpha1.EMQX{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "e2e-test",
+				Namespace: "default",
+			},
+			Spec: appsv2alpha1.EMQXSpec{
+				Image: "emqx/emqx:5.0.4",
+			},
+		}
 		emqx.Default()
 		Expect(k8sClient.Create(context.TODO(), emqx)).Should(Succeed())
 	})
 
 	AfterEach(func() {
-		Expect(k8sClient.Delete(context.TODO(), emqx)).Should(Succeed())
+		Expect(k8sClient.Delete(context.TODO(), &appsv2alpha1.EMQX{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "e2e-test",
+				Namespace: "default",
+			},
+		})).Should(Succeed())
 	})
 
 	Context("Check EMQX Custom Resource when replicant replicas == 0", func() {
@@ -105,10 +110,12 @@ var _ = Describe("E2E Test", func() {
 		instance := &appsv2alpha1.EMQX{}
 		JustBeforeEach(func() {
 			By("Update the EMQX Custom Resource, add replicant nodes")
-			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)).Should(Succeed())
-			replicant := int32(3)
-			instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Eventually(func() error {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
+				replicant := int32(3)
+				instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
+				return k8sClient.Update(context.TODO(), instance)
+			}, timeout, interval).Should(Succeed())
 		})
 
 		It("", func() {
@@ -138,11 +145,13 @@ var _ = Describe("E2E Test", func() {
 	Context("Update EMQX Custom Resource, change image version", func() {
 		instance := &appsv2alpha1.EMQX{}
 		JustBeforeEach(func() {
-			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)).Should(Succeed())
-			replicant := int32(3)
-			instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
-			instance.Spec.Image = "emqx/emqx:5.0.3"
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Eventually(func() error {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
+				replicant := int32(3)
+				instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
+				instance.Spec.Image = "emqx/emqx:5.0.3"
+				return k8sClient.Update(context.TODO(), instance)
+			}, timeout, interval).Should(Succeed())
 		})
 
 		It("Checking the EMQX Custom Resource's Status when update image", func() {
