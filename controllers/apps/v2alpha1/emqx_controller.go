@@ -42,7 +42,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-const requeueAfter time.Duration = time.Second * time.Duration(5)
 const EMQXContainerName string = "emqx"
 
 var (
@@ -114,6 +113,9 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	if !instance.Status.IsRunning() {
+		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
+	}
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
 
