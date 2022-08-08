@@ -50,9 +50,7 @@ type EmqxPlugin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of EmqxPlugin
-	Spec EmqxPluginSpec `json:"spec,omitempty"`
-	// Status defines the observed state of EMQX plugin
+	Spec   EmqxPluginSpec   `json:"spec,omitempty"`
 	Status EmqxPluginStatus `json:"status,omitempty"`
 }
 
