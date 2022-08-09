@@ -792,7 +792,8 @@ func TestGenerateSvc(t *testing.T) {
 				"apps.emqx.io/instance":   "emqx",
 				"apps.emqx.io/managed-by": "emqx-operator",
 			},
-			ClusterIP: corev1.ClusterIPNone,
+			ClusterIP:                corev1.ClusterIPNone,
+			PublishNotReadyAddresses: true,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http-management-8081",
