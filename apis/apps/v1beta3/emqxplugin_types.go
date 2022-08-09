@@ -22,11 +22,14 @@ import (
 
 // EmqxPluginSpec defines the desired state of EmqxPlugin
 type EmqxPluginSpec struct {
+	// More info: https://www.emqx.io/docs/en/v4.4/advanced/plugins.html#list-of-plugins
 	//+kubebuilder:validation:Required
 	PluginName string `json:"pluginName,omitempty"`
+	// Selector matches the labels of the EMQX
 	//+kubebuilder:validation:Required
 	Selector map[string]string `json:"selector,omitempty"`
-	Config   map[string]string `json:"config,omitempty"`
+	// Config defines the configurations of the EMQX plugins
+	Config map[string]string `json:"config,omitempty"`
 }
 
 type phase string
