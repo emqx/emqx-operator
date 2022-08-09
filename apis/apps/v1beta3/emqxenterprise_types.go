@@ -48,17 +48,18 @@ type EmqxEnterpriseTemplate struct {
 	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 
-	// Config represents the configurations of EMQX cluster
-	// More info: https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html#cluster
+	// Config represents the configurations of EMQX
+	// More info: https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html
 	EmqxConfig EmqxConfig `json:"config,omitempty"`
-	// Args define arguments for the command
+	// Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+	// More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
 	Args []string `json:"args,omitempty"`
 
 	// SecurityContext defines the security options the container should be run with.
 	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
 	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
-	// Compute Resources required by this container.
+	// Compute Resources required by EMQX container.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 

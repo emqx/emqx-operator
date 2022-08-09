@@ -863,15 +863,16 @@ spec:
                       type: string
                     type: array
                   args:
-                    description: Args define arguments for the command
+                    description: 'Arguments to the entrypoint. The container image''s
+                      CMD is used if this is not provided. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell'
                     items:
                       type: string
                     type: array
                   config:
                     additionalProperties:
                       type: string
-                    description: 'Config represents the configurations of EMQX cluster
-                      More info: https://www.emqx.io/docs/en/v4.4/configuration/configuration.html#cluster'
+                    description: 'Config represents the configurations of EMQX More
+                      info: https://www.emqx.io/docs/en/v4.4/configuration/configuration.html'
                     type: object
                   extraVolumeMounts:
                     description: See https://github.com/emqx/emqx-operator/pull/72
@@ -2806,7 +2807,7 @@ spec:
                         type: integer
                     type: object
                   resources:
-                    description: 'Compute Resources required by this container. More
+                    description: 'Compute Resources required by EMQX container. More
                       info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     properties:
                       limits:

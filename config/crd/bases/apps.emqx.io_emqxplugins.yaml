@@ -42,6 +42,7 @@ spec:
                 description: Config defines the configurations of the EMQX plugins
                 type: object
               pluginName:
+                description: 'More info: https://www.emqx.io/docs/en/v4.4/advanced/plugins.html#list-of-plugins'
                 type: string
               selector:
                 additionalProperties:
