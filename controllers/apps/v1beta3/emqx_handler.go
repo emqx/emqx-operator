@@ -577,8 +577,9 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 			Namespace: instance.GetNamespace(),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector:  instance.GetLabels(),
-			ClusterIP: corev1.ClusterIPNone,
+			Selector:                 instance.GetLabels(),
+			ClusterIP:                corev1.ClusterIPNone,
+			PublishNotReadyAddresses: true,
 		},
 	}
 
