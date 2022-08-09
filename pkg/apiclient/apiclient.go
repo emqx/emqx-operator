@@ -18,7 +18,7 @@ package apiclient
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -75,7 +75,7 @@ func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
 		}
 
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return resp, nil, err
 		}
