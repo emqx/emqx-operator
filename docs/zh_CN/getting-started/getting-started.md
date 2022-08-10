@@ -29,7 +29,7 @@ helm repo add emqx https://repos.emqx.io/charts
 helm repo update
 ```
 
-1. 用 Helm 安装 EMQX Operator 控制器
+2. 用 Helm 安装 EMQX Operator 控制器
 
 ```bash
 $ helm install emqx-operator emqx/emqx-operator \

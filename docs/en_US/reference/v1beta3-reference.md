@@ -306,8 +306,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `data` _integer array_ |  |
-| `stringData` _string_ |  |
+| `data` _integer array_ | Data contains the secret data. Each key must consist of alphanumeric characters, '-', '_' or '.'. The serialized form of the secret data is a base64 encoded string, representing the arbitrary (possibly non-string) data value here. Described in https://tools.ietf.org/html/rfc4648#section-4 |
+| `stringData` _string_ | StringData allows specifying non-binary secret data in string form. It is provided as a write-only input field for convenience. All keys and values are merged into the data field on write, overwriting any existing values. |
+| `secretName` _string_ | SecretName is the name of the secret in the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret |
 
 
 
