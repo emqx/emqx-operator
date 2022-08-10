@@ -66,13 +66,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	postFn := func(client.Object) error { return nil }
 
 	sts := generateStatefulSetDef(instance)
-	if !reflect.ValueOf(instance.GetPersistent()).IsZero() {
-		pvcList := &corev1.PersistentVolumeClaimList{}
-		_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
-		if len(pvcList.Items) != 0 {
-			sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
-		}
-	}
 
 	storeSts := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
@@ -320,7 +313,7 @@ func generateStatefulSetDef(instance appsv1beta3.Emqx) *appsv1.StatefulSet {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: instance.GetLabels(),
 			},
-			PodManagementPolicy: appsv1.OrderedReadyPodManagement,
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template:            podTemplate,
 		},
 	}

@@ -141,7 +141,7 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 					"apps.emqx.io/instance":   "emqx",
 				},
 			},
-			PodManagementPolicy: appsv1.OrderedReadyPodManagement,
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
