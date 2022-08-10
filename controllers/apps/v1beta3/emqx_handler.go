@@ -93,8 +93,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		sts.Annotations = storeSts.Annotations
 	}
 
-	defaultPluginsConfig, sts := generateDefaultPluginsConfig(instance, sts)
-	loadedPlugins, sts := generateLoadedPlugins(instance, sts)
+	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
+	sts = updatePluginsConfigForSts(sts, defaultPluginsConfig)
+
+	loadedPlugins := generateLoadedPlugins(instance)
+	sts = updateLoadedPluginsForSts(sts, loadedPlugins)
 
 	if status := instance.GetStatus(); !status.IsPluginInitialized() {
 		resources = append(resources, loadedPlugins, defaultPluginsConfig)
@@ -132,21 +135,22 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
 
-	//add acl when module isn't nil
-	acl, sts := generateAcl(instance, sts)
+	acl := generateAcl(instance)
 	if acl != nil {
 		resources = append(resources, acl)
+		sts = updateAclForSts(sts, acl)
 	}
 
-	//add module when module isn't nil
-	module, sts := generateLoadedModules(instance, sts)
-	if module != nil {
-		resources = append(resources, module)
+	loadedModules := generateLoadedModules(instance)
+	if loadedModules != nil {
+		resources = append(resources, loadedModules)
+		sts = updateLoadedModulesForSts(sts, loadedModules)
 	}
 
-	license, sts := generateLicense(instance, sts)
+	license := generateLicense(instance)
 	if license != nil {
 		resources = append(resources, license)
+		sts = updateLicenseForsts(sts, license)
 	}
 
 	if status := instance.GetStatus(); status.IsRunning() {
@@ -422,7 +426,7 @@ func generateInitPluginList(instance appsv1beta3.Emqx, existPluginList *appsv1be
 	return pluginList
 }
 
-func generateDefaultPluginsConfig(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+func generateDefaultPluginsConfig(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 	names := appsv1beta3.Names{Object: instance}
 
 	cm := &corev1.ConfigMap{
@@ -483,31 +487,10 @@ func generateDefaultPluginsConfig(instance appsv1beta3.Emqx, sts *appsv1.Statefu
 		},
 	}
 
-	sts = updateEnvAndVolumeForSts(sts,
-		corev1.EnvVar{
-			Name:  "EMQX_PLUGINS__ETC_DIR",
-			Value: "/mounted/plugins/etc",
-		},
-		corev1.VolumeMount{
-			Name:      cm.Name,
-			MountPath: "/mounted/plugins/etc",
-		},
-		corev1.Volume{
-			Name: cm.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cm.Name,
-					},
-				},
-			},
-		},
-	)
-
-	return cm, sts
+	return cm
 }
 
-func generateLoadedPlugins(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+func generateLoadedPlugins(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 	names := appsv1beta3.Names{Object: instance}
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -528,29 +511,7 @@ func generateLoadedPlugins(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (
 	case *appsv1beta3.EmqxEnterprise:
 		cm.Data["loaded_plugins"] = "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\nemqx_modules.\n"
 	}
-
-	sts = updateEnvAndVolumeForSts(sts,
-		corev1.EnvVar{
-			Name:  "EMQX_PLUGINS__LOADED_FILE",
-			Value: "/mounted/plugins/data/loaded_plugins",
-		},
-		corev1.VolumeMount{
-			Name:      cm.Name,
-			MountPath: "/mounted/plugins/data",
-		},
-		corev1.Volume{
-			Name: cm.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cm.Name,
-					},
-				},
-			},
-		},
-	)
-
-	return cm, sts
+	return cm
 }
 
 func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
@@ -593,9 +554,9 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 	return headlessSvc, svc
 }
 
-func generateAcl(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+func generateAcl(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 	if len(instance.GetACL()) == 0 {
-		return nil, sts
+		return nil
 	}
 	names := appsv1beta3.Names{Object: instance}
 
@@ -603,7 +564,6 @@ func generateAcl(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Co
 	for _, rule := range instance.GetACL() {
 		aclString += fmt.Sprintf("%s\n", rule)
 	}
-
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -616,36 +576,10 @@ func generateAcl(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Co
 		},
 		Data: map[string]string{"acl.conf": aclString},
 	}
-
-	if sts.Spec.Template.Annotations == nil {
-		sts.Spec.Template.Annotations = make(map[string]string)
-	}
-	sts.Spec.Template.Annotations["ACL/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(aclString))
-	sts = updateEnvAndVolumeForSts(sts,
-		corev1.EnvVar{
-			Name:  "EMQX_ACL_FILE",
-			Value: "/mounted/acl/acl.conf",
-		},
-		corev1.VolumeMount{
-			Name:      cm.Name,
-			MountPath: "/mounted/acl",
-		},
-		corev1.Volume{
-			Name: cm.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cm.Name,
-					},
-				},
-			},
-		},
-	)
-
-	return cm, sts
+	return cm
 }
 
-func generateLoadedModules(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.ConfigMap, *appsv1.StatefulSet) {
+func generateLoadedModules(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 	names := appsv1beta3.Names{Object: instance}
 	var loadedModulesString string
 	switch obj := instance.(type) {
@@ -661,7 +595,7 @@ func generateLoadedModules(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (
 		// for enterprise, if modules is empty, don't create configmap
 		loadedModulesString = modules.String()
 		if loadedModulesString == "" {
-			return nil, sts
+			return nil
 		}
 	}
 
@@ -678,43 +612,20 @@ func generateLoadedModules(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (
 		Data: map[string]string{"loaded_modules": loadedModulesString},
 	}
 
-	if sts.Spec.Template.Annotations == nil {
-		sts.Spec.Template.Annotations = make(map[string]string)
-	}
-	sts.Spec.Template.Annotations["LoadedModules/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(loadedModulesString))
-	sts = updateEnvAndVolumeForSts(sts,
-		corev1.EnvVar{
-			Name:  "EMQX_MODULES__LOADED_FILE",
-			Value: "/mounted/modules/loaded_modules",
-		},
-		corev1.VolumeMount{
-			Name:      cm.Name,
-			MountPath: "/mounted/modules",
-		},
-		corev1.Volume{
-			Name: cm.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cm.Name,
-					},
-				},
-			},
-		},
-	)
-
-	return cm, sts
+	return cm
 }
 
-func generateLicense(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev1.Secret, *appsv1.StatefulSet) {
+func generateLicense(instance appsv1beta3.Emqx) *corev1.Secret {
 	names := appsv1beta3.Names{Object: instance}
 	emqxEnterprise, ok := instance.(*appsv1beta3.EmqxEnterprise)
 	if !ok {
-		return nil, sts
+		return nil
 	}
-	if reflect.ValueOf(emqxEnterprise.GetLicense()).IsZero() {
-		return nil, sts
+	license := emqxEnterprise.GetLicense()
+	if len(license.Data) == 0 && len(license.StringData) == 0 {
+		return nil
 	}
+
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -731,28 +642,7 @@ func generateLicense(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) (*corev
 	if emqxEnterprise.GetLicense().StringData != "" {
 		secret.StringData = map[string]string{"emqx.lic": emqxEnterprise.GetLicense().StringData}
 	}
-
-	sts = updateEnvAndVolumeForSts(sts,
-		corev1.EnvVar{
-			Name:  "EMQX_LICENSE__FILE",
-			Value: "/mounted/license/emqx.lic",
-		},
-		corev1.VolumeMount{
-			Name:      secret.Name,
-			MountPath: "/mounted/license",
-			ReadOnly:  true,
-		},
-		corev1.Volume{
-			Name: secret.Name,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secret.Name,
-				},
-			},
-		},
-	)
-
-	return secret, sts
+	return secret
 }
 
 func generateDataVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
@@ -984,4 +874,126 @@ func updateEmqxStatus(instance appsv1beta3.Emqx, emqxNodes []appsv1beta3.EmqxNod
 	status.SetCondition(*cond)
 	instance.SetStatus(status)
 	return instance
+}
+
+func updateLoadedPluginsForSts(sts *appsv1.StatefulSet, loadedPlugins *corev1.ConfigMap) *appsv1.StatefulSet {
+	return updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_PLUGINS__LOADED_FILE",
+			Value: "/mounted/plugins/data/loaded_plugins",
+		},
+		corev1.VolumeMount{
+			Name:      loadedPlugins.Name,
+			MountPath: "/mounted/plugins/data",
+		},
+		corev1.Volume{
+			Name: loadedPlugins.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: loadedPlugins.Name,
+					},
+				},
+			},
+		},
+	)
+}
+
+func updatePluginsConfigForSts(sts *appsv1.StatefulSet, PluginsConfig *corev1.ConfigMap) *appsv1.StatefulSet {
+	return updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_PLUGINS__ETC_DIR",
+			Value: "/mounted/plugins/etc",
+		},
+		corev1.VolumeMount{
+			Name:      PluginsConfig.Name,
+			MountPath: "/mounted/plugins/etc",
+		},
+		corev1.Volume{
+			Name: PluginsConfig.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: PluginsConfig.Name,
+					},
+				},
+			},
+		},
+	)
+}
+
+func updateAclForSts(sts *appsv1.StatefulSet, acl *corev1.ConfigMap) *appsv1.StatefulSet {
+	if sts.Spec.Template.Annotations == nil {
+		sts.Spec.Template.Annotations = make(map[string]string)
+	}
+	sts.Spec.Template.Annotations["ACL/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(acl.Data["acl.conf"]))
+	return updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_ACL_FILE",
+			Value: "/mounted/acl/acl.conf",
+		},
+		corev1.VolumeMount{
+			Name:      acl.Name,
+			MountPath: "/mounted/acl",
+		},
+		corev1.Volume{
+			Name: acl.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: acl.Name,
+					},
+				},
+			},
+		},
+	)
+}
+
+func updateLoadedModulesForSts(sts *appsv1.StatefulSet, loadedModules *corev1.ConfigMap) *appsv1.StatefulSet {
+	if sts.Spec.Template.Annotations == nil {
+		sts.Spec.Template.Annotations = make(map[string]string)
+	}
+	sts.Spec.Template.Annotations["LoadedModules/Base64EncodeConfig"] = base64.StdEncoding.EncodeToString([]byte(loadedModules.Data["loaded_modules"]))
+	return updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_MODULES__LOADED_FILE",
+			Value: "/mounted/modules/loaded_modules",
+		},
+		corev1.VolumeMount{
+			Name:      loadedModules.Name,
+			MountPath: "/mounted/modules",
+		},
+		corev1.Volume{
+			Name: loadedModules.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: loadedModules.Name,
+					},
+				},
+			},
+		},
+	)
+}
+
+func updateLicenseForsts(sts *appsv1.StatefulSet, license *corev1.Secret) *appsv1.StatefulSet {
+	return updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_LICENSE__FILE",
+			Value: "/mounted/license/emqx.lic",
+		},
+		corev1.VolumeMount{
+			Name:      license.Name,
+			MountPath: "/mounted/license",
+			ReadOnly:  true,
+		},
+		corev1.Volume{
+			Name: license.Name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: license.Name,
+				},
+			},
+		},
+	)
 }

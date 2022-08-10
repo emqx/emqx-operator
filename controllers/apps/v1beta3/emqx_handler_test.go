@@ -498,20 +498,6 @@ func TestGenerateDefaultPluginsConfig(t *testing.T) {
 			},
 		},
 	}
-
-	sts := &appsv1.StatefulSet{
-		Spec: appsv1.StatefulSetSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: "emqx"},
-						{Name: "reloader"},
-					},
-				},
-			},
-		},
-	}
-
 	expect := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -522,6 +508,43 @@ func TestGenerateDefaultPluginsConfig(t *testing.T) {
 			Namespace: "default",
 			Labels: map[string]string{
 				"apps.emqx.io/instance": "emqx",
+			},
+		},
+	}
+
+	pluginsConfig := generateDefaultPluginsConfig(broker)
+	assert.Equal(t, expect.ObjectMeta, pluginsConfig.ObjectMeta)
+}
+
+func TestUpdateDefaultPluginsConfigForSts(t *testing.T) {
+	defaultPluginsConfig := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx-plugins-config",
+			Namespace: "default",
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx",
+			},
+		},
+		Data: map[string]string{
+			"emqx_modules.conf":    "",
+			"emqx_management.conf": "management.listener.http = 8081\n",
+			"emqx_dashboard.conf":  "dashboard.listener.http = 18083\n",
+		},
+	}
+
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+						{Name: "reloader"},
+					},
+				},
 			},
 		},
 	}
@@ -579,8 +602,7 @@ func TestGenerateDefaultPluginsConfig(t *testing.T) {
 		},
 	}
 
-	pluginsConfig, sts := generateDefaultPluginsConfig(broker, sts)
-	assert.Equal(t, expect.ObjectMeta, pluginsConfig.ObjectMeta)
+	sts = updatePluginsConfigForSts(sts, defaultPluginsConfig)
 	assert.Equal(t, expectSts, sts)
 }
 
@@ -591,19 +613,6 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 			Namespace: "default",
 			Labels: map[string]string{
 				"apps.emqx.io/instance": "emqx",
-			},
-		},
-	}
-
-	sts := &appsv1.StatefulSet{
-		Spec: appsv1.StatefulSetSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: "emqx"},
-						{Name: "reloader"},
-					},
-				},
 			},
 		},
 	}
@@ -622,6 +631,51 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 		},
 		Data: map[string]string{
 			"loaded_plugins": "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\n",
+		},
+	}
+
+	loadedPlugins := generateLoadedPlugins(borker)
+	assert.Equal(t, expect, loadedPlugins)
+
+	enterprise := &appsv1beta3.EmqxEnterprise{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx-ee",
+			Namespace: "default",
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx-ee",
+			},
+		},
+	}
+
+	loadedPlugins = generateLoadedPlugins(enterprise)
+	assert.Equal(t, "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\nemqx_modules.\n", loadedPlugins.Data["loaded_plugins"])
+}
+
+func TestUpdateLoadedPluginsForSts(t *testing.T) {
+	loadedPlugins := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx-loaded-plugins",
+			Namespace: "default",
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx",
+			},
+		},
+		Data: map[string]string{},
+	}
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+						{Name: "reloader"},
+					},
+				},
+			},
 		},
 	}
 
@@ -677,23 +731,8 @@ func TestGenerateLoadedPlugins(t *testing.T) {
 			},
 		},
 	}
-
-	loadedPlugins, sts := generateLoadedPlugins(borker, sts)
-	assert.Equal(t, expect, loadedPlugins)
+	sts = updateLoadedPluginsForSts(sts, loadedPlugins)
 	assert.Equal(t, expectSts, sts)
-
-	enterprise := &appsv1beta3.EmqxEnterprise{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-ee",
-			Namespace: "default",
-			Labels: map[string]string{
-				"apps.emqx.io/instance": "emqx-ee",
-			},
-		},
-	}
-
-	loadedPlugins, _ = generateLoadedPlugins(enterprise, sts)
-	assert.Equal(t, "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\nemqx_modules.\n", loadedPlugins.Data["loaded_plugins"])
 }
 
 func TestGenerateSvc(t *testing.T) {
@@ -821,20 +860,7 @@ func TestGenerateAcl(t *testing.T) {
 		},
 	}
 
-	sts := &appsv1.StatefulSet{
-		Spec: appsv1.StatefulSetSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: "emqx"},
-						{Name: "reloader"},
-					},
-				},
-			},
-		},
-	}
-
-	acl, _ := generateAcl(broker, sts)
+	acl := generateAcl(broker)
 	assert.Nil(t, acl)
 
 	broker.Spec.EmqxTemplate.ACL = []string{
@@ -856,6 +882,39 @@ func TestGenerateAcl(t *testing.T) {
 		},
 		Data: map[string]string{
 			"acl.conf": "{allow, all}\n{deny, all}\n",
+		},
+	}
+
+	acl = generateAcl(broker)
+	assert.Equal(t, expect, acl)
+}
+
+func TestUpdateAclForSts(t *testing.T) {
+	acl := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx-acl",
+			Namespace: "default",
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx",
+			},
+		},
+		Data: map[string]string{"acl.conf": "{allow, all}\n{deny, all}\n"},
+	}
+
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+						{Name: "reloader"},
+					},
+				},
+			},
 		},
 	}
 
@@ -916,10 +975,9 @@ func TestGenerateAcl(t *testing.T) {
 			},
 		},
 	}
-
-	acl, sts = generateAcl(broker, sts)
-	assert.Equal(t, expect, acl)
+	sts = updateAclForSts(sts, acl)
 	assert.Equal(t, expectSts, sts)
+
 }
 
 func TestGenerateLoadedModules(t *testing.T) {
@@ -933,20 +991,7 @@ func TestGenerateLoadedModules(t *testing.T) {
 		},
 	}
 
-	sts := &appsv1.StatefulSet{
-		Spec: appsv1.StatefulSetSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: "emqx"},
-						{Name: "reloader"},
-					},
-				},
-			},
-		},
-	}
-
-	modules, _ := generateLoadedModules(broker, sts)
+	modules := generateLoadedModules(broker)
 	assert.NotNil(t, modules)
 
 	broker.Spec.EmqxTemplate.Modules = []appsv1beta3.EmqxBrokerModule{
@@ -970,6 +1015,54 @@ func TestGenerateLoadedModules(t *testing.T) {
 		},
 		Data: map[string]string{
 			"loaded_modules": "{emqx_module, true}.\n",
+		},
+	}
+
+	loadedBrokerModules := generateLoadedModules(broker)
+	assert.Equal(t, expect, loadedBrokerModules)
+
+	enterprise := &appsv1beta3.EmqxEnterprise{}
+	modules = generateLoadedModules(enterprise)
+	assert.Nil(t, modules)
+
+	enterprise.Spec.EmqxTemplate.Modules = []appsv1beta3.EmqxEnterpriseModule{
+		{
+			Name:    "internal_acl",
+			Enable:  true,
+			Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
+		},
+	}
+
+	loadedEnterpriseModules := generateLoadedModules(enterprise)
+	assert.Equal(t, `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}}]`, loadedEnterpriseModules.Data["loaded_modules"])
+}
+
+func TestUpdateLoadedBrokerModulesForSts(t *testing.T) {
+	loadedModules := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx-loaded-modules",
+			Namespace: "default",
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx",
+			},
+		},
+		Data: map[string]string{"loaded_modules": "{emqx_module, true}.\n"},
+	}
+
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+						{Name: "reloader"},
+					},
+				},
+			},
 		},
 	}
 
@@ -1030,31 +1123,104 @@ func TestGenerateLoadedModules(t *testing.T) {
 			},
 		},
 	}
-	loadedBrokerModules, sts := generateLoadedModules(broker, sts)
-	assert.Equal(t, expect, loadedBrokerModules)
+	sts = updateLoadedModulesForSts(sts, loadedModules)
 	assert.Equal(t, expectSts, sts)
+}
 
-	enterprise := &appsv1beta3.EmqxEnterprise{}
-	modules, _ = generateLoadedModules(enterprise, sts)
-	assert.Nil(t, modules)
+func TestUpdateLoadedEnterpriseModulesForSts(t *testing.T) {
+	loadedModules := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx",
+			},
+			Namespace: "default",
+			Name:      "emqx-ee-loaded-modules",
+		},
+		Data: map[string]string{"loaded_modules": `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}}]`},
+	}
 
-	enterprise.Spec.EmqxTemplate.Modules = []appsv1beta3.EmqxEnterpriseModule{
-		{
-			Name:    "internal_acl",
-			Enable:  true,
-			Configs: runtime.RawExtension{Raw: []byte(`{"acl_rule_file": "/mounted/acl/acl.conf"}`)},
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+						{Name: "reloader"},
+					},
+				},
+			},
 		},
 	}
 
-	loadedEnterpriseModules, _ := generateLoadedModules(enterprise, sts)
-	assert.Equal(t, `[{"name":"internal_acl","enable":true,"configs":{"acl_rule_file":"/mounted/acl/acl.conf"}}]`, loadedEnterpriseModules.Data["loaded_modules"])
+	Base64EncodeString := "W3sibmFtZSI6ImludGVybmFsX2FjbCIsImVuYWJsZSI6dHJ1ZSwiY29uZmlncyI6eyJhY2xfcnVsZV9maWxlIjoiL21vdW50ZWQvYWNsL2FjbC5jb25mIn19XQ=="
+	expectSts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"LoadedModules/Base64EncodeConfig": Base64EncodeString,
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: "emqx",
+							Env: []corev1.EnvVar{
+								{
+									Name:  "EMQX_MODULES__LOADED_FILE",
+									Value: "/mounted/modules/loaded_modules",
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "emqx-ee-loaded-modules",
+									MountPath: "/mounted/modules",
+								},
+							},
+						},
+						{
+							Name: "reloader",
+							Env: []corev1.EnvVar{
+								{
+									Name:  "EMQX_MODULES__LOADED_FILE",
+									Value: "/mounted/modules/loaded_modules",
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "emqx-ee-loaded-modules",
+									MountPath: "/mounted/modules",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "emqx-ee-loaded-modules",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "emqx-ee-loaded-modules",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	sts = updateLoadedModulesForSts(sts, loadedModules)
+	assert.Equal(t, expectSts, sts)
 }
 
 func TestGenerateLicense(t *testing.T) {
 	broker := &appsv1beta3.EmqxBroker{}
-	sts := &appsv1.StatefulSet{}
-
-	license, _ := generateLicense(broker, sts)
+	license := generateLicense(broker)
 	assert.Nil(t, license)
 
 	enterprise := &appsv1beta3.EmqxEnterprise{
@@ -1067,7 +1233,7 @@ func TestGenerateLicense(t *testing.T) {
 		},
 	}
 
-	license, _ = generateLicense(enterprise, sts)
+	license = generateLicense(enterprise)
 	assert.Nil(t, license)
 
 	enterprise.Spec.EmqxTemplate.License.Data = []byte(`-----BEGIN CERTIFICATE-----
@@ -1096,19 +1262,6 @@ func TestGenerateLicense(t *testing.T) {
 	EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
 	-----END CERTIFICATE-----`)
 
-	sts = &appsv1.StatefulSet{
-		Spec: appsv1.StatefulSetSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: "emqx"},
-						{Name: "reloader"},
-					},
-				},
-			},
-		},
-	}
-
 	expect := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -1127,6 +1280,64 @@ func TestGenerateLicense(t *testing.T) {
 		},
 	}
 
+	license = generateLicense(enterprise)
+	assert.Equal(t, expect, license)
+}
+
+func TestUpdateLicenseForSts(t *testing.T) {
+	Data := []byte(`-----BEGIN CERTIFICATE-----
+	MIIENzCCAx+gAwIBAgIDdMvVMA0GCSqGSIb3DQEBBQUAMIGDMQswCQYDVQQGEwJD
+	TjERMA8GA1UECAwIWmhlamlhbmcxETAPBgNVBAcMCEhhbmd6aG91MQwwCgYDVQQK
+	DANFTVExDDAKBgNVBAsMA0VNUTESMBAGA1UEAwwJKi5lbXF4LmlvMR4wHAYJKoZI
+	hvcNAQkBFg96aGFuZ3doQGVtcXguaW8wHhcNMjAwNjIwMDMwMjUyWhcNNDkwMTAx
+	MDMwMjUyWjBjMQswCQYDVQQGEwJDTjEZMBcGA1UECgwQRU1RIFggRXZhbHVhdGlv
+	bjEZMBcGA1UEAwwQRU1RIFggRXZhbHVhdGlvbjEeMBwGCSqGSIb3DQEJARYPY29u
+	dGFjdEBlbXF4LmlvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArw+3
+	2w9B7Rr3M7IOiMc7OD3Nzv2KUwtK6OSQ07Y7ikDJh0jynWcw6QamTiRWM2Ale8jr
+	0XAmKgwUSI42+f4w84nPpAH4k1L0zupaR10VYKIowZqXVEvSyV8G2N7091+6Jcon
+	DcaNBqZLRe1DiZXMJlhXnDgq14FPAxffKhCXiCgYtluLDDLKv+w9BaQGZVjxlFe5
+	cw32+z/xHU366npHBpafCbxBtWsNvchMVtLBqv9yPmrMqeBROyoJaI3nL78xDgpd
+	cRorqo+uQ1HWdcM6InEFET6pwkeuAF8/jJRlT12XGgZKKgFQTCkZi4hv7aywkGBE
+	JruPif/wlK0YuPJu6QIDAQABo4HSMIHPMBEGCSsGAQQBg5odAQQEDAIxMDCBlAYJ
+	KwYBBAGDmh0CBIGGDIGDZW1xeF9iYWNrZW5kX3JlZGlzLGVtcXhfYmFja2VuZF9t
+	eXNxbCxlbXF4X2JhY2tlbmRfcGdzcWwsZW1xeF9iYWNrZW5kX21vbmdvLGVtcXhf
+	YmFja2VuZF9jYXNzYSxlbXF4X2JyaWRnZV9rYWZrYSxlbXF4X2JyaWRnZV9yYWJi
+	aXQwEAYJKwYBBAGDmh0DBAMMATEwEQYJKwYBBAGDmh0EBAQMAjEwMA0GCSqGSIb3
+	DQEBBQUAA4IBAQDHUe6+P2U4jMD23u96vxCeQrhc/rXWvpmU5XB8Q/VGnJTmv3yU
+	EPyTFKtEZYVX29z16xoipUE6crlHhETOfezYsm9K0DxF3fNilOLRKkg9VEWcb5hj
+	iL3a2tdZ4sq+h/Z1elIXD71JJBAImjr6BljTIdUCfVtNvxlE8M0D/rKSn2jwzsjI
+	UrW88THMtlz9sb56kmM3JIOoIJoep6xNEajIBnoChSGjtBYFNFwzdwSTCodYkgPu
+	JifqxTKSuwAGSlqxJUwhjWG8ulzL3/pCAYEwlWmd2+nsfotQdiANdaPnez7o0z0s
+	EujOCZMbK8qNfSbyo50q5iIXhz2ZIGl+4hdp
+	-----END CERTIFICATE-----`)
+	license := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx-ee-license",
+			Namespace: "default",
+			Labels: map[string]string{
+				"apps.emqx.io/instance": "emqx",
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{"emqx.lic": Data},
+	}
+
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+						{Name: "reloader"},
+					},
+				},
+			},
+		},
+	}
 	expectSts := &appsv1.StatefulSet{
 		Spec: appsv1.StatefulSetSpec{
 			Template: corev1.PodTemplateSpec{
@@ -1180,8 +1391,7 @@ func TestGenerateLicense(t *testing.T) {
 		},
 	}
 
-	license, sts = generateLicense(enterprise, sts)
-	assert.Equal(t, expect, license)
+	sts = updateLicenseForsts(sts, license)
 	assert.Equal(t, expectSts, sts)
 }
 
