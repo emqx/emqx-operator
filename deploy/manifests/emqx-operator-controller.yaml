@@ -50,7 +50,7 @@ spec:
             description: EmqxBrokerSpec defines the desired state of EmqxBroker
             properties:
               affinity:
-                description: Affinity is a group of affinity scheduling rules.
+                description: If specified, the pod's scheduling constraints
                 properties:
                   nodeAffinity:
                     description: Describes node affinity scheduling rules for the pod.
@@ -513,16 +513,19 @@ spec:
               emqxTemplate:
                 properties:
                   acl:
+                    description: 'ACL defines ACL rules More info: https://www.emqx.io/docs/en/v4.4/advanced/acl.html'
                     items:
                       type: string
                     type: array
                   args:
+                    description: 'Arguments to the entrypoint. The container image''s CMD is used if this is not provided. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell'
                     items:
                       type: string
                     type: array
                   config:
                     additionalProperties:
                       type: string
+                    description: 'Config represents the configurations of EMQX More info: https://www.emqx.io/docs/en/v4.4/configuration/configuration.html'
                     type: object
                   extraVolumeMounts:
                     description: See https://github.com/emqx/emqx-operator/pull/72
@@ -1488,10 +1491,10 @@ spec:
                   image:
                     type: string
                   imagePullPolicy:
-                    description: PullPolicy describes a policy for if/when to pull a container image
+                    description: 'Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images'
                     type: string
                   livenessProbe:
-                    description: Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
+                    description: 'Periodic probe of container liveness. Container will be restarted if the probe fails. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -1593,6 +1596,7 @@ spec:
                         type: integer
                     type: object
                   modules:
+                    description: Modules define functional modules for EMQX broker
                     items:
                       properties:
                         enable:
@@ -1606,7 +1610,7 @@ spec:
                     description: Password for EMQX Dashboard and API
                     type: string
                   readinessProbe:
-                    description: Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
+                    description: 'Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -1708,7 +1712,7 @@ spec:
                         type: integer
                     type: object
                   resources:
-                    description: ResourceRequirements describes the compute resource requirements.
+                    description: 'Compute Resources required by EMQX container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     properties:
                       limits:
                         additionalProperties:
@@ -1730,7 +1734,7 @@ spec:
                         type: object
                     type: object
                   securityContext:
-                    description: PodSecurityContext holds pod-level security attributes and common container settings. Some fields are also present in container.securityContext.  Field values of container.securityContext take precedence over field values of PodSecurityContext.
+                    description: 'SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/'
                     properties:
                       fsGroup:
                         description: "A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod: \n 1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw---- \n If unset, the Kubelet will not modify the ownership and permissions of any volume. Note that this field cannot be set when spec.os.name is windows."
@@ -1818,6 +1822,7 @@ spec:
                         type: object
                     type: object
                   serviceTemplate:
+                    description: ServiceTemplate defines a logical set of ports and a policy by which to access them
                     properties:
                       metadata:
                         properties:
@@ -1959,7 +1964,7 @@ spec:
                         type: object
                     type: object
                   startupProbe:
-                    description: Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
+                    description: 'StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod''s lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -2066,6 +2071,7 @@ spec:
                     type: string
                 type: object
               env:
+                description: List of environment variables to set in the container.
                 items:
                   description: EnvVar represents an environment variable present in a Container.
                   properties:
@@ -2145,7 +2151,7 @@ spec:
                   type: object
                 type: array
               extraContainers:
-                description: Extra Containers to be added to the pod. See https://github.com/emqx/emqx-operator/issues/252
+                description: ExtraContainers represents extra containers to be added to the pod. See https://github.com/emqx/emqx-operator/issues/252
                 items:
                   description: A single application container that you want to run within a pod.
                   properties:
@@ -2925,6 +2931,7 @@ spec:
                   type: object
                 type: array
               imagePullSecrets:
+                description: 'ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                 items:
                   description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
                   properties:
@@ -2934,6 +2941,7 @@ spec:
                   type: object
                 type: array
               initContainers:
+                description: 'List of initialization containers belonging to the pod. Init containers are executed in order prior to containers being started. If any init container fails, the pod is considered to have failed and is handled according to its restartPolicy. The name for an init container or normal container must be unique among all containers. Init containers may not have Lifecycle actions, Readiness probes, Liveness probes, or Startup probes. The resourceRequirements of an init container are taken into account during scheduling by finding the highest request/limit for each resource type, and then using the max of of that value or the sum of the normal containers. Limits are applied to init containers in a similar fashion. Init containers cannot currently be added or removed. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/'
                 items:
                   description: A single application container that you want to run within a pod.
                   properties:
@@ -3717,9 +3725,10 @@ spec:
               nodeSelector:
                 additionalProperties:
                   type: string
+                description: 'NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node''s labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                 type: object
               persistent:
-                description: PersistentVolumeClaimSpec describes the common attributes of storage devices and allows a Source for provider-specific attributes
+                description: Persistent describes the common attributes of storage devices
                 properties:
                   accessModes:
                     description: 'accessModes contains the desired access modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
@@ -3825,6 +3834,7 @@ spec:
                 format: int32
                 type: integer
               toleRations:
+                description: If specified, the pod's tolerations.
                 items:
                   description: The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
                   properties:
@@ -3965,7 +3975,7 @@ spec:
             description: EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
             properties:
               affinity:
-                description: Affinity is a group of affinity scheduling rules.
+                description: If specified, the pod's scheduling constraints
                 properties:
                   nodeAffinity:
                     description: Describes node affinity scheduling rules for the pod.
@@ -4428,16 +4438,19 @@ spec:
               emqxTemplate:
                 properties:
                   acl:
+                    description: 'ACL defines ACL rules More info: https://docs.emqx.com/en/enterprise/v4.4/modules/internal_acl.html#builtin-acl-file-2'
                     items:
                       type: string
                     type: array
                   args:
+                    description: 'Arguments to the entrypoint. The container image''s CMD is used if this is not provided. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell'
                     items:
                       type: string
                     type: array
                   config:
                     additionalProperties:
                       type: string
+                    description: 'Config represents the configurations of EMQX More info: https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html'
                     type: object
                   extraVolumeMounts:
                     description: See https://github.com/emqx/emqx-operator/pull/72
@@ -5403,9 +5416,10 @@ spec:
                   image:
                     type: string
                   imagePullPolicy:
-                    description: PullPolicy describes a policy for if/when to pull a container image
+                    description: 'Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images'
                     type: string
                   license:
+                    description: License for EMQX Enterprise broker
                     properties:
                       data:
                         format: byte
@@ -5414,7 +5428,7 @@ spec:
                         type: string
                     type: object
                   livenessProbe:
-                    description: Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
+                    description: 'Periodic probe of container liveness. Container will be restarted if the probe fails. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -5516,6 +5530,7 @@ spec:
                         type: integer
                     type: object
                   modules:
+                    description: 'Modules define functional modules for EMQX Enterprise broker More info: https://docs.emqx.com/en/enterprise/v4.4/modules/modules.html'
                     items:
                       properties:
                         configs:
@@ -5532,7 +5547,7 @@ spec:
                     description: Password for EMQX Dashboard and API
                     type: string
                   readinessProbe:
-                    description: Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
+                    description: 'Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -5634,7 +5649,7 @@ spec:
                         type: integer
                     type: object
                   resources:
-                    description: ResourceRequirements describes the compute resource requirements.
+                    description: 'Compute Resources required by EMQX container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     properties:
                       limits:
                         additionalProperties:
@@ -5656,7 +5671,7 @@ spec:
                         type: object
                     type: object
                   securityContext:
-                    description: PodSecurityContext holds pod-level security attributes and common container settings. Some fields are also present in container.securityContext.  Field values of container.securityContext take precedence over field values of PodSecurityContext.
+                    description: 'SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/'
                     properties:
                       fsGroup:
                         description: "A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod: \n 1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw---- \n If unset, the Kubelet will not modify the ownership and permissions of any volume. Note that this field cannot be set when spec.os.name is windows."
@@ -5744,6 +5759,7 @@ spec:
                         type: object
                     type: object
                   serviceTemplate:
+                    description: ServiceTemplate defines a logical set of ports and a policy by which to access them
                     properties:
                       metadata:
                         properties:
@@ -5885,7 +5901,7 @@ spec:
                         type: object
                     type: object
                   startupProbe:
-                    description: Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.
+                    description: 'StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod''s lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                     properties:
                       exec:
                         description: Exec specifies the action to take.
@@ -5992,6 +6008,7 @@ spec:
                     type: string
                 type: object
               env:
+                description: List of environment variables to set in the container.
                 items:
                   description: EnvVar represents an environment variable present in a Container.
                   properties:
@@ -6071,7 +6088,7 @@ spec:
                   type: object
                 type: array
               extraContainers:
-                description: Extra Containers to be added to the pod. See https://github.com/emqx/emqx-operator/issues/252
+                description: ExtraContainers represents extra containers to be added to the pod. See https://github.com/emqx/emqx-operator/issues/252
                 items:
                   description: A single application container that you want to run within a pod.
                   properties:
@@ -6851,6 +6868,7 @@ spec:
                   type: object
                 type: array
               imagePullSecrets:
+                description: 'ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                 items:
                   description: LocalObjectReference contains enough information to let you locate the referenced object inside the same namespace.
                   properties:
@@ -6860,6 +6878,7 @@ spec:
                   type: object
                 type: array
               initContainers:
+                description: 'List of initialization containers belonging to the pod. Init containers are executed in order prior to containers being started. If any init container fails, the pod is considered to have failed and is handled according to its restartPolicy. The name for an init container or normal container must be unique among all containers. Init containers may not have Lifecycle actions, Readiness probes, Liveness probes, or Startup probes. The resourceRequirements of an init container are taken into account during scheduling by finding the highest request/limit for each resource type, and then using the max of of that value or the sum of the normal containers. Limits are applied to init containers in a similar fashion. Init containers cannot currently be added or removed. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/'
                 items:
                   description: A single application container that you want to run within a pod.
                   properties:
@@ -7643,9 +7662,10 @@ spec:
               nodeSelector:
                 additionalProperties:
                   type: string
+                description: 'NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node''s labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                 type: object
               persistent:
-                description: PersistentVolumeClaimSpec describes the common attributes of storage devices and allows a Source for provider-specific attributes
+                description: Persistent describes the common attributes of storage devices
                 properties:
                   accessModes:
                     description: 'accessModes contains the desired access modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
@@ -7751,6 +7771,7 @@ spec:
                 format: int32
                 type: integer
               toleRations:
+                description: If specified, the pod's tolerations.
                 items:
                   description: The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
                   properties:
@@ -7881,12 +7902,15 @@ spec:
               config:
                 additionalProperties:
                   type: string
+                description: Config defines the configurations of the EMQX plugins
                 type: object
               pluginName:
+                description: 'More info: https://www.emqx.io/docs/en/v4.4/advanced/plugins.html#list-of-plugins'
                 type: string
               selector:
                 additionalProperties:
                   type: string
+                description: Selector matches the labels of the EMQX
                 type: object
             type: object
           status:
@@ -8250,7 +8274,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.2.4
+        image: emqx/emqx-operator-controller:1.2.5
         livenessProbe:
           httpGet:
             path: /healthz
