@@ -1,6 +1,10 @@
-# emqx-operator
+# EMQX Operator
 
-A Kubernetes Operator for EMQX Broker and EMQX Enterprise
+[![GitHub Release](https://img.shields.io/github/release/emqx/emqx-operator?color=brightgreen)](https://github.com/emqx/emqx-operator/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/emqx/emqx-operator-controller)](https://hub.docker.com/r/emqx/emqx-operator-controller)
+[![Coverage Status](https://coveralls.io/repos/github/emqx/emqx-operator/badge.svg?branch=main)](https://coveralls.io/github/emqx/emqx-operator?branch=main)
+
+A Kubernetes Operator for [EMQX](https://www.emqx.io)
 
 ## Overview
 
