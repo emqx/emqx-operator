@@ -1,6 +1,7 @@
 name: Compatibility Test Suite
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 */6 * * *'
   push:
@@ -33,6 +34,22 @@ jobs:
           tar -zxvf kubebuilder-tools
           sudo mv kubebuilder/ /usr/local/kubebuilder
       - run: make test
+      - name: Install goveralls
+        run: go install github.com/mattn/goveralls@latest
+      - name: Send coverage
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: goveralls -coverprofile=cover.out -service=github -parallel -flagname=go-test-${{ matrix.kubernetes-version }}
+
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        parallel-finished: true
 
   deployment:
     runs-on: ubuntu-latest
