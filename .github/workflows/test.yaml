@@ -74,6 +74,7 @@ jobs:
       with:
         github-token: ${{ secrets.github_token }}
         parallel-finished: true
+        git-commit: ${{ github.sha }}
 
   deployment:
     runs-on: ubuntu-latest
