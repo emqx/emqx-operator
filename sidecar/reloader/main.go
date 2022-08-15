@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -18,15 +19,12 @@ import (
 )
 
 const (
-	method = "PUT"
-	host   = "localhost"
+	host = "localhost"
 )
-
-var configFilePath = "/mounted/plugins/etc"
 
 var fileCheck = make(map[string][]byte)
 
-var configFileList = []string{
+var pluginConfigList = []string{
 	"emqx_auth_http.conf",
 	"emqx_auth_jwt.conf",
 	"emqx_auth_ldap.conf",
@@ -74,14 +72,22 @@ var configFileList = []string{
 }
 
 func main() {
-	var username string
-	var password string
+	var username, password string
+	var pluginConfigDir, licenseFilePath string
 	var port int
 
 	flag.StringVar(&username, "u", "admin", "username")
 	flag.StringVar(&password, "p", "public", "password")
 	flag.IntVar(&port, "P", 8081, "port")
 	flag.Parse()
+
+	if os.Getenv("EMQX_PLUGINS__ETC_DIR") != "" {
+		pluginConfigDir = os.Getenv("EMQX_PLUGINS__ETC_DIR")
+	}
+
+	if os.Getenv("EMQX_LICENSE__FILE") != "" {
+		licenseFilePath = os.Getenv("EMQX_LICENSE__FILE")
+	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -106,47 +112,75 @@ func main() {
 					if err != nil {
 						log.Fatal(err)
 					}
+					loadUrl := url.URL{
+						Scheme: "http",
+						Host:   fmt.Sprintf("%s:%d", host, port),
+					}
 					if sha, ok := fileCheck[event.Name]; ok {
 						if !bytes.Equal(sha, getMD5(event.Name)) {
 							log.Println("file changed:", event.Name)
 							fileCheck[event.Name] = getMD5(event.Name)
-
 							_, fileName := filepath.Split(event.Name)
-							name := strings.TrimSuffix(fileName, ".conf")
-
-							url := url.URL{
-								Scheme: "http",
-								Host:   fmt.Sprintf("%s:%d", host, port),
-								Path:   fmt.Sprintf("/api/v4/plugins/%s/reload", name),
+							if event.Name == licenseFilePath {
+								bytes, err := os.ReadFile(event.Name)
+								if err != nil {
+									log.Fatal(err)
+								}
+								/*
+									curl -X POST --basic -u admin:public -d @<(jq -sR '{license: .}' < path/to/new.license)
+									"http://localhost:8081/api/v4/license/upload"
+								*/
+								loadUrl.Path = "/api/v4/license/upload"
+								license := map[string]string{"license": string(bytes)}
+								body, err := json.Marshal(license)
+								if err != nil {
+									log.Fatal(err)
+								}
+								requestWebhook(loadUrl, "POST", body, username, password)
+							} else {
+								pluginName := strings.TrimSuffix(fileName, ".conf")
+								/*
+									curl -i --basic -u admin:public -X PUT
+									"http://localhost:8081/api/v4/plugins/emqx_delayed_publish/reload"
+								*/
+								loadUrl.Path = fmt.Sprintf("/api/v4/plugins/%s/reload", pluginName)
+								requestWebhook(loadUrl, "PUT", nil, username, password)
 							}
-
-							requestWebhook(url, username, password)
 						}
 					}
+
 				}
 
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Println("error:", err)
+				log.Println("watcher error:", err)
 			}
 		}
 	}()
 
-	for _, file := range configFileList {
-		if os.Getenv("EMQX_PLUGINS__ETC_DIR") != "" {
-			configFilePath = os.Getenv("EMQX_PLUGINS__ETC_DIR")
+	// plugin config
+	for _, file := range pluginConfigList {
+		fullFile := filepath.Join(pluginConfigDir, file)
+		if _, err := os.Stat(fullFile); err == nil {
+			log.Printf("add file %s to watcher\n", fullFile)
+			err = watcher.Add(fullFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fileCheck[fullFile] = getMD5(fullFile)
 		}
-		fullFile := filepath.Join(configFilePath, file)
-		log.Printf("watching config file: %q", fullFile)
+	}
 
-		err = watcher.Add(fullFile)
+	// license file
+	if _, err := os.Stat(licenseFilePath); err == nil {
+		log.Printf("add file %s to watcher\n", licenseFilePath)
+		err = watcher.Add(licenseFilePath)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		fileCheck[fullFile] = getMD5(fullFile)
+		fileCheck[licenseFilePath] = getMD5(licenseFilePath)
 	}
 
 	done := make(chan bool)
@@ -168,8 +202,8 @@ func getMD5(file string) []byte {
 	return h.Sum(nil)
 }
 
-func requestWebhook(url url.URL, username, password string) {
-	req, err := http.NewRequest(method, url.String(), nil)
+func requestWebhook(url url.URL, method string, bodys []byte, username, password string) {
+	req, err := http.NewRequest(method, url.String(), bytes.NewReader(bodys))
 	if err != nil {
 		log.Println("http new request error:", err)
 		return
