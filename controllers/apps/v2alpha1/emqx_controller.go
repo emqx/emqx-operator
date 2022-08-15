@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	emperror "emperror.dev/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -80,19 +82,14 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		return ctrl.Result{}, err
 	}
-	if instance.Status.Conditions == nil {
-		instance.Status.CurrentImage = instance.Spec.Image
-		instance.Status.OriginalImage = instance.Spec.Image
-		condition := appsv2alpha1.NewCondition(
-			appsv2alpha1.ClusterCreating,
-			corev1.ConditionTrue,
-			"ClusterCreating",
-			"",
-		)
-		instance.Status.SetCondition(*condition)
-		if err := r.Status().Update(ctx, instance); err != nil {
-			return ctrl.Result{}, err
-		}
+
+	// Update EMQX Custom Resource's status
+	instance, err := r.updateStatus(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.Status().Update(ctx, instance); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Create Resources
@@ -101,15 +98,6 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Update EMQX Custom Resource's status
-	instance, err = r.updateStatus(instance)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.Status().Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -127,10 +115,6 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.Object, error) {
-	deploy := generateDeployment(instance)
-	if instance.Status.OriginalImage != "" {
-		deploy.Spec.Template.Spec.Containers[0].Image = instance.Status.OriginalImage
-	}
 	dashboardSvc := generateDashboardService(instance)
 	headlessSvc := generateHeadlessService(instance)
 	sts := generateStatefulSet(instance)
@@ -152,8 +136,12 @@ func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.
 		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
 	}
 
-	resources := []client.Object{deploy, dashboardSvc, headlessSvc, sts}
-	if instance.Status.IsRunning() {
+	resources := []client.Object{dashboardSvc, headlessSvc, sts}
+
+	if instance.Status.IsRunning() || instance.Status.IsCoreNodesReady() {
+		deploy := generateDeployment(instance)
+		resources = append(resources, deploy)
+
 		listenerPorts, err := r.getAllListenersByAPI(sts)
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
@@ -166,13 +154,16 @@ func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.
 }
 
 func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha1.EMQX, error) {
-	if instance.Status.CurrentImage != instance.Spec.Image {
+	var emqxNodes []appsv2alpha1.EmqxNode
+	var storeSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
+
+	if instance.Status.Conditions == nil {
 		instance.Status.CurrentImage = instance.Spec.Image
 		condition := appsv2alpha1.NewCondition(
-			appsv2alpha1.ClusterCoreUpdating,
+			appsv2alpha1.ClusterCreating,
 			corev1.ConditionTrue,
-			"ClusterCoreUpdating",
-			"Updating core node in cluster",
+			"ClusterCreating",
+			"Creating EMQX cluster",
 		)
 		instance.Status.SetCondition(*condition)
 		return instance, nil
@@ -187,7 +178,12 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	instance.Status.ReadyCoreReplicas = int32(0)
 	instance.Status.ReadyReplicantReplicas = int32(0)
 
-	emqxNodes, err := r.getNodeStatuesByAPI(instance)
+	err := r.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-core", instance.Name), Namespace: instance.Namespace}, storeSts)
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to get store statefulSet")
+	}
+
+	emqxNodes, err = r.getNodeStatuesByAPI(storeSts)
 	if err != nil {
 		condition := appsv2alpha1.NewCondition(
 			appsv2alpha1.ClusterRunning,
@@ -198,6 +194,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		instance.Status.SetCondition(*condition)
 		return instance, err
 	}
+
 	if emqxNodes != nil {
 		instance.Status.EmqxNodes = emqxNodes
 
@@ -214,37 +211,56 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	}
 
 	switch instance.Status.Conditions[0].Type {
-	case appsv2alpha1.ClusterCoreUpdating:
-		if instance.Status.ReadyCoreReplicas == instance.Status.CoreReplicas {
-			instance.Status.OriginalImage = instance.Status.CurrentImage
-			condition := appsv2alpha1.NewCondition(
-				appsv2alpha1.ClusterReplicantUpdating,
-				corev1.ConditionTrue,
-				"ClusterReplicantUpdating",
-				"Updating replicant node in cluster",
-			)
-
-			instance.Status.SetCondition(*condition)
-		}
 	default:
-		var condition *appsv2alpha1.Condition
-		if instance.Status.CoreReplicas == instance.Status.ReadyCoreReplicas &&
+		if instance.Status.CurrentImage != instance.Spec.Image {
+			instance.Status.CurrentImage = instance.Spec.Image
+			condition := appsv2alpha1.NewCondition(
+				appsv2alpha1.ClusterCoreUpdating,
+				corev1.ConditionTrue,
+				"ClusterCoreUpdating",
+				"Updating core nodes in cluster",
+			)
+			instance.Status.SetCondition(*condition)
+		} else if storeSts.Status.UpdatedReplicas == storeSts.Status.Replicas &&
+			storeSts.Status.UpdateRevision == storeSts.Status.CurrentRevision &&
+			instance.Status.CoreReplicas == instance.Status.ReadyCoreReplicas &&
 			instance.Status.ReplicantReplicas == instance.Status.ReadyReplicantReplicas {
-			condition = appsv2alpha1.NewCondition(
+			condition := appsv2alpha1.NewCondition(
 				appsv2alpha1.ClusterRunning,
 				corev1.ConditionTrue,
 				"ClusterReady",
-				"All node are ready",
+				"All nodes are ready",
 			)
-		} else {
-			condition = appsv2alpha1.NewCondition(
-				appsv2alpha1.ClusterRunning,
-				corev1.ConditionFalse,
-				"ClusterNotReady",
-				"Some node not ready",
-			)
+			instance.Status.SetCondition(*condition)
 		}
+	case appsv2alpha1.ClusterCreating:
+		instance.Status.CurrentImage = instance.Spec.Image
+		condition := appsv2alpha1.NewCondition(
+			appsv2alpha1.ClusterCoreUpdating,
+			corev1.ConditionTrue,
+			"ClusterCoreUpdating",
+			"Updating core nodes in cluster",
+		)
 		instance.Status.SetCondition(*condition)
+	case appsv2alpha1.ClusterCoreUpdating:
+		// statefulSet already updated
+		if storeSts.Spec.Template.Spec.Containers[0].Image == instance.Spec.Image &&
+			storeSts.Status.ObservedGeneration == storeSts.Generation {
+			// statefulSet is ready
+			if storeSts.Status.UpdateRevision == storeSts.Status.CurrentRevision &&
+				storeSts.Status.ReadyReplicas == storeSts.Status.Replicas {
+				// core nodes is ready
+				if instance.Status.ReadyCoreReplicas == instance.Status.CoreReplicas {
+					condition := appsv2alpha1.NewCondition(
+						appsv2alpha1.ClusterCoreReady,
+						corev1.ConditionTrue,
+						"ClusterCoreReady",
+						"Core nodes is ready",
+					)
+					instance.Status.SetCondition(*condition)
+				}
+			}
+		}
 	}
 	return instance, nil
 }

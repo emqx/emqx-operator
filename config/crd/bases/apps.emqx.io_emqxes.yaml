@@ -13248,8 +13248,6 @@ spec:
                       type: string
                   type: object
                 type: array
-              originalImage:
-                type: string
               readyCoreReplicas:
                 format: int32
                 type: integer

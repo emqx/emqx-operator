@@ -42,6 +42,12 @@ var _ webhook.Defaulter = &EMQX{}
 func (r *EMQX) Default() {
 	emqxlog.Info("default", "name", r.Name)
 
+	if r.Labels == nil {
+		r.Labels = make(map[string]string)
+	}
+	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	r.Labels["apps.emqx.io/instance"] = r.GetName()
+
 	if r.Spec.CoreTemplate.Labels == nil {
 		r.Spec.CoreTemplate.Labels = make(map[string]string)
 	}
