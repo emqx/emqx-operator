@@ -154,7 +154,7 @@ func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.
 }
 
 func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha1.EMQX, error) {
-	var emqxNodes []appsv2alpha1.EmqxNode
+	var emqxNodes []appsv2alpha1.EMQXNode
 	var storeSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
 
 	if instance.Status.Conditions == nil {
@@ -196,7 +196,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	}
 
 	if emqxNodes != nil {
-		instance.Status.EmqxNodes = emqxNodes
+		instance.Status.EMQXNodes = emqxNodes
 
 		for _, node := range emqxNodes {
 			if strings.ToLower(node.NodeStatus) == "running" {
@@ -265,7 +265,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	return instance, nil
 }
 
-func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EmqxNode, error) {
+func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNode, error) {
 	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, "api/v5/nodes")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get listeners: %v", err)
@@ -274,7 +274,7 @@ func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.
 		return nil, fmt.Errorf("failed to get listener, status : %s, body: %s", resp.Status, body)
 	}
 
-	nodeStatuses := []appsv2alpha1.EmqxNode{}
+	nodeStatuses := []appsv2alpha1.EMQXNode{}
 	if err := json.Unmarshal(body, &nodeStatuses); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
 	}
