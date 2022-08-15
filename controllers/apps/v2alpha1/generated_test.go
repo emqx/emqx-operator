@@ -224,6 +224,11 @@ func TestGenerateStatefulSet(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
+			Annotations: map[string]string{
+				"apps.emqx.io/managed-by":                          "emqx-operator",
+				"apps.emqx.io/instance":                            "emqx",
+				"kubectl.kubernetes.io/last-applied-configuration": "fake",
+			},
 		},
 		Spec: appsv2alpha1.EMQXSpec{
 			Image:           "emqx/emqx:5.0",
@@ -306,7 +311,8 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Namespace: "emqx",
 			Labels:    coreLabels,
 			Annotations: map[string]string{
-				"foo": "bar",
+				"apps.emqx.io/managed-by": "emqx-operator",
+				"apps.emqx.io/instance":   "emqx",
 			},
 		},
 		Spec: appsv1.StatefulSetSpec{
@@ -315,12 +321,13 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: coreLabels,
 			},
-			PodManagementPolicy: appsv1.OrderedReadyPodManagement,
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: coreLabels,
 					Annotations: map[string]string{
-						"foo": "bar",
+						"foo":                            "bar",
+						"apps.emqx.io/manage-containers": "emqx,extra",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -472,6 +479,11 @@ func TestGenerateDeployment(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
+			Annotations: map[string]string{
+				"apps.emqx.io/managed-by":                          "emqx-operator",
+				"apps.emqx.io/instance":                            "emqx",
+				"kubectl.kubernetes.io/last-applied-configuration": "fake",
+			},
 		},
 		Spec: appsv2alpha1.EMQXSpec{
 			Image:           "emqx/emqx:5.0",
@@ -555,7 +567,8 @@ func TestGenerateDeployment(t *testing.T) {
 			Namespace: "emqx",
 			Labels:    replicantLabels,
 			Annotations: map[string]string{
-				"foo": "bar",
+				"apps.emqx.io/managed-by": "emqx-operator",
+				"apps.emqx.io/instance":   "emqx",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
