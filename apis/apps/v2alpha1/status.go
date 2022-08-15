@@ -49,7 +49,7 @@ type Condition struct {
 	LastUpdateAt   metav1.Time `json:"-"`
 }
 
-type EmqxNode struct {
+type EMQXNode struct {
 	// EMQX node name, example: emqx@127.0.0.1
 	Node string `json:"node,omitempty"`
 	// EMQX node status, example: Running
@@ -69,7 +69,7 @@ type EMQXStatus struct {
 	ReadyCoreReplicas      int32       `json:"readyCoreReplicas,omitempty"`
 	ReplicantReplicas      int32       `json:"replicantReplicas,omitempty"`
 	ReadyReplicantReplicas int32       `json:"readyReplicantReplicas,omitempty"`
-	EmqxNodes              []EmqxNode  `json:"emqxNodes,omitempty"`
+	EMQXNodes              []EMQXNode  `json:"emqxNodes,omitempty"`
 	Conditions             []Condition `json:"conditions,omitempty"`
 }
 
