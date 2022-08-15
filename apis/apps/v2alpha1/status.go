@@ -27,22 +27,10 @@ import (
 type ConditionType string
 
 const (
-	ClusterCreating ConditionType = "Creating"
-	ClusterCreated  ConditionType = "Created"
-
-	ClusterCoreCrating ConditionType = "CoreNodesCreating"
-	ClusterCoreCreated ConditionType = "CoreNodesCreated"
-
+	ClusterCreating     ConditionType = "Creating"
 	ClusterCoreUpdating ConditionType = "CoreNodesUpdating"
-	ClusterCoreUpdated  ConditionType = "CoreNodesUpdated"
-
-	ClusterReplicantCreating ConditionType = "ReplicantNodesUpdating"
-	ClusterReplicantCreated  ConditionType = "ReplicantNodesUpdated"
-
-	ClusterReplicantUpdating ConditionType = "ReplicantNodesUpdating"
-	ClusterReplicantUpdated  ConditionType = "ReplicantNodesUpdated"
-
-	ClusterRunning ConditionType = "Running"
+	ClusterCoreReady    ConditionType = "CoreNodesReady"
+	ClusterRunning      ConditionType = "Running"
 )
 
 type Condition struct {
@@ -77,7 +65,6 @@ type EmqxNode struct {
 // EMQXStatus defines the observed state of EMQX
 type EMQXStatus struct {
 	CurrentImage           string      `json:"currentImage,omitempty"`
-	OriginalImage          string      `json:"originalImage,omitempty"`
 	CoreReplicas           int32       `json:"coreReplicas,omitempty"`
 	ReadyCoreReplicas      int32       `json:"readyCoreReplicas,omitempty"`
 	ReplicantReplicas      int32       `json:"replicantReplicas,omitempty"`
@@ -101,10 +88,20 @@ func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason,
 	}
 }
 
-func (s *EMQXStatus) IsCreated() bool {
+func (s *EMQXStatus) IsCreating() bool {
 	if len(s.Conditions) > 0 {
 		cond := s.Conditions[0]
 		if cond.Type == ClusterCreating && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *EMQXStatus) IsCoreNodesReady() bool {
+	if len(s.Conditions) > 0 {
+		cond := s.Conditions[0]
+		if cond.Type == ClusterCoreReady && cond.Status == corev1.ConditionTrue {
 			return true
 		}
 	}

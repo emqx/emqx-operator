@@ -20,12 +20,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	"github.com/emqx/emqx-operator/pkg/handler"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -119,6 +121,78 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 }
 
 func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
+	podTemplate := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      instance.Spec.CoreTemplate.Labels,
+			Annotations: instance.Spec.CoreTemplate.Annotations,
+		},
+		Spec: corev1.PodSpec{
+			ImagePullSecrets: instance.Spec.ImagePullSecrets,
+			SecurityContext:  instance.Spec.SecurityContext,
+			Affinity:         instance.Spec.CoreTemplate.Spec.Affinity,
+			Tolerations:      instance.Spec.CoreTemplate.Spec.ToleRations,
+			NodeName:         instance.Spec.CoreTemplate.Spec.NodeName,
+			NodeSelector:     instance.Spec.CoreTemplate.Spec.NodeSelector,
+			InitContainers:   instance.Spec.CoreTemplate.Spec.InitContainers,
+			Containers: append([]corev1.Container{
+				{
+					Name:            EMQXContainerName,
+					Image:           instance.Spec.Image,
+					ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
+					Env: []corev1.EnvVar{
+						{
+							Name:  "EMQX_NODE__DB_ROLE",
+							Value: "core",
+						},
+						{
+							Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
+							Value: "dns",
+						},
+						{
+							Name:  "EMQX_CLUSTER__DNS__NAME",
+							Value: fmt.Sprintf("%s-headless.%s.svc.cluster.local", instance.Name, instance.Namespace),
+						},
+						{
+							Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
+							Value: "srv",
+						},
+						{
+							Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
+							Value: "hostname",
+						},
+						{
+							Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
+							Value: instance.Namespace,
+						},
+					},
+					Args:            instance.Spec.CoreTemplate.Spec.Args,
+					Resources:       instance.Spec.CoreTemplate.Spec.Resources,
+					ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
+					LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
+					StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
+					SecurityContext: instance.Spec.CoreTemplate.Spec.SecurityContext,
+					VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
+						Name:      fmt.Sprintf("%s-core-data", instance.Name),
+						MountPath: "/opt/emqx/data",
+					}),
+				},
+			}, instance.Spec.CoreTemplate.Spec.ExtraContainers...),
+			Volumes: instance.Spec.CoreTemplate.Spec.ExtraVolumes,
+		},
+	}
+	podAnnotation := podTemplate.ObjectMeta.DeepCopy().Annotations
+	if podAnnotation == nil {
+		podAnnotation = make(map[string]string)
+	}
+	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(podTemplate.Spec.Containers)
+	podTemplate.Annotations = podAnnotation
+
+	annotations := instance.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -128,7 +202,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Name:        fmt.Sprintf("%s-core", instance.Name),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.Spec.CoreTemplate.Labels,
-			Annotations: instance.Spec.CoreTemplate.Annotations,
+			Annotations: annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: fmt.Sprintf("%s-headless", instance.Name),
@@ -136,66 +210,8 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: instance.Spec.CoreTemplate.Labels,
 			},
-			PodManagementPolicy: appsv1.OrderedReadyPodManagement,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      instance.Spec.CoreTemplate.Labels,
-					Annotations: instance.Spec.CoreTemplate.Annotations,
-				},
-				Spec: corev1.PodSpec{
-					ImagePullSecrets: instance.Spec.ImagePullSecrets,
-					SecurityContext:  instance.Spec.SecurityContext,
-					Affinity:         instance.Spec.CoreTemplate.Spec.Affinity,
-					Tolerations:      instance.Spec.CoreTemplate.Spec.ToleRations,
-					NodeName:         instance.Spec.CoreTemplate.Spec.NodeName,
-					NodeSelector:     instance.Spec.CoreTemplate.Spec.NodeSelector,
-					InitContainers:   instance.Spec.CoreTemplate.Spec.InitContainers,
-					Containers: append([]corev1.Container{
-						{
-							Name:            EMQXContainerName,
-							Image:           instance.Spec.Image,
-							ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
-							Env: []corev1.EnvVar{
-								{
-									Name:  "EMQX_NODE__DB_ROLE",
-									Value: "core",
-								},
-								{
-									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
-									Value: "dns",
-								},
-								{
-									Name:  "EMQX_CLUSTER__DNS__NAME",
-									Value: fmt.Sprintf("%s-headless.%s.svc.cluster.local", instance.Name, instance.Namespace),
-								},
-								{
-									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
-									Value: "srv",
-								},
-								{
-									Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
-									Value: "hostname",
-								},
-								{
-									Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
-									Value: instance.Namespace,
-								},
-							},
-							Args:            instance.Spec.CoreTemplate.Spec.Args,
-							Resources:       instance.Spec.CoreTemplate.Spec.Resources,
-							ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
-							LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
-							StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
-							SecurityContext: instance.Spec.CoreTemplate.Spec.SecurityContext,
-							VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
-								Name:      fmt.Sprintf("%s-core-data", instance.Name),
-								MountPath: "/opt/emqx/data",
-							}),
-						},
-					}, instance.Spec.CoreTemplate.Spec.ExtraContainers...),
-					Volumes: instance.Spec.CoreTemplate.Spec.ExtraVolumes,
-				},
-			},
+			PodManagementPolicy: appsv1.ParallelPodManagement,
+			Template:            podTemplate,
 		},
 	}
 	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.Persistent).IsZero() {
@@ -235,6 +251,12 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 	}
 	coreNodesStr, _ := json.Marshal(coreNodes)
 
+	annotations := instance.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -244,7 +266,7 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 			Name:        fmt.Sprintf("%s-replicant", instance.Name),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.Spec.ReplicantTemplate.Labels,
-			Annotations: instance.Spec.ReplicantTemplate.Annotations,
+			Annotations: annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: instance.Spec.ReplicantTemplate.Spec.Replicas,
@@ -330,4 +352,12 @@ func mergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort
 	}
 
 	return result
+}
+
+func generateAnnotationByContainers(containers []corev1.Container) string {
+	containerNames := []string{}
+	for _, c := range containers {
+		containerNames = append(containerNames, c.Name)
+	}
+	return strings.Join(containerNames, ",")
 }
