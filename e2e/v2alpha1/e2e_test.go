@@ -109,10 +109,10 @@ var _ = Describe("E2E Test", func() {
 
 			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.4"))
 			Expect(instance.Status.EMQXNodes).Should(HaveLen(3))
-			Expect(instance.Status.CoreReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReadyCoreReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReplicantReplicas).Should(Equal(int32(0)))
-			Expect(instance.Status.ReadyReplicantReplicas).Should(Equal(int32(0)))
+			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(0)))
+			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(0)))
 		})
 	})
 
@@ -146,10 +146,10 @@ var _ = Describe("E2E Test", func() {
 
 			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.4"))
 			Expect(instance.Status.EMQXNodes).Should(HaveLen(6))
-			Expect(instance.Status.CoreReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReadyCoreReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReplicantReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReadyReplicantReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(3)))
 		})
 	})
 
@@ -194,10 +194,10 @@ var _ = Describe("E2E Test", func() {
 
 			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.3"))
 			Expect(instance.Status.EMQXNodes).Should(HaveLen(6))
-			Expect(instance.Status.CoreReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReadyCoreReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReplicantReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReadyReplicantReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(3)))
 		})
 	})
 

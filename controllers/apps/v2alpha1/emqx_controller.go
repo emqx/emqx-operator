@@ -169,14 +169,14 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		return instance, nil
 	}
 
-	instance.Status.CoreReplicas = *instance.Spec.CoreTemplate.Spec.Replicas
+	instance.Status.CoreNodeReplicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	if isExistReplicant(instance) {
-		instance.Status.ReplicantReplicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
+		instance.Status.ReplicantNodeReplicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 	} else {
-		instance.Status.ReplicantReplicas = int32(0)
+		instance.Status.ReplicantNodeReplicas = int32(0)
 	}
-	instance.Status.ReadyCoreReplicas = int32(0)
-	instance.Status.ReadyReplicantReplicas = int32(0)
+	instance.Status.CoreNodeReadyReplicas = int32(0)
+	instance.Status.ReplicantNodeReadyReplicas = int32(0)
 
 	err := r.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-core", instance.Name), Namespace: instance.Namespace}, storeSts)
 	if err != nil {
@@ -201,10 +201,10 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		for _, node := range emqxNodes {
 			if strings.ToLower(node.NodeStatus) == "running" {
 				if node.Role == "core" {
-					instance.Status.ReadyCoreReplicas++
+					instance.Status.CoreNodeReadyReplicas++
 				}
 				if node.Role == "replicant" {
-					instance.Status.ReadyReplicantReplicas++
+					instance.Status.ReplicantNodeReadyReplicas++
 				}
 			}
 		}
@@ -223,8 +223,8 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 			instance.Status.SetCondition(*condition)
 		} else if storeSts.Status.UpdatedReplicas == storeSts.Status.Replicas &&
 			storeSts.Status.UpdateRevision == storeSts.Status.CurrentRevision &&
-			instance.Status.CoreReplicas == instance.Status.ReadyCoreReplicas &&
-			instance.Status.ReplicantReplicas == instance.Status.ReadyReplicantReplicas {
+			instance.Status.CoreNodeReplicas == instance.Status.CoreNodeReadyReplicas &&
+			instance.Status.ReplicantNodeReplicas == instance.Status.ReplicantNodeReadyReplicas {
 			condition := appsv2alpha1.NewCondition(
 				appsv2alpha1.ClusterRunning,
 				corev1.ConditionTrue,
@@ -250,7 +250,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 			if storeSts.Status.UpdateRevision == storeSts.Status.CurrentRevision &&
 				storeSts.Status.ReadyReplicas == storeSts.Status.Replicas {
 				// core nodes is ready
-				if instance.Status.ReadyCoreReplicas == instance.Status.CoreReplicas {
+				if instance.Status.CoreNodeReadyReplicas == instance.Status.CoreNodeReplicas {
 					condition := appsv2alpha1.NewCondition(
 						appsv2alpha1.ClusterCoreReady,
 						corev1.ConditionTrue,
