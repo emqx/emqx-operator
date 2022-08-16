@@ -112,10 +112,6 @@ func checkDefaulting(emqx Emqx) {
 
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("log.to", "console"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("name", emqx.GetName()))
-	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.tcp.external", "1883"))
-	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.ssl.external", "8883"))
-	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.ws.external", "8083"))
-	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.wss.external", "8084"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.discovery", "dns"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.dns.type", "srv"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.dns.app", emqx.GetName()))

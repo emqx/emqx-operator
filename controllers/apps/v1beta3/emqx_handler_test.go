@@ -210,23 +210,6 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 									Value: "public",
 								},
 								{
-									Name:  "EMQX_LISTENER__SSL__EXTERNAL",
-									Value: "8883",
-								},
-								{
-									Name:  "EMQX_LISTENER__TCP__EXTERNAL",
-									Value: "1883",
-								},
-								{
-									Name:  "EMQX_LISTENER__WSS__EXTERNAL",
-									Value: "8084",
-								},
-
-								{
-									Name:  "EMQX_LISTENER__WS__EXTERNAL",
-									Value: "8083",
-								},
-								{
 									Name:  "EMQX_LOG__LEVEL",
 									Value: "debug",
 								},
