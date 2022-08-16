@@ -64,13 +64,20 @@ type EMQXNode struct {
 
 // EMQXStatus defines the observed state of EMQX
 type EMQXStatus struct {
-	CurrentImage           string      `json:"currentImage,omitempty"`
-	CoreReplicas           int32       `json:"coreReplicas,omitempty"`
-	ReadyCoreReplicas      int32       `json:"readyCoreReplicas,omitempty"`
-	ReplicantReplicas      int32       `json:"replicantReplicas,omitempty"`
-	ReadyReplicantReplicas int32       `json:"readyReplicantReplicas,omitempty"`
-	EMQXNodes              []EMQXNode  `json:"emqxNodes,omitempty"`
-	Conditions             []Condition `json:"conditions,omitempty"`
+	// CurrentImage, indicates the image of the EMQX used to generate Pods in the
+	CurrentImage string `json:"currentImage,omitempty"`
+	// CoreNodeReplicas is the number of EMQX core node Pods created by the EMQX controller.
+	CoreNodeReplicas int32 `json:"coreNodeReplicas,omitempty"`
+	// CoreNodeReadyReplicas is the number of EMQX core node Pods created for this EMQX Custom Resource with a Ready Condition.
+	CoreNodeReadyReplicas int32 `json:"coreNodeReadyReplicas,omitempty"`
+	// ReplicantNodeReplicas is the number of EMQX replicant node Pods created by the EMQX controller.
+	ReplicantNodeReplicas int32 `json:"replicantNodeReplicas,omitempty"`
+	// ReplicantNodeReadyReplicas is the number of EMQX replicant node Pods created for this EMQX Custom Resource with a Ready Condition.
+	ReplicantNodeReadyReplicas int32 `json:"replicantNodeReadyReplicas,omitempty"`
+	// EMQX nodes info
+	EMQXNodes []EMQXNode `json:"emqxNodes,omitempty"`
+	// Represents the latest available observations of a EMQX Custom Resource current state.
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // EMQX Status

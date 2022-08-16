@@ -13196,6 +13196,8 @@ spec:
             description: EMQXStatus defines the observed state of EMQX
             properties:
               conditions:
+                description: Represents the latest available observations of a EMQX
+                  Custom Resource current state.
                 items:
                   properties:
                     lastTransitionTime:
@@ -13223,12 +13225,22 @@ spec:
                   - type
                   type: object
                 type: array
-              coreReplicas:
+              coreNodeReadyReplicas:
+                description: CoreNodeReadyReplicas is the number of EMQX core node
+                  Pods created for this EMQX Custom Resource with a Ready Condition.
+                format: int32
+                type: integer
+              coreNodeReplicas:
+                description: CoreNodeReplicas is the number of EMQX core node Pods
+                  created by the EMQX controller.
                 format: int32
                 type: integer
               currentImage:
+                description: CurrentImage, indicates the image of the EMQX used to
+                  generate Pods in the
                 type: string
               emqxNodes:
+                description: EMQX nodes info
                 items:
                   properties:
                     node:
@@ -13248,13 +13260,14 @@ spec:
                       type: string
                   type: object
                 type: array
-              readyCoreReplicas:
+              replicantNodeReadyReplicas:
+                description: ReplicantNodeReadyReplicas is the number of EMQX replicant
+                  node Pods created for this EMQX Custom Resource with a Ready Condition.
                 format: int32
                 type: integer
-              readyReplicantReplicas:
-                format: int32
-                type: integer
-              replicantReplicas:
+              replicantNodeReplicas:
+                description: ReplicantNodeReplicas is the number of EMQX replicant
+                  node Pods created by the EMQX controller.
                 format: int32
                 type: integer
             type: object
