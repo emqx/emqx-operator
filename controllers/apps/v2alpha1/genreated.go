@@ -31,6 +31,24 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
+func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        fmt.Sprintf("%s-bootstrap-user", instance.Name),
+			Namespace:   instance.Namespace,
+			Labels:      instance.Labels,
+			Annotations: instance.Annotations,
+		},
+		StringData: map[string]string{
+			"bootstrap_user": "emqx:emqx",
+		},
+	}
+}
+
 func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 	headlessSvc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -336,6 +354,64 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 		},
 	}
 	return deploy
+}
+
+func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *corev1.Secret) *appsv1.StatefulSet {
+	isNotExistVolume := func() bool {
+		for _, v := range sts.Spec.Template.Spec.Volumes {
+			if v.Name == "bootstrap-user" {
+				return false
+			}
+		}
+		return true
+	}
+
+	isNotExistVolumeVolumeMount := func() bool {
+		for _, v := range sts.Spec.Template.Spec.Containers[0].VolumeMounts {
+			if v.Name == "bootstrap-user" {
+				return false
+			}
+		}
+		return true
+	}
+
+	isNotExistEnv := func() bool {
+		for _, v := range sts.Spec.Template.Spec.Containers[0].Env {
+			if v.Name == "EMQX_DASHBOARD__BOOTSTRAP_USER" {
+				return false
+			}
+		}
+		return true
+	}
+
+	if isNotExistVolume() {
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "bootstrap-user",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: bootstrapUser.Name,
+				},
+			},
+		})
+	}
+
+	if isNotExistVolumeVolumeMount() {
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      "bootstrap-user",
+			MountPath: "/opt/emqx/data/bootstrap_user",
+			SubPath:   "bootstrap_user",
+			ReadOnly:  true,
+		})
+	}
+
+	if isNotExistEnv() {
+		sts.Spec.Template.Spec.Containers[0].Env = append(sts.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "EMQX_DASHBOARD__BOOTSTRAP_USER",
+			Value: "/opt/emqx/data/bootstrap_user",
+		})
+	}
+
+	return sts
 }
 
 func mergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
