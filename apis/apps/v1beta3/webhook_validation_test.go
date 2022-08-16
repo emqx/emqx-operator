@@ -63,6 +63,31 @@ var _ = Describe("EMQX Enterprise", func() {
 	})
 })
 
+var _ = Describe("EMQX Enterprise License", func() {
+	Context("Check EMQX Enterprise License", func() {
+		emqxEnterprise := &EmqxEnterprise{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "enterprise",
+				Namespace: "default",
+			},
+			Spec: EmqxEnterpriseSpec{
+				EmqxTemplate: EmqxEnterpriseTemplate{
+					License: License{
+						SecretName: "license",
+					},
+				},
+			},
+		}
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(context.Background(), emqxEnterprise)).Should(Succeed())
+		})
+		It("Check validation", func() {
+			checkLicenseValidation(emqxEnterprise)
+		})
+	})
+})
+
 var _ = Describe("EMQX Plugin", func() {
 	Context("Check EMQX Plugin", func() {
 		namespace := "default"
@@ -178,4 +203,39 @@ func checkValidation(emqx Emqx) {
 
 	obj.SetUsername("test")
 	Expect(k8sClient.Update(context.Background(), obj)).ShouldNot(Succeed())
+}
+
+func checkLicenseValidation(emqx *EmqxEnterprise) {
+	license := emqx.GetLicense()
+
+	license.Data = []byte("test")
+	emqx.SetLicense(license)
+	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())
+
+	license.StringData = "test"
+	emqx.SetLicense(license)
+	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())
+
+	license.StringData = "test"
+	license.Data = []byte("test")
+	emqx.SetLicense(license)
+	Expect(k8sClient.Create(context.Background(), emqx)).ShouldNot(Succeed())
+
+	license.StringData = ""
+	license.Data = []byte("")
+	emqx.SetLicense(license)
+	Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
+
+	license.StringData = "test"
+	emqx.SetLicense(license)
+	Expect(k8sClient.Update(context.Background(), emqx)).ShouldNot(Succeed())
+
+	license.Data = []byte("test")
+	emqx.SetLicense(license)
+	Expect(k8sClient.Update(context.Background(), emqx)).ShouldNot(Succeed())
+
+	license.StringData = "test"
+	license.Data = []byte("test")
+	emqx.SetLicense(license)
+	Expect(k8sClient.Update(context.Background(), emqx)).ShouldNot(Succeed())
 }

@@ -88,6 +88,10 @@ func (r *EmqxEnterprise) ValidateCreate() error {
 		emqxenterpriselog.Error(err, "validate create failed")
 		return err
 	}
+	if err := validateLicense(r.Spec.EmqxTemplate.License); err != nil {
+		emqxenterpriselog.Error(err, "validate create failed")
+		return err
+	}
 	return nil
 }
 
@@ -102,6 +106,11 @@ func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 
 	oldEmqx := old.(*EmqxEnterprise)
 	if err := validateUsernameAndPassword(r, oldEmqx); err != nil {
+		emqxenterpriselog.Error(err, "validate update failed")
+		return err
+	}
+
+	if err := validateLicense(r.Spec.EmqxTemplate.License); err != nil {
 		emqxenterpriselog.Error(err, "validate update failed")
 		return err
 	}
@@ -124,6 +133,15 @@ func validateUsernameAndPassword(new, old Emqx) error {
 
 	if new.GetPassword() != old.GetPassword() {
 		return errors.New("refuse to update password")
+	}
+	return nil
+}
+
+func validateLicense(license License) error {
+	if len(license.SecretName) > 0 {
+		if len(license.Data) != 0 || len(license.StringData) != 0 {
+			return errors.New("SecretName or Data and StringData can only set one ")
+		}
 	}
 	return nil
 }

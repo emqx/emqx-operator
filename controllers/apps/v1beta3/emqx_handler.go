@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -34,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 
@@ -128,22 +130,31 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
 
-	acl := generateAcl(instance)
-	if acl != nil {
+	if acl := generateAcl(instance); acl != nil {
 		resources = append(resources, acl)
 		sts = updateAclForSts(sts, acl)
 	}
 
-	loadedModules := generateLoadedModules(instance)
-	if loadedModules != nil {
+	if loadedModules := generateLoadedModules(instance); loadedModules != nil {
 		resources = append(resources, loadedModules)
 		sts = updateLoadedModulesForSts(sts, loadedModules)
 	}
 
-	license := generateLicense(instance)
-	if license != nil {
-		resources = append(resources, license)
-		sts = updateLicenseForsts(sts, license)
+	if emqxEnterprise, ok := instance.(*appsv1beta3.EmqxEnterprise); ok {
+		var license *corev1.Secret
+		if emqxEnterprise.GetLicense().SecretName != "" {
+			license = &corev1.Secret{}
+			if err := r.Client.Get(context.Background(), types.NamespacedName{Name: emqxEnterprise.GetLicense().SecretName, Namespace: emqxEnterprise.GetNamespace()}, license); err != nil {
+				return ctrl.Result{}, err
+			}
+		} else {
+			license = generateLicense(emqxEnterprise)
+		}
+
+		if license != nil {
+			resources = append(resources, license)
+			sts = updateLicenseForsts(sts, license)
+		}
 	}
 
 	if status := instance.GetStatus(); status.IsRunning() {
@@ -608,12 +619,8 @@ func generateLoadedModules(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 	return cm
 }
 
-func generateLicense(instance appsv1beta3.Emqx) *corev1.Secret {
-	names := appsv1beta3.Names{Object: instance}
-	emqxEnterprise, ok := instance.(*appsv1beta3.EmqxEnterprise)
-	if !ok {
-		return nil
-	}
+func generateLicense(emqxEnterprise *appsv1beta3.EmqxEnterprise) *corev1.Secret {
+	names := appsv1beta3.Names{Object: emqxEnterprise}
 	license := emqxEnterprise.GetLicense()
 	if len(license.Data) == 0 && len(license.StringData) == 0 {
 		return nil
@@ -625,8 +632,8 @@ func generateLicense(instance appsv1beta3.Emqx) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    instance.GetLabels(),
-			Namespace: instance.GetNamespace(),
+			Labels:    emqxEnterprise.GetLabels(),
+			Namespace: emqxEnterprise.GetNamespace(),
 			Name:      names.License(),
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -970,10 +977,16 @@ func updateLoadedModulesForSts(sts *appsv1.StatefulSet, loadedModules *corev1.Co
 }
 
 func updateLicenseForsts(sts *appsv1.StatefulSet, license *corev1.Secret) *appsv1.StatefulSet {
+	fileName := "emqx.lic"
+	for k := range license.Data {
+		fileName = k
+		break
+	}
+
 	return updateEnvAndVolumeForSts(sts,
 		corev1.EnvVar{
 			Name:  "EMQX_LICENSE__FILE",
-			Value: "/mounted/license/emqx.lic",
+			Value: filepath.Join("/mounted/license", fileName),
 		},
 		corev1.VolumeMount{
 			Name:      license.Name,

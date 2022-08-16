@@ -1219,10 +1219,6 @@ func TestUpdateLoadedEnterpriseModulesForSts(t *testing.T) {
 }
 
 func TestGenerateLicense(t *testing.T) {
-	broker := &appsv1beta3.EmqxBroker{}
-	license := generateLicense(broker)
-	assert.Nil(t, license)
-
 	enterprise := &appsv1beta3.EmqxEnterprise{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx-ee",
@@ -1233,7 +1229,7 @@ func TestGenerateLicense(t *testing.T) {
 		},
 	}
 
-	license = generateLicense(enterprise)
+	license := generateLicense(enterprise)
 	assert.Nil(t, license)
 
 	enterprise.Spec.EmqxTemplate.License.Data = []byte(`-----BEGIN CERTIFICATE-----
@@ -1323,7 +1319,7 @@ func TestUpdateLicenseForSts(t *testing.T) {
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{"emqx.lic": Data},
+		Data: map[string][]byte{"emqx.test.lic": Data},
 	}
 
 	sts := &appsv1.StatefulSet{
@@ -1348,7 +1344,7 @@ func TestUpdateLicenseForSts(t *testing.T) {
 							Env: []corev1.EnvVar{
 								{
 									Name:  "EMQX_LICENSE__FILE",
-									Value: "/mounted/license/emqx.lic",
+									Value: "/mounted/license/emqx.test.lic",
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -1364,7 +1360,7 @@ func TestUpdateLicenseForSts(t *testing.T) {
 							Env: []corev1.EnvVar{
 								{
 									Name:  "EMQX_LICENSE__FILE",
-									Value: "/mounted/license/emqx.lic",
+									Value: "/mounted/license/emqx.test.lic",
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
