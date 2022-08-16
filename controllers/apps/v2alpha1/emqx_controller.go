@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -115,28 +114,17 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.Object, error) {
+	var resources []client.Object
+	bootstrap_user := generateBootstrapUserSecret(instance)
+	if instance.Status.IsCreating() {
+		resources = append(resources, bootstrap_user)
+	}
+
 	dashboardSvc := generateDashboardService(instance)
 	headlessSvc := generateHeadlessService(instance)
 	sts := generateStatefulSet(instance)
-
-	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.Persistent).IsZero() {
-		pvcList := &corev1.PersistentVolumeClaimList{}
-		_ = r.List(context.TODO(), pvcList, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(instance.GetLabels()))
-		if len(pvcList.Items) != 0 {
-			sts.Spec.PodManagementPolicy = appsv1.ParallelPodManagement
-		}
-	}
-	storeSts := &appsv1.StatefulSet{}
-	if err := r.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-core", instance.Name), Namespace: instance.Namespace}, storeSts); err != nil {
-		if !k8sErrors.IsNotFound(err) {
-			return nil, err
-		}
-	}
-	if storeSts.Spec.PodManagementPolicy != "" {
-		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
-	}
-
-	resources := []client.Object{dashboardSvc, headlessSvc, sts}
+	sts = updateStatefulSetForBootstrapUser(sts, bootstrap_user)
+	resources = append(resources, dashboardSvc, headlessSvc, sts)
 
 	if instance.Status.IsRunning() || instance.Status.IsCoreNodesReady() {
 		deploy := generateDeployment(instance)
@@ -185,14 +173,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 
 	emqxNodes, err = r.getNodeStatuesByAPI(storeSts)
 	if err != nil {
-		condition := appsv2alpha1.NewCondition(
-			appsv2alpha1.ClusterRunning,
-			corev1.ConditionFalse,
-			"FailureToGetNodeStatus",
-			err.Error(),
-		)
-		instance.Status.SetCondition(*condition)
-		return instance, err
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 	}
 
 	if emqxNodes != nil {
