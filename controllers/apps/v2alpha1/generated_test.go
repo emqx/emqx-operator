@@ -373,14 +373,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
 									Value: "srv",
 								},
-								{
-									Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
-									Value: "hostname",
-								},
-								{
-									Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
-									Value: "emqx",
-								},
 							},
 							Args: []string{"hello world"},
 							SecurityContext: &corev1.SecurityContext{
