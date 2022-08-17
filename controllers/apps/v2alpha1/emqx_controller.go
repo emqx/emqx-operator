@@ -18,11 +18,7 @@ package apps
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -31,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,8 +41,6 @@ import (
 const EMQXContainerName string = "emqx"
 
 var (
-	username      string = "admin"
-	password      string = "public"
 	dashboardPort string = "18083"
 )
 
@@ -81,6 +74,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		return ctrl.Result{}, err
 	}
+	r.EventRecorder.Event(instance, corev1.EventTypeNormal, "test", "test")
 
 	// Update EMQX Custom Resource's status
 	instance, err := r.updateStatus(instance)
@@ -130,7 +124,17 @@ func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.
 		deploy := generateDeployment(instance)
 		resources = append(resources, deploy)
 
-		listenerPorts, err := r.getAllListenersByAPI(sts)
+		username, password, err := r.getBootstrapUser(instance)
+		if err != nil {
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
+		}
+
+		listenerPorts, err := (&requestAPI{
+			username: username,
+			password: password,
+			port:     dashboardPort,
+			Handler:  r.Handler,
+		}).getAllListenersByAPI(sts)
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 		}
@@ -171,7 +175,16 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		return nil, emperror.Wrap(err, "failed to get store statefulSet")
 	}
 
-	emqxNodes, err = r.getNodeStatuesByAPI(storeSts)
+	username, password, err := r.getBootstrapUser(instance)
+	if err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
+	}
+	emqxNodes, err = (&requestAPI{
+		username: username,
+		password: password,
+		port:     dashboardPort,
+		Handler:  r.Handler,
+	}).getNodeStatuesByAPI(storeSts)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 	}
@@ -246,111 +259,21 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	return instance, nil
 }
 
-func (r *EMQXReconciler) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNode, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, "api/v5/nodes")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get listeners: %v", err)
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get listener, status : %s, body: %s", resp.Status, body)
+func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username, password string, err error) {
+	secret := &corev1.Secret{}
+	if err = r.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-bootstrap-user", instance.Name), Namespace: instance.Namespace}, secret); err != nil {
+		return "", "", err
 	}
 
-	nodeStatuses := []appsv2alpha1.EMQXNode{}
-	if err := json.Unmarshal(body, &nodeStatuses); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
-	}
-	return nodeStatuses, nil
-}
-
-type emqxGateway struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
-}
-
-type emqxListener struct {
-	Enable bool   `json:"enable"`
-	ID     string `json:"id"`
-	Bind   string `json:"bind"`
-	Type   string `json:"type"`
-}
-
-func (r *EMQXReconciler) getAllListenersByAPI(obj client.Object) ([]corev1.ServicePort, error) {
-	ports, err := r.getListenerPortsByAPI(obj, "api/v5/listeners")
-	if err != nil {
-		return nil, err
+	data, ok := secret.Data["bootstrap_user"]
+	if !ok {
+		return "", "", fmt.Errorf("the secret does not contain the bootstrap_user")
 	}
 
-	gateways, err := r.getGatewaysByAPI(obj)
-	if err != nil {
-		return nil, err
-	}
+	str := string(data)
+	index := strings.Index(str, ":")
 
-	for _, gateway := range gateways {
-		if strings.ToLower(gateway.Status) == "running" {
-			apiPath := fmt.Sprintf("api/v5/gateway/%s/listeners", gateway.Name)
-			gatewayPorts, err := r.getListenerPortsByAPI(obj, apiPath)
-			if err != nil {
-				return nil, err
-			}
-			ports = append(ports, gatewayPorts...)
-		}
-	}
-
-	return ports, nil
-}
-
-func (r *EMQXReconciler) getGatewaysByAPI(obj client.Object) ([]emqxGateway, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, "api/v5/gateway")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get API %s: %v", "api/v5/gateway", err)
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/gateway", resp.Status, body)
-	}
-	gateway := []emqxGateway{}
-	if err := json.Unmarshal(body, &gateway); err != nil {
-		return nil, fmt.Errorf("failed to parse gateway: %v", err)
-	}
-	return gateway, nil
-}
-
-func (r *EMQXReconciler) getListenerPortsByAPI(obj client.Object, apiPath string) ([]corev1.ServicePort, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, "GET", username, password, dashboardPort, apiPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get API %s: %v", apiPath, err)
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get API %s, status : %s, body: %s", apiPath, resp.Status, body)
-	}
-	ports := []corev1.ServicePort{}
-	listeners := []emqxListener{}
-	if err := json.Unmarshal(body, &listeners); err != nil {
-		return nil, fmt.Errorf("failed to parse listeners: %v", err)
-	}
-	for _, listener := range listeners {
-		if !listener.Enable {
-			continue
-		}
-
-		var protocol corev1.Protocol
-		compile := regexp.MustCompile(".*(udp|dtls|quic).*")
-		if compile.MatchString(listener.Type) {
-			protocol = corev1.ProtocolUDP
-		} else {
-			protocol = corev1.ProtocolTCP
-		}
-
-		_, strPort, _ := net.SplitHostPort(listener.Bind)
-		intPort, _ := strconv.Atoi(strPort)
-
-		ports = append(ports, corev1.ServicePort{
-			Name:       strings.ReplaceAll(listener.ID, ":", "-"),
-			Protocol:   protocol,
-			Port:       int32(intPort),
-			TargetPort: intstr.FromInt(intPort),
-		})
-	}
-	return ports, nil
+	return str[:index], str[index+1:], nil
 }
 
 func isExistReplicant(instance *appsv2alpha1.EMQX) bool {

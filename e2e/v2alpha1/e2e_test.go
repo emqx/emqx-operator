@@ -22,7 +22,6 @@ import (
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -73,7 +72,7 @@ var _ = Describe("E2E Test", func() {
 				Namespace: "default",
 			},
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0.4",
+				Image: "emqx/emqx:5.0.5",
 			},
 		}
 		emqx.Default()
@@ -107,7 +106,7 @@ var _ = Describe("E2E Test", func() {
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.4"))
+			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.5"))
 			Expect(instance.Status.EMQXNodes).Should(HaveLen(3))
 			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
@@ -144,7 +143,7 @@ var _ = Describe("E2E Test", func() {
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.4"))
+			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.5"))
 			Expect(instance.Status.EMQXNodes).Should(HaveLen(6))
 			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
@@ -153,52 +152,52 @@ var _ = Describe("E2E Test", func() {
 		})
 	})
 
-	Context("Update EMQX Custom Resource, change image version", func() {
-		instance := &appsv2alpha1.EMQX{}
-		JustBeforeEach(func() {
-			Eventually(func() error {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
-				replicant := int32(3)
-				instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
-				instance.Spec.Image = "emqx/emqx:5.0.3"
-				return k8sClient.Update(context.TODO(), instance)
-			}, timeout, interval).Should(Succeed())
-		})
+	// Context("Update EMQX Custom Resource, change image version", func() {
+	// 	instance := &appsv2alpha1.EMQX{}
+	// 	JustBeforeEach(func() {
+	// 		Eventually(func() error {
+	// 			_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
+	// 			replicant := int32(3)
+	// 			instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
+	// 			instance.Spec.Image = "emqx/emqx:5.0.3"
+	// 			return k8sClient.Update(context.TODO(), instance)
+	// 		}, timeout, interval).Should(Succeed())
+	// 	})
 
-		It("Checking the EMQX Custom Resource's Status when update image", func() {
-			By("Checking statefulSet image")
-			Eventually(func() string {
-				sts := &appsv1.StatefulSet{}
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-core", Namespace: "default"}, sts)
-				if err != nil {
-					return ""
-				}
-				return sts.Spec.Template.Spec.Containers[0].Image
-			}, timeout, interval).Should(Equal("emqx/emqx:5.0.3"))
+	// 		It("Checking the EMQX Custom Resource's Status when update image", func() {
+	// 			By("Checking statefulSet image")
+	// 			Eventually(func() string {
+	// 				sts := &appsv1.StatefulSet{}
+	// 				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-core", Namespace: "default"}, sts)
+	// 				if err != nil {
+	// 					return ""
+	// 				}
+	// 				return sts.Spec.Template.Spec.Containers[0].Image
+	// 			}, timeout, interval).Should(Equal("emqx/emqx:5.0.3"))
 
-			By("Checking deployment image")
-			Eventually(func() string {
-				deploy := &appsv1.Deployment{}
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-replicant", Namespace: "default"}, deploy)
-				if err != nil {
-					return ""
-				}
-				return deploy.Spec.Template.Spec.Containers[0].Image
-			}, timeout, interval).Should(Equal("emqx/emqx:5.0.3"))
+	// 			By("Checking deployment image")
+	// 			Eventually(func() string {
+	// 				deploy := &appsv1.Deployment{}
+	// 				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-replicant", Namespace: "default"}, deploy)
+	// 				if err != nil {
+	// 					return ""
+	// 				}
+	// 				return deploy.Spec.Template.Spec.Containers[0].Image
+	// 			}, timeout, interval).Should(Equal("emqx/emqx:5.0.3"))
 
-			By("Checking the EMQX Custom Resource's Status")
-			Eventually(func() []appsv2alpha1.Condition {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
-				return instance.Status.Conditions
-			}, timeout, interval).Should(ConsistOf(conditions))
+	// 			By("Checking the EMQX Custom Resource's Status")
+	// 			Eventually(func() []appsv2alpha1.Condition {
+	// 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
+	// 				return instance.Status.Conditions
+	// 			}, timeout, interval).Should(ConsistOf(conditions))
 
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.3"))
-			Expect(instance.Status.EMQXNodes).Should(HaveLen(6))
-			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(3)))
-		})
-	})
+	// 			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.3"))
+	// 			Expect(instance.Status.EMQXNodes).Should(HaveLen(6))
+	// 			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
+	// 			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
+	// 			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(3)))
+	// 			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(3)))
+	// 		})
+	// })
 
 })

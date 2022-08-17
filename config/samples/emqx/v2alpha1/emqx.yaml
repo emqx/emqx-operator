@@ -5,7 +5,7 @@ metadata:
   labels:
     "apps.emqx.io/instance": "emqx"
 spec:
-  image: "emqx/emqx:5.0.4"
+  image: "emqx/emqx:5.0.5"
   coreTemplate:
     metadata:
       labels:
@@ -14,7 +14,6 @@ spec:
       annotations:
     spec:
       replicas: 3
-
   replicantTemplate:
     metadata:
       labels:
