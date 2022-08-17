@@ -28,10 +28,14 @@ import (
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/sethvargo/go-password/password"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
 func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
+	username := "emqx_operator_controller"
+	password, _ := password.Generate(64, 10, 10, false, false)
+
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -44,7 +48,7 @@ func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 			Annotations: instance.Annotations,
 		},
 		StringData: map[string]string{
-			"bootstrap_user": "emqx:emqx",
+			"bootstrap_user": fmt.Sprintf("%s:%s", username, password),
 		},
 	}
 }
@@ -173,14 +177,6 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 						{
 							Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
 							Value: "srv",
-						},
-						{
-							Name:  "EMQX_CLUSTER__K8S__ADDRESS_TYPE",
-							Value: "hostname",
-						},
-						{
-							Name:  "EMQX_CLUSTER__K8S__NAMESPACE",
-							Value: instance.Namespace,
 						},
 					},
 					Args:            instance.Spec.CoreTemplate.Spec.Args,
