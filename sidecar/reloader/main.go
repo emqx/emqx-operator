@@ -13,73 +13,30 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	fsnotify "github.com/fsnotify/fsnotify"
 )
 
-const (
-	host = "localhost"
-)
-
-var fileCheck = make(map[string][]byte)
-
-var pluginConfigList = []string{
-	"emqx_auth_http.conf",
-	"emqx_auth_jwt.conf",
-	"emqx_auth_ldap.conf",
-	"emqx_auth_mnesia.conf",
-	"emqx_auth_mongo.conf",
-	"emqx_auth_mysql.conf",
-	"emqx_auth_pgsql.conf",
-	"emqx_auth_redis.conf",
-	"emqx_backend_cassa.conf",
-	"emqx_backend_dynamo.conf",
-	"emqx_backend_influxdb.conf",
-	"emqx_backend_mongo.conf",
-	"emqx_backend_mysql.conf",
-	"emqx_backend_opentsdb.conf",
-	"emqx_backend_pgsql.conf",
-	"emqx_backend_redis.conf",
-	"emqx_backend_timescale.conf",
-	"emqx_bridge_kafka.conf",
-	"emqx_bridge_mqtt.conf",
-	"emqx_bridge_pulsar.conf",
-	"emqx_bridge_rabbit.conf",
-	"emqx_bridge_rocket.conf",
-	"emqx_coap.conf",
-	"emqx_conf.conf",
-	"emqx_dashboard.conf",
-	"emqx_exhook.conf",
-	"emqx_exproto.conf",
-	"emqx_gbt32960.conf",
-	"emqx_jt808.conf",
-	"emqx_lua_hook.conf",
-	"emqx_lwm2m.conf",
-	// "emqx_management.conf",
-	"emqx_modules.conf",
-	"emqx_prometheus.conf",
-	"emqx_psk_file.conf",
-	"emqx_recon.conf",
-	"emqx_retainer.conf",
-	"emqx_rule_engine.conf",
-	"emqx_sasl.conf",
-	"emqx_schema_registry.conf",
-	"emqx_sn.conf",
-	"emqx_stomp.conf",
-	"emqx_tcp.conf",
-	"emqx_web_hook.conf",
+type reloaderWatcher struct {
+	watcher   *fsnotify.Watcher
+	fileCheck map[string][]byte
 }
 
 func main() {
 	var username, password string
-	var pluginConfigDir, licenseFilePath string
+	var licenseFilePath, pluginConfigDir string
 	var port int
-
 	flag.StringVar(&username, "u", "admin", "username")
 	flag.StringVar(&password, "p", "public", "password")
 	flag.IntVar(&port, "P", 8081, "port")
 	flag.Parse()
+
+	loadUrl := url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s:%d", "localhost", port),
+	}
 
 	if os.Getenv("EMQX_PLUGINS__ETC_DIR") != "" {
 		pluginConfigDir = os.Getenv("EMQX_PLUGINS__ETC_DIR")
@@ -89,69 +46,59 @@ func main() {
 		licenseFilePath = os.Getenv("EMQX_LICENSE__FILE")
 	}
 
-	watcher, err := fsnotify.NewWatcher()
+	// generate watched file list
+	fileList := generateWatchedFileList(pluginConfigDir, licenseFilePath)
+
+	r, err := newReloaderWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer watcher.Close()
+	defer r.close()
+	r.watchFileList(fileList)
 
 	go func() {
 		for {
 			select {
-			case event, ok := <-watcher.Events:
+			case event, ok := <-r.watcher.Events:
 				if !ok {
 					return
 				}
 				if event.Op == fsnotify.Remove {
-					// Since its actually a symlink
-					// we are watching its not Write events
-					// we need to react on Remove.
-					// and we must re-register the file to be watched
-					_ = watcher.Remove(event.Name)
-					err = watcher.Add(event.Name)
+					updated, err := r.updateWatcher(event.Name)
 					if err != nil {
 						log.Fatal(err)
 					}
-					loadUrl := url.URL{
-						Scheme: "http",
-						Host:   fmt.Sprintf("%s:%d", host, port),
-					}
-					if sha, ok := fileCheck[event.Name]; ok {
-						if !bytes.Equal(sha, getMD5(event.Name)) {
-							log.Println("file changed:", event.Name)
-							fileCheck[event.Name] = getMD5(event.Name)
-							_, fileName := filepath.Split(event.Name)
-							if event.Name == licenseFilePath {
-								bytes, err := os.ReadFile(event.Name)
-								if err != nil {
-									log.Fatal(err)
-								}
-								/*
-									curl -X POST --basic -u admin:public -d @<(jq -sR '{license: .}' < path/to/new.license)
-									"http://localhost:8081/api/v4/license/upload"
-								*/
-								loadUrl.Path = "/api/v4/license/upload"
-								license := map[string]string{"license": string(bytes)}
-								body, err := json.Marshal(license)
-								if err != nil {
-									log.Fatal(err)
-								}
-								requestWebhook(loadUrl, "POST", body, username, password)
-							} else {
-								pluginName := strings.TrimSuffix(fileName, ".conf")
-								/*
-									curl -i --basic -u admin:public -X PUT
-									"http://localhost:8081/api/v4/plugins/emqx_delayed_publish/reload"
-								*/
-								loadUrl.Path = fmt.Sprintf("/api/v4/plugins/%s/reload", pluginName)
-								requestWebhook(loadUrl, "PUT", nil, username, password)
+					if updated {
+						if event.Name == licenseFilePath {
+							bytes, err := os.ReadFile(event.Name)
+							if err != nil {
+								log.Fatal(err)
 							}
+							/*
+								curl -X POST --basic -u admin:public -d @<(jq -sR '{license: .}' < path/to/new.license)
+								"http://localhost:8081/api/v4/license/upload"
+							*/
+							loadUrl.Path = "/api/v4/license/upload"
+							license := map[string]string{"license": string(bytes)}
+							body, err := json.Marshal(license)
+							if err != nil {
+								log.Fatal(err)
+							}
+							requestWebhook(loadUrl, "POST", body, username, password)
+						} else {
+							_, fileName := filepath.Split(event.Name)
+							pluginName := strings.TrimSuffix(fileName, ".conf")
+							/*
+								curl -i --basic -u admin:public -X PUT
+								"http://localhost:8081/api/v4/plugins/emqx_delayed_publish/reload"
+							*/
+							loadUrl.Path = fmt.Sprintf("/api/v4/plugins/%s/reload", pluginName)
+							requestWebhook(loadUrl, "PUT", nil, username, password)
 						}
 					}
-
 				}
 
-			case err, ok := <-watcher.Errors:
+			case err, ok := <-r.watcher.Errors:
 				if !ok {
 					return
 				}
@@ -160,31 +107,82 @@ func main() {
 		}
 	}()
 
-	// plugin config
-	for _, file := range pluginConfigList {
-		fullFile := filepath.Join(pluginConfigDir, file)
-		if _, err := os.Stat(fullFile); err == nil {
-			log.Printf("add file %s to watcher\n", fullFile)
-			err = watcher.Add(fullFile)
-			if err != nil {
-				log.Fatal(err)
-			}
-			fileCheck[fullFile] = getMD5(fullFile)
-		}
-	}
-
-	// license file
-	if _, err := os.Stat(licenseFilePath); err == nil {
-		log.Printf("add file %s to watcher\n", licenseFilePath)
-		err = watcher.Add(licenseFilePath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fileCheck[licenseFilePath] = getMD5(licenseFilePath)
-	}
-
 	done := make(chan bool)
 	<-done
+}
+
+func generateWatchedFileList(pluginConfigDir, licenseFilePath string) []string {
+	var fileList []string
+	if licenseFilePath != "" {
+		fileList = append(fileList, licenseFilePath)
+	}
+	pluginConfigs, err := ioutil.ReadDir(pluginConfigDir)
+	if err != nil {
+		log.Printf("read dir err: %v", err)
+		return fileList
+	}
+	for _, pluginConfig := range pluginConfigs {
+		if shouldIgnoreFile(pluginConfig.Name()) {
+			log.Printf("%s should not add to watcher", pluginConfig.Name())
+			continue
+		}
+		filePath := filepath.Join(pluginConfigDir, pluginConfig.Name())
+		fileList = append(fileList, filePath)
+	}
+	return fileList
+}
+
+func newReloaderWatcher() (*reloaderWatcher, error) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Printf("NewWathcher err: %v\n", err)
+		return nil, err
+	}
+	return &reloaderWatcher{
+		fileCheck: make(map[string][]byte),
+		watcher:   watcher,
+	}, nil
+}
+
+func (r *reloaderWatcher) close() {
+	r.watcher.Close()
+}
+
+func (r *reloaderWatcher) updateWatcher(filePath string) (bool, error) {
+	// Since its actually a symlink
+	// we are watching its not Write events
+	// we need to react on Remove.
+	// and we must re-register the file to be watched
+	_ = r.watcher.Remove(filePath)
+	err := r.watcher.Add(filePath)
+	if err != nil {
+		log.Printf("watcher add file err:%v", err)
+		return false, err
+	}
+	if !bytes.Equal(r.fileCheck[filePath], getMD5(filePath)) {
+		log.Println("file changed:", filePath)
+		r.fileCheck[filePath] = getMD5(filePath)
+		return true, nil
+	}
+	return false, nil
+}
+
+func (r *reloaderWatcher) watchFileList(fileList []string) {
+	for _, filePath := range fileList {
+		if err := r.watcher.Add(filePath); err != nil {
+			log.Printf("add plugin config to watcher err: %v", err)
+			continue
+		}
+		r.fileCheck[filePath] = getMD5(filePath)
+	}
+}
+
+func shouldIgnoreFile(fileName string) bool {
+	compile := regexp.MustCompile("^emqx.*conf$")
+	if isBlackFile(fileName) || !compile.MatchString(fileName) {
+		return true
+	}
+	return false
 }
 
 func getMD5(file string) []byte {
@@ -225,4 +223,17 @@ func requestWebhook(url url.URL, method string, bodys []byte, username, password
 	log.Println("http response url:", url.String())
 	log.Println("status:", resp.Status)
 	log.Println("body:", string(body))
+}
+
+func isBlackFile(fileName string) bool {
+	var blackReloadList = []string{
+		"emqx_management.conf",
+		"emqx_dashboard.conf",
+	}
+	for _, blackFile := range blackReloadList {
+		if blackFile == fileName {
+			return true
+		}
+	}
+	return false
 }
