@@ -36,6 +36,10 @@
         {
           "title": "Handle EMQX metrics and logs with telegraf",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "Deploy EMQX clusters on Azure AKS using EMQX Operator",
+          "path": "tasks/azure-deployment"
         }
       ]
     },
@@ -95,6 +99,14 @@
         {
           "title": "利用 telegtaf 处理 EMQX metrics 和 logs",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "使用 EMQX Operator 在华为 CCE 上部署 EMQX 集群",
+          "path": "tasks/cce-deployment"
+        },
+        {
+          "title": "使用 EMQX Operator 在 Azure AKS 上部署 EMQX 集群",
+          "path": "tasks/azure-deployment"
         }
       ]
     },
