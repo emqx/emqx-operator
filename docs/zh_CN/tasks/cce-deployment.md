@@ -27,9 +27,8 @@ CCE: 云容器引擎（Cloud Container Engine，简称CCE）提供高度可扩�
 ```shell
 kubectl get sc
 ```
-![](./assets/cce.png)
 
-这里我们用 csi-disk，其他 StorageClass [参考](https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html)
+这里我们用`csi-disk`, 其他 StorageClass [参考](https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html)
 
 
 

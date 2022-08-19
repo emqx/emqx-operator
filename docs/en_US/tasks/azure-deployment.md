@@ -44,7 +44,7 @@ Check if the StroageClass was created successfully
 ```shell
 kubectl get sc
 ```
-![](./assets/azure.png)
+You can see that `azurefile-csi-nfs` has been successfully created
 
 
 ## Deploy EMQX cluster with EMQX Operator

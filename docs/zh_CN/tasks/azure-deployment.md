@@ -42,7 +42,7 @@ EOF
 ```shell
 kubectl get sc
 ```
-![](./assets/azure.png)
+可以看到`azurefile-csi-nfs`已经成功创建
 
 
 ## 使用EMQX Operator 部署EMQX集群
