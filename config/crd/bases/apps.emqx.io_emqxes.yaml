@@ -38,6 +38,8 @@ spec:
           spec:
             description: EMQXSpec defines the desired state of EMQX
             properties:
+              bootstrapConfig:
+                type: string
               coreTemplate:
                 properties:
                   metadata:
@@ -5379,7 +5381,7 @@ spec:
                           type: string
                         type: object
                       persistent:
-                        description: More Persistent field than EMQXReplicantTemplateSpec
+                        description: More than EMQXReplicantTemplateSpec
                         properties:
                           accessModes:
                             description: 'accessModes contains the desired access
