@@ -23,3 +23,10 @@ spec:
         apps.emqx.io/db-role: replicant
     spec:
       replicas: 0
+  dashboardServiceTemplate:
+    spec:
+      ports:
+      - name: "dashboard-listeners-http-bind"
+        protocol: tcp
+        port: 18083
+        targetPort: 18083
