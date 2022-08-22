@@ -168,7 +168,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	instance.Status.CoreNodeReadyReplicas = int32(0)
 	instance.Status.ReplicantNodeReadyReplicas = int32(0)
 
-	err := r.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-core", instance.Name), Namespace: instance.Namespace}, storeSts)
+	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfCoreNode(), Namespace: instance.Namespace}, storeSts)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get store statefulSet")
 	}
@@ -260,7 +260,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 
 func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username, password string, err error) {
 	secret := &corev1.Secret{}
-	if err = r.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("%s-bootstrap-user", instance.Name), Namespace: instance.Namespace}, secret); err != nil {
+	if err = r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfBootStrapUser(), Namespace: instance.Namespace}, secret); err != nil {
 		return "", "", err
 	}
 
