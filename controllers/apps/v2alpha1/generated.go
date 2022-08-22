@@ -102,17 +102,6 @@ func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 
 func generateDashboardService(instance *appsv2alpha1.EMQX) *corev1.Service {
 	instance.Spec.DashboardServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
-	instance.Spec.DashboardServiceTemplate.Spec.Ports = mergeServicePorts(
-		instance.Spec.DashboardServiceTemplate.Spec.Ports,
-		[]corev1.ServicePort{
-			{
-				Name:       "dashboard",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       18083,
-				TargetPort: intstr.FromInt(18083),
-			},
-		},
-	)
 
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -130,7 +119,7 @@ func generateDashboardService(instance *appsv2alpha1.EMQX) *corev1.Service {
 }
 
 func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1.ServicePort) *corev1.Service {
-	instance.Spec.ListenersServiceTemplate.Spec.Ports = mergeServicePorts(
+	instance.Spec.ListenersServiceTemplate.Spec.Ports = appsv2alpha1.MergeServicePorts(
 		instance.Spec.ListenersServiceTemplate.Spec.Ports,
 		listenerPorts,
 	)
@@ -467,22 +456,6 @@ func updateDeploymentForBootstrapConfig(deploy *appsv1.Deployment, bootstrapConf
 	}
 
 	return deploy
-}
-
-func mergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
-	ports := append(ports1, ports2...)
-
-	result := make([]corev1.ServicePort, 0, len(ports))
-	temp := map[string]struct{}{}
-
-	for _, item := range ports {
-		if _, ok := temp[item.Name]; !ok {
-			temp[item.Name] = struct{}{}
-			result = append(result, item)
-		}
-	}
-
-	return result
 }
 
 func generateAnnotationByContainers(containers []corev1.Container) string {

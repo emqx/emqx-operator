@@ -23,6 +23,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/gurkankaymak/hocon"
 	"github.com/sethvargo/go-password/password"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -48,67 +49,23 @@ var _ webhook.Defaulter = &EMQX{}
 func (r *EMQX) Default() {
 	emqxlog.Info("default", "name", r.Name)
 
-	bootstrapConfig, err := defaultBootstrapConfig(r.Spec.BootstrapConfig)
-	if err != nil {
-		emqxlog.Error(err, "default bootstrap config failed")
+	r.defaultLabels()
+	if err := r.defaultBootstrapConfig(); err != nil {
+		emqxlog.Error(err, "parse bootstrap config failed")
 		return
 	}
-	r.Spec.BootstrapConfig = bootstrapConfig
-
-	// Labels
-	if r.Labels == nil {
-		r.Labels = make(map[string]string)
-	}
-	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Labels["apps.emqx.io/instance"] = r.GetName()
-
-	if r.Spec.CoreTemplate.Labels == nil {
-		r.Spec.CoreTemplate.Labels = make(map[string]string)
-	}
-	r.Spec.CoreTemplate.Labels["apps.emqx.io/instance"] = r.Name
-	r.Spec.CoreTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Spec.CoreTemplate.Labels["apps.emqx.io/db-role"] = "core"
-
-	// Replicant
-	if r.Spec.ReplicantTemplate.Labels == nil {
-		r.Spec.ReplicantTemplate.Labels = make(map[string]string)
-	}
-	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/instance"] = r.Name
-	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/db-role"] = "replicant"
 
 	// Replicant replicas
 	defaultReplicas := int32(0)
 	r.Spec.ReplicantTemplate.Spec.Replicas = &defaultReplicas
-}
 
-func defaultBootstrapConfig(bootstrapConfig string) (string, error) {
-	password, _ := password.Generate(64, 10, 0, true, true)
-	defaultBootstrapConfigStr := fmt.Sprintf(`
-	node {
-	  cookie = "%s"
-	  data_dir = "data"
-	  etc_dir = "etc"
-	}
-	dashboard {
-	  listeners.http {
-		bind: "18083"
-	  }
-	  default_username: "admin"
-	  default_password: "public"
-	}
-	listeners.tcp.default {
-		bind = "0.0.0.0:1883"
-		max_connections = 1024000
-	}
-	`, password)
-
-	bootstrapConfig = fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, bootstrapConfig)
-	config, err := hocon.ParseString(bootstrapConfig)
-	if err != nil {
-		return "", err
-	}
-	return config.String(), nil
+	// Dashboard service
+	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
+		r.Spec.DashboardServiceTemplate.Spec.Ports,
+		[]corev1.ServicePort{
+			GetDashboardServicePort(r),
+		},
+	)
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -149,5 +106,74 @@ func (r *EMQX) ValidateDelete() error {
 	emqxlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
+	return nil
+}
+
+func (r *EMQX) defaultLabels() {
+	if r.Labels == nil {
+		r.Labels = make(map[string]string)
+	}
+	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	r.Labels["apps.emqx.io/r"] = r.GetName()
+
+	// Core
+	if r.Spec.CoreTemplate.Labels == nil {
+		r.Spec.CoreTemplate.Labels = make(map[string]string)
+	}
+	r.Spec.CoreTemplate.Labels["apps.emqx.io/r"] = r.Name
+	r.Spec.CoreTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	r.Spec.CoreTemplate.Labels["apps.emqx.io/db-role"] = "core"
+
+	// Replicant
+	if r.Spec.ReplicantTemplate.Labels == nil {
+		r.Spec.ReplicantTemplate.Labels = make(map[string]string)
+	}
+	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/r"] = r.Name
+	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/db-role"] = "replicant"
+
+	// Dashboard service
+	if r.Spec.DashboardServiceTemplate.Labels == nil {
+		r.Spec.DashboardServiceTemplate.Labels = make(map[string]string)
+	}
+	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/r"] = r.Name
+	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+
+	// Listeners service
+	if r.Spec.ListenersServiceTemplate.Labels == nil {
+		r.Spec.DashboardServiceTemplate.Labels = make(map[string]string)
+	}
+	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/r"] = r.Name
+	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+}
+
+func (r *EMQX) defaultBootstrapConfig() error {
+	password, _ := password.Generate(64, 10, 0, true, true)
+	defaultBootstrapConfigStr := fmt.Sprintf(`
+	node {
+	  cookie = "%s"
+	  data_dir = "data"
+	  etc_dir = "etc"
+	}
+	dashboard {
+	  listeners.http {
+		bind: "18083"
+	  }
+	  default_username: "admin"
+	  default_password: "public"
+	}
+	listeners.tcp.default {
+		bind = "0.0.0.0:1883"
+		max_connections = 1024000
+	}
+	`, password)
+
+	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, r.Spec.BootstrapConfig)
+	config, err := hocon.ParseString(bootstrapConfig)
+	if err != nil {
+		return err
+	}
+
+	r.Spec.BootstrapConfig = config.String()
 	return nil
 }
