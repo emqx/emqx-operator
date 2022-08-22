@@ -41,10 +41,10 @@ type requestAPI struct {
 func (r *requestAPI) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNode, error) {
 	resp, body, err := r.Handler.RequestAPI(obj, "GET", r.username, r.password, r.port, "api/v5/nodes")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get listeners: %v", err)
+		return nil, fmt.Errorf("failed to get API %s: %v", "api/v5/nodes", err)
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get listener, status : %s, body: %s", resp.Status, body)
+		return nil, fmt.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/nodes", resp.Status, body)
 	}
 
 	nodeStatuses := []appsv2alpha1.EMQXNode{}
