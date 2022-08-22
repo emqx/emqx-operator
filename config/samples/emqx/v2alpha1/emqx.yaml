@@ -6,6 +6,8 @@ metadata:
     "apps.emqx.io/instance": "emqx"
 spec:
   image: "emqx/emqx:5.0.5"
+  bootstrapConfig: |
+    sysmon.vm.long_schedule = disabled
   coreTemplate:
     metadata:
       labels:

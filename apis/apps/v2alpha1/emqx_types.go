@@ -54,7 +54,7 @@ type EMQXReplicantTemplateSpec struct {
 }
 
 type EMQXCoreTemplateSpec struct {
-	// More Persistent field than EMQXReplicantTemplateSpec
+	// More than EMQXReplicantTemplateSpec
 	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
 
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
@@ -89,6 +89,8 @@ type EMQXSpec struct {
 	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	SecurityContext  *corev1.PodSecurityContext    `json:"securityContext,omitempty"`
+
+	BootstrapConfig string `json:"bootstrapConfig,omitempty"`
 
 	CoreTemplate      EMQXCoreTemplate      `json:"coreTemplate,omitempty"`
 	ReplicantTemplate EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`

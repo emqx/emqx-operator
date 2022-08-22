@@ -74,7 +74,6 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		return ctrl.Result{}, err
 	}
-	r.EventRecorder.Event(instance, corev1.EventTypeNormal, "test", "test")
 
 	// Update EMQX Custom Resource's status
 	instance, err := r.updateStatus(instance)
@@ -110,18 +109,21 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.Object, error) {
 	var resources []client.Object
 	bootstrap_user := generateBootstrapUserSecret(instance)
+	bootstrap_config := generateBootstrapConfigMap(instance)
 	if instance.Status.IsCreating() {
-		resources = append(resources, bootstrap_user)
+		resources = append(resources, bootstrap_user, bootstrap_config)
 	}
 
 	dashboardSvc := generateDashboardService(instance)
 	headlessSvc := generateHeadlessService(instance)
 	sts := generateStatefulSet(instance)
 	sts = updateStatefulSetForBootstrapUser(sts, bootstrap_user)
+	sts = updateStatefulSetForBootstrapConfig(sts, bootstrap_config)
 	resources = append(resources, dashboardSvc, headlessSvc, sts)
 
 	if instance.Status.IsRunning() || instance.Status.IsCoreNodesReady() {
 		deploy := generateDeployment(instance)
+		deploy = updateDeploymentForBootstrapConfig(deploy, bootstrap_config)
 		resources = append(resources, deploy)
 
 		username, password, err := r.getBootstrapUser(instance)
@@ -193,7 +195,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		instance.Status.EMQXNodes = emqxNodes
 
 		for _, node := range emqxNodes {
-			if strings.ToLower(node.NodeStatus) == "running" {
+			if node.NodeStatus == "running" {
 				if node.Role == "core" {
 					instance.Status.CoreNodeReadyReplicas++
 				}
