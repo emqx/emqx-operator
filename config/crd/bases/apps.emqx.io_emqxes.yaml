@@ -12624,7 +12624,7 @@ spec:
                             type: integer
                         type: object
                       replicas:
-                        default: 0
+                        default: 3
                         format: int32
                         type: integer
                       resources:
