@@ -210,6 +210,10 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 									Value: "public",
 								},
 								{
+									Name:  "EMQX_LISTENER__TCP__INTERNAL",
+									Value: "",
+								},
+								{
 									Name:  "EMQX_LOG__LEVEL",
 									Value: "debug",
 								},
