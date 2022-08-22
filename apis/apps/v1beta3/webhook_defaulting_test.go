@@ -116,5 +116,6 @@ func checkDefaulting(emqx Emqx) {
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.dns.type", "srv"))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.dns.app", emqx.GetName()))
 	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("cluster.dns.name", fmt.Sprintf("%s-headless.%s.svc.cluster.local", emqx.GetName(), emqx.GetNamespace())))
+	Expect(emqx.GetEmqxConfig()).Should(HaveKeyWithValue("listener.tcp.internal", ""))
 
 }

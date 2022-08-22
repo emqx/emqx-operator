@@ -18,7 +18,7 @@ func (config EmqxConfig) Default(emqx client.Object) {
 	clusterConfig["cluster.dns.type"] = "srv"
 	clusterConfig["cluster.dns.app"] = emqx.GetName()
 	clusterConfig["cluster.dns.name"] = fmt.Sprintf("%s.%s.svc.cluster.local", names.HeadlessSvc(), emqx.GetNamespace())
-
+	clusterConfig["listener.tcp.internal"] = ""
 	for k, v := range clusterConfig {
 		if _, ok := config[k]; !ok {
 			config[k] = v
