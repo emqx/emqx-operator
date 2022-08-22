@@ -26,11 +26,15 @@ import (
 
 func TestDefaultBootstrapConfig(t *testing.T) {
 	t.Run("empty bootstrap config", func(t *testing.T) {
-		str := ""
-		bootstrapConfigStr, err := defaultBootstrapConfig(str)
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				BootstrapConfig: "",
+			},
+		}
+		err := instance.defaultBootstrapConfig()
 		assert.Nil(t, err)
 
-		bootstrapConfig, err := hocon.ParseString(bootstrapConfigStr)
+		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 
 		assert.NotNil(t, bootstrapConfig.GetString("node.cookie"))
@@ -46,40 +50,52 @@ func TestDefaultBootstrapConfig(t *testing.T) {
 	})
 
 	t.Run("already set cookie", func(t *testing.T) {
-		str := `node.cookie = "12345"`
-		bootstrapConfigStr, err := defaultBootstrapConfig(str)
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				BootstrapConfig: `node.cookie = "12345"`,
+			},
+		}
+		err := instance.defaultBootstrapConfig()
 		assert.Nil(t, err)
 
-		bootstrapConfig, err := hocon.ParseString(bootstrapConfigStr)
+		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 		assert.Equal(t, "12345", bootstrapConfig.GetString("node.cookie"))
 	})
 
-	t.Run("set default listener", func(t *testing.T) {
-		str := `listeners.tcp.default.bind = "0.0.0.0:11883"`
-		bootstrapConfigStr, err := defaultBootstrapConfig(str)
+	t.Run("already set listener", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				BootstrapConfig: `listeners.tcp.default.bind = "0.0.0.0:11883"`,
+			},
+		}
+		err := instance.defaultBootstrapConfig()
 		assert.Nil(t, err)
 
-		bootstrapConfig, err := hocon.ParseString(bootstrapConfigStr)
+		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
 		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
 	})
 
-	t.Run("other style listener", func(t *testing.T) {
-		str := `
-		listeners {
-			tcp {
-				default {
-					bind = "0.0.0.0:11883"
-				}
-			}
+	t.Run("other style set listener", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				BootstrapConfig: `
+					listeners {
+						tcp {
+							default {
+								bind = "0.0.0.0:11883"
+							}
+						}
+					}
+					`,
+			},
 		}
-		`
-		bootstrapConfigStr, err := defaultBootstrapConfig(str)
+		err := instance.defaultBootstrapConfig()
 		assert.Nil(t, err)
 
-		bootstrapConfig, err := hocon.ParseString(bootstrapConfigStr)
+		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
 		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))

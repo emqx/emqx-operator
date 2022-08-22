@@ -40,10 +40,6 @@ import (
 
 const EMQXContainerName string = "emqx"
 
-var (
-	dashboardPort string = "18083"
-)
-
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
 	handler.Handler
@@ -130,11 +126,11 @@ func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
 		}
-
+		dashboardPort := appsv2alpha1.GetDashboardServicePort(instance).TargetPort
 		listenerPorts, err := (&requestAPI{
 			username: username,
 			password: password,
-			port:     dashboardPort,
+			port:     dashboardPort.String(),
 			Handler:  r.Handler,
 		}).getAllListenersByAPI(sts)
 		if err != nil {
@@ -181,10 +177,11 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
 	}
+	dashboardPort := appsv2alpha1.GetDashboardServicePort(instance).TargetPort
 	emqxNodes, err = (&requestAPI{
 		username: username,
 		password: password,
-		port:     dashboardPort,
+		port:     dashboardPort.String(),
 		Handler:  r.Handler,
 	}).getNodeStatuesByAPI(storeSts)
 	if err != nil {
