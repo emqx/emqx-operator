@@ -98,7 +98,7 @@ var _ webhook.Validator = &EmqxBroker{}
 func (r *EmqxBroker) ValidateCreate() error {
 	emqxbrokerlog.Info("validate create", "name", r.Name)
 
-	if err := validateTag(r.Spec.EmqxTemplate.Image); err != nil {
+	if err := validateImageTag(r); err != nil {
 		emqxbrokerlog.Error(err, "validate create failed")
 		return err
 	}
@@ -109,12 +109,17 @@ func (r *EmqxBroker) ValidateCreate() error {
 func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 	emqxbrokerlog.Info("validate update", "name", r.Name)
 
-	if err := validateTag(r.Spec.EmqxTemplate.Image); err != nil {
+	if err := validateImageTag(r); err != nil {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
 	oldEmqx := old.(*EmqxBroker)
 	if err := validateUsernameAndPassword(r, oldEmqx); err != nil {
+		emqxbrokerlog.Error(err, "validate update failed")
+		return err
+	}
+
+	if err := validatePersistent(r, oldEmqx); err != nil {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
@@ -129,7 +134,8 @@ func (r *EmqxBroker) ValidateDelete() error {
 	return nil
 }
 
-func validateTag(image string) error {
+func validateImageTag(emqx Emqx) error {
+	image := emqx.GetImage()
 	str := strings.Split(image, ":")
 	l := len(str)
 	if l > 1 {

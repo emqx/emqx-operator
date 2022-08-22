@@ -18,6 +18,7 @@ package v1beta3
 
 import (
 	"errors"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -84,11 +85,11 @@ var _ webhook.Validator = &EmqxEnterprise{}
 func (r *EmqxEnterprise) ValidateCreate() error {
 	emqxenterpriselog.Info("validate create", "name", r.Name)
 
-	if err := validateTag(r.Spec.EmqxTemplate.Image); err != nil {
+	if err := validateImageTag(r); err != nil {
 		emqxenterpriselog.Error(err, "validate create failed")
 		return err
 	}
-	if err := validateLicense(r.Spec.EmqxTemplate.License); err != nil {
+	if err := validateLicense(r); err != nil {
 		emqxenterpriselog.Error(err, "validate create failed")
 		return err
 	}
@@ -99,7 +100,7 @@ func (r *EmqxEnterprise) ValidateCreate() error {
 func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 	emqxenterpriselog.Info("validate update", "name", r.Name)
 
-	if err := validateTag(r.Spec.EmqxTemplate.Image); err != nil {
+	if err := validateImageTag(r); err != nil {
 		emqxenterpriselog.Error(err, "validate update failed")
 		return err
 	}
@@ -110,8 +111,13 @@ func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 		return err
 	}
 
-	if err := validateLicense(r.Spec.EmqxTemplate.License); err != nil {
+	if err := validateLicense(r); err != nil {
 		emqxenterpriselog.Error(err, "validate update failed")
+		return err
+	}
+
+	if err := validatePersistent(r, oldEmqx); err != nil {
+		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
 
@@ -137,11 +143,19 @@ func validateUsernameAndPassword(new, old Emqx) error {
 	return nil
 }
 
-func validateLicense(license License) error {
+func validateLicense(emqx *EmqxEnterprise) error {
+	license := emqx.Spec.EmqxTemplate.License
 	if len(license.SecretName) > 0 {
 		if len(license.Data) != 0 || len(license.StringData) != 0 {
 			return errors.New("SecretName or Data and StringData can only set one ")
 		}
+	}
+	return nil
+}
+
+func validatePersistent(newEmqx, oldEmqx Emqx) error {
+	if !reflect.DeepEqual(newEmqx.GetPersistent(), oldEmqx.GetPersistent()) {
+		return errors.New("refuse to update persistent ")
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -132,6 +133,58 @@ var _ = Describe("EMQX Plugin", func() {
 	})
 })
 
+var _ = Describe("EMQX Persistent", func() {
+	Context("Check EMQX Persistent", func() {
+		emqxEnterprise := &EmqxEnterprise{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "enterprise",
+				Namespace: "default",
+			},
+			Spec: EmqxEnterpriseSpec{
+				EmqxTemplate: EmqxEnterpriseTemplate{
+					Image: "emqx/emqx:latest",
+				},
+
+				Persistent: corev1.PersistentVolumeClaimSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"test": "enterprise",
+						},
+					},
+				},
+			},
+		}
+		emqxBroker := &EmqxBroker{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "broker",
+				Namespace: "default",
+			},
+			Spec: EmqxBrokerSpec{
+				EmqxTemplate: EmqxBrokerTemplate{
+					Image: "emqx/emqx:latest",
+				},
+
+				Persistent: corev1.PersistentVolumeClaimSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"test": "broker",
+						},
+					},
+				},
+			},
+		}
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(context.Background(), emqxEnterprise)).Should(Succeed())
+			Expect(k8sClient.Delete(context.Background(), emqxBroker)).Should(Succeed())
+		})
+		It("Check validation", func() {
+			checkPersistentValidation(emqxEnterprise)
+			checkPersistentValidation(emqxBroker)
+		})
+	})
+})
+
 func checkValidationUpdate(plugin *EmqxPlugin) {
 	Eventually(func() error {
 		err := k8sClient.Get(
@@ -237,5 +290,31 @@ func checkLicenseValidation(emqx *EmqxEnterprise) {
 	license.StringData = "test"
 	license.Data = []byte("test")
 	emqx.SetLicense(license)
+	Expect(k8sClient.Update(context.Background(), emqx)).ShouldNot(Succeed())
+}
+
+func checkPersistentValidation(emqx Emqx) {
+	Expect(k8sClient.Create(context.Background(), emqx)).Should(Succeed())
+
+	Eventually(func() error {
+		err := k8sClient.Get(
+			context.TODO(),
+			types.NamespacedName{
+				Name:      emqx.GetName(),
+				Namespace: emqx.GetNamespace(),
+			},
+			emqx,
+		)
+		return err
+	}, timeout, interval).Should(Succeed())
+
+	persisten := corev1.PersistentVolumeClaimSpec{
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"test": "broker_test",
+			},
+		},
+	}
+	emqx.SetPersistent(persisten)
 	Expect(k8sClient.Update(context.Background(), emqx)).ShouldNot(Succeed())
 }
