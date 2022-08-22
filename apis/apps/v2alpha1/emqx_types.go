@@ -37,7 +37,7 @@ type EMQXReplicantTemplateSpec struct {
 	NodeName     string              `json:"nodeName,omitempty"`
 	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
 
-	//+kubebuilder:default:=0
+	//+kubebuilder:default:=3
 	Replicas  *int32                      `json:"replicas,omitempty"`
 	Args      []string                    `json:"args,omitempty"`
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`

@@ -49,14 +49,10 @@ var _ webhook.Defaulter = &EMQX{}
 func (r *EMQX) Default() {
 	emqxlog.Info("default", "name", r.Name)
 
-	r.defaultNames().
-		defaultLabels().
-		defaultBootstrapConfig().
-		defaultDashboardServiceTemplate()
-
-	// Replicant replicas
-	defaultReplicas := int32(0)
-	r.Spec.ReplicantTemplate.Spec.Replicas = &defaultReplicas
+	r.defaultNames()
+	r.defaultLabels()
+	r.defaultBootstrapConfig()
+	r.defaultDashboardServiceTemplate()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -100,7 +96,7 @@ func (r *EMQX) ValidateDelete() error {
 	return nil
 }
 
-func (r *EMQX) defaultNames() *EMQX {
+func (r *EMQX) defaultNames() {
 	if r.Name == "" {
 		r.Name = "emqx"
 	}
@@ -121,10 +117,10 @@ func (r *EMQX) defaultNames() *EMQX {
 		r.Spec.ListenersServiceTemplate.Name = r.NameOfListenersService()
 	}
 
-	return r
+	return
 }
 
-func (r *EMQX) defaultLabels() *EMQX {
+func (r *EMQX) defaultLabels() {
 	if r.Labels == nil {
 		r.Labels = make(map[string]string)
 	}
@@ -160,10 +156,11 @@ func (r *EMQX) defaultLabels() *EMQX {
 	}
 	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/instance"] = r.Name
 	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	return r
+
+	return
 }
 
-func (r *EMQX) defaultBootstrapConfig() *EMQX {
+func (r *EMQX) defaultBootstrapConfig() {
 	password, _ := password.Generate(64, 10, 0, true, true)
 	defaultBootstrapConfigStr := fmt.Sprintf(`
 	node {
@@ -187,14 +184,14 @@ func (r *EMQX) defaultBootstrapConfig() *EMQX {
 	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, r.Spec.BootstrapConfig)
 	config, err := hocon.ParseString(bootstrapConfig)
 	if err != nil {
-		return r
+		return
 	}
 
 	r.Spec.BootstrapConfig = config.String()
-	return r
+	return
 }
 
-func (r *EMQX) defaultDashboardServiceTemplate() *EMQX {
+func (r *EMQX) defaultDashboardServiceTemplate() {
 	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
 	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
 		r.Spec.DashboardServiceTemplate.Spec.Ports,
@@ -202,5 +199,5 @@ func (r *EMQX) defaultDashboardServiceTemplate() *EMQX {
 			GetDashboardServicePort(r),
 		},
 	)
-	return r
+	return
 }

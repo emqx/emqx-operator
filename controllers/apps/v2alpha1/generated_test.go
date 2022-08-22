@@ -129,6 +129,7 @@ func TestGenerateDashboardService(t *testing.T) {
 			},
 			DashboardServiceTemplate: corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "emqx-dashboard",
 					Labels: map[string]string{
 						"apps.emqx.io/instance": "emqx",
 					},
@@ -207,6 +208,7 @@ func TestGenerateListenerService(t *testing.T) {
 			},
 			ListenersServiceTemplate: corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: "emqx-listeners",
 					Labels: map[string]string{
 						"apps.emqx.io/instance": "emqx",
 					},
@@ -287,6 +289,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
+					Name:   "emqx-core",
 					Labels: coreLabels,
 					Annotations: map[string]string{
 						"foo": "bar",
@@ -531,12 +534,16 @@ func TestGenerateDeployment(t *testing.T) {
 				FSGroup:    &group,
 			},
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "emqx-core",
+				},
 				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
 					Replicas: &replicas,
 				},
 			},
 			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
 				ObjectMeta: metav1.ObjectMeta{
+					Name:   "emqx-replicant",
 					Labels: replicantLabels,
 					Annotations: map[string]string{
 						"foo": "bar",
