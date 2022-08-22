@@ -42,7 +42,7 @@ func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-bootstrap-user", instance.Name),
+			Name:        instance.NameOfBootStrapUser(),
 			Namespace:   instance.Namespace,
 			Labels:      instance.Labels,
 			Annotations: instance.Annotations,
@@ -60,7 +60,7 @@ func generateBootstrapConfigMap(instance *appsv2alpha1.EMQX) *corev1.ConfigMap {
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-bootstrap-config", instance.Name),
+			Name:        instance.NameOfBootStrapConfig(),
 			Namespace:   instance.Namespace,
 			Labels:      instance.Labels,
 			Annotations: instance.Annotations,
@@ -78,7 +78,7 @@ func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-headless", instance.Name),
+			Name:      instance.NameOfHeadlessService(),
 			Namespace: instance.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -109,7 +109,7 @@ func generateDashboardService(instance *appsv2alpha1.EMQX) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-dashboard", instance.Name),
+			Name:        instance.NameOfDashboardService(),
 			Namespace:   instance.Namespace,
 			Labels:      instance.Spec.DashboardServiceTemplate.Labels,
 			Annotations: instance.Spec.DashboardServiceTemplate.Annotations,
@@ -140,7 +140,7 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-listeners", instance.Name),
+			Name:        instance.NameOfListenersService(),
 			Namespace:   instance.Namespace,
 			Labels:      instance.Spec.ListenersServiceTemplate.Labels,
 			Annotations: instance.Spec.ListenersServiceTemplate.Annotations,
@@ -193,7 +193,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 					StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
 					SecurityContext: instance.Spec.CoreTemplate.Spec.SecurityContext,
 					VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
-						Name:      fmt.Sprintf("%s-core-data", instance.Name),
+						Name:      instance.NameOfCoreNodeData(),
 						MountPath: "/opt/emqx/data",
 					}),
 				},
@@ -208,7 +208,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(podTemplate.Spec.Containers)
 	podTemplate.Annotations = podAnnotation
 
-	annotations := instance.GetAnnotations()
+	annotations := instance.Annotations
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
@@ -220,13 +220,13 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-core", instance.Name),
-			Namespace:   instance.GetNamespace(),
+			Name:        instance.NameOfCoreNode(),
+			Namespace:   instance.Namespace,
 			Labels:      instance.Spec.CoreTemplate.Labels,
 			Annotations: annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: fmt.Sprintf("%s-headless", instance.Name),
+			ServiceName: instance.NameOfHeadlessService(),
 			Replicas:    instance.Spec.CoreTemplate.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: instance.Spec.CoreTemplate.Labels,
@@ -239,8 +239,8 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-core-data", instance.Name),
-					Namespace: instance.GetNamespace(),
+					Name:      instance.NameOfCoreNodeData(),
+					Namespace: instance.Namespace,
 					Labels:    instance.Spec.CoreTemplate.Labels,
 				},
 				Spec: instance.Spec.CoreTemplate.Spec.Persistent,
@@ -248,7 +248,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 		}
 	} else {
 		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: fmt.Sprintf("%s-core-data", instance.Name),
+			Name: instance.NameOfCoreNodeData(),
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
@@ -259,20 +259,20 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 }
 
 func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
-	coreNodesSuffix := fmt.Sprintf("%s.%s.svc.cluster.local", fmt.Sprintf("%s-headless", instance.Name), instance.Namespace)
+	coreNodesSuffix := fmt.Sprintf("%s.%s.svc.cluster.local", instance.NameOfHeadlessService(), instance.Namespace)
 
 	coreNodes := []string{}
 	for i := int32(0); i < *instance.Spec.CoreTemplate.Spec.Replicas; i++ {
 		coreNodes = append(coreNodes,
 			fmt.Sprintf(
 				"%s@%s-%d.%s",
-				EMQXContainerName, fmt.Sprintf("%s-core", instance.Name), i, coreNodesSuffix,
+				EMQXContainerName, instance.NameOfCoreNode(), i, coreNodesSuffix,
 			),
 		)
 	}
 	coreNodesStr, _ := json.Marshal(coreNodes)
 
-	annotations := instance.GetAnnotations()
+	annotations := instance.Annotations
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
@@ -284,8 +284,8 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-replicant", instance.Name),
-			Namespace:   instance.GetNamespace(),
+			Name:        instance.NameOfReplicantNode(),
+			Namespace:   instance.Namespace,
 			Labels:      instance.Spec.ReplicantTemplate.Labels,
 			Annotations: annotations,
 		},
@@ -341,13 +341,13 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 							StartupProbe:    instance.Spec.ReplicantTemplate.Spec.StartupProbe,
 							SecurityContext: instance.Spec.ReplicantTemplate.Spec.SecurityContext,
 							VolumeMounts: append(instance.Spec.ReplicantTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
-								Name:      fmt.Sprintf("%s-replicant-data", instance.Name),
+								Name:      instance.NameOfReplicantNodeData(),
 								MountPath: "/opt/emqx/data",
 							}),
 						},
 					}, instance.Spec.ReplicantTemplate.Spec.ExtraContainers...),
 					Volumes: append(instance.Spec.ReplicantTemplate.Spec.ExtraVolumes, corev1.Volume{
-						Name: fmt.Sprintf("%s-replicant-data", instance.Name),
+						Name: instance.NameOfReplicantNodeData(),
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
