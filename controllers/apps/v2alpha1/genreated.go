@@ -53,6 +53,24 @@ func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 	}
 }
 
+func generateBootstrapConfigMap(instance *appsv2alpha1.EMQX) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        fmt.Sprintf("%s-bootstrap-config", instance.Name),
+			Namespace:   instance.Namespace,
+			Labels:      instance.Labels,
+			Annotations: instance.Annotations,
+		},
+		Data: map[string]string{
+			"emqx.conf": instance.Spec.BootstrapConfig,
+		},
+	}
+}
+
 func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 	headlessSvc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -353,61 +371,102 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 }
 
 func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *corev1.Secret) *appsv1.StatefulSet {
-	isNotExistVolume := func() bool {
-		for _, v := range sts.Spec.Template.Spec.Volumes {
-			if v.Name == "bootstrap-user" {
-				return false
-			}
-		}
-		return true
-	}
-
-	isNotExistVolumeVolumeMount := func() bool {
-		for _, v := range sts.Spec.Template.Spec.Containers[0].VolumeMounts {
-			if v.Name == "bootstrap-user" {
-				return false
-			}
-		}
-		return true
-	}
-
 	isNotExistEnv := func() bool {
 		for _, v := range sts.Spec.Template.Spec.Containers[0].Env {
-			if v.Name == "EMQX_DASHBOARD__BOOTSTRAP_USER" {
+			if v.Name == "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE" {
 				return false
 			}
 		}
 		return true
-	}
-
-	if isNotExistVolume() {
-		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "bootstrap-user",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: bootstrapUser.Name,
-				},
-			},
-		})
-	}
-
-	if isNotExistVolumeVolumeMount() {
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "bootstrap-user",
-			MountPath: "/opt/emqx/data/bootstrap_user",
-			SubPath:   "bootstrap_user",
-			ReadOnly:  true,
-		})
 	}
 
 	if isNotExistEnv() {
 		sts.Spec.Template.Spec.Containers[0].Env = append(sts.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  "EMQX_DASHBOARD__BOOTSTRAP_USER",
+			Name:  "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE",
 			Value: "/opt/emqx/data/bootstrap_user",
 		})
 	}
 
+	volume := corev1.Volume{
+		Name: "bootstrap-user",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: bootstrapUser.Name,
+			},
+		},
+	}
+
+	if isNotExistVolume(sts.Spec.Template.Spec.Volumes, volume) {
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, volume)
+	}
+
+	volumeMount := corev1.VolumeMount{
+		Name:      "bootstrap-user",
+		MountPath: "/opt/emqx/data/bootstrap_user",
+		SubPath:   "bootstrap_user",
+		ReadOnly:  true,
+	}
+	if isNotExistVolumeMount(sts.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMount) {
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMount)
+	}
+
 	return sts
+}
+
+func updateStatefulSetForBootstrapConfig(sts *appsv1.StatefulSet, bootstrapConfig *corev1.ConfigMap) *appsv1.StatefulSet {
+	volume := corev1.Volume{
+		Name: "bootstrap-config",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: bootstrapConfig.Name,
+				},
+			},
+		},
+	}
+	if isNotExistVolume(sts.Spec.Template.Spec.Volumes, volume) {
+		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, volume)
+	}
+
+	volumeMount := corev1.VolumeMount{
+		Name:      "bootstrap-config",
+		MountPath: "/opt/emqx/etc/emqx.conf",
+		SubPath:   "emqx.conf",
+		ReadOnly:  true,
+	}
+	if isNotExistVolumeMount(sts.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMount) {
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMount)
+	}
+
+	return sts
+}
+func updateDeploymentForBootstrapConfig(deploy *appsv1.Deployment, bootstrapConfig *corev1.ConfigMap) *appsv1.Deployment {
+	volume := corev1.Volume{
+		Name: "bootstrap-config",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: bootstrapConfig.Name,
+				},
+			},
+		},
+	}
+	if isNotExistVolume(deploy.Spec.Template.Spec.Volumes, volume) {
+		deploy.Spec.Template.Spec.Volumes = append(deploy.Spec.Template.Spec.Volumes, volume)
+	}
+
+	volumeMount := corev1.VolumeMount{
+		Name:      "bootstrap-config",
+		MountPath: "/opt/emqx/etc/emqx.conf",
+		SubPath:   "emqx.conf",
+		ReadOnly:  true,
+	}
+
+	if isNotExistVolumeMount(deploy.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMount) {
+		deploy.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploy.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMount)
+	}
+
+	return deploy
 }
 
 func mergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
@@ -432,4 +491,22 @@ func generateAnnotationByContainers(containers []corev1.Container) string {
 		containerNames = append(containerNames, c.Name)
 	}
 	return strings.Join(containerNames, ",")
+}
+
+func isNotExistVolumeMount(volumeMounts []corev1.VolumeMount, volumeMount corev1.VolumeMount) bool {
+	for _, v := range volumeMounts {
+		if v.Name == volumeMount.Name {
+			return false
+		}
+	}
+	return true
+}
+
+func isNotExistVolume(volumes []corev1.Volume, volume corev1.Volume) bool {
+	for _, v := range volumes {
+		if v.Name == volume.Name {
+			return false
+		}
+	}
+	return true
 }
