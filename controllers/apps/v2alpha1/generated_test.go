@@ -17,6 +17,7 @@ limitations under the License.
 package apps
 
 import (
+	"strings"
 	"testing"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
@@ -40,6 +41,37 @@ var (
 		"apps.emqx.io/db-role":    "replicant",
 	}
 )
+
+func TestGenerateBootstrapUserSecret(t *testing.T) {
+	instance := &appsv2alpha1.EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+	}
+
+	got := generateBootstrapUserSecret(instance)
+	assert.Equal(t, "emqx-bootstrap-user", got.Name)
+	user, ok := got.StringData["bootstrap_user"]
+	assert.True(t, ok)
+
+	index := strings.Index(user, ":")
+	assert.Equal(t, "emqx_operator_controller", user[:index], user[index+1:])
+}
+
+func TestGenerateBootstrapConfigMap(t *testing.T) {
+	instance := &appsv2alpha1.EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+	}
+
+	got := generateBootstrapConfigMap(instance)
+	assert.Equal(t, "emqx-bootstrap-config", got.Name)
+	_, ok := got.Data["emqx.conf"]
+	assert.True(t, ok)
+}
 
 func TestGenerateHeadlessSVC(t *testing.T) {
 	instance := &appsv2alpha1.EMQX{
@@ -104,7 +136,17 @@ func TestGenerateDashboardService(t *testing.T) {
 						"foo": "bar",
 					},
 				},
-				Spec: corev1.ServiceSpec{},
+				Spec: corev1.ServiceSpec{
+					Selector: coreLabels,
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "dashboard",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       18083,
+							TargetPort: intstr.FromInt(18083),
+						},
+					},
+				},
 			},
 		},
 	}
@@ -679,4 +721,145 @@ func TestGenerateDeployment(t *testing.T) {
 	}
 
 	assert.Equal(t, expect, generateDeployment(instance))
+}
+
+func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
+	bootstrapUser := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "emqx-bootstrap-user",
+		},
+	}
+
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+					},
+				},
+			},
+		},
+	}
+
+	got := updateStatefulSetForBootstrapUser(sts, bootstrapUser)
+
+	assert.Equal(t, []corev1.VolumeMount{{
+		Name:      "bootstrap-user",
+		MountPath: "/opt/emqx/data/bootstrap_user",
+		SubPath:   "bootstrap_user",
+		ReadOnly:  true,
+	}}, got.Spec.Template.Spec.Containers[0].VolumeMounts)
+
+	assert.Equal(t, []corev1.Volume{{
+		Name: "bootstrap-user",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: "emqx-bootstrap-user",
+			},
+		},
+	}}, got.Spec.Template.Spec.Volumes)
+
+	assert.Equal(t, []corev1.EnvVar{{
+		Name:  "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE",
+		Value: "/opt/emqx/data/bootstrap_user",
+	}}, got.Spec.Template.Spec.Containers[0].Env)
+}
+
+func TestUpdateStatefulSetForBootstrapConfig(t *testing.T) {
+	bootstrapConfig := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "emqx-bootstrap-config",
+		},
+	}
+
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+					},
+				},
+			},
+		},
+	}
+
+	got := updateStatefulSetForBootstrapConfig(sts, bootstrapConfig)
+
+	assert.Equal(t, []corev1.Volume{{
+		Name: "bootstrap-config",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: "emqx-bootstrap-config",
+				},
+			},
+		},
+	}}, got.Spec.Template.Spec.Volumes)
+
+	assert.Equal(t, []corev1.VolumeMount{{
+		Name:      "bootstrap-config",
+		MountPath: "/opt/emqx/etc/emqx.conf",
+		SubPath:   "emqx.conf",
+		ReadOnly:  true,
+	}}, got.Spec.Template.Spec.Containers[0].VolumeMounts)
+}
+
+func TestUpdateDeploymentForBootstrapConfig(t *testing.T) {
+	bootstrapConfig := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "emqx-bootstrap-config",
+		},
+	}
+
+	deploy := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+					},
+				},
+			},
+		},
+	}
+
+	got := updateDeploymentForBootstrapConfig(deploy, bootstrapConfig)
+
+	assert.Equal(t, []corev1.Volume{{
+		Name: "bootstrap-config",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: "emqx-bootstrap-config",
+				},
+			},
+		},
+	}}, got.Spec.Template.Spec.Volumes)
+
+	assert.Equal(t, []corev1.VolumeMount{{
+		Name:      "bootstrap-config",
+		MountPath: "/opt/emqx/etc/emqx.conf",
+		SubPath:   "emqx.conf",
+		ReadOnly:  true,
+	}}, got.Spec.Template.Spec.Containers[0].VolumeMounts)
+}
+
+func TestIsNotExistVolumeMount(t *testing.T) {
+	volumeMounts := []corev1.VolumeMount{
+		{Name: "exist"},
+	}
+
+	assert.True(t, isNotExistVolumeMount(volumeMounts, corev1.VolumeMount{Name: "not-exist"}))
+	assert.False(t, isNotExistVolumeMount(volumeMounts, corev1.VolumeMount{Name: "exist"}))
+}
+
+func TestIsNotExistVolume(t *testing.T) {
+	volumes := []corev1.Volume{
+		{Name: "exist"},
+	}
+
+	assert.True(t, isNotExistVolume(volumes, corev1.Volume{Name: "not-exist"}))
+	assert.False(t, isNotExistVolume(volumes, corev1.Volume{Name: "exist"}))
 }

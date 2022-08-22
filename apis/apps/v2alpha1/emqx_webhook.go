@@ -49,23 +49,14 @@ var _ webhook.Defaulter = &EMQX{}
 func (r *EMQX) Default() {
 	emqxlog.Info("default", "name", r.Name)
 
-	r.defaultLabels()
-	if err := r.defaultBootstrapConfig(); err != nil {
-		emqxlog.Error(err, "parse bootstrap config failed")
-		return
-	}
+	r.defaultNames().
+		defaultLabels().
+		defaultBootstrapConfig().
+		defaultDashboardServiceTemplate()
 
 	// Replicant replicas
 	defaultReplicas := int32(0)
 	r.Spec.ReplicantTemplate.Spec.Replicas = &defaultReplicas
-
-	// Dashboard service
-	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
-		r.Spec.DashboardServiceTemplate.Spec.Ports,
-		[]corev1.ServicePort{
-			GetDashboardServicePort(r),
-		},
-	)
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -109,18 +100,42 @@ func (r *EMQX) ValidateDelete() error {
 	return nil
 }
 
-func (r *EMQX) defaultLabels() {
+func (r *EMQX) defaultNames() *EMQX {
+	if r.Name == "" {
+		r.Name = "emqx"
+	}
+
+	if r.Spec.CoreTemplate.Name == "" {
+		r.Spec.CoreTemplate.Name = r.NameOfCoreNode()
+	}
+
+	if r.Spec.ReplicantTemplate.Name == "" {
+		r.Spec.ReplicantTemplate.Name = r.NameOfReplicantNode()
+	}
+
+	if r.Spec.DashboardServiceTemplate.Name == "" {
+		r.Spec.DashboardServiceTemplate.Name = r.NameOfDashboardService()
+	}
+
+	if r.Spec.ListenersServiceTemplate.Name == "" {
+		r.Spec.ListenersServiceTemplate.Name = r.NameOfListenersService()
+	}
+
+	return r
+}
+
+func (r *EMQX) defaultLabels() *EMQX {
 	if r.Labels == nil {
 		r.Labels = make(map[string]string)
 	}
 	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Labels["apps.emqx.io/r"] = r.GetName()
+	r.Labels["apps.emqx.io/instance"] = r.GetName()
 
 	// Core
 	if r.Spec.CoreTemplate.Labels == nil {
 		r.Spec.CoreTemplate.Labels = make(map[string]string)
 	}
-	r.Spec.CoreTemplate.Labels["apps.emqx.io/r"] = r.Name
+	r.Spec.CoreTemplate.Labels["apps.emqx.io/instance"] = r.Name
 	r.Spec.CoreTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Spec.CoreTemplate.Labels["apps.emqx.io/db-role"] = "core"
 
@@ -128,7 +143,7 @@ func (r *EMQX) defaultLabels() {
 	if r.Spec.ReplicantTemplate.Labels == nil {
 		r.Spec.ReplicantTemplate.Labels = make(map[string]string)
 	}
-	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/r"] = r.Name
+	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/instance"] = r.Name
 	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/db-role"] = "replicant"
 
@@ -136,18 +151,19 @@ func (r *EMQX) defaultLabels() {
 	if r.Spec.DashboardServiceTemplate.Labels == nil {
 		r.Spec.DashboardServiceTemplate.Labels = make(map[string]string)
 	}
-	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/r"] = r.Name
+	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/instance"] = r.Name
 	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 
 	// Listeners service
 	if r.Spec.ListenersServiceTemplate.Labels == nil {
-		r.Spec.DashboardServiceTemplate.Labels = make(map[string]string)
+		r.Spec.ListenersServiceTemplate.Labels = make(map[string]string)
 	}
-	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/r"] = r.Name
-	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/instance"] = r.Name
+	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	return r
 }
 
-func (r *EMQX) defaultBootstrapConfig() error {
+func (r *EMQX) defaultBootstrapConfig() *EMQX {
 	password, _ := password.Generate(64, 10, 0, true, true)
 	defaultBootstrapConfigStr := fmt.Sprintf(`
 	node {
@@ -171,9 +187,20 @@ func (r *EMQX) defaultBootstrapConfig() error {
 	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, r.Spec.BootstrapConfig)
 	config, err := hocon.ParseString(bootstrapConfig)
 	if err != nil {
-		return err
+		return r
 	}
 
 	r.Spec.BootstrapConfig = config.String()
-	return nil
+	return r
+}
+
+func (r *EMQX) defaultDashboardServiceTemplate() *EMQX {
+	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
+	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
+		r.Spec.DashboardServiceTemplate.Spec.Ports,
+		[]corev1.ServicePort{
+			GetDashboardServicePort(r),
+		},
+	)
+	return r
 }

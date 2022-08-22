@@ -101,16 +101,14 @@ func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 }
 
 func generateDashboardService(instance *appsv2alpha1.EMQX) *corev1.Service {
-	instance.Spec.DashboardServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
-
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.NameOfDashboardService(),
 			Namespace:   instance.Namespace,
+			Name:        instance.Spec.DashboardServiceTemplate.Name,
 			Labels:      instance.Spec.DashboardServiceTemplate.Labels,
 			Annotations: instance.Spec.DashboardServiceTemplate.Annotations,
 		},
@@ -140,8 +138,8 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.NameOfListenersService(),
 			Namespace:   instance.Namespace,
+			Name:        instance.Spec.ListenersServiceTemplate.Name,
 			Labels:      instance.Spec.ListenersServiceTemplate.Labels,
 			Annotations: instance.Spec.ListenersServiceTemplate.Annotations,
 		},
@@ -220,8 +218,8 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Kind:       "StatefulSet",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.NameOfCoreNode(),
 			Namespace:   instance.Namespace,
+			Name:        instance.Spec.CoreTemplate.Name,
 			Labels:      instance.Spec.CoreTemplate.Labels,
 			Annotations: annotations,
 		},
@@ -266,7 +264,7 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 		coreNodes = append(coreNodes,
 			fmt.Sprintf(
 				"%s@%s-%d.%s",
-				EMQXContainerName, instance.NameOfCoreNode(), i, coreNodesSuffix,
+				EMQXContainerName, instance.Spec.CoreTemplate.Name, i, coreNodesSuffix,
 			),
 		)
 	}
@@ -284,8 +282,8 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.NameOfReplicantNode(),
 			Namespace:   instance.Namespace,
+			Name:        instance.Spec.ReplicantTemplate.Name,
 			Labels:      instance.Spec.ReplicantTemplate.Labels,
 			Annotations: annotations,
 		},
@@ -360,22 +358,6 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 }
 
 func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *corev1.Secret) *appsv1.StatefulSet {
-	isNotExistEnv := func() bool {
-		for _, v := range sts.Spec.Template.Spec.Containers[0].Env {
-			if v.Name == "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE" {
-				return false
-			}
-		}
-		return true
-	}
-
-	if isNotExistEnv() {
-		sts.Spec.Template.Spec.Containers[0].Env = append(sts.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE",
-			Value: "/opt/emqx/data/bootstrap_user",
-		})
-	}
-
 	volume := corev1.Volume{
 		Name: "bootstrap-user",
 		VolumeSource: corev1.VolumeSource{
@@ -397,6 +379,15 @@ func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *c
 	}
 	if isNotExistVolumeMount(sts.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMount) {
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(sts.Spec.Template.Spec.Containers[0].VolumeMounts, volumeMount)
+	}
+
+	env := corev1.EnvVar{
+		Name:  "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE",
+		Value: "/opt/emqx/data/bootstrap_user",
+	}
+
+	if isNotExistEnv(sts.Spec.Template.Spec.Containers[0].Env, env) {
+		sts.Spec.Template.Spec.Containers[0].Env = append(sts.Spec.Template.Spec.Containers[0].Env, env)
 	}
 
 	return sts
@@ -464,6 +455,15 @@ func generateAnnotationByContainers(containers []corev1.Container) string {
 		containerNames = append(containerNames, c.Name)
 	}
 	return strings.Join(containerNames, ",")
+}
+
+func isNotExistEnv(envs []corev1.EnvVar, env corev1.EnvVar) bool {
+	for _, e := range envs {
+		if e.Name == env.Name {
+			return false
+		}
+	}
+	return true
 }
 
 func isNotExistVolumeMount(volumeMounts []corev1.VolumeMount, volumeMount corev1.VolumeMount) bool {

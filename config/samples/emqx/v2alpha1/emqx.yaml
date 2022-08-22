@@ -10,6 +10,7 @@ spec:
     sysmon.vm.long_schedule = disabled
   coreTemplate:
     metadata:
+      name: emqx-core
       labels:
         apps.emqx.io/instance: emqx
         apps.emqx.io/db-role: core
@@ -18,15 +19,21 @@ spec:
       replicas: 3
   replicantTemplate:
     metadata:
+      name: emqx-replicant
       labels:
         apps.emqx.io/instance: emqx
         apps.emqx.io/db-role: replicant
     spec:
       replicas: 0
   dashboardServiceTemplate:
+    metadata:
+      name: emqx-dashboard
     spec:
       ports:
       - name: "dashboard-listeners-http-bind"
         protocol: tcp
         port: 18083
         targetPort: 18083
+  listenersServiceTemplate:
+    metadata:
+      name: emqx-listeners
