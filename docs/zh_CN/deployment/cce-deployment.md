@@ -6,9 +6,7 @@ EMQX: The most scalable open-source MQTT broker for IoT. 详见：[EMQX文档](h
 
 EMQX Operator: A Kubernetes Operator for EMQX. 详见：[EMQX Operator文档](https://github.com/emqx/emqx-operator)
 
-CCE: 云容器引擎（Cloud Container Engine，简称CCE）提供高度可扩展的、高性能的企业级 Kubernetes 集群，支持运行 Docker 容器。借助云容器引擎，您可以在华为云上轻松部署、管理和扩展容器化应用程序。详见：[CCE文档](https://support.huaweicloud.com/cce/index.html)
-
-
+CCE: 云容器引擎（Cloud Container Engine，简称CCE）提供高度可扩展的、高性能的企业级 Kubernetes 集群。详见：[CCE文档](https://support.huaweicloud.com/cce/index.html)
 
 ## 创建CCE集群
 
@@ -30,14 +28,12 @@ kubectl get sc
 
 这里我们用`csi-disk`, 其他 StorageClass [参考](https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html)
 
-
-
 ## 使用EMQX Operator 部署EMQX集群
 
 Operator 安装[参考](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
 
 Operator 安装完成后，使用以下yaml 在 CCE 上进行部署 EMQX 集群
-```yaml
+```shell
 cat << "EOF" | kubectl apply -f -
 apiVersion: apps.emqx.io/v1beta3
 kind: EmqxEnterprise

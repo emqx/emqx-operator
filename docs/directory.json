@@ -27,6 +27,19 @@
       ]
     },
     {
+      "title": "Deployment on public cloud",
+      "children": [
+        {
+          "title": "Deploy EMQX clusters on AWS EKS",
+          "path": "deployment/aws-eks-deployment"
+        },
+        {
+          "title": "Deploy EMQX clusters on Azure AKS",
+          "path": "deployment/azure-deployment"
+        }
+      ]
+    },
+    {
       "title": "Tasks",
       "children": [
         {
@@ -36,10 +49,6 @@
         {
           "title": "Handle EMQX metrics and logs with telegraf",
           "path": "tasks/handle-emqx-metrics-and-logs"
-        },
-        {
-          "title": "Deploy EMQX clusters on Azure AKS using EMQX Operator",
-          "path": "tasks/azure-deployment"
         }
       ]
     },
@@ -84,8 +93,37 @@
       "title": "快速开始",
       "children": [
         {
-          "title": "快速开始",
+          "title": "部署 EMQX 集群",
           "path": "getting-started/getting-started"
+        },
+        {
+          "title": "部署 EMQX 插件",
+          "path": "tasks/install-emqx-prometheus-plugin"
+        }
+      ]
+    },
+    {
+      "title": "公有云平台部署指南",
+      "children": [
+        {
+          "title": "阿里 ACK 上部署 EMQX 集群",
+          "path": "deployment/aliyun-ack-deployment"
+        },
+        {
+          "title": "华为 CCE 上部署 EMQX 集群",
+          "path": "deployment/cce-deployment"
+        },
+        {
+          "title": "AWS EKS 上部署 EMQX 集群",
+          "path": "deployment/aws-eks-deployment"
+        },
+        {
+          "title": "腾讯云 TKE 上部署 EMQX 集群",
+          "path": "deployment/tencent-tke-deployment"
+        },
+        {
+          "title": "Azure AKS 上部署 EMQX 集群",
+          "path": "deployment/azure-deployment"
         }
       ]
     },
@@ -93,28 +131,8 @@
       "title": "任务",
       "children": [
         {
-          "title": "部署 EMQX 插件",
-          "path": "tasks/install-emqx-prometheus-plugin"
-        },
-        {
-          "title": "利用 telegtaf 处理 EMQX metrics 和 logs",
+          "title": "使用 telegtaf 处理 EMQX metrics 和 logs",
           "path": "tasks/handle-emqx-metrics-and-logs"
-        },
-        {
-          "title": "使用 EMQX Operator 在华为 CCE 上部署 EMQX 集群",
-          "path": "tasks/cce-deployment"
-        },
-        {
-          "title": "使用 EMQX Operator 在 Azure AKS 上部署 EMQX 集群",
-          "path": "tasks/azure-deployment"
-        },
-        {
-          "title": "使用 EMQX Operator 在阿里云 ACK 上部署 EMQX 集群",
-          "path": "tasks/ack-deployment"
-        },
-        {
-          "title": "使用 EMQX Operator 在腾讯云 TKE 上部署 EMQX 集群",
-          "path": "tasks/tke-deployment"
         }
       ]
     },
