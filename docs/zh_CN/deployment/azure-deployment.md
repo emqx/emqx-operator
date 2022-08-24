@@ -6,7 +6,7 @@ EMQX: The most scalable open-source MQTT broker for IoT. 详见：[EMQX文档](h
 
 EMQX Operator: A Kubernetes Operator for EMQX. 详见：[EMQX Operator文档](https://github.com/emqx/emqx-operator)
 
-AKS: Azure Kubernetes 服务 (AKS) 通过将操作开销卸载到 Azure，简化了在 Azure 中部署托管 Kubernetes 群集的过程。作为一个托管的 Kubernetes 服务，Azure 可以自动处理运行状况监视和维护等关键任务。由于 Kubernetes 主节点由 Azure 管理，因此你只需要管理和维护代理节点。详见：[Azure 文档](https://docs.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-portal?tabs=azure-cli)
+AKS: Azure Kubernetes 服务 (AKS)。详见：[Azure 文档](https://docs.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-portal?tabs=azure-cli)
 
 ## 创建AKS集群
 
