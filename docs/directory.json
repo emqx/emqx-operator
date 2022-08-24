@@ -107,6 +107,14 @@
         {
           "title": "使用 EMQX Operator 在 Azure AKS 上部署 EMQX 集群",
           "path": "tasks/azure-deployment"
+        },
+        {
+          "title": "使用 EMQX Operator 在阿里云 ACK 上部署 EMQX 集群",
+          "path": "tasks/ack-deployment"
+        },
+        {
+          "title": "使用 EMQX Operator 在腾讯云 TKE 上部署 EMQX 集群",
+          "path": "tasks/tke-deployment"
         }
       ]
     },
