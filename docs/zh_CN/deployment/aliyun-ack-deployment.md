@@ -21,7 +21,7 @@ CLB：传统型负载均衡 CLB（Classic Load Balancer）是将访问流量根�
 
 支持在 Terway 网络模式下，通过 annotation 将 Pod 直接挂载到 CLB 后端，提升网络转发性能。：[通过Annotation配置负载均衡](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-annotations-to-configure-load-balancing-1)
 
-```
+```shell
 service.beta.kubernetes.io/backend-type："eni"
 ```
 
@@ -30,8 +30,8 @@ service.beta.kubernetes.io/backend-type："eni"
 
 使用如下命令查看当前集群可用的 storageClass:
 
-```
-kubectl get sc --kubeconfig=config
+```shell
+kubectl get sc
 ```
 
 可以看到集群默认创建了多个可用的 storageClass, 本文档部署 EMQX 时选取的第一个 storageClass: alibabacloud-cnfs-nas, 其他 StorageClass 可参考文档[存储-CSI](https://help.aliyun.com/document_detail/127551.html)
@@ -43,7 +43,7 @@ EMQX Operator 安装参考：[EMQX Operator 安装](https://github.com/emqx/emqx
 
 EMQX Operator 安装完成后，使用以下命令在 ACK 上进行部署 EMQX 集群：
 
-```
+```shell
 cat << EOF | kubectl apply -f -
 apiVersion: apps.emqx.io/v1beta3
 kind: EmqxEnterprise

@@ -20,7 +20,7 @@ CLB：负载均衡（Cloud Load Balancer， CLB），[CLB 文档](https://cloud.
 
 非直连模式下 CLB 和 Service 本身存在两层 CLB，性能有一定损失，开启直连配置可以提升转发性能。只需要在服务的 Service 的 annotations 里面添加以下注解： [直连模式配置说明](https://cloud.tencent.com/document/product/457/41897)
 
-```
+```yaml
 service.cloud.tencent.com/direct-access: "true" 
 ```
 
@@ -38,7 +38,7 @@ EMQX Operator 安装参考：[EMQX Operator 安装](https://github.com/emqx/emqx
 
 EMQX Operator 安装完成后，使用以下命令在 TKE 上进行部署 EMQX 集群：
 
-```
+```shell
 cat << EOF | kubectl apply -f -
 apiVersion: apps.emqx.io/v1beta3
 kind: EmqxEnterprise
@@ -75,7 +75,7 @@ EOF
 
 目前腾讯云 CLB 支持 终结 TCP TLS ，如需要使用 LB 终结 TCP TLS 请参考这篇文档，[LB 终结 TCP TLS 方案](https://github.com/emqx/emqx-operator/discussions/312)
 
-**备注**： 此文档详细解释了使用 EMQX Operator 在腾讯云 TKE 上部署EMQX 集群的步骤，另外还支持配置 LB 直连 Pod, 进一步提升转发性能。
+
 
 
 
