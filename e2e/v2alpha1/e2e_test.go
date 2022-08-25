@@ -45,24 +45,6 @@ var _ = Describe("E2E Test", func() {
 			Protocol:   corev1.ProtocolTCP,
 			TargetPort: intstr.FromInt(1883),
 		},
-		{
-			Name:       "ssl-default",
-			Port:       8883,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(8883),
-		},
-		{
-			Name:       "ws-default",
-			Port:       8083,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(8083),
-		},
-		{
-			Name:       "wss-default",
-			Port:       8084,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(8084),
-		},
 	}
 
 	BeforeEach(func() {

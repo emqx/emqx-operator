@@ -170,6 +170,9 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 
 	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfCoreNode(), Namespace: instance.Namespace}, storeSts)
 	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return instance, nil
+		}
 		return nil, emperror.Wrap(err, "failed to get store statefulSet")
 	}
 
@@ -273,8 +276,4 @@ func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username
 	index := strings.Index(str, ":")
 
 	return str[:index], str[index+1:], nil
-}
-
-func isExistReplicant(instance *appsv2alpha1.EMQX) bool {
-	return instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
 }
