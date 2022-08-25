@@ -116,8 +116,6 @@ func (r *EMQX) defaultNames() {
 	if r.Spec.ListenersServiceTemplate.Name == "" {
 		r.Spec.ListenersServiceTemplate.Name = r.NameOfListenersService()
 	}
-
-	return
 }
 
 func (r *EMQX) defaultLabels() {
@@ -156,8 +154,6 @@ func (r *EMQX) defaultLabels() {
 	}
 	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/instance"] = r.Name
 	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-
-	return
 }
 
 func (r *EMQX) defaultBootstrapConfig() {
@@ -188,7 +184,6 @@ func (r *EMQX) defaultBootstrapConfig() {
 	}
 
 	r.Spec.BootstrapConfig = config.String()
-	return
 }
 
 func (r *EMQX) defaultDashboardServiceTemplate() {
@@ -199,5 +194,4 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 			GetDashboardServicePort(r),
 		},
 	)
-	return
 }
