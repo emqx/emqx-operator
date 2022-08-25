@@ -17,7 +17,6 @@ limitations under the License.
 package apps
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -177,7 +176,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 						},
 						{
 							Name:  "EMQX_CLUSTER__DNS__NAME",
-							Value: fmt.Sprintf("%s-headless.%s.svc.cluster.local", instance.Name, instance.Namespace),
+							Value: fmt.Sprintf("%s.%s.svc.cluster.local", instance.NameOfHeadlessService(), instance.Namespace),
 						},
 						{
 							Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
@@ -257,19 +256,6 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 }
 
 func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
-	coreNodesSuffix := fmt.Sprintf("%s.%s.svc.cluster.local", instance.NameOfHeadlessService(), instance.Namespace)
-
-	coreNodes := []string{}
-	for i := int32(0); i < *instance.Spec.CoreTemplate.Spec.Replicas; i++ {
-		coreNodes = append(coreNodes,
-			fmt.Sprintf(
-				"%s@%s-%d.%s",
-				EMQXContainerName, instance.Spec.CoreTemplate.Name, i, coreNodesSuffix,
-			),
-		)
-	}
-	coreNodesStr, _ := json.Marshal(coreNodes)
-
 	annotations := instance.Annotations
 	if annotations == nil {
 		annotations = make(map[string]string)
@@ -325,11 +311,15 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 								},
 								{
 									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
-									Value: "static",
+									Value: "dns",
 								},
 								{
-									Name:  "EMQX_CLUSTER__STATIC__SEEDS",
-									Value: string(coreNodesStr),
+									Name:  "EMQX_CLUSTER__DNS__NAME",
+									Value: fmt.Sprintf("%s.%s.svc.cluster.local", instance.NameOfHeadlessService(), instance.Namespace),
+								},
+								{
+									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
+									Value: "srv",
 								},
 							},
 							Args:            instance.Spec.ReplicantTemplate.Spec.Args,
@@ -455,6 +445,10 @@ func generateAnnotationByContainers(containers []corev1.Container) string {
 		containerNames = append(containerNames, c.Name)
 	}
 	return strings.Join(containerNames, ",")
+}
+
+func isExistReplicant(instance *appsv2alpha1.EMQX) bool {
+	return instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
 }
 
 func isNotExistEnv(envs []corev1.EnvVar, env corev1.EnvVar) bool {
