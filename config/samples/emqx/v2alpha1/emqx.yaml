@@ -2,11 +2,25 @@ apiVersion: apps.emqx.io/v2alpha1
 kind: EMQX
 metadata:
   name: emqx
-  labels:
-    "apps.emqx.io/instance": "emqx"
 spec:
-  image: "emqx/emqx:5.0.5"
+  image: "emqx/emqx:5.0.6"
   bootstrapConfig: |
+    node {
+      cookie = emqxsecretcookie
+      data_dir = "data"
+      etc_dir = "etc"
+    }
+    listeners.tcp.default {
+      bind = "0.0.0.0:1883"
+      max_connections = 1024000
+    }
+    dashboard {
+        listeners.http {
+            bind: 18083
+        }
+        default_username: "admin"
+        default_password: "public"
+    }
     sysmon.vm.long_schedule = disabled
   coreTemplate:
     metadata:
@@ -24,14 +38,14 @@ spec:
         apps.emqx.io/instance: emqx
         apps.emqx.io/db-role: replicant
     spec:
-      replicas: 0
+      replicas: 3
   dashboardServiceTemplate:
     metadata:
       name: emqx-dashboard
     spec:
       ports:
       - name: "dashboard-listeners-http-bind"
-        protocol: tcp
+        protocol: TCP
         port: 18083
         targetPort: 18083
   listenersServiceTemplate:
