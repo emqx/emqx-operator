@@ -27,20 +27,24 @@ import (
 )
 
 func GetDashboardServicePort(instance *EMQX) corev1.ServicePort {
+	port := 18083
+
 	hoconConfig, _ := hocon.ParseString(instance.Spec.BootstrapConfig)
 	dashboardPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.http.bind"), `"`)
 
-	_, strPort, err := net.SplitHostPort(dashboardPort)
-	if err != nil {
-		strPort = dashboardPort
+	if dashboardPort != "" {
+		_, strPort, err := net.SplitHostPort(dashboardPort)
+		if err != nil {
+			strPort = dashboardPort
+		}
+		port, _ = strconv.Atoi(strPort)
 	}
-	intPort, _ := strconv.Atoi(strPort)
 
 	return corev1.ServicePort{
 		Name:       "dashboard-listeners-http-bind",
 		Protocol:   corev1.ProtocolTCP,
-		Port:       int32(intPort),
-		TargetPort: intstr.FromInt(intPort),
+		Port:       int32(port),
+		TargetPort: intstr.FromInt(port),
 	}
 }
 

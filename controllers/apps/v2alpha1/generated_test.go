@@ -660,11 +660,15 @@ func TestGenerateDeployment(t *testing.T) {
 								},
 								{
 									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
-									Value: "static",
+									Value: "dns",
 								},
 								{
-									Name:  "EMQX_CLUSTER__STATIC__SEEDS",
-									Value: "[\"emqx@emqx-core-0.emqx-headless.emqx.svc.cluster.local\",\"emqx@emqx-core-1.emqx-headless.emqx.svc.cluster.local\",\"emqx@emqx-core-2.emqx-headless.emqx.svc.cluster.local\"]",
+									Name:  "EMQX_CLUSTER__DNS__NAME",
+									Value: "emqx-headless.emqx.svc.cluster.local",
+								},
+								{
+									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
+									Value: "srv",
 								},
 							},
 							Args: []string{"hello world"},
@@ -851,6 +855,12 @@ func TestUpdateDeploymentForBootstrapConfig(t *testing.T) {
 		SubPath:   "emqx.conf",
 		ReadOnly:  true,
 	}}, got.Spec.Template.Spec.Containers[0].VolumeMounts)
+}
+
+func TestIsExistReplicant(t *testing.T) {
+	instance := &appsv2alpha1.EMQX{}
+
+	assert.False(t, isExistReplicant(instance))
 }
 
 func TestIsNotExistVolumeMount(t *testing.T) {
