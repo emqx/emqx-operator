@@ -43,6 +43,8 @@ spec:
     metadata:
       name: emqx-dashboard
     spec:
+      selector:
+        apps.emqx.io/db-role: core
       ports:
       - name: "dashboard-listeners-http-bind"
         protocol: TCP
