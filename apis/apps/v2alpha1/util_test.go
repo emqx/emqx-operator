@@ -25,7 +25,7 @@ import (
 )
 
 func TestGetDashboardServicePort(t *testing.T) {
-	expect := corev1.ServicePort{
+	expect := &corev1.ServicePort{
 		Name:       "dashboard-listeners-http-bind",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       int32(18083),
@@ -35,19 +35,25 @@ func TestGetDashboardServicePort(t *testing.T) {
 	t.Run("a single port", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = 18083`
-		assert.Equal(t, expect, GetDashboardServicePort(instance))
+		got, err := GetDashboardServicePort(instance)
+		assert.Nil(t, err)
+		assert.Equal(t, expect, got)
 	})
 
 	t.Run("ipv4 address", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = "0.0.0.0:18083"`
-		assert.Equal(t, expect, GetDashboardServicePort(instance))
+		got, err := GetDashboardServicePort(instance)
+		assert.Nil(t, err)
+		assert.Equal(t, expect, got)
 	})
 
 	t.Run("ipv6 address", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = "[::]:18083"`
-		assert.Equal(t, expect, GetDashboardServicePort(instance))
+		got, err := GetDashboardServicePort(instance)
+		assert.Nil(t, err)
+		assert.Equal(t, expect, got)
 	})
 }
 

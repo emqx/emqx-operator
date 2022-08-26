@@ -122,20 +122,11 @@ func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.
 		deploy = updateDeploymentForBootstrapConfig(deploy, bootstrap_config)
 		resources = append(resources, deploy)
 
-		username, password, err := r.getBootstrapUser(instance)
-		if err != nil {
-			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
-		}
-		dashboardPort := appsv2alpha1.GetDashboardServicePort(instance).TargetPort
-		listenerPorts, err := (&requestAPI{
-			username: username,
-			password: password,
-			port:     dashboardPort.String(),
-			Handler:  r.Handler,
-		}).getAllListenersByAPI(sts)
+		listenerPorts, err := r.generateRequestAPI(instance).getAllListenersByAPI(sts)
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 		}
+
 		if listenersSvc := generateListenerService(instance, listenerPorts); listenersSvc != nil {
 			resources = append(resources, listenersSvc)
 		}
@@ -176,17 +167,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		return nil, emperror.Wrap(err, "failed to get store statefulSet")
 	}
 
-	username, password, err := r.getBootstrapUser(instance)
-	if err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
-	}
-	dashboardPort := appsv2alpha1.GetDashboardServicePort(instance).TargetPort
-	emqxNodes, err = (&requestAPI{
-		username: username,
-		password: password,
-		port:     dashboardPort.String(),
-		Handler:  r.Handler,
-	}).getNodeStatuesByAPI(storeSts)
+	emqxNodes, err = r.generateRequestAPI(instance).getNodeStatuesByAPI(storeSts)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 	}
@@ -276,4 +257,28 @@ func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username
 	index := strings.Index(str, ":")
 
 	return str[:index], str[index+1:], nil
+}
+
+func (r *EMQXReconciler) generateRequestAPI(instance *appsv2alpha1.EMQX) *requestAPI {
+	var username, password, port string
+	username, password, err := r.getBootstrapUser(instance)
+	if err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
+	}
+
+	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to get dashboard service port: %s, use 18083 port", err.Error())
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetDashboardServicePort", msg)
+		port = "18083"
+	}
+	if dashboardPort != nil {
+		port = dashboardPort.TargetPort.String()
+	}
+	return &requestAPI{
+		Username: username,
+		Password: password,
+		Port:     port,
+		Handler:  r.Handler,
+	}
 }
