@@ -6,7 +6,7 @@
 
 ### 准备
 
-我们使用 [cert manager](https://github.com/cert-manager/cert-manager)来给 webhook 服务提供证书。你可以通过 [cert manager 文档](https://cert-manager.io/docs/installation/)来安装。
+我们使用 [cert-manager](https://github.com/cert-manager/cert-manager)来给 webhook 服务提供证书。你可以通过 [cert manager 文档](https://cert-manager.io/docs/installation/)来安装。
 
 ### 安装
 EMQX Operator 提供helm 以及 静态yaml安装，我们推荐使用 helm 来安装 EMQX Operator
@@ -37,59 +37,19 @@ NAME                                                READY   STATUS    RESTARTS  
 emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0          15s
 ```
 
-## 部署 EMQX 企业版本
+## 部署 EMQX
 
-1. 部署 EMQX Enterprise
-
-   ```shell
-   cat << "EOF" | kubectl apply -f -
-   apiVersion: apps.emqx.io/v1beta3
-   kind: EmqxEnterprise
-   metadata:
-     name: emqx-ee
-     labels:
-       "foo": "bar"
-   spec:
-     emqxTemplate:
-       image: emqx/emqx-ee:4.4.7
-   EOF
-   ```
-
-2. 检查 EMQX 企业版状态
-
-   ```bash
-   $ kubectl get pods
-   NAME              READY   STATUS    RESTARTS   AGE
-   emqx-ee-0   2/2     Running   0          22m
-   emqx-ee-1   2/2     Running   0          22m
-   emqx-ee-2   2/2     Running   0          22m
-
-   $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl status  
-   Node 'emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local' 4.4.7 is started  
-
-   $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl cluster status  
-   Cluster status: #{running_nodes =>
-                      ['emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local',
-                       'emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local',
-                       'emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local'],
-                  stopped_nodes => []}
-   ```
-
-## 部署 EMQX 开源版
-
-1. 部署 EMQX Broker
+1.  部署 EMQX 自定义资源
 
    ```bash
    cat << "EOF" | kubectl apply -f -
-   apiVersion: apps.emqx.io/v1beta3
-   kind: EmqxBroker
-   metadata:
-     name: emqx
-     labels:
-       "foo": "bar"
-   spec:
-     emqxTemplate:
-       image: emqx/emqx:4.4.7
+     apiVersion: apps.emqx.io/v2alpha1
+     kind: EMQX
+     metadata:
+       name: emqx
+     spec:
+       emqxTemplate:
+         image: emqx/emqx:5.0.6
    EOF
    ```
 
@@ -97,18 +57,57 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
    ```bash
    $ kubectl get pods
-   NAME              READY   STATUS    RESTARTS   AGE
-   emqx-0   2/2     Running   0          22m
-   emqx-1   2/2     Running   0          22m
-   emqx-2   2/2     Running   0          22m
+   NAME                              READY   STATUS    RESTARTS        AGE
+   emqx-core-0                       1/1     Running   0               75s
+   emqx-core-1                       1/1     Running   0               75s
+   emqx-core-2                       1/1     Running   0               75s
+   emqx-replicant-6c8b4fccfb-bkk4s   1/1     Running   0               75s
+   emqx-replicant-6c8b4fccfb-kmg9j   1/1     Running   0               75s
+   emqx-replicant-6c8b4fccfb-zc929   1/1     Running   0               75s
 
-   $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl status
-   Node 'emqx@emqx-0.emqx-headless.default.svc.cluster.local' 4.4.7 is started
-
-   $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl cluster status
-   Cluster status: #{running_nodes =>
-                      ['emqx@emqx-0.emqx-headless.default.svc.cluster.local',
-                       'emqx@emqx-1.emqx-headless.default.svc.cluster.local',
-                       'emqx@emqx-2.emqx-headless.default.svc.cluster.local'],
-                  stopped_nodes => []} 
+   $ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+   [
+     {
+       "node": "emqx@172.17.0.11",
+       "node_status": "running",
+       "otp_release": "24.2.1-1/12.2.1",
+       "role": "replicant",
+       "version": "5.0.6"
+     },
+     {
+       "node": "emqx@172.17.0.12",
+       "node_status": "running",
+       "otp_release": "24.2.1-1/12.2.1",
+       "role": "replicant",
+       "version": "5.0.6"
+     },
+     {
+       "node": "emqx@172.17.0.13",
+       "node_status": "running",
+       "otp_release": "24.2.1-1/12.2.1",
+       "role": "replicant",
+       "version": "5.0.6"
+     },
+     {
+       "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
+       "node_status": "running",
+       "otp_release": "24.2.1-1/12.2.1",
+       "role": "core",
+       "version": "5.0.6"
+     },
+     {
+       "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
+       "node_status": "running",
+       "otp_release": "24.2.1-1/12.2.1",
+       "role": "core",
+       "version": "5.0.6"
+     },
+     {
+       "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
+       "node_status": "running",
+       "otp_release": "24.2.1-1/12.2.1",
+       "role": "core",
+       "version": "5.0.6"
+     }
+   ]
    ```

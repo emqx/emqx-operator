@@ -113,7 +113,7 @@ var _ = Describe("E2E Test", func() {
 		instance := &appsv2alpha1.EMQX{}
 
 		It("", func() {
-			By("Checking the EMQX Custom Resource's Service when replicant nodes exist")
+			By("Checking the EMQX Custom Resource's Service")
 			svc := &corev1.Service{}
 			Eventually(func() map[string]string {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "default"}, svc)
@@ -122,7 +122,7 @@ var _ = Describe("E2E Test", func() {
 
 			Expect(svc.Spec.Ports).Should(ConsistOf(listenerPorts))
 
-			By("Checking the EMQX Custom Resource's Status when replicant nodes exist")
+			By("Checking the EMQX Custom Resource's Status")
 			Eventually(func() []appsv2alpha1.Condition {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
 				return instance.Status.Conditions
@@ -173,9 +173,15 @@ var _ = Describe("E2E Test", func() {
 		})
 	})
 
-	Context("Update EMQX Custom Resource, change image version", func() {
+	Context("Update EMQX Custom Resource, change image", func() {
 		instance := &appsv2alpha1.EMQX{}
 		JustBeforeEach(func() {
+			By("Wait EMQX cluster ready")
+			Eventually(func() []appsv2alpha1.Condition {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
+				return instance.Status.Conditions
+			}, timeout, interval).Should(ConsistOf(conditions))
+			By("Update the EMQX Custom Resource, change image")
 			Eventually(func() error {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
 				replicant := int32(3)
