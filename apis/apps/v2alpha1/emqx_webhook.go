@@ -21,7 +21,8 @@ import (
 	"fmt"
 
 	emperror "emperror.dev/errors"
-	"github.com/gurkankaymak/hocon"
+	// "github.com/gurkankaymak/hocon"
+	hocon "github.com/rory-z/go-hocon"
 	"github.com/sethvargo/go-password/password"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -158,25 +159,33 @@ func (r *EMQX) defaultLabels() {
 }
 
 func (r *EMQX) defaultBootstrapConfig() {
-	password, _ := password.Generate(64, 10, 0, true, true)
+	dnsName := fmt.Sprintf("%s.%s.svc.cluster.local", r.NameOfHeadlessService(), r.Namespace)
+	cookie, _ := password.Generate(64, 10, 0, true, true)
 	defaultBootstrapConfigStr := fmt.Sprintf(`
 	node {
 	  cookie = "%s"
-	  data_dir = "data"
-	  etc_dir = "etc"
+	  data_dir = data
+	  etc_dir = etc
+	}
+	cluster {
+		discovery_strategy = dns
+		dns {
+			record_type = srv
+			name = "%s"
+		}
 	}
 	dashboard {
 	  listeners.http {
-		bind: "18083"
+		bind = 18083
 	  }
-	  default_username: "admin"
-	  default_password: "public"
+	  default_username = admin
+	  default_password = public
 	}
 	listeners.tcp.default {
 		bind = "0.0.0.0:1883"
 		max_connections = 1024000
 	}
-	`, password)
+	`, cookie, dnsName)
 
 	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, r.Spec.BootstrapConfig)
 	config, err := hocon.ParseString(bootstrapConfig)

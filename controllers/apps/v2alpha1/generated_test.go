@@ -421,8 +421,9 @@ func TestGenerateStatefulSet(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: coreLabels,
 					Annotations: map[string]string{
-						"foo":                            "bar",
-						"apps.emqx.io/manage-containers": "emqx,extra",
+						"foo":                                "bar",
+						"apps.emqx.io/headless-service-name": "emqx-headless",
+						"apps.emqx.io/manage-containers":     "emqx,extra",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -460,20 +461,36 @@ func TestGenerateStatefulSet(t *testing.T) {
 							},
 							Env: []corev1.EnvVar{
 								{
+									Name: "POD_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
+										},
+									},
+								},
+								{
+									Name: "POD_NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
+								},
+								{
+									Name: "STS_HEADLESS_SERVICE_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.annotations['apps.emqx.io/headless-service-name']",
+										},
+									},
+								},
+								{
+									Name:  "EMQX_HOST",
+									Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
+								},
+								{
 									Name:  "EMQX_NODE__DB_ROLE",
 									Value: "core",
-								},
-								{
-									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
-									Value: "dns",
-								},
-								{
-									Name:  "EMQX_CLUSTER__DNS__NAME",
-									Value: "emqx-headless.emqx.svc.cluster.local",
-								},
-								{
-									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
-									Value: "srv",
 								},
 								{
 									Name:  "FOO",
@@ -812,18 +829,6 @@ func TestGenerateDeployment(t *testing.T) {
 											FieldPath: "status.podIP",
 										},
 									},
-								},
-								{
-									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
-									Value: "dns",
-								},
-								{
-									Name:  "EMQX_CLUSTER__DNS__NAME",
-									Value: "emqx-headless.emqx.svc.cluster.local",
-								},
-								{
-									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
-									Value: "srv",
 								},
 								{
 									Name:  "FOO",
