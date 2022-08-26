@@ -17,6 +17,7 @@ limitations under the License.
 package v2alpha1
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -26,26 +27,28 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func GetDashboardServicePort(instance *EMQX) corev1.ServicePort {
-	port := 18083
-
-	hoconConfig, _ := hocon.ParseString(instance.Spec.BootstrapConfig)
+func GetDashboardServicePort(instance *EMQX) (*corev1.ServicePort, error) {
+	hoconConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %s: %w", instance.Spec.BootstrapConfig, err)
+	}
 	dashboardPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.http.bind"), `"`)
-
-	if dashboardPort != "" {
-		_, strPort, err := net.SplitHostPort(dashboardPort)
-		if err != nil {
-			strPort = dashboardPort
-		}
-		port, _ = strconv.Atoi(strPort)
+	if dashboardPort == "" {
+		return nil, fmt.Errorf("failed to get dashboard.listeners.http.bind in %s", hoconConfig.String())
 	}
 
-	return corev1.ServicePort{
+	_, strPort, err := net.SplitHostPort(dashboardPort)
+	if err != nil {
+		strPort = dashboardPort
+	}
+	port, _ := strconv.Atoi(strPort)
+
+	return &corev1.ServicePort{
 		Name:       "dashboard-listeners-http-bind",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       int32(port),
 		TargetPort: intstr.FromInt(port),
-	}
+	}, nil
 }
 
 func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
