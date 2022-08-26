@@ -11,6 +11,8 @@ import (
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
+	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -121,6 +123,11 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
 			IgnoreOtherContainers(),
 		)
+	case *appsv1.Deployment:
+		opts = append(
+			opts,
+			IgnoreOtherContainers(),
+		)
 	case *corev1.Service:
 		storageResource := &corev1.Service{}
 		err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.UnstructuredContent(), storageResource)
@@ -188,17 +195,21 @@ func IgnoreOtherContainers() patch.CalculateOption {
 }
 
 func selectManagerContainer(obj []byte) ([]byte, error) {
-	sts := &appsv1.StatefulSet{}
-	_ = json.Unmarshal(obj, sts)
-	containerNames := sts.Spec.Template.Annotations[ManageContainersAnnotation]
+	podTemplateJson := gjson.GetBytes(obj, "spec.template")
+	podTemplate := &corev1.PodTemplateSpec{}
+	_ = json.Unmarshal([]byte(podTemplateJson.String()), podTemplate)
+
+	containerNames := podTemplate.Annotations[ManageContainersAnnotation]
 	containers := []corev1.Container{}
-	for _, container := range sts.Spec.Template.Spec.Containers {
+	for _, container := range podTemplate.Spec.Containers {
 		if strings.Contains(containerNames, container.Name) {
 			containers = append(containers, container)
 		}
 	}
-	sts.Spec.Template.Spec.Containers = containers
-	return json.Marshal(sts)
+	podTemplate.Spec.Containers = containers
+
+	newJson, _ := json.Marshal(podTemplate)
+	return sjson.SetBytes(obj, "spec.template", newJson)
 }
 
 func findReadyEmqxPod(pods *corev1.PodList) string {
