@@ -62,7 +62,7 @@ jobs:
         env:
           COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: goveralls -coverprofile=cover.out -service=github -parallel -flagname=go-test-${{ matrix.dir }}
-  
+
   finish:
     needs: test
     runs-on: ubuntu-latest
@@ -84,8 +84,11 @@ jobs:
         emqx:
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqx.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqx-ee.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx.yaml"]
         exclude:
+          - install: helm
+            emqx: [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
           - install: helm
             emqx: [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx.yaml"]
 
@@ -140,4 +143,8 @@ jobs:
       - if: failure()
         run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
       - if: failure()
+        run: kubectl describe ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json
+      - if: failure()
         run: kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json
+      - if: failure()
+        run: kubectl logs -l "apps.emqx.io/managed-by=emqx-operator" -c emqx
