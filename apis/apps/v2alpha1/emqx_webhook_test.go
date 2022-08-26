@@ -19,7 +19,9 @@ package v2alpha1
 import (
 	"testing"
 
-	"github.com/gurkankaymak/hocon"
+	// "github.com/gurkankaymak/hocon"
+	hocon "github.com/rory-z/go-hocon"
+
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -128,6 +130,10 @@ func TestDefaultLabels(t *testing.T) {
 func TestDefaultBootstrapConfig(t *testing.T) {
 	t.Run("empty bootstrap config", func(t *testing.T) {
 		instance := &EMQX{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "webhook-test",
+				Namespace: "default",
+			},
 			Spec: EMQXSpec{
 				BootstrapConfig: "",
 			},
@@ -152,14 +158,14 @@ func TestDefaultBootstrapConfig(t *testing.T) {
 	t.Run("already set cookie", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
-				BootstrapConfig: `node.cookie = "12345"`,
+				BootstrapConfig: `node.cookie = "6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq"`,
 			},
 		}
 		instance.defaultBootstrapConfig()
 
 		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
-		assert.Equal(t, "12345", bootstrapConfig.GetString("node.cookie"))
+		assert.Equal(t, "\"6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq\"", bootstrapConfig.GetString("node.cookie"))
 	})
 
 	t.Run("already set listener", func(t *testing.T) {
