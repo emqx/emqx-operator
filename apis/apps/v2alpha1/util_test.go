@@ -55,6 +55,29 @@ func TestGetDashboardServicePort(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, expect, got)
 	})
+
+	t.Run("wrong bootstrap config", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.BootstrapConfig = `hello world`
+		got, err := GetDashboardServicePort(instance)
+		assert.ErrorContains(t, err, "failed to parse")
+		assert.Nil(t, got)
+	})
+
+	t.Run("empty bootstrap config", func(t *testing.T) {
+		instance := &EMQX{}
+		got, err := GetDashboardServicePort(instance)
+		assert.ErrorContains(t, err, "failed to get dashboard.listeners.http.bind")
+		assert.Nil(t, got)
+	})
+
+	t.Run("empty dashboard listeners config", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.BootstrapConfig = `foo = bar`
+		got, err := GetDashboardServicePort(instance)
+		assert.ErrorContains(t, err, "failed to get dashboard.listeners.http.bind")
+		assert.Nil(t, got)
+	})
 }
 
 func TestMergeServicePorts(t *testing.T) {
