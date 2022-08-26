@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestIgnoreOtherContainer(t *testing.T) {
+func TestIgnoreOtherContainerForSts(t *testing.T) {
 	selectEmqxContainer := handler.IgnoreOtherContainers()
 
 	currentObject := &appsv1.StatefulSet{
@@ -85,7 +85,99 @@ func TestIgnoreOtherContainer(t *testing.T) {
 	}
 	assert.Equal(t, current, modified, "the current and modified byte sequence should be the same")
 
-	// modifiedObject.Spec.Template.Spec.Containers[0] = corev1.Container{Name: "emqx", Args: []string{"--fake"}}
+	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name: "emqx",
+			Args: []string{"--fake"},
+		},
+		{
+			Name: "reloader",
+		},
+	}
+	modified, _ = json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
+
+	current, modified, err = selectEmqxContainer(current, modified)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.NotEqual(t, current, modified, "the current and modified byte sequence should be the not same")
+
+	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name: "emqx",
+		},
+		{
+			Name: "reloader",
+			Args: []string{"--fake"},
+		},
+	}
+	modified, _ = json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
+
+	current, modified, err = selectEmqxContainer(current, modified)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.NotEqual(t, current, modified, "the current and modified byte sequence should be the not same")
+}
+
+func TestIgnoreOtherContainerForDeploy(t *testing.T) {
+	selectEmqxContainer := handler.IgnoreOtherContainers()
+
+	currentObject := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						handler.ManageContainersAnnotation: "emqx,reloader",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: "emqx",
+						},
+						{
+							Name: "reloader",
+						},
+					},
+				},
+			},
+		},
+	}
+	current, _ := json.ConfigCompatibleWithStandardLibrary.Marshal(currentObject)
+
+	modifiedObject := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						handler.ManageContainersAnnotation: "emqx,reloader",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: "emqx",
+						},
+						{
+							Name: "reloader",
+						},
+						{
+							Name: "fake",
+						},
+					},
+				},
+			},
+		},
+	}
+	modified, _ := json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
+
+	current, modified, err := selectEmqxContainer(current, modified)
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Equal(t, current, modified, "the current and modified byte sequence should be the same")
+
 	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name: "emqx",
