@@ -22,80 +22,288 @@ import (
 )
 
 type ServiceTemplate struct {
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              corev1.ServiceSpec `json:"spec,omitempty"`
+	// Spec defines the behavior of a service.
+	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	Spec corev1.ServiceSpec `json:"spec,omitempty"`
 }
 
 type EMQXReplicantTemplate struct {
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              EMQXReplicantTemplateSpec `json:"spec,omitempty"`
+	// Specification of the desired behavior of the EMQX replicant node.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	Spec EMQXReplicantTemplateSpec `json:"spec,omitempty"`
 }
 
 type EMQXReplicantTemplateSpec struct {
-	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeName     string              `json:"nodeName,omitempty"`
-	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
-
+	// NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node.
+	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
+	NodeName string `json:"nodeName,omitempty"`
+	// Affinity for pod assignment
+	// ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// If specified, the pod's tolerations.
+	// The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
+	ToleRations []corev1.Toleration `json:"toleRations,omitempty"`
+	// Replicas is the desired number of replicas of the given Template.
+	// These are replicas in the sense that they are instantiations of the
+	// same Template, but individual replicas also have a consistent identity.
+	// If unspecified, defaults to 3.
 	//+kubebuilder:default:=3
-	Replicas  *int32                      `json:"replicas,omitempty"`
-	Args      []string                    `json:"args,omitempty"`
+	Replicas *int32 `json:"replicas,omitempty"`
+	// Entrypoint array. Not executed within a shell.
+	// The container image's ENTRYPOINT is used if this is not provided.
+	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+	// cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
+	// to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
+	// produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
+	// of whether the variable exists or not. Cannot be updated.
+	// More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	// +optional
+	Command []string `json:"command,omitempty"`
+	// Arguments to the entrypoint.
+	// The container image's CMD is used if this is not provided.
+	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+	// cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
+	// to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
+	// produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
+	// of whether the variable exists or not. Cannot be updated.
+	// More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	Args []string `json:"args,omitempty"`
+	// List of ports to expose from the container. Exposing a port here gives
+	// the system additional information about the network connections a
+	// container uses, but is primarily informational. Not specifying a port here
+	// DOES NOT prevent that port from being exposed. Any port which is
+	// listening on the default "0.0.0.0" address inside a container will be
+	// accessible from the network.
+	// Cannot be updated.
+	Ports []corev1.ContainerPort `json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"containerPort" protobuf:"bytes,6,rep,name=ports"`
+	// List of environment variables to set in the container.
+	// Cannot be updated.
+	Env []corev1.EnvVar `json:"env,omitempty"`
+	// List of sources to populate environment variables in the container.
+	// The keys defined within a source must be a C_IDENTIFIER. All invalid keys
+	// will be reported as an event when the container is starting. When a key exists in multiple
+	// sources, the value associated with the last source will take precedence.
+	// Values defined by an Env with a duplicate key will take precedence.
+	// Cannot be updated.
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty" protobuf:"bytes,19,rep,name=envFrom"`
+	// Compute Resources required by this container.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	SecurityContext   *corev1.SecurityContext `json:"securityContext,omitempty"`
-	InitContainers    []corev1.Container      `json:"initContainers,omitempty"`
-	ExtraContainers   []corev1.Container      `json:"Containers,omitempty"`
-	ExtraVolumes      []corev1.Volume         `json:"extraVolumes,omitempty"`
-	ExtraVolumeMounts []corev1.VolumeMount    `json:"extraVolumeMounts,omitempty"`
-
+	// SecurityContext holds pod-level security attributes and common container settings.
+	// Optional: Defaults to empty.  See type description for default values of each field.
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	// SecurityContext defines the security options the container should be run with.
+	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
+	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
+	// List of initialization containers belonging to the pod.
+	// Init containers are executed in order prior to containers being started. If any
+	// init container fails, the pod is considered to have failed and is handled according
+	// to its restartPolicy. The name for an init container or normal container must be
+	// unique among all containers.
+	// Init containers may not have Lifecycle actions, Readiness probes, Liveness probes, or Startup probes.
+	// The resourceRequirements of an init container are taken into account during scheduling
+	// by finding the highest request/limit for each resource type, and then using the max of
+	// of that value or the sum of the normal containers. Limits are applied to init containers
+	// in a similar fashion.
+	// Init containers cannot currently be added or removed.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	// ExtraContainers represents extra containers to be added to the pod.
+	// See https://github.com/emqx/emqx-operator/issues/252
+	ExtraContainers []corev1.Container `json:"Containers,omitempty"`
+	// See https://github.com/emqx/emqx-operator/pull/72
+	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
+	// See https://github.com/emqx/emqx-operator/pull/72
+	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
+	// Periodic probe of container liveness.
+	// Container will be restarted if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+	// Periodic probe of container service readiness.
+	// Container will be removed from service endpoints if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
-	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
-	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
+	// StartupProbe indicates that the Pod has successfully initialized.
+	// If specified, no other probes are executed until this completes successfully.
+	// If this probe fails, the Pod will be restarted, just as if the livenessProbe failed.
+	// This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,
+	// when it might take a long time to load data or warm a cache, than during steady-state operation.
+	// This cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
+	// Actions that the management system should take in response to container lifecycle events.
+	// Cannot be updated.
+	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty" protobuf:"bytes,12,opt,name=lifecycle"`
 }
 
 type EMQXCoreTemplateSpec struct {
+	// VolumeClaimTemplates is a list of claims that pods are allowed to reference.
+	// The StatefulSet controller is responsible for mapping network identities to
+	// claims in a way that maintains the identity of a pod. Every claim in
+	// this list must have at least one matching (by name) volumeMount in one
+	// container in the template. A claim in this list takes precedence over
+	// any volumes in the template, with the same name.
 	// More than EMQXReplicantTemplateSpec
-	Persistent corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
-
-	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
-	ToleRations  []corev1.Toleration `json:"toleRations,omitempty"`
-	NodeName     string              `json:"nodeName,omitempty"`
-	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
-
+	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
+	// NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node.
+	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
+	NodeName string `json:"nodeName,omitempty"`
+	// Affinity for pod assignment
+	// ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// If specified, the pod's tolerations.
+	// The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
+	ToleRations []corev1.Toleration `json:"toleRations,omitempty"`
+	// Replicas is the desired number of replicas of the given Template.
+	// These are replicas in the sense that they are instantiations of the
+	// same Template, but individual replicas also have a consistent identity.
+	// If unspecified, defaults to 3.
 	//+kubebuilder:default:=3
-	Replicas  *int32                      `json:"replicas,omitempty"`
-	Args      []string                    `json:"args,omitempty"`
+	Replicas *int32 `json:"replicas,omitempty"`
+	// Entrypoint array. Not executed within a shell.
+	// The container image's ENTRYPOINT is used if this is not provided.
+	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+	// cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
+	// to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
+	// produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
+	// of whether the variable exists or not. Cannot be updated.
+	// More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	// +optional
+	Command []string `json:"command,omitempty"`
+	// Arguments to the entrypoint.
+	// The container image's CMD is used if this is not provided.
+	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+	// cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
+	// to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
+	// produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
+	// of whether the variable exists or not. Cannot be updated.
+	// More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	Args []string `json:"args,omitempty"`
+	// List of ports to expose from the container. Exposing a port here gives
+	// the system additional information about the network connections a
+	// container uses, but is primarily informational. Not specifying a port here
+	// DOES NOT prevent that port from being exposed. Any port which is
+	// listening on the default "0.0.0.0" address inside a container will be
+	// accessible from the network.
+	// Cannot be updated.
+	Ports []corev1.ContainerPort `json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"containerPort" protobuf:"bytes,6,rep,name=ports"`
+	// List of environment variables to set in the container.
+	// Cannot be updated.
+	Env []corev1.EnvVar `json:"env,omitempty"`
+	// List of sources to populate environment variables in the container.
+	// The keys defined within a source must be a C_IDENTIFIER. All invalid keys
+	// will be reported as an event when the container is starting. When a key exists in multiple
+	// sources, the value associated with the last source will take precedence.
+	// Values defined by an Env with a duplicate key will take precedence.
+	// Cannot be updated.
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty" protobuf:"bytes,19,rep,name=envFrom"`
+	// Compute Resources required by this container.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	SecurityContext   *corev1.SecurityContext `json:"securityContext,omitempty"`
-	InitContainers    []corev1.Container      `json:"initContainers,omitempty"`
-	ExtraContainers   []corev1.Container      `json:"Containers,omitempty"`
-	ExtraVolumes      []corev1.Volume         `json:"extraVolumes,omitempty"`
-	ExtraVolumeMounts []corev1.VolumeMount    `json:"extraVolumeMounts,omitempty"`
-
+	// SecurityContext holds pod-level security attributes and common container settings.
+	// Optional: Defaults to empty.  See type description for default values of each field.
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	// SecurityContext defines the security options the container should be run with.
+	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
+	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
+	// List of initialization containers belonging to the pod.
+	// Init containers are executed in order prior to containers being started. If any
+	// init container fails, the pod is considered to have failed and is handled according
+	// to its restartPolicy. The name for an init container or normal container must be
+	// unique among all containers.
+	// Init containers may not have Lifecycle actions, Readiness probes, Liveness probes, or Startup probes.
+	// The resourceRequirements of an init container are taken into account during scheduling
+	// by finding the highest request/limit for each resource type, and then using the max of
+	// of that value or the sum of the normal containers. Limits are applied to init containers
+	// in a similar fashion.
+	// Init containers cannot currently be added or removed.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	// ExtraContainers represents extra containers to be added to the pod.
+	// See https://github.com/emqx/emqx-operator/issues/252
+	ExtraContainers []corev1.Container `json:"Containers,omitempty"`
+	// See https://github.com/emqx/emqx-operator/pull/72
+	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
+	// See https://github.com/emqx/emqx-operator/pull/72
+	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
+	// Periodic probe of container liveness.
+	// Container will be restarted if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+	// Periodic probe of container service readiness.
+	// Container will be removed from service endpoints if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
-	LivenessProbe  *corev1.Probe `json:"livenessProbe,omitempty"`
-	StartupProbe   *corev1.Probe `json:"startupProbe,omitempty"`
+	// StartupProbe indicates that the Pod has successfully initialized.
+	// If specified, no other probes are executed until this completes successfully.
+	// If this probe fails, the Pod will be restarted, just as if the livenessProbe failed.
+	// This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,
+	// when it might take a long time to load data or warm a cache, than during steady-state operation.
+	// This cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
+	// Actions that the management system should take in response to container lifecycle events.
+	// Cannot be updated.
+	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty" protobuf:"bytes,12,opt,name=lifecycle"`
 }
 
 type EMQXCoreTemplate struct {
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              EMQXCoreTemplateSpec `json:"spec,omitempty"`
+	// Specification of the desired behavior of the EMQX core node.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	Spec EMQXCoreTemplateSpec `json:"spec,omitempty"`
 }
 
 // EMQXSpec defines the desired state of EMQX
 type EMQXSpec struct {
-	Image            string                        `json:"image,omitempty"`
-	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
+	// EMQX image name.
+	// More info: https://kubernetes.io/docs/concepts/containers/images
+	Image string `json:"image,omitempty"`
+	// Image pull policy.
+	// One of Always, Never, IfNotPresent.
+	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.
+	// If specified, these secrets will be passed to individual puller implementations for them to use.
+	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	SecurityContext  *corev1.PodSecurityContext    `json:"securityContext,omitempty"`
-
+	// EMQX bootstrap config, hocon style, like emqx.conf
+	// Cannot be updated.
 	BootstrapConfig string `json:"bootstrapConfig,omitempty"`
-
-	CoreTemplate      EMQXCoreTemplate      `json:"coreTemplate,omitempty"`
+	// CoreTemplate is the object that describes the EMQX core node that will be created
+	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
+	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
 	ReplicantTemplate EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
-
+	// DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
+	// This service always selector the EMQX core node
 	DashboardServiceTemplate corev1.Service `json:"dashboardServiceTemplate,omitempty"`
+	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
+	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
+	// Else this service will selector EMQX core node
 	ListenersServiceTemplate corev1.Service `json:"listenersServiceTemplate,omitempty"`
 }
 
@@ -106,10 +314,14 @@ type EMQXSpec struct {
 
 // EMQX is the Schema for the emqxes API
 type EMQX struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   EMQXSpec   `json:"spec,omitempty"`
+	// Spec defines the desired identities of EMQX nodes in this set.
+	Spec EMQXSpec `json:"spec,omitempty"`
+	// Status is the current status of EMQX nodes. This data
+	// may be out of date by some window of time.
 	Status EMQXStatus `json:"status,omitempty"`
 }
 

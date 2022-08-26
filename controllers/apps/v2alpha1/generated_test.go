@@ -282,11 +282,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 					Name: "fake-secret",
 				},
 			},
-			SecurityContext: &corev1.PodSecurityContext{
-				RunAsUser:  &user,
-				RunAsGroup: &group,
-				FSGroup:    &group,
-			},
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "emqx-core",
@@ -296,8 +291,34 @@ func TestGenerateStatefulSet(t *testing.T) {
 					},
 				},
 				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-					Args: []string{"hello world"},
-					SecurityContext: &corev1.SecurityContext{
+					Command: []string{"/bin/sh", "-c"},
+					Args:    []string{"hello world"},
+					Ports: []corev1.ContainerPort{
+						{
+							ContainerPort: int32(1883),
+						},
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "FOO",
+							Value: "BAR",
+						},
+					},
+					EnvFrom: []corev1.EnvFromSource{
+						{
+							ConfigMapRef: &corev1.ConfigMapEnvSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "fake-config",
+								},
+							},
+						},
+					},
+					PodSecurityContext: &corev1.PodSecurityContext{
+						RunAsUser:  &user,
+						RunAsGroup: &group,
+						FSGroup:    &group,
+					},
+					ContainerSecurityContext: &corev1.SecurityContext{
 						RunAsUser:  &user,
 						RunAsGroup: &group,
 					},
@@ -318,16 +339,45 @@ func TestGenerateStatefulSet(t *testing.T) {
 							corev1.ResourceMemory: resource.MustParse("100Mi"),
 						},
 					},
-					ReadinessProbe: &corev1.Probe{
+					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path: "/status",
-								Port: intstr.FromInt(8081),
+								Port: intstr.FromInt(18083),
 							},
 						},
 						InitialDelaySeconds: int32(10),
 						PeriodSeconds:       int32(5),
 						FailureThreshold:    int32(30),
+					},
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/status",
+								Port: intstr.FromInt(18083),
+							},
+						},
+						InitialDelaySeconds: int32(10),
+						PeriodSeconds:       int32(5),
+						FailureThreshold:    int32(30),
+					},
+					StartupProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/status",
+								Port: intstr.FromInt(18083),
+							},
+						},
+						InitialDelaySeconds: int32(10),
+						PeriodSeconds:       int32(5),
+						FailureThreshold:    int32(30),
+					},
+					Lifecycle: &corev1.Lifecycle{
+						PreStop: &corev1.LifecycleHandler{
+							Exec: &corev1.ExecAction{
+								Command: []string{"emqx", "ctl", "cluster", "leave"},
+							},
+						},
 					},
 					InitContainers: []corev1.Container{
 						{
@@ -401,6 +451,13 @@ func TestGenerateStatefulSet(t *testing.T) {
 							Name:            "emqx",
 							Image:           "emqx/emqx:5.0",
 							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/bin/sh", "-c"},
+							Args:            []string{"hello world"},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: int32(1883),
+								},
+							},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "EMQX_NODE__DB_ROLE",
@@ -418,11 +475,19 @@ func TestGenerateStatefulSet(t *testing.T) {
 									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
 									Value: "srv",
 								},
+								{
+									Name:  "FOO",
+									Value: "BAR",
+								},
 							},
-							Args: []string{"hello world"},
-							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:  &user,
-								RunAsGroup: &group,
+							EnvFrom: []corev1.EnvFromSource{
+								{
+									ConfigMapRef: &corev1.ConfigMapEnvSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "fake-config",
+										},
+									},
+								},
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -434,16 +499,49 @@ func TestGenerateStatefulSet(t *testing.T) {
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
-							ReadinessProbe: &corev1.Probe{
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser:  &user,
+								RunAsGroup: &group,
+							},
+							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/status",
-										Port: intstr.FromInt(8081),
+										Port: intstr.FromInt(18083),
 									},
 								},
 								InitialDelaySeconds: int32(10),
 								PeriodSeconds:       int32(5),
 								FailureThreshold:    int32(30),
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/status",
+										Port: intstr.FromInt(18083),
+									},
+								},
+								InitialDelaySeconds: int32(10),
+								PeriodSeconds:       int32(5),
+								FailureThreshold:    int32(30),
+							},
+							StartupProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/status",
+										Port: intstr.FromInt(18083),
+									},
+								},
+								InitialDelaySeconds: int32(10),
+								PeriodSeconds:       int32(5),
+								FailureThreshold:    int32(30),
+							},
+							Lifecycle: &corev1.Lifecycle{
+								PreStop: &corev1.LifecycleHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{"emqx", "ctl", "cluster", "leave"},
+									},
+								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -471,7 +569,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 	}
 	assert.Equal(t, expect, generateStatefulSet(instance))
 
-	instance.Spec.CoreTemplate.Spec.Persistent = corev1.PersistentVolumeClaimSpec{
+	instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates = corev1.PersistentVolumeClaimSpec{
 		AccessModes: []corev1.PersistentVolumeAccessMode{
 			corev1.ReadWriteOnce,
 		},
@@ -528,11 +626,6 @@ func TestGenerateDeployment(t *testing.T) {
 			ImagePullSecrets: []corev1.LocalObjectReference{
 				{Name: "fake-secret"},
 			},
-			SecurityContext: &corev1.PodSecurityContext{
-				RunAsUser:  &user,
-				RunAsGroup: &group,
-				FSGroup:    &group,
-			},
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "emqx-core",
@@ -558,8 +651,34 @@ func TestGenerateDeployment(t *testing.T) {
 					InitContainers: []corev1.Container{
 						{Name: "init", Image: "busybox"},
 					},
-					Args: []string{"hello world"},
-					SecurityContext: &corev1.SecurityContext{
+					Command: []string{"/bin/sh", "-c"},
+					Args:    []string{"hello world"},
+					Ports: []corev1.ContainerPort{
+						{
+							ContainerPort: int32(1883),
+						},
+					},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "FOO",
+							Value: "BAR",
+						},
+					},
+					EnvFrom: []corev1.EnvFromSource{
+						{
+							ConfigMapRef: &corev1.ConfigMapEnvSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "fake-config",
+								},
+							},
+						},
+					},
+					PodSecurityContext: &corev1.PodSecurityContext{
+						RunAsUser:  &user,
+						RunAsGroup: &group,
+						FSGroup:    &group,
+					},
+					ContainerSecurityContext: &corev1.SecurityContext{
 						RunAsUser:  &user,
 						RunAsGroup: &group,
 					},
@@ -573,16 +692,45 @@ func TestGenerateDeployment(t *testing.T) {
 							corev1.ResourceMemory: resource.MustParse("100Mi"),
 						},
 					},
-					ReadinessProbe: &corev1.Probe{
+					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path: "/status",
-								Port: intstr.FromInt(8081),
+								Port: intstr.FromInt(18083),
 							},
 						},
 						InitialDelaySeconds: int32(10),
 						PeriodSeconds:       int32(5),
 						FailureThreshold:    int32(30),
+					},
+					ReadinessProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/status",
+								Port: intstr.FromInt(18083),
+							},
+						},
+						InitialDelaySeconds: int32(10),
+						PeriodSeconds:       int32(5),
+						FailureThreshold:    int32(30),
+					},
+					StartupProbe: &corev1.Probe{
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/status",
+								Port: intstr.FromInt(18083),
+							},
+						},
+						InitialDelaySeconds: int32(10),
+						PeriodSeconds:       int32(5),
+						FailureThreshold:    int32(30),
+					},
+					Lifecycle: &corev1.Lifecycle{
+						PreStop: &corev1.LifecycleHandler{
+							Exec: &corev1.ExecAction{
+								Command: []string{"emqx", "ctl", "cluster", "leave"},
+							},
+						},
 					},
 					ExtraContainers: []corev1.Container{
 						{Name: "extra", Image: "busybox"},
@@ -645,6 +793,13 @@ func TestGenerateDeployment(t *testing.T) {
 							Name:            "emqx",
 							Image:           "emqx/emqx:5.0",
 							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/bin/sh", "-c"},
+							Args:            []string{"hello world"},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: int32(1883),
+								},
+							},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "EMQX_NODE__DB_ROLE",
@@ -670,8 +825,20 @@ func TestGenerateDeployment(t *testing.T) {
 									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
 									Value: "srv",
 								},
+								{
+									Name:  "FOO",
+									Value: "BAR",
+								},
 							},
-							Args: []string{"hello world"},
+							EnvFrom: []corev1.EnvFromSource{
+								{
+									ConfigMapRef: &corev1.ConfigMapEnvSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "fake-config",
+										},
+									},
+								},
+							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -686,16 +853,45 @@ func TestGenerateDeployment(t *testing.T) {
 								RunAsUser:  &user,
 								RunAsGroup: &group,
 							},
-							ReadinessProbe: &corev1.Probe{
+							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/status",
-										Port: intstr.FromInt(8081),
+										Port: intstr.FromInt(18083),
 									},
 								},
 								InitialDelaySeconds: int32(10),
 								PeriodSeconds:       int32(5),
 								FailureThreshold:    int32(30),
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/status",
+										Port: intstr.FromInt(18083),
+									},
+								},
+								InitialDelaySeconds: int32(10),
+								PeriodSeconds:       int32(5),
+								FailureThreshold:    int32(30),
+							},
+							StartupProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/status",
+										Port: intstr.FromInt(18083),
+									},
+								},
+								InitialDelaySeconds: int32(10),
+								PeriodSeconds:       int32(5),
+								FailureThreshold:    int32(30),
+							},
+							Lifecycle: &corev1.Lifecycle{
+								PreStop: &corev1.LifecycleHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{"emqx", "ctl", "cluster", "leave"},
+									},
+								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{

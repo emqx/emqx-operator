@@ -154,7 +154,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 		},
 		Spec: corev1.PodSpec{
 			ImagePullSecrets: instance.Spec.ImagePullSecrets,
-			SecurityContext:  instance.Spec.SecurityContext,
+			SecurityContext:  instance.Spec.CoreTemplate.Spec.PodSecurityContext,
 			Affinity:         instance.Spec.CoreTemplate.Spec.Affinity,
 			Tolerations:      instance.Spec.CoreTemplate.Spec.ToleRations,
 			NodeName:         instance.Spec.CoreTemplate.Spec.NodeName,
@@ -165,7 +165,10 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 					Name:            EMQXContainerName,
 					Image:           instance.Spec.Image,
 					ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
-					Env: []corev1.EnvVar{
+					Command:         instance.Spec.CoreTemplate.Spec.Command,
+					Args:            instance.Spec.CoreTemplate.Spec.Args,
+					Ports:           instance.Spec.CoreTemplate.Spec.Ports,
+					Env: append([]corev1.EnvVar{
 						{
 							Name:  "EMQX_NODE__DB_ROLE",
 							Value: "core",
@@ -182,13 +185,14 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 							Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
 							Value: "srv",
 						},
-					},
-					Args:            instance.Spec.CoreTemplate.Spec.Args,
+					}, instance.Spec.CoreTemplate.Spec.Env...),
+					EnvFrom:         instance.Spec.CoreTemplate.Spec.EnvFrom,
 					Resources:       instance.Spec.CoreTemplate.Spec.Resources,
-					ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
+					SecurityContext: instance.Spec.CoreTemplate.Spec.ContainerSecurityContext,
 					LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
+					ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
 					StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
-					SecurityContext: instance.Spec.CoreTemplate.Spec.SecurityContext,
+					Lifecycle:       instance.Spec.CoreTemplate.Spec.Lifecycle,
 					VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
 						Name:      instance.NameOfCoreNodeData(),
 						MountPath: "/opt/emqx/data",
@@ -232,7 +236,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Template:            podTemplate,
 		},
 	}
-	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.Persistent).IsZero() {
+	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates).IsZero() {
 		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -240,7 +244,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 					Namespace: instance.Namespace,
 					Labels:    instance.Spec.CoreTemplate.Labels,
 				},
-				Spec: instance.Spec.CoreTemplate.Spec.Persistent,
+				Spec: instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates,
 			},
 		}
 	} else {
@@ -285,7 +289,7 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					ImagePullSecrets: instance.Spec.ImagePullSecrets,
-					SecurityContext:  instance.Spec.SecurityContext,
+					SecurityContext:  instance.Spec.ReplicantTemplate.Spec.PodSecurityContext,
 					Affinity:         instance.Spec.ReplicantTemplate.Spec.Affinity,
 					Tolerations:      instance.Spec.ReplicantTemplate.Spec.ToleRations,
 					NodeName:         instance.Spec.ReplicantTemplate.Spec.NodeName,
@@ -296,7 +300,10 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 							Name:            EMQXContainerName,
 							Image:           instance.Spec.Image,
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
-							Env: []corev1.EnvVar{
+							Command:         instance.Spec.ReplicantTemplate.Spec.Command,
+							Args:            instance.Spec.ReplicantTemplate.Spec.Args,
+							Ports:           instance.Spec.ReplicantTemplate.Spec.Ports,
+							Env: append([]corev1.EnvVar{
 								{
 									Name:  "EMQX_NODE__DB_ROLE",
 									Value: "replicant",
@@ -321,13 +328,14 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
 									Value: "srv",
 								},
-							},
-							Args:            instance.Spec.ReplicantTemplate.Spec.Args,
+							}, instance.Spec.ReplicantTemplate.Spec.Env...),
+							EnvFrom:         instance.Spec.ReplicantTemplate.Spec.EnvFrom,
 							Resources:       instance.Spec.ReplicantTemplate.Spec.Resources,
-							ReadinessProbe:  instance.Spec.ReplicantTemplate.Spec.ReadinessProbe,
+							SecurityContext: instance.Spec.ReplicantTemplate.Spec.ContainerSecurityContext,
 							LivenessProbe:   instance.Spec.ReplicantTemplate.Spec.LivenessProbe,
+							ReadinessProbe:  instance.Spec.ReplicantTemplate.Spec.ReadinessProbe,
 							StartupProbe:    instance.Spec.ReplicantTemplate.Spec.StartupProbe,
-							SecurityContext: instance.Spec.ReplicantTemplate.Spec.SecurityContext,
+							Lifecycle:       instance.Spec.ReplicantTemplate.Spec.Lifecycle,
 							VolumeMounts: append(instance.Spec.ReplicantTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
 								Name:      instance.NameOfReplicantNodeData(),
 								MountPath: "/opt/emqx/data",
