@@ -25,6 +25,7 @@ import (
 	"github.com/sethvargo/go-password/password"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -188,10 +189,21 @@ func (r *EMQX) defaultBootstrapConfig() {
 
 func (r *EMQX) defaultDashboardServiceTemplate() {
 	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
+	dashboardPort, err := GetDashboardServicePort(r)
+	if err != nil {
+		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
+		dashboardPort = &corev1.ServicePort{
+			Name:       "dashboard-listeners-http-bind",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       int32(18083),
+			TargetPort: intstr.FromInt(18083),
+		}
+	}
+
 	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
 		r.Spec.DashboardServiceTemplate.Spec.Ports,
 		[]corev1.ServicePort{
-			GetDashboardServicePort(r),
+			*dashboardPort,
 		},
 	)
 }
