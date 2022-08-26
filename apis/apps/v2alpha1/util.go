@@ -22,7 +22,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gurkankaymak/hocon"
+	// "github.com/gurkankaymak/hocon"
+	hocon "github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
