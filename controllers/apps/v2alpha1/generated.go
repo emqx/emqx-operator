@@ -147,10 +147,76 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 }
 
 func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
+	emqxContainer := corev1.Container{
+		Name:            EMQXContainerName,
+		Image:           instance.Spec.Image,
+		ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
+		Command:         instance.Spec.CoreTemplate.Spec.Command,
+		Args:            instance.Spec.CoreTemplate.Spec.Args,
+		Ports:           instance.Spec.CoreTemplate.Spec.Ports,
+		Env: append([]corev1.EnvVar{
+			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+			{
+				Name: "STS_HEADLESS_SERVICE_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.annotations['apps.emqx.io/headless-service-name']",
+					},
+				},
+			},
+			{
+				Name:  "EMQX_HOST",
+				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
+			},
+			{
+				Name:  "EMQX_NODE__DB_ROLE",
+				Value: "core",
+			},
+		}, instance.Spec.CoreTemplate.Spec.Env...),
+		EnvFrom:         instance.Spec.CoreTemplate.Spec.EnvFrom,
+		Resources:       instance.Spec.CoreTemplate.Spec.Resources,
+		SecurityContext: instance.Spec.CoreTemplate.Spec.ContainerSecurityContext,
+		LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
+		ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
+		StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
+		Lifecycle:       instance.Spec.CoreTemplate.Spec.Lifecycle,
+		VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
+			Name:      instance.NameOfCoreNodeData(),
+			MountPath: "/opt/emqx/data",
+		}),
+	}
+
+	containers := append(
+		[]corev1.Container{emqxContainer},
+		instance.Spec.CoreTemplate.Spec.ExtraContainers...,
+	)
+
+	podAnnotation := instance.Spec.CoreTemplate.Annotations
+	if podAnnotation == nil {
+		podAnnotation = make(map[string]string)
+	}
+	podAnnotation["apps.emqx.io/headless-service-name"] = instance.NameOfHeadlessService()
+	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(containers)
+
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      instance.Spec.CoreTemplate.Labels,
-			Annotations: instance.Spec.CoreTemplate.Annotations,
+			Annotations: podAnnotation,
 		},
 		Spec: corev1.PodSpec{
 			ImagePullSecrets: instance.Spec.ImagePullSecrets,
@@ -160,54 +226,10 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			NodeName:         instance.Spec.CoreTemplate.Spec.NodeName,
 			NodeSelector:     instance.Spec.CoreTemplate.Spec.NodeSelector,
 			InitContainers:   instance.Spec.CoreTemplate.Spec.InitContainers,
-			Containers: append([]corev1.Container{
-				{
-					Name:            EMQXContainerName,
-					Image:           instance.Spec.Image,
-					ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
-					Command:         instance.Spec.CoreTemplate.Spec.Command,
-					Args:            instance.Spec.CoreTemplate.Spec.Args,
-					Ports:           instance.Spec.CoreTemplate.Spec.Ports,
-					Env: append([]corev1.EnvVar{
-						{
-							Name:  "EMQX_NODE__DB_ROLE",
-							Value: "core",
-						},
-						{
-							Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
-							Value: "dns",
-						},
-						{
-							Name:  "EMQX_CLUSTER__DNS__NAME",
-							Value: fmt.Sprintf("%s.%s.svc.cluster.local", instance.NameOfHeadlessService(), instance.Namespace),
-						},
-						{
-							Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
-							Value: "srv",
-						},
-					}, instance.Spec.CoreTemplate.Spec.Env...),
-					EnvFrom:         instance.Spec.CoreTemplate.Spec.EnvFrom,
-					Resources:       instance.Spec.CoreTemplate.Spec.Resources,
-					SecurityContext: instance.Spec.CoreTemplate.Spec.ContainerSecurityContext,
-					LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
-					ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
-					StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
-					Lifecycle:       instance.Spec.CoreTemplate.Spec.Lifecycle,
-					VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
-						Name:      instance.NameOfCoreNodeData(),
-						MountPath: "/opt/emqx/data",
-					}),
-				},
-			}, instance.Spec.CoreTemplate.Spec.ExtraContainers...),
-			Volumes: instance.Spec.CoreTemplate.Spec.ExtraVolumes,
+			Volumes:          instance.Spec.CoreTemplate.Spec.ExtraVolumes,
+			Containers:       containers,
 		},
 	}
-	podAnnotation := podTemplate.ObjectMeta.DeepCopy().Annotations
-	if podAnnotation == nil {
-		podAnnotation = make(map[string]string)
-	}
-	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(podTemplate.Spec.Containers)
-	podTemplate.Annotations = podAnnotation
 
 	annotations := instance.Annotations
 	if annotations == nil {
@@ -315,18 +337,6 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 											FieldPath: "status.podIP",
 										},
 									},
-								},
-								{
-									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
-									Value: "dns",
-								},
-								{
-									Name:  "EMQX_CLUSTER__DNS__NAME",
-									Value: fmt.Sprintf("%s.%s.svc.cluster.local", instance.NameOfHeadlessService(), instance.Namespace),
-								},
-								{
-									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
-									Value: "srv",
 								},
 							}, instance.Spec.ReplicantTemplate.Spec.Env...),
 							EnvFrom:         instance.Spec.ReplicantTemplate.Spec.EnvFrom,

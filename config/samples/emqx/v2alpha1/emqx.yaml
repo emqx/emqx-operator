@@ -10,9 +10,12 @@ spec:
       data_dir = "data"
       etc_dir = "etc"
     }
-    listeners.tcp.default {
-      bind = "0.0.0.0:1883"
-      max_connections = 1024000
+    cluster {
+      discovery_strategy = dns
+      dns {
+        record_type = srv
+        name:"emqx-headless.default.svc.cluster.local"
+      }
     }
     dashboard {
         listeners.http {
@@ -20,6 +23,10 @@ spec:
         }
         default_username: "admin"
         default_password: "public"
+    }
+    listeners.tcp.default {
+      bind = "0.0.0.0:1883"
+      max_connections = 1024000
     }
     sysmon.vm.long_schedule = disabled
   coreTemplate:
