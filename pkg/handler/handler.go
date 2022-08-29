@@ -161,13 +161,8 @@ func (handler *Handler) Create(obj client.Object, postCreated func(client.Object
 }
 
 func (handler *Handler) Update(obj client.Object, postUpdated func(client.Object) error) error {
-	switch obj.(type) {
-	case *appsv1beta3.EmqxBroker:
-	case *appsv1beta3.EmqxEnterprise:
-	default:
-		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-			return fmt.Errorf("failed to set last applied annotation for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
-		}
+	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
+		return fmt.Errorf("failed to set last applied annotation for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}
 
 	if err := handler.Client.Update(context.TODO(), obj); err != nil {

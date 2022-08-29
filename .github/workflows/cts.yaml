@@ -20,6 +20,7 @@ jobs:
           - "v1.22.12"
           - "v1.23.9"
           - "v1.24.3"
+          - "v1.25.0"
     steps:
       - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
       - uses: actions/checkout@v2
@@ -62,6 +63,7 @@ jobs:
           - "v1.22.12"
           - "v1.23.9"
           - "v1.24.3"
+          - "v1.25.0"
         emqx:
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqx.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqx-ee.yaml"]
