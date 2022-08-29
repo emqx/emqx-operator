@@ -2,41 +2,32 @@
 
 **注意**: EMQX Operator 控制器需要 Kubernetes v1.20.0 或者以上。
 
-## 背景
-
-此教程采用 minikube v1.20.0 安装部署
-
 ## 部署Operator控制器
 
 ### 准备
 
 我们使用 [cert manager](https://github.com/cert-manager/cert-manager)来给 webhook 服务提供证书。你可以通过 [cert manager 文档](https://cert-manager.io/docs/installation/)来安装。
 
-### 默认静态安装
+### 安装
+EMQX Operator 提供helm 以及 静态yaml安装，我们推荐使用 helm 来安装 EMQX Operator
 
-安装默认静态配置文件
+#### 通过 Helm 安装
+
+```bash
+helm repo add emqx https://repos.emqx.io/charts
+helm repo update
+helm install emqx-operator emqx/emqx-operator --set installCRDs=true --namespace emqx-operator-system --create-namespace
+```
+
+#### 静态yaml安装
+
+安装默认静态配置文件(如果已经通过helm安装，则跳过该步骤)
 
 ```bash
 kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.5/emqx-operator-controller.yaml"
 ```
 
-### 通过 Helm 安装
 
-1. 添加 EMQX Helm 仓库
-
-```bash
-helm repo add emqx https://repos.emqx.io/charts
-helm repo update
-```
-
-2. 用 Helm 安装 EMQX Operator 控制器
-
-```bash
-$ helm install emqx-operator emqx/emqx-operator \
-   --set installCRDs=true \
-   --namespace emqx-operator-system \
-   --create-namespace
-```
 
 ### 检查 EMQX Operator 控制器状态
 
@@ -48,9 +39,9 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 ## 部署 EMQX 企业版本
 
-1. 部署 EMQX Enterprise Custom Resource
+1. 部署 EMQX Enterprise
 
-   ```
+   ```shell
    cat << "EOF" | kubectl apply -f -
    apiVersion: apps.emqx.io/v1beta3
    kind: EmqxEnterprise
@@ -60,7 +51,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx-ee:4.4.6
+       image: emqx/emqx-ee:4.4.7
    EOF
    ```
 
@@ -74,7 +65,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
    emqx-ee-2   2/2     Running   0          22m
 
    $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl status  
-   Node 'emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local' 4.4.5 is started  
+   Node 'emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local' 4.4.7 is started  
 
    $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl cluster status  
    Cluster status: #{running_nodes =>
@@ -86,9 +77,9 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 ## 部署 EMQX 开源版
 
-1. 部署 EMQX Broker Custom Resource
+1. 部署 EMQX Broker
 
-   ```
+   ```bash
    cat << "EOF" | kubectl apply -f -
    apiVersion: apps.emqx.io/v1beta3
    kind: EmqxBroker
@@ -98,7 +89,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx:4.4.6
+       image: emqx/emqx:4.4.7
    EOF
    ```
 
@@ -112,7 +103,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
    emqx-2   2/2     Running   0          22m
 
    $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl status
-   Node 'emqx@emqx-0.emqx-headless.default.svc.cluster.local' 4.4.5 is started
+   Node 'emqx@emqx-0.emqx-headless.default.svc.cluster.local' 4.4.7 is started
 
    $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl cluster status
    Cluster status: #{running_nodes =>

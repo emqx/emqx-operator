@@ -42,6 +42,17 @@ The EMQX Operator automatically detects changes on any of the above custom resou
 
 For more information on getting started, see the [getting started](docs/en_US/getting-started/getting-started.md)
 
+## Public Cloud Platform Deployment Guide
+
+|  Public Cloud Platform   | Deployment Guide                                         | 
+|--------------------------|----------------------------------------------------------|
+|    AWS                   | [EKS](docs/en_US/deployment/aws-eks-deployment.md)       | 
+|    Azure                 | [Azure](docs/en_US/deployment/azure-deployment.md)       | 
+|    Aliyun                | [ACK](docs/zh_CN/deployment/aliyun-ack-deployment.md)    | 
+|    Huawei                | [CCE](docs/zh_CN/deployment/cce-deployment.md)           | 
+|    Tencent               | [TKE](docs/zh_CN/deployment/tencent-tke-deployment.md)   | 
+
+
 ## Development
 
 ### Prerequisites
