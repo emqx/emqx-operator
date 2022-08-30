@@ -309,6 +309,7 @@ type EMQXSpec struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:subresource:scale:specpath=.spec.replicantTemplate.spec.replicas,statuspath=.status.replicantNodeReplicas
 //+kubebuilder:resource:shortName=emqx
 //+kubebuilder:storageversion
 

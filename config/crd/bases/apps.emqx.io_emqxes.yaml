@@ -14422,6 +14422,9 @@ spec:
     served: true
     storage: true
     subresources:
+      scale:
+        specReplicasPath: .spec.replicantTemplate.spec.replicas
+        statusReplicasPath: .status.replicantNodeReplicas
       status: {}
 status:
   acceptedNames:
