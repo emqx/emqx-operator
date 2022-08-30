@@ -24,7 +24,7 @@ helm install emqx-operator emqx/emqx-operator --set installCRDs=true --namespace
 安装默认静态配置文件(如果已经通过helm安装，则跳过该步骤)
 
 ```bash
-kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.6/emqx-operator-controller.yaml"
+kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/2.0.0/emqx-operator-controller.yaml"
 ```
 
 ### 检查 EMQX Operator 控制器状态
