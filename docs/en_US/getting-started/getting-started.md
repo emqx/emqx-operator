@@ -27,7 +27,7 @@ EMQX Operator provides helm and static yaml installation, we recommend using hel
 The default static configuration can be installed as follows(If you have already installed using Helm, please ignore this step):
 
 ```shell
-kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/1.2.5/emqx-operator-controller.yaml"
+kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/2.0.0-alpha.1/emqx-operator-controller.yaml"
 ```
 
 ### Check EMQX Operator Controller status
