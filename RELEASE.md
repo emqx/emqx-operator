@@ -1,21 +1,21 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.6 is released.
+EMQX Operator 2.0.0 is released.
 
 ### Supported EMQX version
 
-- EMQX 4.4.8 and later
+- EMQX 5.0.6 and later
 
-- EMQX Enterprise 4.4.8 and later
+#### Features 🌈
 
-### Features 🌈
+New API version: `apps.emqx.io/v2alpha1` and Kind: `EMQX`, support for EMQX 5 milestone versions, please check out reference docs
 
-- Add `.spec.emqxTemplate.license.secretName` for EMQX Enterprise Custom Resource, the user can create the EMQX license as a Kubernetes secret resource and use in MQX Enterprise Custom Resource
+- New stateless node: EMQX Replicant, use `Deployment`
 
-- After the user updates the license, the EMQX Operator completes the runtime update via the EMQX API
+- New HOCON configuration style, in line with the format of EMQX 5
 
-### Fixes 🛠
+- Fully automated EMQX node upgrade management
 
-- Now it's not possible to update `.spec.persistent` in the EMQX Custom Resource runtime
+### Broken Change 🚫
 
-- Now it does not create `loaded_plugins` configMap for EMQX Custom Resource, this is to fix the `erofs` error in EMQX
+Must uninstall EMQX Operator 1 before installing this release

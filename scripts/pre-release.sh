@@ -2,8 +2,8 @@
 set -euo pipefail
 
 tag=$1
-V1BETA3_DIR='apis/apps/v1beta3'
-V1BETA2_DIR='apis/apps/v1beta2'
+
+APIS_DIR='apis/apps'
 REFERENCE_OUTPUT='docs/en_US/reference'
 REFERENCE_CONFIG='crd-reference-config.yaml'
 
@@ -32,7 +32,9 @@ ${SED_REPLACE} -r "s|^appVersion:.*|appVersion: ${tag}|g" deploy/charts/emqx-ope
 # update reference for apis
 
 function updateCrdReference {
-    crd-ref-docs --source-path=${PWD}/${V1BETA3_DIR} --config=${REFERENCE_CONFIG} --output-path=${PWD}/${REFERENCE_OUTPUT} --renderer=markdown && mv ${PWD}/${REFERENCE_OUTPUT}/out.md ${PWD}/${REFERENCE_OUTPUT}/v1beta3-reference.md
+    for API_DIR in $(find apis/apps -type d -d 1); do
+        crd-ref-docs --source-path=${PWD}/${API_DIR} --config=${REFERENCE_CONFIG} --output-path=${PWD}/${REFERENCE_OUTPUT} --renderer=markdown && mv ${PWD}/${REFERENCE_OUTPUT}/out.md ${PWD}/${REFERENCE_OUTPUT}/v1beta3-reference.md
+    done
 }
 
 if type crd-ref-docs >/dev/null 2>&1
