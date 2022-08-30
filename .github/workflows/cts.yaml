@@ -101,6 +101,9 @@ jobs:
         emqx:
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqx.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqx-ee.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx.yaml"]
+
     steps:
       - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
       - uses: actions/checkout@v2
