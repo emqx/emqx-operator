@@ -71,3 +71,24 @@ webhooks:
     resources:
     - emqxplugins
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: emqx-operator-webhook-service
+      namespace: emqx-operator-system
+      path: /validate-apps-emqx-io-v2alpha1-emqx
+  failurePolicy: Fail
+  name: validator.apps.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v2alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxes
+  sideEffects: None
