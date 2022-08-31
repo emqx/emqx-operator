@@ -53,7 +53,7 @@ var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 const (
 	ReloaderContainerName  = "reloader"
-	ReloaderContainerImage = "emqx/emqx-operator-reloader:0.0.1"
+	ReloaderContainerImage = "emqx/emqx-operator-reloader:0.0.2"
 )
 
 type EmqxReconciler struct {
