@@ -52,7 +52,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx-ee:4.4.7
+       image: emqx/emqx-ee:4.4.8
    EOF
    ```
 
@@ -91,7 +91,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
        "foo": "bar"
    spec:
      emqxTemplate:
-       image: emqx/emqx:4.4.7
+       image: emqx/emqx:4.4.8
    EOF
    ```
 

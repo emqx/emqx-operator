@@ -29,7 +29,7 @@ var _ = Describe("EMQX Broker", func() {
 			},
 			Spec: EmqxBrokerSpec{
 				EmqxTemplate: EmqxBrokerTemplate{
-					Image: "emqx/emqx:4.4.6",
+					Image: "emqx/emqx:4.4.8",
 				},
 			},
 		}
@@ -60,7 +60,7 @@ var _ = Describe("EMQX Enterprise", func() {
 			},
 			Spec: EmqxEnterpriseSpec{
 				EmqxTemplate: EmqxEnterpriseTemplate{
-					Image: "emqx/emqx-ee:4.4.6",
+					Image: "emqx/emqx-ee:4.4.8",
 				},
 			},
 		}

@@ -55,7 +55,7 @@ metadata:
     service.beta.kubernetes.io/backend-type："eni"
 spec:
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.6
+    image: emqx/emqx-ee:4.4.8
     serviceTemplate:
       metadata:
         name: emqx-ee

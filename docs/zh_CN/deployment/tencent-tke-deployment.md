@@ -50,7 +50,7 @@ metadata:
     service.cloud.tencent.com/direct-access: "true" ##开启LB 直连 Pod 模式
 spec:
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.6
+    image: emqx/emqx-ee:4.4.8
     serviceTemplate:
       metadata:
         name: emqx-ee

@@ -89,7 +89,7 @@ spec:
      accessModes:
      - ReadWriteOnce
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.6
+    image: emqx/emqx-ee:4.4.8
     serviceTemplate:
       spec:
         type: LoadBalancer
@@ -134,7 +134,7 @@ spec:
      accessModes:
      - ReadWriteOnce
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.6
+    image: emqx/emqx-ee:4.4.8
     serviceTemplate:
       spec:
         type: LoadBalancer

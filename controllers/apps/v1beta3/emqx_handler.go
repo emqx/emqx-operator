@@ -91,11 +91,8 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
 	sts = updatePluginsConfigForSts(sts, defaultPluginsConfig)
 
-	loadedPlugins := generateLoadedPlugins(instance)
-	sts = updateLoadedPluginsForSts(sts, loadedPlugins)
-
 	if status := instance.GetStatus(); !status.IsPluginInitialized() {
-		resources = append(resources, loadedPlugins, defaultPluginsConfig)
+		resources = append(resources, defaultPluginsConfig)
 
 		pluginsList := &appsv1beta3.EmqxPluginList{}
 		err = r.Client.List(ctx, pluginsList, client.InNamespace(instance.GetNamespace()))
@@ -449,6 +446,7 @@ func generateDefaultPluginsConfig(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 			"emqx_dashboard.conf":         "dashboard.listener.http = 18083\n",
 			"emqx_rule_engine.conf":       "",
 			"emqx_retainer.conf":          "",
+			"emqx_telemetry.conf":         "",
 			"emqx_auth_http.conf":         "auth.http.auth_req.url = http://127.0.0.1:80/mqtt/auth\nauth.http.auth_req.method = post\nauth.http.auth_req.headers.content_type = application/x-www-form-urlencoded\nauth.http.auth_req.params = clientid=%c,username=%u,password=%P\nauth.http.acl_req.url = http://127.0.0.1:80/mqtt/acl\nauth.http.acl_req.method = post\nauth.http.acl_req.headers.content-type = application/x-www-form-urlencoded\nauth.http.acl_req.params = access=%A,username=%u,clientid=%c,ipaddr=%a,topic=%t,mountpoint=%m\nauth.http.timeout = 5s\nauth.http.connect_timeout = 5s\nauth.http.pool_size = 32\nauth.http.enable_pipelining = true\n",
 			"emqx_auth_jwt.conf":          "auth.jwt.secret = emqxsecret\nauth.jwt.from = password\nauth.jwt.verify_claims = off\n",
 			"emqx_auth_ldap.conf":         "auth.ldap.servers = 127.0.0.1\nauth.ldap.port = 389\nauth.ldap.pool = 8\nauth.ldap.bind_dn = cn=root,dc=emqx,dc=io\nauth.ldap.bind_password = public\nauth.ldap.timeout = 30s\nauth.ldap.device_dn = ou=device,dc=emqx,dc=io\nauth.ldap.match_objectclass = mqttUser\nauth.ldap.username.attributetype = uid\nauth.ldap.password.attributetype = userPassword\nauth.ldap.ssl = false\n",
@@ -491,30 +489,6 @@ func generateDefaultPluginsConfig(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 		},
 	}
 
-	return cm
-}
-
-func generateLoadedPlugins(instance appsv1beta3.Emqx) *corev1.ConfigMap {
-	names := appsv1beta3.Names{Object: instance}
-	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:    instance.GetLabels(),
-			Namespace: instance.GetNamespace(),
-			Name:      names.LoadedPlugins(),
-		},
-		Data: make(map[string]string),
-	}
-
-	switch instance.(type) {
-	case *appsv1beta3.EmqxBroker:
-		cm.Data["loaded_plugins"] = "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\n"
-	case *appsv1beta3.EmqxEnterprise:
-		cm.Data["loaded_plugins"] = "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\nemqx_modules.\n"
-	}
 	return cm
 }
 
@@ -592,6 +566,9 @@ func generateLoadedModules(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 			Items: obj.Spec.EmqxTemplate.Modules,
 		}
 		loadedModulesString = modules.String()
+		if loadedModulesString == "" {
+			return nil
+		}
 	case *appsv1beta3.EmqxEnterprise:
 		modules := &appsv1beta3.EmqxEnterpriseModuleList{
 			Items: obj.Spec.EmqxTemplate.Modules,
@@ -874,29 +851,6 @@ func updateEmqxStatus(instance appsv1beta3.Emqx, emqxNodes []appsv1beta3.EmqxNod
 	status.SetCondition(*cond)
 	instance.SetStatus(status)
 	return instance
-}
-
-func updateLoadedPluginsForSts(sts *appsv1.StatefulSet, loadedPlugins *corev1.ConfigMap) *appsv1.StatefulSet {
-	return updateEnvAndVolumeForSts(sts,
-		corev1.EnvVar{
-			Name:  "EMQX_PLUGINS__LOADED_FILE",
-			Value: "/mounted/plugins/data/loaded_plugins",
-		},
-		corev1.VolumeMount{
-			Name:      loadedPlugins.Name,
-			MountPath: "/mounted/plugins/data",
-		},
-		corev1.Volume{
-			Name: loadedPlugins.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: loadedPlugins.Name,
-					},
-				},
-			},
-		},
-	)
 }
 
 func updatePluginsConfigForSts(sts *appsv1.StatefulSet, PluginsConfig *corev1.ConfigMap) *appsv1.StatefulSet {
