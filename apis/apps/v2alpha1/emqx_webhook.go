@@ -55,6 +55,7 @@ func (r *EMQX) Default() {
 	r.defaultLabels()
 	r.defaultBootstrapConfig()
 	r.defaultDashboardServiceTemplate()
+	r.defaultProbeForCoreNode()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -215,4 +216,41 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 			*dashboardPort,
 		},
 	)
+}
+
+func (r *EMQX) defaultProbeForCoreNode() {
+	dashboardPort, err := GetDashboardServicePort(r)
+	if err != nil {
+		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
+		dashboardPort = &corev1.ServicePort{
+			TargetPort: intstr.FromInt(18083),
+		}
+	}
+
+	if r.Spec.CoreTemplate.Spec.ReadinessProbe == nil {
+		r.Spec.CoreTemplate.Spec.ReadinessProbe = &corev1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       5,
+			FailureThreshold:    30,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/status",
+					Port: dashboardPort.TargetPort,
+				},
+			},
+		}
+	}
+	if r.Spec.CoreTemplate.Spec.LivenessProbe == nil {
+		r.Spec.CoreTemplate.Spec.LivenessProbe = &corev1.Probe{
+			InitialDelaySeconds: 60,
+			PeriodSeconds:       30,
+			FailureThreshold:    10,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/status",
+					Port: dashboardPort.TargetPort,
+				},
+			},
+		}
+	}
 }

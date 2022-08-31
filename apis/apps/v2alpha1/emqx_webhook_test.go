@@ -23,7 +23,9 @@ import (
 	hocon "github.com/rory-z/go-hocon"
 
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestDefault(t *testing.T) {
@@ -203,25 +205,115 @@ func TestDefaultBootstrapConfig(t *testing.T) {
 		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
 		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
 	})
+
+	t.Run("wrong bootstrap config", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				BootstrapConfig: `hello world`,
+			},
+		}
+		instance.defaultBootstrapConfig()
+		assert.Equal(t, `hello world`, instance.Spec.BootstrapConfig)
+	})
 }
 
 func TestDefaultDashboardServiceTemplate(t *testing.T) {
-	instance := &EMQX{
-		Spec: EMQXSpec{
-			BootstrapConfig: `dashboard.listeners.http.bind = 18083`,
-			CoreTemplate: EMQXCoreTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"foo": "bar",
+	t.Run("failed to get dashboard listeners", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.defaultDashboardServiceTemplate()
+		assert.Equal(t, int32(18083), instance.Spec.DashboardServiceTemplate.Spec.Ports[0].Port)
+	})
+
+	t.Run("set dashboard listeners", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				BootstrapConfig: `dashboard.listeners.http.bind = 18084`,
+			},
+		}
+		instance.defaultDashboardServiceTemplate()
+		assert.Equal(t, int32(18084), instance.Spec.DashboardServiceTemplate.Spec.Ports[0].Port)
+	})
+
+	t.Run("check service selector", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				CoreTemplate: EMQXCoreTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"foo": "bar",
+						},
 					},
 				},
 			},
-		},
-	}
-	instance.defaultDashboardServiceTemplate()
+		}
+		instance.defaultDashboardServiceTemplate()
+		assert.Equal(t, map[string]string{
+			"foo": "bar",
+		}, instance.Spec.DashboardServiceTemplate.Spec.Selector)
+	})
 
-	assert.Equal(t, map[string]string{
-		"foo": "bar",
-	}, instance.Spec.DashboardServiceTemplate.Spec.Selector)
-	assert.Equal(t, int32(18083), instance.Spec.DashboardServiceTemplate.Spec.Ports[0].Port)
+}
+
+func TestDefaultProbeForCoreNode(t *testing.T) {
+	t.Run("failed to get dashboard listeners", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.defaultProbeForCoreNode()
+
+		assert.Equal(t, &corev1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       5,
+			FailureThreshold:    30,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/status",
+					Port: intstr.FromInt(18083),
+				},
+			},
+		}, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
+
+		assert.Equal(t, &corev1.Probe{
+			InitialDelaySeconds: 60,
+			PeriodSeconds:       30,
+			FailureThreshold:    10,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/status",
+					Port: intstr.FromInt(18083),
+				},
+			},
+		}, instance.Spec.CoreTemplate.Spec.LivenessProbe)
+	})
+
+	t.Run("set dashboard listeners", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				BootstrapConfig: `dashboard.listeners.http.bind = 18084`,
+			},
+		}
+		instance.defaultProbeForCoreNode()
+
+		assert.Equal(t, &corev1.Probe{
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       5,
+			FailureThreshold:    30,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/status",
+					Port: intstr.FromInt(18084),
+				},
+			},
+		}, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
+
+		assert.Equal(t, &corev1.Probe{
+			InitialDelaySeconds: 60,
+			PeriodSeconds:       30,
+			FailureThreshold:    10,
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/status",
+					Port: intstr.FromInt(18084),
+				},
+			},
+		}, instance.Spec.CoreTemplate.Spec.LivenessProbe)
+	})
 }
