@@ -6,7 +6,7 @@
 
 ## Configure `emqx_prometheus` plugin
 
-[Refer to docs of install-emqx-prometheus-plugin](../tasks/install-emqx-prometheus-plugin.md)
+[Refer to docs of install-emqx-prometheus-plugin](../getting-started/install-emqx-prometheus-plugin.md)
 
 ## Configure class.yaml
 

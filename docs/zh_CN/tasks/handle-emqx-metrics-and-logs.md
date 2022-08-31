@@ -6,7 +6,7 @@
 
 ## 配置 `emqx_prometheus` 插件
 
-[具体步骤请参考](../tasks/install-emqx-prometheus-plugin.md)
+[具体步骤请参考](../getting-started/install-emqx-prometheus-plugin.md)
 
 ## 自定义 class.yaml 配置
 

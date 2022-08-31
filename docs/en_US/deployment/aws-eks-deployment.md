@@ -62,7 +62,7 @@ kubectl apply -f storageclass.yaml
 
 [Operator installation reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md) 
 
-After Operator is installed, deploy EMQX cluster in aws eks console using the following yaml
+After Operator is installed, deploy EMQX cluster in AWS EKS console using the following yaml
 
 ```yaml
 cat << "EOF" | kubectl apply -f -
