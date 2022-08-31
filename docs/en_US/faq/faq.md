@@ -1,17 +1,7 @@
 # FAQ
 
-## `make docker build` error:
+For the problems encountered, you can try to solve through the following address, while welcome to raise issues.
 
-```bash
-Unexpected error: msg: "failed to start the controlplane. retried 5 times: fork/exec /usr/local/kubebuilder/bin/etcd: no such file or directory"
-```
 
-[References](https://github.com/kubernetes-sigs/kubebuilder/issues/1599)
-
-```bash
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m | sed 's/x86_64/amd64/')
-curl -fsL "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.16.4-${OS}-${ARCH}.tar.gz" -o kubebuilder-tools
-tar -zvxf kubebuilder-tools
-sudo mv kubebuilder/ /usr/local/kubebuilder
-```
+[discussions](https://github.com/emqx/emqx-operator/discussions/categories/q-a)  
+[issue](https://github.com/emqx/emqx-operator/issues?q=)  

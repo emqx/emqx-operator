@@ -10,9 +10,9 @@ This project provides an operator for managing EMQX clusters on Kubernetes.
 
 We use a [cert-manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert-manager documentation](https://cert-manager.io/docs/installation/) to install it.
 
-### Installation
+### Install
 
-EMQX Operator provides helm and static yaml installation, we recommend using helm to install EMQX Operator
+EMQX Operator provides helm and static yaml install, we recommend using helm to install EMQX Operator
 
 #### Using helm
 

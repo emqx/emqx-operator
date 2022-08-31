@@ -4,15 +4,15 @@
       "title": "Introduction",
       "children": [
         {
-          "title": "EMQX Operator introduction",
+          "title": "Introduction",
           "path": "./"
         },
         {
-          "title": "Main features",
+          "title": "Features",
           "path": "introduction/features"
         },
         {
-          "title": "Deployment",
+          "title": "Prepare",
           "path": "introduction/deployment"
         }
       ]
@@ -21,20 +21,24 @@
       "title": "Getting Started",
       "children": [
         {
-          "title": "Getting Started",
+          "title": "Running the Operator",
           "path": "getting-started/getting-started"
+        },
+        {
+          "title": "Install EMQX plugin",
+          "path": "getting-started/install-emqx-prometheus-plugin"
         }
       ]
     },
     {
-      "title": "Deployment on public cloud",
+      "title": "Deployment on Public Cloud",
       "children": [
         {
-          "title": "Deploy EMQX clusters on AWS EKS",
+          "title": "AWS EKS",
           "path": "deployment/aws-eks-deployment"
         },
         {
-          "title": "Deploy EMQX clusters on Azure AKS",
+          "title": "Azure AKS",
           "path": "deployment/azure-deployment"
         }
       ]
@@ -42,10 +46,6 @@
     {
       "title": "Tasks",
       "children": [
-        {
-          "title": "Install EMQX plugin",
-          "path": "tasks/install-emqx-prometheus-plugin"
-        },
         {
           "title": "Handle EMQX metrics and logs with telegraf",
           "path": "tasks/handle-emqx-metrics-and-logs"
@@ -65,7 +65,7 @@
       "title": "FAQ",
       "children": [
         {
-          "title": "Common errors",
+          "title": "FAQ",
           "path": "faq/faq"
         }
       ]
@@ -98,7 +98,7 @@
         },
         {
           "title": "部署 EMQX 插件",
-          "path": "tasks/install-emqx-prometheus-plugin"
+          "path": "getting-started/install-emqx-prometheus-plugin"
         }
       ]
     },
@@ -140,7 +140,7 @@
       "title": "FAQ 常见问题解答",
       "children": [
         {
-          "title": "常见错误",
+          "title": "常见问题",
           "path": "faq/faq"
         }
       ]

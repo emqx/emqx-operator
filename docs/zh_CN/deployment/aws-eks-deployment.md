@@ -1,4 +1,4 @@
-# 本文主要介绍在aws eks上通过EMQX Operator 部署 EMQX集群，主要内容包括:
+# 本文主要介绍在AWS EKS上通过EMQX Operator 部署 EMQX集群，主要内容包括:
 
 
 
@@ -14,7 +14,7 @@ NLB：AWS 提供的LoadBalancer
 
 ## 创建EKS集群
 
-登录aws eks 控制台，进入创建eks 集群页面，EMQX Operator 要求Kubernetes 版本>=1.20.0 ，因此我们在此选择 Kubernetes 选择 1.22 ,网络与其他资源信息根据自身需求来制定。[细节请参考](https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html) 
+登录 AWS EKS 控制台，进入创建eks 集群页面，EMQX Operator 要求Kubernetes 版本>=1.20.0 ，因此我们在此选择 Kubernetes 选择 1.22 ,网络与其他资源信息根据自身需求来制定。[细节请参考](https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html) 
 
 ## 访问EKS集群
 
@@ -61,7 +61,7 @@ kubectl apply -f storageclass.yaml
 ## 使用EMQX Operator 进行集群创建 
 
 [查看Operator安装](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md) 
-Operator 安装完成后，使用以下yaml 在aws eks 上进行部署EMQX 集群
+Operator 安装完成后，使用以下yaml 在 AWS EKS 上进行部署EMQX 集群
 
 ```shell
 cat << "EOF" | kubectl apply -f -
