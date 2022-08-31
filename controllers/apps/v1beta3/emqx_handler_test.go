@@ -245,7 +245,7 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 						},
 						{
 							Name:            "reloader",
-							Image:           "emqx/emqx-operator-reloader:0.0.1",
+							Image:           "emqx/emqx-operator-reloader:0.0.2",
 							ImagePullPolicy: corev1.PullAlways,
 							Args: []string{
 								"-u", "admin",
