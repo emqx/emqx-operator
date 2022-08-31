@@ -179,18 +179,6 @@ var _ = Describe("Check EMQX Custom Resource", func() {
 
 			By("should delete plugin resource")
 
-			Eventually(func() string {
-				cm := &corev1.ConfigMap{}
-				_ = k8sClient.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      fmt.Sprintf("%s-%s", broker.GetName(), "loaded-plugins"),
-						Namespace: broker.GetNamespace(),
-					}, cm,
-				)
-				return cm.Data["loaded_plugins"]
-			}, timeout, interval).ShouldNot(ContainSubstring("emqx_lwm2m"))
-
 			Eventually(func() []corev1.ServicePort {
 				svc := &corev1.Service{}
 				_ = k8sClient.Get(
@@ -326,17 +314,5 @@ func check_plugin(emqx appsv1beta3.Emqx, pluginList []string) {
 			)
 			return cm.Data
 		}, timeout, interval).Should(HaveKey(pluginName + ".conf"))
-
-		Eventually(func() string {
-			cm := &corev1.ConfigMap{}
-			_ = k8sClient.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
-					Namespace: emqx.GetNamespace(),
-				}, cm,
-			)
-			return cm.Data["loaded_plugins"]
-		}, timeout, interval).Should(ContainSubstring(pluginName))
 	}
 }

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	json "github.com/json-iterator/go"
@@ -90,9 +89,6 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
 				if err := r.unloadPluginByAPI(emqx, instance.Spec.PluginName); err != nil {
-					return ctrl.Result{}, err
-				}
-				if err := r.unloadPluginConfig(instance, emqx); err != nil {
 					return ctrl.Result{}, err
 				}
 			}
@@ -283,42 +279,6 @@ func (r *EmqxPluginReconciler) loadPluginConfig(plugin *appsv1beta3.EmqxPlugin, 
 	if err := r.Handler.Update(pluginsConfig, func(_ client.Object) error { return nil }); err != nil {
 		return err
 	}
-
-	// Update loaded plugins
-	loadedPlugins, err := r.getLoadedPlugins(emqx)
-	if err != nil {
-		return err
-	}
-	loadedPluginsStr := loadedPlugins.Data["loaded_plugins"]
-	index := strings.Index(loadedPluginsStr, plugin.Spec.PluginName)
-	if index == -1 {
-		loadedPluginLine := plugin.Spec.PluginName + ".\n"
-		loadedPluginsStr += loadedPluginLine
-		loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
-		if err := r.Handler.Update(loadedPlugins, func(_ client.Object) error { return nil }); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *EmqxPluginReconciler) unloadPluginConfig(plugin *appsv1beta3.EmqxPlugin, emqx appsv1beta3.Emqx) error {
-	// Update loaded plugins
-	postfun := func(_ client.Object) error { return nil }
-	loadedPlugins, err := r.getLoadedPlugins(emqx)
-	if err != nil {
-		return err
-	}
-	loadedPluginsStr := loadedPlugins.Data["loaded_plugins"]
-	index := strings.Index(loadedPluginsStr, plugin.Spec.PluginName)
-	if index != -1 {
-		loadedPluginLine := plugin.Spec.PluginName + ".\n"
-		loadedPluginsStr = loadedPluginsStr[:index] + loadedPluginsStr[index+len(loadedPluginLine):]
-		loadedPlugins.Data = map[string]string{"loaded_plugins": loadedPluginsStr}
-		if err := r.Handler.Update(loadedPlugins, postfun); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -354,21 +314,6 @@ func (r *EmqxPluginReconciler) getPluginsConfig(emqx appsv1beta3.Emqx) (*corev1.
 		context.TODO(),
 		client.ObjectKey{
 			Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "plugins-config"),
-			Namespace: emqx.GetNamespace(),
-		},
-		configMap,
-	); err != nil {
-		return nil, err
-	}
-	return configMap, nil
-}
-
-func (r *EmqxPluginReconciler) getLoadedPlugins(emqx appsv1beta3.Emqx) (*corev1.ConfigMap, error) {
-	configMap := &corev1.ConfigMap{}
-	if err := r.Get(
-		context.TODO(),
-		client.ObjectKey{
-			Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "loaded-plugins"),
 			Namespace: emqx.GetNamespace(),
 		},
 		configMap,

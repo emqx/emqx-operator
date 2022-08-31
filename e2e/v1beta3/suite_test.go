@@ -153,7 +153,7 @@ var _ = BeforeSuite(func() {
 		},
 		Spec: appsv1beta3.EmqxBrokerSpec{
 			EmqxTemplate: appsv1beta3.EmqxBrokerTemplate{
-				Image: "emqx/emqx:4.4.6",
+				Image: "emqx/emqx:4.4.8",
 			},
 		},
 	}
@@ -178,7 +178,7 @@ var _ = BeforeSuite(func() {
 				},
 			},
 			EmqxTemplate: appsv1beta3.EmqxEnterpriseTemplate{
-				Image: "emqx/emqx-ee:4.4.6",
+				Image: "emqx/emqx-ee:4.4.8",
 				ACL: []string{
 					"{allow, all}",
 				},

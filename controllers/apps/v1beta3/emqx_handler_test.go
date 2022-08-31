@@ -71,7 +71,7 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 				{Name: "EMQX_LOG__TO", Value: "file"},
 			},
 			EmqxTemplate: appsv1beta3.EmqxBrokerTemplate{
-				Image:           "emqx/emqx:4.4.6",
+				Image:           "emqx/emqx:4.4.8",
 				ImagePullPolicy: corev1.PullAlways,
 				EmqxConfig: appsv1beta3.EmqxConfig{
 					"log.level": "debug",
@@ -174,7 +174,7 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:            "emqx",
-							Image:           "emqx/emqx:4.4.6",
+							Image:           "emqx/emqx:4.4.8",
 							ImagePullPolicy: corev1.PullAlways,
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -593,135 +593,6 @@ func TestUpdateDefaultPluginsConfigForSts(t *testing.T) {
 	assert.Equal(t, expectSts, sts)
 }
 
-func TestGenerateLoadedPlugins(t *testing.T) {
-	borker := &appsv1beta3.EmqxBroker{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx",
-			Namespace: "default",
-			Labels: map[string]string{
-				"apps.emqx.io/instance": "emqx",
-			},
-		},
-	}
-
-	expect := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-loaded-plugins",
-			Namespace: "default",
-			Labels: map[string]string{
-				"apps.emqx.io/instance": "emqx",
-			},
-		},
-		Data: map[string]string{
-			"loaded_plugins": "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\n",
-		},
-	}
-
-	loadedPlugins := generateLoadedPlugins(borker)
-	assert.Equal(t, expect, loadedPlugins)
-
-	enterprise := &appsv1beta3.EmqxEnterprise{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-ee",
-			Namespace: "default",
-			Labels: map[string]string{
-				"apps.emqx.io/instance": "emqx-ee",
-			},
-		},
-	}
-
-	loadedPlugins = generateLoadedPlugins(enterprise)
-	assert.Equal(t, "emqx_management.\nemqx_dashboard.\nemqx_retainer.\nemqx_rule_engine.\nemqx_modules.\n", loadedPlugins.Data["loaded_plugins"])
-}
-
-func TestUpdateLoadedPluginsForSts(t *testing.T) {
-	loadedPlugins := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-loaded-plugins",
-			Namespace: "default",
-			Labels: map[string]string{
-				"apps.emqx.io/instance": "emqx",
-			},
-		},
-		Data: map[string]string{},
-	}
-	sts := &appsv1.StatefulSet{
-		Spec: appsv1.StatefulSetSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: "emqx"},
-						{Name: "reloader"},
-					},
-				},
-			},
-		},
-	}
-
-	expectSts := &appsv1.StatefulSet{
-		Spec: appsv1.StatefulSetSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name: "emqx",
-							Env: []corev1.EnvVar{
-								{
-									Name:  "EMQX_PLUGINS__LOADED_FILE",
-									Value: "/mounted/plugins/data/loaded_plugins",
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "emqx-loaded-plugins",
-									MountPath: "/mounted/plugins/data",
-								},
-							},
-						},
-						{
-							Name: "reloader",
-							Env: []corev1.EnvVar{
-								{
-									Name:  "EMQX_PLUGINS__LOADED_FILE",
-									Value: "/mounted/plugins/data/loaded_plugins",
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "emqx-loaded-plugins",
-									MountPath: "/mounted/plugins/data",
-								},
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "emqx-loaded-plugins",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "emqx-loaded-plugins",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	sts = updateLoadedPluginsForSts(sts, loadedPlugins)
-	assert.Equal(t, expectSts, sts)
-}
-
 func TestGenerateSvc(t *testing.T) {
 	broker := &appsv1beta3.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
@@ -979,7 +850,7 @@ func TestGenerateLoadedModules(t *testing.T) {
 	}
 
 	modules := generateLoadedModules(broker)
-	assert.NotNil(t, modules)
+	assert.Nil(t, modules)
 
 	broker.Spec.EmqxTemplate.Modules = []appsv1beta3.EmqxBrokerModule{
 		{
