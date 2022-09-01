@@ -146,6 +146,14 @@ func (s *EMQXStatus) SetCondition(c Condition) {
 	s.sortConditions(s.Conditions)
 }
 
+func (s *EMQXStatus) RemoveCondition(t ConditionType) {
+	pos, _ := getCondition(s, t)
+	if pos == -1 {
+		return
+	}
+	s.Conditions = append(s.Conditions[:pos], s.Conditions[pos+1:]...)
+}
+
 func (s *EMQXStatus) sortConditions(conditions []Condition) {
 	sort.Slice(conditions, func(i, j int) bool {
 		return s.Conditions[j].LastUpdateAt.Before(&s.Conditions[i].LastUpdateAt)
