@@ -82,10 +82,12 @@ jobs:
           - static
           - helm
         emqx:
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqx.yaml"]
-          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqx-ee.yaml"]
+          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-slim.yaml"]
+          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-full.yaml"]
+          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-slim.yaml"]
+          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-full.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
-          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
 
     steps:
       - run: minikube start
@@ -138,7 +140,7 @@ jobs:
       - if: failure()
         run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
       - if: failure()
-        run: kubectl describe ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json
+        run: kubectl describe ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }}
       - if: failure()
         run: kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json
       - if: failure()
