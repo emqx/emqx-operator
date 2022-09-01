@@ -49,8 +49,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
      metadata:
        name: emqx
      spec:
-       emqxTemplate:
-         image: emqx/emqx:5.0.6
+       image: emqx/emqx:5.0.6
    EOF
    ```
 

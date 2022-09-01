@@ -27,16 +27,17 @@ The EMQX Operator requires a Kubernetes cluster of version `>=1.20.0`.
 A core feature of the EMQX Operator is to monitor the Kubernetes API server for changes to specific objects and ensure that the running EMQX deployments match these objects.
 The Operator acts on the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/).
 
-For the example of EMQX Broker see the [`emqx.yaml`](config/samples/emqx/v1beta3/emqx.yaml) and for the example of EMQX Enterprise see the [emqx-ee.yaml](config/samples/emqx/v1beta3/emqx-ee.yaml).
+For the example of EMQX see the [`emqx-full.yaml`](config/samples/emqx/v2alpha1/emqx-full.yaml).
 
 The EMQX Operator automatically detects changes on any of the above custom resource objects and ensures that running deployments are kept in sync with the changes.
 
 ## EMQX Operator compatibility 
 
-|                          | EMQX 4.2 latest | EMQX 4.3 latest | EMQX 4.4 latest |
-|--------------------------|-----------------|-----------------|-----------------|
-| EMQX Operator 1.1 latest | ✓               | ✓               | ✓               |
-| EMQX Operator 1.2 latest |                 |                 | ✓               |
+|                          | EMQX 4.2 latest | EMQX 4.3 latest | EMQX 4.4 latest | EMQX 5.0 latest |
+|--------------------------|-----------------|-----------------|-----------------| ----------------|
+| EMQX Operator 1.1 latest | ✓               | ✓               |                 |                 |
+| EMQX Operator 1.2 latest |                 |                 | ✓               |                 |
+| EMQX Operator 2.0 latest |                 |                 | ✓               | ✓               |
 
 ## Getting Start
 
@@ -48,7 +49,7 @@ For more information on getting started, see the [getting started](docs/en_US/ge
 |--------------------------|----------------------------------------------------------|
 |    AWS                   | [EKS](docs/en_US/deployment/aws-eks-deployment.md)       | 
 |    Azure                 | [Azure](docs/en_US/deployment/azure-deployment.md)       | 
-|    Aliyun                | [ACK](docs/zh_CN/deployment/aliyun-ack-deployment.md)    | 
+|    Alibaba Cloud         | [ACK](docs/zh_CN/deployment/aliyun-ack-deployment.md)    |
 |    Huawei                | [CCE](docs/zh_CN/deployment/cce-deployment.md)           | 
 |    Tencent               | [TKE](docs/zh_CN/deployment/tencent-tke-deployment.md)   | 
 
