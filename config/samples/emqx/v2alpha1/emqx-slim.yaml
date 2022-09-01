@@ -3,4 +3,4 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.5
+  image: emqx/emqx:5.0.6

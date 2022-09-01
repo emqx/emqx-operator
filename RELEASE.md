@@ -2,9 +2,16 @@
 
 EMQX Operator 2.0.0 is released.
 
-### Supported EMQX version
+### Supported version
 
-- EMQX 5.0.6 and later
+- `apps.emqx.io/v1beta3`
+
+  - `EMQX` at [4.4.8](https://www.emqx.com/en/changelogs/enterprise/4.4.8)
+  - `EMQX Enterprise` at [4.4.8](https://www.emqx.com/en/changelogs/broker/4.4.8)
+
+- `apps.emqx.io/v2alpha1`
+
+  - `EMQX` at [5.0.6](https://www.emqx.com/en/changelogs/broker/5.0.6)
 
 #### Features 🌈
 

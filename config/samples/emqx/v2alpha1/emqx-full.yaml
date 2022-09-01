@@ -1,0 +1,191 @@
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: "emqx/emqx:5.0.6"
+  imagePullPolicy: Always
+  # imagePullSecrets: [fake-secrets]
+  bootstrapConfig: |
+    listeners.tcp.default {
+      bind = "0.0.0.0:1883"
+      max_connections = 1024000
+    }
+  coreTemplate:
+    metadata:
+      name: emqx-core
+      labels:
+        apps.emqx.io/instance: emqx
+        apps.emqx.io/db-role: core
+      annotations:
+    spec:
+      replicas: 3
+      volumeClaimTemplates:
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+        - ReadWriteOnce
+      # nodeName:
+      # nodeSelector:
+      # affinity:
+      # toleRations:
+      command: 
+        - "/usr/bin/docker-entrypoint.sh"
+      args:
+        - "/opt/emqx/bin/emqx"
+        - "foreground"
+      ports:
+        - containerPort: 1883
+      env:
+        - name: Foo
+          value: Bar
+      # envFrom:
+      #   - configMapRef:
+      #       name: fake-configmap
+      resources:
+        requests:
+          memory: "250Mi"
+          cpu: "250m"
+        limits:
+          memory: "1024Mi"
+          cpu: "500m" 
+      podSecurityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      containerSecurityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      extraVolumes:
+        - name: fake-volume
+          emptyDir: {} 
+      extraVolumeMounts:
+        - name: fake-volume
+          mountPath: /tmp/fake
+      livenessProbe:
+        httpGet:
+          path: /status
+          port: 18083
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        failureThreshold: 10
+      readinessProbe:
+        httpGet:
+          path: /status
+          port: 8081
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        failureThreshold: 30
+      startupProbe:
+        httpGet:
+          path: /status
+          port: 8081
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        failureThreshold: 30
+      lifecycle:
+        preStop:
+          exec:
+            command: ["/bin/sh","-c","emqx ctl cluster leave"]
+      # extraContainers:
+      #   - name: busybox
+      #     image: busybox
+      # initContainers:
+      #   - name: busybox
+      #     image: busybox
+  replicantTemplate:
+    metadata:
+      name: emqx-replicant
+      labels:
+        apps.emqx.io/instance: emqx
+        apps.emqx.io/db-role: replicant
+    spec:
+      replicas: 3
+      # nodeName:
+      # nodeSelector:
+      # affinity:
+      # toleRations:
+      command: 
+        - "/usr/bin/docker-entrypoint.sh"
+      args:
+        - "/opt/emqx/bin/emqx"
+        - "foreground"
+      ports:
+        - containerPort: 1883
+      env:
+        - name: Foo
+          value: Bar
+      # envFrom:
+      #   - configMapRef:
+      #       name: fake-configmap
+      resources:
+        requests:
+          memory: "250Mi"
+          cpu: "250m"
+        limits:
+          memory: "1024Mi"
+          cpu: "500m" 
+      podSecurityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      containerSecurityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      extraVolumes:
+        - name: fake-volume
+          emptyDir: {} 
+      extraVolumeMounts:
+        - name: fake-volume
+          mountPath: /tmp/fake
+      livenessProbe:
+        httpGet:
+          path: /status
+          port: 18083
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        failureThreshold: 10
+      readinessProbe:
+        httpGet:
+          path: /status
+          port: 8081
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        failureThreshold: 30
+      startupProbe:
+        httpGet:
+          path: /status
+          port: 8081
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        failureThreshold: 30
+      lifecycle:
+        preStop:
+          exec:
+            command: ["/bin/sh","-c","emqx ctl cluster leave"]
+      # extraContainers:
+      #   - name: busybox
+      #     image: busybox
+      # initContainers:
+      #   - name: busybox
+      #     image: busybox
+  dashboardServiceTemplate:
+    metadata:
+      name: emqx-dashboard
+    spec:
+      selector:
+        apps.emqx.io/db-role: core
+      ports:
+        - name: "dashboard-listeners-http-bind"
+          protocol: TCP
+          port: 18083
+          targetPort: 18083
+  listenersServiceTemplate:
+    metadata:
+      name: emqx-listeners
+    spec:
+      ports:
+        - name: "tcp-default"
+          protocol: TCP
+          port: 1883
+          targetPort: 1883
