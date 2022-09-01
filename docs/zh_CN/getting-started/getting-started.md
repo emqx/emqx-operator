@@ -15,7 +15,7 @@
 ```bash
 helm repo add emqx https://repos.emqx.io/charts
 helm repo update
-helm install emqx-operator emqx/emqx-operator --set installCRDs=true --namespace emqx-operator-system --create-namespace
+helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
 ```
 
 2. 等待 EMQX Operator 控制器就绪

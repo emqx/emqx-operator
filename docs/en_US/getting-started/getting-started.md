@@ -17,7 +17,7 @@ We use a [cert-manager](https://github.com/jetstack/cert-manager) for provisioni
  ```shell
  helm repo add emqx https://repos.emqx.io/charts
  helm repo update
- helm install emqx-operator emqx/emqx-operator --set installCRDs=true --namespace emqx-operator-system --create-namespace
+ helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
  ```
 2. Wait EMQX Operator Controller running 
 
