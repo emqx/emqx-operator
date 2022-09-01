@@ -8,7 +8,7 @@ The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deploymen
 
 ## Installing the Chart
 
-To install the chart with the release name `my-emqx-operator`:
+To install the chart with the release name `emqx-operator`:
 
 ```console
 ## Add the EMQX Helm repository
@@ -16,8 +16,7 @@ $ helm repo add emqx https://repos.emqx.io/charts
 $ helm repo update
 
 ## Install the emqx-operator helm chart
-$ helm install my-emqx-operator emqx/emqx-operator \
-      --set installCRDs=true \
+$ helm install emqx-operator emqx/emqx-operator \
       --namespace emqx-operator-system \
       --create-namespace
 ```
@@ -26,10 +25,10 @@ $ helm install my-emqx-operator emqx/emqx-operator \
 
 ## Uninstalling the Chart
 
-To uninstall/delete the `my-emqx-operator` deployment:
+To uninstall/delete the `emqx-operator` deployment:
 
 ```console
-$ helm delete my-emqx-operator -n emqx-operator-system
+$ helm delete emqx-operator -n emqx-operator-system
 ```
 
 ## Configuration
@@ -38,7 +37,7 @@ The following table lists the configurable parameters of the cert-manager chart 
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `installCRDs` | If true, CRD resources will be installed as part of the Helm chart. If enabled, when uninstalling CRD resources will be deleted causing all installed custom resources to be DELETED | `false` |
+| `skipCRDs`| If true, CRD resources will not be installed as part of the Helm chart. | `false` |
 | `image.repository` | Image repository | `emqx/emqx-operator-controller` |
 | `image.tag` | Image tag | `{{RELEASE_VERSION}}` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
@@ -61,7 +60,7 @@ Specify each parameter using the `--set key=value[,key=value]` argument to `helm
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-$ helm install my-emqx-operator -f values.yaml .
+$ helm install emqx-operator -f values.yaml .
 ```
 > **Tip**: You can use the default [values.yaml](https://github.com/emqx/emqx-operator/tree/main/deploy/charts/emqx-operator/values.yaml)
 

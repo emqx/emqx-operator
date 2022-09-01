@@ -22,13 +22,11 @@ runs:
         cert-manager jetstack/cert-manager \
         --namespace cert-manager \
         --create-namespace \
-        --version v1.8.2 \
         --set installCRDs=true
   - name: Deploy operator by helm
     shell: bash
     run: |
       helm install emqx-operator deploy/charts/emqx-operator\
-        --set installCRDs=true \
         --set image.repository=${{ inputs.repository }} \
         --set image.tag=${{ inputs.tag }} \
         --namespace emqx-operator-system \
