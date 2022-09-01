@@ -1,0 +1,7 @@
+apiVersion: apps.emqx.io/v1beta3
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  emqxTemplate:
+    image: emqx/emqx-ee:4.4.8

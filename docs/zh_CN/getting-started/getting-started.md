@@ -9,9 +9,8 @@
 我们使用 [cert-manager](https://github.com/cert-manager/cert-manager)来给 webhook 服务提供证书。你可以通过 [cert manager 文档](https://cert-manager.io/docs/installation/)来安装。
 
 ### 安装
-EMQX Operator 提供helm 以及 静态 YAML 安装，我们推荐使用 helm 来安装 EMQX Operator
 
-#### 通过 Helm 安装
+1. 通过 Helm 安装
 
 ```bash
 helm repo add emqx https://repos.emqx.io/charts
@@ -19,15 +18,7 @@ helm repo update
 helm install emqx-operator emqx/emqx-operator --set installCRDs=true --namespace emqx-operator-system --create-namespace
 ```
 
-#### 静态yaml安装
-
-安装默认静态配置文件(如果已经通过helm安装，则跳过该步骤)
-
-```bash
-kubectl apply -f "https://github.com/emqx/emqx-operator/releases/download/2.0.0/emqx-operator-controller.yaml"
-```
-
-### 检查 EMQX Operator 控制器状态
+2. 等待 EMQX Operator 控制器就绪
 
 ```bash
 $ kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system
@@ -37,74 +28,78 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 ## 部署 EMQX
 
-1.  部署 EMQX 自定义资源
+### 部署 EMQX 5 
 
-   ```bash
-   cat << "EOF" | kubectl apply -f -
-     apiVersion: apps.emqx.io/v2alpha1
-     kind: EMQX
-     metadata:
-       name: emqx
-     spec:
-       image: emqx/emqx:5.0.6
-   EOF
-   ```
+1. 部署 EMQX 自定义资源
 
-2. 检查 EMQX 状态
+    ```bash
+    cat << "EOF" | kubectl apply -f -
+      apiVersion: apps.emqx.io/v2alpha1
+      kind: EMQX
+      metadata:
+        name: emqx
+      spec:
+        image: emqx/emqx:5.0.6
+    EOF
+    ```
 
-   ```bash
-   $ kubectl get pods
-   NAME                              READY   STATUS    RESTARTS        AGE
-   emqx-core-0                       1/1     Running   0               75s
-   emqx-core-1                       1/1     Running   0               75s
-   emqx-core-2                       1/1     Running   0               75s
-   emqx-replicant-6c8b4fccfb-bkk4s   1/1     Running   0               75s
-   emqx-replicant-6c8b4fccfb-kmg9j   1/1     Running   0               75s
-   emqx-replicant-6c8b4fccfb-zc929   1/1     Running   0               75s
+    完整的例子请查看 [`emqx-full.yaml`](https://github.com/emqx/emqx-operator/blob/2.0.0/config/samples/emqx/v2alpha1/emqx-full.yaml)
 
-   $ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-   [
-     {
-       "node": "emqx@172.17.0.11",
-       "node_status": "running",
-       "otp_release": "24.2.1-1/12.2.1",
-       "role": "replicant",
-       "version": "5.0.6"
-     },
-     {
-       "node": "emqx@172.17.0.12",
-       "node_status": "running",
-       "otp_release": "24.2.1-1/12.2.1",
-       "role": "replicant",
-       "version": "5.0.6"
-     },
-     {
-       "node": "emqx@172.17.0.13",
-       "node_status": "running",
-       "otp_release": "24.2.1-1/12.2.1",
-       "role": "replicant",
-       "version": "5.0.6"
-     },
-     {
-       "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-       "node_status": "running",
-       "otp_release": "24.2.1-1/12.2.1",
-       "role": "core",
-       "version": "5.0.6"
-     },
-     {
-       "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-       "node_status": "running",
-       "otp_release": "24.2.1-1/12.2.1",
-       "role": "core",
-       "version": "5.0.6"
-     },
-     {
-       "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-       "node_status": "running",
-       "otp_release": "24.2.1-1/12.2.1",
-       "role": "core",
-       "version": "5.0.6"
-     }
-   ]
-   ```
+2. 检查 EMQX 自定义资源状态
+
+    ```
+    $ kubectl get pods
+    $ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+    ```
+
+### 部署 EMQX 4
+
+1. 部署 EMQX 自定义资源
+
+    ```bash
+    cat << "EOF" | kubectl apply -f -
+      apiVersion: apps.emqx.io/v1beta3
+      kind: EmqxBroker
+      metadata:
+        name: emqx
+      spec:
+        emqxTemplate:
+          image: emqx/emqx:4.4.8
+    EOF
+    ```
+
+    完整的例子请查看 [`emqxbroker-full.yaml`](https://github.com/emqx/emqx-operator/blob/2.0.0/config/samples/emqx/v1beta3/emqxbroker-full.yaml).
+
+2. 检查 EMQX 自定义资源状态
+
+    ```
+    $ kubectl get pods
+    $ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+    ```
+
+
+### 部署 EMQX Enterprise 4
+
+1. 部署 EMQX 自定义资源
+
+    ```bash
+    cat << "EOF" | kubectl apply -f -
+      apiVersion: apps.emqx.io/v1beta3
+      kind: EmqxEnterprise
+      metadata:
+        name: emqx-ee
+      spec:
+        emqxTemplate:
+          image: emqx/emqx-ee:4.4.8
+    EOF
+    ```
+
+
+    完整的例子请查看 [`emqxenterprise-full.yaml`](https://github.com/emqx/emqx-operator/blob/2.0.0/config/samples/emqx/v1beta3/emqxenterprise-full.yaml).
+
+2. 检查 EMQX 自定义资源状态
+
+    ```
+    $ kubectl get pods
+    $ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+    ```

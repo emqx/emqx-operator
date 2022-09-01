@@ -4,13 +4,33 @@ metadata:
   name: emqx
 spec:
   image: "emqx/emqx:5.0.6"
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   # imagePullSecrets: [fake-secrets]
   bootstrapConfig: |
+    node {
+      cookie = emqxsecretcookie
+      data_dir = "data"
+      etc_dir = "etc"
+    }
+    cluster {
+      discovery_strategy = dns
+      dns {
+        record_type = srv
+        name:"emqx-headless.default.svc.cluster.local"
+      }
+    }
+    dashboard {
+        listeners.http {
+            bind: 18083
+        }
+        default_username: "admin"
+        default_password: "public"
+    }
     listeners.tcp.default {
       bind = "0.0.0.0:1883"
       max_connections = 1024000
     }
+    sysmon.vm.long_schedule = disabled
   coreTemplate:
     metadata:
       name: emqx-core
@@ -20,18 +40,18 @@ spec:
       annotations:
     spec:
       replicas: 3
-      volumeClaimTemplates:
-        storageClassName: standard
-        resources:
-          requests:
-            storage: 20Mi
-        accessModes:
-        - ReadWriteOnce
+      # volumeClaimTemplates:
+      #   storageClassName: standard
+      #   resources:
+      #     requests:
+      #       storage: 20Mi
+      #   accessModes:
+      #   - ReadWriteOnce
       # nodeName:
       # nodeSelector:
       # affinity:
       # toleRations:
-      command: 
+      command:
         - "/usr/bin/docker-entrypoint.sh"
       args:
         - "/opt/emqx/bin/emqx"
@@ -46,20 +66,22 @@ spec:
       #       name: fake-configmap
       resources:
         requests:
-          memory: "250Mi"
-          cpu: "250m"
+          memory: "64Mi"
+          cpu: "125m"
         limits:
           memory: "1024Mi"
-          cpu: "500m" 
+          cpu: "500m"
       podSecurityContext:
-        runAsUser: 0
-        runAsGroup: 0
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: Always
       containerSecurityContext:
-        runAsUser: 0
-        runAsGroup: 0
+        runAsUser: 1000
+        runAsGroup: 1000
       extraVolumes:
         - name: fake-volume
-          emptyDir: {} 
+          emptyDir: {}
       extraVolumeMounts:
         - name: fake-volume
           mountPath: /tmp/fake
@@ -73,14 +95,14 @@ spec:
       readinessProbe:
         httpGet:
           path: /status
-          port: 8081
+          port: 18083
         initialDelaySeconds: 10
         periodSeconds: 5
         failureThreshold: 30
       startupProbe:
         httpGet:
           path: /status
-          port: 8081
+          port: 18083
         initialDelaySeconds: 10
         periodSeconds: 5
         failureThreshold: 30
@@ -89,11 +111,51 @@ spec:
           exec:
             command: ["/bin/sh","-c","emqx ctl cluster leave"]
       # extraContainers:
-      #   - name: busybox
-      #     image: busybox
+      #   - name: extra
+      #     image: busybox:stable
+      #     command:
+      #       - /bin/sh
+      #       - -c
+      #       - |
+      #         tail -f /dev/null
       # initContainers:
       #   - name: busybox
-      #     image: busybox
+      #     image: busybox:stable
+      #     securityContext:
+      #       runAsUser: 0
+      #       runAsGroup: 0
+      #       capabilities:
+      #         add:
+      #         - SYS_ADMIN
+      #         drop:
+      #         - ALL
+      #     command:
+      #       - /bin/sh
+      #       - -c
+      #       - |
+      #         mount -o remount rw /proc/sys
+      #         sysctl -w net.core.somaxconn=65535
+      #         sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+      #         sysctl -w kernel.core_uses_pid=0
+      #         sysctl -w net.ipv4.tcp_tw_reuse=1
+      #         sysctl -w fs.nr_open=1000000000
+      #         sysctl -w fs.file-max=1000000000
+      #         sysctl -w net.ipv4.ip_local_port_range='1025 65534'
+      #         sysctl -w net.ipv4.udp_mem='74583000 499445000 749166000'
+      #         sysctl -w net.ipv4.tcp_max_sync_backlog=163840
+      #         sysctl -w net.core.netdev_max_backlog=163840
+      #         sysctl -w net.core.optmem_max=16777216
+      #         sysctl -w net.ipv4.tcp_rmem='1024 4096 16777216'
+      #         sysctl -w net.ipv4.tcp_wmem='1024 4096 16777216'
+      #         sysctl -w net.ipv4.tcp_max_tw_buckets=1048576
+      #         sysctl -w net.ipv4.tcp_fin_timeout=15
+      #         sysctl -w net.core.rmem_default=262144000
+      #         sysctl -w net.core.wmem_default=262144000
+      #         sysctl -w net.core.rmem_max=262144000
+      #         sysctl -w net.core.wmem_max=262144000
+      #         sysctl -w net.ipv4.tcp_mem='378150000  504200000  756300000'
+      #         sysctl -w net.netfilter.nf_conntrack_max=1000000
+      #         sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
   replicantTemplate:
     metadata:
       name: emqx-replicant
@@ -106,7 +168,7 @@ spec:
       # nodeSelector:
       # affinity:
       # toleRations:
-      command: 
+      command:
         - "/usr/bin/docker-entrypoint.sh"
       args:
         - "/opt/emqx/bin/emqx"
@@ -125,16 +187,16 @@ spec:
           cpu: "250m"
         limits:
           memory: "1024Mi"
-          cpu: "500m" 
+          cpu: "500m"
       podSecurityContext:
-        runAsUser: 0
-        runAsGroup: 0
+        runAsUser: 1000
+        runAsGroup: 1000
       containerSecurityContext:
-        runAsUser: 0
-        runAsGroup: 0
+        runAsUser: 1000
+        runAsGroup: 1000
       extraVolumes:
         - name: fake-volume
-          emptyDir: {} 
+          emptyDir: {}
       extraVolumeMounts:
         - name: fake-volume
           mountPath: /tmp/fake
@@ -148,14 +210,14 @@ spec:
       readinessProbe:
         httpGet:
           path: /status
-          port: 8081
+          port: 18083
         initialDelaySeconds: 10
         periodSeconds: 5
         failureThreshold: 30
       startupProbe:
         httpGet:
           path: /status
-          port: 8081
+          port: 18083
         initialDelaySeconds: 10
         periodSeconds: 5
         failureThreshold: 30
@@ -164,8 +226,13 @@ spec:
           exec:
             command: ["/bin/sh","-c","emqx ctl cluster leave"]
       # extraContainers:
-      #   - name: busybox
-      #     image: busybox
+      #   - name: extra
+      #     image: busybox:stable
+      #     command:
+      #       - /bin/sh
+      #       - -c
+      #       - |
+      #         tail -f /dev/null
       # initContainers:
       #   - name: busybox
       #     image: busybox
