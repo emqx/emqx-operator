@@ -231,7 +231,7 @@ func (r *EMQX) defaultProbeForCoreNode() {
 		r.Spec.CoreTemplate.Spec.ReadinessProbe = &corev1.Probe{
 			InitialDelaySeconds: 10,
 			PeriodSeconds:       5,
-			FailureThreshold:    30,
+			FailureThreshold:    12,
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/status",
@@ -244,7 +244,7 @@ func (r *EMQX) defaultProbeForCoreNode() {
 		r.Spec.CoreTemplate.Spec.LivenessProbe = &corev1.Probe{
 			InitialDelaySeconds: 60,
 			PeriodSeconds:       30,
-			FailureThreshold:    10,
+			FailureThreshold:    3,
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: "/status",

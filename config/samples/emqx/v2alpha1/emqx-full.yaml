@@ -91,21 +91,21 @@ spec:
           port: 18083
         initialDelaySeconds: 60
         periodSeconds: 30
-        failureThreshold: 10
+        failureThreshold: 3
       readinessProbe:
         httpGet:
           path: /status
           port: 18083
         initialDelaySeconds: 10
         periodSeconds: 5
-        failureThreshold: 30
-      startupProbe:
-        httpGet:
-          path: /status
-          port: 18083
-        initialDelaySeconds: 10
-        periodSeconds: 5
-        failureThreshold: 30
+        failureThreshold: 12
+      # startupProbe:
+      #   httpGet:
+      #     path: /status
+      #     port: 18083
+      #   initialDelaySeconds: 10
+      #   periodSeconds: 5
+      #   failureThreshold: 12
       lifecycle:
         preStop:
           exec:

@@ -109,21 +109,21 @@ spec:
         port: 8081
       initialDelaySeconds: 10
       periodSeconds: 5
-      failureThreshold: 30
+      failureThreshold: 12
     livenessProbe:
       httpGet:
         path: /status
         port: 8081
       initialDelaySeconds: 60
       periodSeconds: 30
-      failureThreshold: 10
-    startupProbe:
-      httpGet:
-        path: /status
-        port: 8081
-      initialDelaySeconds: 10
-      periodSeconds: 5
-      failureThreshold: 30
+      failureThreshold: 3
+    # startupProbe:
+    #   httpGet:
+    #     path: /status
+    #     port: 8081
+    #   initialDelaySeconds: 10
+    #   periodSeconds: 5
+    #   failureThreshold: 12
     resources:
       requests:
         memory: "64Mi"

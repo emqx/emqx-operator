@@ -27,10 +27,6 @@ func (n Names) PluginsConfig() string {
 	return fmt.Sprintf("%s-%s", n.Object.GetName(), "plugins-config")
 }
 
-func (n Names) LoadedPlugins() string {
-	return fmt.Sprintf("%s-%s", n.Object.GetName(), "loaded-plugins")
-}
-
 func (n Names) LoadedModules() string {
 	return fmt.Sprintf("%s-%s", n.Object.GetName(), "loaded-modules")
 }
