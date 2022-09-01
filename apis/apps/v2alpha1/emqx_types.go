@@ -239,7 +239,7 @@ type EMQXCoreTemplateSpec struct {
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 	// ExtraContainers represents extra containers to be added to the pod.
 	// See https://github.com/emqx/emqx-operator/issues/252
-	ExtraContainers []corev1.Container `json:"Containers,omitempty"`
+	ExtraContainers []corev1.Container `json:"extraContainers,omitempty"`
 	// See https://github.com/emqx/emqx-operator/pull/72
 	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
 	// See https://github.com/emqx/emqx-operator/pull/72
@@ -264,7 +264,7 @@ type EMQXCoreTemplateSpec struct {
 	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 	// Actions that the management system should take in response to container lifecycle events.
 	// Cannot be updated.
-	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty" protobuf:"bytes,12,opt,name=lifecycle"`
+	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
 }
 
 type EMQXCoreTemplate struct {
