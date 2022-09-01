@@ -164,7 +164,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		if k8sErrors.IsNotFound(err) {
 			return instance, nil
 		}
-		return nil, emperror.Wrap(err, "failed to get store statefulSet")
+		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
 	}
 
 	emqxNodes, err = r.generateRequestAPI(instance).getNodeStatuesByAPI(storeSts)
@@ -250,7 +250,7 @@ func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username
 
 	data, ok := secret.Data["bootstrap_user"]
 	if !ok {
-		return "", "", fmt.Errorf("the secret does not contain the bootstrap_user")
+		return "", "", emperror.Errorf("the secret does not contain the bootstrap_user")
 	}
 
 	str := string(data)

@@ -17,11 +17,11 @@ limitations under the License.
 package v2alpha1
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
 
+	emperror "emperror.dev/errors"
 	// "github.com/gurkankaymak/hocon"
 	hocon "github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
@@ -31,11 +31,11 @@ import (
 func GetDashboardServicePort(instance *EMQX) (*corev1.ServicePort, error) {
 	hoconConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s: %w", instance.Spec.BootstrapConfig, err)
+		return nil, emperror.Wrapf(err, "failed to parse %s", instance.Spec.BootstrapConfig)
 	}
 	dashboardPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.http.bind"), `"`)
 	if dashboardPort == "" {
-		return nil, fmt.Errorf("failed to get dashboard.listeners.http.bind in %s", hoconConfig.String())
+		return nil, emperror.Errorf("failed to get dashboard.listeners.http.bind in %s", hoconConfig.String())
 	}
 
 	_, strPort, err := net.SplitHostPort(dashboardPort)

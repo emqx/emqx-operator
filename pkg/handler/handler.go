@@ -47,12 +47,12 @@ func (handler *Handler) RequestAPI(obj client.Object, method, username, password
 	}
 
 	if len(podList.Items) == 0 {
-		return nil, nil, fmt.Errorf("not found pods")
+		return nil, nil, emperror.Errorf("not found pods")
 	}
 
 	podName := findReadyEmqxPod(podList)
 	if podName == "" {
-		return nil, nil, fmt.Errorf("pods not ready")
+		return nil, nil, emperror.Errorf("pods not ready")
 	}
 
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
@@ -97,7 +97,7 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 		if k8sErrors.IsNotFound(err) {
 			return handler.Create(obj, postFun)
 		}
-		return fmt.Errorf("failed to get %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+		return emperror.Wrapf(err, "failed to get %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 
 	obj.SetResourceVersion(u.GetResourceVersion())
@@ -143,7 +143,7 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 
 	patchResult, err := patch.DefaultPatchMaker.Calculate(u, obj, opts...)
 	if err != nil {
-		return fmt.Errorf("failed to calculate patch for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+		return emperror.Wrapf(err, "failed to calculate patch for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	if !patchResult.IsEmpty() {
 		return handler.Update(obj, postFun)
@@ -157,23 +157,23 @@ func (handler *Handler) Create(obj client.Object, postCreated func(client.Object
 	case *appsv1beta3.EmqxEnterprise:
 	default:
 		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-			return fmt.Errorf("failed to set last applied annotation for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+			return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 		}
 	}
 
 	if err := handler.Client.Create(context.TODO(), obj); err != nil {
-		return fmt.Errorf("failed to create %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+		return emperror.Wrapf(err, "failed to create %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	return postCreated(obj)
 }
 
 func (handler *Handler) Update(obj client.Object, postUpdated func(client.Object) error) error {
 	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
-		return fmt.Errorf("failed to set last applied annotation for %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 
 	if err := handler.Client.Update(context.TODO(), obj); err != nil {
-		return fmt.Errorf("failed to update %s %s: %v", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
+		return emperror.Wrapf(err, "failed to update %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	return postUpdated(obj)
 }

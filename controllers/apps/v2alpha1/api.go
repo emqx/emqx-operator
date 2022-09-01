@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"strings"
 
+	emperror "emperror.dev/errors"
+
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	corev1 "k8s.io/api/core/v1"
@@ -41,15 +43,15 @@ type requestAPI struct {
 func (r *requestAPI) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNode, error) {
 	resp, body, err := r.Handler.RequestAPI(obj, "GET", r.Username, r.Password, r.Port, "api/v5/nodes")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get API %s: %v", "api/v5/nodes", err)
+		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/nodes", resp.Status, body)
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/nodes", resp.Status, body)
 	}
 
 	nodeStatuses := []appsv2alpha1.EMQXNode{}
 	if err := json.Unmarshal(body, &nodeStatuses); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
+		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
 	}
 	return nodeStatuses, nil
 }
@@ -94,14 +96,14 @@ func (r *requestAPI) getAllListenersByAPI(obj client.Object) ([]corev1.ServicePo
 func (r *requestAPI) getGatewaysByAPI(obj client.Object) ([]emqxGateway, error) {
 	resp, body, err := r.Handler.RequestAPI(obj, "GET", r.Username, r.Password, r.Port, "api/v5/gateway")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get API %s: %v", "api/v5/gateway", err)
+		return nil, emperror.Wrap(err, "failed to get API api/v5/gateway")
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/gateway", resp.Status, body)
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/gateway", resp.Status, body)
 	}
 	gateway := []emqxGateway{}
 	if err := json.Unmarshal(body, &gateway); err != nil {
-		return nil, fmt.Errorf("failed to parse gateway: %v", err)
+		return nil, emperror.Wrap(err, "failed to parse gateway")
 	}
 	return gateway, nil
 }
@@ -109,15 +111,15 @@ func (r *requestAPI) getGatewaysByAPI(obj client.Object) ([]emqxGateway, error) 
 func (r *requestAPI) getListenerPortsByAPI(obj client.Object, apiPath string) ([]corev1.ServicePort, error) {
 	resp, body, err := r.Handler.RequestAPI(obj, "GET", r.Username, r.Password, r.Port, apiPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get API %s: %v", apiPath, err)
+		return nil, emperror.Wrapf(err, "failed to get API %s", apiPath)
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get API %s, status : %s, body: %s", apiPath, resp.Status, body)
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", apiPath, resp.Status, body)
 	}
 	ports := []corev1.ServicePort{}
 	listeners := []emqxListener{}
 	if err := json.Unmarshal(body, &listeners); err != nil {
-		return nil, fmt.Errorf("failed to parse listeners: %v", err)
+		return nil, emperror.Wrap(err, "failed to parse listeners")
 	}
 	for _, listener := range listeners {
 		if !listener.Enable {
