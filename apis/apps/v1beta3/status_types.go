@@ -42,7 +42,6 @@ type EmqxStatus interface {
 	IsPluginInitialized() bool
 	GetConditions() []Condition
 	SetCondition(c Condition)
-	ClearCondition(t ConditionType)
 }
 
 type EmqxNode struct {
@@ -126,14 +125,6 @@ func (s *Status) SetCondition(c Condition) {
 	}
 
 	s.sortConditions(s.Conditions)
-}
-
-func (s *Status) ClearCondition(t ConditionType) {
-	pos, _ := getCondition(s, t)
-	if pos == -1 {
-		return
-	}
-	s.Conditions = append(s.Conditions[:pos], s.Conditions[pos+1:]...)
 }
 
 func (s *Status) sortConditions(conditions []Condition) {

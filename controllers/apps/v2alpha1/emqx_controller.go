@@ -198,6 +198,8 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 				"Updating core nodes in cluster",
 			)
 			instance.Status.SetCondition(*condition)
+			instance.Status.RemoveCondition(appsv2alpha1.ClusterCoreReady)
+			instance.Status.RemoveCondition(appsv2alpha1.ClusterRunning)
 		} else if storeSts.Status.UpdatedReplicas == storeSts.Status.Replicas &&
 			storeSts.Status.UpdateRevision == storeSts.Status.CurrentRevision &&
 			instance.Status.CoreNodeReplicas == instance.Status.CoreNodeReadyReplicas &&
