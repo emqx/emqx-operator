@@ -69,23 +69,23 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 
 	sts := generateStatefulSetDef(instance)
 
-	storeSts := &appsv1.StatefulSet{}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), storeSts); err != nil {
+	existedSts := &appsv1.StatefulSet{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(sts), existedSts); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
 	// store statefulSet is exit
-	if storeSts.Spec.PodManagementPolicy != "" {
-		sts.Spec.PodManagementPolicy = storeSts.Spec.PodManagementPolicy
+	if existedSts.Spec.PodManagementPolicy != "" {
+		sts.Spec.PodManagementPolicy = existedSts.Spec.PodManagementPolicy
 	}
 	// compatible with 1.2.2
-	if storeSts.Spec.VolumeClaimTemplates != nil {
-		sts.Spec.VolumeClaimTemplates = storeSts.Spec.VolumeClaimTemplates
+	if existedSts.Spec.VolumeClaimTemplates != nil {
+		sts.Spec.VolumeClaimTemplates = existedSts.Spec.VolumeClaimTemplates
 	}
 	// compatible with 1.2.2
-	if storeSts.Annotations != nil {
-		sts.Annotations = storeSts.Annotations
+	if existedSts.Annotations != nil {
+		sts.Annotations = existedSts.Annotations
 	}
 
 	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
