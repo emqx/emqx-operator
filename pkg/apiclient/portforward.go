@@ -19,9 +19,9 @@ package apiclient
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http"
 
+	emperror "emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -49,7 +49,7 @@ func (o *PortForwardOptions) New() error {
 	}
 
 	if pod.Status.Phase != corev1.PodRunning {
-		return fmt.Errorf("unable to forward port because pod is not running. Current status=%v", pod.Status.Phase)
+		return emperror.Errorf("unable to forward port because pod is not running. Current status=%v", pod.Status.Phase)
 	}
 
 	portForwardURL := o.Clientset.

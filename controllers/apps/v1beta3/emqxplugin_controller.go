@@ -22,6 +22,7 @@ import (
 	"sort"
 	"time"
 
+	emperror "emperror.dev/errors"
 	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -195,7 +196,7 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("request api failed: %s", resp.Status)
+		return emperror.Errorf("request api failed: %s", resp.Status)
 	}
 	return nil
 }
@@ -209,7 +210,7 @@ func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta3.Emqx) ([]pluginL
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("request api failed: %s", resp.Status)
+		return nil, emperror.Errorf("request api failed: %s", resp.Status)
 	}
 
 	err = json.Unmarshal([]byte(gjson.GetBytes(body, "data").String()), &data)

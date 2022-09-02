@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	emperror "emperror.dev/errors"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -263,13 +265,13 @@ func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]apps
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get node statuses from API: %s", resp.Status)
+		return nil, emperror.Errorf("failed to get node statuses from API: %s", resp.Status)
 	}
 
 	emqxNodes := []appsv1beta3.EmqxNode{}
 	data := gjson.GetBytes(body, "data")
 	if err := json.Unmarshal([]byte(data.Raw), &emqxNodes); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
+		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
 	}
 	return emqxNodes, nil
 }

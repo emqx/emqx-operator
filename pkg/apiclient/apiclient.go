@@ -17,6 +17,7 @@ limitations under the License.
 package apiclient
 
 import (
+	emperror "emperror.dev/errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -54,7 +55,7 @@ func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
 			return nil, nil, err
 		}
 		if len(ports) == 0 {
-			return nil, nil, fmt.Errorf("not found listener port")
+			return nil, nil, emperror.Errorf("not found listener port")
 		}
 
 		url := url.URL{
