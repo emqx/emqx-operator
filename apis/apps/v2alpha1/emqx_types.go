@@ -174,6 +174,7 @@ type EMQXCoreTemplateSpec struct {
 	// same Template, but individual replicas also have a consistent identity.
 	// If unspecified, defaults to 3.
 	//+kubebuilder:default:=3
+	//+kubebuilder:validation:Minimum:=1
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Entrypoint array. Not executed within a shell.
 	// The container image's ENTRYPOINT is used if this is not provided.
@@ -183,7 +184,6 @@ type EMQXCoreTemplateSpec struct {
 	// produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
 	// of whether the variable exists or not. Cannot be updated.
 	// More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
-	// +optional
 	Command []string `json:"command,omitempty"`
 	// Arguments to the entrypoint.
 	// The container image's CMD is used if this is not provided.
