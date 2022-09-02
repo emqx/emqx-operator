@@ -6353,6 +6353,7 @@ spec:
                           replicas also have a consistent identity. If unspecified,
                           defaults to 3.
                         format: int32
+                        minimum: 1
                         type: integer
                       resources:
                         description: 'Compute Resources required by this container.
