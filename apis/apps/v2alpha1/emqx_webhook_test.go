@@ -257,9 +257,9 @@ func TestDefaultDashboardServiceTemplate(t *testing.T) {
 func TestDefaultProbeForCoreNode(t *testing.T) {
 	t.Run("failed to get dashboard listeners", func(t *testing.T) {
 		instance := &EMQX{}
-		instance.defaultProbeForCoreNode()
+		instance.defaultProbe()
 
-		assert.Equal(t, &corev1.Probe{
+		expectReadinessProbe := &corev1.Probe{
 			InitialDelaySeconds: 10,
 			PeriodSeconds:       5,
 			FailureThreshold:    12,
@@ -269,9 +269,9 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 					Port: intstr.FromInt(18083),
 				},
 			},
-		}, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
+		}
 
-		assert.Equal(t, &corev1.Probe{
+		expectLivenessProbe := &corev1.Probe{
 			InitialDelaySeconds: 60,
 			PeriodSeconds:       30,
 			FailureThreshold:    3,
@@ -281,7 +281,10 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 					Port: intstr.FromInt(18083),
 				},
 			},
-		}, instance.Spec.CoreTemplate.Spec.LivenessProbe)
+		}
+
+		assert.Equal(t, expectReadinessProbe, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
+		assert.Equal(t, expectLivenessProbe, instance.Spec.CoreTemplate.Spec.LivenessProbe)
 	})
 
 	t.Run("set dashboard listeners", func(t *testing.T) {
@@ -290,9 +293,9 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 				BootstrapConfig: `dashboard.listeners.http.bind = 18084`,
 			},
 		}
-		instance.defaultProbeForCoreNode()
+		instance.defaultProbe()
 
-		assert.Equal(t, &corev1.Probe{
+		expectReadinessProbe := &corev1.Probe{
 			InitialDelaySeconds: 10,
 			PeriodSeconds:       5,
 			FailureThreshold:    12,
@@ -302,9 +305,9 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 					Port: intstr.FromInt(18084),
 				},
 			},
-		}, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
+		}
 
-		assert.Equal(t, &corev1.Probe{
+		expectLivenessProbe := &corev1.Probe{
 			InitialDelaySeconds: 60,
 			PeriodSeconds:       30,
 			FailureThreshold:    3,
@@ -314,6 +317,9 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 					Port: intstr.FromInt(18084),
 				},
 			},
-		}, instance.Spec.CoreTemplate.Spec.LivenessProbe)
+		}
+
+		assert.Equal(t, expectReadinessProbe, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
+		assert.Equal(t, expectLivenessProbe, instance.Spec.CoreTemplate.Spec.LivenessProbe)
 	})
 }
