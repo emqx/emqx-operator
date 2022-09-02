@@ -55,7 +55,7 @@ func (r *EMQX) Default() {
 	r.defaultLabels()
 	r.defaultBootstrapConfig()
 	r.defaultDashboardServiceTemplate()
-	r.defaultProbeForCoreNode()
+	r.defaultProbe()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -218,7 +218,7 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 	)
 }
 
-func (r *EMQX) defaultProbeForCoreNode() {
+func (r *EMQX) defaultProbe() {
 	dashboardPort, err := GetDashboardServicePort(r)
 	if err != nil {
 		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
@@ -227,30 +227,41 @@ func (r *EMQX) defaultProbeForCoreNode() {
 		}
 	}
 
-	if r.Spec.CoreTemplate.Spec.ReadinessProbe == nil {
-		r.Spec.CoreTemplate.Spec.ReadinessProbe = &corev1.Probe{
-			InitialDelaySeconds: 10,
-			PeriodSeconds:       5,
-			FailureThreshold:    12,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: dashboardPort.TargetPort,
-				},
+	defaultReadinessProbe := &corev1.Probe{
+		InitialDelaySeconds: 10,
+		PeriodSeconds:       5,
+		FailureThreshold:    12,
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: "/status",
+				Port: dashboardPort.TargetPort,
 			},
-		}
+		},
+	}
+
+	defaultLivenessProbe := &corev1.Probe{
+		InitialDelaySeconds: 60,
+		PeriodSeconds:       30,
+		FailureThreshold:    3,
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: "/status",
+				Port: dashboardPort.TargetPort,
+			},
+		},
+	}
+
+	if r.Spec.CoreTemplate.Spec.ReadinessProbe == nil {
+		r.Spec.CoreTemplate.Spec.ReadinessProbe = defaultReadinessProbe
 	}
 	if r.Spec.CoreTemplate.Spec.LivenessProbe == nil {
-		r.Spec.CoreTemplate.Spec.LivenessProbe = &corev1.Probe{
-			InitialDelaySeconds: 60,
-			PeriodSeconds:       30,
-			FailureThreshold:    3,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: dashboardPort.TargetPort,
-				},
-			},
-		}
+		r.Spec.CoreTemplate.Spec.LivenessProbe = defaultLivenessProbe
+	}
+
+	if r.Spec.ReplicantTemplate.Spec.ReadinessProbe == nil {
+		r.Spec.ReplicantTemplate.Spec.ReadinessProbe = defaultReadinessProbe
+	}
+	if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
+		r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
 	}
 }
