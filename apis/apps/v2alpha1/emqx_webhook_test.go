@@ -71,6 +71,10 @@ func TestValidateUpdate(t *testing.T) {
 
 	instance.Spec.BootstrapConfig = "foo = bar"
 	assert.Nil(t, instance.ValidateUpdate(old))
+
+	instance.Spec.CoreTemplate.Spec.Replicas = int32Ptr(4)
+	assert.Nil(t, instance.ValidateUpdate(old))
+
 }
 
 func TestValidateDelete(t *testing.T) {

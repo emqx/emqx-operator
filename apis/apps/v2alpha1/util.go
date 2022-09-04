@@ -67,3 +67,7 @@ func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort
 
 	return result
 }
+
+func int32Ptr(x int32) *int32 {
+	return &x
+}
