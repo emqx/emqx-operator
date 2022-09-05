@@ -64,13 +64,25 @@ func TestValidateUpdate(t *testing.T) {
 		},
 	}
 
-	old := instance.DeepCopy()
-	old.Spec.BootstrapConfig = "foo = bar"
+	t.Run("should return error if bootstrap config is invalid", func(t *testing.T) {
+		old := instance.DeepCopy()
+		instance.Spec.BootstrapConfig = "hello world"
+		assert.ErrorContains(t, instance.ValidateUpdate(old), "failed to parse bootstrap config")
+	})
 
-	assert.EqualError(t, instance.ValidateUpdate(old), "bootstrap config cannot be updated")
+	t.Run("should return error if bootstrap config is update", func(t *testing.T) {
+		old := instance.DeepCopy()
+		instance.Spec.BootstrapConfig = "foo = bar"
+		assert.ErrorContains(t, instance.ValidateUpdate(old), "bootstrap config cannot be updated")
+	})
 
-	instance.Spec.BootstrapConfig = "foo = bar"
-	assert.Nil(t, instance.ValidateUpdate(old))
+	t.Run("check bootstrap config is map", func(t *testing.T) {
+		old := instance.DeepCopy()
+		old.Spec.BootstrapConfig = `{a = 1, b = { c = 2, d = 3}}`
+
+		instance.Spec.BootstrapConfig = `{b = { d = 3, c = 2 }, a = 1}`
+		assert.Nil(t, instance.ValidateUpdate(old))
+	})
 }
 
 func TestValidateDelete(t *testing.T) {
