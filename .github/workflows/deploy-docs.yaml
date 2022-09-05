@@ -27,7 +27,7 @@ jobs:
     - name: get_tags
       id: tags
       run: |
-        if [ "github.event_name" = "workflow_dispatch" ]; then
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           ref="${{ inputs.tag }}"
         else
           ref="${{ github.ref_name }}"
