@@ -6,18 +6,51 @@ concurrency:
 
 ## Only runs on released, do not runs on pre-released
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        type: string
   release:
     types:
-    - published 
+    - published
 
 jobs:
+  prepare:
+    outputs:
+      profiles: ${{ steps.tags.outputs.tags}}
+
+    runs-on: ubuntu-20.04
+    if: github.repository_owner == 'emqx'
+
+    steps:
+    - name: get_tags
+      id: tags
+      run: |
+        if [ "github.event_name" = "workflow_dispatch" ]; then
+          ref="${{ inputs.tag }}"
+        else
+          ref="${{ github.ref_name }}"
+        fi
+        latest_tag = "$(curl --silent --show-error \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ github.token }}" \
+            https://api.github.com/repos/emqx/emqx-operator/releases/latest \
+            | jq '.tag_name')"
+        if [ "$latest_tag" = "$ref" ];then
+          tag=("$ref" "latest")
+        else
+          tag=("$ref")
+        fi
+        tags=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${tag[@]}")
+        echo "::set-output name=tags::$tags"
+
   deploy:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
-        ref:
-          - "latest"
-          - ""
+        tags: ${{ fromJSON(needs.prepare.outputs.tags) }}
 
     runs-on: ubuntu-20.04
     if: github.repository_owner == 'emqx'
@@ -48,11 +81,7 @@ jobs:
 
     - name: set env
       run: |
-        if [ "${{ matrix.ref }}" == "latest" ]; then
-          echo "VERSION=latest" >> $GITHUB_ENV
-        else
-          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
-        fi
+        echo "VERSION=${{ matrix.tags }}" >> $GITHUB_ENV
         echo "DOCS_TYPE=emqx-operator" >> $GITHUB_ENV
 
     - name: remove unused files
