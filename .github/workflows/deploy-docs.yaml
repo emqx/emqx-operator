@@ -8,7 +8,7 @@ concurrency:
 on:
   release:
     types:
-    - released
+    - published 
 
 jobs:
   deploy:
