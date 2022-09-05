@@ -36,7 +36,7 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ github.token }}" \
             https://api.github.com/repos/emqx/emqx-operator/releases/latest \
-            | jq '.tag_name')"
+            | jq '.tag_name' | tr -d '"')"
         if [ "$latest_tag" = "$ref" ];then
           tag=("$ref" "latest")
         else
