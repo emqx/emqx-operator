@@ -18,7 +18,7 @@ on:
 jobs:
   prepare:
     outputs:
-      profiles: ${{ steps.tags.outputs.tags}}
+      tags: ${{ steps.tags.outputs.tags}}
 
     runs-on: ubuntu-20.04
     if: github.repository_owner == 'emqx'
