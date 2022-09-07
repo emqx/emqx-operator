@@ -201,16 +201,29 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 			instance.Status.RemoveCondition(appsv2alpha1.ClusterCoreReady)
 			instance.Status.RemoveCondition(appsv2alpha1.ClusterRunning)
 		} else if existedSts.Status.UpdatedReplicas == existedSts.Status.Replicas &&
-			existedSts.Status.UpdateRevision == existedSts.Status.CurrentRevision &&
-			instance.Status.CoreNodeReplicas == instance.Status.CoreNodeReadyReplicas &&
-			instance.Status.ReplicantNodeReplicas == instance.Status.ReplicantNodeReadyReplicas {
-			condition := appsv2alpha1.NewCondition(
-				appsv2alpha1.ClusterRunning,
-				corev1.ConditionTrue,
-				"ClusterReady",
-				"All nodes are ready",
-			)
-			instance.Status.SetCondition(*condition)
+			existedSts.Status.UpdateRevision == existedSts.Status.CurrentRevision {
+			existedDeploy := &appsv1.Deployment{}
+			err := r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfReplicantNode(), Namespace: instance.Namespace}, existedDeploy)
+			if err != nil {
+				if k8sErrors.IsNotFound(err) {
+					return instance, nil
+				}
+				return nil, emperror.Wrap(err, "failed to get existed deployment")
+			}
+			if existedDeploy.Status.UpdatedReplicas == existedDeploy.Status.Replicas &&
+				existedDeploy.Status.ReadyReplicas == existedDeploy.Status.Replicas {
+				if instance.Status.CoreNodeReplicas == instance.Status.CoreNodeReadyReplicas &&
+					instance.Status.ReplicantNodeReplicas == instance.Status.ReplicantNodeReadyReplicas {
+					condition := appsv2alpha1.NewCondition(
+						appsv2alpha1.ClusterRunning,
+						corev1.ConditionTrue,
+						"ClusterReady",
+						"All nodes are ready",
+					)
+					instance.Status.SetCondition(*condition)
+				}
+			}
+
 		}
 	case appsv2alpha1.ClusterCreating:
 		instance.Status.CurrentImage = instance.Spec.Image
