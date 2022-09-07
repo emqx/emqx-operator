@@ -62,7 +62,7 @@ spec:
                 "name": "emqx",
                 "bandwidth_name": "cce-emqx",
                 "bandwidth_chargemode": "bandwidth",
-                "bandwidth_size": 200,
+                "bandwidth_size": 5,
                 "bandwidth_sharetype": "PER",
                 "eip_type": "5_bgp"
               }'
@@ -72,6 +72,28 @@ EOF
 ```
 
 这里 service type采用LoadBalancer
+
+**elb参数说明**
+- bandwidth_chargemode
+> 带宽付费模式。
+bandwidth：按带宽计费
+traffic：按流量计费
+默认类型：bandwidth
+
+- bandwidth_size
+> 带宽大小，默认1Mbit/s~2000Mbit/s，请根据Region带宽支持范围设置。
+
+- bandwidth_sharetype
+> 带宽共享方式。
+PER：独享带宽
+
+- eip_type
+> 弹性公网IP类型
+5_telcom：电信
+5_union：联通
+5_bgp：全动态BGP
+5_sbgp：静态BGP
+
 
 annotations的说明[参考](https://support.huaweicloud.com/usermanual-cce/cce_10_0252.html)
 
