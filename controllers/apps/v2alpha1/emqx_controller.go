@@ -137,34 +137,17 @@ func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.
 func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha1.EMQX, error) {
 	var emqxNodes []appsv2alpha1.EMQXNode
 	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
+	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
+	var err error
 
-	if instance.Status.Conditions == nil {
-		instance.Status.CurrentImage = instance.Spec.Image
-		condition := appsv2alpha1.NewCondition(
-			appsv2alpha1.ClusterCreating,
-			corev1.ConditionTrue,
-			"ClusterCreating",
-			"Creating EMQX cluster",
-		)
-		instance.Status.SetCondition(*condition)
-		return instance, nil
-	}
-
-	instance.Status.CoreNodeReplicas = *instance.Spec.CoreTemplate.Spec.Replicas
-	if isExistReplicant(instance) {
-		instance.Status.ReplicantNodeReplicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
-	} else {
-		instance.Status.ReplicantNodeReplicas = int32(0)
-	}
-	instance.Status.CoreNodeReadyReplicas = int32(0)
-	instance.Status.ReplicantNodeReadyReplicas = int32(0)
-
-	err := r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfCoreNode(), Namespace: instance.Namespace}, existedSts)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return instance, nil
-		}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfCoreNode(), Namespace: instance.Namespace}, existedSts)
+	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
+	}
+
+	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfReplicantNode(), Namespace: instance.Namespace}, existedDeploy)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, emperror.Wrap(err, "failed to get existed deployment")
 	}
 
 	emqxNodes, err = r.generateRequestAPI(instance).getNodeStatuesByAPI(existedSts)
@@ -172,89 +155,10 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 	}
 
-	if emqxNodes != nil {
-		instance.Status.EMQXNodes = emqxNodes
-
-		for _, node := range emqxNodes {
-			if node.NodeStatus == "running" {
-				if node.Role == "core" {
-					instance.Status.CoreNodeReadyReplicas++
-				}
-				if node.Role == "replicant" {
-					instance.Status.ReplicantNodeReadyReplicas++
-				}
-			}
-		}
-	}
-
-	switch instance.Status.Conditions[0].Type {
-	default:
-		if instance.Status.CurrentImage != instance.Spec.Image {
-			instance.Status.CurrentImage = instance.Spec.Image
-			condition := appsv2alpha1.NewCondition(
-				appsv2alpha1.ClusterCoreUpdating,
-				corev1.ConditionTrue,
-				"ClusterCoreUpdating",
-				"Updating core nodes in cluster",
-			)
-			instance.Status.SetCondition(*condition)
-			instance.Status.RemoveCondition(appsv2alpha1.ClusterCoreReady)
-			instance.Status.RemoveCondition(appsv2alpha1.ClusterRunning)
-		} else if existedSts.Status.UpdatedReplicas == existedSts.Status.Replicas &&
-			existedSts.Status.UpdateRevision == existedSts.Status.CurrentRevision {
-			existedDeploy := &appsv1.Deployment{}
-			err := r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfReplicantNode(), Namespace: instance.Namespace}, existedDeploy)
-			if err != nil {
-				if k8sErrors.IsNotFound(err) {
-					return instance, nil
-				}
-				return nil, emperror.Wrap(err, "failed to get existed deployment")
-			}
-			if existedDeploy.Status.UpdatedReplicas == existedDeploy.Status.Replicas &&
-				existedDeploy.Status.ReadyReplicas == existedDeploy.Status.Replicas {
-				if instance.Status.CoreNodeReplicas == instance.Status.CoreNodeReadyReplicas &&
-					instance.Status.ReplicantNodeReplicas == instance.Status.ReplicantNodeReadyReplicas {
-					condition := appsv2alpha1.NewCondition(
-						appsv2alpha1.ClusterRunning,
-						corev1.ConditionTrue,
-						"ClusterReady",
-						"All nodes are ready",
-					)
-					instance.Status.SetCondition(*condition)
-				}
-			}
-
-		}
-	case appsv2alpha1.ClusterCreating:
-		instance.Status.CurrentImage = instance.Spec.Image
-		condition := appsv2alpha1.NewCondition(
-			appsv2alpha1.ClusterCoreUpdating,
-			corev1.ConditionTrue,
-			"ClusterCoreUpdating",
-			"Updating core nodes in cluster",
-		)
-		instance.Status.SetCondition(*condition)
-	case appsv2alpha1.ClusterCoreUpdating:
-		// statefulSet already updated
-		if existedSts.Spec.Template.Spec.Containers[0].Image == instance.Spec.Image &&
-			existedSts.Status.ObservedGeneration == existedSts.Generation {
-			// statefulSet is ready
-			if existedSts.Status.UpdateRevision == existedSts.Status.CurrentRevision &&
-				existedSts.Status.ReadyReplicas == existedSts.Status.Replicas {
-				// core nodes is ready
-				if instance.Status.CoreNodeReadyReplicas == instance.Status.CoreNodeReplicas {
-					condition := appsv2alpha1.NewCondition(
-						appsv2alpha1.ClusterCoreReady,
-						corev1.ConditionTrue,
-						"ClusterCoreReady",
-						"Core nodes is ready",
-					)
-					instance.Status.SetCondition(*condition)
-				}
-			}
-		}
-	}
-	return instance, nil
+	emqxStatusMachine := newEMQXStatusMachine(instance)
+	emqxStatusMachine.CheckNodeCount(emqxNodes)
+	emqxStatusMachine.NextStatus(existedSts, existedDeploy)
+	return emqxStatusMachine.GetEMQX(), nil
 }
 
 func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username, password string, err error) {

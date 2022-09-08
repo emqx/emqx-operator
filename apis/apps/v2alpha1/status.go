@@ -105,6 +105,16 @@ func (s *EMQXStatus) IsCreating() bool {
 	return false
 }
 
+func (s *EMQXStatus) IsCoreNodesUpdating() bool {
+	if len(s.Conditions) > 0 {
+		cond := s.Conditions[0]
+		if cond.Type == ClusterCoreUpdating && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *EMQXStatus) IsCoreNodesReady() bool {
 	if len(s.Conditions) > 0 {
 		cond := s.Conditions[0]
