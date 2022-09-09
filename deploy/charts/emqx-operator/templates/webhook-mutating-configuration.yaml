@@ -76,8 +76,8 @@ webhooks:
   - v1beta1
   clientConfig:
     service:
-      name: emqx-operator-webhook-service
-      namespace: emqx-operator-system
+      name: {{ include "emqx-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
       path: /mutate-apps-emqx-io-v2alpha1-emqx
   failurePolicy: Fail
   name: mutating.apps.emqx.io
