@@ -27,14 +27,14 @@ EOF
 
 ## 检查 `emqx_prometheus` 是否创建成功
 
-   ```bash
-   kubectl get emqxplugins.apps.emqx.io | grep prometheus
-   emqx-prometheus    2m37s
-   ```
+```bash
+kubectl get emqxplugins.apps.emqx.io | grep prometheus
+emqx-prometheus    2m37s
+```
 
 ## 检查 EMQX 实例插件是否生效
 
-   ```bash
-   kubectl exec -it emqx-0 -- emqx_ctl plugins list | grep prometheus
-   Plugin(emqx_prometheus, description=Prometheus for EMQ X, active=true)
-   ```
+```bash
+kubectl exec -it emqx-0 -- emqx_ctl plugins list | grep prometheus
+Plugin(emqx_prometheus, description=Prometheus for EMQ X, active=true)
+```
