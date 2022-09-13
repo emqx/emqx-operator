@@ -11585,6 +11585,7 @@ spec:
                         default: 3
                         description: Replicas is the desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. If unspecified, defaults to 3.
                         format: int32
+                        minimum: 1
                         type: integer
                       resources:
                         description: 'Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
@@ -16694,7 +16695,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: emqx/emqx-operator-controller:2.0.0
+        image: emqx/emqx-operator-controller:2.0.1
         livenessProbe:
           httpGet:
             path: /healthz
