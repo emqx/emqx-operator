@@ -20,11 +20,11 @@ spec:
       }
     }
     dashboard {
-        listeners.http {
-            bind: 18083
-        }
-        default_username: "admin"
-        default_password: "public"
+      listeners.http {
+          bind: 18083
+      }
+      default_username: "admin"
+      default_password: "public"
     }
     listeners.tcp.default {
       bind = "0.0.0.0:1883"
@@ -39,7 +39,7 @@ spec:
         apps.emqx.io/db-role: core
       annotations:
     spec:
-      replicas: 3
+      replicas: 1
       # volumeClaimTemplates:
       #   storageClassName: standard
       #   resources:
