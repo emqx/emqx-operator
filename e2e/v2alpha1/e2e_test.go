@@ -61,7 +61,7 @@ var _ = Describe("E2E Test", func() {
 				Namespace: "default",
 			},
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0.6",
+				Image: "emqx/emqx:5.0.5",
 				BootstrapConfig: `
 				gateway {
 					"lwm2m" {
@@ -128,10 +128,10 @@ var _ = Describe("E2E Test", func() {
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.6"))
-			Expect(instance.Status.EMQXNodes).Should(HaveLen(4))
-			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(1)))
+			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.5"))
+			Expect(instance.Status.EMQXNodes).Should(HaveLen(6))
+			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(3)))
 		})
@@ -164,10 +164,10 @@ var _ = Describe("E2E Test", func() {
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.6"))
-			Expect(instance.Status.EMQXNodes).Should(HaveLen(1))
-			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(1)))
+			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.5"))
+			Expect(instance.Status.EMQXNodes).Should(HaveLen(3))
+			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(0)))
 			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(0)))
 		})
@@ -186,7 +186,7 @@ var _ = Describe("E2E Test", func() {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "default"}, instance)
 				replicant := int32(3)
 				instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
-				instance.Spec.Image = "emqx/emqx:5.0.7"
+				instance.Spec.Image = "emqx/emqx:5.0.6"
 				return k8sClient.Update(context.TODO(), instance)
 			}, timeout, interval).Should(Succeed())
 		})
@@ -200,7 +200,7 @@ var _ = Describe("E2E Test", func() {
 					return ""
 				}
 				return sts.Spec.Template.Spec.Containers[0].Image
-			}, timeout, interval).Should(Equal("emqx/emqx:5.0.7"))
+			}, timeout, interval).Should(Equal("emqx/emqx:5.0.6"))
 
 			By("Checking deployment image")
 			Eventually(func() string {
@@ -210,7 +210,7 @@ var _ = Describe("E2E Test", func() {
 					return ""
 				}
 				return deploy.Spec.Template.Spec.Containers[0].Image
-			}, timeout, interval).Should(Equal("emqx/emqx:5.0.7"))
+			}, timeout, interval).Should(Equal("emqx/emqx:5.0.6"))
 
 			By("Checking the EMQX Custom Resource's Status")
 			Eventually(func() []appsv2alpha1.Condition {
@@ -218,10 +218,10 @@ var _ = Describe("E2E Test", func() {
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.7"))
-			Expect(instance.Status.EMQXNodes).Should(HaveLen(4))
-			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(1)))
+			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.6"))
+			Expect(instance.Status.EMQXNodes).Should(HaveLen(6))
+			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(3)))
+			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(3)))
 			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(3)))
 		})
