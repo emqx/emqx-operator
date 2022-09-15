@@ -660,8 +660,9 @@ func TestGenerateDeployment(t *testing.T) {
 					},
 				},
 				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
-					Replicas: &replicas,
-					NodeName: "emqx-node",
+					Replicas:    &replicas,
+					HostNetwork: true,
+					NodeName:    "emqx-node",
 					NodeSelector: map[string]string{
 						"kubernetes.io/hostname": "emqx-node",
 					},
@@ -793,6 +794,7 @@ func TestGenerateDeployment(t *testing.T) {
 					ImagePullSecrets: []corev1.LocalObjectReference{
 						{Name: "fake-secret"},
 					},
+					HostNetwork: true,
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser:  &user,
 						RunAsGroup: &group,

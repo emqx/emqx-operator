@@ -146,7 +146,12 @@ type EMQXReplicantTemplateSpec struct {
 	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 	// Actions that the management system should take in response to container lifecycle events.
 	// Cannot be updated.
-	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty" protobuf:"bytes,12,opt,name=lifecycle"`
+	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
+	// Host networking requested for this pod. Use the host's network namespace.
+	// If this option is set, the ports that will be used must be specified.
+	// Default to false.
+	// More than EMQXCoreTemplateSpec
+	HostNetwork bool `json:"hostNetwork,omitempty"`
 }
 
 type EMQXCoreTemplateSpec struct {

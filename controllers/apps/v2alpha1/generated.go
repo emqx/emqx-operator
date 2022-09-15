@@ -311,6 +311,7 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					ImagePullSecrets: instance.Spec.ImagePullSecrets,
+					HostNetwork:      instance.Spec.ReplicantTemplate.Spec.HostNetwork,
 					SecurityContext:  instance.Spec.ReplicantTemplate.Spec.PodSecurityContext,
 					Affinity:         instance.Spec.ReplicantTemplate.Spec.Affinity,
 					Tolerations:      instance.Spec.ReplicantTemplate.Spec.ToleRations,
