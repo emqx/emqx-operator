@@ -25,7 +25,7 @@ Example:
 
 ```yaml
 spec:
-	env:
+  env:
     - name: Foo
       value: Bar
 ```
@@ -44,7 +44,7 @@ Example:
 
 ```yaml
 spec:
-	imagePullSecrets: [fake-secrets]
+  imagePullSecrets: [fake-secrets]
 ```
 
 ### Node Configuration
@@ -59,7 +59,7 @@ Example:
 
 ```yaml
 spec:
-	nodeName: kube-01
+  nodeName: kube-01
 ```
 
 Schedule to node kube-01
@@ -72,8 +72,8 @@ Example:
 
 ```yaml
 spec:
-	nodeSelector:
-		key: value
+  nodeSelector:
+    key: value
 ```
 
 Schedule to the node which is labeled with key=value
@@ -86,7 +86,7 @@ Example:
 
 ```yaml
 spec:
-	affinity: [config of affinity]
+  affinity: [config of affinity]
 ```
 
 Please refer to [Kubernetes Docs](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)
@@ -101,11 +101,11 @@ Example:
 
 ```yaml
 spec:
-	toleRations:
-		- key: "key"
-			operator: "Equal"
-			value: "value"
-			effect: "NoSchedule"
+  toleRations:
+    - key: "key"
+      operator: "Equal"
+      value: "value"
+      effect: "NoSchedule"
 ```
 
 Please refer to [Kubernetes Docs](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
@@ -124,7 +124,7 @@ spec:
       requests:
         storage: 20Mi
     accessModes:
-    - ReadWriteOnce
+      - ReadWriteOnce
 ```
 
 | Field | Default | Description |
@@ -195,14 +195,14 @@ Example:
 
 ```yaml
 spec:
-	extraContainers:
-  - name: extra
-    image: busybox:stable
-    command:
-      - /bin/sh
-      - -c
-      - |
-        tail -f /dev/null
+  extraContainers:
+    - name: extra
+      image: busybox:stable
+      command:
+        - /bin/sh
+        - -c
+        - |
+          tail -f /dev/null
 ```
 
 ## EMQX Template
@@ -215,7 +215,7 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
+  emqxTemplate:
     username: "admin"
     password: "public"
 ```
@@ -235,9 +235,9 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		image: emqx/emqx-ee:4.4.8
-		imagePullPolicy: IfNotPresent
+  emqxTemplate:
+    image: emqx/emqx-ee:4.4.8
+    imagePullPolicy: IfNotPresent
 ```
 
 Field Description:
@@ -257,8 +257,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		securityContext:
+  emqxTemplate:
+    securityContext:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
@@ -275,8 +275,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		extraVolumes:
+  emqxTemplate:
+    extraVolumes:
       - name: fake-volume
         emptyDir: {}
     extraVolumeMounts:
@@ -294,8 +294,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		args:
+  emqxTemplate:
+    args:
       - bash
       - -c
       - |
@@ -311,8 +311,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		config:
+  emqxTemplate:
+    config:
       name: emqx-ee
       cluster.discovery: dns
       cluster.dns.type: srv
@@ -333,8 +333,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		- "{allow, all}."
+  emqxTemplate:
+    - "{allow, all}."
 ```
 
 Please refer to [EMQX Docs](https://www.emqx.io/docs/en/v4.4/advanced/acl.html)
@@ -345,8 +345,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		modules:
+  emqxTemplate:
+    modules:
       - name: "emqx_mod_acl_internal"
         enable: true
       - name: "emqx_mod_presence"
@@ -365,8 +365,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		readinessProbe:
+  emqxTemplate:
+    readinessProbe:
       httpGet:
         path: /status
         port: 8081
@@ -393,8 +393,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		livenessProbe:
+  emqxTemplate:
+    livenessProbe:
       httpGet:
         path: /status
         port: 8081
@@ -422,14 +422,14 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		startupProbe:
-		  httpGet:
-		    path: /status
-		    port: 8081
-		  initialDelaySeconds: 10
-		  periodSeconds: 5
-		  failureThreshold: 12
+  emqxTemplate:
+    startupProbe:
+      httpGet:
+        path: /status
+        port: 8081
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 12
 ```
 
 Field Description:
@@ -453,8 +453,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		resources:
+  emqxTemplate:
+    resources:
       requests:
         memory: "64Mi"
         cpu: "125m"
@@ -480,8 +480,8 @@ Example:
 
 ```yaml
 spec:
-	emqxTemplate:
-		metadata:
+  emqxTemplate:
+    metadata:
       name: emqx-ee
       namespace: default
       labels:

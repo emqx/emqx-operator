@@ -25,7 +25,7 @@ spec:
 
 ```yaml
 spec:
-	env:
+  env:
     - name: Foo
       value: Bar
 ```
@@ -43,7 +43,7 @@ spec:
 
 ```yaml
 spec:
-	imagePullSecrets: [fake-secrets]
+  imagePullSecrets: [fake-secrets]
 ```
 
 ### 节点配置
@@ -58,7 +58,7 @@ spec:
 
 ```yaml
 spec:
-	nodeName: kube-01
+  nodeName: kube-01
 ```
 
 将调度到节点 kube-01
@@ -71,8 +71,8 @@ spec:
 
 ```yaml
 spec:
-	nodeSelector:
-		key: value
+  nodeSelector:
+    key: value
 ```
 
 指定调度节点为带有label标记为 key=value 的 node 节点
@@ -85,7 +85,7 @@ spec:
 
 ```yaml
 spec:
-	affinity: [config of affinity]
+  affinity: [config of affinity]
 ```
 
 详情请参考 [Kubernetes 官方文档](https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)
@@ -100,11 +100,11 @@ spec:
 
 ```yaml
 spec:
-	toleRations:
-		- key: "key"
-			operator: "Equal"
-			value: "value"
-			effect: "NoSchedule"
+  toleRations:
+    - key: "key"
+      operator: "Equal"
+      value: "value"
+      effect: "NoSchedule"
 ```
 
 详情请参考 [Kubernetes 官方文档](https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/taint-and-toleration/)
@@ -190,7 +190,7 @@ spec:
 
 ```yaml
 spec:
-	extraContainers:
+  extraContainers:
   - name: extra
     image: busybox:stable
     command:
@@ -210,7 +210,7 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
+  emqxTemplate:
     username: "admin"
     password: "public"
 ```
@@ -230,9 +230,9 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		image: emqx/emqx-ee:4.4.8
-		imagePullPolicy: IfNotPresent
+  emqxTemplate:
+    image: emqx/emqx-ee:4.4.8
+    imagePullPolicy: IfNotPresent
 ```
 
 字段说明：
@@ -253,8 +253,8 @@ IfNotPresent: 只有当镜像在本地不存在时才会拉取。 |
 
 ```yaml
 spec:
-	emqxTemplate:
-		securityContext:
+  emqxTemplate:
+    securityContext:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
@@ -271,8 +271,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		extraVolumes:
+  emqxTemplate:
+    extraVolumes:
       - name: fake-volume
         emptyDir: {}
     extraVolumeMounts:
@@ -290,8 +290,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		args:
+  emqxTemplate:
+    args:
       - bash
       - -c
       - |
@@ -309,8 +309,8 @@ EMQX 参数配置项
 
 ```yaml
 spec:
-	emqxTemplate:
-		config:
+  emqxTemplate:
+    config:
       name: emqx-ee
       cluster.discovery: dns
       cluster.dns.type: srv
@@ -331,8 +331,8 @@ EMQX ACL 规则
 
 ```yaml
 spec:
-	emqxTemplate:
-		- "{allow, all}."
+  emqxTemplate:
+    - "{allow, all}."
 ```
 
 详情请参考 [EMQX 官方文档](https://docs.emqx.com/zh/enterprise/v4.4/advanced/acl.html)
@@ -345,8 +345,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		modules:
+  emqxTemplate:
+    modules:
       - name: "internal_acl"
         enable: true
         configs:
@@ -391,8 +391,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		readinessProbe:
+  emqxTemplate:
+    readinessProbe:
       httpGet:
         path: /status
         port: 8081
@@ -418,8 +418,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		livenessProbe:
+  emqxTemplate:
+    livenessProbe:
       httpGet:
         path: /status
         port: 8081
@@ -447,14 +447,14 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		startupProbe:
-		  httpGet:
-		    path: /status
-		    port: 8081
-		  initialDelaySeconds: 10
-		  periodSeconds: 5
-		  failureThreshold: 12
+  emqxTemplate:
+    startupProbe:
+      httpGet:
+        path: /status
+        port: 8081
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 12
 ```
 
 字段说明：
@@ -478,8 +478,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		resources:
+  emqxTemplate:
+    resources:
       requests:
         memory: "64Mi"
         cpu: "125m"
@@ -505,8 +505,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		metadata:
+  emqxTemplate:
+    metadata:
       name: emqx-ee
       namespace: default
       labels:

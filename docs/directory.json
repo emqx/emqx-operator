@@ -38,11 +38,11 @@
           "children": [
             {
               "title": "Config EmqxBroker",
-              "path": "config/v1beta3/EmqxBroker.md"
+              "path": "config/v1beta3/EmqxBroker"
             },
             {
               "title": "Config EmqxEnterprise",
-              "path": "config/v1beta3/EmqxEnterprise.md"
+              "path": "config/v1beta3/EmqxEnterprise"
             }
           ]
         }
@@ -128,11 +128,11 @@
           "children": [
             {
               "title": "配置 EmqxBroker",
-              "path": "config/v1beta3/EmqxBroker.md"
+              "path": "config/v1beta3/EmqxBroker"
             },
             {
               "title": "配置 EmqxEnterprise",
-              "path": "config/v1beta3/EmqxEnterprise.md"
+              "path": "config/v1beta3/EmqxEnterprise"
             }
           ]
         }

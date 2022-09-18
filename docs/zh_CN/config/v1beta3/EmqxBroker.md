@@ -25,7 +25,7 @@ spec:
 
 ```yaml
 spec:
-	env:
+  env:
     - name: Foo
       value: Bar
 ```
@@ -43,7 +43,7 @@ spec:
 
 ```yaml
 spec:
-	imagePullSecrets: [fake-secrets]
+  imagePullSecrets: [fake-secrets]
 ```
 
 ### 节点配置
@@ -58,7 +58,7 @@ spec:
 
 ```yaml
 spec:
-	nodeName: kube-01
+  nodeName: kube-01
 ```
 
 将调度到节点 kube-01
@@ -71,8 +71,8 @@ spec:
 
 ```yaml
 spec:
-	nodeSelector:
-		key: value
+  nodeSelector:
+    key: value
 ```
 
 指定调度节点为带有label标记为 key=value 的 node 节点
@@ -85,7 +85,7 @@ spec:
 
 ```yaml
 spec:
-	affinity: [config of affinity]
+  affinity: [config of affinity]
 ```
 
 详情请参考 [Kubernetes 官方文档](https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)
@@ -100,7 +100,7 @@ spec:
 
 ```yaml
 spec:
-	toleRations:
+  toleRations:
     - key: "key"
       operator: "Equal"
       value: "value"
@@ -190,7 +190,7 @@ spec:
 
 ```yaml
 spec:
-	extraContainers:
+  extraContainers:
     - name: extra
       image: busybox:stable
       command:
@@ -253,7 +253,7 @@ IfNotPresent: 只有当镜像在本地不存在时才会拉取。 |
 
 ```yaml
 spec:
-	emqxTemplate:
+  emqxTemplate:
     securityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -271,8 +271,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		extraVolumes:
+  emqxTemplate:
+    extraVolumes:
       - name: fake-volume
         emptyDir: {}
     extraVolumeMounts:
@@ -290,8 +290,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		args:
+  emqxTemplate:
+    args:
       - bash
       - -c
       - |
@@ -309,8 +309,8 @@ EMQX 参数配置项
 
 ```yaml
 spec:
-	emqxTemplate:
-		config:
+  emqxTemplate:
+    config:
       name: emqx-ee
       cluster.discovery: dns
       cluster.dns.type: srv
@@ -345,8 +345,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		modules:
+  emqxTemplate:
+    modules:
       - name: "emqx_mod_acl_internal"
         enable: true
       - name: "emqx_mod_presence"
@@ -365,8 +365,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		readinessProbe:
+  emqxTemplate:
+    readinessProbe:
       httpGet:
         path: /status
         port: 8081
@@ -392,8 +392,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		livenessProbe:
+  emqxTemplate:
+    livenessProbe:
       httpGet:
         path: /status
         port: 8081
@@ -421,14 +421,14 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		startupProbe:
-		  httpGet:
-		    path: /status
-		    port: 8081
-		  initialDelaySeconds: 10
-		  periodSeconds: 5
-		  failureThreshold: 12
+  emqxTemplate:
+    startupProbe:
+      httpGet:
+        path: /status
+        port: 8081
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      failureThreshold: 12
 ```
 
 字段说明：
@@ -452,8 +452,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		resources:
+  emqxTemplate:
+    resources:
       requests:
         memory: "64Mi"
         cpu: "125m"
@@ -479,8 +479,8 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
-		metadata:
+  emqxTemplate:
+    metadata:
       name: emqx-ee
       namespace: default
       labels:
