@@ -101,10 +101,10 @@ spec:
 ```yaml
 spec:
 	toleRations:
-		- key: "key"
-			operator: "Equal"
-			value: "value"
-			effect: "NoSchedule"
+    - key: "key"
+      operator: "Equal"
+      value: "value"
+      effect: "NoSchedule"
 ```
 
 详情请参考 [Kubernetes 官方文档](https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/taint-and-toleration/)
@@ -140,43 +140,44 @@ Init 容器是一种特殊容器，在 [Pod](https://kubernetes.io/docs/concept
 
 ```yaml
 spec:
-	name: busybox
-  image: busybox:stable
-  securityContext:
-    runAsUser: 0
-    runAsGroup: 0
-    capabilities:
-      add:
-      - SYS_ADMIN
-      drop:
-      - ALL
-  command:
-    - /bin/sh
-    - -c
-    - |
-      mount -o remount rw /proc/sys
-      sysctl -w net.core.somaxconn=65535
-      sysctl -w net.ipv4.ip_local_port_range="1024 65535"
-      sysctl -w kernel.core_uses_pid=0
-      sysctl -w net.ipv4.tcp_tw_reuse=1
-      sysctl -w fs.nr_open=1000000000
-      sysctl -w fs.file-max=1000000000
-      sysctl -w net.ipv4.ip_local_port_range='1025 65534'
-      sysctl -w net.ipv4.udp_mem='74583000 499445000 749166000'
-      sysctl -w net.ipv4.tcp_max_sync_backlog=163840
-      sysctl -w net.core.netdev_max_backlog=163840
-      sysctl -w net.core.optmem_max=16777216
-      sysctl -w net.ipv4.tcp_rmem='1024 4096 16777216'
-      sysctl -w net.ipv4.tcp_wmem='1024 4096 16777216'
-      sysctl -w net.ipv4.tcp_max_tw_buckets=1048576
-      sysctl -w net.ipv4.tcp_fin_timeout=15
-      sysctl -w net.core.rmem_default=262144000
-      sysctl -w net.core.wmem_default=262144000
-      sysctl -w net.core.rmem_max=262144000
-      sysctl -w net.core.wmem_max=262144000
-      sysctl -w net.ipv4.tcp_mem='378150000  504200000  756300000'
-      sysctl -w net.netfilter.nf_conntrack_max=1000000
-      sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
+  initContainers:
+    name: busybox
+    image: busybox:stable
+    securityContext:
+      runAsUser: 0
+      runAsGroup: 0
+      capabilities:
+        add:
+        - SYS_ADMIN
+        drop:
+        - ALL
+    command:
+      - /bin/sh
+      - -c
+      - |
+        mount -o remount rw /proc/sys
+        sysctl -w net.core.somaxconn=65535
+        sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+        sysctl -w kernel.core_uses_pid=0
+        sysctl -w net.ipv4.tcp_tw_reuse=1
+        sysctl -w fs.nr_open=1000000000
+        sysctl -w fs.file-max=1000000000
+        sysctl -w net.ipv4.ip_local_port_range='1025 65534'
+        sysctl -w net.ipv4.udp_mem='74583000 499445000 749166000'
+        sysctl -w net.ipv4.tcp_max_sync_backlog=163840
+        sysctl -w net.core.netdev_max_backlog=163840
+        sysctl -w net.core.optmem_max=16777216
+        sysctl -w net.ipv4.tcp_rmem='1024 4096 16777216'
+        sysctl -w net.ipv4.tcp_wmem='1024 4096 16777216'
+        sysctl -w net.ipv4.tcp_max_tw_buckets=1048576
+        sysctl -w net.ipv4.tcp_fin_timeout=15
+        sysctl -w net.core.rmem_default=262144000
+        sysctl -w net.core.wmem_default=262144000
+        sysctl -w net.core.rmem_max=262144000
+        sysctl -w net.core.wmem_max=262144000
+        sysctl -w net.ipv4.tcp_mem='378150000  504200000  756300000'
+        sysctl -w net.netfilter.nf_conntrack_max=1000000
+        sysctl -w net.netfilter.nf_conntrack_tcp_timeout_time_wait=30
 ```
 
 上述这段配置用来对 EMQX 容器进行内核和网络优化
@@ -190,13 +191,13 @@ spec:
 ```yaml
 spec:
 	extraContainers:
-  - name: extra
-    image: busybox:stable
-    command:
-      - /bin/sh
-      - -c
-      - |
-        tail -f /dev/null
+    - name: extra
+      image: busybox:stable
+      command:
+        - /bin/sh
+        - -c
+        - |
+          tail -f /dev/null
 ```
 
 ## EMQX模版配置
@@ -209,7 +210,7 @@ spec:
 
 ```yaml
 spec:
-	emqxTemplate:
+  emqxTemplate:
     username: "admin"
     password: "public"
 ```
@@ -253,7 +254,7 @@ IfNotPresent: 只有当镜像在本地不存在时才会拉取。 |
 ```yaml
 spec:
 	emqxTemplate:
-		securityContext:
+    securityContext:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
@@ -480,17 +481,17 @@ spec:
 spec:
 	emqxTemplate:
 		metadata:
-        name: emqx-ee
-        namespace: default
-        labels:
-          "apps.emqx.io/instance": "emqx-ee"
-      spec:
-        type: ClusterIP
-        selector:
-          "apps.emqx.io/instance": "emqx-ee"
-        ports:
-          - name: "http-management-8081"
-            port: 8081
-            protocol: "TCP"
-            targetPort: 8081
+      name: emqx-ee
+      namespace: default
+      labels:
+        "apps.emqx.io/instance": "emqx-ee"
+    spec:
+      type: ClusterIP
+      selector:
+        "apps.emqx.io/instance": "emqx-ee"
+      ports:
+        - name: "http-management-8081"
+          port: 8081
+          protocol: "TCP"
+          targetPort: 8081
 ```
