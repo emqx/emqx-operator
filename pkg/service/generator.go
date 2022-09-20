@@ -248,9 +248,10 @@ func generateSvc(emqx v1beta2.Emqx, sts *appsv1.StatefulSet) (*corev1.Service, *
 			Namespace: emqx.GetNamespace(),
 		},
 		Spec: corev1.ServiceSpec{
-			Selector:       emqx.GetLabels(),
-			ClusterIP:      corev1.ClusterIPNone,
-			IPFamilyPolicy: &headlessSvcIPFamilyPolicy,
+			Selector:                 emqx.GetLabels(),
+			ClusterIP:                corev1.ClusterIPNone,
+			IPFamilyPolicy:           &headlessSvcIPFamilyPolicy,
+			PublishNotReadyAddresses: true,
 		},
 	}
 	sts.Spec.ServiceName = headlessSvc.Name

@@ -50,6 +50,7 @@ jobs:
           helm repo update
           helm install emqx-operator emqx/emqx-operator \
             --set installCRDs=true \
+            --version v1.0.4 \
             --namespace emqx-operator-system \
             --create-namespace
       - name: Check operator
