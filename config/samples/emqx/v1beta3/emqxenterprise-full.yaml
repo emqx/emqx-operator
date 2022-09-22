@@ -148,7 +148,7 @@ spec:
         labels:
           "apps.emqx.io/instance": "emqx-ee"
       spec:
-        type: ClusterIP
+        type: NodePort
         selector:
           "apps.emqx.io/instance": "emqx-ee"
         ports:
@@ -156,3 +156,23 @@ spec:
             port: 8081
             protocol: "TCP"
             targetPort: 8081
+          - name: "mqtt-tcp-1883"
+            protocol: "TCP"
+            port: 1883
+            targetPort: 1883
+            nodePort: 30654
+          - name: "mqtt-tcp-11883"
+            protocol: "TCP"
+            port: 11883
+            targetPort: 11883
+            nodePort: 30655
+          - name: "mqtt-ws-8083"
+            protocol: "TCP"
+            port: 8083
+            targetPort: 8083
+            nodePort: 30656
+          - name: "mqtt-wss-8084"
+            protocol: "TCP"
+            port: 8084
+            targetPort: 8084
+            nodePort: 30657
