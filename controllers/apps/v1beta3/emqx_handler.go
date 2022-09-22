@@ -527,7 +527,14 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 	compile := regexp.MustCompile(".*management.*")
 	for _, port := range svc.Spec.Ports {
 		if compile.MatchString(port.Name) {
-			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, port)
+			// Headless services must not set nodePort
+			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, corev1.ServicePort{
+				Name:        port.Name,
+				Protocol:    port.Protocol,
+				AppProtocol: port.AppProtocol,
+				TargetPort:  port.TargetPort,
+				Port:        port.Port,
+			})
 		}
 	}
 
