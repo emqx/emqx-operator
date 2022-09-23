@@ -38,44 +38,6 @@ NAME                                                READY   STATUS    RESTARTS  
 emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0          15s
 ```
 
-## Deploy the EMQX Enterprise
-
-1. Deploy EMQX Enterprise Custom Resource  
-
-   ```bash
-   cat << "EOF" | kubectl apply -f -
-   apiVersion: apps.emqx.io/v1beta3
-   kind: EmqxEnterprise
-   metadata:
-     name: emqx-ee
-     labels:
-       "foo": "bar"
-   spec:
-     emqxTemplate:
-       image: emqx/emqx-ee:4.4.8
-   EOF
-   ```
-
-2. Check EMQX status
-
-   ```bash  
-   $ kubectl get pods  
-   NAME              READY   STATUS    RESTARTS   AGE  
-   emqx-ee-0   2/2     Running   0          22m  
-   emqx-ee-1   2/2     Running   0          22m  
-   emqx-ee-2   2/2     Running   0          22m  
-
-   $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl status  
-   Node 'emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local' 4.4.7 is started  
-
-   $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl cluster status  
-   Cluster status: #{running_nodes =>
-                      ['emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local',
-                       'emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local',
-                       'emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local'],
-                  stopped_nodes => []}
-   ```
-
 
 ## Deploy the EMQX Broker
 
@@ -94,23 +56,38 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
        image: emqx/emqx:4.4.8
    EOF
    ```
+    Full example please check [emqxbroker-full.yaml.](https://github.com/emqx/emqx-operator/blob/2.0.0/config/samples/emqx/v1beta3/emqxbroker-full.yaml)
 
-2. Check EMQX status
+2. Check EMQX Custom Resource status
 
    ```bash
    $ kubectl get pods
-   NAME              READY   STATUS    RESTARTS   AGE
-   emqx-0   2/2     Running   0          22m
-   emqx-1   2/2     Running   0          22m
-   emqx-2   2/2     Running   0          22m
-
-   $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl status
-   Node 'emqx@emqx-0.emqx-headless.default.svc.cluster.local' 4.4.7 is started
-
-   $ kubectl exec -it emqx-0 -c emqx -- emqx_ctl cluster status
-   Cluster status: #{running_nodes =>
-                      ['emqx@emqx-0.emqx-headless.default.svc.cluster.local',
-                       'emqx@emqx-1.emqx-headless.default.svc.cluster.local',
-                       'emqx@emqx-2.emqx-headless.default.svc.cluster.local'],
-                  stopped_nodes => []} 
+   $ kubectl get emqxbroker emqx -o json | jq ".status.emqxNodes"
    ```
+
+
+## Deploy the EMQX Enterprise
+
+1. Deploy EMQX Enterprise Custom Resource  
+
+   ```bash
+   cat << "EOF" | kubectl apply -f -
+   apiVersion: apps.emqx.io/v1beta3
+   kind: EmqxEnterprise
+   metadata:
+     name: emqx-ee
+     labels:
+       "foo": "bar"
+   spec:
+     emqxTemplate:
+       image: emqx/emqx-ee:4.4.8
+   EOF
+   ```
+    Full example please check [emqxenterprise-full.yaml.](https://github.com/emqx/emqx-operator/blob/2.0.0/config/samples/emqx/v1beta3/emqxenterprise-full.yaml)
+
+2. Check EMQX Custom Resource status
+
+  ```bash  
+    $ kubectl get pods
+    $ kubectl get emqxenterprise emqx -o json | jq ".status.emqxNodes"
+  ```
