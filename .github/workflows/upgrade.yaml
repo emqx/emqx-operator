@@ -38,14 +38,16 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '1.18.3'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Install storage operator
         if: matrix.install == 'static'
         run: |
           browser_download_url="$(curl --silent --show-error \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token ${{ github.token }}" \
-            https://api.github.com/repos/emqx/emqx-operator/releases/latest \
+            https://api.github.com/repos/emqx/emqx-operator/releases/tags/$(git describe --tags --abbrev=0) \
             | jq '.assets[0].browser_download_url')"
           kubectl apply -f "$browser_download_url" --server-side --force-conflicts
       - name: Install storage operator
