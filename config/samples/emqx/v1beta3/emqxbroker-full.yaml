@@ -133,16 +133,36 @@ spec:
         cpu: "500m"
     serviceTemplate:
       metadata:
-        name: emqx-ee
+        name: emqx
         namespace: default
         labels:
-          "apps.emqx.io/instance": "emqx-ee"
+          "apps.emqx.io/instance": "emqx"
       spec:
-        type: ClusterIP
+        type: NodePort
         selector:
-          "apps.emqx.io/instance": "emqx-ee"
+          "apps.emqx.io/instance": "emqx"
         ports:
           - name: "http-management-8081"
             port: 8081
             protocol: "TCP"
             targetPort: 8081
+          - name: "mqtt-tcp-1883"
+            protocol: "TCP"
+            port: 1883
+            targetPort: 1883
+            nodePort: 30649
+          - name: "mqtt-tcp-11883"
+            protocol: "TCP"
+            port: 11883
+            targetPort: 11883
+            nodePort: 30650
+          - name: "mqtt-ws-8083"
+            protocol: "TCP"
+            port: 8083
+            targetPort: 8083
+            nodePort: 30651
+          - name: "mqtt-wss-8084"
+            protocol: "TCP"
+            port: 8084
+            targetPort: 8084
+            nodePort: 30652
