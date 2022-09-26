@@ -74,7 +74,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     ```
     $ kubectl get pods
-    $ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+    $ kubectl get emqxbroker emqx -o json | jq ".status.emqxNodes"
     ```
 
 
@@ -101,5 +101,5 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     ```
     $ kubectl get pods
-    $ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+    $ kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
     ```
