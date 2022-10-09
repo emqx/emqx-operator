@@ -40,11 +40,11 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
       metadata:
         name: emqx
       spec:
-        image: emqx/emqx:5.0.6
+        image: emqx/emqx:5.0.8
     EOF
     ```
 
-    Full example please check [`emqx-full.yaml`](https://github.com/emqx/emqx-operator/blob/2.0.0/config/samples/emqx/v2alpha1/emqx-full.yaml).
+    Full example please check [`emqx-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml).
 
 2. Check EMQX Custom Resource status
 
@@ -65,11 +65,11 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
         name: emqx
       spec:
         emqxTemplate:
-          image: emqx/emqx:4.4.8
+          image: emqx/emqx:4.4.9
     EOF
     ```
 
-    Full example please check [`emqxbroker-full.yaml`](https://github.com/emqx/emqx-operator/blob/2.0.0/config/samples/emqx/v1beta3/emqxbroker-full.yaml).
+    Full example please check [`emqxbroker-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxbroker-full.yaml).
 
 2. Check EMQX Custom Resource status
 
@@ -90,11 +90,11 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
         name: emqx-ee
       spec:
         emqxTemplate:
-          image: emqx/emqx-ee:4.4.8
+          image: emqx/emqx-ee:4.4.9
     EOF
     ```
 
-    Full example please check [`emqxenterprise-full.yaml`](https://github.com/emqx/emqx-operator/blob/2.0.0/config/samples/emqx/v1beta3/emqxenterprise-full.yaml).
+    Full example please check [`emqxenterprise-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxenterprise-full.yaml).
 
 2. Check EMQX Custom Resource status
 
