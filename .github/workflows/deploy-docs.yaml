@@ -111,10 +111,10 @@ jobs:
     - name: upload dist
       run: |
         pip3 install coscmd
-        coscmd config -a ${{ secrets.COS_ID }} -s ${{ secrets.COS_KEY }} -b ${{ secrets.COS_NAME }} -r ${{ secrets.COS_REGION }}
+        coscmd config -a ${{ secrets.TENCENT_COS_ID }} -s ${{ secrets.TENCENT_COS_KEY }} -b docs-1302406139 -r ap-shanghai
         coscmd delete -r -f en/${DOCS_TYPE}/${VERSION} || true
         coscmd delete -r -f zh/${DOCS_TYPE}/${VERSION} || true
-        coscmd config -a ${{ secrets.COS_ID }} -s ${{ secrets.COS_KEY }} -b ${{ secrets.COS_NAME }} -e cos.accelerate.myqcloud.com
+        coscmd config -a ${{ secrets.TENCENT_COS_ID }} -s ${{ secrets.TENCENT_COS_KEY }} -b docs-1302406139 -e cos.accelerate.myqcloud.com
         cd frontend/docs/.vuepress/dist/
         zip -rq docs-dist-${DOCS_TYPE}-${VERSION}.zip ./
         coscmd upload docs-dist-${DOCS_TYPE}-${VERSION}.zip docs-zip/
@@ -123,39 +123,17 @@ jobs:
     - name: flush cdn
       run: |
         pip3 install tccli
-        tccli configure set secretId ${{ secrets.COS_ID }}
-        tccli configure set secretKey ${{ secrets.COS_KEY }}
-        tccli configure set region ${{ secrets.COS_REGION }}
+        tccli configure set secretId ${{ secrets.TENCENT_COS_ID }}
+        tccli configure set secretKey ${{ secrets.TENCENT_COS_KEY }}
+        tccli configure set region ap-shanghai
         tccli cdn PurgePathCache --cli-unfold-argument --Paths https://docs.emqx.com/zh/${DOCS_TYPE}/${VERSION}/ https://docs.emqx.com/en/${DOCS_TYPE}/${VERSION}/ --FlushType delete
         tccli cdn PurgeUrlsCache --cli-unfold-argument --Urls https://docs.emqx.com/api/${DOCS_TYPE}_versions.json https://docs.emqx.com/sitemap_${DOCS_TYPE}_${VERSION}.xml
 
-    - name: clone docsearch
-      uses: actions/checkout@v2
-      with:
-        repository: 'Swilder-M/docsearch-scraper-simple'
-        path: docsearch
-
-    - name: install pipenv
-      run: |
-          python -m pip install --upgrade pipenv wheel
-
-    - id: cache-pipenv
-      uses: actions/cache@v1
-      with:
-        path: ~/.local/share/virtualenvs
-        key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
-
-    - name: install dependencies
-      if: steps.cache-pipenv.outputs.cache-hit != 'true'
-      run: |
-        cd docsearch
-        pipenv install --keep-outdated
-
-    - name: update current version
-      if: env.VERSION == 'latest'
+    - name: update search index
+      uses: Swilder-M/docsearch-scraper-simple@v4
       env:
-        APPLICATION_ID: ${{ secrets.DOCS_APPLICATION_ID }}
-        API_KEY: ${{ secrets.DOCS_API_KEY }}
-      run: |
-        cd docsearch
-        pipenv run python -m src.index config ${DOCS_TYPE} ${VERSION}
+        APPLICATION_ID: ${{ secrets.ALGOLIA_APPLICATION_ID }}
+        API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
+      with:
+        docs_type: ${{ env.DOCS_TYPE }}
+        docs_version: ${{ env.VERSION }}
