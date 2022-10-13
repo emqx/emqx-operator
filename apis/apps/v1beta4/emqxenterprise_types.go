@@ -21,7 +21,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type EmqxBlueGreenUpdateStrategy struct {
+type EmqxBlueGreenUpdate struct {
+	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
+}
+
+type EvacuationStrategy struct {
 	WaitTakeover  int32 `json:"waitTakeover,omitempty"`
 	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
 	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
@@ -35,7 +39,7 @@ type EmqxEnterpriseSpec struct {
 	// VolumeClaimTemplates describes the common attributes of storage devices
 	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
 
-	EmqxBlueGreenUpdateStrategy EmqxBlueGreenUpdateStrategy `json:"blueGreenUpdateStrategy,omitempty"`
+	EmqxBlueGreenUpdate EmqxBlueGreenUpdate `json:"blueGreenUpdate,omitempty"`
 
 	Template EmqxTemplate `json:"template,omitempty"`
 
