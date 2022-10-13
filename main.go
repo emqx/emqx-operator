@@ -36,8 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
+	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
 	appscontrollersv2alpha1 "github.com/emqx/emqx-operator/controllers/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	//+kubebuilder:scaffold:imports
@@ -52,6 +54,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(appsv1beta3.AddToScheme(scheme))
+	utilruntime.Must(appsv1beta4.AddToScheme(scheme))
 	utilruntime.Must(appsv2alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -141,6 +144,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&appscontrollersv1beta4.EmqxBrokerReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EmqxBroker")
+		os.Exit(1)
+	}
+
+	if err = (&appscontrollersv1beta4.EmqxEnterpriseReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EmqxEnterprise")
+		os.Exit(1)
+	}
 	if err = (&appscontrollersv2alpha1.EMQXReconciler{
 		Handler:       handler,
 		Scheme:        mgr.GetScheme(),
@@ -149,6 +167,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX")
 		os.Exit(1)
 	}
+
 	//+kubebuilder:scaffold:builder
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
@@ -162,6 +181,14 @@ func main() {
 			os.Exit(1)
 		}
 		if err = (&appsv1beta3.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
+			os.Exit(1)
+		}
+		if err = (&appsv1beta4.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
+			os.Exit(1)
+		}
+		if err = (&appsv1beta4.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
 			os.Exit(1)
 		}
