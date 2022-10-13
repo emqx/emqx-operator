@@ -133,6 +133,7 @@ rules:
   - emqxbrokers
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -158,6 +159,7 @@ rules:
   - emqxenterprises
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
