@@ -146,6 +146,11 @@ spec:
             port: 8081
             protocol: "TCP"
             targetPort: 8081
+          - name: "http-dashboard-18083"
+            port: 18083
+            protocol: "TCP"
+            targetPort: 18083
+            nodePort: 30648
           - name: "mqtt-tcp-1883"
             protocol: "TCP"
             port: 1883
