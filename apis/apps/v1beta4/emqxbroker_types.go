@@ -27,7 +27,7 @@ type EmqxBrokerSpec struct {
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// VolumeClaimTemplates describes the common attributes of storage devices
-	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"persistent,omitempty"`
+	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
 
 	Template EmqxTemplate `json:"template,omitempty"`
 
