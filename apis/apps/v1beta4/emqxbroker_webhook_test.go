@@ -117,8 +117,12 @@ func TestBrokerValidateUpdate(t *testing.T) {
 	assert.Nil(t, instance.ValidateUpdate(&EmqxBroker{}))
 	assert.Error(t, instance.ValidateUpdate(&EmqxBroker{
 		Spec: EmqxBrokerSpec{
-			VolumeClaimTemplates: corev1.PersistentVolumeClaimSpec{
-				StorageClassName: &[]string{"fake"}[0],
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					Spec: corev1.PersistentVolumeClaimSpec{
+						StorageClassName: &[]string{"fake"}[0],
+					},
+				},
 			},
 		},
 	}))
