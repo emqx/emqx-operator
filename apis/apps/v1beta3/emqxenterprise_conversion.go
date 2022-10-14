@@ -20,6 +20,8 @@ import (
 	"reflect"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
@@ -35,7 +37,15 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	}
 	// VolumeClaimTemplates
 	if !reflect.ValueOf(src.Spec.Persistent).IsZero() {
-		dst.Spec.VolumeClaimTemplates = src.Spec.Persistent
+		names := Names{Object: src}
+		dst.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: names.Data(),
+				},
+				Spec: src.Spec.Persistent,
+			},
+		}
 	}
 	// Template
 	dst.Spec.Template.Spec.EmqxContainer.Image = src.Spec.EmqxTemplate.Image
@@ -112,7 +122,7 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.Replicas = src.Spec.Replicas
 	// VolumeClaimTemplates
 	if !reflect.ValueOf(src.Spec.VolumeClaimTemplates).IsZero() {
-		dst.Spec.Persistent = src.Spec.VolumeClaimTemplates
+		dst.Spec.Persistent = src.Spec.VolumeClaimTemplates[0].Spec
 	}
 	// ServiceTemplate
 	if !reflect.ValueOf(src.Spec.ServiceTemplate).IsZero() {
