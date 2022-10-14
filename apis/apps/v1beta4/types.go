@@ -3,12 +3,17 @@ package v1beta4
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 //+kubebuilder:object:generate=false
 type Emqx interface {
-	metav1.Object
+	client.Object
 	EmqxSpec
+	EmqxStatus
+
+	GetStatus() Status
+	SetStatus(Status)
 }
 
 //+kubebuilder:object:generate=false
@@ -16,8 +21,8 @@ type EmqxSpec interface {
 	GetReplicas() *int32
 	SetReplicas(int32)
 
-	GetVolumeClaimTemplates() corev1.PersistentVolumeClaimSpec
-	SetVolumeClaimTemplates(corev1.PersistentVolumeClaimSpec)
+	GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim
+	SetVolumeClaimTemplates([]corev1.PersistentVolumeClaim)
 
 	GetTemplate() EmqxTemplate
 	SetTemplate(EmqxTemplate)
@@ -229,6 +234,6 @@ type EmqxTemplateSpec struct {
 }
 
 type EmqxTemplate struct {
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Spec            EmqxTemplateSpec `json:"spec,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              EmqxTemplateSpec `json:"spec,omitempty"`
 }

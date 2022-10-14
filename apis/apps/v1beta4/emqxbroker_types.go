@@ -27,7 +27,7 @@ type EmqxBrokerSpec struct {
 	Replicas *int32 `json:"replicas,omitempty"`
 
 	// VolumeClaimTemplates describes the common attributes of storage devices
-	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
+	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
 
 	Template EmqxTemplate `json:"template,omitempty"`
 
@@ -74,11 +74,11 @@ func (emqx *EmqxBroker) SetReplicas(replicas int32) {
 	emqx.Spec.Replicas = &replicas
 }
 
-func (emqx *EmqxBroker) GetVolumeClaimTemplates() corev1.PersistentVolumeClaimSpec {
+func (emqx *EmqxBroker) GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim {
 	return emqx.Spec.VolumeClaimTemplates
 }
 
-func (emqx *EmqxBroker) SetVolumeClaimTemplates(volumeClaimTemplates corev1.PersistentVolumeClaimSpec) {
+func (emqx *EmqxBroker) SetVolumeClaimTemplates(volumeClaimTemplates []corev1.PersistentVolumeClaim) {
 	emqx.Spec.VolumeClaimTemplates = volumeClaimTemplates
 }
 
@@ -95,4 +95,11 @@ func (emqx *EmqxBroker) GetServiceTemplate() ServiceTemplate {
 }
 func (emqx *EmqxBroker) SetServiceTemplate(serviceTemplate ServiceTemplate) {
 	emqx.Spec.ServiceTemplate = serviceTemplate
+}
+
+func (emqx *EmqxBroker) GetStatus() Status {
+	return emqx.Status
+}
+func (emqx *EmqxBroker) SetStatus(status Status) {
+	emqx.Status = status
 }
