@@ -46,4 +46,6 @@ cert-manager:
   # You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it.
   # Or you can use your own certificate, You need create a TLS secret for provisioning the certificates for the "${NAME}-webhook-service.${NAMESPACE}.svc"
   enable: true
-  # secretName:
+  secretName: 
+
+webhookServerSecretName:
