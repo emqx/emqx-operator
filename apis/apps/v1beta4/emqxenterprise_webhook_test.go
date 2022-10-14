@@ -117,8 +117,12 @@ func TestEnterpriseValidateUpdate(t *testing.T) {
 	assert.Nil(t, instance.ValidateUpdate(&EmqxEnterprise{}))
 	assert.Error(t, instance.ValidateUpdate(&EmqxEnterprise{
 		Spec: EmqxEnterpriseSpec{
-			VolumeClaimTemplates: corev1.PersistentVolumeClaimSpec{
-				StorageClassName: &[]string{"fake"}[0],
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					Spec: corev1.PersistentVolumeClaimSpec{
+						StorageClassName: &[]string{"fake"}[0],
+					},
+				},
 			},
 		},
 	}))
