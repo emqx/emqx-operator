@@ -205,8 +205,12 @@ var v1beta4EmqxEnterprise = &v1beta4.EmqxEnterprise{
 	},
 	Spec: v1beta4.EmqxEnterpriseSpec{
 		Replicas: &[]int32{3}[0],
-		VolumeClaimTemplates: corev1.PersistentVolumeClaimSpec{
-			StorageClassName: &[]string{"foo"}[0],
+		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+			{
+				Spec: corev1.PersistentVolumeClaimSpec{
+					StorageClassName: &[]string{"foo"}[0],
+				},
+			},
 		},
 		Template: v1beta4.EmqxTemplate{
 			Spec: v1beta4.EmqxTemplateSpec{
