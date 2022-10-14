@@ -85,4 +85,18 @@ resources:
     defaulting: true
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: emqx.io
+  group: apps
+  kind: EmqxPlugin
+  path: github.com/emqx/emqx-operator/apis/apps/v1beta4
+  version: v1beta4
+  webhooks:
+    conversion: true
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"
