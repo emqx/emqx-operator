@@ -168,6 +168,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&appscontrollersv1beta4.EmqxPluginReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
@@ -175,13 +183,17 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxPlugin")
 			os.Exit(1)
 		}
-
 		if err = (&appsv1beta3.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
 			os.Exit(1)
 		}
 		if err = (&appsv1beta3.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
+			os.Exit(1)
+		}
+
+		if err = (&appsv1beta4.EmqxPlugin{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxPlugin")
 			os.Exit(1)
 		}
 		if err = (&appsv1beta4.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
@@ -192,6 +204,7 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
 			os.Exit(1)
 		}
+
 		if err = (&appsv2alpha1.EMQX{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EMQX")
 			os.Exit(1)
