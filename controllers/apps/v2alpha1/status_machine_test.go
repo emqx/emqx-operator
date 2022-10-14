@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apps
+package v2alpha1
 
 import (
 	"testing"
