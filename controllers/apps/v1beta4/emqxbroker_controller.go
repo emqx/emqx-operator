@@ -14,23 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apps
+package v1beta4
 
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 )
 
 // EmqxBrokerReconciler reconciles a EmqxBroker object
 type EmqxBrokerReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+	EmqxReconciler
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers,verbs=get;list;watch;create;update;patch;delete
@@ -47,9 +44,14 @@ type EmqxBrokerReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *EmqxBrokerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
-
-	// your logic here
+	instance := &appsv1beta4.EmqxBroker{}
+	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	return r.Do(ctx, instance)
 
 	return ctrl.Result{}, nil
 }
