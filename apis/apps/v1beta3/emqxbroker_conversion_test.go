@@ -424,7 +424,7 @@ func TestBrokerConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.Affinity, emqx.Spec.Affinity)
 
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1beta4EmqxBroker.Spec.VolumeClaimTemplates, emqx.Spec.Persistent)
+	assert.Equal(t, v1beta4EmqxBroker.Spec.VolumeClaimTemplates[0].Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxBroker.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
 }
