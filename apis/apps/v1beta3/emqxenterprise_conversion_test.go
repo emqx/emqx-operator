@@ -373,7 +373,7 @@ func TestEnterpriseConversionTo(t *testing.T) {
 	assert.Equal(t, v1bete3EmqxEnterprise.ObjectMeta, emqx.ObjectMeta)
 
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1bete3EmqxEnterprise.Spec.Persistent, emqx.Spec.VolumeClaimTemplates)
+	assert.Equal(t, v1bete3EmqxEnterprise.Spec.Persistent, emqx.Spec.VolumeClaimTemplates[0].Spec)
 	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.ServiceTemplate, emqx.Spec.ServiceTemplate)
 
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.Image, emqx.Spec.Template.Spec.EmqxContainer.Image)
@@ -406,7 +406,7 @@ func TestEnterpriseConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxEnterprise.ObjectMeta, emqx.ObjectMeta)
 
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1beta4EmqxEnterprise.Spec.VolumeClaimTemplates, emqx.Spec.Persistent)
+	assert.Equal(t, v1beta4EmqxEnterprise.Spec.VolumeClaimTemplates[0].Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.Image, emqx.Spec.EmqxTemplate.Image)
@@ -432,7 +432,7 @@ func TestEnterpriseConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.Affinity, emqx.Spec.Affinity)
 
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1beta4EmqxEnterprise.Spec.VolumeClaimTemplates, emqx.Spec.Persistent)
+	assert.Equal(t, v1beta4EmqxEnterprise.Spec.VolumeClaimTemplates[0].Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
 }
