@@ -30,7 +30,7 @@ jobs:
         - apis
         - controllers
         - pkg
-        - e2e/v1beta3
+        - e2e/v1beta4
         - e2e/v2alpha1
 
     steps:
@@ -86,10 +86,10 @@ jobs:
           - static
           - helm
         emqx:
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-slim.yaml"]
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-full.yaml"]
-          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-slim.yaml"]
-          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-full.yaml"]
+          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-slim.yaml"]
+          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
+          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-slim.yaml"]
+          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-full.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
 
