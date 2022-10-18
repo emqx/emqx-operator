@@ -35,17 +35,6 @@ type EmqxPluginSpec struct {
 	Config map[string]string `json:"config,omitempty"`
 }
 
-type phase string
-
-const (
-	EmqxPluginStatusLoaded phase = "loaded"
-)
-
-// EmqxPluginStatus defines the observed state of EmqxPlugin
-type EmqxPluginStatus struct {
-	Phase phase `json:"phase,omitempty"`
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
@@ -55,8 +44,7 @@ type EmqxPlugin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxPluginSpec   `json:"spec,omitempty"`
-	Status EmqxPluginStatus `json:"status,omitempty"`
+	Spec EmqxPluginSpec `json:"spec,omitempty"`
 }
 
 //+kubebuilder:object:root=true
