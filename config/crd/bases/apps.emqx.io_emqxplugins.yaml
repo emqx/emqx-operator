@@ -95,12 +95,6 @@ spec:
                 description: Selector matches the labels of the EMQX
                 type: object
             type: object
-          status:
-            description: EmqxPluginStatus defines the observed state of EmqxPlugin
-            properties:
-              phase:
-                type: string
-            type: object
         type: object
     served: true
     storage: true
