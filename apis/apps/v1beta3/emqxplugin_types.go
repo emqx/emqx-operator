@@ -45,6 +45,7 @@ type EmqxPluginStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:unservedversion
 
 // EmqxPlugin is the Schema for the emqxplugins API
 type EmqxPlugin struct {
