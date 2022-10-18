@@ -1,9 +1,9 @@
 apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise  
 metadata:
-  name: emqx
+  name: emqx-ee
   labels:
-    "apps.emqx.io/instance": "emqx"
+    "apps.emqx.io/instance": "emqx-ee"
 spec:
   replicas: 3
   # volumeClaimTemplates:
@@ -21,7 +21,7 @@ spec:
   template:
     metadata:
       labels:
-        foo: bar
+        "apps.emqx.io/instance": "emqx-ee"
       annotations:
         foo: bar
     spec:
@@ -31,6 +31,7 @@ spec:
       # affinity:
       # toleRations:
       emqxContainer:
+        name: "emqx"
         image: emqx/emqx-ee:4.4.8
         emqxLicense:
           # stringData:
@@ -40,7 +41,7 @@ spec:
           cluster.discovery: dns
           cluster.dns.type: srv
           cluster.dns.app: emqx
-          cluster.dns.name: emqx-headless.default.svc.cluster.local
+          cluster.dns.name: emqx-ee-headless.default.svc.cluster.local
           listener.tcp.external: "1883"
         emqxACL:
           - "{allow, all}."

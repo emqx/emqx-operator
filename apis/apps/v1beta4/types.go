@@ -1,6 +1,8 @@
 package v1beta4
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,6 +13,11 @@ type Emqx interface {
 	client.Object
 	EmqxSpec
 	EmqxStatus
+
+	Default()
+	ValidateCreate() error
+	ValidateUpdate(runtime.Object) error
+	ValidateDelete() error
 
 	GetStatus() Status
 	SetStatus(Status)
