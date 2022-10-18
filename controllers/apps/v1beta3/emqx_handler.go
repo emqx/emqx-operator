@@ -54,6 +54,7 @@ import (
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 const (
+	EmqxContainerName      = "emqx"
 	ReloaderContainerName  = "reloader"
 	ReloaderContainerImage = "emqx/emqx-operator-reloader:0.0.2"
 )
@@ -206,7 +207,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 }
 
 func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []corev1.ServicePort {
-	resp, body, err := r.Handler.RequestAPI(instance, "GET", instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort, "api/v4/listeners")
+	resp, body, err := r.Handler.RequestAPI(instance, EmqxContainerName, "GET", instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort, "api/v4/listeners")
 	if err != nil {
 		return nil
 	}
@@ -260,7 +261,7 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta3.Emqx) []core
 }
 
 func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]appsv1beta3.EmqxNode, error) {
-	resp, body, err := r.Handler.RequestAPI(instance, "GET", instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort, "api/v4/nodes")
+	resp, body, err := r.Handler.RequestAPI(instance, EmqxContainerName, "GET", instance.GetUsername(), instance.GetPassword(), appsv1beta3.DefaultManagementPort, "api/v4/nodes")
 	if err != nil {
 		return nil, err
 	}
@@ -652,7 +653,7 @@ func generateDataVolume(instance appsv1beta3.Emqx, sts *appsv1.StatefulSet) *app
 		)
 	}
 
-	emqxContainerIndex := findContinerIndex(sts, handler.EmqxContainerName)
+	emqxContainerIndex := findContinerIndex(sts, EmqxContainerName)
 	sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts = append(
 		sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts,
 		corev1.VolumeMount{
@@ -696,7 +697,7 @@ func generateReloaderContainer(instance appsv1beta3.Emqx) *corev1.Container {
 
 func generateEmqxContainer(instance appsv1beta3.Emqx) *corev1.Container {
 	return &corev1.Container{
-		Name:            handler.EmqxContainerName,
+		Name:            EmqxContainerName,
 		Image:           instance.GetImage(),
 		ImagePullPolicy: instance.GetImagePullPolicy(),
 		Resources:       instance.GetResource(),
@@ -727,7 +728,7 @@ func generateEmqxContainer(instance appsv1beta3.Emqx) *corev1.Container {
 }
 
 func updateEnvAndVolumeForSts(sts *appsv1.StatefulSet, envVar corev1.EnvVar, volumeMount corev1.VolumeMount, volume corev1.Volume) *appsv1.StatefulSet {
-	emqxContainerIndex := findContinerIndex(sts, handler.EmqxContainerName)
+	emqxContainerIndex := findContinerIndex(sts, EmqxContainerName)
 	reloaderContainerIndex := findContinerIndex(sts, ReloaderContainerName)
 
 	isNotExistVolume := func(volume corev1.Volume) bool {

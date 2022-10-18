@@ -191,7 +191,7 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta3.Emqx, pluginNa
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta3.Emqx, nodeName, pluginName, reloadOrUnload string) error {
 	username, password, apiPort := emqx.GetUsername(), emqx.GetPassword(), appsv1beta3.DefaultManagementPort
-	resp, _, err := r.Handler.RequestAPI(emqx, "PUT", username, password, apiPort, fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
+	resp, _, err := r.Handler.RequestAPI(emqx, EmqxContainerName, "PUT", username, password, apiPort, fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta3.Emqx) ([]pluginL
 	var data []pluginListByAPIReturn
 
 	username, password, apiPort := emqx.GetUsername(), emqx.GetPassword(), appsv1beta3.DefaultManagementPort
-	resp, body, err := r.Handler.RequestAPI(emqx, "GET", username, password, apiPort, "api/v4/plugins")
+	resp, body, err := r.Handler.RequestAPI(emqx, EmqxContainerName, "GET", username, password, apiPort, "api/v4/plugins")
 	if err != nil {
 		return nil, err
 	}

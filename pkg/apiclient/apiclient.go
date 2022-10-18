@@ -17,11 +17,12 @@ limitations under the License.
 package apiclient
 
 import (
-	emperror "emperror.dev/errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+
+	emperror "emperror.dev/errors"
 )
 
 type APIClient struct {
@@ -70,6 +71,7 @@ func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
 			return nil, nil, err
 		}
 		req.SetBasicAuth(c.Username, c.Password)
+		req.Close = true
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, nil, err
