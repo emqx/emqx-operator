@@ -52,11 +52,11 @@ type EmqxReconciler struct {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
-
 	if !instance.IsPluginInitialized() {
 		condition, err := r.initializedPluginList(instance)
 		if condition != nil {
 			instance.SetCondition(*condition)
+			_ = r.Status().Update(ctx, instance)
 		}
 		if err != nil {
 			return ctrl.Result{}, err
@@ -73,10 +73,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{}, err
 	}
 
-	instance, err = r.updateEmqxStatus(instance)
+	status, err := r.updateEmqxStatus(instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	instance.SetStatus(status)
 	_ = r.Status().Update(ctx, instance)
 
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
@@ -127,8 +128,11 @@ func (r *EmqxReconciler) createOrUpdateResourceList(instance appsv1beta4.Emqx) (
 	return nil, nil
 }
 
-func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta4.Emqx, error) {
+func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta4.Status, error) {
 	var condition *appsv1beta4.Condition
+
+	status := instance.GetStatus()
+	status.Replicas = *instance.GetReplicas()
 
 	emqxNodes, err := r.getNodeStatusesByAPI(instance)
 	if err != nil {
@@ -139,12 +143,10 @@ func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta
 			"FailedToGetNodeStatues",
 			err.Error(),
 		)
-		instance.SetCondition(*condition)
-		return instance, err
+		status.SetCondition(*condition)
+		return status, err
 	}
 
-	status := instance.GetStatus()
-	status.Replicas = *instance.GetReplicas()
 	if emqxNodes != nil {
 		readyReplicas := int32(0)
 		for _, node := range emqxNodes {
@@ -171,9 +173,8 @@ func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta
 			"Some nodes are not ready",
 		)
 	}
-	instance.SetCondition(*condition)
-	instance.SetStatus(status)
-	return instance, nil
+	status.SetCondition(*condition)
+	return status, nil
 }
 
 func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]client.Object, error) {
@@ -182,7 +183,9 @@ func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]clie
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
-	return generateInitPluginList(instance, pluginsList), nil
+	initPluginsList := generateInitPluginList(instance, pluginsList)
+	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
+	return append([]client.Object{defaultPluginsConfig}, initPluginsList...), nil
 }
 
 func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client.Object, error) {
@@ -195,14 +198,10 @@ func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client
 	}
 
 	headlessSvc, svc := generateService(instance)
-	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
 	acl := generateEmqxACL(instance)
 	sts := generateStatefulSet(instance)
-
-	sts = updateStatefulSetForVolume(instance, sts)
-	sts = updateStatefulSetAnnotations(instance, sts)
-	sts = updateStatefulSetForPluginsConfig(sts, defaultPluginsConfig)
 	sts = updateStatefulSetForACL(sts, acl)
+	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
 
 	if emqxEnterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
 		var license *corev1.Secret
@@ -221,12 +220,12 @@ func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client
 		}
 	}
 
-	resources = append(resources, defaultPluginsConfig, headlessSvc, svc, sts)
+	resources = append(resources, acl, headlessSvc, svc, sts)
 	return resources, nil
 }
 
 func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
-	resp, body, err := r.Handler.RequestAPI(instance, "GET", "admin", "public", "8081", "api/v4/nodes")
+	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/nodes")
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +242,7 @@ func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]apps
 }
 
 func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) []corev1.ServicePort {
-	resp, body, err := r.Handler.RequestAPI(instance, "GET", "admin", "public", "8081", "api/v4/listeners")
+	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/listeners")
 	if err != nil {
 		return nil
 	}
