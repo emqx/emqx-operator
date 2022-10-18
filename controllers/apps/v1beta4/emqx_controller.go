@@ -193,7 +193,8 @@ func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client
 
 	if instance.IsRunning() {
 		serviceTemplate := instance.GetServiceTemplate()
-		serviceTemplate.MergePorts(r.getListenerPortsByAPI(instance))
+		ports, _ := r.getListenerPortsByAPI(instance)
+		serviceTemplate.MergePorts(ports)
 		instance.SetServiceTemplate(serviceTemplate)
 	}
 
@@ -241,39 +242,73 @@ func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]apps
 	return emqxNodes, nil
 }
 
-func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) []corev1.ServicePort {
+func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]corev1.ServicePort, error) {
+	type emqxListener struct {
+		Protocol string `json:"protocol"`
+		ListenOn string `json:"listen_on"`
+	}
+
+	type emqxListeners struct {
+		Node      string         `json:"node"`
+		Listeners []emqxListener `json:"listeners"`
+	}
+
+	intersection := func(listeners1 []emqxListener, listeners2 []emqxListener) []emqxListener {
+		hSection := map[string]struct{}{}
+		ans := make([]emqxListener, 0)
+		for _, listener := range listeners1 {
+			hSection[listener.ListenOn] = struct{}{}
+		}
+		for _, listener := range listeners2 {
+			_, ok := hSection[listener.ListenOn]
+			if ok {
+				ans = append(ans, listener)
+				delete(hSection, listener.ListenOn)
+			}
+		}
+		return ans
+	}
+
 	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/listeners")
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return nil
+		return nil, err
+	}
+
+	listenerList := []emqxListeners{}
+	data := gjson.GetBytes(body, "data")
+	if err := json.Unmarshal([]byte(data.Raw), &listenerList); err != nil {
+		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
+	}
+
+	var listeners []emqxListener
+	for i := 0; i < len(listenerList)-1; i++ {
+		listeners = intersection(listenerList[i].Listeners, listenerList[i+1].Listeners)
 	}
 
 	ports := []corev1.ServicePort{}
-	listeners := gjson.GetBytes(body, "data.0.listeners")
-	for _, l := range listeners.Array() {
+	for _, l := range listeners {
 		var name string
 		var protocol corev1.Protocol
 		var strPort string
 		var intPort int
 
 		compile := regexp.MustCompile(".*(udp|dtls|sn).*")
-		proto := gjson.Get(l.Raw, "protocol").String()
-		if compile.MatchString(proto) {
+		if compile.MatchString(l.Protocol) {
 			protocol = corev1.ProtocolUDP
 		} else {
 			protocol = corev1.ProtocolTCP
 		}
 
-		listenOn := gjson.Get(l.Raw, "listen_on").String()
-		if strings.Contains(listenOn, ":") {
-			_, strPort, err = net.SplitHostPort(listenOn)
+		if strings.Contains(l.ListenOn, ":") {
+			_, strPort, err = net.SplitHostPort(l.ListenOn)
 			if err != nil {
-				strPort = listenOn
+				strPort = l.ListenOn
 			}
 		} else {
-			strPort = listenOn
+			strPort = l.ListenOn
 		}
 		intPort, _ = strconv.Atoi(strPort)
 
@@ -281,7 +316,7 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) []core
 		// protocol maybe like mqtt:wss:8084
 		// protocol maybe like mqtt:tcp
 		// We had to do something with the "protocol" to make it conform to the kubernetes service port name specification
-		name = regexp.MustCompile(`:[\d]+`).ReplaceAllString(proto, "")
+		name = regexp.MustCompile(`:[\d]+`).ReplaceAllString(l.Protocol, "")
 		name = strings.ReplaceAll(name, ":", "-")
 		name = fmt.Sprintf("%s-%s", name, strPort)
 
@@ -292,5 +327,5 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) []core
 			TargetPort: intstr.FromInt(intPort),
 		})
 	}
-	return ports
+	return ports, nil
 }
