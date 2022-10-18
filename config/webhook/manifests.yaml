@@ -15,7 +15,7 @@ webhooks:
       namespace: system
       path: /mutate-apps-emqx-io-v1beta4-emqxbroker
   failurePolicy: Fail
-  name: emqxbrokers.v1beta4.apps.emqx.io
+  name: mutating.broker.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
@@ -36,7 +36,7 @@ webhooks:
       namespace: system
       path: /mutate-apps-emqx-io-v1beta4-emqxenterprise
   failurePolicy: Fail
-  name: emqxenterprises.v1beta4.apps.emqx.io
+  name: mutating.enterprise.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
@@ -57,75 +57,12 @@ webhooks:
       namespace: system
       path: /mutate-apps-emqx-io-v1beta4-emqxplugin
   failurePolicy: Fail
-  name: emqxplugins.v1beta4.apps.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta3
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxplugins
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /mutate-apps-emqx-io-v1beta3-emqxbroker
-  failurePolicy: Fail
-  name: mutating.broker.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta3
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxbrokers
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /mutate-apps-emqx-io-v1beta3-emqxenterprise
-  failurePolicy: Fail
-  name: mutating.enterprise.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta3
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxenterprises
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /mutate-apps-emqx-io-v1beta3-emqxplugin
-  failurePolicy: Fail
   name: mutating.emqxplugin.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v1beta3
+    - v1beta4
     operations:
     - CREATE
     - UPDATE
@@ -170,7 +107,7 @@ webhooks:
       namespace: system
       path: /validate-apps-emqx-io-v1beta4-emqxbroker
   failurePolicy: Fail
-  name: emqxbrokers.v1beta4.apps.emqx.io
+  name: validator.broker.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
@@ -191,7 +128,7 @@ webhooks:
       namespace: system
       path: /validate-apps-emqx-io-v1beta4-emqxenterprise
   failurePolicy: Fail
-  name: emqxenterprises.v1beta4.apps.emqx.io
+  name: validator.enterprise.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
@@ -212,75 +149,12 @@ webhooks:
       namespace: system
       path: /validate-apps-emqx-io-v1beta4-emqxplugin
   failurePolicy: Fail
-  name: emqxplugins.v1beta4.apps.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta3
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxplugins
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-apps-emqx-io-v1beta3-emqxbroker
-  failurePolicy: Fail
-  name: validator.broker.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta3
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxbrokers
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-apps-emqx-io-v1beta3-emqxenterprise
-  failurePolicy: Fail
-  name: validator.enterprise.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta3
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxenterprises
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-apps-emqx-io-v1beta3-emqxplugin
-  failurePolicy: Fail
   name: validator.emqxplugin.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v1beta3
+    - v1beta4
     operations:
     - CREATE
     - UPDATE

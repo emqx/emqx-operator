@@ -61,7 +61,7 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 	if !isExistPlugin("emqx_rule_engine", matchedPluginList) {
 		emqxRuleEngine := &appsv1beta4.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps.emqx.io/v1beta3",
+				APIVersion: "apps.emqx.io/v1beta4",
 				Kind:       "EmqxPlugin",
 			},
 			ObjectMeta: metav1.ObjectMeta{
@@ -81,7 +81,7 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 	if !isExistPlugin("emqx_retainer", matchedPluginList) {
 		emqxRetainer := &appsv1beta4.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps.emqx.io/v1beta3",
+				APIVersion: "apps.emqx.io/v1beta4",
 				Kind:       "EmqxPlugin",
 			},
 			ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +102,7 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 	if ok && !isExistPlugin(" ", matchedPluginList) {
 		emqxModules := &appsv1beta4.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps.emqx.io/v1beta3",
+				APIVersion: "apps.emqx.io/v1beta4",
 				Kind:       "EmqxPlugin",
 			},
 			ObjectMeta: metav1.ObjectMeta{

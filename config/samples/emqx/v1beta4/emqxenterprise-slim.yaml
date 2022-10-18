@@ -1,8 +1,10 @@
-apiVersion: apps.emqx.io/v1beta3
+apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
 spec:
   template:
-    emqxContainer:
-      image: emqx/emqx-ee:4.4.8
+    spec:
+      emqxContainer:
+        name: emqx
+        image: emqx/emqx-ee:4.4.8
