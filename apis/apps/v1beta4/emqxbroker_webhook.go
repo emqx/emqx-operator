@@ -91,6 +91,15 @@ func defaultLabels(r Emqx) {
 	labels["apps.emqx.io/managed-by"] = "emqx-operator"
 	labels["apps.emqx.io/instance"] = r.GetName()
 	r.SetLabels(labels)
+
+	template := r.GetTemplate()
+	if template.Labels == nil {
+		template.Labels = make(map[string]string)
+	}
+	for k, v := range labels {
+		template.Labels[k] = v
+	}
+	r.SetTemplate(template)
 }
 
 func defaultEmqxACL(r Emqx) {

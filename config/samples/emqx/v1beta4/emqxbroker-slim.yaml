@@ -2,7 +2,10 @@ apiVersion: apps.emqx.io/v1beta4
 kind: EmqxBroker
 metadata:
   name: emqx
+  namespace: default
 spec:
   template:
-    emqxContainer:
-      image: emqx/emqx:4.4.8
+    spec:
+      emqxContainer:
+        name: emqx
+        image: emqx/emqx:4.4.8

@@ -55,6 +55,12 @@ func TestBrokerDefault(t *testing.T) {
 			"apps.emqx.io/managed-by": "emqx-operator",
 			"apps.emqx.io/instance":   "webhook-test",
 		}, instance.Labels)
+
+		assert.Equal(t, map[string]string{
+			"foo":                     "bar",
+			"apps.emqx.io/managed-by": "emqx-operator",
+			"apps.emqx.io/instance":   "webhook-test",
+		}, instance.Spec.Template.Labels)
 	})
 
 	t.Run("default emqx acl", func(t *testing.T) {
