@@ -26,7 +26,6 @@ import (
 
 const (
 	ManageContainersAnnotation = "apps.emqx.io/manage-containers"
-	EmqxContainerName          = "emqx"
 )
 
 type Handler struct {
@@ -35,7 +34,7 @@ type Handler struct {
 	rest.Config
 }
 
-func (handler *Handler) RequestAPI(obj client.Object, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
+func (handler *Handler) RequestAPI(obj client.Object, containerName string, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
 	podList := &corev1.PodList{}
 	if err := handler.Client.List(
 		context.TODO(),
@@ -50,7 +49,7 @@ func (handler *Handler) RequestAPI(obj client.Object, method, username, password
 		return nil, nil, emperror.Errorf("not found pods")
 	}
 
-	podName := findReadyEmqxPod(podList)
+	podName := findReadyEmqxPod(podList, containerName)
 	if podName == "" {
 		return nil, nil, emperror.Errorf("pods not ready")
 	}
@@ -212,10 +211,10 @@ func selectManagerContainer(obj []byte) ([]byte, error) {
 	return sjson.SetBytes(obj, "spec.template", newJson)
 }
 
-func findReadyEmqxPod(pods *corev1.PodList) string {
+func findReadyEmqxPod(pods *corev1.PodList, containerName string) string {
 	for _, pod := range pods.Items {
 		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == EmqxContainerName && status.Ready {
+			if status.Name == containerName && status.Ready {
 				return pod.Name
 			}
 		}
