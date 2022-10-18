@@ -16,7 +16,8 @@ spec:
     singular: emqxplugin
   scope: Namespaced
   versions:
-  - name: v1beta3
+  - deprecated: true
+    name: v1beta3
     schema:
       openAPIV3Schema:
         properties:
