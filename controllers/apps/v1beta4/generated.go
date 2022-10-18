@@ -164,8 +164,8 @@ func generateDefaultPluginsConfig(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 		},
 		Data: map[string]string{
 			"emqx_modules.conf":           "",
-			"emqx_management.conf":        "management.listener.http = 8081\n",
-			"emqx_dashboard.conf":         "dashboard.listener.http = 18083\n",
+			"emqx_management.conf":        "management.listener.http = 8081\nmanagement.default_application.id = admin\nmanagement.default_application.secret = public",
+			"emqx_dashboard.conf":         "dashboard.listener.http = 18083\ndashboard.default_user.login = admin\ndashboard.default_user.password = public",
 			"emqx_rule_engine.conf":       "",
 			"emqx_retainer.conf":          "",
 			"emqx_telemetry.conf":         "",
@@ -244,8 +244,12 @@ func generateService(instance appsv1beta4.Emqx) (headlessSvc, svc *corev1.Servic
 			Kind:       "Service",
 			APIVersion: "v1",
 		},
-		ObjectMeta: instance.GetServiceTemplate().ObjectMeta,
-		Spec:       instance.GetServiceTemplate().Spec,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.GetName(),
+			Namespace: instance.GetNamespace(),
+		},
+		// ObjectMeta: instance.GetServiceTemplate().ObjectMeta,
+		Spec: instance.GetServiceTemplate().Spec,
 	}
 
 	headlessSvc = &corev1.Service{
@@ -284,6 +288,82 @@ func generateService(instance appsv1beta4.Emqx) (headlessSvc, svc *corev1.Servic
 }
 
 func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
+	names := appsv1beta4.Names{Object: instance}
+
+	reloaderContainer := corev1.Container{
+		Name:            ReloaderContainerName,
+		Image:           ReloaderContainerImage,
+		ImagePullPolicy: instance.GetTemplate().Spec.EmqxContainer.ImagePullPolicy,
+		Args: []string{
+			"-u", "admin",
+			"-p", "public",
+			"-P", "8081",
+		},
+		EnvFrom: instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
+		Env: mergeEnvAndConfig(instance, []corev1.EnvVar{
+			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+			{
+				Name: "STS_HEADLESS_SERVICE_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.annotations['apps.emqx.io/headless-service-name']",
+					},
+				},
+			},
+			{
+				Name:  "EMQX_HOST",
+				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
+			},
+		}...),
+		VolumeMounts: instance.GetTemplate().Spec.EmqxContainer.VolumeMounts,
+	}
+
+	emqxContainer := corev1.Container{
+		Name:       instance.GetTemplate().Spec.EmqxContainer.Name,
+		Image:      instance.GetTemplate().Spec.EmqxContainer.Image,
+		Command:    instance.GetTemplate().Spec.EmqxContainer.Command,
+		Args:       instance.GetTemplate().Spec.EmqxContainer.Args,
+		WorkingDir: instance.GetTemplate().Spec.EmqxContainer.WorkingDir,
+		Ports:      instance.GetTemplate().Spec.EmqxContainer.Ports,
+		EnvFrom:    instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
+		Env:        mergeEnvAndConfig(instance),
+		Resources:  instance.GetTemplate().Spec.EmqxContainer.Resources,
+		VolumeMounts: append(
+			instance.GetTemplate().Spec.EmqxContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      names.Data(),
+				MountPath: "/opt/emqx/data",
+			},
+		),
+		VolumeDevices:            instance.GetTemplate().Spec.EmqxContainer.VolumeDevices,
+		LivenessProbe:            instance.GetTemplate().Spec.EmqxContainer.LivenessProbe,
+		ReadinessProbe:           instance.GetTemplate().Spec.EmqxContainer.ReadinessProbe,
+		StartupProbe:             instance.GetTemplate().Spec.EmqxContainer.StartupProbe,
+		Lifecycle:                instance.GetTemplate().Spec.EmqxContainer.Lifecycle,
+		TerminationMessagePath:   instance.GetTemplate().Spec.EmqxContainer.TerminationMessagePath,
+		TerminationMessagePolicy: instance.GetTemplate().Spec.EmqxContainer.TerminationMessagePolicy,
+		ImagePullPolicy:          instance.GetTemplate().Spec.EmqxContainer.ImagePullPolicy,
+		SecurityContext:          instance.GetTemplate().Spec.EmqxContainer.SecurityContext,
+		Stdin:                    instance.GetTemplate().Spec.EmqxContainer.Stdin,
+		StdinOnce:                instance.GetTemplate().Spec.EmqxContainer.StdinOnce,
+		TTY:                      instance.GetTemplate().Spec.EmqxContainer.TTY,
+	}
+
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      instance.GetTemplate().Labels,
@@ -298,51 +378,13 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			InitContainers:      instance.GetTemplate().Spec.InitContainers,
 			EphemeralContainers: instance.GetTemplate().Spec.EphemeralContainers,
 			Containers: append([]corev1.Container{
-				{
-					Name:                     instance.GetTemplate().Spec.EmqxContainer.Name,
-					Image:                    instance.GetTemplate().Spec.EmqxContainer.Image,
-					Command:                  instance.GetTemplate().Spec.EmqxContainer.Command,
-					Args:                     instance.GetTemplate().Spec.EmqxContainer.Args,
-					WorkingDir:               instance.GetTemplate().Spec.EmqxContainer.WorkingDir,
-					Ports:                    instance.GetTemplate().Spec.EmqxContainer.Ports,
-					EnvFrom:                  instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
-					Env:                      mergeEnvAndConfig(instance),
-					Resources:                instance.GetTemplate().Spec.EmqxContainer.Resources,
-					VolumeMounts:             instance.GetTemplate().Spec.EmqxContainer.VolumeMounts,
-					VolumeDevices:            instance.GetTemplate().Spec.EmqxContainer.VolumeDevices,
-					LivenessProbe:            instance.GetTemplate().Spec.EmqxContainer.LivenessProbe,
-					ReadinessProbe:           instance.GetTemplate().Spec.EmqxContainer.ReadinessProbe,
-					StartupProbe:             instance.GetTemplate().Spec.EmqxContainer.StartupProbe,
-					Lifecycle:                instance.GetTemplate().Spec.EmqxContainer.Lifecycle,
-					TerminationMessagePath:   instance.GetTemplate().Spec.EmqxContainer.TerminationMessagePath,
-					TerminationMessagePolicy: instance.GetTemplate().Spec.EmqxContainer.TerminationMessagePolicy,
-					ImagePullPolicy:          instance.GetTemplate().Spec.EmqxContainer.ImagePullPolicy,
-					SecurityContext:          instance.GetTemplate().Spec.EmqxContainer.SecurityContext,
-					Stdin:                    instance.GetTemplate().Spec.EmqxContainer.Stdin,
-					StdinOnce:                instance.GetTemplate().Spec.EmqxContainer.StdinOnce,
-					TTY:                      instance.GetTemplate().Spec.EmqxContainer.TTY,
-				},
-				{
-					Name:            ReloaderContainerName,
-					Image:           ReloaderContainerImage,
-					ImagePullPolicy: instance.GetTemplate().Spec.EmqxContainer.ImagePullPolicy,
-					Args: []string{
-						"-u", "admin",
-						"-p", "public",
-						"-P", "8081",
-					},
-					EnvFrom:      instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
-					Env:          mergeEnvAndConfig(instance),
-					VolumeMounts: instance.GetTemplate().Spec.EmqxContainer.VolumeMounts,
-				},
+				emqxContainer, reloaderContainer,
 			}, instance.GetTemplate().Spec.ExtraContainers...),
 
 			SecurityContext: instance.GetTemplate().Spec.PodSecurityContext,
 			Volumes:         instance.GetTemplate().Spec.Volumes,
 		},
 	}
-
-	names := appsv1beta4.Names{Object: instance}
 
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -365,35 +407,12 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Template:            podTemplate,
 		},
 	}
-	return sts
-}
-
-func updateStatefulSetAnnotations(instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
-	annotations := sts.Annotations
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
-	sts.Annotations = annotations
-
-	containerNames := []string{}
-	for _, c := range sts.Spec.Template.Spec.Containers {
-		containerNames = append(containerNames, c.Name)
-	}
-
-	sts.Spec.Template.Annotations[handler.ManageContainersAnnotation] = strings.Join(containerNames, ",")
-	return sts
-}
-
-func updateStatefulSetForVolume(instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) *appsv1.StatefulSet {
-	names := appsv1beta4.Names{Object: instance}
-	dataName := names.Data()
 
 	if len(instance.GetVolumeClaimTemplates()) == 0 {
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
 			corev1.Volume{
-				Name: dataName,
+				Name: names.Data(),
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
@@ -403,17 +422,22 @@ func updateStatefulSetForVolume(instance appsv1beta4.Emqx, sts *appsv1.StatefulS
 		sts.Spec.VolumeClaimTemplates = instance.GetVolumeClaimTemplates()
 	}
 
-	emqxContainerIndex := 0
-	sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts = append(
-		sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts,
-		corev1.VolumeMount{
-			Name:      dataName,
-			MountPath: "/opt/emqx/data",
-		},
-	)
+	containerNames := []string{}
+	for _, c := range sts.Spec.Template.Spec.Containers {
+		containerNames = append(containerNames, c.Name)
+	}
 
-	ReloaderContainerIndex := 1
-	sts.Spec.Template.Spec.Containers[ReloaderContainerIndex].VolumeMounts = sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts
+	if sts.Spec.Template.Annotations == nil {
+		sts.Spec.Template.Annotations = make(map[string]string)
+	}
+	sts.Spec.Template.Annotations[handler.ManageContainersAnnotation] = strings.Join(containerNames, ",")
+	sts.Spec.Template.Annotations["apps.emqx.io/headless-service-name"] = sts.Spec.ServiceName
+
+	if sts.Annotations == nil {
+		sts.Annotations = make(map[string]string)
+	}
+	delete(sts.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
 	return sts
 }
 
@@ -534,6 +558,10 @@ func updateEnvAndVolumeForSts(sts *appsv1.StatefulSet, envVar corev1.EnvVar, vol
 			sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts,
 			volumeMount,
 		)
+		sts.Spec.Template.Spec.Containers[reloaderContainerIndex].VolumeMounts = append(
+			sts.Spec.Template.Spec.Containers[reloaderContainerIndex].VolumeMounts,
+			volumeMount,
+		)
 	}
 
 	if isNotExistEnv(envVar) {
@@ -541,10 +569,11 @@ func updateEnvAndVolumeForSts(sts *appsv1.StatefulSet, envVar corev1.EnvVar, vol
 			sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env,
 			envVar,
 		)
+		sts.Spec.Template.Spec.Containers[reloaderContainerIndex].Env = append(
+			sts.Spec.Template.Spec.Containers[reloaderContainerIndex].Env,
+			envVar,
+		)
 	}
-
-	sts.Spec.Template.Spec.Containers[reloaderContainerIndex].VolumeMounts = sts.Spec.Template.Spec.Containers[emqxContainerIndex].VolumeMounts
-	sts.Spec.Template.Spec.Containers[reloaderContainerIndex].Env = sts.Spec.Template.Spec.Containers[emqxContainerIndex].Env
 
 	return sts
 }
