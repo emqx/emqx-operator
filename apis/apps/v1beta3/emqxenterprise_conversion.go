@@ -48,6 +48,8 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 		}
 	}
 	// Template
+	dst.Spec.Template.ObjectMeta.Labels = src.Labels
+	dst.Spec.Template.ObjectMeta.Annotations = src.Annotations
 	dst.Spec.Template.Spec.EmqxContainer.Image = src.Spec.EmqxTemplate.Image
 	if !reflect.ValueOf(src.Spec.EmqxTemplate.License).IsZero() {
 		dst.Spec.Template.Spec.EmqxContainer.EmqxLicense = v1beta4.EmqxLicense(src.Spec.EmqxTemplate.License)
