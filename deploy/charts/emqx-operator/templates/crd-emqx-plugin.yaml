@@ -4,10 +4,22 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    {{- if (index .Values "cert-manager" "enable") }}
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "emqx-operator.fullname" . }}-serving-cert
+    {{- end }}
     controller-gen.kubebuilder.io/version: v0.6.2
-  creationTimestamp: null
   name: emqxplugins.apps.emqx.io
 spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: {{ include "emqx-operator.fullname" . }}-webhook-service
+          namespace: {{ .Release.Namespace }}
+          path: /convert
+      conversionReviewVersions:
+      - v1
   group: apps.emqx.io
   names:
     kind: EmqxPlugin
@@ -16,13 +28,16 @@ spec:
     singular: emqxplugin
   scope: Namespaced
   versions:
-  - name: v1beta3
+  - deprecated: true
+    name: v1beta3
     schema:
       openAPIV3Schema:
         properties:
           apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -43,6 +58,41 @@ spec:
             properties:
               phase:
                 type: string
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v1beta4
+    schema:
+      openAPIV3Schema:
+        description: EmqxPlugin is the Schema for the emqxplugins API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EmqxPluginSpec defines the desired state of EmqxPlugin
+            properties:
+              config:
+                additionalProperties:
+                  type: string
+                description: Config defines the configurations of the EMQX plugins
+                type: object
+              pluginName:
+                description: 'More info: https://www.emqx.io/docs/en/v4.4/advanced/plugins.html#list-of-plugins'
+                type: string
+              selector:
+                additionalProperties:
+                  type: string
+                description: Selector matches the labels of the EMQX
+                type: object
             type: object
         type: object
     served: true
