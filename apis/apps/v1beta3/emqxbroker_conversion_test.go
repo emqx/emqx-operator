@@ -210,6 +210,14 @@ var v1beta4EmqxBroker = &v1beta4.EmqxBroker{
 			},
 		},
 		Template: v1beta4.EmqxTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					"foo": "bar",
+				},
+				Annotations: map[string]string{
+					"foo": "bar",
+				},
+			},
 			Spec: v1beta4.EmqxTemplateSpec{
 				NodeName: "fake-node",
 				NodeSelector: map[string]string{
@@ -370,7 +378,8 @@ func TestBrokerConversionTo(t *testing.T) {
 	assert.Equal(t, v1bete3EmqxBroker.Spec.Persistent, emqx.Spec.VolumeClaimTemplates[0].Spec)
 	assert.ObjectsAreEqualValues(v1bete3EmqxBroker.Spec.EmqxTemplate.ServiceTemplate, emqx.Spec.ServiceTemplate)
 
-	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.Image, emqx.Spec.Template.Spec.EmqxContainer.Image)
+	assert.Equal(t, v1bete3EmqxBroker.Labels, emqx.Spec.Template.Labels)
+	assert.Equal(t, v1bete3EmqxBroker.Annotations, emqx.Spec.Template.Annotations)
 	assert.ObjectsAreEqualValues(v1bete3EmqxBroker.Spec.EmqxTemplate.EmqxConfig, emqx.Spec.Template.Spec.EmqxContainer.EmqxConfig)
 	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.ACL, emqx.Spec.Template.Spec.EmqxContainer.EmqxACL)
 	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.ImagePullPolicy, emqx.Spec.Template.Spec.EmqxContainer.ImagePullPolicy)
