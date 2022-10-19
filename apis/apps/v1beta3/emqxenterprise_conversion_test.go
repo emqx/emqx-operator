@@ -213,6 +213,14 @@ var v1beta4EmqxEnterprise = &v1beta4.EmqxEnterprise{
 			},
 		},
 		Template: v1beta4.EmqxTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					"foo": "bar",
+				},
+				Annotations: map[string]string{
+					"foo": "bar",
+				},
+			},
 			Spec: v1beta4.EmqxTemplateSpec{
 				NodeName: "fake-node",
 				NodeSelector: map[string]string{
@@ -376,6 +384,8 @@ func TestEnterpriseConversionTo(t *testing.T) {
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.Persistent, emqx.Spec.VolumeClaimTemplates[0].Spec)
 	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.ServiceTemplate, emqx.Spec.ServiceTemplate)
 
+	assert.Equal(t, v1bete3EmqxBroker.Labels, emqx.Spec.Template.Labels)
+	assert.Equal(t, v1bete3EmqxBroker.Annotations, emqx.Spec.Template.Annotations)
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.Image, emqx.Spec.Template.Spec.EmqxContainer.Image)
 	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.License, emqx.Spec.Template.Spec.EmqxContainer.EmqxLicense)
 	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.EmqxConfig, emqx.Spec.Template.Spec.EmqxContainer.EmqxConfig)
