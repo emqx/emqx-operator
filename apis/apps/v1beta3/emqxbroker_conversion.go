@@ -51,6 +51,7 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	// Template
 	dst.Spec.Template.ObjectMeta.Labels = src.Labels
 	dst.Spec.Template.ObjectMeta.Annotations = src.Annotations
+	dst.Spec.Template.Spec.EmqxContainer.Name = "emqx"
 	dst.Spec.Template.Spec.EmqxContainer.Image = src.Spec.EmqxTemplate.Image
 	if src.Spec.EmqxTemplate.EmqxConfig != nil {
 		dst.Spec.Template.Spec.EmqxContainer.EmqxConfig = src.Spec.EmqxTemplate.EmqxConfig

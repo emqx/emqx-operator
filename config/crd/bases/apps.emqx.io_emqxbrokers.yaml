@@ -8265,6 +8265,7 @@ spec:
                                 type: integer
                             type: object
                           name:
+                            default: emqx
                             description: Name of the container specified as a DNS_LABEL.
                               Each container in a pod must have a unique name (DNS_LABEL).
                               Cannot be updated.

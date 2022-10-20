@@ -85,10 +85,12 @@ jobs:
       - name: Deploy controller
         if: matrix.install == 'helm'
         run: |
+          kubectl apply --server-side --force-conflicts -f deploy/charts/emqx-operator/crds
           helm upgrade --install emqx-operator deploy/charts/emqx-operator \
-            --set image.tag=${{ github.sha }} \
             --namespace emqx-operator-system \
-            --create-namespace
+            --create-namespace \
+            --set image.tag=${{ github.sha }} \
+            --debug
       - name: Check operator
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
@@ -118,3 +120,5 @@ jobs:
         run: kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json
       - if: failure()
         run: kubectl get ${{ matrix.emqx[0] }} emqx -o json
+      - if: failure()
+        run: kubectl get event

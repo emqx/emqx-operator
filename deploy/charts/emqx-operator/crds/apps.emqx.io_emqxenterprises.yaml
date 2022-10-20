@@ -5,6 +5,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.2
+    helm.sh/resource-policy: keep
   creationTimestamp: null
   name: emqxenterprises.apps.emqx.io
 spec:
