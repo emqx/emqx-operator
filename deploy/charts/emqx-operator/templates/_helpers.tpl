@@ -61,3 +61,14 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create the name of the patch service account to use
+*/}}
+{{- define "emqx-operator.patchServiceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (cat (include "emqx-operator.fullname" .) "-" "patch" | nospace) .Values.patch.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.patch.serviceAccount.name }}
+{{- end }}
+{{- end }}
