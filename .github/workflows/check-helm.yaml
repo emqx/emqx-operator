@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: minikube start
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Update helm
         run: |
           helm repo add emqx https://repos.emqx.io/charts

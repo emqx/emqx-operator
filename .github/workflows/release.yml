@@ -9,7 +9,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Check image tag for yaml
       run: |
         tag=$(cat deploy/manifests/emqx-operator-controller.yaml | egrep "image:[[:space:]]emqx/emqx-operator-controller" | sed -r 's|image:[[:space:]]emqx/emqx-operator-controller:(.*)|\1|g' | tr -d '[:space:]')

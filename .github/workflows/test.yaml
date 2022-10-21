@@ -11,8 +11,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: '1.18.3'
       - name: golangci-lint
@@ -35,10 +35,10 @@ jobs:
 
     steps:
       - run: minikube start
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: '1.18.3'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/cache@v2
         with:
           path: |
@@ -100,10 +100,10 @@ jobs:
             --namespace cert-manager \
             --create-namespace \
             --set installCRDs=true
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: '1.18.3'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Build image
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
