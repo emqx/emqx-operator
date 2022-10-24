@@ -65,9 +65,10 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 				Kind:       "EmqxPlugin",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-rule-engine", instance.GetName()),
-				Namespace: instance.GetNamespace(),
-				Labels:    instance.GetLabels(),
+				Name:        fmt.Sprintf("%s-rule-engine", instance.GetName()),
+				Namespace:   instance.GetNamespace(),
+				Labels:      instance.GetLabels(),
+				Annotations: instance.GetAnnotations(),
 			},
 			Spec: appsv1beta4.EmqxPluginSpec{
 				PluginName: "emqx_rule_engine",
@@ -85,9 +86,10 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 				Kind:       "EmqxPlugin",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-retainer", instance.GetName()),
-				Namespace: instance.GetNamespace(),
-				Labels:    instance.GetLabels(),
+				Name:        fmt.Sprintf("%s-retainer", instance.GetName()),
+				Namespace:   instance.GetNamespace(),
+				Labels:      instance.GetLabels(),
+				Annotations: instance.GetAnnotations(),
 			},
 			Spec: appsv1beta4.EmqxPluginSpec{
 				PluginName: "emqx_retainer",
@@ -99,16 +101,17 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 	}
 
 	_, ok := instance.(*appsv1beta4.EmqxEnterprise)
-	if ok && !isExistPlugin(" ", matchedPluginList) {
+	if ok && !isExistPlugin("emqx_modules", matchedPluginList) {
 		emqxModules := &appsv1beta4.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps.emqx.io/v1beta4",
 				Kind:       "EmqxPlugin",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-modules", instance.GetName()),
-				Namespace: instance.GetNamespace(),
-				Labels:    instance.GetLabels(),
+				Name:        fmt.Sprintf("%s-modules", instance.GetName()),
+				Namespace:   instance.GetNamespace(),
+				Labels:      instance.GetLabels(),
+				Annotations: instance.GetAnnotations(),
 			},
 			Spec: appsv1beta4.EmqxPluginSpec{
 				PluginName: "emqx_modules",
@@ -123,32 +126,6 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 	return pluginList
 }
 
-func generateLicense(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Secret {
-	names := appsv1beta4.Names{Object: emqxEnterprise}
-	license := emqxEnterprise.Spec.Template.Spec.EmqxContainer.EmqxLicense
-	if len(license.Data) == 0 && len(license.StringData) == 0 {
-		return nil
-	}
-
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:    emqxEnterprise.GetLabels(),
-			Namespace: emqxEnterprise.GetNamespace(),
-			Name:      names.License(),
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{"emqx.lic": license.Data},
-	}
-	if license.StringData != "" {
-		secret.StringData = map[string]string{"emqx.lic": license.StringData}
-	}
-	return secret
-}
-
 func generateDefaultPluginsConfig(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 	names := appsv1beta4.Names{Object: instance}
 
@@ -158,9 +135,10 @@ func generateDefaultPluginsConfig(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    instance.GetLabels(),
-			Namespace: instance.GetNamespace(),
-			Name:      names.PluginsConfig(),
+			Name:        names.PluginsConfig(),
+			Namespace:   instance.GetNamespace(),
+			Labels:      instance.GetLabels(),
+			Annotations: instance.GetAnnotations(),
 		},
 		Data: map[string]string{
 			"emqx_modules.conf":           "",
@@ -214,6 +192,33 @@ func generateDefaultPluginsConfig(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 	return cm
 }
 
+func generateLicense(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Secret {
+	names := appsv1beta4.Names{Object: emqxEnterprise}
+	license := emqxEnterprise.Spec.Template.Spec.EmqxContainer.EmqxLicense
+	if len(license.Data) == 0 && len(license.StringData) == 0 {
+		return nil
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        names.License(),
+			Namespace:   emqxEnterprise.GetNamespace(),
+			Labels:      emqxEnterprise.GetLabels(),
+			Annotations: emqxEnterprise.GetAnnotations(),
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{"emqx.lic": license.Data},
+	}
+	if license.StringData != "" {
+		secret.StringData = map[string]string{"emqx.lic": license.StringData}
+	}
+	return secret
+}
+
 func generateEmqxACL(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 	names := appsv1beta4.Names{Object: instance}
 
@@ -244,12 +249,8 @@ func generateService(instance appsv1beta4.Emqx) (headlessSvc, svc *corev1.Servic
 			Kind:       "Service",
 			APIVersion: "v1",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.GetName(),
-			Namespace: instance.GetNamespace(),
-		},
-		// ObjectMeta: instance.GetServiceTemplate().ObjectMeta,
-		Spec: instance.GetServiceTemplate().Spec,
+		ObjectMeta: instance.GetServiceTemplate().ObjectMeta,
+		Spec:       instance.GetServiceTemplate().Spec,
 	}
 
 	headlessSvc = &corev1.Service{
@@ -265,6 +266,7 @@ func generateService(instance appsv1beta4.Emqx) (headlessSvc, svc *corev1.Servic
 		},
 		Spec: corev1.ServiceSpec{
 			Selector:                 instance.GetLabels(),
+			Type:                     corev1.ServiceTypeClusterIP,
 			ClusterIP:                corev1.ClusterIPNone,
 			PublishNotReadyAddresses: true,
 		},
@@ -299,50 +301,22 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			"-p", "public",
 			"-P", "8081",
 		},
-		EnvFrom: instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
-		Env: mergeEnvAndConfig(instance, []corev1.EnvVar{
-			{
-				Name: "POD_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.name",
-					},
-				},
-			},
-			{
-				Name: "POD_NAMESPACE",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
-					},
-				},
-			},
-			{
-				Name: "STS_HEADLESS_SERVICE_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.annotations['apps.emqx.io/headless-service-name']",
-					},
-				},
-			},
-			{
-				Name:  "EMQX_HOST",
-				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
-			},
-		}...),
+		EnvFrom:      instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
+		Env:          mergeEnvAndConfig(instance),
 		VolumeMounts: instance.GetTemplate().Spec.EmqxContainer.VolumeMounts,
 	}
 
 	emqxContainer := corev1.Container{
-		Name:       instance.GetTemplate().Spec.EmqxContainer.Name,
-		Image:      instance.GetTemplate().Spec.EmqxContainer.Image,
-		Command:    instance.GetTemplate().Spec.EmqxContainer.Command,
-		Args:       instance.GetTemplate().Spec.EmqxContainer.Args,
-		WorkingDir: instance.GetTemplate().Spec.EmqxContainer.WorkingDir,
-		Ports:      instance.GetTemplate().Spec.EmqxContainer.Ports,
-		EnvFrom:    instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
-		Env:        mergeEnvAndConfig(instance),
-		Resources:  instance.GetTemplate().Spec.EmqxContainer.Resources,
+		Name:            instance.GetTemplate().Spec.EmqxContainer.Name,
+		Image:           instance.GetTemplate().Spec.EmqxContainer.Image,
+		ImagePullPolicy: instance.GetTemplate().Spec.EmqxContainer.ImagePullPolicy,
+		Command:         instance.GetTemplate().Spec.EmqxContainer.Command,
+		Args:            instance.GetTemplate().Spec.EmqxContainer.Args,
+		WorkingDir:      instance.GetTemplate().Spec.EmqxContainer.WorkingDir,
+		Ports:           instance.GetTemplate().Spec.EmqxContainer.Ports,
+		EnvFrom:         instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
+		Env:             mergeEnvAndConfig(instance),
+		Resources:       instance.GetTemplate().Spec.EmqxContainer.Resources,
 		VolumeMounts: append(
 			instance.GetTemplate().Spec.EmqxContainer.VolumeMounts,
 			corev1.VolumeMount{
@@ -357,7 +331,6 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 		Lifecycle:                instance.GetTemplate().Spec.EmqxContainer.Lifecycle,
 		TerminationMessagePath:   instance.GetTemplate().Spec.EmqxContainer.TerminationMessagePath,
 		TerminationMessagePolicy: instance.GetTemplate().Spec.EmqxContainer.TerminationMessagePolicy,
-		ImagePullPolicy:          instance.GetTemplate().Spec.EmqxContainer.ImagePullPolicy,
 		SecurityContext:          instance.GetTemplate().Spec.EmqxContainer.SecurityContext,
 		Stdin:                    instance.GetTemplate().Spec.EmqxContainer.Stdin,
 		StdinOnce:                instance.GetTemplate().Spec.EmqxContainer.StdinOnce,
@@ -431,7 +404,6 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 		sts.Spec.Template.Annotations = make(map[string]string)
 	}
 	sts.Spec.Template.Annotations[handler.ManageContainersAnnotation] = strings.Join(containerNames, ",")
-	sts.Spec.Template.Annotations["apps.emqx.io/headless-service-name"] = sts.Spec.ServiceName
 
 	if sts.Annotations == nil {
 		sts.Annotations = make(map[string]string)
@@ -439,6 +411,29 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	delete(sts.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	return sts
+}
+
+func updateStatefulSetForPluginsConfig(sts *appsv1.StatefulSet, pluginsConfig *corev1.ConfigMap) *appsv1.StatefulSet {
+	return updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_PLUGINS__ETC_DIR",
+			Value: "/mounted/plugins/etc",
+		},
+		corev1.VolumeMount{
+			Name:      pluginsConfig.Name,
+			MountPath: "/mounted/plugins/etc",
+		},
+		corev1.Volume{
+			Name: pluginsConfig.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: pluginsConfig.Name,
+					},
+				},
+			},
+		},
+	)
 }
 
 func updateStatefulSetForLicense(sts *appsv1.StatefulSet, license *corev1.Secret) *appsv1.StatefulSet {
@@ -463,29 +458,6 @@ func updateStatefulSetForLicense(sts *appsv1.StatefulSet, license *corev1.Secret
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: license.Name,
-				},
-			},
-		},
-	)
-}
-
-func updateStatefulSetForPluginsConfig(sts *appsv1.StatefulSet, PluginsConfig *corev1.ConfigMap) *appsv1.StatefulSet {
-	return updateEnvAndVolumeForSts(sts,
-		corev1.EnvVar{
-			Name:  "EMQX_PLUGINS__ETC_DIR",
-			Value: "/mounted/plugins/etc",
-		},
-		corev1.VolumeMount{
-			Name:      PluginsConfig.Name,
-			MountPath: "/mounted/plugins/etc",
-		},
-		corev1.Volume{
-			Name: PluginsConfig.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: PluginsConfig.Name,
-					},
 				},
 			},
 		},
