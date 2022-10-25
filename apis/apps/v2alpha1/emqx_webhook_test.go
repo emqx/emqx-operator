@@ -83,6 +83,18 @@ func TestValidateUpdate(t *testing.T) {
 		instance.Spec.BootstrapConfig = `{b = { d = 3, c = 2 }, a = 1}`
 		assert.Nil(t, instance.ValidateUpdate(old))
 	})
+
+	t.Run("should return error if .spec.coreTemplate.metadata is update", func(t *testing.T) {
+		old := instance.DeepCopy()
+		old.Spec.CoreTemplate.Labels = map[string]string{"foo": "bar"}
+		assert.ErrorContains(t, instance.ValidateUpdate(old), "coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
+	})
+
+	t.Run("should return error if .spec.replicant.metadata is update", func(t *testing.T) {
+		old := instance.DeepCopy()
+		old.Spec.ReplicantTemplate.Labels = map[string]string{"foo": "bar"}
+		assert.ErrorContains(t, instance.ValidateUpdate(old), "coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
+	})
 }
 
 func TestValidateDelete(t *testing.T) {
