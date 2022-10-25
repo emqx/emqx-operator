@@ -140,12 +140,12 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
 	var err error
 
-	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfCoreNode(), Namespace: instance.Namespace}, existedSts)
+	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
 	}
 
-	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfReplicantNode(), Namespace: instance.Namespace}, existedDeploy)
+	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ReplicantTemplate.Name, Namespace: instance.Namespace}, existedDeploy)
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, emperror.Wrap(err, "failed to get existed deployment")
 	}
