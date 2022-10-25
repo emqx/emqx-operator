@@ -95,6 +95,13 @@ func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 		return err
 	}
 
+	if !reflect.DeepEqual(oldEMQX.Spec.ReplicantTemplate.ObjectMeta, r.Spec.ReplicantTemplate.ObjectMeta) ||
+		!reflect.DeepEqual(oldEMQX.Spec.CoreTemplate.ObjectMeta, r.Spec.CoreTemplate.ObjectMeta) {
+		err := emperror.New(".spec.coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
+		emqxlog.Error(err, "validate update failed")
+		return err
+	}
+
 	return nil
 }
 
