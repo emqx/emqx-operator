@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -44,6 +45,7 @@ import (
 // var cfg *rest.Config
 var timeout, interval time.Duration
 var k8sClient client.Client
+var clientset *kubernetes.Clientset
 var testEnv *envtest.Environment
 
 func TestAPIs(t *testing.T) {
@@ -64,7 +66,14 @@ var _ = BeforeSuite(func() {
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	opts := zap.Options{
+		Development: true,
+		Level:       zapcore.DebugLevel,
+		TimeEncoder: zapcore.RFC3339TimeEncoder,
+		DestWriter:  GinkgoWriter,
+	}
+
+	logf.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -91,7 +100,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	clientset, _ := kubernetes.NewForConfig(cfg)
+	clientset, _ = kubernetes.NewForConfig(cfg)
 	err = (&appscontrollersv2alpha1.EMQXReconciler{
 		Scheme: k8sManager.GetScheme(),
 		Handler: handler.Handler{

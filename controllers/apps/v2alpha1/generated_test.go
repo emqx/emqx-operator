@@ -974,7 +974,7 @@ func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
 
 	assert.Equal(t, []corev1.EnvVar{{
 		Name:  "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE",
-		Value: "/opt/emqx/data/bootstrap_user",
+		Value: `"/opt/emqx/data/bootstrap_user"`,
 	}}, got.Spec.Template.Spec.Containers[0].Env)
 }
 
