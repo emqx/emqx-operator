@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -35,8 +36,8 @@ import (
 
 var emqxBroker = &appsv1beta3.EmqxBroker{
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "emqx",
-		Namespace: "default",
+		Name:      "e2e-test-emqx",
+		Namespace: "e2e-test-v1beta3",
 		Labels: map[string]string{
 			"test": "e2e",
 		},
@@ -50,8 +51,8 @@ var emqxBroker = &appsv1beta3.EmqxBroker{
 
 var emqxEnterprise = &appsv1beta3.EmqxEnterprise{
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "emqx-ee",
-		Namespace: "default",
+		Name:      "e2e-test-emqx-ee",
+		Namespace: "e2e-test-v1beta3",
 		Labels: map[string]string{
 			"test": "e2e",
 		},
@@ -69,8 +70,8 @@ var lwm2m = &appsv1beta3.EmqxPlugin{
 		Kind:       "EmqxPlugin",
 	},
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      "lwm2m",
-		Namespace: "default",
+		Name:      "e2e-test-lwm2m",
+		Namespace: "e2e-test-v1beta3",
 		Labels: map[string]string{
 			"test": "e2e",
 		},
@@ -168,6 +169,11 @@ var _ = Describe("", func() {
 			By("create EMQX CR")
 			emqx.Default()
 			Expect(emqx.ValidateCreate()).Should(Succeed())
+			Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: emqx.GetNamespace(),
+				},
+			})).Should(Succeed())
 			Expect(k8sClient.Create(context.TODO(), emqx)).Should(Succeed())
 			Eventually(func() bool {
 				_ = k8sClient.Get(
@@ -347,6 +353,16 @@ var _ = Describe("", func() {
 				Expect(k8sClient.Delete(context.Background(), &plugin)).Should(Succeed())
 			}
 			Expect(k8sClient.Delete(context.TODO(), emqx)).Should(Succeed())
+			Expect(k8sClient.Delete(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: emqx.GetNamespace(),
+				},
+			})).Should(Succeed())
+
+			Eventually(func() bool {
+				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetNamespace()}, &corev1.Namespace{})
+				return k8sErrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
 		},
 		Entry(nil, emqxBroker.DeepCopy(), lwm2m.DeepCopy()),
 		Entry(nil, emqxEnterprise.DeepCopy(), lwm2m.DeepCopy()),
