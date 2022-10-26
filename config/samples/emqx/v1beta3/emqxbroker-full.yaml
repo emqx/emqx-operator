@@ -9,7 +9,8 @@ spec:
   env:
     - name: Foo
       value: Bar
-  # imagePullPolicy: [fake-secret]
+  # imagePullSecrets:
+  #   - name: fake-secrets
   # nodeName:
   # nodeSelector:
   # affinity:
