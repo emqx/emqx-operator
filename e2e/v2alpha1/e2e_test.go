@@ -59,17 +59,11 @@ var _ = Describe("E2E Test", func() {
 		emqx := &appsv2alpha1.EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "e2e-test",
-				Namespace: "e2e-test",
+				Namespace: "e2e-test-v2alpha1",
 			},
 			Spec: appsv2alpha1.EMQXSpec{
 				Image: "emqx/emqx:5.0.9",
 				BootstrapConfig: `
-				log{
-					console_handler: {
-						enable: true
-						level: debug
-					}
-				}
 				gateway {
 					"lwm2m" {
 					  auto_observe = true
@@ -107,21 +101,28 @@ var _ = Describe("E2E Test", func() {
 
 		Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "e2e-test",
+				Name: "e2e-test-v2alpha1",
 			},
 		})).Should(Succeed())
 		Expect(k8sClient.Create(context.TODO(), emqx)).Should(Succeed())
 	})
 
 	AfterEach(func() {
+		Expect(k8sClient.Delete(context.TODO(), &appsv2alpha1.EMQX{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "e2e-test",
+				Namespace: "e2e-test-v2alpha1",
+			},
+		})).Should(Succeed())
+
 		Expect(k8sClient.Delete(context.TODO(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "e2e-test",
+				Name: "e2e-test-v2alpha1",
 			},
 		})).Should(Succeed())
 
 		Eventually(func() bool {
-			err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test"}, &corev1.Namespace{})
+			err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-v2alpha1"}, &corev1.Namespace{})
 			return k8sErrors.IsNotFound(err)
 		}, timeout, interval).Should(BeTrue())
 	})
@@ -132,7 +133,7 @@ var _ = Describe("E2E Test", func() {
 		It("", func() {
 			By("Checking the EMQX Custom Resource's Status")
 			Eventually(func() []appsv2alpha1.Condition {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test"}, instance)
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
@@ -146,7 +147,7 @@ var _ = Describe("E2E Test", func() {
 			By("Checking the EMQX Custom Resource's Service")
 			svc := &corev1.Service{}
 			Eventually(func() map[string]string {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "e2e-test"}, svc)
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "e2e-test-v2alpha1"}, svc)
 				return svc.Spec.Selector
 			}, timeout, interval).Should(HaveKeyWithValue("apps.emqx.io/db-role", "replicant"))
 
@@ -160,7 +161,7 @@ var _ = Describe("E2E Test", func() {
 		JustBeforeEach(func() {
 			By("Update the EMQX Custom Resource, add replicant nodes")
 			Eventually(func() error {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test"}, instance)
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
 				replicant := int32(0)
 				instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
 				return k8sClient.Update(context.TODO(), instance)
@@ -169,7 +170,7 @@ var _ = Describe("E2E Test", func() {
 		It("", func() {
 			By("Checking the EMQX Custom Resource's Status")
 			Eventually(func() []appsv2alpha1.Condition {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test"}, instance)
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
@@ -183,7 +184,7 @@ var _ = Describe("E2E Test", func() {
 			By("Checking the EMQX Custom Resource's Service")
 			svc := &corev1.Service{}
 			Eventually(func() map[string]string {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "e2e-test"}, svc)
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "e2e-test-v2alpha1"}, svc)
 				return svc.Spec.Selector
 			}, timeout, interval).Should(HaveKeyWithValue("apps.emqx.io/db-role", "core"))
 
@@ -197,12 +198,12 @@ var _ = Describe("E2E Test", func() {
 		JustBeforeEach(func() {
 			By("Wait EMQX cluster ready")
 			Eventually(func() []appsv2alpha1.Condition {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test"}, instance)
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 			By("Update the EMQX Custom Resource, change image")
 			Eventually(func() error {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test"}, instance)
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
 				replicant := int32(3)
 				instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
 				instance.Spec.Image = "emqx/emqx:5.0.8"
@@ -214,7 +215,7 @@ var _ = Describe("E2E Test", func() {
 			By("Checking statefulSet image")
 			Eventually(func() string {
 				sts := &appsv1.StatefulSet{}
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-core", Namespace: "e2e-test"}, sts)
+				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-core", Namespace: "e2e-test-v2alpha1"}, sts)
 				if err != nil {
 					return ""
 				}
@@ -224,7 +225,7 @@ var _ = Describe("E2E Test", func() {
 			By("Checking deployment image")
 			Eventually(func() string {
 				deploy := &appsv1.Deployment{}
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-replicant", Namespace: "e2e-test"}, deploy)
+				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-replicant", Namespace: "e2e-test-v2alpha1"}, deploy)
 				if err != nil {
 					return ""
 				}
@@ -233,7 +234,7 @@ var _ = Describe("E2E Test", func() {
 
 			By("Checking the EMQX Custom Resource's Status")
 			Eventually(func() []appsv2alpha1.Condition {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test"}, instance)
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
