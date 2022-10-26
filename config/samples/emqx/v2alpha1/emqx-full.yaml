@@ -5,7 +5,8 @@ metadata:
 spec:
   image: "emqx/emqx:5.0.6"
   imagePullPolicy: IfNotPresent
-  # imagePullSecrets: [fake-secrets]
+  # imagePullSecrets:
+  #   - name: fake-secrets
   bootstrapConfig: |
     node {
       cookie = emqxsecretcookie
