@@ -71,21 +71,21 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// Update EMQX Custom Resource's status
-	instance, err := r.updateStatus(instance)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.Status().Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Create Resources
 	resources, err := r.createResources(instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Update EMQX Custom Resource's status
+	instance, err = r.updateStatus(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.Status().Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
 

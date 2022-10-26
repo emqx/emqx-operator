@@ -391,7 +391,7 @@ func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *c
 
 	env := corev1.EnvVar{
 		Name:  "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE",
-		Value: "/opt/emqx/data/bootstrap_user",
+		Value: `"/opt/emqx/data/bootstrap_user"`,
 	}
 
 	if isNotExistEnv(sts.Spec.Template.Spec.Containers[0].Env, env) {
