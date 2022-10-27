@@ -1,9 +1,6 @@
 # Default values for emqx-operator.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-
-skipCRDs: false
-
 replicaCount: 1
 
 image:
@@ -41,30 +38,52 @@ tolerations: []
 
 affinity: {}
 
-cert-manager:
-  # We using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server.
-  # You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it.
-  # Or you can use your own certificate, You need create a TLS secret for provisioning the certificates for the "${NAME}-webhook-service.${NAMESPACE}.svc"
-  enable: true
-  secretName:
+admissionWebhooks:
+  cert:
+    # If not set and create is true, a name is generated using the "{fullname}-webhook-server-cert"
+    secretName: ""
+    cert-manager:
+      # Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server.
+      # You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it.
+      enable: true
+    certgen:
+      enable: false
+      patch:
+        image:
+          repository: "k8s.gcr.io/ingress-nginx/kube-webhook-certgen"
+          tag: ""
+          pullPolicy: IfNotPresent
+        serviceAccount:
+          # Specifies whether a service account should be created
+          create: true
+          # Annotations to add to the service account
+          annotations: {}
+          # The name of the service account to use.
+          # If not set and create is true, a name is generated using the "{fullname}-certgen"
+          name: ""
+        resources: {}
+        podAnnotations: {}
+        nodeSelector: {}
+        affinity: {}
+        tolerations: []
 
-webhookServerSecretName:
-
-patch:
-  image:
-    repository: bitnami/kubectl
-    tag: ""
-    pullPolicy: IfNotPresent
-  serviceAccount:
-    # Specifies whether a service account should be created
-    create: true
-    # Annotations to add to the service account
-    annotations: {}
-    # The name of the service account to use.
-    # If not set and create is true, a name is generated using the "{fullname template}-patch"
-    name: ""
-  resources: {}
-  podAnnotations: {}
-  nodeSelector: {}
-  affinity: {}
-  tolerations: []
+  conversion:
+    enable: true
+    patch:
+      image:
+        repository: docker.io/emqx/emqx-operator-kubectl
+        tag: "1.25"
+        pullPolicy: IfNotPresent
+      serviceAccount:
+        # Specifies whether a service account should be created
+        create: true
+        # Annotations to add to the service account
+        annotations: {}
+        # The name of the service account to use.
+        # If not set and create is true, a name is generated using the "{fullname}-conversion-patch"
+        name: ""
+      resources: {}
+      podAnnotations: {}
+      nodeSelector: {}
+      affinity: {}
+      tolerations: []
