@@ -1,3 +1,4 @@
+{{- if .Values.admissionWebhooks.conversion.enable -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -11,7 +12,7 @@ metadata:
 spec:
   template:
     metadata:
-      {{- with .Values.patch.podAnnotations }}
+      {{- with .Values.admissionWebhooks.conversion.patch.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -22,7 +23,7 @@ spec:
       serviceAccountName: {{ include "emqx-operator.patchServiceAccountName" . }}
       containers:
       - name: conversion-patch
-        image: "{{ .Values.patch.image.repository }}:{{ .Values.patch.image.tag | default "latest" }}"
+        image: "{{ .Values.admissionWebhooks.conversion.patch.image.repository }}:{{ .Values.admissionWebhooks.conversion.patch.image.tag | default "latest" }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command:
         - bash
@@ -30,6 +31,7 @@ spec:
         - |
           set -x
           for r in emqxbrokers.apps.emqx.io emqxenterprises.apps.emqx.io emqxplugins.apps.emqx.io; do
+            {{- if (index .Values "admissionWebhooks" "cert" "cert-manager" "enable") }}
             kubectl patch crd $r --type merge -p '
               {
                 "metadata": {
@@ -39,6 +41,7 @@ spec:
                 }
               }
             '
+            {{- end }}
             kubectl patch crd $r --type merge -p '
               {
                 "spec": {
@@ -62,16 +65,17 @@ spec:
             '
           done
         resources:
-          {{- toYaml .Values.patch.resources | nindent 12 }}
-      {{- with .Values.patch.nodeSelector }}
+          {{- toYaml .Values.admissionWebhooks.conversion.patch.resources | nindent 12 }}
+      {{- with .Values.admissionWebhooks.conversion.patch.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.patch.affinity }}
+      {{- with .Values.admissionWebhooks.conversion.patch.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.patch.tolerations }}
+      {{- with .Values.admissionWebhooks.conversion.patch.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
