@@ -1,6 +1,6 @@
-# emqx-operator
+****# emqx-operator
 
-The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/) includes EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of the EMQX cluster.
+The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/) including EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of the EMQX cluster.
 
 ## Prerequisites
 
@@ -37,7 +37,6 @@ The following table lists the configurable parameters of the cert-manager chart 
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
-| `skipCRDs`| If true, CRD resources will not be installed as part of the Helm chart. | `false` |
 | `image.repository` | Image repository | `emqx/emqx-operator-controller` |
 | `image.tag` | Image tag | `{{RELEASE_VERSION}}` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
@@ -52,8 +51,20 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `nodeSelector` | Node labels for pod assignment | `{}` |
 | `affinity` | Node affinity for pod assignment | `{}` |
 | `tolerations` | Node tolerations for pod assignment | `[]` |
-| `cert-manager.enable` | We using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it. | `true` |
-| `cert-manager.secretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc` | `""` |
+| `admissionWebhooks.cert` | Manager TLS secret for operator webhook server | `{}` |
+| `admissionWebhooks.cert.secretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc` | `""` |
+| `admissionWebhooks.cert.cert-manager.enable` | Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it. | `false` |
+| `admissionWebhooks.conversion.patch` | add `.spec.conversion` fields in CRDs | `{}` |
+| `admissionWebhooks.conversion.patch.image.tag` | Image tag | `` |
+| `admissionWebhooks.conversion.patch.image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `admissionWebhooks.conversion.patch.imagePullSecrets` | Image pull secrets| `[]` |
+| `admissionWebhooks.conversion.patch.serviceAccount.create` | If `true`, create a new service account | `true` |
+| `admissionWebhooks.conversion.patch.serviceAccount.name` | Service account to be used. If not set and `serviceAccount.create` is `true`, a name is generated using the {fullname}-conversion-patch |  |
+| `admissionWebhooks.conversion.patch.serviceAccount.annotations` | Annotations to add to the service account |  |
+| `admissionWebhooks.conversion.patch.resources` | CPU/memory resource requests/limits | `{}` |
+| `admissionWebhooks.conversion.patch.nodeSelector` | Node labels for pod assignment | `{}` |
+| `admissionWebhooks.conversion.patch.affinity` | Node affinity for pod assignment | `{}` |
+| `admissionWebhooks.conversion.patch.tolerations` | Node tolerations for pod assignment | `[]` |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
