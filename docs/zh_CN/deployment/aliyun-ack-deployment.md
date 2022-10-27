@@ -52,7 +52,7 @@ metadata:
   labels:
     "apps.emqx.io/instance": "emqx-ee"
   annotations:
-    service.beta.kubernetes.io/backend-type："eni"
+    service.beta.kubernetes.io/backend-type: "eni"
 spec:
   emqxTemplate:
     image: emqx/emqx-ee:4.4.8
