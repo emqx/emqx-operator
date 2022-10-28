@@ -67,7 +67,7 @@ type EmqxContainer struct {
 	// Each container in a pod must have a unique name (DNS_LABEL).
 	// Cannot be updated.
 	//+kubebuilder:default="emqx"
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Container image name.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
 	// This field is optional to allow higher level config management to default or override
