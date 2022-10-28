@@ -5537,8 +5537,6 @@ spec:
                               might be configured in the container image. Cannot be
                               updated.
                             type: string
-                        required:
-                        - name
                         type: object
                       ephemeralContainers:
                         items:
