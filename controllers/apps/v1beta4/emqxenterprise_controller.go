@@ -45,7 +45,7 @@ type EmqxEnterpriseReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *EmqxEnterpriseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	instance := &appsv1beta4.EmqxEnterprise{}
-	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
