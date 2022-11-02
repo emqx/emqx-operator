@@ -28,7 +28,7 @@ import (
 )
 
 type PortForwardOptions struct {
-	kubernetes.Clientset
+	*kubernetes.Clientset
 	Namespace    string
 	PodName      string
 	PodPorts     []string
