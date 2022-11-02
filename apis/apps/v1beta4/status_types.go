@@ -42,6 +42,7 @@ type EmqxStatus interface {
 	IsPluginInitialized() bool
 	GetConditions() []Condition
 	SetCondition(c Condition)
+	GetEmqxNodes() []EmqxNode
 }
 
 type EmqxNode struct {
@@ -100,6 +101,10 @@ func (s *Status) IsPluginInitialized() bool {
 		}
 	}
 	return false
+}
+
+func (s *Status) GetEmqxNodes() []EmqxNode {
+	return s.EmqxNodes
 }
 
 func (s *Status) GetConditions() []Condition {
