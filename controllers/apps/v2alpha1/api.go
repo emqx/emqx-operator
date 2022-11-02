@@ -37,7 +37,7 @@ type requestAPI struct {
 	Username string
 	Password string
 	Port     string
-	handler.Handler
+	*handler.Handler
 }
 
 func (r *requestAPI) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNode, error) {
