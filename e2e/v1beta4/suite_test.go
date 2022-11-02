@@ -24,7 +24,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -91,15 +90,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	clientset, _ := kubernetes.NewForConfig(cfg)
-	Expect(clientset).NotTo(BeNil())
-
-	handler := handler.Handler{
-		Client:    k8sClient,
-		Clientset: *clientset,
-		Config:    *cfg,
-	}
-
+	handler := handler.NewHandler(k8sManager)
 	emqxReconciler := appscontrollersv1beta4.EmqxReconciler{
 		Handler:       handler,
 		Scheme:        k8sManager.GetScheme(),
