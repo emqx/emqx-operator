@@ -200,7 +200,7 @@ func TestGenerateService(t *testing.T) {
 	t.Run("service", func(t *testing.T) {
 		expectService := expect.DeepCopy()
 
-		_, got := generateService(emqx)
+		got := generateService(emqx)
 		assert.Equal(t, expectService, got)
 	})
 
@@ -220,7 +220,7 @@ func TestGenerateService(t *testing.T) {
 			},
 		}
 
-		got, _ := generateService(emqx)
+		got := generateHeadlessService(emqx)
 		assert.Equal(t, expectHeadless, got)
 	})
 }
