@@ -192,9 +192,12 @@ func generateDefaultPluginsConfig(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 	return cm
 }
 
-func generateLicense(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Secret {
-	names := appsv1beta4.Names{Object: emqxEnterprise}
-	license := emqxEnterprise.Spec.Template.Spec.EmqxContainer.EmqxLicense
+func generateLicense(instance appsv1beta4.Emqx) *corev1.Secret {
+	if _, ok := instance.(*appsv1beta4.EmqxEnterprise); !ok {
+		return nil
+	}
+	names := appsv1beta4.Names{Object: instance}
+	license := instance.GetTemplate().Spec.EmqxContainer.EmqxLicense
 	if len(license.Data) == 0 && len(license.StringData) == 0 {
 		return nil
 	}
@@ -206,9 +209,9 @@ func generateLicense(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Secret 
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        names.License(),
-			Namespace:   emqxEnterprise.GetNamespace(),
-			Labels:      emqxEnterprise.GetLabels(),
-			Annotations: emqxEnterprise.GetAnnotations(),
+			Namespace:   instance.GetNamespace(),
+			Labels:      instance.GetLabels(),
+			Annotations: instance.GetAnnotations(),
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{"emqx.lic": license.Data},
@@ -242,18 +245,10 @@ func generateEmqxACL(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 	}
 }
 
-func generateService(instance appsv1beta4.Emqx) (headlessSvc, svc *corev1.Service) {
+func generateHeadlessService(instance appsv1beta4.Emqx) *corev1.Service {
 	names := appsv1beta4.Names{Object: instance}
-	svc = &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: instance.GetServiceTemplate().ObjectMeta,
-		Spec:       instance.GetServiceTemplate().Spec,
-	}
 
-	headlessSvc = &corev1.Service{
+	headlessSvc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: "v1",
@@ -273,7 +268,7 @@ func generateService(instance appsv1beta4.Emqx) (headlessSvc, svc *corev1.Servic
 	}
 
 	compile := regexp.MustCompile(".*management.*")
-	for _, port := range svc.Spec.Ports {
+	for _, port := range instance.GetServiceTemplate().Spec.Ports {
 		if compile.MatchString(port.Name) {
 			// Headless services must not set nodePort
 			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, corev1.ServicePort{
@@ -285,79 +280,100 @@ func generateService(instance appsv1beta4.Emqx) (headlessSvc, svc *corev1.Servic
 			})
 		}
 	}
+	return headlessSvc
+}
 
-	return headlessSvc, svc
+func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: instance.GetServiceTemplate().ObjectMeta,
+		Spec:       instance.GetServiceTemplate().Spec,
+	}
 }
 
 func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	names := appsv1beta4.Names{Object: instance}
 
+	emqxTemplate := instance.GetTemplate()
+
 	reloaderContainer := corev1.Container{
 		Name:            ReloaderContainerName,
 		Image:           ReloaderContainerImage,
-		ImagePullPolicy: instance.GetTemplate().Spec.EmqxContainer.ImagePullPolicy,
+		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.ImagePullPolicy,
 		Args: []string{
 			"-u", "admin",
 			"-p", "public",
 			"-P", "8081",
 		},
-		EnvFrom:      instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
+		EnvFrom:      emqxTemplate.Spec.EmqxContainer.EnvFrom,
 		Env:          mergeEnvAndConfig(instance),
-		VolumeMounts: instance.GetTemplate().Spec.EmqxContainer.VolumeMounts,
+		VolumeMounts: emqxTemplate.Spec.EmqxContainer.VolumeMounts,
 	}
 
 	emqxContainer := corev1.Container{
-		Name:            instance.GetTemplate().Spec.EmqxContainer.Name,
-		Image:           instance.GetTemplate().Spec.EmqxContainer.Image,
-		ImagePullPolicy: instance.GetTemplate().Spec.EmqxContainer.ImagePullPolicy,
-		Command:         instance.GetTemplate().Spec.EmqxContainer.Command,
-		Args:            instance.GetTemplate().Spec.EmqxContainer.Args,
-		WorkingDir:      instance.GetTemplate().Spec.EmqxContainer.WorkingDir,
-		Ports:           instance.GetTemplate().Spec.EmqxContainer.Ports,
-		EnvFrom:         instance.GetTemplate().Spec.EmqxContainer.EnvFrom,
+		Name:            emqxTemplate.Spec.EmqxContainer.Name,
+		Image:           emqxTemplate.Spec.EmqxContainer.Image,
+		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.ImagePullPolicy,
+		Command:         emqxTemplate.Spec.EmqxContainer.Command,
+		Args:            emqxTemplate.Spec.EmqxContainer.Args,
+		WorkingDir:      emqxTemplate.Spec.EmqxContainer.WorkingDir,
+		Ports:           emqxTemplate.Spec.EmqxContainer.Ports,
+		EnvFrom:         emqxTemplate.Spec.EmqxContainer.EnvFrom,
 		Env:             mergeEnvAndConfig(instance),
-		Resources:       instance.GetTemplate().Spec.EmqxContainer.Resources,
+		Resources:       emqxTemplate.Spec.EmqxContainer.Resources,
 		VolumeMounts: append(
-			instance.GetTemplate().Spec.EmqxContainer.VolumeMounts,
+			emqxTemplate.Spec.EmqxContainer.VolumeMounts,
 			corev1.VolumeMount{
 				Name:      names.Data(),
 				MountPath: "/opt/emqx/data",
 			},
 		),
-		VolumeDevices:            instance.GetTemplate().Spec.EmqxContainer.VolumeDevices,
-		LivenessProbe:            instance.GetTemplate().Spec.EmqxContainer.LivenessProbe,
-		ReadinessProbe:           instance.GetTemplate().Spec.EmqxContainer.ReadinessProbe,
-		StartupProbe:             instance.GetTemplate().Spec.EmqxContainer.StartupProbe,
-		Lifecycle:                instance.GetTemplate().Spec.EmqxContainer.Lifecycle,
-		TerminationMessagePath:   instance.GetTemplate().Spec.EmqxContainer.TerminationMessagePath,
-		TerminationMessagePolicy: instance.GetTemplate().Spec.EmqxContainer.TerminationMessagePolicy,
-		SecurityContext:          instance.GetTemplate().Spec.EmqxContainer.SecurityContext,
-		Stdin:                    instance.GetTemplate().Spec.EmqxContainer.Stdin,
-		StdinOnce:                instance.GetTemplate().Spec.EmqxContainer.StdinOnce,
-		TTY:                      instance.GetTemplate().Spec.EmqxContainer.TTY,
+		VolumeDevices:            emqxTemplate.Spec.EmqxContainer.VolumeDevices,
+		LivenessProbe:            emqxTemplate.Spec.EmqxContainer.LivenessProbe,
+		ReadinessProbe:           emqxTemplate.Spec.EmqxContainer.ReadinessProbe,
+		StartupProbe:             emqxTemplate.Spec.EmqxContainer.StartupProbe,
+		Lifecycle:                emqxTemplate.Spec.EmqxContainer.Lifecycle,
+		TerminationMessagePath:   emqxTemplate.Spec.EmqxContainer.TerminationMessagePath,
+		TerminationMessagePolicy: emqxTemplate.Spec.EmqxContainer.TerminationMessagePolicy,
+		SecurityContext:          emqxTemplate.Spec.EmqxContainer.SecurityContext,
+		Stdin:                    emqxTemplate.Spec.EmqxContainer.Stdin,
+		StdinOnce:                emqxTemplate.Spec.EmqxContainer.StdinOnce,
+		TTY:                      emqxTemplate.Spec.EmqxContainer.TTY,
 	}
 
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:      instance.GetTemplate().Labels,
-			Annotations: instance.GetTemplate().Annotations,
+			Labels:      emqxTemplate.Labels,
+			Annotations: emqxTemplate.Annotations,
 		},
 		Spec: corev1.PodSpec{
-			Affinity:            instance.GetTemplate().Spec.Affinity,
-			Tolerations:         instance.GetTemplate().Spec.Tolerations,
-			NodeName:            instance.GetTemplate().Spec.NodeName,
-			NodeSelector:        instance.GetTemplate().Spec.NodeSelector,
-			ImagePullSecrets:    instance.GetTemplate().Spec.ImagePullSecrets,
-			InitContainers:      instance.GetTemplate().Spec.InitContainers,
-			EphemeralContainers: instance.GetTemplate().Spec.EphemeralContainers,
+			Affinity:            emqxTemplate.Spec.Affinity,
+			Tolerations:         emqxTemplate.Spec.Tolerations,
+			NodeName:            emqxTemplate.Spec.NodeName,
+			NodeSelector:        emqxTemplate.Spec.NodeSelector,
+			ImagePullSecrets:    emqxTemplate.Spec.ImagePullSecrets,
+			InitContainers:      emqxTemplate.Spec.InitContainers,
+			EphemeralContainers: emqxTemplate.Spec.EphemeralContainers,
 			Containers: append([]corev1.Container{
 				emqxContainer, reloaderContainer,
-			}, instance.GetTemplate().Spec.ExtraContainers...),
+			}, emqxTemplate.Spec.ExtraContainers...),
 
-			SecurityContext: instance.GetTemplate().Spec.PodSecurityContext,
-			Volumes:         instance.GetTemplate().Spec.Volumes,
+			SecurityContext: emqxTemplate.Spec.PodSecurityContext,
+			Volumes:         emqxTemplate.Spec.Volumes,
 		},
 	}
+	containerNames := []string{}
+	for _, c := range podTemplate.Spec.Containers {
+		containerNames = append(containerNames, c.Name)
+	}
+
+	if podTemplate.Annotations == nil {
+		podTemplate.Annotations = make(map[string]string)
+	}
+	podTemplate.Annotations[handler.ManageContainersAnnotation] = strings.Join(containerNames, ",")
 
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -374,11 +390,16 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			ServiceName: names.HeadlessSvc(),
 			Replicas:    instance.GetReplicas(),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: instance.GetLabels(),
+				MatchLabels: podTemplate.Labels,
 			},
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template:            podTemplate,
 		},
+	}
+
+	if sts.Annotations != nil {
+		// Delete needless annotations from EMQX Custom Resource
+		delete(sts.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 	}
 
 	if len(instance.GetVolumeClaimTemplates()) == 0 {
@@ -394,21 +415,6 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	} else {
 		sts.Spec.VolumeClaimTemplates = instance.GetVolumeClaimTemplates()
 	}
-
-	containerNames := []string{}
-	for _, c := range sts.Spec.Template.Spec.Containers {
-		containerNames = append(containerNames, c.Name)
-	}
-
-	if sts.Spec.Template.Annotations == nil {
-		sts.Spec.Template.Annotations = make(map[string]string)
-	}
-	sts.Spec.Template.Annotations[handler.ManageContainersAnnotation] = strings.Join(containerNames, ",")
-
-	if sts.Annotations == nil {
-		sts.Annotations = make(map[string]string)
-	}
-	delete(sts.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	return sts
 }
@@ -437,6 +443,9 @@ func updateStatefulSetForPluginsConfig(sts *appsv1.StatefulSet, pluginsConfig *c
 }
 
 func updateStatefulSetForLicense(sts *appsv1.StatefulSet, license *corev1.Secret) *appsv1.StatefulSet {
+	if license == nil {
+		return sts
+	}
 	fileName := "emqx.lic"
 	for k := range license.Data {
 		fileName = k
