@@ -46,7 +46,7 @@ import (
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 type EmqxReconciler struct {
-	handler.Handler
+	*handler.Handler
 	Scheme *runtime.Scheme
 	record.EventRecorder
 }
@@ -56,7 +56,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		condition, err := r.initializedPluginList(instance)
 		if condition != nil {
 			instance.SetCondition(*condition)
-			_ = r.Status().Update(ctx, instance)
+			_ = r.Client.Status().Update(ctx, instance)
 		}
 		if err != nil {
 			return ctrl.Result{}, err
@@ -67,7 +67,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	condition, err := r.createOrUpdateResourceList(instance)
 	if condition != nil {
 		instance.SetCondition(*condition)
-		_ = r.Status().Update(ctx, instance)
+		_ = r.Client.Status().Update(ctx, instance)
 	}
 	if err != nil {
 		return ctrl.Result{}, err
@@ -78,7 +78,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{}, err
 	}
 	instance.SetStatus(status)
-	_ = r.Status().Update(ctx, instance)
+	_ = r.Client.Status().Update(ctx, instance)
 
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
@@ -89,7 +89,7 @@ func (r *EmqxReconciler) initializedPluginList(instance appsv1beta4.Emqx) (*apps
 		return nil, err
 	}
 
-	if err := r.CreateOrUpdateList(instance, r.Scheme, plugins, func(client.Object) error { return nil }); err != nil {
+	if err := r.CreateOrUpdateList(instance, r.Scheme, plugins); err != nil {
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 			condition := appsv1beta4.NewCondition(
@@ -115,7 +115,7 @@ func (r *EmqxReconciler) createOrUpdateResourceList(instance appsv1beta4.Emqx) (
 	if err != nil {
 		return nil, err
 	}
-	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
+	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		condition := appsv1beta4.NewCondition(
 			appsv1beta4.ConditionRunning,
