@@ -42,7 +42,7 @@ const EMQXContainerName string = "emqx"
 
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
-	handler.Handler
+	*handler.Handler
 	Scheme *runtime.Scheme
 	record.EventRecorder
 }
@@ -64,7 +64,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	_ = log.FromContext(ctx)
 
 	instance := &appsv2alpha1.EMQX{}
-	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -76,7 +76,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
+	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -85,7 +85,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.Status().Update(ctx, instance); err != nil {
+	if err := r.Client.Status().Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -140,12 +140,12 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
 	var err error
 
-	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
 	}
 
-	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ReplicantTemplate.Name, Namespace: instance.Namespace}, existedDeploy)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ReplicantTemplate.Name, Namespace: instance.Namespace}, existedDeploy)
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, emperror.Wrap(err, "failed to get existed deployment")
 	}
@@ -163,7 +163,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 
 func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username, password string, err error) {
 	secret := &corev1.Secret{}
-	if err = r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfBootStrapUser(), Namespace: instance.Namespace}, secret); err != nil {
+	if err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfBootStrapUser(), Namespace: instance.Namespace}, secret); err != nil {
 		return "", "", err
 	}
 

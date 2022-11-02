@@ -52,7 +52,7 @@ type pluginListByAPIReturn struct {
 
 // EmqxPluginReconciler reconciles a EmqxPlugin object
 type EmqxPluginReconciler struct {
-	handler.Handler
+	*handler.Handler
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxplugins,verbs=get;list;watch;create;update;patch;delete
@@ -73,7 +73,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logger.V(1).Info("Reconcile EmqxPlugin")
 
 	instance := &appsv1beta4.EmqxPlugin{}
-	if err := r.Handler.Get(ctx, req.NamespacedName, instance); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -271,7 +271,7 @@ func (r *EmqxPluginReconciler) loadPluginConfig(plugin *appsv1beta4.EmqxPlugin, 
 	pluginsConfig.Data = configData
 
 	// Update plugin config
-	if err := r.Handler.Update(pluginsConfig, func(_ client.Object) error { return nil }); err != nil {
+	if err := r.Handler.Update(pluginsConfig); err != nil {
 		return err
 	}
 	return nil
@@ -281,7 +281,7 @@ func (r *EmqxPluginReconciler) getEmqxList(namespace string, labels map[string]s
 	var emqxList []appsv1beta4.Emqx
 
 	emqxBrokerList := &appsv1beta4.EmqxBrokerList{}
-	if err := r.List(context.Background(), emqxBrokerList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+	if err := r.Client.List(context.Background(), emqxBrokerList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -291,7 +291,7 @@ func (r *EmqxPluginReconciler) getEmqxList(namespace string, labels map[string]s
 	}
 
 	emqxEnterpriseList := &appsv1beta4.EmqxEnterpriseList{}
-	if err := r.List(context.Background(), emqxEnterpriseList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+	if err := r.Client.List(context.Background(), emqxEnterpriseList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -305,7 +305,7 @@ func (r *EmqxPluginReconciler) getEmqxList(namespace string, labels map[string]s
 
 func (r *EmqxPluginReconciler) getPluginsConfig(emqx appsv1beta4.Emqx) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{}
-	if err := r.Get(
+	if err := r.Client.Get(
 		context.TODO(),
 		client.ObjectKey{
 			Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "plugins-config"),

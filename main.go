@@ -25,7 +25,6 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	"go.uber.org/zap/zapcore"
-	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -108,13 +107,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	config := mgr.GetConfig()
-	clientset, _ := kubernetes.NewForConfig(config)
-	handler := handler.Handler{
-		Client:    mgr.GetClient(),
-		Clientset: *clientset,
-		Config:    *config,
-	}
+	handler := handler.NewHandler(mgr)
 
 	emqxReconciler := appscontrollersv1beta4.EmqxReconciler{
 		Handler:       handler,

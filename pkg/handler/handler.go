@@ -22,16 +22,44 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
 	ManageContainersAnnotation = "apps.emqx.io/manage-containers"
+	LastAppliedAnnotation      = "apps.emqx.io/last-applied"
 )
 
+type Patcher struct {
+	*patch.Annotator
+	patch.Maker
+}
+
 type Handler struct {
-	client.Client
-	kubernetes.Clientset
-	rest.Config
+	Patcher   *Patcher
+	Client    client.Client
+	clientset *kubernetes.Clientset
+	config    *rest.Config
+}
+
+func newPatcher() *Patcher {
+	var patcher *Patcher = new(Patcher)
+	patcher.Annotator = patch.NewAnnotator(LastAppliedAnnotation)
+	patcher.Maker = patch.NewPatchMaker(
+		patcher.Annotator,
+		&patch.K8sStrategicMergePatcher{},
+		&patch.BaseJSONMergePatcher{},
+	)
+	return patcher
+}
+
+func NewHandler(mgr manager.Manager) *Handler {
+	return &Handler{
+		Patcher:   newPatcher(),
+		Client:    mgr.GetClient(),
+		clientset: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		config:    mgr.GetConfig(),
+	}
 }
 
 func (handler *Handler) RequestAPI(obj client.Object, containerName string, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
@@ -65,8 +93,8 @@ func (handler *Handler) RequestAPI(obj client.Object, containerName string, meth
 			PodPorts: []string{
 				fmt.Sprintf(":%s", apiPort),
 			},
-			Clientset:    handler.Clientset,
-			Config:       &handler.Config,
+			Clientset:    handler.clientset,
+			Config:       handler.config,
 			ReadyChannel: readyChan,
 			StopChannel:  stopChan,
 		},
@@ -75,12 +103,12 @@ func (handler *Handler) RequestAPI(obj client.Object, containerName string, meth
 	return apiClient.Do(method, path)
 }
 
-func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runtime.Scheme, resources []client.Object, postFun func(client.Object) error) error {
+func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runtime.Scheme, resources []client.Object) error {
 	for _, resource := range resources {
 		if err := ctrl.SetControllerReference(instance, resource, scheme); err != nil {
 			return err
 		}
-		err := handler.CreateOrUpdate(resource, postFun)
+		err := handler.CreateOrUpdate(resource)
 		if err != nil {
 			return err
 		}
@@ -88,13 +116,13 @@ func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runti
 	return nil
 }
 
-func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Object) error) error {
+func (handler *Handler) CreateOrUpdate(obj client.Object) error {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
 	err := handler.Client.Get(context.TODO(), client.ObjectKeyFromObject(obj), u)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return handler.Create(obj, postFun)
+			return handler.Create(obj)
 		}
 		return emperror.Wrapf(err, "failed to get %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
@@ -140,22 +168,22 @@ func (handler *Handler) CreateOrUpdate(obj client.Object, postFun func(client.Ob
 		obj = resource
 	}
 
-	patchResult, err := patch.DefaultPatchMaker.Calculate(u, obj, opts...)
+	patchResult, err := handler.Patcher.Calculate(u, obj, opts...)
 	if err != nil {
 		return emperror.Wrapf(err, "failed to calculate patch for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	if !patchResult.IsEmpty() {
-		return handler.Update(obj, postFun)
+		return handler.Update(obj)
 	}
 	return nil
 }
 
-func (handler *Handler) Create(obj client.Object, postCreated func(client.Object) error) error {
+func (handler *Handler) Create(obj client.Object) error {
 	switch obj.(type) {
 	case *appsv1beta3.EmqxBroker:
 	case *appsv1beta3.EmqxEnterprise:
 	default:
-		if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
+		if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
 			return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 		}
 	}
@@ -163,18 +191,18 @@ func (handler *Handler) Create(obj client.Object, postCreated func(client.Object
 	if err := handler.Client.Create(context.TODO(), obj); err != nil {
 		return emperror.Wrapf(err, "failed to create %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
-	return postCreated(obj)
+	return nil
 }
 
-func (handler *Handler) Update(obj client.Object, postUpdated func(client.Object) error) error {
-	if err := patch.DefaultAnnotator.SetLastAppliedAnnotation(obj); err != nil {
+func (handler *Handler) Update(obj client.Object) error {
+	if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
 		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 
 	if err := handler.Client.Update(context.TODO(), obj); err != nil {
 		return emperror.Wrapf(err, "failed to update %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
-	return postUpdated(obj)
+	return nil
 }
 
 func IgnoreOtherContainers() patch.CalculateOption {
