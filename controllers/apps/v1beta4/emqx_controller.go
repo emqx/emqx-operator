@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -64,12 +65,65 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	condition, err := r.createOrUpdateResourceList(instance)
-	if condition != nil {
+	var resources []client.Object
+	var license *corev1.Secret
+	if instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName != "" {
+		if err := r.Client.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName,
+				Namespace: instance.GetNamespace(),
+			},
+			license,
+		); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		license = generateLicense(instance)
+	}
+
+	if license != nil {
+		resources = append(resources, license)
+	}
+
+	if instance.IsRunning() {
+		serviceTemplate := instance.GetServiceTemplate()
+		ports, _ := r.getListenerPortsByAPI(instance)
+		serviceTemplate.MergePorts(ports)
+		instance.SetServiceTemplate(serviceTemplate)
+	}
+	headlessSvc := generateHeadlessService(instance)
+	// svc := generateService(instance)
+	acl := generateEmqxACL(instance)
+
+	sts := generateStatefulSet(instance)
+	sts = updateStatefulSetForACL(sts, acl)
+	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
+	sts = updateStatefulSetForLicense(sts, license)
+
+	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
+		if !reflect.ValueOf(enterprise.Spec.EmqxBlueGreenUpdate).IsZero() {
+			var err error
+			sts, err = r.getNewStatefulSet(instance, sts)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+	// svc.Spec.Selector = sts.Spec.Template.Labels
+	// resources = append(resources, acl, headlessSvc, svc, sts)
+	resources = append(resources, acl, headlessSvc, sts)
+
+	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
+		condition := appsv1beta4.NewCondition(
+			appsv1beta4.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedCreateOrUpdate",
+			err.Error(),
+		)
 		instance.SetCondition(*condition)
 		_ = r.Client.Status().Update(ctx, instance)
-	}
-	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -79,6 +133,34 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	}
 	instance.SetStatus(status)
 	_ = r.Client.Status().Update(ctx, instance)
+
+	if _, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
+		if err := r.syncStatefulSet(instance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	svc := generateService(instance)
+	latestReadySts, err := r.getLatestReadyStatefulSet(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	selector := svc.Spec.Selector
+	selector["controller-revision-hash"] = latestReadySts.Status.CurrentRevision
+	svc.Spec.Selector = selector
+
+	if err := r.CreateOrUpdateList(instance, r.Scheme, []client.Object{svc}); err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
+		condition := appsv1beta4.NewCondition(
+			appsv1beta4.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedCreateOrUpdate",
+			err.Error(),
+		)
+		instance.SetCondition(*condition)
+		_ = r.Client.Status().Update(ctx, instance)
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
@@ -108,24 +190,6 @@ func (r *EmqxReconciler) initializedPluginList(instance appsv1beta4.Emqx) (*apps
 		"All default plugins initialized",
 	)
 	return condition, nil
-}
-
-func (r *EmqxReconciler) createOrUpdateResourceList(instance appsv1beta4.Emqx) (*appsv1beta4.Condition, error) {
-	resources, err := r.createResourceList(instance)
-	if err != nil {
-		return nil, err
-	}
-	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-		condition := appsv1beta4.NewCondition(
-			appsv1beta4.ConditionRunning,
-			corev1.ConditionFalse,
-			"FailedCreateOrUpdate",
-			err.Error(),
-		)
-		return condition, err
-	}
-	return nil, nil
 }
 
 func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta4.Status, error) {
@@ -158,7 +222,7 @@ func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta
 		status.EmqxNodes = emqxNodes
 	}
 
-	if status.Replicas == status.ReadyReplicas {
+	if status.ReadyReplicas >= status.Replicas {
 		condition = appsv1beta4.NewCondition(
 			appsv1beta4.ConditionRunning,
 			corev1.ConditionTrue,
@@ -186,43 +250,6 @@ func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]clie
 	initPluginsList := generateInitPluginList(instance, pluginsList)
 	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
 	return append([]client.Object{defaultPluginsConfig}, initPluginsList...), nil
-}
-
-func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client.Object, error) {
-	var resources []client.Object
-
-	if instance.IsRunning() {
-		serviceTemplate := instance.GetServiceTemplate()
-		ports, _ := r.getListenerPortsByAPI(instance)
-		serviceTemplate.MergePorts(ports)
-		instance.SetServiceTemplate(serviceTemplate)
-	}
-
-	headlessSvc, svc := generateService(instance)
-	acl := generateEmqxACL(instance)
-	sts := generateStatefulSet(instance)
-	sts = updateStatefulSetForACL(sts, acl)
-	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
-
-	if emqxEnterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-		var license *corev1.Secret
-		if instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName != "" {
-			license = &corev1.Secret{}
-			if err := r.Client.Get(context.Background(), types.NamespacedName{Name: instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName, Namespace: emqxEnterprise.GetNamespace()}, license); err != nil {
-				return nil, err
-			}
-		} else {
-			license = generateLicense(emqxEnterprise)
-		}
-
-		if license != nil {
-			resources = append(resources, license)
-			sts = updateStatefulSetForLicense(sts, license)
-		}
-	}
-
-	resources = append(resources, acl, headlessSvc, svc, sts)
-	return resources, nil
 }
 
 func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
