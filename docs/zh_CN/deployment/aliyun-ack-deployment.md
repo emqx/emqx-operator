@@ -79,7 +79,7 @@ EOF
 
 ## 使用 LB 终结 TCP TLS 方案
 
-我们推荐在NLB上做TLS终结,如需在NLB上实现TLS 终于，你可以通过以下几个步骤实现
+我们推荐通过 [Aliyun NLB](https://help.aliyun.com/document_detail/439119.html) 进行 TLS 终结,如需在 NLB 上实现 TLS 终结，你可以通过以下几个步骤实现
 
 **备注**： 此文档详细解释了使用 EMQX Operator 在阿里云 ACK 上部署 EMQX 集群的步骤，另外还支持配置 LB 直连 Pod, 进一步提升转发性能。
 
