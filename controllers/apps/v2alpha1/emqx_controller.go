@@ -141,7 +141,10 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	var err error
 
 	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
-	if err != nil && !k8sErrors.IsNotFound(err) {
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return instance, nil
+		}
 		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
 	}
 
