@@ -79,12 +79,65 @@ EOF
 
 ## 使用 LB 终结 TCP TLS 方案
 
-由于阿里云 CLB 不支持 TCP 证书终结(NLB发布后，我们会更该该项内容)，所以请参考这篇文档解决 TCP 证书终结问题，[LB 终结 TCP TLS 方案](https://github.com/emqx/emqx-operator/discussions/312)
-
+我们推荐通过 [Aliyun NLB](https://help.aliyun.com/document_detail/439119.html) 进行 TLS 终结,如需在 NLB 上实现 TLS 终结，你可以通过以下几个步骤实现
 
 **备注**： 此文档详细解释了使用 EMQX Operator 在阿里云 ACK 上部署 EMQX 集群的步骤，另外还支持配置 LB 直连 Pod, 进一步提升转发性能。
 
+> 使用 NLB 要求 k8s 版本不低于v1.24且 CCM 版本不低于v2.5.0。有关 CCM 的版本升级说明请查看[官方文档](https://help.aliyun.com/document_detail/198792.html)
 
+### 证书导入
 
+在 Aliyun [数字证书管理服务](https://us-east-2.console.aws.amazon.com/acm/home)控制台，导入自签名或者购买证书, 证书导入后点击证书详情，获取证书ID（纯数字）。如下图:
+![](./assets/aliyun-cert.png)
 
+由于每次重新创建 NLB 时，其关联的 DNS 域名会发生变化，如果采用自签名证书，为方便测试，这里建议将证书绑定的域名设置为`*.cn-shanghai.nlb.aliyuncs.com`
 
+### 修改部署yaml
+
+```shell
+cat << "EOF" | kubectl apply -f -
+apiVersion: apps.emqx.io/v1beta3
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+  labels:
+    "apps.emqx.io/instance": "emqx-ee"
+  annotations:
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-name: "nlb"
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-force-override-listeners: "true"
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-protocol-port: "tcpssl:8883"
+    # 如集群为中国内地 Region 时，组合后的证书ID为${your-cert-id}-cn-hangzhou。
+    # 如集群为除中国内地以外的其他Region时，组合后的证书ID为${your-cert-id}-ap-southeast-1，例如：6134-ap-southeast-1。
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-cert-id: "${组合后的证书ID}"
+    # NLB 支持的地域及可用区可以登录 NLB 控制台查看，至少需要两个可用区。
+    service.beta.kubernetes.io/alibaba-cloud-loadbalancer-zone-maps: cn-hangzhou-k:vsw-i123456,cn-hangzhou-j:vsw-j654321
+spec:
+  emqxTemplate:
+    image: emqx/emqx-ee:4.4.8
+    serviceTemplate:
+      metadata:
+        name: emqx-ee
+        namespace: default
+        labels:
+          "apps.emqx.io/instance": "emqx-ee"
+      spec:
+        type: LoadBalancer
+        loadBalancerClass: "alibabacloud.com/nlb"
+        externalTrafficPolicy: Local
+        ports:
+        - name: tcpssl
+          port: 8883
+          protocol: TCP
+          targetPort: 1883
+          
+        selector:
+          "apps.emqx.io/instance": "emqx-ee"
+EOF
+```
+
+可用区域的组成规则为服务器所在区域+专有网络中[交换机](https://vpc.console.aliyun.com/vpc/cn-shanghai/switches)的实例ID
+![](./assets/aliyun-vsw.png)
+
+> 查看[官方文档](https://help.aliyun.com/document_detail/456461.html)以了解更多的参数说明
+
+部署成功后，可在[网络型负载均衡 NLB](https://slb.console.aliyun.com/nlb)中查看自动创建的 NLB 实例
