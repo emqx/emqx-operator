@@ -2,17 +2,17 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+
+	json "github.com/json-iterator/go"
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -194,9 +194,32 @@ func IgnoreOtherContainers() patch.CalculateOption {
 }
 
 func selectManagerContainer(obj []byte) ([]byte, error) {
-	podTemplateJson := gjson.GetBytes(obj, "spec.template")
-	podTemplate := &corev1.PodTemplateSpec{}
-	_ = json.Unmarshal([]byte(podTemplateJson.String()), podTemplate)
+	var podTemplate corev1.PodTemplateSpec
+	var objMap map[string]interface{}
+	err := json.Unmarshal(obj, &objMap)
+	if err != nil {
+		return nil, emperror.Wrap(err, "could not unmarshal json")
+	}
+
+	kind := objMap["kind"].(string)
+	switch kind {
+	case "Deployment":
+		deploy := &appsv1.Deployment{}
+		err := json.Unmarshal(obj, deploy)
+		if err != nil {
+			return nil, emperror.Wrap(err, "could not unmarshal json")
+		}
+		podTemplate = deploy.Spec.Template
+	case "StatefulSet":
+		sts := &appsv1.StatefulSet{}
+		err := json.Unmarshal(obj, sts)
+		if err != nil {
+			return nil, emperror.Wrap(err, "could not unmarshal json")
+		}
+		podTemplate = sts.Spec.Template
+	default:
+		return nil, emperror.Wrapf(err, "unsupported kind: %s", kind)
+	}
 
 	containerNames := podTemplate.Annotations[ManageContainersAnnotation]
 	containers := []corev1.Container{}
@@ -206,9 +229,8 @@ func selectManagerContainer(obj []byte) ([]byte, error) {
 		}
 	}
 	podTemplate.Spec.Containers = containers
-
-	newJson, _ := json.Marshal(podTemplate)
-	return sjson.SetBytes(obj, "spec.template", newJson)
+	objMap["spec"].(map[string]interface{})["template"] = podTemplate
+	return json.ConfigCompatibleWithStandardLibrary.Marshal(objMap)
 }
 
 func findReadyEmqxPod(pods *corev1.PodList, containerName string) string {
