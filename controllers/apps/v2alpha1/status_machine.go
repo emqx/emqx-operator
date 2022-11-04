@@ -159,6 +159,10 @@ func (s *coreUpdateStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDep
 		return
 	}
 
+	if existedSts == nil {
+		return
+	}
+
 	// statefulSet already updated
 	if existedSts.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
 		existedSts.Status.ObservedGeneration != existedSts.Generation {
