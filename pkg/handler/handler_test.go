@@ -19,8 +19,8 @@ package handler_test
 import (
 	"testing"
 
+	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	"github.com/emqx/emqx-operator/pkg/handler"
-	json "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,9 +28,15 @@ import (
 )
 
 func TestIgnoreOtherContainerForSts(t *testing.T) {
-	selectEmqxContainer := handler.IgnoreOtherContainers()
-
-	currentObject := &appsv1.StatefulSet{
+	current := &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "StatefulSet",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "default",
+		},
 		Spec: appsv1.StatefulSetSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -51,41 +57,16 @@ func TestIgnoreOtherContainerForSts(t *testing.T) {
 			},
 		},
 	}
-	current, _ := json.ConfigCompatibleWithStandardLibrary.Marshal(currentObject)
+	assert.Nil(t, patch.DefaultAnnotator.SetLastAppliedAnnotation(current))
 
-	modifiedObject := &appsv1.StatefulSet{
-		Spec: appsv1.StatefulSetSpec{
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						handler.ManageContainersAnnotation: "emqx,reloader",
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name: "emqx",
-						},
-						{
-							Name: "reloader",
-						},
-						{
-							Name: "fake",
-						},
-					},
-				},
-			},
-		},
-	}
-	modified, _ := json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
+	modified := current.DeepCopy()
+	modified.Spec.Template.Spec.Containers = append(modified.Spec.Template.Spec.Containers, corev1.Container{Name: "fake"})
 
-	current, modified, err := selectEmqxContainer(current, modified)
-	if err != nil {
-		t.Error(err)
-	}
-	assert.Equal(t, current, modified, "the current and modified byte sequence should be the same")
+	patchResult, err := patch.DefaultPatchMaker.Calculate(current, modified, handler.IgnoreOtherContainers())
+	assert.Nil(t, err)
+	assert.True(t, patchResult.IsEmpty())
 
-	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
+	modified.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name: "emqx",
 			Args: []string{"--fake"},
@@ -94,15 +75,12 @@ func TestIgnoreOtherContainerForSts(t *testing.T) {
 			Name: "reloader",
 		},
 	}
-	modified, _ = json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
 
-	current, modified, err = selectEmqxContainer(current, modified)
-	if err != nil {
-		t.Error(err)
-	}
-	assert.NotEqual(t, current, modified, "the current and modified byte sequence should be the not same")
+	patchResult, err = patch.DefaultPatchMaker.Calculate(current, modified, handler.IgnoreOtherContainers())
+	assert.Nil(t, err)
+	assert.False(t, patchResult.IsEmpty())
 
-	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
+	modified.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name: "emqx",
 		},
@@ -111,19 +89,22 @@ func TestIgnoreOtherContainerForSts(t *testing.T) {
 			Args: []string{"--fake"},
 		},
 	}
-	modified, _ = json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
 
-	current, modified, err = selectEmqxContainer(current, modified)
-	if err != nil {
-		t.Error(err)
-	}
-	assert.NotEqual(t, current, modified, "the current and modified byte sequence should be the not same")
+	patchResult, err = patch.DefaultPatchMaker.Calculate(current, modified, handler.IgnoreOtherContainers())
+	assert.Nil(t, err)
+	assert.False(t, patchResult.IsEmpty())
 }
 
 func TestIgnoreOtherContainerForDeploy(t *testing.T) {
-	selectEmqxContainer := handler.IgnoreOtherContainers()
-
-	currentObject := &appsv1.Deployment{
+	current := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "default",
+		},
 		Spec: appsv1.DeploymentSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -144,41 +125,18 @@ func TestIgnoreOtherContainerForDeploy(t *testing.T) {
 			},
 		},
 	}
-	current, _ := json.ConfigCompatibleWithStandardLibrary.Marshal(currentObject)
+	assert.Nil(t, patch.DefaultAnnotator.SetLastAppliedAnnotation(current))
 
-	modifiedObject := &appsv1.Deployment{
-		Spec: appsv1.DeploymentSpec{
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						handler.ManageContainersAnnotation: "emqx,reloader",
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name: "emqx",
-						},
-						{
-							Name: "reloader",
-						},
-						{
-							Name: "fake",
-						},
-					},
-				},
-			},
-		},
-	}
-	modified, _ := json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
+	modified := current.DeepCopy()
+	modified.Spec.Template.Spec.Containers = append(modified.Spec.Template.Spec.Containers, corev1.Container{Name: "fake"})
 
-	current, modified, err := selectEmqxContainer(current, modified)
-	if err != nil {
-		t.Error(err)
-	}
-	assert.Equal(t, current, modified, "the current and modified byte sequence should be the same")
+	patchResult, err := patch.DefaultPatchMaker.Calculate(current, modified, []patch.CalculateOption{
+		handler.IgnoreOtherContainers(),
+	}...)
+	assert.Nil(t, err)
+	assert.True(t, patchResult.IsEmpty())
 
-	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
+	modified.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name: "emqx",
 			Args: []string{"--fake"},
@@ -187,15 +145,12 @@ func TestIgnoreOtherContainerForDeploy(t *testing.T) {
 			Name: "reloader",
 		},
 	}
-	modified, _ = json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
 
-	current, modified, err = selectEmqxContainer(current, modified)
-	if err != nil {
-		t.Error(err)
-	}
-	assert.NotEqual(t, current, modified, "the current and modified byte sequence should be the not same")
+	patchResult, err = patch.DefaultPatchMaker.Calculate(current, modified, handler.IgnoreOtherContainers())
+	assert.Nil(t, err)
+	assert.False(t, patchResult.IsEmpty())
 
-	modifiedObject.Spec.Template.Spec.Containers = []corev1.Container{
+	modified.Spec.Template.Spec.Containers = []corev1.Container{
 		{
 			Name: "emqx",
 		},
@@ -204,11 +159,8 @@ func TestIgnoreOtherContainerForDeploy(t *testing.T) {
 			Args: []string{"--fake"},
 		},
 	}
-	modified, _ = json.ConfigCompatibleWithStandardLibrary.Marshal(modifiedObject)
 
-	current, modified, err = selectEmqxContainer(current, modified)
-	if err != nil {
-		t.Error(err)
-	}
-	assert.NotEqual(t, current, modified, "the current and modified byte sequence should be the not same")
+	patchResult, err = patch.DefaultPatchMaker.Calculate(current, modified, handler.IgnoreOtherContainers())
+	assert.Nil(t, err)
+	assert.False(t, patchResult.IsEmpty())
 }
