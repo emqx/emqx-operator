@@ -72,3 +72,42 @@ Create the name of the patch service account to use
 {{- default "default" .Values.admissionWebhooks.conversion.patch.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+
+{{/*
+Create the name of the certgen service account to use
+*/}}
+{{- define "emqx-operator.certgen.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (cat (include "emqx-operator.fullname" .) "-" "certgen" | nospace) .Values.admissionWebhooks.cert.certgen.patch.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.admissionWebhooks.cert.certgen.patch.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+
+{{/* 
+Validate values of admissionWebhooks ; - cert-manager enable or certgen enable 
+*/}}
+{{- define "emqx-operator.validate.admissionWebhooks" -}}
+{{- if and (index .Values "admissionWebhooks" "cert" "cert-manager" "enable")  .Values.admissionWebhooks.cert.certgen.enable }}
+admissionWebhooks: 
+    when cert-manager and certgen are enabled at the same time, 
+    use cert-mananger first
+{{- end }}
+{{- end }}
+
+
+
+{{/*
+Get the secretName of admissionWebhooks
+*/}}
+{{- define "emqx-operator.admissionWebhooks.secretName" -}}
+{{- if .Values.admissionWebhooks.cert.secretName }}
+{{- .Values.admissionWebhooks.cert.secretName }}
+{{- else }}
+{{- printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)}}
+{{- end }}
+{{- end }}
+
+

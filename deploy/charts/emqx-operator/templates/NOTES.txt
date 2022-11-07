@@ -1,3 +1,5 @@
+{{- include "emqx-operator.validate.admissionWebhooks" .}}
+
 EMQX Operator Controller {{ .Chart.AppVersion }} has been deployed successfully!
 
 Now you can create the EMQX Custom Resource file and deploy it.

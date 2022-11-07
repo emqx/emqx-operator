@@ -42,6 +42,12 @@ spec:
               }
             '
             {{- end }}
+            data='""'
+            {{- if not (index .Values "admissionWebhooks" "cert" "cert-manager" "enable") }}
+            {{- if .Values.admissionWebhooks.cert.certgen.enable }}
+            data=`kubectl get secret -n {{ .Release.Namespace }} {{  include "emqx-operator.admissionWebhooks.secretName" .}} -o json | jq .data.ca `
+            {{- end }}
+            {{- end }}
             kubectl patch crd $r --type merge -p '
               {
                 "spec": {
@@ -53,7 +59,8 @@ spec:
                           "namespace": "{{ .Release.Namespace }}",
                           "name": "{{ include "emqx-operator.fullname" . }}-webhook-service",
                           "path": "/convert"
-                        }
+                        },
+                        "caBundle": '$data'
                       },
                       "conversionReviewVersions": [
                         "v1"

@@ -4,10 +4,10 @@
 replicaCount: 1
 
 image:
-  repository: emqx/emqx-operator-controller
+  repository: emqx-test/emqx-operator-controller
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -39,19 +39,21 @@ tolerations: []
 affinity: {}
 
 admissionWebhooks:
+  failurePolicy: Fail
   cert:
     # If not set and create is true, a name is generated using the "{fullname}-webhook-server-cert"
     secretName: ""
     cert-manager:
       # Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server.
       # You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it.
-      enable: true
-    certgen:
       enable: false
+    certgen:
+      enable: true
       patch:
         image:
-          repository: "k8s.gcr.io/ingress-nginx/kube-webhook-certgen"
-          tag: ""
+          repository: registry.aliyuncs.com/google_containers/kube-webhook-certgen
+        #  repository: "k8s.gcr.io/ingress-nginx/kube-webhook-certgen"
+          tag: "v1.3.0"
           pullPolicy: IfNotPresent
         serviceAccount:
           # Specifies whether a service account should be created
@@ -71,8 +73,8 @@ admissionWebhooks:
     enable: true
     patch:
       image:
-        repository: docker.io/emqx/emqx-operator-kubectl
-        tag: "1.25"
+        repository: emqx-test/emqx-operator-kubectl
+        tag: "latest"
         pullPolicy: IfNotPresent
       serviceAccount:
         # Specifies whether a service account should be created
