@@ -6,12 +6,13 @@ metadata:
   name: {{ include "emqx-operator.fullname" . }}-patch-role
   labels:
     {{- include "emqx-operator.labels" . | nindent 4 }}
-  {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    {{- toYaml .  | nindent 4 }}
-  {{- end }}
+    {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
+      {{- toYaml .  | nindent 4 }}
+    {{- end }}
 rules:
 - apiGroups:
   - "apiextensions.k8s.io"
@@ -28,12 +29,13 @@ metadata:
   name: {{ include "emqx-operator.fullname" . }}-patch-rolebinding
   labels:
     {{- include "emqx-operator.labels" . | nindent 4 }}
-  {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    {{- toYaml .  | nindent 4 }}
-  {{- end }}
+    {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
+      {{- toYaml .  | nindent 4 }}
+    {{- end }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -51,11 +53,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "emqx-operator.labels" . | nindent 4 }}
-  {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    {{- toYaml .  | nindent 4 }}
-  {{- end }}
+    {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
+      {{- toYaml .  | nindent 4 }}
+    {{- end }}
 {{- end }}
 {{- end}}
