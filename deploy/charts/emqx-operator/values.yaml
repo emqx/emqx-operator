@@ -4,10 +4,10 @@
 replicaCount: 1
 
 image:
-  repository: emqx-test/emqx-operator-controller
+  repository: emqx/emqx-operator-controller
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: ""
 
 imagePullSecrets: []
 nameOverride: ""
@@ -73,8 +73,8 @@ admissionWebhooks:
     enable: true
     patch:
       image:
-        repository: emqx-test/emqx-operator-kubectl
-        tag: "latest"
+        repository: docker.io/emqx/emqx-operator-kubectl
+        tag: "1.25"
         pullPolicy: IfNotPresent
       serviceAccount:
         # Specifies whether a service account should be created
