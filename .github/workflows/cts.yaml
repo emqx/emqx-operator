@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.18.3'
+          go-version: '1.19.3'
       - name: install kubebuilder
         run: |
           OS=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.18.3'
+          go-version: '1.19.3'
       - name: Install goveralls
         run: go install github.com/mattn/goveralls@latest
       - name: Send coverage
@@ -115,7 +115,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.18.3'
+          go-version: '1.19.3'
       - name: Deploy operator
         timeout-minutes: 5
         uses: ./.github/actions/deploy-operator
