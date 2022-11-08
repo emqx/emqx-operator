@@ -29,6 +29,7 @@ spec:
         - bash
         - -c
         - |
+          set -euo pipefail
           set -x
           for r in emqxbrokers.apps.emqx.io emqxenterprises.apps.emqx.io emqxplugins.apps.emqx.io; do
             {{- if (index .Values "admissionWebhooks" "cert" "cert-manager" "enable") }}
