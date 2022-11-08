@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type Emqx interface {
 	client.Object
 	EmqxSpec
@@ -23,7 +23,7 @@ type Emqx interface {
 	SetStatus(Status)
 }
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type EmqxSpec interface {
 	GetReplicas() *int32
 	SetReplicas(int32)
