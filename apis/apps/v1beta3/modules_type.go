@@ -7,13 +7,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-//+kubebuilder:object:generate=true
+// +kubebuilder:object:generate=true
 type EmqxBrokerModule struct {
 	Name   string `json:"name,omitempty"`
 	Enable bool   `json:"enable,omitempty"`
 }
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type EmqxBrokerModuleList struct {
 	Items []EmqxBrokerModule
 }
@@ -57,7 +57,7 @@ func (list *EmqxBrokerModuleList) String() string {
 	return str
 }
 
-//+kubebuilder:object:generate=true
+// +kubebuilder:object:generate=true
 type EmqxEnterpriseModule struct {
 	Name   string `json:"name,omitempty"`
 	Enable bool   `json:"enable,omitempty"`
@@ -65,7 +65,7 @@ type EmqxEnterpriseModule struct {
 	Configs runtime.RawExtension `json:"configs,omitempty"`
 }
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type EmqxEnterpriseModuleList struct {
 	Items []EmqxEnterpriseModule
 }
