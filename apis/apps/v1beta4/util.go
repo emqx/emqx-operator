@@ -23,7 +23,7 @@ func (s *ServiceTemplate) MergePorts(ports []corev1.ServicePort) {
 	s.Spec.Ports = result
 }
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type Names struct {
 	metav1.Object
 }
