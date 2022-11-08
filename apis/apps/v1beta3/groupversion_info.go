@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1beta3 contains API Schema definitions for the apps v1beta3 API group
-//+kubebuilder:object:generate=true
-//+groupName=apps.emqx.io
+// +kubebuilder:object:generate=true
+// +groupName=apps.emqx.io
 package v1beta3
 
 import (
