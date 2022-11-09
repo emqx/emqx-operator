@@ -27,7 +27,7 @@ import (
 
 // EmqxBrokerReconciler reconciles a EmqxBroker object
 type EmqxBrokerReconciler struct {
-	EmqxReconciler
+	*EmqxReconciler
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxbrokers,verbs=get;list;watch;create;update;patch;delete
