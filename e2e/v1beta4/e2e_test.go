@@ -43,6 +43,7 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 		},
 	},
 	Spec: appsv1beta4.EmqxBrokerSpec{
+		Replicas: &[]int32{1}[0],
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
@@ -63,6 +64,7 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 		},
 	},
 	Spec: appsv1beta4.EmqxEnterpriseSpec{
+		Replicas: &[]int32{1}[0],
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
@@ -202,9 +204,9 @@ var _ = Describe("", func() {
 			Expect(k8sClient.Create(context.TODO(), plugin)).Should(Succeed())
 
 			By("check EMQX CR status")
-			Expect(emqx.GetStatus().Replicas).Should(Equal(int32(3)))
-			Expect(emqx.GetStatus().ReadyReplicas).Should(Equal(int32(3)))
-			Expect(emqx.GetStatus().EmqxNodes).Should(HaveLen(3))
+			Expect(emqx.GetStatus().Replicas).Should(Equal(int32(1)))
+			Expect(emqx.GetStatus().ReadyReplicas).Should(Equal(int32(1)))
+			Expect(emqx.GetStatus().EmqxNodes).Should(HaveLen(1))
 
 			By("check pod annotations")
 			sts := &appsv1.StatefulSet{}

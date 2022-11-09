@@ -284,8 +284,12 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 	}
 
 	var listeners []emqxListener
-	for i := 0; i < len(listenerList)-1; i++ {
-		listeners = intersection(listenerList[i].Listeners, listenerList[i+1].Listeners)
+	if len(listenerList) == 1 {
+		listeners = listenerList[0].Listeners
+	} else {
+		for i := 0; i < len(listenerList)-1; i++ {
+			listeners = intersection(listenerList[i].Listeners, listenerList[i+1].Listeners)
+		}
 	}
 
 	ports := []corev1.ServicePort{}
