@@ -147,3 +147,5 @@ jobs:
         run: kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json
       - if: failure()
         run: kubectl logs -l "apps.emqx.io/managed-by=emqx-operator" -c emqx
+      - if: failure()
+        run: kubectl get event

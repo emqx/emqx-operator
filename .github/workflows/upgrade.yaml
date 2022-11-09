@@ -119,6 +119,6 @@ jobs:
       - if: failure()
         run: kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json
       - if: failure()
-        run: kubectl get ${{ matrix.emqx[0] }} emqx -o json
+        run: kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }}  -o json
       - if: failure()
         run: kubectl get event
