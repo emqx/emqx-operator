@@ -18,30 +18,24 @@ package v1beta4
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"net"
 	"reflect"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 
-	emperror "emperror.dev/errors"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/emqx/emqx-operator/pkg/handler"
-	"github.com/tidwall/gjson"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
@@ -50,6 +44,19 @@ type EmqxReconciler struct {
 	*handler.Handler
 	Scheme *runtime.Scheme
 	record.EventRecorder
+
+	config    *rest.Config
+	clientset *kubernetes.Clientset
+}
+
+func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
+	return &EmqxReconciler{
+		Handler:       handler.NewHandler(mgr),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
+		config:        mgr.GetConfig(),
+		clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+	}
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
@@ -86,14 +93,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		resources = append(resources, license)
 	}
 
+	var listenerPorts []corev1.ServicePort
 	if instance.IsRunning() {
-		serviceTemplate := instance.GetServiceTemplate()
-		ports, _ := r.getListenerPortsByAPI(instance)
-		serviceTemplate.MergePorts(ports)
-		instance.SetServiceTemplate(serviceTemplate)
+		listenerPorts, _ = r.getListenerPortsByAPI(instance)
 	}
-	headlessSvc := generateHeadlessService(instance)
-	// svc := generateService(instance)
+	headlessSvc := generateHeadlessService(instance, listenerPorts...)
 	acl := generateEmqxACL(instance)
 
 	sts := generateStatefulSet(instance)
@@ -110,8 +114,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 			}
 		}
 	}
-	// svc.Spec.Selector = sts.Spec.Template.Labels
-	// resources = append(resources, acl, headlessSvc, svc, sts)
 	resources = append(resources, acl, headlessSvc, sts)
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
@@ -140,8 +142,8 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		}
 	}
 
-	svc := generateService(instance)
-	latestReadySts, err := r.getLatestReadyStatefulSet(instance)
+	svc := generateService(instance, listenerPorts...)
+	latestReadySts, err := r.getLatestReadyStatefulSet(instance, true)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -250,109 +252,4 @@ func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]clie
 	initPluginsList := generateInitPluginList(instance, pluginsList)
 	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
 	return append([]client.Object{defaultPluginsConfig}, initPluginsList...), nil
-}
-
-func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
-	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/nodes")
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, emperror.Errorf("failed to get node statuses from API: %s", resp.Status)
-	}
-
-	emqxNodes := []appsv1beta4.EmqxNode{}
-	data := gjson.GetBytes(body, "data")
-	if err := json.Unmarshal([]byte(data.Raw), &emqxNodes); err != nil {
-		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
-	}
-	return emqxNodes, nil
-}
-
-func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]corev1.ServicePort, error) {
-	type emqxListener struct {
-		Protocol string `json:"protocol"`
-		ListenOn string `json:"listen_on"`
-	}
-
-	type emqxListeners struct {
-		Node      string         `json:"node"`
-		Listeners []emqxListener `json:"listeners"`
-	}
-
-	intersection := func(listeners1 []emqxListener, listeners2 []emqxListener) []emqxListener {
-		hSection := map[string]struct{}{}
-		ans := make([]emqxListener, 0)
-		for _, listener := range listeners1 {
-			hSection[listener.ListenOn] = struct{}{}
-		}
-		for _, listener := range listeners2 {
-			_, ok := hSection[listener.ListenOn]
-			if ok {
-				ans = append(ans, listener)
-				delete(hSection, listener.ListenOn)
-			}
-		}
-		return ans
-	}
-
-	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/listeners")
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, err
-	}
-
-	listenerList := []emqxListeners{}
-	data := gjson.GetBytes(body, "data")
-	if err := json.Unmarshal([]byte(data.Raw), &listenerList); err != nil {
-		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
-	}
-
-	var listeners []emqxListener
-	for i := 0; i < len(listenerList)-1; i++ {
-		listeners = intersection(listenerList[i].Listeners, listenerList[i+1].Listeners)
-	}
-
-	ports := []corev1.ServicePort{}
-	for _, l := range listeners {
-		var name string
-		var protocol corev1.Protocol
-		var strPort string
-		var intPort int
-
-		compile := regexp.MustCompile(".*(udp|dtls|sn).*")
-		if compile.MatchString(l.Protocol) {
-			protocol = corev1.ProtocolUDP
-		} else {
-			protocol = corev1.ProtocolTCP
-		}
-
-		if strings.Contains(l.ListenOn, ":") {
-			_, strPort, err = net.SplitHostPort(l.ListenOn)
-			if err != nil {
-				strPort = l.ListenOn
-			}
-		} else {
-			strPort = l.ListenOn
-		}
-		intPort, _ = strconv.Atoi(strPort)
-
-		// Get name by protocol and port from API
-		// protocol maybe like mqtt:wss:8084
-		// protocol maybe like mqtt:tcp
-		// We had to do something with the "protocol" to make it conform to the kubernetes service port name specification
-		name = regexp.MustCompile(`:[\d]+`).ReplaceAllString(l.Protocol, "")
-		name = strings.ReplaceAll(name, ":", "-")
-		name = fmt.Sprintf("%s-%s", name, strPort)
-
-		ports = append(ports, corev1.ServicePort{
-			Name:       name,
-			Protocol:   protocol,
-			Port:       int32(intPort),
-			TargetPort: intstr.FromInt(intPort),
-		})
-	}
-	return ports, nil
 }

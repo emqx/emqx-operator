@@ -107,14 +107,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	handler := handler.NewHandler(mgr)
-
-	emqxReconciler := appscontrollersv1beta4.EmqxReconciler{
-		Handler:       handler,
-		Scheme:        mgr.GetScheme(),
-		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
-	}
-
+	emqxReconciler := appscontrollersv1beta4.NewEmqxReconciler(mgr)
 	if err = (&appscontrollersv1beta4.EmqxBrokerReconciler{
 		EmqxReconciler: emqxReconciler,
 	}).SetupWithManager(mgr); err != nil {
@@ -128,19 +121,21 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxEnterprise")
 		os.Exit(1)
 	}
+
+	handler := handler.NewHandler(mgr)
+	if err = (&appscontrollersv1beta4.EmqxPluginReconciler{
+		Handler: handler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
+		os.Exit(1)
+	}
+
 	if err = (&appscontrollersv2alpha1.EMQXReconciler{
 		Handler:       handler,
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX")
-		os.Exit(1)
-	}
-
-	if err = (&appscontrollersv1beta4.EmqxPluginReconciler{
-		Handler: handler,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
 		os.Exit(1)
 	}
 

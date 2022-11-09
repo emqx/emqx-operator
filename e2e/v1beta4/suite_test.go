@@ -90,12 +90,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	handler := handler.NewHandler(k8sManager)
-	emqxReconciler := appscontrollersv1beta4.EmqxReconciler{
-		Handler:       handler,
-		Scheme:        k8sManager.GetScheme(),
-		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
-	}
+	emqxReconciler := appscontrollersv1beta4.NewEmqxReconciler(k8sManager)
 
 	err = (&appscontrollersv1beta4.EmqxBrokerReconciler{
 		EmqxReconciler: emqxReconciler,
@@ -108,7 +103,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&appscontrollersv1beta4.EmqxPluginReconciler{
-		Handler: handler,
+		Handler: handler.NewHandler(k8sManager),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 	go func() {
