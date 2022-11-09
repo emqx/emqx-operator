@@ -245,7 +245,7 @@ func generateEmqxACL(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 	}
 }
 
-func generateHeadlessService(instance appsv1beta4.Emqx) *corev1.Service {
+func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
 	names := appsv1beta4.Names{Object: instance}
 
 	headlessSvc := &corev1.Service{
@@ -268,7 +268,10 @@ func generateHeadlessService(instance appsv1beta4.Emqx) *corev1.Service {
 	}
 
 	compile := regexp.MustCompile(".*management.*")
-	for _, port := range instance.GetServiceTemplate().Spec.Ports {
+
+	serviceTemplate := instance.GetServiceTemplate()
+	serviceTemplate.MergePorts(port)
+	for _, port := range serviceTemplate.Spec.Ports {
 		if compile.MatchString(port.Name) {
 			// Headless services must not set nodePort
 			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, corev1.ServicePort{
@@ -284,13 +287,15 @@ func generateHeadlessService(instance appsv1beta4.Emqx) *corev1.Service {
 }
 
 func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
+	serviceTemplate := instance.GetServiceTemplate()
+	serviceTemplate.MergePorts(port)
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: "v1",
 		},
-		ObjectMeta: instance.GetServiceTemplate().ObjectMeta,
-		Spec:       instance.GetServiceTemplate().Spec,
+		ObjectMeta: serviceTemplate.ObjectMeta,
+		Spec:       serviceTemplate.Spec,
 	}
 }
 

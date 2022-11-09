@@ -87,8 +87,7 @@ func (r *EmqxReconciler) getPodMap(instance appsv1beta4.Emqx, allSts []*appsv1.S
 	for _, p := range podList.Items {
 		// Do not ignore inactive Pods because Recreate Deployments need to verify that no
 		// Pods from older versions are running before spinning up new Pods.
-		var pod *corev1.Pod = new(corev1.Pod)
-		pod = p.DeepCopy()
+		pod := p.DeepCopy()
 		controllerRef := metav1.GetControllerOf(pod)
 		if controllerRef == nil {
 			continue
@@ -101,7 +100,7 @@ func (r *EmqxReconciler) getPodMap(instance appsv1beta4.Emqx, allSts []*appsv1.S
 	return podMap, nil
 }
 
-func (r *EmqxReconciler) getLatestReadyStatefulSet(instance appsv1beta4.Emqx) (*appsv1.StatefulSet, error) {
+func (r *EmqxReconciler) getLatestReadyStatefulSet(instance appsv1beta4.Emqx, inCluster bool) (*appsv1.StatefulSet, error) {
 	allSts, err := r.getAllStatefulSet(instance)
 	if err != nil {
 		return nil, err
@@ -118,15 +117,19 @@ func (r *EmqxReconciler) getLatestReadyStatefulSet(instance appsv1beta4.Emqx) (*
 			if pod.Status.Phase == corev1.PodRunning {
 				for _, containerStatus := range pod.Status.ContainerStatuses {
 					if containerStatus.Ready && containerStatus.Name == instance.GetTemplate().Spec.EmqxContainer.Name {
-						for _, emqxNode := range instance.GetEmqxNodes() {
-							emqxNodeName := fmt.Sprintf(
-								"%s@%s.%s",
-								instance.GetTemplate().Spec.EmqxContainer.EmqxConfig["name"],
-								pod.Name,
-								instance.GetTemplate().Spec.EmqxContainer.EmqxConfig["cluster.dns.name"],
-							)
-							if emqxNodeName == emqxNode.Node && emqxNode.NodeStatus == "Running" {
-								readyCount++
+						if !inCluster {
+							readyCount++
+						} else {
+							for _, emqxNode := range instance.GetEmqxNodes() {
+								emqxNodeName := fmt.Sprintf(
+									"%s@%s.%s",
+									instance.GetTemplate().Spec.EmqxContainer.EmqxConfig["name"],
+									pod.Name,
+									instance.GetTemplate().Spec.EmqxContainer.EmqxConfig["cluster.dns.name"],
+								)
+								if emqxNodeName == emqxNode.Node && emqxNode.NodeStatus == "Running" {
+									readyCount++
+								}
 							}
 						}
 					}
@@ -147,7 +150,7 @@ func (r *EmqxReconciler) syncStatefulSet(instance appsv1beta4.Emqx) error {
 		return err
 	}
 
-	latestReadySts, err := r.getLatestReadyStatefulSet(instance)
+	latestReadySts, err := r.getLatestReadyStatefulSet(instance, true)
 	if err != nil {
 		return err
 	}
@@ -192,7 +195,8 @@ func (r *EmqxReconciler) getNewStatefulSet(instance appsv1beta4.Emqx, newSts *ap
 			patchOpts...,
 		)
 		if patchResult.IsEmpty() {
-			return allSts[i], nil
+			newSts.ObjectMeta = *allSts[i].ObjectMeta.DeepCopy()
+			return newSts, nil
 		}
 	}
 

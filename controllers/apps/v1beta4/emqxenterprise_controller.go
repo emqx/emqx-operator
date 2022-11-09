@@ -27,7 +27,7 @@ import (
 
 // EmqxEnterpriseReconciler reconciles a EmqxEnterprise object
 type EmqxEnterpriseReconciler struct {
-	EmqxReconciler
+	*EmqxReconciler
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxenterprises,verbs=get;list;watch;create;update;patch;delete
