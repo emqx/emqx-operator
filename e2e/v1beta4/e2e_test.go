@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -43,6 +44,7 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 		},
 	},
 	Spec: appsv1beta4.EmqxBrokerSpec{
+		Replicas: &[]int32{1}[0],
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
@@ -63,6 +65,7 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 		},
 	},
 	Spec: appsv1beta4.EmqxEnterpriseSpec{
+		Replicas: &[]int32{1}[0],
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
@@ -103,7 +106,7 @@ var lwm2m = &appsv1beta4.EmqxPlugin{
 	},
 }
 
-var _ = Describe("", func() {
+var _ = Describe("Base E2E Test", func() {
 	DescribeTable("",
 		func(emqx appsv1beta4.Emqx, plugin *appsv1beta4.EmqxPlugin) {
 			var pluginList []string
@@ -177,34 +180,17 @@ var _ = Describe("", func() {
 				TargetPort: intstr.FromInt(8081),
 			}
 			By("create EMQX CR")
-			emqx.Default()
-			Expect(emqx.ValidateCreate()).Should(Succeed())
-			Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: emqx.GetNamespace(),
-				},
-			})).Should(Succeed())
-			Expect(k8sClient.Create(context.TODO(), emqx)).Should(Succeed())
-			Eventually(func() bool {
-				_ = k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Name:      emqx.GetName(),
-						Namespace: emqx.GetNamespace(),
-					},
-					emqx,
-				)
-				return emqx.IsRunning()
-			}, timeout, interval).Should(BeTrue())
+			createEmqx(emqx)
 
 			By("create EMQX Plugin")
 			plugin.Labels = emqx.GetLabels()
+			plugin.Namespace = emqx.GetNamespace()
 			Expect(k8sClient.Create(context.TODO(), plugin)).Should(Succeed())
 
 			By("check EMQX CR status")
-			Expect(emqx.GetStatus().Replicas).Should(Equal(int32(3)))
-			Expect(emqx.GetStatus().ReadyReplicas).Should(Equal(int32(3)))
-			Expect(emqx.GetStatus().EmqxNodes).Should(HaveLen(3))
+			Expect(emqx.GetStatus().Replicas).Should(Equal(int32(1)))
+			Expect(emqx.GetStatus().ReadyReplicas).Should(Equal(int32(1)))
+			Expect(emqx.GetStatus().EmqxNodes).Should(HaveLen(1))
 
 			By("check pod annotations")
 			sts := &appsv1.StatefulSet{}
@@ -271,22 +257,23 @@ var _ = Describe("", func() {
 
 			By("update EMQX Plugin")
 			Eventually(func() error {
-				plugin := &appsv1beta4.EmqxPlugin{}
+				p := &appsv1beta4.EmqxPlugin{}
 				err := k8sClient.Get(
 					context.Background(),
 					types.NamespacedName{
-						Name:      lwm2m.GetName(),
-						Namespace: lwm2m.GetNamespace(),
-					}, plugin,
+						Name:      plugin.GetName(),
+						Namespace: plugin.GetNamespace(),
+					},
+					p,
 				)
 				if err != nil {
 					return err
 				}
-				plugin.Spec.Config["lwm2m.bind.udp.1"] = "0.0.0.0:5695"
-				plugin.Spec.Config["lwm2m.bind.udp.2"] = "0.0.0.0:5696"
-				plugin.Spec.Config["lwm2m.bind.dtls.1"] = "0.0.0.0:5697"
-				plugin.Spec.Config["lwm2m.bind.dtls.2"] = "0.0.0.0:5698"
-				return k8sClient.Update(context.Background(), plugin)
+				p.Spec.Config["lwm2m.bind.udp.1"] = "0.0.0.0:5695"
+				p.Spec.Config["lwm2m.bind.udp.2"] = "0.0.0.0:5696"
+				p.Spec.Config["lwm2m.bind.dtls.1"] = "0.0.0.0:5697"
+				p.Spec.Config["lwm2m.bind.dtls.2"] = "0.0.0.0:5698"
+				return k8sClient.Update(context.Background(), p)
 			}, timeout, interval).Should(Succeed())
 
 			pluginPorts = []corev1.ServicePort{
@@ -331,31 +318,153 @@ var _ = Describe("", func() {
 			}, timeout, interval).Should(ContainElements(append(pluginPorts, append(ports, headlessPort)...)))
 
 			By("delete EMQX CR and EMQX Plugin")
-			finalizer := "apps.emqx.io/finalizer"
-			plugins := &appsv1beta4.EmqxPluginList{}
-			_ = k8sClient.List(
-				context.Background(),
-				plugins,
-				client.InNamespace("default"),
-			)
-			for _, plugin := range plugins.Items {
-				controllerutil.RemoveFinalizer(&plugin, finalizer)
-				Expect(k8sClient.Update(context.Background(), &plugin)).Should(Succeed())
-				Expect(k8sClient.Delete(context.Background(), &plugin)).Should(Succeed())
-			}
-			Expect(k8sClient.Delete(context.TODO(), emqx)).Should(Succeed())
-			Expect(k8sClient.Delete(context.TODO(), &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: emqx.GetNamespace(),
-				},
-			})).Should(Succeed())
-
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetNamespace()}, &corev1.Namespace{})
-				return k8sErrors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
+			deleteEmqx(emqx)
 		},
 		Entry(nil, emqxBroker.DeepCopy(), lwm2m.DeepCopy()),
 		Entry(nil, emqxEnterprise.DeepCopy(), lwm2m.DeepCopy()),
 	)
 })
+
+var _ = Describe("Blue Green Update Test", func() {
+	Describe("Just check enterprise", func() {
+		emqx := emqxEnterprise.DeepCopy()
+		emqx.Spec.EmqxBlueGreenUpdate = appsv1beta4.EmqxBlueGreenUpdate{
+			EvacuationStrategy: appsv1beta4.EvacuationStrategy{
+				WaitTakeover:  int32(200),
+				ConnEvictRate: int32(30),
+				SessEvictRate: int32(30),
+			},
+		}
+
+		BeforeEach(func() {
+			createEmqx(emqx)
+		})
+
+		AfterEach(func() {
+			// deleteEmqx(emqx)
+		})
+
+		It("blue green update", func() {
+			var sts *appsv1.StatefulSet
+			var existedStsList *appsv1.StatefulSetList = new(appsv1.StatefulSetList)
+			labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+				MatchLabels: emqx.GetLabels(),
+			})
+			Eventually(func() bool {
+				_ = k8sClient.List(
+					context.TODO(),
+					existedStsList,
+					&client.ListOptions{
+						Namespace:     emqx.GetNamespace(),
+						LabelSelector: labelSelector,
+					},
+				)
+				return len(existedStsList.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+
+			sts = &existedStsList.Items[0]
+
+			Eventually(func() map[string]string {
+				svc := &corev1.Service{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
+				return svc.Spec.Selector
+			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", sts.Status.CurrentRevision))
+
+			Eventually(func() string {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				if len(ee.GetEmqxNodes()) > 0 {
+					return ee.GetEmqxNodes()[0].Node
+				}
+				return ""
+			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace())))
+
+			By("update EMQX CR")
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), emqx)).Should(Succeed())
+			emqx.Spec.Template.Spec.EmqxContainer.Image = "emqx/emqx-ee:4.4.10"
+			Expect(k8sClient.Update(context.Background(), emqx)).Should(Succeed())
+
+			By("wait create new sts and delete old sts")
+			Eventually(func() bool {
+				_ = k8sClient.List(
+					context.TODO(),
+					existedStsList,
+					&client.ListOptions{
+						Namespace:     emqx.GetNamespace(),
+						LabelSelector: labelSelector,
+					},
+				)
+				return len(existedStsList.Items) == 1 && existedStsList.Items[0].UID != sts.UID
+			}, timeout, interval).Should(BeTrue())
+
+			sts = &existedStsList.Items[0]
+
+			Eventually(func() map[string]string {
+				svc := &corev1.Service{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
+				return svc.Spec.Selector
+			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", sts.Status.CurrentRevision))
+
+			Eventually(func() string {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				if len(ee.GetEmqxNodes()) > 0 {
+					return ee.GetEmqxNodes()[0].Node
+				}
+				return ""
+			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace())))
+		})
+	})
+})
+
+func createEmqx(emqx appsv1beta4.Emqx) {
+	emqx.SetNamespace(emqx.GetNamespace() + "-" + rand.String(5))
+	emqx.Default()
+	Expect(emqx.ValidateCreate()).Should(Succeed())
+	Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: emqx.GetNamespace(),
+			Labels: map[string]string{
+				"test": "e2e",
+			},
+		},
+	})).Should(Succeed())
+	Expect(k8sClient.Create(context.TODO(), emqx)).Should(Succeed())
+	Eventually(func() bool {
+		_ = k8sClient.Get(
+			context.TODO(),
+			types.NamespacedName{
+				Name:      emqx.GetName(),
+				Namespace: emqx.GetNamespace(),
+			},
+			emqx,
+		)
+		return len(emqx.GetEmqxNodes()) > 0
+	}, timeout, interval).Should(BeTrue())
+}
+
+func deleteEmqx(emqx appsv1beta4.Emqx) {
+	finalizer := "apps.emqx.io/finalizer"
+	plugins := &appsv1beta4.EmqxPluginList{}
+	_ = k8sClient.List(
+		context.Background(),
+		plugins,
+		client.InNamespace("default"),
+	)
+	for _, plugin := range plugins.Items {
+		controllerutil.RemoveFinalizer(&plugin, finalizer)
+		Expect(k8sClient.Update(context.Background(), &plugin)).Should(Succeed())
+		Expect(k8sClient.Delete(context.Background(), &plugin)).Should(Succeed())
+	}
+	Expect(k8sClient.Delete(context.TODO(), emqx)).Should(Succeed())
+	Expect(k8sClient.Delete(context.TODO(), &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: emqx.GetNamespace(),
+		},
+	})).Should(Succeed())
+
+	Eventually(func() bool {
+		err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetNamespace()}, &corev1.Namespace{})
+		return k8sErrors.IsNotFound(err)
+	}, timeout, interval).Should(BeTrue())
+}
