@@ -39,7 +39,7 @@ type EmqxEnterpriseSpec struct {
 	// VolumeClaimTemplates describes the common attributes of storage devices
 	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"persistent,omitempty"`
 
-	EmqxBlueGreenUpdate EmqxBlueGreenUpdate `json:"blueGreenUpdate,omitempty"`
+	EmqxBlueGreenUpdate *EmqxBlueGreenUpdate `json:"blueGreenUpdate,omitempty"`
 
 	Template EmqxTemplate `json:"template,omitempty"`
 
