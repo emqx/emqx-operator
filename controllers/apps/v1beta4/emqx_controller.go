@@ -18,7 +18,6 @@ package v1beta4
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -106,7 +105,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	sts = updateStatefulSetForLicense(sts, license)
 
 	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-		if !reflect.ValueOf(enterprise.Spec.EmqxBlueGreenUpdate).IsZero() {
+		if enterprise.Spec.EmqxBlueGreenUpdate != nil {
 			var err error
 			sts, err = r.getNewStatefulSet(instance, sts)
 			if err != nil {

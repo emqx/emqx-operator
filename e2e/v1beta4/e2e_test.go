@@ -328,7 +328,7 @@ var _ = Describe("Base E2E Test", func() {
 var _ = Describe("Blue Green Update Test", func() {
 	Describe("Just check enterprise", func() {
 		emqx := emqxEnterprise.DeepCopy()
-		emqx.Spec.EmqxBlueGreenUpdate = appsv1beta4.EmqxBlueGreenUpdate{
+		emqx.Spec.EmqxBlueGreenUpdate = &appsv1beta4.EmqxBlueGreenUpdate{
 			EvacuationStrategy: appsv1beta4.EvacuationStrategy{
 				WaitTakeover:  int32(200),
 				ConnEvictRate: int32(30),
