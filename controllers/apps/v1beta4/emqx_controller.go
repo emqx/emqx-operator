@@ -74,12 +74,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	}
 
 	status, err := r.updateEmqxStatus(instance)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
 	instance.SetStatus(status)
 	_ = r.Client.Status().Update(ctx, instance)
-
+	if err != nil {
+		return ctrl.Result{}, nil
+	}
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
 
@@ -190,12 +189,15 @@ func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]clie
 
 func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client.Object, error) {
 	var resources []client.Object
-
+	bootstrap_user := generateBootstrapUserSecret(instance)
 	if instance.IsRunning() {
 		serviceTemplate := instance.GetServiceTemplate()
 		ports, _ := r.getListenerPortsByAPI(instance)
 		serviceTemplate.MergePorts(ports)
 		instance.SetServiceTemplate(serviceTemplate)
+	}
+	if instance.IsCreating() {
+		resources = append(resources, bootstrap_user)
 	}
 
 	headlessSvc, svc := generateService(instance)
@@ -203,6 +205,7 @@ func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client
 	sts := generateStatefulSet(instance)
 	sts = updateStatefulSetForACL(sts, acl)
 	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
+	sts = updateStatefulSetForBootstrapUser(sts, bootstrap_user)
 
 	if emqxEnterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
 		var license *corev1.Secret
@@ -220,13 +223,16 @@ func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client
 			sts = updateStatefulSetForLicense(sts, license)
 		}
 	}
-
 	resources = append(resources, acl, headlessSvc, svc, sts)
 	return resources, nil
 }
 
 func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
-	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/nodes")
+	username, password, err := r.Handler.GetBootstrapUser(instance)
+	if err != nil {
+		return nil, err
+	}
+	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", username, password, "8081", "api/v4/nodes")
 	if err != nil {
 		return nil, err
 	}
@@ -268,8 +274,11 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 		}
 		return ans
 	}
-
-	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/listeners")
+	username, password, err := r.Handler.GetBootstrapUser(instance)
+	if err != nil {
+		return nil, err
+	}
+	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", username, password, "8081", "api/v4/listeners")
 	if err != nil {
 		return nil, err
 	}

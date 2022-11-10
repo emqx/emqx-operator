@@ -112,6 +112,7 @@ func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runti
 		if err != nil {
 			return err
 		}
+
 	}
 	return nil
 }
@@ -203,6 +204,10 @@ func (handler *Handler) Update(obj client.Object) error {
 		return emperror.Wrapf(err, "failed to update %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	return nil
+}
+
+func (handler *Handler) GetBootstrapUser(instance client.Object) (username, password string, err error) {
+	return "admin", "public", nil
 }
 
 func IgnoreOtherContainers() patch.CalculateOption {

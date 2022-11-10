@@ -47,3 +47,7 @@ func (n Names) PluginsConfig() string {
 func (n Names) Data() string {
 	return fmt.Sprintf("%s-%s", n.Object.GetName(), "data")
 }
+
+func (n Names) BootstrapUser() string {
+	return fmt.Sprintf("%s-%s", n.Object.GetName(), "bootstrap-user")
+}

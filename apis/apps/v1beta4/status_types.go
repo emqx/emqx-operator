@@ -40,6 +40,7 @@ const (
 type EmqxStatus interface {
 	IsRunning() bool
 	IsPluginInitialized() bool
+	IsCreating() bool
 	GetConditions() []Condition
 	SetCondition(c Condition)
 }
@@ -89,6 +90,21 @@ func (s *Status) IsRunning() bool {
 	if c.Type == ConditionRunning && c.Status == corev1.ConditionTrue {
 		return true
 	}
+	return false
+}
+
+func (s *Status) IsCreating() bool {
+	if len(s.Conditions) == 0 {
+		return false
+	}
+	c := s.Conditions[0]
+	if c.Type == ConditionRunning && c.Status == corev1.ConditionFalse && c.Message == "FailedCreateOrUpdate" {
+		return true
+	}
+	if c.Type == ConditionPluginInitialized && c.Status == corev1.ConditionTrue {
+		return true
+	}
+
 	return false
 }
 
