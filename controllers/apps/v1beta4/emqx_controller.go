@@ -18,29 +18,26 @@ package v1beta4
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 
-	emperror "emperror.dev/errors"
+	"github.com/sethvargo/go-password/password"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/emqx/emqx-operator/pkg/handler"
-	"github.com/tidwall/gjson"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
@@ -49,11 +46,32 @@ type EmqxReconciler struct {
 	*handler.Handler
 	Scheme *runtime.Scheme
 	record.EventRecorder
+
+	config    *rest.Config
+	clientset *kubernetes.Clientset
+}
+
+func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
+	return &EmqxReconciler{
+		Handler:       handler.NewHandler(mgr),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
+		config:        mgr.GetConfig(),
+		clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+	}
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
-	if !instance.IsPluginInitialized() {
-		condition, err := r.initializedPluginList(instance)
+	var resources []client.Object
+	bootstrap_user := r.createBootstrapUserSecret(instance)
+	plugins, err := r.createInitPluginList(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if !instance.IsInitResourceReady() {
+		resources = append(resources, bootstrap_user)
+		resources = append(resources, plugins...)
+		condition, err := r.createInitResource(instance, resources)
 		if condition != nil {
 			instance.SetCondition(*condition)
 			_ = r.Client.Status().Update(ctx, instance)
@@ -63,13 +81,60 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		}
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
+	var license *corev1.Secret
+	if instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName != "" {
+		if err := r.Client.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName,
+				Namespace: instance.GetNamespace(),
+			},
+			license,
+		); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		license = generateLicense(instance)
+	}
 
-	condition, err := r.createOrUpdateResourceList(instance)
-	if condition != nil {
+	if license != nil {
+		resources = append(resources, license)
+	}
+
+	var listenerPorts []corev1.ServicePort
+	if instance.IsRunning() {
+		listenerPorts, _ = r.getListenerPortsByAPI(instance)
+	}
+	headlessSvc := generateHeadlessService(instance, listenerPorts...)
+	acl := generateEmqxACL(instance)
+
+	sts := generateStatefulSet(instance)
+	sts = updateStatefulSetForACL(sts, acl)
+	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
+	sts = updateStatefulSetForLicense(sts, license)
+	sts = updateStatefulSetForBootstrapUser(sts, bootstrap_user)
+
+	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
+		if enterprise.Spec.EmqxBlueGreenUpdate != nil {
+			var err error
+			sts, err = r.getNewStatefulSet(instance, sts)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+	resources = append(resources, acl, headlessSvc, sts)
+
+	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
+		condition := appsv1beta4.NewCondition(
+			appsv1beta4.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedCreateOrUpdate",
+			err.Error(),
+		)
 		instance.SetCondition(*condition)
 		_ = r.Client.Status().Update(ctx, instance)
-	}
-	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -80,42 +145,22 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	instance.SetStatus(status)
 	_ = r.Client.Status().Update(ctx, instance)
 
-	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
-}
-
-func (r *EmqxReconciler) initializedPluginList(instance appsv1beta4.Emqx) (*appsv1beta4.Condition, error) {
-	plugins, err := r.createInitPluginList(instance)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := r.CreateOrUpdateList(instance, r.Scheme, plugins); err != nil {
-		if err != nil {
-			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-			condition := appsv1beta4.NewCondition(
-				appsv1beta4.ConditionPluginInitialized,
-				corev1.ConditionFalse,
-				"PluginInitializeFailed",
-				err.Error(),
-			)
-			return condition, err
+	if _, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
+		if err := r.syncStatefulSet(instance); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
-	condition := appsv1beta4.NewCondition(
-		appsv1beta4.ConditionPluginInitialized,
-		corev1.ConditionTrue,
-		"PluginInitializeSuccessfully",
-		"All default plugins initialized",
-	)
-	return condition, nil
-}
 
-func (r *EmqxReconciler) createOrUpdateResourceList(instance appsv1beta4.Emqx) (*appsv1beta4.Condition, error) {
-	resources, err := r.createResourceList(instance)
+	svc := generateService(instance, listenerPorts...)
+	latestReadySts, err := r.getLatestReadyStatefulSet(instance, true)
 	if err != nil {
-		return nil, err
+		return ctrl.Result{}, err
 	}
-	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
+	selector := svc.Spec.Selector
+	selector["controller-revision-hash"] = latestReadySts.Status.CurrentRevision
+	svc.Spec.Selector = selector
+
+	if err := r.CreateOrUpdateList(instance, r.Scheme, []client.Object{svc}); err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		condition := appsv1beta4.NewCondition(
 			appsv1beta4.ConditionRunning,
@@ -123,9 +168,34 @@ func (r *EmqxReconciler) createOrUpdateResourceList(instance appsv1beta4.Emqx) (
 			"FailedCreateOrUpdate",
 			err.Error(),
 		)
-		return condition, err
+		instance.SetCondition(*condition)
+		_ = r.Client.Status().Update(ctx, instance)
+		return ctrl.Result{}, err
 	}
-	return nil, nil
+
+	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
+}
+
+func (r *EmqxReconciler) createInitResource(instance appsv1beta4.Emqx, initResource []client.Object) (*appsv1beta4.Condition, error) {
+	if err := r.CreateOrUpdateList(instance, r.Scheme, initResource); err != nil {
+		if err != nil {
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
+			condition := appsv1beta4.NewCondition(
+				appsv1beta4.ConditionInitResourceReady,
+				corev1.ConditionFalse,
+				"InitResourceFailed",
+				err.Error(),
+			)
+			return condition, err
+		}
+	}
+	condition := appsv1beta4.NewCondition(
+		appsv1beta4.ConditionInitResourceReady,
+		corev1.ConditionTrue,
+		"InitResourceReady",
+		"All init resources ready",
+	)
+	return condition, nil
 }
 
 func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta4.Status, error) {
@@ -158,7 +228,7 @@ func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta
 		status.EmqxNodes = emqxNodes
 	}
 
-	if status.Replicas == status.ReadyReplicas {
+	if status.ReadyReplicas >= status.Replicas {
 		condition = appsv1beta4.NewCondition(
 			appsv1beta4.ConditionRunning,
 			corev1.ConditionTrue,
@@ -188,144 +258,24 @@ func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]clie
 	return append([]client.Object{defaultPluginsConfig}, initPluginsList...), nil
 }
 
-func (r *EmqxReconciler) createResourceList(instance appsv1beta4.Emqx) ([]client.Object, error) {
-	var resources []client.Object
+func (r *EmqxReconciler) createBootstrapUserSecret(instance appsv1beta4.Emqx) *corev1.Secret {
+	names := appsv1beta4.Names{Object: instance}
+	username := "emqx_operator_controller"
+	password, _ := password.Generate(64, 10, 0, true, true)
 
-	if instance.IsRunning() {
-		serviceTemplate := instance.GetServiceTemplate()
-		ports, _ := r.getListenerPortsByAPI(instance)
-		serviceTemplate.MergePorts(ports)
-		instance.SetServiceTemplate(serviceTemplate)
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        names.BootstrapUser(),
+			Namespace:   instance.GetNamespace(),
+			Labels:      instance.GetLabels(),
+			Annotations: instance.GetAnnotations(),
+		},
+		StringData: map[string]string{
+			"bootstrap_user": fmt.Sprintf("%s:%s", username, password),
+		},
 	}
-
-	headlessSvc, svc := generateService(instance)
-	acl := generateEmqxACL(instance)
-	sts := generateStatefulSet(instance)
-	sts = updateStatefulSetForACL(sts, acl)
-	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
-
-	if emqxEnterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-		var license *corev1.Secret
-		if instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName != "" {
-			license = &corev1.Secret{}
-			if err := r.Client.Get(context.Background(), types.NamespacedName{Name: instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName, Namespace: emqxEnterprise.GetNamespace()}, license); err != nil {
-				return nil, err
-			}
-		} else {
-			license = generateLicense(emqxEnterprise)
-		}
-
-		if license != nil {
-			resources = append(resources, license)
-			sts = updateStatefulSetForLicense(sts, license)
-		}
-	}
-
-	resources = append(resources, acl, headlessSvc, svc, sts)
-	return resources, nil
-}
-
-func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
-	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/nodes")
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, emperror.Errorf("failed to get node statuses from API: %s", resp.Status)
-	}
-
-	emqxNodes := []appsv1beta4.EmqxNode{}
-	data := gjson.GetBytes(body, "data")
-	if err := json.Unmarshal([]byte(data.Raw), &emqxNodes); err != nil {
-		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
-	}
-	return emqxNodes, nil
-}
-
-func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]corev1.ServicePort, error) {
-	type emqxListener struct {
-		Protocol string `json:"protocol"`
-		ListenOn string `json:"listen_on"`
-	}
-
-	type emqxListeners struct {
-		Node      string         `json:"node"`
-		Listeners []emqxListener `json:"listeners"`
-	}
-
-	intersection := func(listeners1 []emqxListener, listeners2 []emqxListener) []emqxListener {
-		hSection := map[string]struct{}{}
-		ans := make([]emqxListener, 0)
-		for _, listener := range listeners1 {
-			hSection[listener.ListenOn] = struct{}{}
-		}
-		for _, listener := range listeners2 {
-			_, ok := hSection[listener.ListenOn]
-			if ok {
-				ans = append(ans, listener)
-				delete(hSection, listener.ListenOn)
-			}
-		}
-		return ans
-	}
-
-	resp, body, err := r.Handler.RequestAPI(instance, instance.GetTemplate().Spec.EmqxContainer.Name, "GET", "admin", "public", "8081", "api/v4/listeners")
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, err
-	}
-
-	listenerList := []emqxListeners{}
-	data := gjson.GetBytes(body, "data")
-	if err := json.Unmarshal([]byte(data.Raw), &listenerList); err != nil {
-		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
-	}
-
-	var listeners []emqxListener
-	for i := 0; i < len(listenerList)-1; i++ {
-		listeners = intersection(listenerList[i].Listeners, listenerList[i+1].Listeners)
-	}
-
-	ports := []corev1.ServicePort{}
-	for _, l := range listeners {
-		var name string
-		var protocol corev1.Protocol
-		var strPort string
-		var intPort int
-
-		compile := regexp.MustCompile(".*(udp|dtls|sn).*")
-		if compile.MatchString(l.Protocol) {
-			protocol = corev1.ProtocolUDP
-		} else {
-			protocol = corev1.ProtocolTCP
-		}
-
-		if strings.Contains(l.ListenOn, ":") {
-			_, strPort, err = net.SplitHostPort(l.ListenOn)
-			if err != nil {
-				strPort = l.ListenOn
-			}
-		} else {
-			strPort = l.ListenOn
-		}
-		intPort, _ = strconv.Atoi(strPort)
-
-		// Get name by protocol and port from API
-		// protocol maybe like mqtt:wss:8084
-		// protocol maybe like mqtt:tcp
-		// We had to do something with the "protocol" to make it conform to the kubernetes service port name specification
-		name = regexp.MustCompile(`:[\d]+`).ReplaceAllString(l.Protocol, "")
-		name = strings.ReplaceAll(name, ":", "-")
-		name = fmt.Sprintf("%s-%s", name, strPort)
-
-		ports = append(ports, corev1.ServicePort{
-			Name:       name,
-			Protocol:   protocol,
-			Port:       int32(intPort),
-			TargetPort: intstr.FromInt(intPort),
-		})
-	}
-	return ports, nil
 }

@@ -23,7 +23,7 @@ func (s *ServiceTemplate) MergePorts(ports []corev1.ServicePort) {
 	s.Spec.Ports = result
 }
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type Names struct {
 	metav1.Object
 }
@@ -46,4 +46,8 @@ func (n Names) PluginsConfig() string {
 
 func (n Names) Data() string {
 	return fmt.Sprintf("%s-%s", n.Object.GetName(), "data")
+}
+
+func (n Names) BootstrapUser() string {
+	return fmt.Sprintf("%s-%s", n.Object.GetName(), "bootstrap-user")
 }

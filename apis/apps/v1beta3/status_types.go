@@ -36,7 +36,7 @@ const (
 	ConditionRunning           ConditionType = "Running"
 )
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type EmqxStatus interface {
 	IsRunning() bool
 	IsPluginInitialized() bool

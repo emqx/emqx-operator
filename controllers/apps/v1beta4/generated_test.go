@@ -200,7 +200,7 @@ func TestGenerateService(t *testing.T) {
 	t.Run("service", func(t *testing.T) {
 		expectService := expect.DeepCopy()
 
-		_, got := generateService(emqx)
+		got := generateService(emqx)
 		assert.Equal(t, expectService, got)
 	})
 
@@ -220,7 +220,7 @@ func TestGenerateService(t *testing.T) {
 			},
 		}
 
-		got, _ := generateService(emqx)
+		got := generateHeadlessService(emqx)
 		assert.Equal(t, expectHeadless, got)
 	})
 }
@@ -676,4 +676,61 @@ func TestUpdateStatefulSetForACL(t *testing.T) {
 			Value: "/mounted/acl/acl.conf",
 		},
 	}, sts.Spec.Template.Spec.Containers[1].Env)
+}
+
+func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
+	bootstrapUser := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "emqx-bootstrap-user",
+		},
+	}
+
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+						{Name: "reloader"},
+					},
+				},
+			},
+		},
+	}
+
+	got := updateStatefulSetForBootstrapUser(sts, bootstrapUser)
+
+	assert.Equal(t, []corev1.Volume{{
+		Name: "bootstrap-user",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: "emqx-bootstrap-user",
+			},
+		},
+	}}, got.Spec.Template.Spec.Volumes)
+
+	assert.Equal(t, []corev1.VolumeMount{{
+		Name:      "bootstrap-user",
+		MountPath: "/opt/emqx/data/bootstrap_user",
+		SubPath:   "bootstrap_user",
+		ReadOnly:  true,
+	}}, got.Spec.Template.Spec.Containers[0].VolumeMounts)
+
+	assert.Equal(t, []corev1.VolumeMount{{
+		Name:      "bootstrap-user",
+		MountPath: "/opt/emqx/data/bootstrap_user",
+		SubPath:   "bootstrap_user",
+		ReadOnly:  true,
+	}}, got.Spec.Template.Spec.Containers[1].VolumeMounts)
+
+	assert.Equal(t, []corev1.EnvVar{{
+		Name:  "EMQX_MANAGEMENT__BOOTSTRAP_APPS_FILE",
+		Value: "/opt/emqx/data/bootstrap_user",
+	}}, got.Spec.Template.Spec.Containers[0].Env)
+
+	assert.Equal(t, []corev1.EnvVar{{
+		Name:  "EMQX_MANAGEMENT__BOOTSTRAP_APPS_FILE",
+		Value: "/opt/emqx/data/bootstrap_user",
+	}}, got.Spec.Template.Spec.Containers[1].Env)
+
 }
