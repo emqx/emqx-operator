@@ -351,7 +351,11 @@ func (in *EmqxEnterpriseSpec) DeepCopyInto(out *EmqxEnterpriseSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	out.EmqxBlueGreenUpdate = in.EmqxBlueGreenUpdate
+	if in.EmqxBlueGreenUpdate != nil {
+		in, out := &in.EmqxBlueGreenUpdate, &out.EmqxBlueGreenUpdate
+		*out = new(EmqxBlueGreenUpdate)
+		**out = **in
+	}
 	in.Template.DeepCopyInto(&out.Template)
 	in.ServiceTemplate.DeepCopyInto(&out.ServiceTemplate)
 }
