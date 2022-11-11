@@ -99,7 +99,7 @@ func (s *Status) IsInitResourceReady() bool {
 		return false
 	}
 	c := s.Conditions[len(s.Conditions)-1]
-	if c.Type == ConditionRunning && c.Status == corev1.ConditionTrue {
+	if c.Type == ConditionInitResourceReady && c.Status == corev1.ConditionTrue {
 		return true
 	}
 	return false
