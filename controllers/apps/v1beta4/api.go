@@ -35,7 +35,6 @@ import (
 )
 
 func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, path string) (*http.Response, []byte, error) {
-	var pod *corev1.Pod
 	inCluster := true
 	if path == "api/v4/nodes" {
 		inCluster = false
@@ -48,18 +47,13 @@ func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, 
 	if err != nil {
 		return nil, nil, err
 	}
-	pod = podMap[latestReadySts.UID][0]
-
-	if pod == nil {
-		return nil, nil, emperror.Errorf("no running pod found for emqx %s", instance.GetName())
-	}
-
-	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
+	pod := podMap[latestReadySts.UID][0]
 
 	username, password, err := r.Handler.GetBootstrapUser(instance)
 	if err != nil {
 		return nil, nil, err
 	}
+	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
 	apiClient := apiClient.APIClient{
 		Username: username,
 		Password: password,
