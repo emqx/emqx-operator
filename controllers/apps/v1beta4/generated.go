@@ -25,6 +25,7 @@ import (
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/sethvargo/go-password/password"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -588,4 +589,49 @@ func mergeEnvAndConfig(instance appsv1beta4.Emqx, extraEnvs ...corev1.EnvVar) []
 		return envs[i].Name < envs[j].Name
 	})
 	return envs
+}
+
+func generateBootstrapUserSecret(instance appsv1beta4.Emqx) *corev1.Secret {
+	names := appsv1beta4.Names{Object: instance}
+	username := "emqx_operator_controller"
+	password, _ := password.Generate(64, 10, 0, true, true)
+
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        names.BootstrapUser(),
+			Namespace:   instance.GetNamespace(),
+			Labels:      instance.GetLabels(),
+			Annotations: instance.GetAnnotations(),
+		},
+		StringData: map[string]string{
+			"bootstrap_user": fmt.Sprintf("%s:%s", username, password),
+		},
+	}
+}
+
+func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *corev1.Secret) *appsv1.StatefulSet {
+	return updateEnvAndVolumeForSts(sts,
+		corev1.EnvVar{
+			Name:  "EMQX_MANAGEMENT__BOOTSTRAP_APPS_FILE",
+			Value: "/opt/emqx/data/bootstrap_user",
+		},
+		corev1.VolumeMount{
+			Name:      "bootstrap-user",
+			MountPath: "/opt/emqx/data/bootstrap_user",
+			SubPath:   "bootstrap_user",
+			ReadOnly:  true,
+		},
+		corev1.Volume{
+			Name: "bootstrap-user",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: bootstrapUser.Name,
+				},
+			},
+		},
+	)
 }

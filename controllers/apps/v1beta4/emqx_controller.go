@@ -59,8 +59,16 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
-	if !instance.IsPluginInitialized() {
-		condition, err := r.initializedPluginList(instance)
+	var resources []client.Object
+	bootstrap_user := generateBootstrapUserSecret(instance)
+	plugins, err := r.createInitPluginList(instance)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if !instance.IsInitResourceReady() {
+		resources = append(resources, bootstrap_user)
+		resources = append(resources, plugins...)
+		condition, err := r.createInitResources(instance, resources)
 		if condition != nil {
 			instance.SetCondition(*condition)
 			_ = r.Client.Status().Update(ctx, instance)
@@ -71,7 +79,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	var resources []client.Object
 	var license *corev1.Secret
 	if instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName != "" {
 		if err := r.Client.Get(
@@ -103,6 +110,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	sts = updateStatefulSetForACL(sts, acl)
 	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
 	sts = updateStatefulSetForLicense(sts, license)
+	sts = updateStatefulSetForBootstrapUser(sts, bootstrap_user)
 
 	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
 		if enterprise.Spec.EmqxBlueGreenUpdate != nil {
@@ -166,17 +174,13 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
 
-func (r *EmqxReconciler) initializedPluginList(instance appsv1beta4.Emqx) (*appsv1beta4.Condition, error) {
-	plugins, err := r.createInitPluginList(instance)
-	if err != nil {
-		return nil, err
-	}
+func (r *EmqxReconciler) createInitResources(instance appsv1beta4.Emqx, initResources []client.Object) (*appsv1beta4.Condition, error) {
 
-	if err := r.CreateOrUpdateList(instance, r.Scheme, plugins); err != nil {
+	if err := r.CreateOrUpdateList(instance, r.Scheme, initResources); err != nil {
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 			condition := appsv1beta4.NewCondition(
-				appsv1beta4.ConditionPluginInitialized,
+				appsv1beta4.ConditionInitResourceReady,
 				corev1.ConditionFalse,
 				"PluginInitializeFailed",
 				err.Error(),
@@ -185,7 +189,7 @@ func (r *EmqxReconciler) initializedPluginList(instance appsv1beta4.Emqx) (*apps
 		}
 	}
 	condition := appsv1beta4.NewCondition(
-		appsv1beta4.ConditionPluginInitialized,
+		appsv1beta4.ConditionInitResourceReady,
 		corev1.ConditionTrue,
 		"PluginInitializeSuccessfully",
 		"All default plugins initialized",
