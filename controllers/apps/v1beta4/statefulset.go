@@ -171,8 +171,18 @@ func (r *EmqxReconciler) syncStatefulSet(instance appsv1beta4.Emqx) error {
 			continue
 		}
 		if controllerRef.UID == instance.GetUID() {
-			sts.Spec.Replicas = &scaleDown
-			_ = r.Client.Delete(context.TODO(), sts)
+			stsCopy := sts.DeepCopy()
+			if err := r.Client.Get(context.TODO(), client.ObjectKeyFromObject(stsCopy), stsCopy); err != nil {
+				if !k8sErrors.IsNotFound(err) {
+					return err
+				}
+			}
+			stsCopy.Spec.Replicas = &scaleDown
+			if err := r.Client.Update(context.TODO(), stsCopy); err != nil {
+				if !k8sErrors.IsConflict(err) {
+					return err
+				}
+			}
 		}
 	}
 
