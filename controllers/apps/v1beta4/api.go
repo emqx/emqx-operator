@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
+func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, path string) (*http.Response, []byte, error) {
 	var pod *corev1.Pod
 	inCluster := true
 	if path == "api/v4/nodes" {
@@ -56,6 +56,10 @@ func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, username,
 
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
 
+	username, password, err := r.Handler.GetBootstrapUser(instance)
+	if err != nil {
+		return nil, nil, err
+	}
 	apiClient := apiClient.APIClient{
 		Username: username,
 		Password: password,
@@ -76,7 +80,7 @@ func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, username,
 }
 
 func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
-	resp, body, err := r.requestAPI(instance, "GET", "admin", "public", "8081", "api/v4/nodes")
+	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/nodes")
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +123,7 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 		return ans
 	}
 
-	resp, body, err := r.requestAPI(instance, "GET", "admin", "public", "8081", "api/v4/listeners")
+	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/listeners")
 	if err != nil {
 		return nil, err
 	}
