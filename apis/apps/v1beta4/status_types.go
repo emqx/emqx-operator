@@ -32,14 +32,14 @@ type Condition struct {
 type ConditionType string
 
 const (
-	ConditionPluginInitialized ConditionType = "PluginInitialized"
+	ConditionInitResourceReady ConditionType = "InitResourceReady"
 	ConditionRunning           ConditionType = "Running"
 )
 
 // +kubebuilder:object:generate=false
 type EmqxStatus interface {
 	IsRunning() bool
-	IsPluginInitialized() bool
+	IsInitResourceReady() bool
 	GetConditions() []Condition
 	SetCondition(c Condition)
 	GetEmqxNodes() []EmqxNode
@@ -93,12 +93,14 @@ func (s *Status) IsRunning() bool {
 	return false
 }
 
-func (s *Status) IsPluginInitialized() bool {
-	// Init Plugin
-	for _, c := range s.Conditions {
-		if c.Type == ConditionPluginInitialized && c.Status == corev1.ConditionTrue {
-			return true
-		}
+func (s *Status) IsInitResourceReady() bool {
+
+	if len(s.Conditions) == 0 {
+		return false
+	}
+	c := s.Conditions[len(s.Conditions)-1]
+	if c.Type == ConditionRunning && c.Status == corev1.ConditionTrue {
+		return true
 	}
 	return false
 }
