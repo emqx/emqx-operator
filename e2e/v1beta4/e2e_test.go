@@ -19,8 +19,10 @@ package v1beta4
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -345,12 +347,12 @@ var _ = Describe("Blue Green Update Test", func() {
 		})
 
 		It("blue green update", func() {
-			var sts *appsv1.StatefulSet
-			var existedStsList *appsv1.StatefulSetList = new(appsv1.StatefulSetList)
+			var existedStsList *appsv1.StatefulSetList
 			labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 				MatchLabels: emqx.GetLabels(),
 			})
-			Eventually(func() bool {
+			existedStsList = &appsv1.StatefulSetList{}
+			Eventually(func() []appsv1.StatefulSet {
 				_ = k8sClient.List(
 					context.TODO(),
 					existedStsList,
@@ -359,10 +361,10 @@ var _ = Describe("Blue Green Update Test", func() {
 						LabelSelector: labelSelector,
 					},
 				)
-				return len(existedStsList.Items) == 1
-			}, timeout, interval).Should(BeTrue())
+				return existedStsList.Items
+			}, timeout, interval).Should(HaveLen(1))
 
-			sts = &existedStsList.Items[0]
+			sts := existedStsList.Items[0].DeepCopy()
 
 			Eventually(func() map[string]string {
 				svc := &corev1.Service{}
@@ -384,8 +386,9 @@ var _ = Describe("Blue Green Update Test", func() {
 			emqx.Spec.Template.Spec.EmqxContainer.Image = "emqx/emqx-ee:4.4.10"
 			Expect(k8sClient.Update(context.Background(), emqx)).Should(Succeed())
 
-			By("wait create new sts and delete old sts")
-			Eventually(func() bool {
+			By("wait create new sts")
+			existedStsList = &appsv1.StatefulSetList{}
+			Eventually(func() []appsv1.StatefulSet {
 				_ = k8sClient.List(
 					context.TODO(),
 					existedStsList,
@@ -394,16 +397,59 @@ var _ = Describe("Blue Green Update Test", func() {
 						LabelSelector: labelSelector,
 					},
 				)
-				return len(existedStsList.Items) == 1 && existedStsList.Items[0].UID != sts.UID
-			}, timeout, interval).Should(BeTrue())
+				return existedStsList.Items
+			}, timeout, interval).Should(HaveLen(2))
 
-			sts = &existedStsList.Items[0]
+			allSts := []*appsv1.StatefulSet{}
+			for _, es := range existedStsList.Items {
+				allSts = append(allSts, es.DeepCopy())
+			}
+			sort.Sort(appscontrollersv1beta4.StatefulSetsBySizeNewer(allSts))
+
+			newSts := allSts[0].DeepCopy()
+			Expect(newSts.UID).ShouldNot(Equal(sts.UID))
+
+			Eventually(func() []corev1.Pod {
+				podList := &corev1.PodList{}
+				selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"controller-revision-hash": sts.Status.CurrentRevision,
+					},
+				})
+				_ = k8sClient.List(
+					context.TODO(),
+					podList,
+					&client.ListOptions{
+						Namespace:     sts.GetNamespace(),
+						LabelSelector: selector,
+					},
+				)
+				return podList.Items
+			}, timeout, interval).Should(HaveLen(0))
+
+			Eventually(func() []corev1.Pod {
+				podList := &corev1.PodList{}
+				selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"controller-revision-hash": newSts.Status.CurrentRevision,
+					},
+				})
+				_ = k8sClient.List(
+					context.TODO(),
+					podList,
+					&client.ListOptions{
+						Namespace:     newSts.GetNamespace(),
+						LabelSelector: selector,
+					},
+				)
+				return podList.Items
+			}, timeout, interval).Should(HaveLen(int(*emqx.GetReplicas())))
 
 			Eventually(func() map[string]string {
 				svc := &corev1.Service{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
 				return svc.Spec.Selector
-			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", sts.Status.CurrentRevision))
+			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", newSts.Status.CurrentRevision))
 
 			Eventually(func() string {
 				ee := &appsv1beta4.EmqxEnterprise{}
@@ -412,7 +458,7 @@ var _ = Describe("Blue Green Update Test", func() {
 					return ee.GetEmqxNodes()[0].Node
 				}
 				return ""
-			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace())))
+			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", newSts.Name, emqx.GetNamespace())))
 		})
 	})
 })
