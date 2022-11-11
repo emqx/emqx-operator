@@ -32,6 +32,7 @@ import (
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -200,10 +201,25 @@ func (r *EmqxReconciler) getNewStatefulSet(instance appsv1beta4.Emqx, newSts *ap
 		}
 	}
 
-	podTemplateSpecHash := computeHash(&newSts.Spec.Template, nil)
-	newSts.Name = newSts.Name + "-" + podTemplateSpecHash
+	// Do-while loop
+	var collisionCount *int32 = new(int32)
+	for {
+		podTemplateSpecHash := computeHash(&newSts.Spec.Template, collisionCount)
+		name := newSts.Name + "-" + podTemplateSpecHash
+		err := r.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: newSts.Namespace,
+			Name:      name,
+		}, &appsv1.StatefulSet{})
+		*collisionCount++
 
-	return newSts, nil
+		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				newSts.Name = name
+				return newSts, nil
+			}
+			return nil, err
+		}
+	}
 }
 
 // JustCheckPodTemplate will check only the differences between the podTemplate of the two statefulSets
