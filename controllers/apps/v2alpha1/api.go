@@ -41,7 +41,7 @@ type requestAPI struct {
 }
 
 func (r *requestAPI) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNode, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, "api/v5/nodes")
+	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, "api/v5/nodes", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
 	}
@@ -94,7 +94,7 @@ func (r *requestAPI) getAllListenersByAPI(obj client.Object) ([]corev1.ServicePo
 }
 
 func (r *requestAPI) getGatewaysByAPI(obj client.Object) ([]emqxGateway, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, "api/v5/gateway")
+	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, "api/v5/gateway", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/gateway")
 	}
@@ -109,7 +109,7 @@ func (r *requestAPI) getGatewaysByAPI(obj client.Object) ([]emqxGateway, error) 
 }
 
 func (r *requestAPI) getListenerPortsByAPI(obj client.Object, apiPath string) ([]corev1.ServicePort, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, apiPath)
+	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, apiPath, nil)
 	if err != nil {
 		return nil, emperror.Wrapf(err, "failed to get API %s", apiPath)
 	}
