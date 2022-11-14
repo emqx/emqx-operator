@@ -70,7 +70,7 @@ func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, 
 		},
 	}
 
-	return apiClient.Do(method, path)
+	return apiClient.Do(method, path, nil)
 }
 
 func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
