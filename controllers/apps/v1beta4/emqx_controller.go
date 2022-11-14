@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	emperror "emperror.dev/errors"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -171,9 +172,18 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	_ = r.Client.Status().Update(ctx, instance)
 
 	if instance.GetStatus().IsRunning() {
-		if _, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-			if err := r.syncStatefulSet(instance); err != nil {
-				return ctrl.Result{}, err
+		if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
+			// always need do this, no-matter blue-green update enabled or not
+			// because the blue-green update may be canceled after it is started
+			evacuationsStatus, err := r.getEvacuationStatusByAPI(instance)
+			if err != nil {
+				return ctrl.Result{}, emperror.Wrap(err, "get evacuation status by api failed")
+			}
+			enterprise.Status.EvacuationsStatus = evacuationsStatus
+			_ = r.Client.Status().Update(ctx, instance)
+
+			if err := r.syncStatefulSet(instance, evacuationsStatus); err != nil {
+				return ctrl.Result{}, emperror.Wrap(err, "sync statefulSet failed")
 			}
 		}
 	}

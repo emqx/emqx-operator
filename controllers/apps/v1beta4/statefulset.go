@@ -18,7 +18,9 @@ package v1beta4
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
@@ -204,8 +206,13 @@ func (r *EmqxReconciler) getNewStatefulSet(instance appsv1beta4.Emqx, newSts *ap
 	}
 }
 
-func (r *EmqxReconciler) syncStatefulSet(instance appsv1beta4.Emqx) error {
-	allSts, err := r.getAllStatefulSet(instance)
+func (r *EmqxReconciler) syncStatefulSet(instance appsv1beta4.Emqx, evacuationsStatus []appsv1beta4.EmqxEvacuationStatus) error {
+	inClusterStss, err := r.getInClusterStatefulSets(instance)
+	if err != nil {
+		return err
+	}
+
+	podMap, err := r.getPodMap(instance, inClusterStss)
 	if err != nil {
 		return err
 	}
@@ -216,34 +223,72 @@ func (r *EmqxReconciler) syncStatefulSet(instance appsv1beta4.Emqx) error {
 	}
 
 	i := 0
-	for i <= len(allSts) {
-		if allSts[i].UID == latestReadySts.UID {
+	for i <= len(inClusterStss)-1 {
+		if inClusterStss[i].UID == latestReadySts.UID {
 			break
 		}
 		i++
 	}
 
-	scaleDown := int32(0)
-	for _, sts := range allSts[i+1:] {
-		controllerRef := metav1.GetControllerOf(sts)
-		if controllerRef == nil {
-			continue
-		}
-		if controllerRef.UID == instance.GetUID() {
-			stsCopy := sts.DeepCopy()
-			if err := r.Client.Get(context.TODO(), client.ObjectKeyFromObject(stsCopy), stsCopy); err != nil {
-				if !k8sErrors.IsNotFound(err) {
-					return err
-				}
+	if len(inClusterStss[i+1:]) == 0 {
+		return nil
+	}
+	otherStss := inClusterStss[i+1:]
+
+	scaleDownSts := r.whoCanBeScaledDown(instance, evacuationsStatus, otherStss, podMap)
+	if scaleDownSts != nil {
+		scaleDown := *scaleDownSts.Spec.Replicas - 1
+		stsCopy := scaleDownSts.DeepCopy()
+		if err := r.Client.Get(context.TODO(), client.ObjectKeyFromObject(stsCopy), stsCopy); err != nil {
+			if !k8sErrors.IsNotFound(err) {
+				return err
 			}
-			stsCopy.Spec.Replicas = &scaleDown
-			if err := r.Client.Update(context.TODO(), stsCopy); err != nil {
-				if !k8sErrors.IsConflict(err) {
-					return err
-				}
+		}
+		stsCopy.Spec.Replicas = &scaleDown
+
+		r.EventRecorder.Event(instance, corev1.EventTypeNormal, "ScaleDown", fmt.Sprintf("scale down StatefulSet %s to %d", scaleDownSts.Name, scaleDown))
+		if err := r.Client.Update(context.TODO(), stsCopy); err != nil {
+			if !k8sErrors.IsConflict(err) {
+				return err
 			}
 		}
 	}
 
+	if len(evacuationsStatus) == 0 {
+		sort.Sort(StatefulSetsBySizeOlder(otherStss))
+		pods := podMap[otherStss[0].UID]
+		if len(pods) == 0 {
+			return nil
+		}
+		// evacuate the last pod
+		sort.Sort(PodsByNameNewer(pods))
+		emqxNodeName := getEmqxNodeName(instance, pods[0])
+
+		r.EventRecorder.Event(instance, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("evacuate node %s start", emqxNodeName))
+		if err := r.evacuateNodeByAPI(instance, podMap[latestReadySts.UID], emqxNodeName); err != nil {
+			return emperror.Wrap(err, "evacuate node failed")
+		}
+	}
+
+	return nil
+}
+
+func (r *EmqxReconciler) whoCanBeScaledDown(instance appsv1beta4.Emqx, evacuationsStatus []appsv1beta4.EmqxEvacuationStatus, allSts []*appsv1.StatefulSet, podMap map[types.UID][]*corev1.Pod) *appsv1.StatefulSet {
+	for _, e := range evacuationsStatus {
+		if *e.Stats.CurrentConnected == 0 && *e.Stats.CurrentSessions == 0 && e.State == "prohibiting" {
+			podName := strings.Split(strings.Split(e.Node, "@")[1], ".")[0]
+			for _, sts := range allSts {
+				if strings.Contains(podName, sts.Name) {
+					pods := podMap[sts.UID]
+					// Get latest pod for sts
+					sort.Sort(PodsByNameNewer(pods))
+					if pods[0].Name == podName {
+						r.EventRecorder.Event(instance, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("evacuate node %s successfully", getEmqxNodeName(instance, pods[0])))
+						return sts
+					}
+				}
+			}
+		}
+	}
 	return nil
 }
