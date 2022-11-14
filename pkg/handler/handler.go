@@ -62,7 +62,7 @@ func NewHandler(mgr manager.Manager) *Handler {
 	}
 }
 
-func (handler *Handler) RequestAPI(obj client.Object, containerName string, method, username, password, apiPort, path string) (*http.Response, []byte, error) {
+func (handler *Handler) RequestAPI(obj client.Object, containerName string, method, username, password, apiPort, path string, body []byte) (*http.Response, []byte, error) {
 	podList := &corev1.PodList{}
 	if err := handler.Client.List(
 		context.TODO(),
@@ -100,7 +100,7 @@ func (handler *Handler) RequestAPI(obj client.Object, containerName string, meth
 		},
 	}
 
-	return apiClient.Do(method, path)
+	return apiClient.Do(method, path, body)
 }
 
 func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runtime.Scheme, resources []client.Object) error {
