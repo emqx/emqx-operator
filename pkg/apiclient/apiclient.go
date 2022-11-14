@@ -17,6 +17,7 @@ limitations under the License.
 package apiclient
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,7 +32,7 @@ type APIClient struct {
 	PortForwardOptions
 }
 
-func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
+func (c *APIClient) Do(method, path string, body []byte) (*http.Response, []byte, error) {
 	err := c.PortForwardOptions.New()
 	if err != nil {
 		return nil, nil, err
@@ -66,7 +67,7 @@ func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
 		}
 
 		httpClient := http.Client{}
-		req, err := http.NewRequest(method, url.String(), nil)
+		req, err := http.NewRequest(method, url.String(), bytes.NewReader(body))
 		if err != nil {
 			return nil, nil, err
 		}

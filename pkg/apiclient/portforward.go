@@ -18,12 +18,8 @@ package apiclient
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 
-	emperror "emperror.dev/errors"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -43,22 +39,13 @@ type PortForwardOptions struct {
 }
 
 func (o *PortForwardOptions) New() error {
-	pod, err := o.Clientset.CoreV1().Pods(o.Namespace).Get(context.TODO(), o.PodName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	if pod.Status.Phase != corev1.PodRunning {
-		return emperror.Errorf("unable to forward port because pod is not running. Current status=%v", pod.Status.Phase)
-	}
-
 	portForwardURL := o.Clientset.
 		CoreV1().
 		RESTClient().
 		Post().
 		Resource("pods").
 		Namespace(o.Namespace).
-		Name(pod.Name).
+		Name(o.PodName).
 		SubResource("portforward").
 		URL()
 
