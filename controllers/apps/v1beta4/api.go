@@ -181,3 +181,53 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 	}
 	return ports, nil
 }
+
+func (r *EmqxReconciler) getEvacuationStatusByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxEvacuationStatus, error) {
+	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/load_rebalance/global_status", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, err
+	}
+
+	evacuationStatuses := []appsv1beta4.EmqxEvacuationStatus{}
+	data := gjson.GetBytes(body, "evacuations")
+	if err := json.Unmarshal([]byte(data.Raw), &evacuationStatuses); err != nil {
+		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
+	}
+	return evacuationStatuses, nil
+}
+
+func (r *EmqxReconciler) evacuateNodeByAPI(instance appsv1beta4.Emqx, migrateToPods []*corev1.Pod, nodeName string) error {
+	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
+	if !ok {
+		return emperror.New("failed to evacuate node, only support emqx enterprise")
+	}
+
+	type requestBody struct {
+		ConnEvictRate int32    `json:"conn_evict_rate"`
+		SessEvictRate int32    `json:"sess_evict_rate"`
+		WaitTakeover  int32    `json:"wait_takeover"`
+		MigrateTo     []string `json:"migrate_to"`
+	}
+
+	body := requestBody{
+		ConnEvictRate: enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.ConnEvictRate,
+		SessEvictRate: enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.SessEvictRate,
+		WaitTakeover:  enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.WaitTakeover,
+	}
+
+	for _, pod := range migrateToPods {
+		emqxNodeName := getEmqxNodeName(instance, pod)
+		body.MigrateTo = append(body.MigrateTo, emqxNodeName)
+	}
+
+	b, err := json.Marshal(body)
+	if err != nil {
+		return emperror.Wrap(err, "marshal body failed")
+	}
+
+	_, _, err = r.requestAPI(instance, "POST", "8081", "api/v4/load_rebalance/"+nodeName+"/evacuation/start", b)
+	return err
+}
