@@ -68,38 +68,26 @@ type Status struct {
 }
 
 func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
-	now := metav1.Now()
-	nowString := now.Format(time.RFC3339)
 	return &Condition{
-		Type:               condType,
-		Status:             status,
-		LastUpdateTime:     nowString,
-		LastUpdateAt:       now,
-		LastTransitionTime: nowString,
-		Reason:             reason,
-		Message:            message,
+		Type:    condType,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
 	}
 }
 
 func (s *Status) IsRunning() bool {
-	if len(s.Conditions) == 0 {
-		return false
-	}
-	c := s.Conditions[0]
-	if c.Type == ConditionRunning && c.Status == corev1.ConditionTrue {
-		return true
-	}
-	return false
+	index := indexCondition(s, ConditionRunning)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
 func (s *Status) IsPluginInitialized() bool {
 	// Init Plugin
-	for _, c := range s.Conditions {
-		if c.Type == ConditionPluginInitialized && c.Status == corev1.ConditionTrue {
-			return true
-		}
+	index := indexCondition(s, ConditionPluginInitialized)
+	if index == -1 {
+		return false
 	}
-	return false
+	return s.Conditions[index].Status == corev1.ConditionTrue
 }
 
 func (s *Status) GetConditions() []Condition {
@@ -107,20 +95,15 @@ func (s *Status) GetConditions() []Condition {
 }
 
 func (s *Status) SetCondition(c Condition) {
-	pos, cp := getCondition(s, c.Type)
-	if cp != nil &&
-		cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
-		now := metav1.Now()
-		nowString := now.Format(time.RFC3339)
-		s.Conditions[pos].LastUpdateAt = now
-		s.Conditions[pos].LastUpdateTime = nowString
-		s.sortConditions(s.Conditions)
-		return
-	}
-
-	if cp != nil {
+	now := metav1.Now()
+	c.LastUpdateAt = now
+	c.LastUpdateTime = now.Format(time.RFC3339)
+	pos := indexCondition(s, c.Type)
+	// condition exist
+	if pos >= 0 {
 		s.Conditions[pos] = c
-	} else {
+	} else { // condition not exist
+		c.LastTransitionTime = now.Format(time.RFC3339)
 		s.Conditions = append(s.Conditions, c)
 	}
 
@@ -133,11 +116,11 @@ func (s *Status) sortConditions(conditions []Condition) {
 	})
 }
 
-func getCondition(status *Status, t ConditionType) (int, *Condition) {
+func indexCondition(status *Status, t ConditionType) int {
 	for i, c := range status.Conditions {
 		if t == c.Type {
-			return i, &c
+			return i
 		}
 	}
-	return -1, nil
+	return -1
 }
