@@ -34,7 +34,7 @@ type APIClient struct {
 func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
 	err := c.PortForwardOptions.New()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, emperror.Wrap(err, "failed to create port forward")
 	}
 
 	defer close(c.StopChannel)
@@ -68,20 +68,20 @@ func (c *APIClient) Do(method, path string) (*http.Response, []byte, error) {
 		httpClient := http.Client{}
 		req, err := http.NewRequest(method, url.String(), nil)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, emperror.Wrap(err, "failed to create request")
 		}
 		req.SetBasicAuth(c.Username, c.Password)
 		req.Close = true
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, emperror.Wrap(err, "failed to do request")
 		}
 
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return resp, nil, err
+			return resp, nil, emperror.Wrap(err, "failed to read response body")
 		}
-		return resp, body, err
+		return resp, body, nil
 	}
 }
