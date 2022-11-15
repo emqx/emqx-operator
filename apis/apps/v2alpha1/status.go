@@ -82,82 +82,51 @@ type EMQXStatus struct {
 
 // EMQX Status
 func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
-	now := metav1.Now()
-	nowString := now.Format(time.RFC3339)
 	return &Condition{
-		Type:               condType,
-		Status:             status,
-		LastUpdateTime:     nowString,
-		LastUpdateAt:       now,
-		LastTransitionTime: nowString,
-		Reason:             reason,
-		Message:            message,
+		Type:    condType,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
 	}
 }
 
 func (s *EMQXStatus) IsCreating() bool {
-	if len(s.Conditions) > 0 {
-		cond := s.Conditions[0]
-		if cond.Type == ClusterCreating && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
+	index := indexCondition(s, ClusterCreating)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
 func (s *EMQXStatus) IsCoreNodesUpdating() bool {
-	if len(s.Conditions) > 0 {
-		cond := s.Conditions[0]
-		if cond.Type == ClusterCoreUpdating && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
+	index := indexCondition(s, ClusterCoreUpdating)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
 func (s *EMQXStatus) IsCoreNodesReady() bool {
-	if len(s.Conditions) > 0 {
-		cond := s.Conditions[0]
-		if cond.Type == ClusterCoreReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
+	index := indexCondition(s, ClusterCoreReady)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
 func (s *EMQXStatus) IsRunning() bool {
-	if len(s.Conditions) > 0 {
-		cond := s.Conditions[0]
-		if cond.Type == ClusterRunning && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
+	index := indexCondition(s, ClusterRunning)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
 func (s *EMQXStatus) SetCondition(c Condition) {
-	pos, cp := getCondition(s, c.Type)
-	if cp != nil &&
-		cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
-		now := metav1.Now()
-		nowString := now.Format(time.RFC3339)
-		s.Conditions[pos].LastUpdateAt = now
-		s.Conditions[pos].LastUpdateTime = nowString
-		s.sortConditions(s.Conditions)
-		return
-	}
-
-	if cp != nil {
+	now := metav1.Now()
+	c.LastUpdateAt = now
+	c.LastUpdateTime = now.Format(time.RFC3339)
+	pos := indexCondition(s, c.Type)
+	// condition exist
+	if pos >= 0 {
 		s.Conditions[pos] = c
-	} else {
+	} else { // condition not exist
+		c.LastTransitionTime = now.Format(time.RFC3339)
 		s.Conditions = append(s.Conditions, c)
 	}
-
 	s.sortConditions(s.Conditions)
 }
 
 func (s *EMQXStatus) RemoveCondition(t ConditionType) {
-	pos, _ := getCondition(s, t)
+	pos := indexCondition(s, t)
 	if pos == -1 {
 		return
 	}
@@ -170,11 +139,11 @@ func (s *EMQXStatus) sortConditions(conditions []Condition) {
 	})
 }
 
-func getCondition(status *EMQXStatus, t ConditionType) (int, *Condition) {
+func indexCondition(status *EMQXStatus, t ConditionType) int {
 	for i, c := range status.Conditions {
 		if t == c.Type {
-			return i, &c
+			return i
 		}
 	}
-	return -1, nil
+	return -1
 }
