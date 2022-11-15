@@ -65,12 +65,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if !instance.IsInitResourceReady() {
+	if !instance.GetStatus().IsInitResourceReady() {
 		resources = append(resources, bootstrap_user)
 		resources = append(resources, plugins...)
 		condition, err := r.createInitResources(instance, resources)
 		if condition != nil {
-			instance.SetCondition(*condition)
+			instance.GetStatus().SetCondition(*condition)
 			_ = r.Client.Status().Update(ctx, instance)
 		}
 		if err != nil {
@@ -80,11 +80,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	}
 
 	var license *corev1.Secret
-	if instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName != "" {
+	if instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName != "" {
 		if err := r.Client.Get(
 			context.Background(),
 			types.NamespacedName{
-				Name:      instance.GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName,
+				Name:      instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName,
 				Namespace: instance.GetNamespace(),
 			},
 			license,
@@ -100,7 +100,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	}
 
 	var listenerPorts []corev1.ServicePort
-	if instance.IsRunning() {
+	if instance.GetStatus().IsRunning() {
 		listenerPorts, _ = r.getListenerPortsByAPI(instance)
 	}
 	headlessSvc := generateHeadlessService(instance, listenerPorts...)
@@ -131,16 +131,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 			"FailedCreateOrUpdate",
 			err.Error(),
 		)
-		instance.SetCondition(*condition)
+		instance.GetStatus().SetCondition(*condition)
 		_ = r.Client.Status().Update(ctx, instance)
 		return ctrl.Result{}, err
 	}
 
-	status, err := r.updateEmqxStatus(instance)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	instance.SetStatus(status)
+	instance = r.updateEmqxStatus(instance)
 	_ = r.Client.Status().Update(ctx, instance)
 
 	if _, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
@@ -166,7 +162,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 			"FailedCreateOrUpdate",
 			err.Error(),
 		)
-		instance.SetCondition(*condition)
+		instance.GetStatus().SetCondition(*condition)
 		_ = r.Client.Status().Update(ctx, instance)
 		return ctrl.Result{}, err
 	}
@@ -197,11 +193,10 @@ func (r *EmqxReconciler) createInitResources(instance appsv1beta4.Emqx, initReso
 	return condition, nil
 }
 
-func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta4.Status, error) {
+func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) appsv1beta4.Emqx {
 	var condition *appsv1beta4.Condition
 
-	status := instance.GetStatus()
-	status.Replicas = *instance.GetReplicas()
+	instance.GetStatus().SetReplicas(*instance.GetSpec().GetReplicas())
 
 	emqxNodes, err := r.getNodeStatusesByAPI(instance)
 	if err != nil {
@@ -212,8 +207,8 @@ func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta
 			"FailedToGetNodeStatues",
 			err.Error(),
 		)
-		status.SetCondition(*condition)
-		return status, err
+		instance.GetStatus().SetCondition(*condition)
+		return instance
 	}
 
 	if emqxNodes != nil {
@@ -223,11 +218,11 @@ func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta
 				readyReplicas++
 			}
 		}
-		status.ReadyReplicas = readyReplicas
-		status.EmqxNodes = emqxNodes
+		instance.GetStatus().SetReadyReplicas(readyReplicas)
+		instance.GetStatus().SetEmqxNodes(emqxNodes)
 	}
 
-	if status.ReadyReplicas >= status.Replicas {
+	if instance.GetStatus().GetReadyReplicas() >= *instance.GetSpec().GetReplicas() {
 		condition = appsv1beta4.NewCondition(
 			appsv1beta4.ConditionRunning,
 			corev1.ConditionTrue,
@@ -242,8 +237,8 @@ func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) (appsv1beta
 			"Some nodes are not ready",
 		)
 	}
-	status.SetCondition(*condition)
-	return status, nil
+	instance.GetStatus().SetCondition(*condition)
+	return instance
 }
 
 func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]client.Object, error) {

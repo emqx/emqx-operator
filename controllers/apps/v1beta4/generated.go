@@ -198,7 +198,7 @@ func generateLicense(instance appsv1beta4.Emqx) *corev1.Secret {
 		return nil
 	}
 	names := appsv1beta4.Names{Object: instance}
-	license := instance.GetTemplate().Spec.EmqxContainer.EmqxLicense
+	license := instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxLicense
 	if len(license.Data) == 0 && len(license.StringData) == 0 {
 		return nil
 	}
@@ -227,7 +227,7 @@ func generateEmqxACL(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 	names := appsv1beta4.Names{Object: instance}
 
 	var aclString string
-	for _, rule := range instance.GetTemplate().Spec.EmqxContainer.EmqxACL {
+	for _, rule := range instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxACL {
 		aclString += fmt.Sprintf("%s\n", rule)
 	}
 
@@ -270,7 +270,7 @@ func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePo
 
 	compile := regexp.MustCompile(".*management.*")
 
-	serviceTemplate := instance.GetServiceTemplate()
+	serviceTemplate := instance.GetSpec().GetServiceTemplate()
 	serviceTemplate.MergePorts(port)
 	for _, port := range serviceTemplate.Spec.Ports {
 		if compile.MatchString(port.Name) {
@@ -288,7 +288,7 @@ func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePo
 }
 
 func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
-	serviceTemplate := instance.GetServiceTemplate()
+	serviceTemplate := instance.GetSpec().GetServiceTemplate()
 	serviceTemplate.MergePorts(port)
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -303,7 +303,7 @@ func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *cor
 func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	names := appsv1beta4.Names{Object: instance}
 
-	emqxTemplate := instance.GetTemplate()
+	emqxTemplate := instance.GetSpec().GetTemplate()
 
 	reloaderContainer := corev1.Container{
 		Name:            ReloaderContainerName,
@@ -394,7 +394,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: names.HeadlessSvc(),
-			Replicas:    instance.GetReplicas(),
+			Replicas:    instance.GetSpec().GetReplicas(),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podTemplate.Labels,
 			},
@@ -408,7 +408,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 		delete(sts.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 	}
 
-	if len(instance.GetVolumeClaimTemplates()) == 0 {
+	if len(instance.GetSpec().GetVolumeClaimTemplates()) == 0 {
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
 			corev1.Volume{
@@ -419,7 +419,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			},
 		)
 	} else {
-		sts.Spec.VolumeClaimTemplates = instance.GetVolumeClaimTemplates()
+		sts.Spec.VolumeClaimTemplates = instance.GetSpec().GetVolumeClaimTemplates()
 	}
 
 	return sts
@@ -575,8 +575,8 @@ func mergeEnvAndConfig(instance appsv1beta4.Emqx, extraEnvs ...corev1.EnvVar) []
 		return false
 	}
 
-	envs := append(instance.GetTemplate().Spec.EmqxContainer.Env, extraEnvs...)
-	emqxConfig := instance.GetTemplate().Spec.EmqxContainer.EmqxConfig
+	envs := append(instance.GetSpec().GetTemplate().Spec.EmqxContainer.Env, extraEnvs...)
+	emqxConfig := instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig
 
 	for k, v := range emqxConfig {
 		key := fmt.Sprintf("EMQX_%s", strings.ToUpper(strings.ReplaceAll(k, ".", "__")))

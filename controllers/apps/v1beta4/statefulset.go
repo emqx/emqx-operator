@@ -117,16 +117,16 @@ func (r *EmqxReconciler) getLatestReadyStatefulSet(instance appsv1beta4.Emqx, in
 		for _, pod := range podMap[sts.UID] {
 			if pod.Status.Phase == corev1.PodRunning {
 				for _, containerStatus := range pod.Status.ContainerStatuses {
-					if containerStatus.Ready && containerStatus.Name == instance.GetTemplate().Spec.EmqxContainer.Name {
+					if containerStatus.Ready && containerStatus.Name == instance.GetSpec().GetTemplate().Spec.EmqxContainer.Name {
 						if !inCluster {
 							readyCount++
 						} else {
-							for _, emqxNode := range instance.GetEmqxNodes() {
+							for _, emqxNode := range instance.GetStatus().GetEmqxNodes() {
 								emqxNodeName := fmt.Sprintf(
 									"%s@%s.%s",
-									instance.GetTemplate().Spec.EmqxContainer.EmqxConfig["name"],
+									instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig["name"],
 									pod.Name,
-									instance.GetTemplate().Spec.EmqxContainer.EmqxConfig["cluster.dns.name"],
+									instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig["cluster.dns.name"],
 								)
 								if emqxNodeName == emqxNode.Node && emqxNode.NodeStatus == "Running" {
 									readyCount++
@@ -138,7 +138,7 @@ func (r *EmqxReconciler) getLatestReadyStatefulSet(instance appsv1beta4.Emqx, in
 			}
 
 		}
-		if readyCount == *instance.GetReplicas() {
+		if readyCount == *instance.GetSpec().GetReplicas() {
 			return sts, nil
 		}
 	}

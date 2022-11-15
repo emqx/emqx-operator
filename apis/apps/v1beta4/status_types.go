@@ -2,7 +2,6 @@ package v1beta4
 
 import (
 	"sort"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,15 +35,6 @@ const (
 	ConditionRunning           ConditionType = "Running"
 )
 
-// +kubebuilder:object:generate=false
-type EmqxStatus interface {
-	IsRunning() bool
-	IsInitResourceReady() bool
-	GetConditions() []Condition
-	SetCondition(c Condition)
-	GetEmqxNodes() []EmqxNode
-}
-
 type EmqxNode struct {
 	// EMQX node name
 	Node string `json:"node,omitempty"`
@@ -56,16 +46,22 @@ type EmqxNode struct {
 	Version string `json:"version,omitempty"`
 }
 
-// Emqx Status defines the observed state of EMQX
-type Status struct {
-	// Represents the latest available observations of a EMQX current state.
-	Conditions []Condition `json:"conditions,omitempty"`
-	// Nodes of the EMQX cluster
-	EmqxNodes []EmqxNode `json:"emqxNodes,omitempty"`
-	// replicas is the number of Pods created by the EMQX Custom Resource controller.
-	Replicas int32 `json:"replicas,omitempty"`
-	// readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready.
-	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+type EmqxEvacuationStats struct {
+	InitialSessions  int32 `json:"initial_sessions,omitempty"`
+	InitialConnected int32 `json:"initial_connected,omitempty"`
+	CurrentSessions  int32 `json:"current_sessions,omitempty"`
+	CurrentConnected int32 `json:"current_connected,omitempty"`
+}
+
+type EmqxEvacuationStatus struct {
+	Node                   string              `json:"node,omitempty"`
+	Stats                  EmqxEvacuationStats `json:"stats,omitempty"`
+	State                  string              `json:"state,omitempty"`
+	SessionRecipients      []string            `json:"session_recipients,omitempty"`
+	SessionGoal            int32               `json:"session_goal,omitempty"`
+	SessionEvictionRate    int32               `json:"session_eviction_rate,omitempty"`
+	ConnectionGoal         int32               `json:"connection_goal,omitempty"`
+	ConnectionEvictionRate int32               `json:"connection_eviction_rate,omitempty"`
 }
 
 func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
@@ -77,51 +73,14 @@ func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason,
 	}
 }
 
-func (s *Status) IsRunning() bool {
-	index := indexCondition(s, ConditionRunning)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
-func (s *Status) IsInitResourceReady() bool {
-	index := indexCondition(s, ConditionInitResourceReady)
-	if index == -1 {
-		return false
-	}
-	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
-func (s *Status) GetEmqxNodes() []EmqxNode {
-	return s.EmqxNodes
-}
-
-func (s *Status) GetConditions() []Condition {
-	return s.Conditions
-}
-
-func (s *Status) SetCondition(c Condition) {
-	now := metav1.Now()
-	c.LastUpdateAt = now
-	c.LastUpdateTime = now.Format(time.RFC3339)
-	pos := indexCondition(s, c.Type)
-	// condition exist
-	if pos >= 0 {
-		s.Conditions[pos] = c
-	} else { // condition not exist
-		c.LastTransitionTime = now.Format(time.RFC3339)
-		s.Conditions = append(s.Conditions, c)
-	}
-
-	s.sortConditions(s.Conditions)
-}
-
-func (s *Status) sortConditions(conditions []Condition) {
+func sortConditions(conditions []Condition) {
 	sort.Slice(conditions, func(i, j int) bool {
-		return s.Conditions[j].LastUpdateAt.Before(&s.Conditions[i].LastUpdateAt)
+		return conditions[j].LastUpdateAt.Before(&conditions[i].LastUpdateAt)
 	})
 }
 
-func indexCondition(status *Status, t ConditionType) int {
-	for i, c := range status.Conditions {
+func indexCondition(conditions []Condition, t ConditionType) int {
+	for i, c := range conditions {
 		if t == c.Type {
 			return i
 		}

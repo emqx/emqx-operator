@@ -2,25 +2,23 @@ package v1beta4
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // +kubebuilder:object:generate=false
 type Emqx interface {
 	client.Object
-	EmqxSpec
-	EmqxStatus
+
+	GetSpec() EmqxSpec
+	GetStatus() EmqxStatus
 
 	Default()
 	ValidateCreate() error
 	ValidateUpdate(runtime.Object) error
 	ValidateDelete() error
-
-	GetStatus() Status
-	SetStatus(Status)
 }
 
 // +kubebuilder:object:generate=false
@@ -36,6 +34,20 @@ type EmqxSpec interface {
 
 	GetServiceTemplate() ServiceTemplate
 	SetServiceTemplate(ServiceTemplate)
+}
+
+// +kubebuilder:object:generate=false
+type EmqxStatus interface {
+	IsInitResourceReady() bool
+	IsRunning() bool
+	GetConditions() []Condition
+	SetCondition(c Condition)
+	GetEmqxNodes() []EmqxNode
+	SetEmqxNodes([]EmqxNode)
+	GetReplicas() int32
+	SetReplicas(int32)
+	GetReadyReplicas() int32
+	SetReadyReplicas(int32)
 }
 
 type ServiceTemplate struct {
