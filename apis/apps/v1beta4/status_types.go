@@ -78,25 +78,16 @@ func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason,
 }
 
 func (s *Status) IsRunning() bool {
-	if len(s.Conditions) == 0 {
-		return false
-	}
-	c := s.Conditions[0]
-	if c.Type == ConditionRunning && c.Status == corev1.ConditionTrue {
-		return true
-	}
-	return false
+	index := indexCondition(s, ConditionRunning)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
 func (s *Status) IsInitResourceReady() bool {
-	if len(s.Conditions) == 0 {
+	index := indexCondition(s, ConditionInitResourceReady)
+	if index == -1 {
 		return false
 	}
-	c := s.Conditions[len(s.Conditions)-1]
-	if c.Type == ConditionInitResourceReady && c.Status == corev1.ConditionTrue {
-		return true
-	}
-	return false
+	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
 func (s *Status) GetEmqxNodes() []EmqxNode {
