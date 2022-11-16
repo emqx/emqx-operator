@@ -19,7 +19,7 @@ We use a [cert-manager](https://github.com/jetstack/cert-manager) for provisioni
  helm repo update
  helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
  ```
-2. Wait EMQX Operator Controller running 
+2. Wait EMQX Operator Controller running
 
 ```shell
 $ kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system
@@ -29,7 +29,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 ## Deploy the EMQX
 
-### Deploy EMQX 5 
+### Deploy EMQX 5
 
 1. Deploy EMQX Custom Resource
 
@@ -45,6 +45,8 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
     ```
 
     Full example please check [`emqx-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml).
+
+    Detailed explanation of each field please check [v2alpha1-reference](../reference/v2alpha1-reference.md)
 
 2. Check EMQX Custom Resource status
 
@@ -71,6 +73,8 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     Full example please check [`emqxbroker-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxbroker-full.yaml).
 
+    Detailed explanation of each field please check [v1beta3-reference](../reference/v1beta3-reference.md)
+
 2. Check EMQX Custom Resource status
 
     ```
@@ -95,6 +99,8 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
     ```
 
     Full example please check [`emqxenterprise-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxenterprise-full.yaml).
+
+    Detailed explanation of each field please check [v1beta3-reference](../reference/v1beta3-reference.md)
 
 2. Check EMQX Custom Resource status
 
