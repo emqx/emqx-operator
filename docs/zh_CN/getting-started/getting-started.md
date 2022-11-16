@@ -28,7 +28,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 ## 部署 EMQX
 
-### 部署 EMQX 5 
+### 部署 EMQX 5
 
 1. 部署 EMQX 自定义资源
 
@@ -44,6 +44,8 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
     ```
 
     完整的例子请查看 [`emqx-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml)
+
+    每个字段的详细解释，请参考 [v2alpha1-reference](../../en_US/reference/v2alpha1-reference.md)
 
 2. 检查 EMQX 自定义资源状态
 
@@ -68,7 +70,9 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
     EOF
     ```
 
-    完整的例子请查看 [`emqxbroker-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxbroker-full.yaml).
+    完整的例子请查看 [`emqxbroker-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxbroker-full.yaml)
+
+    每个字段的详细解释，请参考 [v1beta3-reference](../../en_US/reference/v1beta3-reference.md)
 
 2. 检查 EMQX 自定义资源状态
 
@@ -95,7 +99,9 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
     ```
 
 
-    完整的例子请查看 [`emqxenterprise-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxenterprise-full.yaml).
+    完整的例子请查看 [`emqxenterprise-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxenterprise-full.yaml)
+
+    每个字段的详细解释，请参考 [v1beta3-reference](../../en_US/reference/v1beta3-reference.md)
 
 2. 检查 EMQX 自定义资源状态
 
