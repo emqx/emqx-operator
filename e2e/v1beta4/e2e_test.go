@@ -190,9 +190,9 @@ var _ = Describe("Base E2E Test", func() {
 			Expect(k8sClient.Create(context.TODO(), plugin)).Should(Succeed())
 
 			By("check EMQX CR status")
-			Expect(emqx.GetStatus().Replicas).Should(Equal(int32(1)))
-			Expect(emqx.GetStatus().ReadyReplicas).Should(Equal(int32(1)))
-			Expect(emqx.GetStatus().EmqxNodes).Should(HaveLen(1))
+			Expect(emqx.GetStatus().GetReplicas()).Should(Equal(int32(1)))
+			Expect(emqx.GetStatus().GetReadyReplicas()).Should(Equal(int32(1)))
+			Expect(emqx.GetStatus().GetEmqxNodes()).Should(HaveLen(1))
 
 			By("check pod annotations")
 			sts := &appsv1.StatefulSet{}
@@ -375,8 +375,8 @@ var _ = Describe("Blue Green Update Test", func() {
 			Eventually(func() string {
 				ee := &appsv1beta4.EmqxEnterprise{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				if len(ee.GetEmqxNodes()) > 0 {
-					return ee.GetEmqxNodes()[0].Node
+				if len(ee.GetStatus().GetEmqxNodes()) > 0 {
+					return ee.GetStatus().GetEmqxNodes()[0].Node
 				}
 				return ""
 			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace())))
@@ -443,7 +443,7 @@ var _ = Describe("Blue Green Update Test", func() {
 					},
 				)
 				return podList.Items
-			}, timeout, interval).Should(HaveLen(int(*emqx.GetReplicas())))
+			}, timeout, interval).Should(HaveLen(int(*emqx.GetSpec().GetReplicas())))
 
 			Eventually(func() map[string]string {
 				svc := &corev1.Service{}
@@ -454,8 +454,8 @@ var _ = Describe("Blue Green Update Test", func() {
 			Eventually(func() string {
 				ee := &appsv1beta4.EmqxEnterprise{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				if len(ee.GetEmqxNodes()) > 0 {
-					return ee.GetEmqxNodes()[0].Node
+				if len(ee.GetStatus().GetEmqxNodes()) > 0 {
+					return ee.GetStatus().GetEmqxNodes()[0].Node
 				}
 				return ""
 			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", newSts.Name, emqx.GetNamespace())))
@@ -485,7 +485,7 @@ func createEmqx(emqx appsv1beta4.Emqx) {
 			},
 			emqx,
 		)
-		return len(emqx.GetEmqxNodes()) > 0
+		return len(emqx.GetStatus().GetEmqxNodes()) > 0
 	}, timeout, interval).Should(BeTrue())
 }
 
