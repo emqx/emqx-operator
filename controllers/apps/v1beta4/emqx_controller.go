@@ -145,23 +145,13 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{}, err
 	}
 
-	r.updateEmqxStatus(instance)
-	_ = r.Client.Status().Update(ctx, instance)
-
-	if _, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-		if err := r.syncStatefulSet(instance); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
 	svc := generateService(instance, listenerPorts...)
-	latestReadySts, err := r.getLatestReadyStatefulSet(instance, true)
-	if err != nil {
-		return ctrl.Result{}, err
+	latestReadySts, _ := r.getLatestReadyStatefulSet(instance, true)
+	if latestReadySts != nil {
+		selector := svc.Spec.Selector
+		selector["controller-revision-hash"] = latestReadySts.Status.CurrentRevision
+		svc.Spec.Selector = selector
 	}
-	selector := svc.Spec.Selector
-	selector["controller-revision-hash"] = latestReadySts.Status.CurrentRevision
-	svc.Spec.Selector = selector
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, []client.Object{svc}); err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
@@ -173,6 +163,17 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		)
 		_ = r.Client.Status().Update(ctx, instance)
 		return ctrl.Result{}, err
+	}
+
+	r.updateEmqxStatus(instance)
+	_ = r.Client.Status().Update(ctx, instance)
+
+	if instance.GetStatus().IsRunning() {
+		if _, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
+			if err := r.syncStatefulSet(instance); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil

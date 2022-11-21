@@ -34,9 +34,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, path string) (*http.Response, []byte, error) {
+func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, path string, body []byte) (*http.Response, []byte, error) {
 	inCluster := true
-	if path == "api/v4/nodes" {
+	if path == "api/v4/nodes" && !instance.GetStatus().IsRunning() {
 		inCluster = false
 	}
 	latestReadySts, err := r.getLatestReadyStatefulSet(instance, inCluster)
@@ -70,11 +70,11 @@ func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, 
 		},
 	}
 
-	return apiClient.Do(method, path, nil)
+	return apiClient.Do(method, path, body)
 }
 
 func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
-	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/nodes")
+	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/nodes", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 		return ans
 	}
 
-	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/listeners")
+	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/listeners", nil)
 	if err != nil {
 		return nil, err
 	}
