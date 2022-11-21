@@ -11789,7 +11789,7 @@ spec:
                 type: object
             type: object
           status:
-            description: Emqx Status defines the observed state of EMQX
+            description: EmqxEnterpriseStatus defines the observed state of EmqxEnterprise
             properties:
               conditions:
                 description: Represents the latest available observations of a EMQX
@@ -11838,6 +11838,46 @@ spec:
                     version:
                       description: EMQX version
                       type: string
+                  type: object
+                type: array
+              evacuationsStatus:
+                items:
+                  properties:
+                    connection_eviction_rate:
+                      format: int32
+                      type: integer
+                    connection_goal:
+                      format: int32
+                      type: integer
+                    node:
+                      type: string
+                    session_eviction_rate:
+                      format: int32
+                      type: integer
+                    session_goal:
+                      format: int32
+                      type: integer
+                    session_recipients:
+                      items:
+                        type: string
+                      type: array
+                    state:
+                      type: string
+                    stats:
+                      properties:
+                        current_connected:
+                          format: int32
+                          type: integer
+                        current_sessions:
+                          format: int32
+                          type: integer
+                        initial_connected:
+                          format: int32
+                          type: integer
+                        initial_sessions:
+                          format: int32
+                          type: integer
+                      type: object
                   type: object
                 type: array
               readyReplicas:
