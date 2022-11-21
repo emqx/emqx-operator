@@ -92,18 +92,18 @@ func defaultLabels(r Emqx) {
 	labels["apps.emqx.io/instance"] = r.GetName()
 	r.SetLabels(labels)
 
-	template := r.GetTemplate()
+	template := r.GetSpec().GetTemplate()
 	if template.Labels == nil {
 		template.Labels = make(map[string]string)
 	}
 	for k, v := range labels {
 		template.Labels[k] = v
 	}
-	r.SetTemplate(template)
+	r.GetSpec().SetTemplate(template)
 }
 
 func defaultEmqxACL(r Emqx) {
-	template := r.GetTemplate()
+	template := r.GetSpec().GetTemplate()
 	if len(template.Spec.EmqxContainer.EmqxACL) == 0 {
 		template.Spec.EmqxContainer.EmqxACL = []string{
 			`{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.`,
@@ -112,13 +112,13 @@ func defaultEmqxACL(r Emqx) {
 			`{allow, all}.`,
 		}
 	}
-	r.SetTemplate(template)
+	r.GetSpec().SetTemplate(template)
 }
 
 func defaultEmqxConfig(r Emqx) {
 	names := &Names{r}
 
-	template := r.GetTemplate()
+	template := r.GetSpec().GetTemplate()
 	if template.Spec.EmqxContainer.EmqxConfig == nil {
 		template.Spec.EmqxContainer.EmqxConfig = make(map[string]string)
 	}
@@ -136,11 +136,11 @@ func defaultEmqxConfig(r Emqx) {
 			template.Spec.EmqxContainer.EmqxConfig[k] = v
 		}
 	}
-	r.SetTemplate(template)
+	r.GetSpec().SetTemplate(template)
 }
 
 func defaultServiceTemplate(r Emqx) {
-	s := r.GetServiceTemplate()
+	s := r.GetSpec().GetServiceTemplate()
 
 	s.ObjectMeta.Namespace = r.GetNamespace()
 	if s.ObjectMeta.Name == "" {
@@ -176,11 +176,11 @@ func defaultServiceTemplate(r Emqx) {
 		},
 	})
 
-	r.SetServiceTemplate(s)
+	r.GetSpec().SetServiceTemplate(s)
 }
 
 func validateVolumeClaimTemplates(new, old Emqx) error {
-	if !reflect.DeepEqual(new.GetVolumeClaimTemplates(), old.GetVolumeClaimTemplates()) {
+	if !reflect.DeepEqual(new.GetSpec().GetVolumeClaimTemplates(), old.GetSpec().GetVolumeClaimTemplates()) {
 		return errors.New("refuse to update VolumeClaimTemplates ")
 	}
 	return nil
