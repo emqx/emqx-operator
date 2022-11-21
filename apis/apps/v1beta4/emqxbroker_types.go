@@ -35,8 +35,97 @@ type EmqxBrokerSpec struct {
 	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
 }
 
+func (s *EmqxBrokerSpec) GetReplicas() *int32 {
+	return s.Replicas
+}
+
+func (s *EmqxBrokerSpec) SetReplicas(replicas int32) {
+	s.Replicas = &replicas
+}
+
+func (s *EmqxBrokerSpec) GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim {
+	return s.VolumeClaimTemplates
+}
+
+func (s *EmqxBrokerSpec) SetVolumeClaimTemplates(volumeClaimTemplates []corev1.PersistentVolumeClaim) {
+	s.VolumeClaimTemplates = volumeClaimTemplates
+}
+
+func (s *EmqxBrokerSpec) GetTemplate() EmqxTemplate {
+	return s.Template
+}
+
+func (s *EmqxBrokerSpec) SetTemplate(template EmqxTemplate) {
+	s.Template = template
+}
+
+func (s *EmqxBrokerSpec) GetServiceTemplate() ServiceTemplate {
+	return s.ServiceTemplate
+}
+func (s *EmqxBrokerSpec) SetServiceTemplate(serviceTemplate ServiceTemplate) {
+	s.ServiceTemplate = serviceTemplate
+}
+
 // EmqxBrokerStatus defines the observed state of EmqxBroker
 type EmqxBrokerStatus struct {
+	// Represents the latest available observations of a EMQX current state.
+	Conditions []Condition `json:"conditions,omitempty"`
+	// Nodes of the EMQX cluster
+	EmqxNodes []EmqxNode `json:"emqxNodes,omitempty"`
+	// replicas is the number of Pods created by the EMQX Custom Resource controller.
+	Replicas int32 `json:"replicas,omitempty"`
+	// readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+}
+
+func (s *EmqxBrokerStatus) IsRunning() bool {
+	index := indexCondition(s.Conditions, ConditionRunning)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
+}
+
+func (s *EmqxBrokerStatus) IsInitResourceReady() bool {
+	index := indexCondition(s.Conditions, ConditionInitResourceReady)
+	if index == -1 {
+		return false
+	}
+	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
+}
+
+func (s *EmqxBrokerStatus) GetReplicas() int32 {
+	return s.Replicas
+}
+
+func (s *EmqxBrokerStatus) SetReplicas(replicas int32) {
+	s.Replicas = replicas
+}
+
+func (s *EmqxBrokerStatus) GetReadyReplicas() int32 {
+	return s.ReadyReplicas
+}
+
+func (s *EmqxBrokerStatus) SetReadyReplicas(readyReplicas int32) {
+	s.ReadyReplicas = readyReplicas
+}
+
+func (s *EmqxBrokerStatus) GetEmqxNodes() []EmqxNode {
+	return s.EmqxNodes
+}
+
+func (s *EmqxBrokerStatus) SetEmqxNodes(nodes []EmqxNode) {
+	s.EmqxNodes = nodes
+}
+
+func (s *EmqxBrokerStatus) GetConditions() []Condition {
+	return s.Conditions
+}
+
+func (s *EmqxBrokerStatus) AddCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) {
+	s.Conditions = addCondition(s.Conditions, Condition{
+		Type:    condType,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
 }
 
 //+kubebuilder:object:root=true
@@ -49,8 +138,8 @@ type EmqxBroker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxBrokerSpec `json:"spec,omitempty"`
-	Status `json:"status,omitempty"`
+	Spec   EmqxBrokerSpec   `json:"spec,omitempty"`
+	Status EmqxBrokerStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -66,40 +155,10 @@ func init() {
 	SchemeBuilder.Register(&EmqxBroker{}, &EmqxBrokerList{})
 }
 
-func (emqx *EmqxBroker) GetReplicas() *int32 {
-	return emqx.Spec.Replicas
+func (emqx *EmqxBroker) GetSpec() EmqxSpec {
+	return &emqx.Spec
 }
 
-func (emqx *EmqxBroker) SetReplicas(replicas int32) {
-	emqx.Spec.Replicas = &replicas
-}
-
-func (emqx *EmqxBroker) GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim {
-	return emqx.Spec.VolumeClaimTemplates
-}
-
-func (emqx *EmqxBroker) SetVolumeClaimTemplates(volumeClaimTemplates []corev1.PersistentVolumeClaim) {
-	emqx.Spec.VolumeClaimTemplates = volumeClaimTemplates
-}
-
-func (emqx *EmqxBroker) GetTemplate() EmqxTemplate {
-	return emqx.Spec.Template
-}
-
-func (emqx *EmqxBroker) SetTemplate(template EmqxTemplate) {
-	emqx.Spec.Template = template
-}
-
-func (emqx *EmqxBroker) GetServiceTemplate() ServiceTemplate {
-	return emqx.Spec.ServiceTemplate
-}
-func (emqx *EmqxBroker) SetServiceTemplate(serviceTemplate ServiceTemplate) {
-	emqx.Spec.ServiceTemplate = serviceTemplate
-}
-
-func (emqx *EmqxBroker) GetStatus() Status {
-	return emqx.Status
-}
-func (emqx *EmqxBroker) SetStatus(status Status) {
-	emqx.Status = status
+func (emqx *EmqxBroker) GetStatus() EmqxStatus {
+	return &emqx.Status
 }
