@@ -15120,7 +15120,7 @@ spec:
                 type: array
             type: object
           status:
-            description: Emqx Status defines the observed state of EMQX
+            description: EmqxBrokerStatus defines the observed state of EmqxBroker
             properties:
               conditions:
                 description: Represents the latest available observations of a EMQX
