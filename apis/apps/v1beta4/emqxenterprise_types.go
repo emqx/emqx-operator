@@ -47,8 +47,99 @@ type EmqxEnterpriseSpec struct {
 	ServiceTemplate ServiceTemplate `json:"serviceTemplate,omitempty"`
 }
 
+func (s *EmqxEnterpriseSpec) GetReplicas() *int32 {
+	return s.Replicas
+}
+
+func (s *EmqxEnterpriseSpec) SetReplicas(replicas int32) {
+	s.Replicas = &replicas
+}
+
+func (s *EmqxEnterpriseSpec) GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim {
+	return s.VolumeClaimTemplates
+}
+
+func (s *EmqxEnterpriseSpec) SetVolumeClaimTemplates(volumeClaimTemplates []corev1.PersistentVolumeClaim) {
+	s.VolumeClaimTemplates = volumeClaimTemplates
+}
+
+func (s *EmqxEnterpriseSpec) GetTemplate() EmqxTemplate {
+	return s.Template
+}
+
+func (s *EmqxEnterpriseSpec) SetTemplate(template EmqxTemplate) {
+	s.Template = template
+}
+
+func (s *EmqxEnterpriseSpec) GetServiceTemplate() ServiceTemplate {
+	return s.ServiceTemplate
+}
+func (s *EmqxEnterpriseSpec) SetServiceTemplate(serviceTemplate ServiceTemplate) {
+	s.ServiceTemplate = serviceTemplate
+}
+
 // EmqxEnterpriseStatus defines the observed state of EmqxEnterprise
 type EmqxEnterpriseStatus struct {
+	// Represents the latest available observations of a EMQX current state.
+	Conditions []Condition `json:"conditions,omitempty"`
+	// Nodes of the EMQX cluster
+	EmqxNodes []EmqxNode `json:"emqxNodes,omitempty"`
+	// replicas is the number of Pods created by the EMQX Custom Resource controller.
+	Replicas int32 `json:"replicas,omitempty"`
+	// readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+
+	EvacuationsStatus []EmqxEvacuationStatus `json:"evacuationsStatus,omitempty"`
+}
+
+func (s *EmqxEnterpriseStatus) IsRunning() bool {
+	index := indexCondition(s.Conditions, ConditionRunning)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
+}
+
+func (s *EmqxEnterpriseStatus) IsInitResourceReady() bool {
+	index := indexCondition(s.Conditions, ConditionInitResourceReady)
+	if index == -1 {
+		return false
+	}
+	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
+}
+
+func (s *EmqxEnterpriseStatus) GetReplicas() int32 {
+	return s.Replicas
+}
+
+func (s *EmqxEnterpriseStatus) SetReplicas(replicas int32) {
+	s.Replicas = replicas
+}
+
+func (s *EmqxEnterpriseStatus) GetReadyReplicas() int32 {
+	return s.ReadyReplicas
+}
+
+func (s *EmqxEnterpriseStatus) SetReadyReplicas(readyReplicas int32) {
+	s.ReadyReplicas = readyReplicas
+}
+
+func (s *EmqxEnterpriseStatus) GetEmqxNodes() []EmqxNode {
+	return s.EmqxNodes
+}
+
+func (s *EmqxEnterpriseStatus) SetEmqxNodes(nodes []EmqxNode) {
+	s.EmqxNodes = nodes
+}
+
+func (s *EmqxEnterpriseStatus) GetConditions() []Condition {
+	return s.Conditions
+}
+
+func (s *EmqxEnterpriseStatus) AddCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) {
+	s.Conditions = addCondition(s.Conditions, Condition{
+		Type:    condType,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
 }
 
 //+kubebuilder:object:root=true
@@ -61,8 +152,8 @@ type EmqxEnterprise struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxEnterpriseSpec `json:"spec,omitempty"`
-	Status `json:"status,omitempty"`
+	Spec   EmqxEnterpriseSpec   `json:"spec,omitempty"`
+	Status EmqxEnterpriseStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -78,40 +169,10 @@ func init() {
 	SchemeBuilder.Register(&EmqxEnterprise{}, &EmqxEnterpriseList{})
 }
 
-func (emqx *EmqxEnterprise) GetReplicas() *int32 {
-	return emqx.Spec.Replicas
+func (emqx *EmqxEnterprise) GetSpec() EmqxSpec {
+	return &emqx.Spec
 }
 
-func (emqx *EmqxEnterprise) SetReplicas(replicas int32) {
-	emqx.Spec.Replicas = &replicas
-}
-
-func (emqx *EmqxEnterprise) GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim {
-	return emqx.Spec.VolumeClaimTemplates
-}
-
-func (emqx *EmqxEnterprise) SetVolumeClaimTemplates(volumeClaimTemplates []corev1.PersistentVolumeClaim) {
-	emqx.Spec.VolumeClaimTemplates = volumeClaimTemplates
-}
-
-func (emqx *EmqxEnterprise) GetTemplate() EmqxTemplate {
-	return emqx.Spec.Template
-}
-
-func (emqx *EmqxEnterprise) SetTemplate(template EmqxTemplate) {
-	emqx.Spec.Template = template
-}
-
-func (emqx *EmqxEnterprise) GetServiceTemplate() ServiceTemplate {
-	return emqx.Spec.ServiceTemplate
-}
-func (emqx *EmqxEnterprise) SetServiceTemplate(serviceTemplate ServiceTemplate) {
-	emqx.Spec.ServiceTemplate = serviceTemplate
-}
-
-func (emqx *EmqxEnterprise) GetStatus() Status {
-	return emqx.Status
-}
-func (emqx *EmqxEnterprise) SetStatus(status Status) {
-	emqx.Status = status
+func (emqx *EmqxEnterprise) GetStatus() EmqxStatus {
+	return &emqx.Status
 }
