@@ -90,11 +90,11 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	}
 
 	var license *corev1.Secret
-	if instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName != "" {
+	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
 		if err := r.Client.Get(
 			context.Background(),
 			types.NamespacedName{
-				Name:      instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxLicense.SecretName,
+				Name:      enterprise.Spec.License.SecretName,
 				Namespace: instance.GetNamespace(),
 			},
 			license,
