@@ -10,15 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Check image tag for yaml
+    - name: Check helm
       run: |
-        tag=$(cat deploy/manifests/emqx-operator-controller.yaml | egrep "image:[[:space:]]emqx/emqx-operator-controller" | sed -r 's|image:[[:space:]]emqx/emqx-operator-controller:(.*)|\1|g' | tr -d '[:space:]')
-        if [ "$tag" != "${GITHUB_REF##*/}" ]; then
-          echo "Need update image tag for deploy/manifests/emqx-operator-controller.yaml"
+        version=$(egrep "^version" deploy/charts/emqx-operator/Chart.yaml | sed -r 's|^version:[[:space:]]([0-9]+.[0-9]+.[0-9]+)$|\1|g')
+        if [ "$version" != "${GITHUB_REF##*/}" ]; then
+          echo "Need update version for Chart.yaml"
           exit 1
         fi
-    - name: Check appVersion for helm
-      run: |
         appVersion=$(egrep "^appVersion" deploy/charts/emqx-operator/Chart.yaml | sed -r 's|^appVersion:[[:space:]]([0-9]+.[0-9]+.[0-9]+)$|\1|g')
         if [ "$appVersion" != "${GITHUB_REF##*/}" ]; then
           echo "Need update appVersion for Chart.yaml"
@@ -63,8 +61,6 @@ jobs:
         name: EMQX Operator ${{ github.ref_name }} Released
         body_path: RELEASE.md
         generate_release_notes: true
-        files: |
-          deploy/manifests/emqx-operator-controller.yaml
     - name: Update helm repo
       uses: emqx/push-helm-action@v1
       with:

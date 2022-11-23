@@ -13,9 +13,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        install:
-          - static
-          - helm
         emqx:
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-slim.yaml"]
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-full.yaml"]
@@ -42,22 +39,13 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install storage operator
-        if: matrix.install == 'static'
-        run: |
-          browser_download_url="$(curl --silent --show-error \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ github.token }}" \
-            https://api.github.com/repos/emqx/emqx-operator/releases/tags/$(git describe --tags --abbrev=0) \
-            | jq '.assets[0].browser_download_url')"
-          kubectl apply -f "$browser_download_url" --server-side --force-conflicts
-      - name: Install storage operator
-        if: matrix.install == 'helm'
         run: |
           helm repo add emqx https://repos.emqx.io/charts
           helm repo update
           helm install emqx-operator emqx/emqx-operator \
             --namespace emqx-operator-system \
-            --create-namespace
+            --create-namespace \
+            --version $(git describe --abbrev=0 --tags)
       - name: Check operator
         timeout-minutes: 5
         run: |
@@ -78,17 +66,11 @@ jobs:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
         run: eval $(minikube docker-env) && docker build -t $IMG .
       - name: Deploy controller
-        if: matrix.install == 'static'
-        env:
-          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
-        run: make deploy
-      - name: Deploy controller
-        if: matrix.install == 'helm'
         run: |
           helm upgrade --install emqx-operator deploy/charts/emqx-operator \
-            --set image.tag=${{ github.sha }} \
             --namespace emqx-operator-system \
-            --create-namespace
+            --create-namespace \
+            --set image.tag=${{ github.sha }}
       - name: Check operator
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
