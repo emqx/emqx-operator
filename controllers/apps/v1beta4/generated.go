@@ -194,11 +194,12 @@ func generateDefaultPluginsConfig(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 }
 
 func generateLicense(instance appsv1beta4.Emqx) *corev1.Secret {
-	if _, ok := instance.(*appsv1beta4.EmqxEnterprise); !ok {
+	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
+	if !ok {
 		return nil
 	}
 	names := appsv1beta4.Names{Object: instance}
-	license := instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxLicense
+	license := enterprise.Spec.License
 	if len(license.Data) == 0 && len(license.StringData) == 0 {
 		return nil
 	}

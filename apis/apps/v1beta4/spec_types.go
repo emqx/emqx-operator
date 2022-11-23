@@ -27,23 +27,6 @@ type ServiceTemplate struct {
 
 type EmqxConfig map[string]string
 
-type EmqxLicense struct {
-	// Data contains the secret data. Each key must consist of alphanumeric
-	// characters, '-', '_' or '.'. The serialized form of the secret data is a
-	// base64 encoded string, representing the arbitrary (possibly non-string)
-	// data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
-	Data []byte `json:"data,omitempty"`
-
-	// StringData allows specifying non-binary secret data in string form.
-	// It is provided as a write-only input field for convenience.
-	// All keys and values are merged into the data field on write, overwriting any existing values.
-	StringData string `json:"stringData,omitempty"`
-
-	// SecretName is the name of the secret in the pod's namespace to use.
-	// More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
-	SecretName string `json:"secretName,omitempty"`
-}
-
 type EmqxContainer struct {
 	// Name of the container specified as a DNS_LABEL.
 	// Each container in a pod must have a unique name (DNS_LABEL).
@@ -204,9 +187,8 @@ type EmqxContainer struct {
 	// +optional
 	TTY bool `json:"tty,omitempty" protobuf:"varint,18,opt,name=tty"`
 
-	EmqxConfig  map[string]string `json:"emqxConfig,omitempty"`
-	EmqxACL     []string          `json:"emqxACL,omitempty"`
-	EmqxLicense EmqxLicense       `json:"emqxLicense,omitempty"`
+	EmqxConfig map[string]string `json:"emqxConfig,omitempty"`
+	EmqxACL    []string          `json:"emqxACL,omitempty"`
 }
 
 type EmqxTemplateSpec struct {

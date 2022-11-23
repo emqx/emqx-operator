@@ -53,7 +53,7 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.Template.Spec.EmqxContainer.Name = "emqx"
 	dst.Spec.Template.Spec.EmqxContainer.Image = src.Spec.EmqxTemplate.Image
 	if !reflect.ValueOf(src.Spec.EmqxTemplate.License).IsZero() {
-		dst.Spec.Template.Spec.EmqxContainer.EmqxLicense = v1beta4.EmqxLicense(src.Spec.EmqxTemplate.License)
+		dst.Spec.License = v1beta4.EmqxLicense(src.Spec.EmqxTemplate.License)
 	}
 	if src.Spec.EmqxTemplate.EmqxConfig != nil {
 		dst.Spec.Template.Spec.EmqxContainer.EmqxConfig = src.Spec.EmqxTemplate.EmqxConfig
@@ -134,7 +134,7 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 	// Template
 	dst.Spec.EmqxTemplate.Image = src.Spec.Template.Spec.EmqxContainer.Image
 	if !reflect.ValueOf(dst.Spec.EmqxTemplate.License).IsZero() {
-		dst.Spec.EmqxTemplate.License = License(src.Spec.Template.Spec.EmqxContainer.EmqxLicense)
+		dst.Spec.EmqxTemplate.License = License(src.Spec.License)
 	}
 	if src.Spec.Template.Spec.EmqxContainer.EmqxConfig != nil {
 		dst.Spec.EmqxTemplate.EmqxConfig = src.Spec.Template.Spec.EmqxContainer.EmqxConfig

@@ -21,6 +21,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type EmqxLicense struct {
+	// Data contains the secret data. Each key must consist of alphanumeric
+	// characters, '-', '_' or '.'. The serialized form of the secret data is a
+	// base64 encoded string, representing the arbitrary (possibly non-string)
+	// data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
+	Data []byte `json:"data,omitempty"`
+
+	// StringData allows specifying non-binary secret data in string form.
+	// It is provided as a write-only input field for convenience.
+	// All keys and values are merged into the data field on write, overwriting any existing values.
+	StringData string `json:"stringData,omitempty"`
+
+	// SecretName is the name of the secret in the pod's namespace to use.
+	// More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+	SecretName string `json:"secretName,omitempty"`
+}
+
 type EmqxBlueGreenUpdate struct {
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 }
@@ -35,6 +52,8 @@ type EvacuationStrategy struct {
 type EmqxEnterpriseSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	License EmqxLicense `json:"license,omitempty"`
 
 	// VolumeClaimTemplates describes the common attributes of storage devices
 	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"persistent,omitempty"`
