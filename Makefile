@@ -37,7 +37,7 @@ help: ## Display this help.
 
 ##@ Development
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: crd-ref-docs controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -94,6 +94,11 @@ envtest: ## Download envtest-setup locally if necessary.
 	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 	$(ENVTEST) use 1.21
 
+CRD_REF_DOCS = $(shell pwd)/bin/crd-ref-docs
+crd-ref-docs:
+	$(call go-install-tool,$(CRD_REF_DOCS),github.com/elastic/crd-ref-docs@latest)
+	$(call gen-crd-ref-docs)
+
 # go-install-tool will 'go install' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-install-tool
@@ -102,4 +107,17 @@ set -e ;\
 echo "Install $(2)" ;\
 GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
 }
+endef
+
+REFERENCE_OUTPUT := $(PROJECT_DIR)/docs/en_US/reference
+REFERENCE_CONFIG := $(PROJECT_DIR)/crd-reference-config.yaml
+define gen-crd-ref-docs
+@for API_DIR in $$(find $(PROJECT_DIR)/apis/apps -type d -d 1); do \
+    crd-ref-docs \
+		--source-path=$${API_DIR} \
+		--config=$(REFERENCE_CONFIG) \
+		--output-path=$(REFERENCE_OUTPUT)/$$(basename $${API_DIR})-reference.md \
+		--renderer=markdown \
+		--log-level=error; \
+done
 endef
