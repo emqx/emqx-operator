@@ -17,15 +17,16 @@ limitations under the License.
 package v1beta4
 
 import (
+	"path/filepath"
+	"strings"
+	"testing"
+
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"path/filepath"
-	"strings"
-	"testing"
 )
 
 var instance = appsv1beta4.EmqxEnterprise{
@@ -112,7 +113,7 @@ func TestGenerateLicense(t *testing.T) {
 	emqx := instance.DeepCopy()
 	assert.Nil(t, generateLicense(emqx))
 
-	emqx.Spec.Template.Spec.EmqxContainer.EmqxLicense = appsv1beta4.EmqxLicense{
+	emqx.Spec.License = appsv1beta4.EmqxLicense{
 		Data:       []byte("fake data"),
 		StringData: string("fake string data"),
 	}

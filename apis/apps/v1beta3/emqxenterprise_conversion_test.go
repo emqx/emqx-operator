@@ -205,6 +205,9 @@ var v1beta4EmqxEnterprise = &v1beta4.EmqxEnterprise{
 	},
 	Spec: v1beta4.EmqxEnterpriseSpec{
 		Replicas: &[]int32{3}[0],
+		License: v1beta4.EmqxLicense{
+			SecretName: "fake-license-secret",
+		},
 		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 			{
 				Spec: corev1.PersistentVolumeClaimSpec{
@@ -263,9 +266,6 @@ var v1beta4EmqxEnterprise = &v1beta4.EmqxEnterprise{
 				},
 				EmqxContainer: v1beta4.EmqxContainer{
 					Image: "emqx/emqx:4.4.8",
-					EmqxLicense: v1beta4.EmqxLicense{
-						SecretName: "fake-license-secret",
-					},
 					EmqxConfig: map[string]string{
 						"foo": "bar",
 					},
@@ -387,7 +387,7 @@ func TestEnterpriseConversionTo(t *testing.T) {
 	assert.Equal(t, v1bete3EmqxBroker.Labels, emqx.Spec.Template.Labels)
 	assert.Equal(t, v1bete3EmqxBroker.Annotations, emqx.Spec.Template.Annotations)
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.Image, emqx.Spec.Template.Spec.EmqxContainer.Image)
-	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.License, emqx.Spec.Template.Spec.EmqxContainer.EmqxLicense)
+	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.License, emqx.Spec.License)
 	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.EmqxConfig, emqx.Spec.Template.Spec.EmqxContainer.EmqxConfig)
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.ACL, emqx.Spec.Template.Spec.EmqxContainer.EmqxACL)
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.ImagePullPolicy, emqx.Spec.Template.Spec.EmqxContainer.ImagePullPolicy)
@@ -420,7 +420,7 @@ func TestEnterpriseConversionFrom(t *testing.T) {
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.Image, emqx.Spec.EmqxTemplate.Image)
-	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.EmqxLicense, emqx.Spec.EmqxTemplate.License)
+	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.License, emqx.Spec.EmqxTemplate.License)
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.EmqxConfig, emqx.Spec.EmqxTemplate.EmqxConfig)
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.EmqxACL, emqx.Spec.EmqxTemplate.ACL)
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.ImagePullPolicy, emqx.Spec.EmqxTemplate.ImagePullPolicy)
