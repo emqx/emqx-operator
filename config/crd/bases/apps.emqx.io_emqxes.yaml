@@ -1378,26 +1378,6 @@ spec:
                                   x-kubernetes-int-or-string: true
                               type: object
                             ephemeral:
-                              description: "ephemeral represents a volume that is
-                                handled by a cluster storage driver. The volume's
-                                lifecycle is tied to the pod that defines it - it
-                                will be created before the pod starts, and deleted
-                                when the pod is removed. \n Use this if: a) the volume
-                                is only needed while the pod runs, b) features of
-                                normal volumes like restoring from snapshot or capacity
-                                tracking are needed, c) the storage driver is specified
-                                through a storage class, and d) the storage driver
-                                supports dynamic volume provisioning through a PersistentVolumeClaim
-                                (see EphemeralVolumeSource for more information on
-                                the connection between this volume type and PersistentVolumeClaim).
-                                \n Use PersistentVolumeClaim or one of the vendor-specific
-                                APIs for volumes that persist for longer than the
-                                lifecycle of an individual pod. \n Use CSI for light-weight
-                                local ephemeral volumes if the CSI driver is meant
-                                to be used that way - see the documentation of the
-                                driver for more information. \n A pod can use both
-                                types of ephemeral volumes and persistent volumes
-                                at the same time."
                               properties:
                                 volumeClaimTemplate:
                                   properties:
@@ -1440,34 +1420,6 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         dataSourceRef:
-                                          description: 'dataSourceRef specifies the
-                                            object from which to populate the volume
-                                            with data, if a non-empty volume is desired.
-                                            This may be any local object from a non-empty
-                                            API group (non core object) or a PersistentVolumeClaim
-                                            object. When this field is specified,
-                                            volume binding will only succeed if the
-                                            type of the specified object matches some
-                                            installed volume populator or dynamic
-                                            provisioner. This field will replace the
-                                            functionality of the DataSource field
-                                            and as such if both fields are non-empty,
-                                            they must have the same value. For backwards
-                                            compatibility, both fields (DataSource
-                                            and DataSourceRef) will be set to the
-                                            same value automatically if one of them
-                                            is empty and the other is non-empty. There
-                                            are two important differences between
-                                            DataSource and DataSourceRef: * While
-                                            DataSource only allows two specific types
-                                            of objects, DataSourceRef allows any non-core
-                                            object, as well as PersistentVolumeClaim
-                                            objects. * While DataSource ignores disallowed
-                                            values (dropping them), DataSourceRef
-                                            preserves all values, and generates an
-                                            error if a disallowed value is specified.
-                                            (Beta) Using this field requires the AnyVolumeDataSource
-                                            feature gate to be enabled.'
                                           properties:
                                             apiGroup:
                                               type: string
@@ -3031,27 +2983,6 @@ spec:
                             type: object
                             x-kubernetes-map-type: atomic
                           dataSourceRef:
-                            description: 'dataSourceRef specifies the object from
-                              which to populate the volume with data, if a non-empty
-                              volume is desired. This may be any local object from
-                              a non-empty API group (non core object) or a PersistentVolumeClaim
-                              object. When this field is specified, volume binding
-                              will only succeed if the type of the specified object
-                              matches some installed volume populator or dynamic provisioner.
-                              This field will replace the functionality of the DataSource
-                              field and as such if both fields are non-empty, they
-                              must have the same value. For backwards compatibility,
-                              both fields (DataSource and DataSourceRef) will be set
-                              to the same value automatically if one of them is empty
-                              and the other is non-empty. There are two important
-                              differences between DataSource and DataSourceRef: *
-                              While DataSource only allows two specific types of objects,
-                              DataSourceRef allows any non-core object, as well as
-                              PersistentVolumeClaim objects. * While DataSource ignores
-                              disallowed values (dropping them), DataSourceRef preserves
-                              all values, and generates an error if a disallowed value
-                              is specified. (Beta) Using this field requires the AnyVolumeDataSource
-                              feature gate to be enabled.'
                             properties:
                               apiGroup:
                                 type: string
@@ -3234,17 +3165,6 @@ spec:
                     properties:
                       conditions:
                         items:
-                          description: "Condition contains details for one aspect
-                            of the current state of this API Resource. --- This struct
-                            is intended for direct use as an array at the field path
-                            .status.conditions.  For example, type FooStatus struct{
-                            // Represents the observations of a foo's current state.
-                            // Known .status.conditions.type are: \"Available\", \"Progressing\",
-                            and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                            // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                            `json:\"conditions,omitempty\" patchStrategy:\"merge\"
-                            patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
-                            \n // other fields }"
                           properties:
                             lastTransitionTime:
                               format: date-time
@@ -3295,15 +3215,6 @@ spec:
                                   items:
                                     properties:
                                       error:
-                                        description: 'Error is to record the problem
-                                          with the service port The format of the
-                                          error shall comply with the following rules:
-                                          - built-in error values shall be specified
-                                          in this file and those shall use CamelCase
-                                          names - cloud provider specific error values
-                                          must have names that comply with the format
-                                          foo.example.com/CamelCase. --- The regex
-                                          it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
                                         maxLength: 316
                                         pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                                         type: string
@@ -3454,17 +3365,6 @@ spec:
                     properties:
                       conditions:
                         items:
-                          description: "Condition contains details for one aspect
-                            of the current state of this API Resource. --- This struct
-                            is intended for direct use as an array at the field path
-                            .status.conditions.  For example, type FooStatus struct{
-                            // Represents the observations of a foo's current state.
-                            // Known .status.conditions.type are: \"Available\", \"Progressing\",
-                            and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                            // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                            `json:\"conditions,omitempty\" patchStrategy:\"merge\"
-                            patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
-                            \n // other fields }"
                           properties:
                             lastTransitionTime:
                               format: date-time
@@ -3515,15 +3415,6 @@ spec:
                                   items:
                                     properties:
                                       error:
-                                        description: 'Error is to record the problem
-                                          with the service port The format of the
-                                          error shall comply with the following rules:
-                                          - built-in error values shall be specified
-                                          in this file and those shall use CamelCase
-                                          names - cloud provider specific error values
-                                          must have names that comply with the format
-                                          foo.example.com/CamelCase. --- The regex
-                                          it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
                                         maxLength: 316
                                         pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                                         type: string
@@ -4891,26 +4782,6 @@ spec:
                                   x-kubernetes-int-or-string: true
                               type: object
                             ephemeral:
-                              description: "ephemeral represents a volume that is
-                                handled by a cluster storage driver. The volume's
-                                lifecycle is tied to the pod that defines it - it
-                                will be created before the pod starts, and deleted
-                                when the pod is removed. \n Use this if: a) the volume
-                                is only needed while the pod runs, b) features of
-                                normal volumes like restoring from snapshot or capacity
-                                tracking are needed, c) the storage driver is specified
-                                through a storage class, and d) the storage driver
-                                supports dynamic volume provisioning through a PersistentVolumeClaim
-                                (see EphemeralVolumeSource for more information on
-                                the connection between this volume type and PersistentVolumeClaim).
-                                \n Use PersistentVolumeClaim or one of the vendor-specific
-                                APIs for volumes that persist for longer than the
-                                lifecycle of an individual pod. \n Use CSI for light-weight
-                                local ephemeral volumes if the CSI driver is meant
-                                to be used that way - see the documentation of the
-                                driver for more information. \n A pod can use both
-                                types of ephemeral volumes and persistent volumes
-                                at the same time."
                               properties:
                                 volumeClaimTemplate:
                                   properties:
@@ -4953,34 +4824,6 @@ spec:
                                           type: object
                                           x-kubernetes-map-type: atomic
                                         dataSourceRef:
-                                          description: 'dataSourceRef specifies the
-                                            object from which to populate the volume
-                                            with data, if a non-empty volume is desired.
-                                            This may be any local object from a non-empty
-                                            API group (non core object) or a PersistentVolumeClaim
-                                            object. When this field is specified,
-                                            volume binding will only succeed if the
-                                            type of the specified object matches some
-                                            installed volume populator or dynamic
-                                            provisioner. This field will replace the
-                                            functionality of the DataSource field
-                                            and as such if both fields are non-empty,
-                                            they must have the same value. For backwards
-                                            compatibility, both fields (DataSource
-                                            and DataSourceRef) will be set to the
-                                            same value automatically if one of them
-                                            is empty and the other is non-empty. There
-                                            are two important differences between
-                                            DataSource and DataSourceRef: * While
-                                            DataSource only allows two specific types
-                                            of objects, DataSourceRef allows any non-core
-                                            object, as well as PersistentVolumeClaim
-                                            objects. * While DataSource ignores disallowed
-                                            values (dropping them), DataSourceRef
-                                            preserves all values, and generates an
-                                            error if a disallowed value is specified.
-                                            (Beta) Using this field requires the AnyVolumeDataSource
-                                            feature gate to be enabled.'
                                           properties:
                                             apiGroup:
                                               type: string
