@@ -70,6 +70,7 @@ spec:
   emqxTemplate:
     # username: "admin"
     # password: "public"
+    registry: docker.io
     image: emqx/emqx:4.4.8
     imagePullPolicy: IfNotPresent
     securityContext:
