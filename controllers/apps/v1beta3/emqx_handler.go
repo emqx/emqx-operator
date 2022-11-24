@@ -722,9 +722,13 @@ func generateVolumeClaimTemplate(instance appsv1beta3.Emqx, Name string) corev1.
 }
 
 func generateReloaderContainer(instance appsv1beta3.Emqx) *corev1.Container {
+	image := ReloaderContainerImage
+	if len(instance.GetRegistry()) != 0 {
+		image = fmt.Sprintf("%s/%s", instance.GetRegistry(), image)
+	}
 	return &corev1.Container{
 		Name:            ReloaderContainerName,
-		Image:           ReloaderContainerImage,
+		Image:           image,
 		ImagePullPolicy: instance.GetImagePullPolicy(),
 		Args: []string{
 			"-u", instance.GetUsername(),
@@ -735,9 +739,13 @@ func generateReloaderContainer(instance appsv1beta3.Emqx) *corev1.Container {
 }
 
 func generateEmqxContainer(instance appsv1beta3.Emqx) *corev1.Container {
+	image := instance.GetImage()
+	if len(instance.GetRegistry()) != 0 {
+		image = fmt.Sprintf("%s/%s", instance.GetRegistry(), image)
+	}
 	return &corev1.Container{
 		Name:            EmqxContainerName,
-		Image:           instance.GetImage(),
+		Image:           image,
 		ImagePullPolicy: instance.GetImagePullPolicy(),
 		Resources:       instance.GetResource(),
 		Env: mergeEnvAndConfig(instance, []corev1.EnvVar{

@@ -107,6 +107,9 @@ type EmqxSpec interface {
 
 	GetStatus() Status
 	SetStatus(status Status)
+
+	GetRegistry() string
+	SetRegistry(registry string)
 }
 
 // +kubebuilder:object:generate=false
