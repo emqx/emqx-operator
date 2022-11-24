@@ -1298,6 +1298,8 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  registry:
+                    type: string
                   resources:
                     properties:
                       limits:
