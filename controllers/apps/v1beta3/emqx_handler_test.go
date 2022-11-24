@@ -71,6 +71,7 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 				{Name: "EMQX_LOG__TO", Value: "file"},
 			},
 			EmqxTemplate: appsv1beta3.EmqxBrokerTemplate{
+				Registry:        "emqx.test.io",
 				Image:           "emqx/emqx:4.4.8",
 				ImagePullPolicy: corev1.PullAlways,
 				EmqxConfig: appsv1beta3.EmqxConfig{
@@ -174,7 +175,7 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 					Containers: []corev1.Container{
 						{
 							Name:            "emqx",
-							Image:           "emqx/emqx:4.4.8",
+							Image:           "emqx.test.io/emqx/emqx:4.4.8",
 							ImagePullPolicy: corev1.PullAlways,
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -245,7 +246,7 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 						},
 						{
 							Name:            "reloader",
-							Image:           "emqx/emqx-operator-reloader:0.0.2",
+							Image:           "emqx.test.io/emqx/emqx-operator-reloader:0.0.2",
 							ImagePullPolicy: corev1.PullAlways,
 							Args: []string{
 								"-u", "admin",

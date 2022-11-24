@@ -22,6 +22,10 @@ import (
 )
 
 type EmqxBrokerTemplate struct {
+	// Registry will used for EMQX owner image,
+	// like ${registry}/emqx/emqx and ${registry}/emqx/emqx-operator-reloader,
+	// but it will not be use other images, like sidecar container or else.
+	Registry string `json:"registry,omitempty"`
 	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
 	// Image pull policy.
@@ -312,3 +316,6 @@ func (emqx *EmqxBroker) SetPassword(password string) {
 
 func (emqx *EmqxBroker) GetStatus() Status       { return emqx.Status }
 func (emqx *EmqxBroker) SetStatus(status Status) { emqx.Status = status }
+
+func (emqx *EmqxBroker) GetRegistry() string         { return emqx.Spec.EmqxTemplate.Registry }
+func (emqx *EmqxBroker) SetRegistry(registry string) { emqx.Spec.EmqxTemplate.Registry = registry }
