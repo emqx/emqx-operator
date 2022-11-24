@@ -14,6 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        kubernetes-env:
+          - minikube
+          - k3s
         kubernetes-version:
           - "v1.20.15"
           - "v1.21.14"
@@ -22,7 +25,13 @@ jobs:
           - "v1.24.7"
           - "v1.25.3"
     steps:
-      - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
+      - if: matrix.kubernetes-env == 'k3s'
+        run: |
+          INSTALL_K3S_VERSION="${{ matrix.kubernetes-version }}+k3s1" curl -sfL https://get.k3s.io | sh -
+          sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+          echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
+      - if: matrix.kubernetes-env == 'minikube'
+        run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
@@ -95,6 +104,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        kubernetes-env:
+          - minikube
+          - k3s
         kubernetes-version:
           - "v1.20.15"
           - "v1.21.14"
@@ -111,7 +123,13 @@ jobs:
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
 
     steps:
-      - run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
+      - if: matrix.kubernetes-env == 'k3s'
+        run: |
+          curl -sfL https://get.k3s.io | sh -
+          sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+          echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
+      - if: matrix.kubernetes-env == 'minikube'
+        run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:

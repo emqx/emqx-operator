@@ -26,9 +26,11 @@ runs:
   - name: Deploy operator by helm
     shell: bash
     run: |
+      repository=$(echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]')
+      tag=$(echo ${{ inputs.tag }} | tr '/' '-')
       helm install emqx-operator deploy/charts/emqx-operator\
-        --set image.repository=${{ inputs.repository }} \
-        --set image.tag=${{ inputs.tag }} \
+        --set image.repository=$repository \
+        --set image.tag=$tag \
         --namespace emqx-operator-system \
         --create-namespace
   - name: Check operator
