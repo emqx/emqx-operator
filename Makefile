@@ -36,8 +36,9 @@ help: ## Display this help.
 
 ##@ Development
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) crd:generateEmbeddedObjectMeta=true rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+manifests: crd-ref-docs controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) crd:maxDescLen=0,generateEmbeddedObjectMeta=true rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(call gen-crd-ref-docs)
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -82,8 +83,10 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 ##@ Build Dependencies
 
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+
 ## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
+LOCALBIN ?= $(PROJECT_DIR)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
@@ -91,6 +94,7 @@ $(LOCALBIN):
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
@@ -111,3 +115,19 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	test -s $(LOCALBIN)/crd-ref-docs || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@latest
+
+define gen-crd-ref-docs
+@for API_DIR in $$(find $(PROJECT_DIR)/apis/apps -type d -d 1); do \
+	$(CRD_REF_DOCS) \
+		--source-path=$${API_DIR} \
+		--config=$(PROJECT_DIR)/crd-reference-config.yaml \
+		--output-path=$(PROJECT_DIR)/docs/en_US/reference/$$(basename $${API_DIR})-reference.md \
+		--renderer=markdown \
+		--log-level=error; \
+done
+endef
