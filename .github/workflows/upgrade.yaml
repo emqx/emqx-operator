@@ -38,6 +38,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - run: echo "PRE_VERSION=$(git describe --abbrev=0 --tags)" >> $GITHUB_ENV
       - name: Install storage operator
         run: |
           helm repo add emqx https://repos.emqx.io/charts
@@ -45,7 +46,7 @@ jobs:
           helm install emqx-operator emqx/emqx-operator \
             --namespace emqx-operator-system \
             --create-namespace \
-            --version $(git describe --abbrev=0 --tags)
+            --version ${{ env.PRE_VERSION }}
       - name: Check operator
         timeout-minutes: 5
         run: |
@@ -60,7 +61,7 @@ jobs:
         with:
           kind: ${{ matrix.emqx[0] }}
           name: ${{ matrix.emqx[1] }}
-          file: ${{ matrix.emqx[2] }}
+          file: https://raw.githubusercontent.com/emqx/emqx-operator/${{ env.PRE_VERSION }}/${{ matrix.emqx[2] }}
       - name: Build image
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
