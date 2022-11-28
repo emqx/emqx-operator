@@ -27,9 +27,36 @@ import (
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/rory-z/go-hocon"
 	"github.com/sethvargo/go-password/password"
 	appsv1 "k8s.io/api/apps/v1"
 )
+
+func generateNodeCookieSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
+	var cookie string
+
+	config, _ := hocon.ParseString(instance.Spec.BootstrapConfig)
+	cookie = config.GetString("node.cookie")
+	if cookie == "" {
+		cookie, _ = password.Generate(64, 10, 0, true, true)
+	}
+
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        instance.NameOfNodeCookie(),
+			Namespace:   instance.Namespace,
+			Labels:      instance.Labels,
+			Annotations: instance.Annotations,
+		},
+		StringData: map[string]string{
+			"node_cookie": cookie,
+		},
+	}
+}
 
 func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 	username := "emqx_operator_controller"
@@ -365,6 +392,26 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 	return deploy
 }
 
+func updateStatefulSetForNodeCookie(sts *appsv1.StatefulSet, nodeCookie *corev1.Secret) *appsv1.StatefulSet {
+	env := corev1.EnvVar{
+		Name: "EMQX_NODE__COOKIE",
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: nodeCookie.Name,
+				},
+				Key: "node_cookie",
+			},
+		},
+	}
+
+	if isNotExistEnv(sts.Spec.Template.Spec.Containers[0].Env, env) {
+		sts.Spec.Template.Spec.Containers[0].Env = append(sts.Spec.Template.Spec.Containers[0].Env, env)
+	}
+
+	return sts
+}
+
 func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *corev1.Secret) *appsv1.StatefulSet {
 	volume := corev1.Volume{
 		Name: "bootstrap-user",
@@ -428,6 +475,27 @@ func updateStatefulSetForBootstrapConfig(sts *appsv1.StatefulSet, bootstrapConfi
 
 	return sts
 }
+
+func updateDeploymentForNodeCookie(deploy *appsv1.Deployment, nodeCookie *corev1.Secret) *appsv1.Deployment {
+	env := corev1.EnvVar{
+		Name: "EMQX_NODE__COOKIE",
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: nodeCookie.Name,
+				},
+				Key: "node_cookie",
+			},
+		},
+	}
+
+	if isNotExistEnv(deploy.Spec.Template.Spec.Containers[0].Env, env) {
+		deploy.Spec.Template.Spec.Containers[0].Env = append(deploy.Spec.Template.Spec.Containers[0].Env, env)
+	}
+
+	return deploy
+}
+
 func updateDeploymentForBootstrapConfig(deploy *appsv1.Deployment, bootstrapConfig *corev1.ConfigMap) *appsv1.Deployment {
 	volume := corev1.Volume{
 		Name: "bootstrap-config",

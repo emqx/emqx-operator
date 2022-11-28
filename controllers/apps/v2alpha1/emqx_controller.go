@@ -104,22 +104,25 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.Object, error) {
 	var resources []client.Object
-	bootstrap_user := generateBootstrapUserSecret(instance)
-	bootstrap_config := generateBootstrapConfigMap(instance)
+	nodeCookie := generateNodeCookieSecret(instance)
+	bootstrapUser := generateBootstrapUserSecret(instance)
+	bootstrapConfig := generateBootstrapConfigMap(instance)
 	if instance.Status.IsCreating() {
-		resources = append(resources, bootstrap_user, bootstrap_config)
+		resources = append(resources, nodeCookie, bootstrapUser, bootstrapConfig)
 	}
 
 	dashboardSvc := generateDashboardService(instance)
 	headlessSvc := generateHeadlessService(instance)
 	sts := generateStatefulSet(instance)
-	sts = updateStatefulSetForBootstrapUser(sts, bootstrap_user)
-	sts = updateStatefulSetForBootstrapConfig(sts, bootstrap_config)
+	sts = updateStatefulSetForNodeCookie(sts, nodeCookie)
+	sts = updateStatefulSetForBootstrapUser(sts, bootstrapUser)
+	sts = updateStatefulSetForBootstrapConfig(sts, bootstrapConfig)
 	resources = append(resources, dashboardSvc, headlessSvc, sts)
 
 	if instance.Status.IsRunning() || instance.Status.IsCoreNodesReady() {
 		deploy := generateDeployment(instance)
-		deploy = updateDeploymentForBootstrapConfig(deploy, bootstrap_config)
+		deploy = updateDeploymentForNodeCookie(deploy, nodeCookie)
+		deploy = updateDeploymentForBootstrapConfig(deploy, bootstrapConfig)
 		resources = append(resources, deploy)
 
 		listenerPorts, err := r.generateRequestAPI(instance).getAllListenersByAPI(sts)
