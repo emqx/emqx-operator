@@ -42,6 +42,31 @@ var (
 	}
 )
 
+func TestGenerateNodeCookieSecret(t *testing.T) {
+	instance := &appsv2alpha1.EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+	}
+
+	t.Run("generate node cookie secret", func(t *testing.T) {
+		got := generateNodeCookieSecret(instance)
+		assert.Equal(t, "emqx-node-cookie", got.Name)
+		_, ok := got.StringData["node_cookie"]
+		assert.True(t, ok)
+	})
+
+	t.Run("generate node cookie when already set node cookie", func(t *testing.T) {
+		instance.Spec.BootstrapConfig = "node.cookie = fake"
+		got := generateNodeCookieSecret(instance)
+		assert.Equal(t, "emqx-node-cookie", got.Name)
+		_, ok := got.StringData["node_cookie"]
+		assert.True(t, ok)
+		assert.Equal(t, "fake", got.StringData["node_cookie"])
+	})
+}
+
 func TestGenerateBootstrapUserSecret(t *testing.T) {
 	instance := &appsv2alpha1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
@@ -935,6 +960,43 @@ func TestGenerateDeployment(t *testing.T) {
 	assert.Equal(t, expect, generateDeployment(instance))
 }
 
+func TestUpdateStatefulSetForNodeCookie(t *testing.T) {
+	nodeCookie := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "emqx-node-cookie",
+		},
+		StringData: map[string]string{
+			"node_cookie": "fake",
+		},
+	}
+
+	sts := &appsv1.StatefulSet{
+		Spec: appsv1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+					},
+				},
+			},
+		},
+	}
+
+	got := updateStatefulSetForNodeCookie(sts, nodeCookie)
+
+	assert.Equal(t, []corev1.EnvVar{{
+		Name: "EMQX_NODE__COOKIE",
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: "emqx-node-cookie",
+				},
+				Key: "node_cookie",
+			},
+		},
+	}}, got.Spec.Template.Spec.Containers[0].Env)
+}
+
 func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
 	bootstrapUser := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1016,6 +1078,43 @@ func TestUpdateStatefulSetForBootstrapConfig(t *testing.T) {
 		SubPath:   "emqx.conf",
 		ReadOnly:  true,
 	}}, got.Spec.Template.Spec.Containers[0].VolumeMounts)
+}
+
+func TestUpdateDeploymentForNodeCookie(t *testing.T) {
+	nodeCookie := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "emqx-node-cookie",
+		},
+		StringData: map[string]string{
+			"node_cookie": "fake",
+		},
+	}
+
+	deploy := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx"},
+					},
+				},
+			},
+		},
+	}
+
+	got := updateDeploymentForNodeCookie(deploy, nodeCookie)
+
+	assert.Equal(t, []corev1.EnvVar{{
+		Name: "EMQX_NODE__COOKIE",
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: "emqx-node-cookie",
+				},
+				Key: "node_cookie",
+			},
+		},
+	}}, got.Spec.Template.Spec.Containers[0].Env)
 }
 
 func TestUpdateDeploymentForBootstrapConfig(t *testing.T) {

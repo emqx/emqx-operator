@@ -46,6 +46,10 @@ func (instance *EMQX) NameOfListenersService() string {
 	return fmt.Sprintf("%s-listeners", instance.Name)
 }
 
+func (instance *EMQX) NameOfNodeCookie() string {
+	return fmt.Sprintf("%s-node-cookie", instance.Name)
+}
+
 func (instance *EMQX) NameOfBootStrapUser() string {
 	return fmt.Sprintf("%s-bootstrap-user", instance.Name)
 }

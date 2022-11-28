@@ -23,7 +23,6 @@ import (
 	emperror "emperror.dev/errors"
 	// "github.com/gurkankaymak/hocon"
 	hocon "github.com/rory-z/go-hocon"
-	"github.com/sethvargo/go-password/password"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -40,8 +39,6 @@ func (r *EMQX) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		For(r).
 		Complete()
 }
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 //+kubebuilder:webhook:path=/mutate-apps-emqx-io-v2alpha1-emqx,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxes,verbs=create;update,versions=v2alpha1,name=mutating.apps.emqx.io,admissionReviewVersions={v1,v1beta1}
 
@@ -175,10 +172,8 @@ func (r *EMQX) defaultLabels() {
 
 func (r *EMQX) defaultBootstrapConfig() {
 	dnsName := fmt.Sprintf("%s.%s.svc.cluster.local", r.NameOfHeadlessService(), r.Namespace)
-	cookie, _ := password.Generate(64, 10, 0, true, true)
 	defaultBootstrapConfigStr := fmt.Sprintf(`
 	node {
-	  cookie = "%s"
 	  data_dir = data
 	  etc_dir = etc
 	}
@@ -200,7 +195,7 @@ func (r *EMQX) defaultBootstrapConfig() {
 		bind = "0.0.0.0:1883"
 		max_connections = 1024000
 	}
-	`, cookie, dnsName)
+	`, dnsName)
 
 	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, r.Spec.BootstrapConfig)
 	config, err := hocon.ParseString(bootstrapConfig)
