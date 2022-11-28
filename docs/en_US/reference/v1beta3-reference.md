@@ -117,7 +117,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `registry` _string_ | Registry will used for EMQX owner image, like ${registry}/emqx/emqx and ${registry}/emqx/emqx-operator-reloader, but it will not be use other images, like sidecar container or else. |
+| `registry` _string_ | Registry will used for EMQX owner image, like ${registry}/emqx/emqx and ${registry}/emqx/emqx-operator-reloader, but it will not be used by other images, like sidecar container or else. |
 | `image` _string_ |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `username` _string_ | Username for EMQX Dashboard and API |
@@ -209,7 +209,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `registry` _string_ | Registry will used for EMQX owner image, like ${registry}/emqx/emqx-ee and ${registry}/emqx/emqx-operator-reloader, but it will not be use other images, like sidecar container or else. |
+| `registry` _string_ | Registry will used for EMQX owner image, like ${registry}/emqx/emqx-ee and ${registry}/emqx/emqx-operator-reloader, but it will not be used by other images, like sidecar container or else. |
 | `image` _string_ |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `username` _string_ | Username for EMQX Dashboard and API |
