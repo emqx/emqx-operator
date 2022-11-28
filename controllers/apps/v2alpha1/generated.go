@@ -21,19 +21,24 @@ import (
 	"reflect"
 	"strings"
 
+	emperror "emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/pkg/handler"
+	hocon "github.com/rory-z/go-hocon"
 	"github.com/sethvargo/go-password/password"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
+func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) (*corev1.Secret, error) {
 	username := "emqx_operator_controller"
-	password, _ := password.Generate(64, 10, 0, true, true)
+	password, err := password.Generate(64, 10, 0, true, true)
+	if err != nil {
+		return nil, emperror.Wrap(err, "generate bootstrap user password failed")
+	}
 
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -49,10 +54,47 @@ func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 		StringData: map[string]string{
 			"bootstrap_user": fmt.Sprintf("%s:%s", username, password),
 		},
-	}
+	}, nil
 }
 
-func generateBootstrapConfigMap(instance *appsv2alpha1.EMQX) *corev1.ConfigMap {
+func generateBootstrapConfigMap(instance *appsv2alpha1.EMQX) (*corev1.ConfigMap, error) {
+	dnsName := fmt.Sprintf("%s.%s.svc.cluster.local", instance.NameOfHeadlessService(), instance.Namespace)
+	cookie, err := password.Generate(64, 10, 0, true, true)
+	if err != nil {
+		return nil, emperror.Wrap(err, "generate node cookie failed")
+	}
+	defaultBootstrapConfigStr := fmt.Sprintf(`
+	node {
+	  cookie = "%s"
+	  data_dir = data
+	  etc_dir = etc
+	}
+	cluster {
+		discovery_strategy = dns
+		dns {
+			record_type = srv
+			name = "%s"
+		}
+	}
+	dashboard {
+	  listeners.http {
+		bind = 18083
+	  }
+	  default_username = admin
+	  default_password = public
+	}
+	listeners.tcp.default {
+		bind = "0.0.0.0:1883"
+		max_connections = 1024000
+	}
+	`, cookie, dnsName)
+
+	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, instance.Spec.BootstrapConfig)
+	config, err := hocon.ParseString(bootstrapConfig)
+	if err != nil {
+		return nil, emperror.Wrap(err, "parse bootstrap config failed")
+	}
+
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -65,9 +107,9 @@ func generateBootstrapConfigMap(instance *appsv2alpha1.EMQX) *corev1.ConfigMap {
 			Annotations: instance.Annotations,
 		},
 		Data: map[string]string{
-			"emqx.conf": instance.Spec.BootstrapConfig,
+			"emqx.conf": config.String(),
 		},
-	}
+	}, nil
 }
 
 func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {

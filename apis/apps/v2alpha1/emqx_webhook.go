@@ -17,13 +17,11 @@ limitations under the License.
 package v2alpha1
 
 import (
-	"fmt"
 	"reflect"
 
 	emperror "emperror.dev/errors"
 	// "github.com/gurkankaymak/hocon"
 	hocon "github.com/rory-z/go-hocon"
-	"github.com/sethvargo/go-password/password"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -53,7 +51,6 @@ func (r *EMQX) Default() {
 
 	r.defaultNames()
 	r.defaultLabels()
-	r.defaultBootstrapConfig()
 	r.defaultDashboardServiceTemplate()
 	r.defaultProbe()
 }
@@ -173,49 +170,10 @@ func (r *EMQX) defaultLabels() {
 	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 }
 
-func (r *EMQX) defaultBootstrapConfig() {
-	dnsName := fmt.Sprintf("%s.%s.svc.cluster.local", r.NameOfHeadlessService(), r.Namespace)
-	cookie, _ := password.Generate(64, 10, 0, true, true)
-	defaultBootstrapConfigStr := fmt.Sprintf(`
-	node {
-	  cookie = "%s"
-	  data_dir = data
-	  etc_dir = etc
-	}
-	cluster {
-		discovery_strategy = dns
-		dns {
-			record_type = srv
-			name = "%s"
-		}
-	}
-	dashboard {
-	  listeners.http {
-		bind = 18083
-	  }
-	  default_username = admin
-	  default_password = public
-	}
-	listeners.tcp.default {
-		bind = "0.0.0.0:1883"
-		max_connections = 1024000
-	}
-	`, cookie, dnsName)
-
-	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, r.Spec.BootstrapConfig)
-	config, err := hocon.ParseString(bootstrapConfig)
-	if err != nil {
-		return
-	}
-
-	r.Spec.BootstrapConfig = config.String()
-}
-
 func (r *EMQX) defaultDashboardServiceTemplate() {
 	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
 	dashboardPort, err := GetDashboardServicePort(r)
 	if err != nil {
-		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
 		dashboardPort = &corev1.ServicePort{
 			Name:       "dashboard-listeners-http-bind",
 			Protocol:   corev1.ProtocolTCP,

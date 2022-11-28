@@ -104,8 +104,14 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.Object, error) {
 	var resources []client.Object
-	bootstrap_user := generateBootstrapUserSecret(instance)
-	bootstrap_config := generateBootstrapConfigMap(instance)
+	bootstrap_user, err := generateBootstrapUserSecret(instance)
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to generate bootstrap user secret")
+	}
+	bootstrap_config, err := generateBootstrapConfigMap(instance)
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to generate bootstrap config map")
+	}
 	if instance.Status.IsCreating() {
 		resources = append(resources, bootstrap_user, bootstrap_config)
 	}

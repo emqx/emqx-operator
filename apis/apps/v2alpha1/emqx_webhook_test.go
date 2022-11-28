@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	// "github.com/gurkankaymak/hocon"
-	hocon "github.com/rory-z/go-hocon"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -151,94 +150,6 @@ func TestDefaultLabels(t *testing.T) {
 		"apps.emqx.io/instance":   "webhook-test",
 		"apps.emqx.io/db-role":    "replicant",
 	}, instance.Spec.ReplicantTemplate.Labels)
-}
-
-func TestDefaultBootstrapConfig(t *testing.T) {
-	t.Run("empty bootstrap config", func(t *testing.T) {
-		instance := &EMQX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "webhook-test",
-				Namespace: "default",
-			},
-			Spec: EMQXSpec{
-				BootstrapConfig: "",
-			},
-		}
-		instance.defaultBootstrapConfig()
-
-		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
-		assert.Nil(t, err)
-
-		assert.NotNil(t, bootstrapConfig.GetString("node.cookie"))
-		assert.Equal(t, "data", bootstrapConfig.GetString("node.data_dir"))
-		assert.Equal(t, "etc", bootstrapConfig.GetString("node.etc_dir"))
-
-		assert.Equal(t, "18083", bootstrapConfig.GetString("dashboard.listeners.http.bind"))
-		assert.Equal(t, "admin", bootstrapConfig.GetString("dashboard.default_username"))
-		assert.Equal(t, "public", bootstrapConfig.GetString("dashboard.default_password"))
-
-		assert.Equal(t, "\"0.0.0.0:1883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
-		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
-	})
-
-	t.Run("already set cookie", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				BootstrapConfig: `node.cookie = "6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq"`,
-			},
-		}
-		instance.defaultBootstrapConfig()
-
-		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
-		assert.Nil(t, err)
-		assert.Equal(t, "\"6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq\"", bootstrapConfig.GetString("node.cookie"))
-	})
-
-	t.Run("already set listener", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				BootstrapConfig: `listeners.tcp.default.bind = "0.0.0.0:11883"`,
-			},
-		}
-		instance.defaultBootstrapConfig()
-
-		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
-		assert.Nil(t, err)
-		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
-		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
-	})
-
-	t.Run("other style set listener", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				BootstrapConfig: `
-					listeners {
-						tcp {
-							default {
-								bind = "0.0.0.0:11883"
-							}
-						}
-					}
-					`,
-			},
-		}
-		instance.defaultBootstrapConfig()
-
-		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
-		assert.Nil(t, err)
-		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
-		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
-	})
-
-	t.Run("wrong bootstrap config", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				BootstrapConfig: `hello world`,
-			},
-		}
-		instance.defaultBootstrapConfig()
-		assert.Equal(t, `hello world`, instance.Spec.BootstrapConfig)
-	})
 }
 
 func TestDefaultDashboardServiceTemplate(t *testing.T) {

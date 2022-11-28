@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	hocon "github.com/rory-z/go-hocon"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -50,7 +51,8 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 		},
 	}
 
-	got := generateBootstrapUserSecret(instance)
+	got, err := generateBootstrapUserSecret(instance)
+	assert.NoError(t, err)
 	assert.Equal(t, "emqx-bootstrap-user", got.Name)
 	user, ok := got.StringData["bootstrap_user"]
 	assert.True(t, ok)
@@ -63,14 +65,78 @@ func TestGenerateBootstrapConfigMap(t *testing.T) {
 	instance := &appsv2alpha1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
-			Namespace: "emqx",
+			Namespace: "default",
 		},
 	}
+	t.Run("empty bootstrap config", func(t *testing.T) {
+		instance.Spec.BootstrapConfig = ""
+		got, err := generateBootstrapConfigMap(instance)
+		assert.NoError(t, err)
+		assert.Equal(t, "emqx-bootstrap-config", got.Name)
+		_, ok := got.Data["emqx.conf"]
+		assert.True(t, ok)
 
-	got := generateBootstrapConfigMap(instance)
-	assert.Equal(t, "emqx-bootstrap-config", got.Name)
-	_, ok := got.Data["emqx.conf"]
-	assert.True(t, ok)
+		bootstrapConfig, err := hocon.ParseString(got.Data["emqx.conf"])
+		assert.NoError(t, err)
+
+		assert.NotNil(t, bootstrapConfig.GetString("node.cookie"))
+		assert.Equal(t, "data", bootstrapConfig.GetString("node.data_dir"))
+		assert.Equal(t, "etc", bootstrapConfig.GetString("node.etc_dir"))
+
+		assert.Equal(t, "18083", bootstrapConfig.GetString("dashboard.listeners.http.bind"))
+		assert.Equal(t, "admin", bootstrapConfig.GetString("dashboard.default_username"))
+		assert.Equal(t, "public", bootstrapConfig.GetString("dashboard.default_password"))
+
+		assert.Equal(t, "\"0.0.0.0:1883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
+		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
+	})
+
+	t.Run("already set cookie", func(t *testing.T) {
+		instance.Spec.BootstrapConfig = `node.cookie = "6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq"`
+		got, err := generateBootstrapConfigMap(instance)
+		assert.NoError(t, err)
+
+		bootstrapConfig, err := hocon.ParseString(got.Data["emqx.conf"])
+		assert.NoError(t, err)
+		assert.Equal(t, "\"6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq\"", bootstrapConfig.GetString("node.cookie"))
+	})
+
+	t.Run("already set listener", func(t *testing.T) {
+		instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "0.0.0.0:11883"`
+		got, err := generateBootstrapConfigMap(instance)
+		assert.NoError(t, err)
+
+		bootstrapConfig, err := hocon.ParseString(got.Data["emqx.conf"])
+		assert.NoError(t, err)
+		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
+		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
+	})
+
+	t.Run("other style set listener", func(t *testing.T) {
+		instance.Spec.BootstrapConfig = `
+		listeners {
+			tcp {
+				default {
+					bind = "0.0.0.0:11883"
+				}
+			}
+		}
+		`
+		got, err := generateBootstrapConfigMap(instance)
+		assert.NoError(t, err)
+
+		bootstrapConfig, err := hocon.ParseString(got.Data["emqx.conf"])
+		assert.NoError(t, err)
+		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
+		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
+	})
+
+	t.Run("wrong bootstrap config", func(t *testing.T) {
+		instance.Spec.BootstrapConfig = `hello world`
+		got, err := generateBootstrapConfigMap(instance)
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
 }
 
 func TestGenerateHeadlessSVC(t *testing.T) {
