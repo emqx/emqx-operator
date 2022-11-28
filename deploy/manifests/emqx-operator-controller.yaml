@@ -1711,6 +1711,9 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  registry:
+                    description: Registry will used for EMQX owner image, like ${registry}/emqx/emqx and ${registry}/emqx/emqx-operator-reloader, but it will not be use other images, like sidecar container or else.
+                    type: string
                   resources:
                     description: 'Compute Resources required by EMQX container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     properties:
@@ -5653,6 +5656,9 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  registry:
+                    description: Registry will used for EMQX owner image, like ${registry}/emqx/emqx-ee and ${registry}/emqx/emqx-operator-reloader, but it will not be use other images, like sidecar container or else.
+                    type: string
                   resources:
                     description: 'Compute Resources required by EMQX container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     properties:
@@ -8279,7 +8285,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.2.7
+        image: emqx/emqx-operator-controller:1.2.8
         livenessProbe:
           httpGet:
             path: /healthz
