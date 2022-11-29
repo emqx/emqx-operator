@@ -9,8 +9,8 @@ namespace: emqx-operator-system
 namePrefix: emqx-operator-
 
 # Labels to add to all resources and selectors.
-#commonLabels:
-#  someName: someValue
+commonLabels:
+  apps.emqx.io/name: emqx-operator
 
 bases:
 - ../crd
