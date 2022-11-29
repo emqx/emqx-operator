@@ -71,7 +71,7 @@ spec:
   emqxTemplate:
     # username: "admin"
     # password: "public"
-    image: emqx/emqx-ee:4.4.8
+    image: emqx/emqx-ee:4.4.11
     imagePullPolicy: IfNotPresent
     securityContext:
       runAsUser: 1000

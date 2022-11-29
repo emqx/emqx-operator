@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strings"
 
+	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	"github.com/sethvargo/go-password/password"
@@ -310,14 +311,9 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 		Name:            ReloaderContainerName,
 		Image:           ReloaderContainerImage,
 		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.ImagePullPolicy,
-		Args: []string{
-			"-u", "admin",
-			"-p", "public",
-			"-P", "8081",
-		},
-		EnvFrom:      emqxTemplate.Spec.EmqxContainer.EnvFrom,
-		Env:          mergeEnvAndConfig(instance),
-		VolumeMounts: emqxTemplate.Spec.EmqxContainer.VolumeMounts,
+		EnvFrom:         emqxTemplate.Spec.EmqxContainer.EnvFrom,
+		Env:             mergeEnvAndConfig(instance),
+		VolumeMounts:    emqxTemplate.Spec.EmqxContainer.VolumeMounts,
 	}
 
 	emqxContainer := corev1.Container{
@@ -615,6 +611,17 @@ func generateBootstrapUserSecret(instance appsv1beta4.Emqx) *corev1.Secret {
 }
 
 func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *corev1.Secret) *appsv1.StatefulSet {
+	username, password, err := getUsernameAndPasswordFromBootstrapUser(bootstrapUser)
+	if err != nil {
+		return nil
+	}
+
+	sts.Spec.Template.Spec.Containers[1].Args = []string{
+		"-u", username,
+		"-p", password,
+		"-P", "8081",
+	}
+
 	return updateEnvAndVolumeForSts(sts,
 		corev1.EnvVar{
 			Name:  "EMQX_MANAGEMENT__BOOTSTRAP_APPS_FILE",
@@ -635,4 +642,19 @@ func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *c
 			},
 		},
 	)
+}
+
+func getUsernameAndPasswordFromBootstrapUser(bootstrapUser *corev1.Secret) (string, string, error) {
+	if bootstrapUser == nil {
+		return "", "", emperror.Errorf("the bootstrap_user cann't be nil")
+	}
+	bytes, ok := bootstrapUser.Data["bootstrap_user"]
+	if !ok {
+		return "", "", emperror.Errorf("the secret does not contain the bootstrap_user")
+	}
+
+	strData := string(bytes)
+	index := strings.Index(strData, ":")
+
+	return strData[:index], strData[index+1:], nil
 }

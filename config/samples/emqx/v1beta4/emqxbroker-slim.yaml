@@ -6,4 +6,4 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: emqx/emqx:4.4.8
+        image: emqx/emqx:4.4.11

@@ -28,6 +28,7 @@ import (
 	"github.com/tidwall/sjson"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -184,7 +185,12 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta4.Emqx, pluginNa
 }
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta4.Emqx, nodeName, pluginName, reloadOrUnload string) error {
-	username, password, err := r.Handler.GetBootstrapUser(emqx)
+	bootstrapUser := &corev1.Secret{}
+	names := appsv1beta4.Names{Object: emqx}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: names.BootstrapUser(), Namespace: emqx.GetNamespace()}, bootstrapUser); err != nil {
+		return err
+	}
+	username, password, err := getUsernameAndPasswordFromBootstrapUser(bootstrapUser)
 	if err != nil {
 		return err
 	}
@@ -200,7 +206,12 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta4.Emqx, nodeName
 
 func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta4.Emqx) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
-	username, password, err := r.Handler.GetBootstrapUser(emqx)
+	bootstrapUser := &corev1.Secret{}
+	names := appsv1beta4.Names{Object: emqx}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: names.BootstrapUser(), Namespace: emqx.GetNamespace()}, bootstrapUser); err != nil {
+		return nil, err
+	}
+	username, password, err := getUsernameAndPasswordFromBootstrapUser(bootstrapUser)
 	if err != nil {
 		return nil, err
 	}

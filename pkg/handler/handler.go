@@ -271,7 +271,3 @@ func findReadyEmqxPod(pods *corev1.PodList, containerName string) string {
 	}
 	return ""
 }
-
-func (handler *Handler) GetBootstrapUser(instance client.Object) (username, password string, err error) {
-	return "admin", "public", nil
-}

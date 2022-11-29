@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta4
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -466,11 +467,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 			MountPath: "/fake",
 		},
 	}, got.Spec.Template.Spec.Containers[1].VolumeMounts)
-	assert.Equal(t, []string{
-		"-u", "admin",
-		"-p", "public",
-		"-P", "8081",
-	}, got.Spec.Template.Spec.Containers[1].Args)
 }
 
 func TestUpdateStatefulSetForPluginsConfig(t *testing.T) {
@@ -701,6 +697,9 @@ func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "emqx-bootstrap-user",
 		},
+		Data: map[string][]byte{
+			"bootstrap_user": []byte(fmt.Sprintf("%s:%s", "admin", "public")),
+		},
 	}
 
 	sts := &appsv1.StatefulSet{
@@ -750,5 +749,37 @@ func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
 		Name:  "EMQX_MANAGEMENT__BOOTSTRAP_APPS_FILE",
 		Value: "/opt/emqx/data/bootstrap_user",
 	}}, got.Spec.Template.Spec.Containers[1].Env)
+
+	assert.Equal(t, []string{
+		"-u", "admin",
+		"-p", "public",
+		"-P", "8081",
+	}, got.Spec.Template.Spec.Containers[1].Args)
+}
+
+func TestGetUsernameAndPasswordFromBootstrapUser(t *testing.T) {
+	bootstrapUser := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		Data: map[string][]byte{
+			"bootstrap_user": []byte(fmt.Sprintf("%s:%s", "admin", "public")),
+		},
+	}
+	username, password, err := getUsernameAndPasswordFromBootstrapUser(bootstrapUser)
+	assert.Nil(t, err)
+	assert.Equal(t, "admin", username)
+	assert.Equal(t, "public", password)
+
+	username, password, err = getUsernameAndPasswordFromBootstrapUser(&corev1.Secret{})
+	assert.EqualError(t, err, "the secret does not contain the bootstrap_user")
+	assert.Equal(t, "", username)
+	assert.Equal(t, "", password)
+
+	username, password, err = getUsernameAndPasswordFromBootstrapUser(nil)
+	assert.EqualError(t, err, "the bootstrap_user cann't be nil")
+	assert.Equal(t, "", username)
+	assert.Equal(t, "", password)
 
 }

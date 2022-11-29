@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta4
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -31,6 +32,7 @@ import (
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -48,8 +50,12 @@ func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, 
 		return nil, nil, err
 	}
 	pod := podMap[latestReadySts.UID][0]
-
-	username, password, err := r.Handler.GetBootstrapUser(instance)
+	bootstrapUser := &corev1.Secret{}
+	names := appsv1beta4.Names{Object: instance}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: names.BootstrapUser(), Namespace: instance.GetNamespace()}, bootstrapUser); err != nil {
+		return nil, nil, err
+	}
+	username, password, err := getUsernameAndPasswordFromBootstrapUser(bootstrapUser)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -60,13 +60,13 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
 	var resources []client.Object
-	bootstrap_user := generateBootstrapUserSecret(instance)
 	plugins, err := r.createInitPluginList(instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if !instance.GetStatus().IsInitResourceReady() {
-		resources = append(resources, bootstrap_user)
+		bootstrapUser := generateBootstrapUserSecret(instance)
+		resources = append(resources, bootstrapUser)
 		resources = append(resources, plugins...)
 		err := r.createInitResources(instance, resources)
 		if err != nil {
@@ -121,7 +121,13 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	sts = updateStatefulSetForACL(sts, acl)
 	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
 	sts = updateStatefulSetForLicense(sts, license)
-	sts = updateStatefulSetForBootstrapUser(sts, bootstrap_user)
+
+	bootstrapUser := &corev1.Secret{}
+	names := appsv1beta4.Names{Object: instance}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: names.BootstrapUser(), Namespace: instance.GetNamespace()}, bootstrapUser); err != nil {
+		return ctrl.Result{}, err
+	}
+	sts = updateStatefulSetForBootstrapUser(sts, bootstrapUser)
 
 	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
 		if enterprise.Spec.EmqxBlueGreenUpdate != nil {
