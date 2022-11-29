@@ -36,7 +36,7 @@ const (
 	ConditionRunning           ConditionType = "Running"
 )
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type EmqxStatus interface {
 	IsRunning() bool
 	IsPluginInitialized() bool
@@ -98,12 +98,14 @@ func (s *Status) SetCondition(c Condition) {
 	now := metav1.Now()
 	c.LastUpdateAt = now
 	c.LastUpdateTime = now.Format(time.RFC3339)
+	c.LastTransitionTime = now.Format(time.RFC3339)
 	pos := indexCondition(s, c.Type)
-	// condition exist
 	if pos >= 0 {
+		if s.Conditions[pos].Status == c.Status && s.Conditions[pos].LastTransitionTime != "" {
+			c.LastTransitionTime = s.Conditions[pos].LastTransitionTime
+		}
 		s.Conditions[pos] = c
-	} else { // condition not exist
-		c.LastTransitionTime = now.Format(time.RFC3339)
+	} else {
 		s.Conditions = append(s.Conditions, c)
 	}
 
