@@ -2,6 +2,7 @@ package v1beta3
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -90,35 +91,86 @@ func TestIndexCondition(t *testing.T) {
 }
 
 func TestSetCondition(t *testing.T) {
-	status := &Status{
-		Conditions: []Condition{
-			{
-				Type:   ConditionPluginInitialized,
-				Status: v1.ConditionFalse,
-			},
-		},
-	}
-	c := Condition{
+	c0 := Condition{
 		Type:   ConditionPluginInitialized,
-		Status: v1.ConditionTrue,
+		Status: v1.ConditionFalse,
 	}
-	status.SetCondition(c)
-	conditions := status.GetConditions()
 
-	assert.Equal(t, 1, len(conditions))
-	assert.Equal(t, c.LastTransitionTime, conditions[0].LastTransitionTime)
-	assert.NotEqual(t, c.LastUpdateAt, conditions[0].LastUpdateAt)
-	assert.NotEqual(t, c.LastUpdateTime, conditions[0].LastUpdateTime)
+	c1 := Condition{
+		Type:   ConditionRunning,
+		Status: v1.ConditionFalse,
+	}
 
-	c = Condition{
+	c2 := Condition{
 		Type:   ConditionRunning,
 		Status: v1.ConditionTrue,
 	}
-	status.SetCondition(c)
-	conditions = status.GetConditions()
 
-	assert.Equal(t, 2, len(conditions))
-	assert.NotEqual(t, c.LastTransitionTime, conditions[0].LastTransitionTime)
-	assert.NotEqual(t, c.LastUpdateAt, conditions[0].LastUpdateAt)
-	assert.NotEqual(t, c.LastUpdateTime, conditions[0].LastUpdateTime)
+	c3 := c2
+
+	t.Run("add condition", func(t *testing.T) {
+		status := &Status{}
+
+		status.SetCondition(c0)
+		assert.Equal(t, 1, len(status.Conditions))
+
+		c0 = status.Conditions[0]
+		assert.NotEmpty(t, c0.LastTransitionTime)
+		assert.NotEmpty(t, c0.LastUpdateTime)
+		assert.NotEmpty(t, c0.LastUpdateAt)
+	})
+
+	t.Run("add different condition type", func(t *testing.T) {
+		status := &Status{}
+
+		status.SetCondition(c0)
+		c0 = status.Conditions[0]
+		time.Sleep(time.Millisecond * time.Duration(1500))
+		status.SetCondition(c1)
+		c1 = status.Conditions[0]
+
+		assert.Equal(t, 2, len(status.Conditions))
+		assert.NotEmpty(t, c1.LastTransitionTime)
+		assert.NotEqual(t, c0.LastTransitionTime, c1.LastTransitionTime)
+		assert.NotEmpty(t, c1.LastUpdateTime)
+		assert.NotEqual(t, c0.LastUpdateTime, c1.LastUpdateTime)
+		assert.NotEmpty(t, c1.LastUpdateAt)
+		assert.NotEqual(t, c0.LastUpdateAt, c1.LastUpdateAt)
+	})
+
+	t.Run("add same condition type, but different condition status", func(t *testing.T) {
+		status := &Status{}
+
+		status.SetCondition(c1)
+		c1 = status.Conditions[0]
+		time.Sleep(time.Millisecond * time.Duration(1500))
+		status.SetCondition(c2)
+		c2 = status.Conditions[0]
+
+		assert.Equal(t, 1, len(status.Conditions))
+		assert.NotEmpty(t, c2.LastTransitionTime)
+		assert.NotEqual(t, c1.LastTransitionTime, c2.LastTransitionTime)
+		assert.NotEmpty(t, c2.LastUpdateTime)
+		assert.NotEqual(t, c1.LastUpdateTime, c2.LastUpdateTime)
+		assert.NotEmpty(t, c2.LastUpdateAt)
+		assert.NotEqual(t, c1.LastUpdateAt, c2.LastUpdateAt)
+	})
+
+	t.Run("add same condition type and same condition status", func(t *testing.T) {
+		status := &Status{}
+
+		status.SetCondition(c2)
+		c2 = status.Conditions[0]
+		time.Sleep(time.Millisecond * time.Duration(1500))
+		status.SetCondition(c3)
+		c3 = status.Conditions[0]
+
+		assert.Equal(t, 1, len(status.Conditions))
+		assert.NotEmpty(t, c3.LastTransitionTime)
+		assert.Equal(t, c2.LastTransitionTime, c3.LastTransitionTime)
+		assert.NotEmpty(t, c3.LastUpdateTime)
+		assert.NotEqual(t, c2.LastUpdateTime, c3.LastUpdateTime)
+		assert.NotEmpty(t, c3.LastUpdateAt)
+		assert.NotEqual(t, c2.LastUpdateAt, c3.LastUpdateAt)
+	})
 }
