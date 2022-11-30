@@ -54,7 +54,7 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `tolerations` | Node tolerations for pod assignment | `[]` |
 | `cert-manager.enable` | We using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it. | `true` |
 | `cert-manager.secretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc` | `""` |
-| `webhookServerSecretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc`, if set `cert-manager.enable = false`, this secret must be created manually in advance. | `""` |
+| `extraCert.secretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc`, if set `cert-manager.enable = false`, this secret must be created manually in advance. | `""` |
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
