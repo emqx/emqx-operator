@@ -4,16 +4,17 @@ concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
 
-## Only runs on released, do not runs on pre-released
 on:
   workflow_dispatch:
     inputs:
       tag:
         required: true
         type: string
-  release:
+  workflow_run:
+    workflows:
+      - "Release emqx operator"
     types:
-    - published
+      - completed
 
 jobs:
   prepare:
