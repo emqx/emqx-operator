@@ -67,6 +67,10 @@
         {
           "title": "Handle EMQX metrics and logs with telegraf",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "Use Telegraf to collect EMQX cluster logs",
+          "path": "tasks/use-telegraf-collect-emqx-log"
         }
       ]
     },
@@ -171,8 +175,12 @@
       "title": "任务",
       "children": [
         {
-          "title": "使用 telegtaf 处理 EMQX metrics 和 logs",
+          "title": "使用 telegraf 处理 EMQX metrics 和 logs",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "使用 Telegraf 收集 EMQX 集群日志",
+          "path": "tasks/use-telegraf-collect-emqx-log"
         }
       ]
     },
