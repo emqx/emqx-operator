@@ -67,6 +67,10 @@
         {
           "title": "Handle EMQX metrics and logs with telegraf",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "Configure EMQX modules",
+          "path": "tasks/configure-emqx-modules"
         }
       ]
     },
@@ -173,6 +177,10 @@
         {
           "title": "使用 telegtaf 处理 EMQX metrics 和 logs",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "配置 EMQX 模块",
+          "path": "tasks/configure-emqx-modules"
         }
       ]
     },
