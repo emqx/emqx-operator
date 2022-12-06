@@ -67,6 +67,10 @@
         {
           "title": "Handle EMQX metrics and logs with telegraf",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "Use Prometheus to monitor EMQX cluster",
+          "path": "tasks/user-prometheus-monitor-emqx"
         }
       ]
     },
@@ -173,6 +177,10 @@
         {
           "title": "使用 telegtaf 处理 EMQX metrics 和 logs",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "使用 Prometheus 监控 EMQX 集群",
+          "path": "tasks/user-prometheus-monitor-emqx"
         }
       ]
     },
