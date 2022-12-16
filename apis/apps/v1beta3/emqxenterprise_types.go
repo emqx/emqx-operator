@@ -41,7 +41,7 @@ type License struct {
 type EmqxEnterpriseTemplate struct {
 	// Registry will used for EMQX owner image,
 	// like ${registry}/emqx/emqx-ee and ${registry}/emqx/emqx-operator-reloader,
-	// but it will not be use other images, like sidecar container or else.
+	// but it will not be used by other images, like sidecar container or else.
 	Registry string `json:"registry,omitempty"`
 	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`

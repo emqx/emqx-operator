@@ -71,7 +71,15 @@
         {
           "title": "Configure EMQX TLS certificate",
           "path": "tasks/configure-emqx-tls"
-        }
+        },
+        {
+          "title": "Configure EMQX License",
+          "path": "tasks/configure-emqx-license"
+         },
+         {
+          "title": "Configure EMQX persistence",
+          "path": "tasks/configure-emqx-persistence"
+          }
       ]
     },
     {
@@ -181,6 +189,14 @@
         {
           "title": "配置 EMQX TLS 证书 ",
           "path": "tasks/configure-emqx-tls"
+        }
+        {
+          "title": "配置 EMQX License",
+          "path": "tasks/configure-emqx-license"
+        },
+        {
+          "title": "配置 EMQX 持久化",
+          "path": "tasks/configure-emqx-persistence"
         }
       ]
     },

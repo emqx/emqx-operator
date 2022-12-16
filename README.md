@@ -8,13 +8,13 @@ A Kubernetes Operator for [EMQX](https://www.emqx.io)
 
 ## Overview
 
-The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/) including EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of the EMQX cluster.
+The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/), including EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of the EMQX cluster.
 
 The EMQX Operator includes, but is not limited to, the following features:
 
 * **Kubernetes Custom Resource**: Deploy and manage EMQX Cluster with pre-defined custom resources.
 
-* **Simplified Deployment Configuration**: Configure the fundamentals of EMQX Cluster, including persistence, configuration, license and etc, in a Kubernetes-native way.
+* **Simplified Deployment Configuration**: Configure the fundamentals of EMQX Cluster, including persistence, configuration, license, etc., in a Kubernetes-native way.
 
 For an introduction to the EMQX Operator, see the [introduction](docs/en_US/README.md).
 
@@ -27,11 +27,11 @@ The EMQX Operator requires a Kubernetes cluster of version `>=1.20.0`.
 A core feature of the EMQX Operator is to monitor the Kubernetes API server for changes to specific objects and ensure that the running EMQX deployments match these objects.
 The Operator acts on the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/).
 
-For the example of EMQX see the [`emqx-full.yaml`](config/samples/emqx/v2alpha1/emqx-full.yaml).
+For the example of EMQX, see the [`emqx-full.yaml`](config/samples/emqx/v2alpha1/emqx-full.yaml).
 
 The EMQX Operator automatically detects changes on any of the above custom resource objects and ensures that running deployments are kept in sync with the changes.
 
-## EMQX Operator compatibility 
+## EMQX Operator compatibility
 
 |                          | EMQX 4.2 latest | EMQX 4.3 latest | EMQX 4.4 latest | EMQX 5.0 latest |
 |--------------------------|-----------------|-----------------|-----------------| ----------------|
@@ -41,17 +41,17 @@ The EMQX Operator automatically detects changes on any of the above custom resou
 
 ## Getting Start
 
-For more information on getting started, see the [getting started](docs/en_US/getting-started/getting-started.md)
+For more information on getting started, see the [getting started](docs/en_US/getting-started/getting-started.md).
 
 ## Public Cloud Platform Deployment Guide
 
-|  Public Cloud Platform   | Deployment Guide                                         | 
+|  Public Cloud Platform   | Deployment Guide                                         |
 |--------------------------|----------------------------------------------------------|
-|    AWS                   | [EKS](docs/en_US/deployment/aws-eks-deployment.md)       | 
-|    Azure                 | [Azure](docs/en_US/deployment/azure-deployment.md)       | 
+|    AWS                   | [EKS](docs/en_US/deployment/aws-eks-deployment.md)       |
+|    Azure                 | [Azure](docs/en_US/deployment/azure-deployment.md)       |
 |    Alibaba Cloud         | [ACK](docs/zh_CN/deployment/aliyun-ack-deployment.md)    |
-|    Huawei                | [CCE](docs/zh_CN/deployment/cce-deployment.md)           | 
-|    Tencent               | [TKE](docs/zh_CN/deployment/tencent-tke-deployment.md)   | 
+|    Huawei                | [CCE](docs/zh_CN/deployment/cce-deployment.md)           |
+|    Tencent               | [TKE](docs/zh_CN/deployment/tencent-tke-deployment.md)   |
 
 
 ## Development
@@ -67,7 +67,7 @@ Many files (API, config, controller, hack,...) in this repository are auto-gener
 Before proposing a pull request:
 
 1. Commit your changes.
-2. Run `make` and `make manifests`
+2. `make` and `make manifests`
 3. Commit the generated changes.
 
 ## Troubleshooting
