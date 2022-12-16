@@ -69,13 +69,17 @@
           "path": "tasks/handle-emqx-metrics-and-logs"
         },
         {
+          "title": "Configure EMQX TLS certificate",
+          "path": "tasks/configure-emqx-tls"
+        },
+        {
           "title": "Configure EMQX License",
           "path": "tasks/configure-emqx-license"
-         },
-         {
+        },
+        {
           "title": "Configure EMQX persistence",
           "path": "tasks/configure-emqx-persistence"
-          }
+        }
       ]
     },
     {
@@ -181,6 +185,10 @@
         {
           "title": "使用 telegtaf 处理 EMQX metrics 和 logs",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "配置 EMQX TLS 证书 ",
+          "path": "tasks/configure-emqx-tls"
         },
         {
           "title": "配置 EMQX License",
