@@ -13,3 +13,4 @@ spec:
     targetPort: metrics
   selector:
     control-plane: controller-manager
+    {{- include "emqx-operator.selectorLabels" . | nindent 4 }}
