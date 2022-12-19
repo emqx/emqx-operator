@@ -134,3 +134,25 @@ func TestMergeServicePorts(t *testing.T) {
 
 	assert.Equal(t, expect, MergeServicePorts(ports1, ports2))
 }
+
+func TestMergeMap(t *testing.T) {
+	m1 := map[string]string{
+		"m0": "test-0",
+		"m1": "test-1",
+		"m2": "test-2",
+	}
+
+	m2 := map[string]string{
+		"m0": "test-0",
+		"m1": "test-1",
+		"m3": "test-3",
+	}
+
+	expect := map[string]string{
+		"m0": "test-0",
+		"m1": "test-1",
+		"m2": "test-2",
+		"m3": "test-3",
+	}
+	assert.Equal(t, expect, mergeMap(m1, m2))
+}
