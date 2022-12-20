@@ -347,3 +347,100 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 		assert.Equal(t, expectLivenessProbe, instance.Spec.CoreTemplate.Spec.LivenessProbe)
 	})
 }
+
+func TestDefaultAnnotationsForService(t *testing.T) {
+	t.Run("inject empty annotations for servcie", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				DashboardServiceTemplate: corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"dashboard": "test",
+						},
+					},
+				},
+				ListenersServiceTemplate: corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"listeners": "test",
+						},
+					},
+				},
+			},
+		}
+		instance.defaultAnnotationsForService()
+
+		expectDashboardServiceAnnotations := map[string]string{
+			"dashboard": "test",
+		}
+
+		expectListenersServiceAnnotations := map[string]string{
+			"listeners": "test",
+		}
+
+		assert.Equal(t, expectDashboardServiceAnnotations, instance.Spec.DashboardServiceTemplate.Annotations)
+		assert.Equal(t, expectListenersServiceAnnotations, instance.Spec.ListenersServiceTemplate.Annotations)
+	})
+
+	t.Run("inject annotations for empty servcie", func(t *testing.T) {
+		instance := &EMQX{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					"foo": "bar",
+				},
+			},
+		}
+		instance.defaultAnnotationsForService()
+
+		expectDashboardServiceAnnotations := map[string]string{
+			"foo": "bar",
+		}
+
+		expectListenersServiceAnnotations := map[string]string{
+			"foo": "bar",
+		}
+
+		assert.Equal(t, expectDashboardServiceAnnotations, instance.Spec.DashboardServiceTemplate.Annotations)
+		assert.Equal(t, expectListenersServiceAnnotations, instance.Spec.ListenersServiceTemplate.Annotations)
+	})
+
+	t.Run("inject annotations for servcie", func(t *testing.T) {
+		instance := &EMQX{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					"foo": "bar",
+				},
+			},
+			Spec: EMQXSpec{
+				DashboardServiceTemplate: corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"dashboard": "test",
+						},
+					},
+				},
+				ListenersServiceTemplate: corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"listeners": "test",
+						},
+					},
+				},
+			},
+		}
+		instance.defaultAnnotationsForService()
+
+		expectDashboardServiceAnnotations := map[string]string{
+			"foo":       "bar",
+			"dashboard": "test",
+		}
+
+		expectListenersServiceAnnotations := map[string]string{
+			"foo":       "bar",
+			"listeners": "test",
+		}
+
+		assert.Equal(t, expectDashboardServiceAnnotations, instance.Spec.DashboardServiceTemplate.Annotations)
+		assert.Equal(t, expectListenersServiceAnnotations, instance.Spec.ListenersServiceTemplate.Annotations)
+	})
+}

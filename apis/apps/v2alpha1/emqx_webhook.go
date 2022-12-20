@@ -51,6 +51,7 @@ func (r *EMQX) Default() {
 	r.defaultNames()
 	r.defaultLabels()
 	r.defaultBootstrapConfig()
+	r.defaultAnnotationsForService()
 	r.defaultDashboardServiceTemplate()
 	r.defaultProbe()
 }
@@ -273,4 +274,15 @@ func (r *EMQX) defaultProbe() {
 	if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
 		r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
 	}
+}
+
+func (r *EMQX) defaultAnnotationsForService() {
+	annotations := r.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
+	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
+	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
 }
