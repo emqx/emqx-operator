@@ -18,7 +18,7 @@ metadata:
 spec:
   dnsNames:
   - {{ include "emqx-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc
-  - {{ include "emqx-operator.fullname" . }}-service.{{ .Release.Namespace }}.svc.cluster.local
+  - {{ include "emqx-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: {{ include "emqx-operator.fullname" . }}-selfsigned-issuer
