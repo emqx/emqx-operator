@@ -81,58 +81,82 @@ func TestGetDashboardServicePort(t *testing.T) {
 }
 
 func TestMergeServicePorts(t *testing.T) {
-	ports1 := []corev1.ServicePort{
-		{
-			Name:       "mqtt",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       1883,
-			TargetPort: intstr.FromInt(1883),
-		},
-		{
-			Name:       "mqtts",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       8883,
-			TargetPort: intstr.FromInt(8883),
-		},
-	}
+	t.Run("duplicate name", func(t *testing.T) {
+		ports1 := []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "mqtts",
+				Port: 8883,
+			},
+		}
 
-	ports2 := []corev1.ServicePort{
-		{
-			Name:       "mqtt",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       11883,
-			TargetPort: intstr.FromInt(11883),
-		},
-		{
-			Name:       "ws",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       8083,
-			TargetPort: intstr.FromInt(8083),
-		},
-	}
+		ports2 := []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 11883,
+			},
+			{
+				Name: "ws",
+				Port: 8083,
+			},
+		}
 
-	expect := []corev1.ServicePort{
-		{
-			Name:       "mqtt",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       1883,
-			TargetPort: intstr.FromInt(1883),
-		},
-		{
-			Name:       "mqtts",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       8883,
-			TargetPort: intstr.FromInt(8883),
-		},
-		{
-			Name:       "ws",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       8083,
-			TargetPort: intstr.FromInt(8083),
-		},
-	}
+		assert.Equal(t, []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "mqtts",
+				Port: 8883,
+			},
+			{
+				Name: "ws",
+				Port: 8083,
+			},
+		}, MergeServicePorts(ports1, ports2))
+	})
 
-	assert.Equal(t, expect, MergeServicePorts(ports1, ports2))
+	t.Run("duplicate port", func(t *testing.T) {
+		ports1 := []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "mqtts",
+				Port: 8883,
+			},
+		}
+		ports2 := []corev1.ServicePort{
+			{
+				Name: "duplicate-mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "ws",
+				Port: 8083,
+			},
+		}
+		assert.Equal(t, []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "mqtts",
+				Port: 8883,
+			},
+			{
+				Name: "ws",
+				Port: 8083,
+			},
+		}, MergeServicePorts(ports1, ports2))
+	})
+
 }
 
 func TestMergeMap(t *testing.T) {
