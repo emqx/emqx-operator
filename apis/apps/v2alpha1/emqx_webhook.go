@@ -220,12 +220,18 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 		}
 	}
 
-	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
-		r.Spec.DashboardServiceTemplate.Spec.Ports,
-		[]corev1.ServicePort{
-			*dashboardPort,
-		},
-	)
+	isExistPort := func(dst []corev1.ServicePort, src corev1.ServicePort) bool {
+		for _, port := range dst {
+			if port.Name == src.Name || port.Port == src.Port {
+				return true
+			}
+		}
+		return false
+	}
+
+	if !isExistPort(r.Spec.DashboardServiceTemplate.Spec.Ports, *dashboardPort) {
+		r.Spec.DashboardServiceTemplate.Spec.Ports = append(r.Spec.DashboardServiceTemplate.Spec.Ports, *dashboardPort)
+	}
 }
 
 func (r *EMQX) defaultProbe() {

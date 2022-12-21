@@ -258,6 +258,74 @@ func TestDefaultDashboardServiceTemplate(t *testing.T) {
 		assert.Equal(t, int32(18084), instance.Spec.DashboardServiceTemplate.Spec.Ports[0].Port)
 	})
 
+	t.Run("set dashboard listeners", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				BootstrapConfig: `dashboard.listeners.http.bind = 18083`,
+				DashboardServiceTemplate: corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "dashboard",
+								Port:       18083,
+								TargetPort: intstr.IntOrString{IntVal: 18083},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			},
+		}
+		instance.defaultDashboardServiceTemplate()
+		assert.Equal(t, 1, len(instance.Spec.DashboardServiceTemplate.Spec.Ports))
+		assert.Equal(t, "dashboard", instance.Spec.DashboardServiceTemplate.Spec.Ports[0].Name)
+	})
+
+	t.Run("set same name dashboard listener", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				DashboardServiceTemplate: corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "dashboard-listeners-http-bind",
+								Port:       18083,
+								TargetPort: intstr.IntOrString{IntVal: 18083},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			},
+		}
+		instance.defaultDashboardServiceTemplate()
+		assert.Equal(t, 1, len(instance.Spec.DashboardServiceTemplate.Spec.Ports))
+		assert.Equal(t, "dashboard-listeners-http-bind", instance.Spec.DashboardServiceTemplate.Spec.Ports[0].Name)
+	})
+
+	t.Run("set other listener in dashboard service", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				DashboardServiceTemplate: corev1.Service{
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "sidecar-test",
+								Port:       18084,
+								TargetPort: intstr.IntOrString{IntVal: 18084},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			},
+		}
+		instance.defaultDashboardServiceTemplate()
+		assert.Equal(t, 2, len(instance.Spec.DashboardServiceTemplate.Spec.Ports))
+		assert.Equal(t, "sidecar-test", instance.Spec.DashboardServiceTemplate.Spec.Ports[0].Name)
+		assert.Equal(t, "dashboard-listeners-http-bind", instance.Spec.DashboardServiceTemplate.Spec.Ports[1].Name)
+	})
+
 	t.Run("check service selector", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
