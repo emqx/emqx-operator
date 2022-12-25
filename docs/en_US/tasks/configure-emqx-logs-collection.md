@@ -15,7 +15,6 @@ helm repo add influxdata https://helm.influxdata.com/
 helm upgrade --install telegraf-operator influxdata/telegraf-operator
 ```
 
-
 ## Global Configuration - classes
 
 The global configuration is mounted via secret, specifying the class name as logs
@@ -78,8 +77,6 @@ NAME                        TYPE     DATA   AGE
 telegraf-operator-classes   Opaque   1      11h
 ```
 
-
-
 ## Deploy EMQX cluster
 
 Telegraf uses annotations to inject sidecar for Pod log collection, for a detailed definition of annotations refer to the documentation: [telegraf annotations](https://github.com/influxdata/telegraf-operator#pod-level-annotations)
@@ -96,7 +93,6 @@ Telegraf uses annotations to inject sidecar for Pod log collection, for a detail
 `spec.bootstrapConfig` Configure the output log to a file and the log level to debug
 
 `spec.coreTemplate.spec.extraVolumes` and `spec.coreTemplate.spec.extraVolumeMounts` Configuring Log Mounts
-
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -142,7 +138,6 @@ spec:
 :::
 ::: tab v1beta3
 
-
 `telegraf.influxdata.com/internal` Set to false to not collect the telegraf agent's own metrics
 
 `telegraf.influxdata.com/volume-mounts` Set the mount path of the log
@@ -151,7 +146,7 @@ spec:
 
 `spec.emqxTemplate.config` Configure the output log to a file and the log level to debug
 
-`spec.emqxTemplate.extraVolumes` and `spec.emqxTemplate.extraVolumeMounts` Configuring Log Mounts
+`spec.emqxTemplate.extraVolumes` and `spec.emqxTemplate.extraVolumeMounts` Configure Log volume
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta3
@@ -182,6 +177,7 @@ spec:
 Save the above as: emqx-telegraf.yaml
 
 - Deploy EMQX cluster
+
 ```shell
 kubectl apply -f emqx-telegraf.yaml
 ```
@@ -190,7 +186,6 @@ kubectl apply -f emqx-telegraf.yaml
 
 :::: tabs type:card
 ::: tab v2alpha1
-
 
 ```shell
 kubectl get pods  -l  apps.emqx.io/instance=emqx
@@ -205,6 +200,7 @@ emqx-replicant-c868c79cd-9m5rw   1/1     Running   0          41s
 emqx-replicant-c868c79cd-qv8mk   1/1     Running   0          41s
 emqx-replicant-c868c79cd-z8bvj   1/1     Running   0          41s
 ```
+
 **Note:** When the telegraf sidecar is injected into the EMQX core pod, the number of containers in the EQMX core pod will reach 2
 
 

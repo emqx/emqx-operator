@@ -9,11 +9,11 @@
 Telegraf 是 InfluxData 开发的一个开源数据采集代理，可以收集、处理、聚合和写入指标。 它支持四类插件，包括输入，输出，聚合器，处理器。 更多关于 Telegraf 的文章可以参考：[telegraf](https://docs.influxdata.com/telegraf/v1.24/) ，telegraf-operator 的文档可以参考： [telegraf-operator](https://github.com/influxdata/telegraf-operator)
 
 执行如下命令部署 telegraf-operator
+
 ```shell
 helm repo add influxdata https://helm.influxdata.com/
 helm upgrade --install telegraf-operator influxdata/telegraf-operator
 ```
-
 
 ## 全局配置 - classes
 
@@ -57,23 +57,25 @@ stringData:
 ```
 
 将上述内容保存为：classes.yaml
+
 - 创建 secret
+
 ```shell
 kubectl apply -f classes.yaml
 ```
 
 - 检查创建的 secret
+
 ```shell
 kubectl get secret telegraf-operator-classes
 ```
 
 输出类似于：
+
 ```shell
 NAME                        TYPE     DATA   AGE
 telegraf-operator-classes   Opaque   1      11h
 ```
-
-
 
 ## 部署 EMQX 集群
 
@@ -177,6 +179,7 @@ spec:
 将上述内容保存为：emqx-telegraf.yaml
 
 - 部署 EMQX 集群
+
 ```shell
 kubectl apply -f emqx-telegraf.yaml
 ```
@@ -192,6 +195,7 @@ kubectl get pods  -l  apps.emqx.io/instance=emqx
 ```
 
 输出类似于：
+
 ```shell
 NAME                             READY   STATUS    RESTARTS   AGE
 emqx-core-0                      2/2     Running   0          54s
@@ -199,6 +203,7 @@ emqx-replicant-c868c79cd-9m5rw   1/1     Running   0          41s
 emqx-replicant-c868c79cd-qv8mk   1/1     Running   0          41s
 emqx-replicant-c868c79cd-z8bvj   1/1     Running   0          41s
 ```
+
 **备注：** 当 telegraf sidecar 注入到 EMQX core pod 中后，EQMX core pod 中的容器数量会达到2个
 
 
@@ -210,6 +215,7 @@ kubectl get pods  -l  apps.emqx.io/instance=emqx-ee
 ```
 
 输出类似于：
+
 ```shell
 NAME        READY   STATUS    RESTARTS   AGE
 emqx-ee-0   3/3     Running   0          8m37s
