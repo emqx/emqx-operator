@@ -44,18 +44,7 @@ jobs:
           tar -zxvf kubebuilder-tools
           sudo mv kubebuilder/ /usr/local/kubebuilder
       - run: make test
-      - name: Install goveralls
-        run: go install github.com/mattn/goveralls@latest
-      - name: Send coverage
-        env:
-          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goveralls -coverprofile=cover.out -service=github -parallel -flagname=go-test-${{ matrix.kubernetes-version }}
-
-  finish:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-go@v3
+      - uses: codecov/codecov-action@v3
         with:
           go-version: '1.19.3'
       - name: Install goveralls

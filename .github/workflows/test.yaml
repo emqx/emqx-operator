@@ -6,6 +6,10 @@ concurrency:
 
 on:
   pull_request:
+  push:
+    ## For update codecov.io
+    branches:
+      - main**
 
 jobs:
   lint:
@@ -56,26 +60,11 @@ jobs:
           sudo mv kubebuilder/ /usr/local/kubebuilder
       - name: Run unit tests
         run: go test -coverpkg=./... -coverprofile=cover.out --timeout=20m ./${{ matrix.dir }}/...
-      - name: Install goveralls
-        run: go install github.com/mattn/goveralls@latest
-      - name: Send coverage
-        env:
-          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goveralls -coverprofile=cover.out -service=github -parallel -flagname=go-test-${{ matrix.dir }}
-
-  finish:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-go@v3
+      - uses: codecov/codecov-action@v3
         with:
-          go-version: '1.19.3'
-      - name: Install goveralls
-        run: go install github.com/mattn/goveralls@latest
-      - name: Send coverage
-        env:
-          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goveralls -parallel-finish=true -service=github
+          files: ./cover.out # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
 
   deployment:
     runs-on: ubuntu-latest
