@@ -32,3 +32,11 @@ runs:
           echo "waiting"
           sleep 1
         done
+    - name: Check statefulSet doesn't update
+      shell: bash
+      run: |
+        generation=$(kubectl get sts -l "apps.emqx.io/instance=${{ inputs.name }}" -o 'jsonpath={.items[0].status.observedGeneration}')
+        if [ $generation != 1 ]; then
+          kubectl get sts -l "apps.emqx.io/instance=${{ inputs.name }}" -o json
+          exit 1;
+        fi
