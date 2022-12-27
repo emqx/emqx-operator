@@ -67,6 +67,26 @@ func TestGenerateInitPluginList(t *testing.T) {
 		},
 	}
 
+	t.Run("default eviction agent", func(t *testing.T) {
+		plugin := expectPlugin.DeepCopy()
+		plugin.Name = "emqx-eviction-agent"
+		plugin.Spec.PluginName = "emqx_eviction_agent"
+		assert.Contains(t, generateInitPluginList(emqx, existPluginList), plugin)
+
+		existPluginList.Items = append(existPluginList.Items, *plugin)
+		assert.NotContains(t, generateInitPluginList(emqx, existPluginList), plugin)
+	})
+
+	t.Run("default node rebalance", func(t *testing.T) {
+		plugin := expectPlugin.DeepCopy()
+		plugin.Name = "emqx-node-rebalance"
+		plugin.Spec.PluginName = "emqx_node_rebalance"
+		assert.Contains(t, generateInitPluginList(emqx, existPluginList), plugin)
+
+		existPluginList.Items = append(existPluginList.Items, *plugin)
+		assert.NotContains(t, generateInitPluginList(emqx, existPluginList), plugin)
+	})
+
 	t.Run("default rule engine", func(t *testing.T) {
 		plugin := expectPlugin.DeepCopy()
 		plugin.Name = "emqx-rule-engine"
