@@ -59,6 +59,48 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 
 	pluginList := []client.Object{}
 	// Default plugins
+	if !isExistPlugin("emqx_eviction_agent", matchedPluginList) {
+		emqxRuleEngine := &appsv1beta4.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta4",
+				Kind:       "EmqxPlugin",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        fmt.Sprintf("%s-eviction-agent", instance.GetName()),
+				Namespace:   instance.GetNamespace(),
+				Labels:      instance.GetLabels(),
+				Annotations: instance.GetAnnotations(),
+			},
+			Spec: appsv1beta4.EmqxPluginSpec{
+				PluginName: "emqx_eviction_agent",
+				Selector:   instance.GetLabels(),
+				Config:     map[string]string{},
+			},
+		}
+		pluginList = append(pluginList, emqxRuleEngine)
+	}
+
+	if !isExistPlugin("emqx_node_rebalance", matchedPluginList) {
+		emqxRuleEngine := &appsv1beta4.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta4",
+				Kind:       "EmqxPlugin",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        fmt.Sprintf("%s-node-rebalance", instance.GetName()),
+				Namespace:   instance.GetNamespace(),
+				Labels:      instance.GetLabels(),
+				Annotations: instance.GetAnnotations(),
+			},
+			Spec: appsv1beta4.EmqxPluginSpec{
+				PluginName: "emqx_node_rebalance",
+				Selector:   instance.GetLabels(),
+				Config:     map[string]string{},
+			},
+		}
+		pluginList = append(pluginList, emqxRuleEngine)
+	}
+
 	if !isExistPlugin("emqx_rule_engine", matchedPluginList) {
 		emqxRuleEngine := &appsv1beta4.EmqxPlugin{
 			TypeMeta: metav1.TypeMeta{
