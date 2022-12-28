@@ -336,6 +336,7 @@ var _ = Describe("Base E2E Test", func() {
 var _ = Describe("Blue Green Update Test", func() {
 	Describe("Just check enterprise", func() {
 		emqx := emqxEnterprise.DeepCopy()
+		emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
 		emqx.Spec.EmqxBlueGreenUpdate = &appsv1beta4.EmqxBlueGreenUpdate{
 			EvacuationStrategy: appsv1beta4.EvacuationStrategy{
 				WaitTakeover:  int32(200),
@@ -349,7 +350,7 @@ var _ = Describe("Blue Green Update Test", func() {
 		})
 
 		AfterEach(func() {
-			// deleteEmqx(emqx)
+			deleteEmqx(emqx)
 		})
 
 		It("blue green update", func() {
