@@ -255,11 +255,11 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `registry` _string_ | Container image registry |
-| `repository` _string_ | Container image repository |
+| `repository` _string_ | Container image repository Defaults to "emqx/emqx" if kind is EmqxBroker, or "emqx/emqx-ee" if kind is EmqxEnterprise |
 | `version` _string_ | Container image tag version, must semver format or "latest" |
-| `prefix` _string_ | Container image tag prefix, like `v` |
-| `suffix` _string_ | Container image tag suffix |
-| `pullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Container image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if latest version is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
+| `prefix` _string_ | Container image tag prefix, like "v" |
+| `suffix` _string_ | Container image tag suffix, like "-alpine" |
+| `pullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Container image pull policy. One of Always, Never, IfNotPresent. Defaults to IfNotPresent. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 
 
 #### EmqxLicense

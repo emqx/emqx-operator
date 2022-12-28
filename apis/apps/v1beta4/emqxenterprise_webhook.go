@@ -41,6 +41,7 @@ func (r *EmqxEnterprise) Default() {
 	emqxenterpriselog.Info("default", "name", r.Name)
 
 	defaultLabels(r)
+	defaultEmqxImage(r)
 	defaultEmqxACL(r)
 	defaultEmqxConfig(r)
 	defaultServiceTemplate(r)
@@ -54,12 +55,22 @@ var _ webhook.Validator = &EmqxEnterprise{}
 func (r *EmqxEnterprise) ValidateCreate() error {
 	emqxenterpriselog.Info("validate create", "name", r.Name)
 
+	if err := validateImageVersion(r); err != nil {
+		emqxbrokerlog.Error(err, "validate create failed")
+		return err
+	}
+
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 	emqxenterpriselog.Info("validate update", "name", r.Name)
+
+	if err := validateImageVersion(r); err != nil {
+		emqxbrokerlog.Error(err, "validate create failed")
+		return err
+	}
 
 	oldEmqx := old.(*EmqxEnterprise)
 	if err := validateVolumeClaimTemplates(r, oldEmqx); err != nil {
@@ -75,3 +86,11 @@ func (r *EmqxEnterprise) ValidateDelete() error {
 
 	return nil
 }
+
+// func validateEmqxBlueGreenUpdate(r EmqxEnterprise) error {
+// 	if r.Spec.EmqxBlueGreenUpdate != nil {
+// 		return nil
+// 	}
+
+// 	return nil
+// }

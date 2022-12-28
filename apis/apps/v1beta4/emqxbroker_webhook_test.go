@@ -63,6 +63,10 @@ func TestBrokerDefault(t *testing.T) {
 		}, instance.Spec.Template.Labels)
 	})
 
+	t.Run("default emqx image", func(t *testing.T) {
+		assert.Equal(t, "emqx/emqx", instance.Spec.Template.Spec.EmqxContainer.Image.Repository)
+	})
+
 	t.Run("default emqx acl", func(t *testing.T) {
 		assert.ElementsMatch(t, []string{
 			`{allow, {user, "dashboard"}, subscribe, ["$SYS/#"]}.`,
@@ -117,17 +121,113 @@ func TestBrokerDefault(t *testing.T) {
 	})
 }
 
-func TestBrokerValidateUpdate(t *testing.T) {
-	instance := &EmqxBroker{}
-
-	assert.Nil(t, instance.ValidateUpdate(&EmqxBroker{}))
-	assert.Error(t, instance.ValidateUpdate(&EmqxBroker{
+func TestBrokerValidateCreate(t *testing.T) {
+	broker := &EmqxBroker{
 		Spec: EmqxBrokerSpec{
-			Persistent: &corev1.PersistentVolumeClaimTemplate{
-				Spec: corev1.PersistentVolumeClaimSpec{
-					StorageClassName: &[]string{"fake"}[0],
+			Template: EmqxTemplate{
+				Spec: EmqxTemplateSpec{
+					EmqxContainer: EmqxContainer{
+						Image: EmqxImage{
+							Version: "4.4.12",
+						},
+					},
 				},
 			},
 		},
-	}))
+	}
+
+	t.Run("valid image version", func(t *testing.T) {
+		instance := broker.DeepCopy()
+
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
+		assert.NoError(t, instance.ValidateCreate())
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.20"
+		assert.NoError(t, instance.ValidateCreate())
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.5.0"
+		assert.NoError(t, instance.ValidateCreate())
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.10"
+		assert.NoError(t, instance.ValidateCreate())
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.123456789"
+		assert.NoError(t, instance.ValidateCreate())
+
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
+		assert.ErrorContains(t, instance.ValidateCreate(), "image version can not be latest")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = ""
+		assert.ErrorContains(t, instance.ValidateCreate(), "invalid image version")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "fake"
+		assert.ErrorContains(t, instance.ValidateCreate(), "invalid image version")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.11"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.3"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "5.0.0"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please downgrade to 5.0.0 earlier")
+	})
+}
+
+func TestBrokerValidateUpdate(t *testing.T) {
+	broker := &EmqxBroker{
+		Spec: EmqxBrokerSpec{
+			Template: EmqxTemplate{
+				Spec: EmqxTemplateSpec{
+					EmqxContainer: EmqxContainer{
+						Image: EmqxImage{
+							Version: "4.4.12",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	t.Run("valid image version", func(t *testing.T) {
+		instance := broker.DeepCopy()
+
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
+		assert.NoError(t, instance.ValidateCreate())
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.20"
+		assert.NoError(t, instance.ValidateCreate())
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.5.0"
+		assert.NoError(t, instance.ValidateCreate())
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.10"
+		assert.NoError(t, instance.ValidateCreate())
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.123456789"
+		assert.NoError(t, instance.ValidateCreate())
+
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
+		assert.ErrorContains(t, instance.ValidateCreate(), "image version can not be latest")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = ""
+		assert.ErrorContains(t, instance.ValidateCreate(), "invalid image version")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "fake"
+		assert.ErrorContains(t, instance.ValidateCreate(), "invalid image version")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.11"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.3"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "5.0.0"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please downgrade to 5.0.0 earlier")
+	})
+
+	t.Run("valid volume template can not update", func(t *testing.T) {
+		instance := broker.DeepCopy()
+
+		assert.Nil(t, instance.ValidateUpdate(&EmqxBroker{}))
+		assert.Error(t, instance.ValidateUpdate(&EmqxBroker{
+			Spec: EmqxBrokerSpec{
+				Persistent: &corev1.PersistentVolumeClaimTemplate{
+					Spec: corev1.PersistentVolumeClaimSpec{
+						StorageClassName: &[]string{"fake"}[0],
+					},
+				},
+			},
+		}))
+	})
 }
