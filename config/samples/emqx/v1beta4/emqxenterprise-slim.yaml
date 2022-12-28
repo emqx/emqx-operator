@@ -6,4 +6,6 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: emqx/emqx-ee:4.4.8
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.8

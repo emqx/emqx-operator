@@ -237,8 +237,9 @@ func TestGenerateStatefulSet(t *testing.T) {
 		},
 	}
 	emqx.Spec.Template.Spec.EmqxContainer.Name = "emqx"
-	emqx.Spec.Template.Spec.EmqxContainer.Image = "emqx/emqx-ee:latest"
-	emqx.Spec.Template.Spec.EmqxContainer.ImagePullPolicy = corev1.PullAlways
+	emqx.Spec.Template.Spec.EmqxContainer.Image.Repository = "emqx/emqx-ee"
+	emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
+	emqx.Spec.Template.Spec.EmqxContainer.Image.PullPolicy = corev1.PullAlways
 	emqx.Spec.Template.Spec.EmqxContainer.EnvFrom = []corev1.EnvFromSource{
 		{
 			ConfigMapRef: &corev1.ConfigMapEnvSource{
@@ -405,7 +406,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 	assert.Equal(t, emqx.Spec.Template.Spec.EmqxContainer.Lifecycle, got.Spec.Template.Spec.Containers[0].Lifecycle)
 	assert.Equal(t, emqx.Spec.Template.Spec.EmqxContainer.TerminationMessagePath, got.Spec.Template.Spec.Containers[0].TerminationMessagePath)
 	assert.Equal(t, emqx.Spec.Template.Spec.EmqxContainer.TerminationMessagePolicy, got.Spec.Template.Spec.Containers[0].TerminationMessagePolicy)
-	assert.Equal(t, emqx.Spec.Template.Spec.EmqxContainer.ImagePullPolicy, got.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+	assert.Equal(t, emqx.Spec.Template.Spec.EmqxContainer.Image.PullPolicy, got.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 	assert.Equal(t, emqx.Spec.Template.Spec.EmqxContainer.Stdin, got.Spec.Template.Spec.Containers[0].Stdin)
 	assert.Equal(t, emqx.Spec.Template.Spec.EmqxContainer.StdinOnce, got.Spec.Template.Spec.Containers[0].StdinOnce)
 	assert.Equal(t, emqx.Spec.Template.Spec.EmqxContainer.TTY, got.Spec.Template.Spec.Containers[0].TTY)

@@ -50,8 +50,11 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
-					Name:  "emqx",
-					Image: "emqx/emqx:4.4.9",
+					Name: "emqx",
+					Image: appsv1beta4.EmqxImage{
+						Repository: "emqx/emqx",
+						Version:    "4.4.9",
+					},
 				},
 			},
 		},
@@ -71,8 +74,11 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
-					Name:  "emqx",
-					Image: "emqx/emqx-ee:4.4.9",
+					Name: "emqx",
+					Image: appsv1beta4.EmqxImage{
+						Repository: "emqx/emqx-ee",
+						Version:    "4.4.9",
+					},
 				},
 			},
 		},
@@ -383,7 +389,8 @@ var _ = Describe("Blue Green Update Test", func() {
 
 			By("update EMQX CR")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), emqx)).Should(Succeed())
-			emqx.Spec.Template.Spec.EmqxContainer.Image = "emqx/emqx-ee:4.4.10"
+			emqx.Spec.Template.Spec.EmqxContainer.Image.Repository = "emqx/emqx-ee"
+			emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.10"
 			Expect(k8sClient.Update(context.Background(), emqx)).Should(Succeed())
 
 			By("wait create new sts")
