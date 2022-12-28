@@ -1,6 +1,6 @@
 # 产品概览
 
-**注意**: EMQX Operator 控制器需要 Kubernetes v1.20.0 或者以上。
+**注意**: EMQX Operator 控制器需要 Kubernetes v1.20.11 或者以上。
 
 ## 部署Operator控制器
 
@@ -10,18 +10,25 @@
 
 ### 安装
 
-1. 通过 Helm 安装
+1
+
+2. 通过 Helm 安装
 
 ```bash
 helm repo add emqx https://repos.emqx.io/charts
-helm repo update
+helm repo updatE
 helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
 ```
 
-2. 等待 EMQX Operator 控制器就绪
+2. 检查 EMQX Operator 是否就绪
 
 ```bash
-$ kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system
+kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system
+```
+
+输出类似于：
+
+```
 NAME                                                READY   STATUS    RESTARTS   AGE
 emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0          15s
 ```
@@ -32,27 +39,26 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 1. 部署 EMQX 自定义资源
 
-    ```bash
-    cat << "EOF" | kubectl apply -f -
-      apiVersion: apps.emqx.io/v2alpha1
-      kind: EMQX
-      metadata:
-        name: emqx
-      spec:
-        image: emqx/emqx:5.0.9
-    EOF
-    ```
+```yaml
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: emqx/emqx:5.0.9
+```
 
-    完整的例子请查看 [`emqx-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml)
+2. 检查 EMQX 集群是否就绪
 
-    每个字段的详细解释，请参考 [v2alpha1-reference](../../en_US/reference/v2alpha1-reference.md)
+```bash
+kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+```
 
-2. 检查 EMQX 自定义资源状态
+输出类似于：
 
-    ```
-    $ kubectl get pods
-    $ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-    ```
+```
+
+```
 
 ### 部署 EMQX 4
 
