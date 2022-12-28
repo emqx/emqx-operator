@@ -38,7 +38,7 @@ tolerations: []
 
 affinity: {}
 
-admissionWebhooks:
+webhooks:
   cert:
     # If not set, a name is generated using the "${FULLNAME}-webhook-server-cert"
     secretName: ""

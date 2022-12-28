@@ -1,5 +1,5 @@
-{{- if .Values.admissionWebhooks.conversion.enable -}}
-{{- if .Values.admissionWebhooks.conversion.patch.serviceAccount.create -}}
+{{- if .Values.webhooks.conversion.enable -}}
+{{- if .Values.webhooks.conversion.patch.serviceAccount.create -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -10,7 +10,7 @@ metadata:
     "helm.sh/hook-weight": "-1"
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
+    {{- with .Values.webhooks.conversion.patch.serviceAccount.annotations }}
       {{- toYaml .  | nindent 4 }}
     {{- end }}
 rules:
@@ -33,7 +33,7 @@ metadata:
     "helm.sh/hook-weight": "-1"
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
+    {{- with .Values.webhooks.conversion.patch.serviceAccount.annotations }}
       {{- toYaml .  | nindent 4 }}
     {{- end }}
 roleRef:
@@ -57,7 +57,7 @@ metadata:
     "helm.sh/hook-weight": "-1"
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
-    {{- with .Values.admissionWebhooks.conversion.patch.serviceAccount.annotations }}
+    {{- with .Values.webhooks.conversion.patch.serviceAccount.annotations }}
       {{- toYaml .  | nindent 4 }}
     {{- end }}
 {{- end }}

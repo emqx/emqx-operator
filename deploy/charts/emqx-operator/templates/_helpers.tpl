@@ -67,8 +67,8 @@ Create the name of the patch service account to use
 */}}
 {{- define "emqx-operator.patchServiceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (cat (include "emqx-operator.fullname" .) "-" "conversion-patch" | nospace) .Values.admissionWebhooks.conversion.patch.serviceAccount.name }}
+{{- default (cat (include "emqx-operator.fullname" .) "-" "conversion-patch" | nospace) .Values.webhooks.conversion.patch.serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.admissionWebhooks.conversion.patch.serviceAccount.name }}
+{{- default "default" .Values.webhooks.conversion.patch.serviceAccount.name }}
 {{- end }}
 {{- end }}
