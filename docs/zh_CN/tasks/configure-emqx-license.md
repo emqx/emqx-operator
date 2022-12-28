@@ -27,6 +27,30 @@ secret/test created
 
 - 配置 EMQX 集群
 
+:::: tabs type:card
+::: tab v1beta4
+
+EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnterprise 支持通过 `.spec.license.secretName` 字段来配置 EMQX 企业版 License，secretName 字段的具体描述可以参考：[secretName](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#emqxlicense)。
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  license:
+    secretName: test
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.8
+```
+
+:::
+::: tab v1beta3
+
 EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnterprise 支持通过 `.spec.emqxTemplate.license.secretName` 字段来配置 EMQX 企业版 License，secretName 字段的具体描述可以参考：[secretName](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v1beta3-reference.md#license)。
 
 ```yaml
@@ -40,6 +64,9 @@ spec:
     license:
       secretName: test
 ```
+
+:::
+::::
 
 **说明**：`secretName` 表示上一步中创建的 Secret 名称。
 
