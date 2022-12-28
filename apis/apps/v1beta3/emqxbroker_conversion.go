@@ -18,6 +18,8 @@ package v1beta3
 
 import (
 	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	corev1 "k8s.io/api/core/v1"
@@ -50,15 +52,28 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.Template.ObjectMeta.Labels = src.Labels
 	dst.Spec.Template.ObjectMeta.Annotations = src.Annotations
 	dst.Spec.Template.Spec.EmqxContainer.Name = "emqx"
-	dst.Spec.Template.Spec.EmqxContainer.Image = src.Spec.EmqxTemplate.Image
+
+	dst.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
+	compile := regexp.MustCompile(`(latest|[0-9]+(\.[0-9]+)?(\.[0-9]+)?(-(alpha|beta|rc)\.[0-9]+)?)`)
+	image := strings.Split(src.Spec.EmqxTemplate.Image, ":")
+	dst.Spec.Template.Spec.EmqxContainer.Image.Repository = image[0]
+	if compile.MatchString(image[1]) {
+		dst.Spec.Template.Spec.EmqxContainer.Image.Version = compile.FindString(image[1])
+		index := compile.FindStringIndex(image[1])
+		if index != nil {
+			dst.Spec.Template.Spec.EmqxContainer.Image.Prefix = image[1][:index[0]]
+			dst.Spec.Template.Spec.EmqxContainer.Image.Suffix = image[1][index[1]:]
+		}
+	}
+	if len(src.Spec.EmqxTemplate.ImagePullPolicy) != 0 {
+		dst.Spec.Template.Spec.EmqxContainer.Image.PullPolicy = src.Spec.EmqxTemplate.ImagePullPolicy
+	}
+
 	if src.Spec.EmqxTemplate.EmqxConfig != nil {
 		dst.Spec.Template.Spec.EmqxContainer.EmqxConfig = src.Spec.EmqxTemplate.EmqxConfig
 	}
 	if len(src.Spec.EmqxTemplate.ACL) != 0 {
 		dst.Spec.Template.Spec.EmqxContainer.EmqxACL = src.Spec.EmqxTemplate.ACL
-	}
-	if len(src.Spec.EmqxTemplate.ImagePullPolicy) != 0 {
-		dst.Spec.Template.Spec.EmqxContainer.ImagePullPolicy = src.Spec.EmqxTemplate.ImagePullPolicy
 	}
 	if len(src.Spec.EmqxTemplate.Args) != 0 {
 		dst.Spec.Template.Spec.EmqxContainer.Args = src.Spec.EmqxTemplate.Args
@@ -128,15 +143,16 @@ func (dst *EmqxBroker) ConvertFrom(srcRaw conversion.Hub) error {
 		dst.Spec.EmqxTemplate.ServiceTemplate = ServiceTemplate(src.Spec.ServiceTemplate)
 	}
 	// Template
-	dst.Spec.EmqxTemplate.Image = src.Spec.Template.Spec.EmqxContainer.Image
+	dst.Spec.EmqxTemplate.Image = v1beta4.GetEmqxImage(src)
+
+	if len(src.Spec.Template.Spec.EmqxContainer.Image.PullPolicy) != 0 {
+		dst.Spec.EmqxTemplate.ImagePullPolicy = src.Spec.Template.Spec.EmqxContainer.Image.PullPolicy
+	}
 	if src.Spec.Template.Spec.EmqxContainer.EmqxConfig != nil {
 		dst.Spec.EmqxTemplate.EmqxConfig = src.Spec.Template.Spec.EmqxContainer.EmqxConfig
 	}
 	if len(src.Spec.Template.Spec.EmqxContainer.EmqxACL) != 0 {
 		dst.Spec.EmqxTemplate.ACL = src.Spec.Template.Spec.EmqxContainer.EmqxACL
-	}
-	if len(src.Spec.Template.Spec.EmqxContainer.ImagePullPolicy) != 0 {
-		dst.Spec.EmqxTemplate.ImagePullPolicy = src.Spec.Template.Spec.EmqxContainer.ImagePullPolicy
 	}
 	if len(src.Spec.Template.Spec.EmqxContainer.Args) != 0 {
 		dst.Spec.EmqxTemplate.Args = src.Spec.Template.Spec.EmqxContainer.Args

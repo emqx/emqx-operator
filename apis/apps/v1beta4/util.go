@@ -2,6 +2,7 @@ package v1beta4
 
 import (
 	"fmt"
+	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +27,15 @@ func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort
 	}
 
 	return result
+}
+
+func GetEmqxImage(instance Emqx) string {
+	image := instance.GetSpec().GetTemplate().Spec.EmqxContainer.Image
+	return fmt.Sprintf(
+		"%s:%s",
+		filepath.Join(image.Registry, image.Repository),
+		image.Prefix+image.Version+image.Suffix,
+	)
 }
 
 // +kubebuilder:object:generate=false

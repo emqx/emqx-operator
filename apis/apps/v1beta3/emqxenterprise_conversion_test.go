@@ -89,7 +89,7 @@ var v1bete3EmqxEnterprise = &EmqxEnterprise{
 			},
 		},
 		EmqxTemplate: EmqxEnterpriseTemplate{
-			Image: "emqx/emqx:4.4.8",
+			Image: "emqx/emqx-ee:4.4.8",
 			License: License{
 				SecretName: "fake-license-secret",
 			},
@@ -263,12 +263,15 @@ var v1beta4EmqxEnterprise = &v1beta4.EmqxEnterprise{
 					},
 				},
 				EmqxContainer: v1beta4.EmqxContainer{
-					Image: "emqx/emqx:4.4.8",
+					Image: v1beta4.EmqxImage{
+						Repository: "emqx/emqx-ee",
+						Version:    "4.4.8",
+						PullPolicy: corev1.PullIfNotPresent,
+					},
 					EmqxConfig: map[string]string{
 						"foo": "bar",
 					},
-					EmqxACL:         []string{"allow, all."},
-					ImagePullPolicy: corev1.PullIfNotPresent,
+					EmqxACL: []string{"allow, all."},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "foo",
@@ -384,11 +387,12 @@ func TestEnterpriseConversionTo(t *testing.T) {
 
 	assert.Equal(t, v1bete3EmqxBroker.Labels, emqx.Spec.Template.Labels)
 	assert.Equal(t, v1bete3EmqxBroker.Annotations, emqx.Spec.Template.Annotations)
-	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.Image, emqx.Spec.Template.Spec.EmqxContainer.Image)
+	assert.Equal(t, "emqx/emqx-ee", emqx.Spec.Template.Spec.EmqxContainer.Image.Repository)
+	assert.Equal(t, "4.4.8", emqx.Spec.Template.Spec.EmqxContainer.Image.Version)
+	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.ImagePullPolicy, emqx.Spec.Template.Spec.EmqxContainer.Image.PullPolicy)
 	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.License, emqx.Spec.License)
 	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.EmqxConfig, emqx.Spec.Template.Spec.EmqxContainer.EmqxConfig)
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.ACL, emqx.Spec.Template.Spec.EmqxContainer.EmqxACL)
-	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.ImagePullPolicy, emqx.Spec.Template.Spec.EmqxContainer.ImagePullPolicy)
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.Args, emqx.Spec.Template.Spec.EmqxContainer.Args)
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.Resources, emqx.Spec.Template.Spec.EmqxContainer.Resources)
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.EmqxTemplate.ReadinessProbe, emqx.Spec.Template.Spec.EmqxContainer.ReadinessProbe)
@@ -417,11 +421,12 @@ func TestEnterpriseConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Persistent.Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
-	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.Image, emqx.Spec.EmqxTemplate.Image)
+	assert.Equal(t, "emqx/emqx-ee:4.4.8", emqx.Spec.EmqxTemplate.Image)
+	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.Image.PullPolicy, emqx.Spec.EmqxTemplate.ImagePullPolicy)
+
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.License, emqx.Spec.EmqxTemplate.License)
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.EmqxConfig, emqx.Spec.EmqxTemplate.EmqxConfig)
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.EmqxACL, emqx.Spec.EmqxTemplate.ACL)
-	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.ImagePullPolicy, emqx.Spec.EmqxTemplate.ImagePullPolicy)
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.Args, emqx.Spec.EmqxTemplate.Args)
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.Resources, emqx.Spec.EmqxTemplate.Resources)
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.ReadinessProbe, emqx.Spec.EmqxTemplate.ReadinessProbe)
