@@ -83,6 +83,10 @@
         {
           "title": "Configure EMQX persistence",
           "path": "tasks/configure-emqx-persistence"
+        },
+        {
+          "title": "Configure EMQX Enterprise blue-green upgrade",
+          "path": "tasks/configure-emqx-blueGreenUpdate"
         }
       ]
     },
@@ -205,6 +209,10 @@
         {
           "title": "配置 EMQX 持久化",
           "path": "tasks/configure-emqx-persistence"
+        },
+        {
+          "title": "配置 EMQX 企业版蓝绿升级",
+          "path": "tasks/configure-emqx-blueGreenUpdate"
         }
       ]
     },
