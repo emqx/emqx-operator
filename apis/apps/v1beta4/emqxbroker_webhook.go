@@ -167,14 +167,17 @@ func defaultServiceTemplate(r Emqx) {
 	}
 
 	s.Spec.Selector = r.GetLabels()
-	s.MergePorts([]corev1.ServicePort{
-		{
-			Name:       "http-management-8081",
-			Port:       8081,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(8081),
+	s.Spec.Ports = MergeServicePorts(
+		s.Spec.Ports,
+		[]corev1.ServicePort{
+			{
+				Name:       "http-management-8081",
+				Port:       8081,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(8081),
+			},
 		},
-	})
+	)
 
 	r.GetSpec().SetServiceTemplate(s)
 }
