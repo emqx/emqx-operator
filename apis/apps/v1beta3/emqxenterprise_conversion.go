@@ -35,16 +35,14 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	if !reflect.ValueOf(src.Spec.EmqxTemplate.ServiceTemplate).IsZero() {
 		dst.Spec.ServiceTemplate = v1beta4.ServiceTemplate(src.Spec.EmqxTemplate.ServiceTemplate)
 	}
-	// VolumeClaimTemplates
+	// Persistent
 	if !reflect.ValueOf(src.Spec.Persistent).IsZero() {
 		names := Names{Object: src}
-		dst.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: names.Data(),
-				},
-				Spec: src.Spec.Persistent,
+		dst.Spec.Persistent = &corev1.PersistentVolumeClaimTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: names.Data(),
 			},
+			Spec: src.Spec.Persistent,
 		}
 	}
 	// Template
@@ -123,9 +121,9 @@ func (dst *EmqxEnterprise) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.ObjectMeta = src.ObjectMeta
 	//Replicas
 	dst.Spec.Replicas = src.Spec.Replicas
-	// VolumeClaimTemplates
-	if !reflect.ValueOf(src.Spec.VolumeClaimTemplates).IsZero() {
-		dst.Spec.Persistent = src.Spec.VolumeClaimTemplates[0].Spec
+	// Persistent
+	if !reflect.ValueOf(src.Spec.Persistent).IsZero() {
+		dst.Spec.Persistent = src.Spec.Persistent.Spec
 	}
 	// ServiceTemplate
 	if !reflect.ValueOf(src.Spec.ServiceTemplate).IsZero() {

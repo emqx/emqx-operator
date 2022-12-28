@@ -10,8 +10,8 @@ type EmqxSpec interface {
 	GetReplicas() *int32
 	SetReplicas(int32)
 
-	GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim
-	SetVolumeClaimTemplates([]corev1.PersistentVolumeClaim)
+	GetPersistent() *corev1.PersistentVolumeClaimTemplate
+	SetPersistent(*corev1.PersistentVolumeClaimTemplate)
 
 	GetTemplate() EmqxTemplate
 	SetTemplate(EmqxTemplate)

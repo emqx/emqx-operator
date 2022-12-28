@@ -55,8 +55,8 @@ type EmqxEnterpriseSpec struct {
 
 	License EmqxLicense `json:"license,omitempty"`
 
-	// VolumeClaimTemplates describes the common attributes of storage devices
-	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"persistent,omitempty"`
+	// Persistent describes the common attributes of storage devices
+	Persistent *corev1.PersistentVolumeClaimTemplate `json:"persistent,omitempty"`
 
 	EmqxBlueGreenUpdate *EmqxBlueGreenUpdate `json:"blueGreenUpdate,omitempty"`
 
@@ -74,12 +74,12 @@ func (s *EmqxEnterpriseSpec) SetReplicas(replicas int32) {
 	s.Replicas = &replicas
 }
 
-func (s *EmqxEnterpriseSpec) GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim {
-	return s.VolumeClaimTemplates
+func (s *EmqxEnterpriseSpec) GetPersistent() *corev1.PersistentVolumeClaimTemplate {
+	return s.Persistent
 }
 
-func (s *EmqxEnterpriseSpec) SetVolumeClaimTemplates(volumeClaimTemplates []corev1.PersistentVolumeClaim) {
-	s.VolumeClaimTemplates = volumeClaimTemplates
+func (s *EmqxEnterpriseSpec) SetPersistent(persistent *corev1.PersistentVolumeClaimTemplate) {
+	s.Persistent = persistent
 }
 
 func (s *EmqxEnterpriseSpec) GetTemplate() EmqxTemplate {

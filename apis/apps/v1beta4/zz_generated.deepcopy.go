@@ -125,12 +125,10 @@ func (in *EmqxBrokerSpec) DeepCopyInto(out *EmqxBrokerSpec) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.VolumeClaimTemplates != nil {
-		in, out := &in.VolumeClaimTemplates, &out.VolumeClaimTemplates
-		*out = make([]v1.PersistentVolumeClaim, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+	if in.Persistent != nil {
+		in, out := &in.Persistent, &out.Persistent
+		*out = new(v1.PersistentVolumeClaimTemplate)
+		(*in).DeepCopyInto(*out)
 	}
 	in.Template.DeepCopyInto(&out.Template)
 	in.ServiceTemplate.DeepCopyInto(&out.ServiceTemplate)
@@ -356,12 +354,10 @@ func (in *EmqxEnterpriseSpec) DeepCopyInto(out *EmqxEnterpriseSpec) {
 		**out = **in
 	}
 	in.License.DeepCopyInto(&out.License)
-	if in.VolumeClaimTemplates != nil {
-		in, out := &in.VolumeClaimTemplates, &out.VolumeClaimTemplates
-		*out = make([]v1.PersistentVolumeClaim, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+	if in.Persistent != nil {
+		in, out := &in.Persistent, &out.Persistent
+		*out = new(v1.PersistentVolumeClaimTemplate)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.EmqxBlueGreenUpdate != nil {
 		in, out := &in.EmqxBlueGreenUpdate, &out.EmqxBlueGreenUpdate

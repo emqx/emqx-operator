@@ -91,7 +91,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `replicas` _integer_ |  |
-| `volumeClaimTemplates` _[PersistentVolumeClaim](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaim-v1-core) array_ | VolumeClaimTemplates describes the common attributes of storage devices |
+| `persistent` _[PersistentVolumeClaimTemplate](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimtemplate-v1-core)_ | Persistent describes the common attributes of storage devices |
 | `template` _[EmqxTemplate](#emqxtemplate)_ |  |
 | `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ | ServiceTemplate defines a logical set of ports and a policy by which to access them |
 
@@ -182,7 +182,7 @@ _Appears in:_
 | --- | --- |
 | `replicas` _integer_ |  |
 | `license` _[EmqxLicense](#emqxlicense)_ |  |
-| `persistent` _[PersistentVolumeClaim](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaim-v1-core) array_ | VolumeClaimTemplates describes the common attributes of storage devices |
+| `persistent` _[PersistentVolumeClaimTemplate](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimtemplate-v1-core)_ | Persistent describes the common attributes of storage devices |
 | `blueGreenUpdate` _[EmqxBlueGreenUpdate](#emqxbluegreenupdate)_ |  |
 | `template` _[EmqxTemplate](#emqxtemplate)_ |  |
 | `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ | ServiceTemplate defines a logical set of ports and a policy by which to access them |
