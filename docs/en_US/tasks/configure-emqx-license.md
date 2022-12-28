@@ -27,6 +27,30 @@ secret/test created
 
 - Configure EMQX cluster
 
+:::: tabs type:card
+::: tab v1beta4
+
+The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring EMQX Enterprise Edition License through `.spec.license.secretName` field. For the specific description of the secretName field, please refer to: [secretName](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#emqxlicense).
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  license:
+    secretName: test
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.8
+```
+
+:::
+::: tab v1beta3
+
 The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring the EMQX Enterprise Edition License through `.spec.emqxTemplate.license.secretName` field. For the specific description of the secretName field, please refer to: [secretName](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v1beta3-reference.md#license).
 
 ```yaml
@@ -40,6 +64,9 @@ spec:
      license:
        secretName: test
 ```
+
+:::
+::::
 
 **NOTE**: `secretName` indicates the name of the Secret created in the previous step.
 
