@@ -69,6 +69,10 @@
           "path": "tasks/handle-emqx-metrics-and-logs"
         },
         {
+          "title": "Configure EMQX Core and Replicant nodes",
+          "path": "tasks/configure-emqx-core-replicant"
+        },
+        {
           "title": "Configure EMQX TLS certificate",
           "path": "tasks/configure-emqx-tls"
         },
@@ -185,6 +189,10 @@
         {
           "title": "使用 telegtaf 处理 EMQX metrics 和 logs",
           "path": "tasks/handle-emqx-metrics-and-logs"
+        },
+        {
+          "title": "配置 EMQX Core 和 Replicant 节点",
+          "path": "tasks/configure-emqx-core-replicant"
         },
         {
           "title": "配置 EMQX TLS 证书 ",
