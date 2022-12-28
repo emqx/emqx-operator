@@ -11,10 +11,14 @@ on:
         required: true
         type: string
   workflow_run:
+    ##  Release by github-actions will not trigger "release" event, so need this
     workflows:
       - "Release emqx operator"
     types:
       - completed
+  release:
+    types:
+      - published
 
 jobs:
   prepare:
@@ -25,13 +29,18 @@ jobs:
     if: github.repository_owner == 'emqx'
 
     steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: get_tags
       id: tags
       run: |
+        ref=$(git describe --tags --abbrev=0)
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           ref="${{ inputs.tag }}"
-        else
-          ref="${{ github.ref_name }}"
+        fi
+        if [ "${{ github.event_name }}" = "release" ]; then
+          ref="${{ github.event.release.tag_name }}"
         fi
         latest_tag="$(curl --silent --show-error \
             -H "Accept: application/vnd.github.v3+json" \
