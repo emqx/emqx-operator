@@ -92,13 +92,14 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	var license *corev1.Secret
 	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
 		if enterprise.Spec.License.SecretName != "" {
+			license = &corev1.Secret{}
 			if err := r.Client.Get(
 				context.Background(),
 				types.NamespacedName{
 					Name:      enterprise.Spec.License.SecretName,
 					Namespace: instance.GetNamespace(),
 				},
-				&corev1.Secret{},
+				license,
 			); err != nil {
 				return ctrl.Result{}, err
 			}
