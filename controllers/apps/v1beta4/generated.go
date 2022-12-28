@@ -271,9 +271,10 @@ func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePo
 
 	compile := regexp.MustCompile(".*management.*")
 
-	serviceTemplate := instance.GetSpec().GetServiceTemplate()
-	serviceTemplate.MergePorts(port)
-	for _, port := range serviceTemplate.Spec.Ports {
+	for _, port := range appsv1beta4.MergeServicePorts(
+		instance.GetSpec().GetServiceTemplate().Spec.Ports,
+		port,
+	) {
 		if compile.MatchString(port.Name) {
 			// Headless services must not set nodePort
 			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, corev1.ServicePort{
@@ -290,7 +291,7 @@ func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePo
 
 func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
 	serviceTemplate := instance.GetSpec().GetServiceTemplate()
-	serviceTemplate.MergePorts(port)
+	serviceTemplate.Spec.Ports = appsv1beta4.MergeServicePorts(serviceTemplate.Spec.Ports, port)
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
