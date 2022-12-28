@@ -35,7 +35,9 @@ spec:
       # tolerations:
       emqxContainer:
         name: "emqx"
-        image: emqx/emqx-ee:4.4.8
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.8
         emqxConfig:
           name: emqx-ee
           cluster.discovery: dns

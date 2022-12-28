@@ -3774,9 +3774,20 @@ spec:
                               type: object
                             type: array
                           image:
-                            type: string
-                          imagePullPolicy:
-                            type: string
+                            properties:
+                              prefix:
+                                type: string
+                              pullPolicy:
+                                type: string
+                              registry:
+                                type: string
+                              repository:
+                                type: string
+                              suffix:
+                                type: string
+                              version:
+                                type: string
+                            type: object
                           lifecycle:
                             properties:
                               postStart:

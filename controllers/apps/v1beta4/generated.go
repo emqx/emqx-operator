@@ -309,8 +309,8 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 
 	reloaderContainer := corev1.Container{
 		Name:            ReloaderContainerName,
-		Image:           ReloaderContainerImage,
-		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.ImagePullPolicy,
+		Image:           filepath.Join(emqxTemplate.Spec.EmqxContainer.Image.Registry, ReloaderContainerImage),
+		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
 		Args: []string{
 			"-u", "admin",
 			"-p", "public",
@@ -323,8 +323,8 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 
 	emqxContainer := corev1.Container{
 		Name:            emqxTemplate.Spec.EmqxContainer.Name,
-		Image:           emqxTemplate.Spec.EmqxContainer.Image,
-		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.ImagePullPolicy,
+		Image:           appsv1beta4.GetEmqxImage(instance),
+		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
 		Command:         emqxTemplate.Spec.EmqxContainer.Command,
 		Args:            emqxTemplate.Spec.EmqxContainer.Args,
 		WorkingDir:      emqxTemplate.Spec.EmqxContainer.WorkingDir,
