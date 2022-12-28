@@ -208,11 +208,9 @@ var v1beta4EmqxEnterprise = &v1beta4.EmqxEnterprise{
 		License: v1beta4.EmqxLicense{
 			SecretName: "fake-license-secret",
 		},
-		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-			{
-				Spec: corev1.PersistentVolumeClaimSpec{
-					StorageClassName: &[]string{"foo"}[0],
-				},
+		Persistent: &corev1.PersistentVolumeClaimTemplate{
+			Spec: corev1.PersistentVolumeClaimSpec{
+				StorageClassName: &[]string{"foo"}[0],
 			},
 		},
 		Template: v1beta4.EmqxTemplate{
@@ -381,7 +379,7 @@ func TestEnterpriseConversionTo(t *testing.T) {
 	assert.Equal(t, v1bete3EmqxEnterprise.ObjectMeta, emqx.ObjectMeta)
 
 	assert.Equal(t, v1bete3EmqxEnterprise.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1bete3EmqxEnterprise.Spec.Persistent, emqx.Spec.VolumeClaimTemplates[0].Spec)
+	assert.Equal(t, v1bete3EmqxEnterprise.Spec.Persistent, emqx.Spec.Persistent.Spec)
 	assert.ObjectsAreEqualValues(v1bete3EmqxEnterprise.Spec.EmqxTemplate.ServiceTemplate, emqx.Spec.ServiceTemplate)
 
 	assert.Equal(t, v1bete3EmqxBroker.Labels, emqx.Spec.Template.Labels)
@@ -416,7 +414,7 @@ func TestEnterpriseConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxEnterprise.ObjectMeta, emqx.ObjectMeta)
 
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1beta4EmqxEnterprise.Spec.VolumeClaimTemplates[0].Spec, emqx.Spec.Persistent)
+	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Persistent.Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.EmqxContainer.Image, emqx.Spec.EmqxTemplate.Image)
@@ -442,7 +440,7 @@ func TestEnterpriseConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Template.Spec.Affinity, emqx.Spec.Affinity)
 
 	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1beta4EmqxEnterprise.Spec.VolumeClaimTemplates[0].Spec, emqx.Spec.Persistent)
+	assert.Equal(t, v1beta4EmqxEnterprise.Spec.Persistent.Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxEnterprise.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
 }

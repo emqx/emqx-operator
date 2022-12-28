@@ -202,11 +202,9 @@ var v1beta4EmqxBroker = &v1beta4.EmqxBroker{
 	},
 	Spec: v1beta4.EmqxBrokerSpec{
 		Replicas: &[]int32{3}[0],
-		VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-			{
-				Spec: corev1.PersistentVolumeClaimSpec{
-					StorageClassName: &[]string{"foo"}[0],
-				},
+		Persistent: &corev1.PersistentVolumeClaimTemplate{
+			Spec: corev1.PersistentVolumeClaimSpec{
+				StorageClassName: &[]string{"foo"}[0],
 			},
 		},
 		Template: v1beta4.EmqxTemplate{
@@ -375,7 +373,7 @@ func TestBrokerConversionTo(t *testing.T) {
 	assert.Equal(t, v1bete3EmqxBroker.ObjectMeta, emqx.ObjectMeta)
 
 	assert.Equal(t, v1bete3EmqxBroker.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1bete3EmqxBroker.Spec.Persistent, emqx.Spec.VolumeClaimTemplates[0].Spec)
+	assert.Equal(t, v1bete3EmqxBroker.Spec.Persistent, emqx.Spec.Persistent.Spec)
 	assert.ObjectsAreEqualValues(v1bete3EmqxBroker.Spec.EmqxTemplate.ServiceTemplate, emqx.Spec.ServiceTemplate)
 
 	assert.Equal(t, v1bete3EmqxBroker.Labels, emqx.Spec.Template.Labels)
@@ -408,7 +406,7 @@ func TestBrokerConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxBroker.ObjectMeta, emqx.ObjectMeta)
 
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1beta4EmqxBroker.Spec.VolumeClaimTemplates[0].Spec, emqx.Spec.Persistent)
+	assert.Equal(t, v1beta4EmqxBroker.Spec.Persistent.Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxBroker.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.Image, emqx.Spec.EmqxTemplate.Image)
@@ -433,7 +431,7 @@ func TestBrokerConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.Affinity, emqx.Spec.Affinity)
 
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Replicas, emqx.Spec.Replicas)
-	assert.Equal(t, v1beta4EmqxBroker.Spec.VolumeClaimTemplates[0].Spec, emqx.Spec.Persistent)
+	assert.Equal(t, v1beta4EmqxBroker.Spec.Persistent.Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxBroker.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
 }
