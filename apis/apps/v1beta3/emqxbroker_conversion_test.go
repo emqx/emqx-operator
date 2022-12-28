@@ -257,12 +257,15 @@ var v1beta4EmqxBroker = &v1beta4.EmqxBroker{
 					},
 				},
 				EmqxContainer: v1beta4.EmqxContainer{
-					Image: "emqx/emqx:4.4.8",
+					Image: v1beta4.EmqxImage{
+						Repository: "emqx/emqx",
+						Version:    "4.4.8",
+						PullPolicy: corev1.PullIfNotPresent,
+					},
 					EmqxConfig: map[string]string{
 						"foo": "bar",
 					},
-					EmqxACL:         []string{"allow, all."},
-					ImagePullPolicy: corev1.PullIfNotPresent,
+					EmqxACL: []string{"allow, all."},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "foo",
@@ -380,7 +383,9 @@ func TestBrokerConversionTo(t *testing.T) {
 	assert.Equal(t, v1bete3EmqxBroker.Annotations, emqx.Spec.Template.Annotations)
 	assert.ObjectsAreEqualValues(v1bete3EmqxBroker.Spec.EmqxTemplate.EmqxConfig, emqx.Spec.Template.Spec.EmqxContainer.EmqxConfig)
 	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.ACL, emqx.Spec.Template.Spec.EmqxContainer.EmqxACL)
-	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.ImagePullPolicy, emqx.Spec.Template.Spec.EmqxContainer.ImagePullPolicy)
+	assert.Equal(t, "emqx/emqx", emqx.Spec.Template.Spec.EmqxContainer.Image.Repository)
+	assert.Equal(t, "4.4.8", emqx.Spec.Template.Spec.EmqxContainer.Image.Version)
+	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.ImagePullPolicy, emqx.Spec.Template.Spec.EmqxContainer.Image.PullPolicy)
 	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.Args, emqx.Spec.Template.Spec.EmqxContainer.Args)
 	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.Resources, emqx.Spec.Template.Spec.EmqxContainer.Resources)
 	assert.Equal(t, v1bete3EmqxBroker.Spec.EmqxTemplate.ReadinessProbe, emqx.Spec.Template.Spec.EmqxContainer.ReadinessProbe)
@@ -409,10 +414,11 @@ func TestBrokerConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Persistent.Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxBroker.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
-	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.Image, emqx.Spec.EmqxTemplate.Image)
+	assert.Equal(t, "emqx/emqx:4.4.8", emqx.Spec.EmqxTemplate.Image)
+	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.Image.PullPolicy, emqx.Spec.EmqxTemplate.ImagePullPolicy)
+
 	assert.ObjectsAreEqualValues(v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.EmqxConfig, emqx.Spec.EmqxTemplate.EmqxConfig)
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.EmqxACL, emqx.Spec.EmqxTemplate.ACL)
-	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.ImagePullPolicy, emqx.Spec.EmqxTemplate.ImagePullPolicy)
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.Args, emqx.Spec.EmqxTemplate.Args)
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.Resources, emqx.Spec.EmqxTemplate.Resources)
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.ReadinessProbe, emqx.Spec.EmqxTemplate.ReadinessProbe)
