@@ -1,8 +1,8 @@
-# 配置 EMQX logs 采集
+# 配置 EMQX Logs 采集
 
 ## 任务目标
 
-- 学习如何通过 Telegraf 收集 EMQX 集群日志，并且输出到容器的标准输出
+- 如何通过 Telegraf 收集 EMQX 集群日志，并且输出到容器的标准输出
 
 ## 部署 telegraf-operator
 

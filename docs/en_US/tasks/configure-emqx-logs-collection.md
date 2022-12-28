@@ -1,8 +1,8 @@
-# Configure EMQX logs collection
+# Configure EMQX Logs Collection
 
 ## Task target
 
-- Learn how to collect EMQX cluster logs through Telegraf and export them to the standard output of the container
+- How to collect EMQX cluster logs through Telegraf and export them to the standard output of the container
 
 ## Deploy telegraf-operator
 
