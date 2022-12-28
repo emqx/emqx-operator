@@ -113,6 +113,50 @@ spec:
 **NOTE**: `.spec.coreTemplate.extraVolumes` field configures the volume type as: secret, and the name as: emqx-tls. `.spec.coreTemplate.extraVolumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`. The `.spec.bootstrapConfig` field configures the certificate path of the TLS listener. For more configurations of the TLS listener, please refer to the document: [ssllistener](https://www.emqx.io/docs/en/v5.0/admin/cfg.html#broker-mqtt-ssl-listener). The `.spec.listenersServiceTemplate` field configures the way the EMQX cluster exposes services to the outside world: NodePort, and specifies the nodePort corresponding to port 8883 of the EMQX ssl-default listener as 32016 (the value range of nodePort is: 30000-32767).
 
 :::
+::: tab v1beta4
+
+EMQX CRD supports configuring volumes and mount points for EMQX clusters through `.spec.template.spec.volumes` and `.spec.template.spec.emqxContainer.volumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
+
+There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this article we are using the `secret` type.
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.8
+        emqxConfig:
+          listener.ssl.external.cacertfile: /mounted/cert/ca.crt
+          listener.ssl.external.certfile: /mounted/cert/tls.crt
+          listener.ssl.external.keyfile: /mounted/cert/tls.key
+          listener.ssl.external: "0.0.0.0:8883"
+        volumeMounts:
+          - name: emqx-tls 
+            mountPath: /mounted/cert
+      volumes:
+        - name: emqx-tls
+          secret:
+            secretName: emqx-tls
+  serviceTemplate:
+    spec:
+      type: NodePort
+      ports:
+        - name: "mqtt-ssl-8883"
+          protocol: "TCP"
+          port: 8883
+          targetPort: 8883
+          nodePort: 32016
+```
+
+**NOTE**: The `.spec.template.spec.volumes` field configures the volume type as: secret, and the name as: emqx-tls. The `.spec.template.spec.emqxContainer.volumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`. The `.spec.template.spec.emqxContainer.emqxConfig` field configures the TLS listener certificate path. For more TLS listener configurations, please refer to the document: [tlsexternal](https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html#tlsexternal). The `.spec.serviceTemplate` configuration field defines the way the EMQX cluster exposes services to the outside world: NodePort, and specifies the nodePort corresponding to port 8883 of the EMQX mqtt-ssl-8883 listener as 32016 (the value range of nodePort is: 30000-32767).
+
+:::
 ::: tab v1beta3
 
 EMQX CRD supports configuring additional volumes and mount points for the EMQX cluster through `.spec.emqxTemplate.extraVolumes` and `.spec.emqxTemplate.extraVolumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
@@ -205,6 +249,40 @@ The output is similar to:
 ```
 
 **NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `role` represents the EMQX node role type. `version` indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
+
+:::
+::: tab v1beta4
+
+```
+kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```
+
+The output is similar to:
+
+```
+[
+   {
+     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
+     "node_status": "Running",
+     "otp_release": "24.1.5/12.1.5",
+     "version": "4.4.8"
+   },
+   {
+     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
+     "node_status": "Running",
+     "otp_release": "24.1.5/12.1.5",
+     "version": "4.4.8"
+   },
+   {
+     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
+     "node_status": "Running",
+     "otp_release": "24.1.5/12.1.5",
+     "version": "4.4.8"
+   }
+]
+```
+
+**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `version` indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::: tab v1beta3

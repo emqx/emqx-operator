@@ -113,6 +113,50 @@ spec:
 **说明**：`.spec.coreTemplate.extraVolumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.coreTemplate.extraVolumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.bootstrapConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[ssllistener](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html#broker-mqtt-ssl-listener)。 `.spec.listenersServiceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX ssl-default 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
 
 :::
+::: tab v1beta4
+
+EMQX CRD 支持通过 `.spec.template.spec.volumes` 和 `.spec.template.spec.emqxContainer.volumeMounts` 字段给 EMQX 集群配置卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
+
+Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/)。在本文中我们使用的是 `secret` 类型。
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.8
+        emqxConfig:
+          listener.ssl.external.cacertfile: /mounted/cert/ca.crt
+          listener.ssl.external.certfile: /mounted/cert/tls.crt
+          listener.ssl.external.keyfile: /mounted/cert/tls.key
+          listener.ssl.external: "0.0.0.0:8883"
+        volumeMounts:
+          - name: emqx-tls 
+            mountPath: /mounted/cert
+      volumes:
+        - name: emqx-tls
+          secret:
+            secretName: emqx-tls
+  serviceTemplate:
+    spec:
+      type: NodePort
+      ports:
+        - name: "mqtt-ssl-8883"
+          protocol: "TCP"
+          port: 8883
+          targetPort: 8883
+          nodePort: 32016
+```
+
+**说明**：`.spec.template.spec.volumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.template.spec.emqxContainer.volumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.template.spec.emqxContainer.emqxConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。 `.spec.serviceTemplate` 配置字段了 EMQX 集群对外暴露服务的方式为：NodePort ，并指定了 EMQX mqtt-ssl-8883 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
+
+:::
 ::: tab v1beta3
 
 EMQX CRD 支持通过 `.spec.emqxTemplate.extraVolumes` 和 `.spec.emqxTemplate.extraVolumeMounts` 字段给 EMQX 集群配置额外的卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
@@ -150,7 +194,7 @@ spec:
             nodePort: 32016
 ```
 
-**说明**：`.spec.emqxTemplate.extraVolumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.emqxTemplate.extraVolumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.emqxTemplate.config` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。 `.spec.emqxTemplate.serviceTemplate` 配置字段了 EMQX 集群对外暴露服务的方式为：NodePort ，并指定了 EMQX mqtt-ssl-8883 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）.
+**说明**：`.spec.emqxTemplate.extraVolumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.emqxTemplate.extraVolumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.emqxTemplate.config` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。 `.spec.emqxTemplate.serviceTemplate` 配置字段了 EMQX 集群对外暴露服务的方式为：NodePort ，并指定了 EMQX mqtt-ssl-8883 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
 
 :::
 ::::
@@ -205,6 +249,40 @@ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
 ```
 
 **说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`role` 表示 EMQX 节点角色类型。`version` 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 replicant 节点数量应和这个 replicas 的值相等。
+
+:::
+::: tab v1beta4
+
+```
+kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```
+
+输出类似于：
+
+```
+[
+  {
+    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
+    "node_status": "Running",
+    "otp_release": "24.1.5/12.1.5",
+    "version": "4.4.8"
+  },
+  {
+    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
+    "node_status": "Running",
+    "otp_release": "24.1.5/12.1.5",
+    "version": "4.4.8"
+  },
+  {
+    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
+    "node_status": "Running",
+    "otp_release": "24.1.5/12.1.5",
+    "version": "4.4.8"
+  }
+]
+```
+
+**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`version` 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 :::
 ::: tab v1beta3
