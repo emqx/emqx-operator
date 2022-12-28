@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
+	semver "github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -47,6 +48,7 @@ func (r *EmqxBroker) Default() {
 	emqxbrokerlog.Info("default", "name", r.Name)
 
 	defaultLabels(r)
+	defaultEmqxImage(r)
 	defaultEmqxACL(r)
 	defaultEmqxConfig(r)
 	defaultServiceTemplate(r)
@@ -60,12 +62,22 @@ var _ webhook.Validator = &EmqxBroker{}
 func (r *EmqxBroker) ValidateCreate() error {
 	emqxbrokerlog.Info("validate create", "name", r.Name)
 
+	if err := validateImageVersion(r); err != nil {
+		emqxbrokerlog.Error(err, "validate create failed")
+		return err
+	}
+
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 	emqxbrokerlog.Info("validate update", "name", r.Name)
+
+	if err := validateImageVersion(r); err != nil {
+		emqxbrokerlog.Error(err, "validate create failed")
+		return err
+	}
 
 	oldEmqx := old.(*EmqxBroker)
 	if err := validateVolumeClaimTemplates(r, oldEmqx); err != nil {
@@ -98,6 +110,19 @@ func defaultLabels(r Emqx) {
 	}
 	for k, v := range labels {
 		template.Labels[k] = v
+	}
+	r.GetSpec().SetTemplate(template)
+}
+
+func defaultEmqxImage(r Emqx) {
+	template := r.GetSpec().GetTemplate()
+	if template.Spec.EmqxContainer.Image.Repository == "" {
+		if _, ok := r.(*EmqxBroker); ok {
+			template.Spec.EmqxContainer.Image.Repository = "emqx/emqx"
+		}
+		if _, ok := r.(*EmqxEnterprise); ok {
+			template.Spec.EmqxContainer.Image.Repository = "emqx/emqx-ee"
+		}
 	}
 	r.GetSpec().SetTemplate(template)
 }
@@ -180,6 +205,26 @@ func defaultServiceTemplate(r Emqx) {
 	)
 
 	r.GetSpec().SetServiceTemplate(s)
+}
+
+func validateImageVersion(r Emqx) error {
+	version := r.GetSpec().GetTemplate().Spec.EmqxContainer.Image.Version
+	if version == "latest" {
+		return fmt.Errorf("image version can not be latest")
+	}
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return fmt.Errorf("invalid image version: %s", version)
+	}
+	if v.Compare(semver.MustParse("4.4.12")) < 0 {
+		return fmt.Errorf("image version %s is too old, please upgrade to 4.4.12 or later", version)
+	}
+	if v.Compare(semver.MustParse("5.0.0")) >= 0 {
+		return fmt.Errorf("image version %s is too new, please downgrade to 5.0.0 earlier", version)
+	}
+
+	return nil
 }
 
 func validateVolumeClaimTemplates(new, old Emqx) error {

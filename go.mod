@@ -21,7 +21,10 @@ require (
 
 require github.com/onsi/ginkgo v1.16.5
 
-require github.com/rory-z/go-hocon v1.2.7-2
+require (
+	github.com/Masterminds/semver/v3 v3.2.0
+	github.com/rory-z/go-hocon v1.2.7-2
+)
 
 require (
 	cloud.google.com/go/compute v1.7.0 // indirect

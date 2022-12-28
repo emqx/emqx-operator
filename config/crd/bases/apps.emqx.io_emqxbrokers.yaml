@@ -3740,6 +3740,11 @@ spec:
                               prefix:
                                 type: string
                               pullPolicy:
+                                default: IfNotPresent
+                                enum:
+                                - Always
+                                - Never
+                                - IfNotPresent
                                 type: string
                               registry:
                                 type: string
