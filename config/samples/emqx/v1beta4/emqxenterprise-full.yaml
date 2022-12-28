@@ -37,7 +37,7 @@ spec:
         name: "emqx"
         image:
           repository: emqx/emqx-ee
-          version: 4.4.8
+          version: 4.4.12
         emqxConfig:
           name: emqx-ee
           cluster.discovery: dns

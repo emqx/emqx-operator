@@ -66,7 +66,7 @@ docker-build: test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
-helm-crd: manifests kustomize ## build CRDs to helm template
+helm-crds: manifests kustomize ## build CRDs to helm template
 	$(KUSTOMIZE) build config/crd > deploy/charts/emqx-operator/templates/crds.yaml
 	
 	yq -i '.metadata.annotations."cert-manager.io/inject-ca-from" = "{{ .Release.Namespace }}/{{ include \"emqx-operator.fullname\" . }}-serving-cert"' deploy/charts/emqx-operator/templates/crds.yaml
@@ -107,7 +107,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v3.8.7
+KUSTOMIZE_VERSION ?= v4.5.7
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
