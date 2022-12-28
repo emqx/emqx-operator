@@ -29,22 +29,25 @@ type EmqxConfig map[string]string
 
 type EmqxImage struct {
 	// Container image registry
+	//+kubectl:default="docker.io"
 	Registry string `json:"registry,omitempty"`
 	// Container image repository
-	//+kubebuilder:validation:Required
+	// Defaults to "emqx/emqx" if kind is EmqxBroker, or "emqx/emqx-ee" if kind is EmqxEnterprise
 	Repository string `json:"repository,omitempty"`
 	// Container image tag version, must semver format or "latest"
 	//+kubebuilder:validation:Required
 	Version string `json:"version,omitempty"`
-	// Container image tag prefix, like `v`
+	// Container image tag prefix, like "v"
 	Prefix string `json:"prefix,omitempty"`
-	// Container image tag suffix
+	// Container image tag suffix, like "-alpine"
 	Suffix string `json:"suffix,omitempty"`
 	// Container image pull policy.
 	// One of Always, Never, IfNotPresent.
-	// Defaults to Always if latest version is specified, or IfNotPresent otherwise.
+	// Defaults to IfNotPresent.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	//+kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	//+kubebuilder:default:=IfNotPresent
 	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty"`
 }
 
