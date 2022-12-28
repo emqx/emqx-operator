@@ -183,8 +183,8 @@ func defaultServiceTemplate(r Emqx) {
 }
 
 func validateVolumeClaimTemplates(new, old Emqx) error {
-	if !reflect.DeepEqual(new.GetSpec().GetVolumeClaimTemplates(), old.GetSpec().GetVolumeClaimTemplates()) {
-		return errors.New("refuse to update VolumeClaimTemplates ")
+	if !reflect.DeepEqual(new.GetSpec().GetPersistent(), old.GetSpec().GetPersistent()) {
+		return errors.New("refuse to update Persistent ")
 	}
 	return nil
 }

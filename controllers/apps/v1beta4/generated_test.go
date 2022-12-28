@@ -295,16 +295,15 @@ func TestGenerateStatefulSet(t *testing.T) {
 		},
 	}, got.Spec.Template.Spec.Volumes)
 
-	emqx.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
-		{
-			Spec: corev1.PersistentVolumeClaimSpec{
-				StorageClassName: &[]string{"fake"}[0],
-			},
+	emqx.Spec.Persistent = &corev1.PersistentVolumeClaimTemplate{
+		Spec: corev1.PersistentVolumeClaimSpec{
+			StorageClassName: &[]string{"fake"}[0],
 		},
 	}
 
 	got = generateStatefulSet(emqx)
-	assert.Equal(t, emqx.Spec.VolumeClaimTemplates, got.Spec.VolumeClaimTemplates)
+	assert.Equal(t, emqx.Spec.Persistent.ObjectMeta, got.Spec.VolumeClaimTemplates[0].ObjectMeta)
+	assert.Equal(t, emqx.Spec.Persistent.Spec, got.Spec.VolumeClaimTemplates[0].Spec)
 
 	assert.Equal(t, "emqx", got.Name)
 	assert.Equal(t, "default", got.Namespace)

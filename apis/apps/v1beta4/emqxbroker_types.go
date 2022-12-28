@@ -26,8 +26,8 @@ type EmqxBrokerSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// VolumeClaimTemplates describes the common attributes of storage devices
-	VolumeClaimTemplates []corev1.PersistentVolumeClaim `json:"volumeClaimTemplates,omitempty"`
+	// Persistent describes the common attributes of storage devices
+	Persistent *corev1.PersistentVolumeClaimTemplate `json:"persistent,omitempty"`
 
 	Template EmqxTemplate `json:"template,omitempty"`
 
@@ -43,12 +43,12 @@ func (s *EmqxBrokerSpec) SetReplicas(replicas int32) {
 	s.Replicas = &replicas
 }
 
-func (s *EmqxBrokerSpec) GetVolumeClaimTemplates() []corev1.PersistentVolumeClaim {
-	return s.VolumeClaimTemplates
+func (s *EmqxBrokerSpec) GetPersistent() *corev1.PersistentVolumeClaimTemplate {
+	return s.Persistent
 }
 
-func (s *EmqxBrokerSpec) SetVolumeClaimTemplates(volumeClaimTemplates []corev1.PersistentVolumeClaim) {
-	s.VolumeClaimTemplates = volumeClaimTemplates
+func (s *EmqxBrokerSpec) SetPersistent(persistent *corev1.PersistentVolumeClaimTemplate) {
+	s.Persistent = persistent
 }
 
 func (s *EmqxBrokerSpec) GetTemplate() EmqxTemplate {

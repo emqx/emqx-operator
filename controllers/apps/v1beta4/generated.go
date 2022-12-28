@@ -410,7 +410,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 		delete(sts.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 	}
 
-	if len(instance.GetSpec().GetVolumeClaimTemplates()) == 0 {
+	if instance.GetSpec().GetPersistent() == nil {
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
 			corev1.Volume{
@@ -421,7 +421,13 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			},
 		)
 	} else {
-		sts.Spec.VolumeClaimTemplates = instance.GetSpec().GetVolumeClaimTemplates()
+		sts.Spec.VolumeClaimTemplates = append(
+			sts.Spec.VolumeClaimTemplates,
+			corev1.PersistentVolumeClaim{
+				ObjectMeta: instance.GetSpec().GetPersistent().ObjectMeta,
+				Spec:       instance.GetSpec().GetPersistent().Spec,
+			},
+		)
 	}
 
 	return sts
