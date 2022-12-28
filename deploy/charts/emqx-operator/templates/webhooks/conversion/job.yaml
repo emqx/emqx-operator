@@ -32,7 +32,7 @@ spec:
           set -euo pipefail
           set -x
           for r in emqxbrokers.apps.emqx.io emqxenterprises.apps.emqx.io emqxplugins.apps.emqx.io; do
-            {{- if (index .Values "webhooks" "cert" "cert-manager" "enable") }}
+            {{- if (index .Values "cert-manager" "enable") }}
             kubectl patch crd $r --type merge -p '
               {
                 "metadata": {

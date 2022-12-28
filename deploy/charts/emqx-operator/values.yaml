@@ -68,3 +68,11 @@ webhooks:
       nodeSelector: {}
       affinity: {}
       tolerations: []
+
+# Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server.
+# Or you can use your own certificate, You need create a TLS secret for provisioning the certificates for the "${FULLNAME}-webhook-service.${NAMESPACE}.svc"
+cert-manager:
+  enable: true
+  installCRDs: true
+  # If not set, a name is generated using the "${FULLNAME}-webhook-server-cert"
+  secretName: ""

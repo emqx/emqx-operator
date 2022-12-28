@@ -1,10 +1,12 @@
-{{- if (index .Values "webhooks" "cert" "cert-manager" "enable") }}
+{{- if (index .Values "cert-manager" "enable") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: {{ include "emqx-operator.fullname" . }}-selfsigned-issuer
   namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
 spec:
   selfSigned: {}
 ---
@@ -13,6 +15,8 @@ kind: Certificate
 metadata:
   name: {{ include "emqx-operator.fullname" . }}-serving-cert
   namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
 spec:
   dnsNames:
   - {{ include "emqx-operator.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc
@@ -20,5 +24,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: {{ include "emqx-operator.fullname" . }}-selfsigned-issuer
-  secretName: {{ .Values.webhooks.cert.secretName | default (printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)) }}
+  secretName: {{ index .Values "cert-manager" "secretName" | default (printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)) }}
 {{- end }}

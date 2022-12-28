@@ -13,21 +13,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-  - name: Install cert-manager
-    shell: bash
-    run: |
-      helm repo add jetstack https://charts.jetstack.io
-      helm repo update
-      helm install \
-        cert-manager jetstack/cert-manager \
-        --namespace cert-manager \
-        --create-namespace \
-        --set installCRDs=true
   - name: Deploy operator by helm
     shell: bash
     run: |
+      set -euo pipefail
       repository=$(echo ${{ inputs.repository }} | tr '[:upper:]' '[:lower:]')
       tag=$(echo ${{ inputs.tag }} | tr '/' '-')
+      helm repo add jetstack https://charts.jetstack.io
+      helm dependency build deploy/charts/emqx-operator
       helm install emqx-operator deploy/charts/emqx-operator\
         --set image.repository=$repository \
         --set image.tag=$tag \
@@ -37,7 +30,4 @@ runs:
     shell: bash
     run: |
       set -euo pipefail
-      while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
-        echo "waiting operator controller pod running"
-        sleep 1
-      done
+      kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system --timeout=60s

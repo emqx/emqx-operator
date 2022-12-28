@@ -2,7 +2,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  {{- if (index .Values "webhooks" "cert" "cert-manager" "enable") }}
+  {{- if (index .Values "cert-manager" "enable") }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "emqx-operator.fullname" . }}-serving-cert
   {{- end}}

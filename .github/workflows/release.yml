@@ -10,18 +10,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Check helm
+    - name: Helm package
+      id: helm
       run: |
-        version=$(egrep "^version" deploy/charts/emqx-operator/Chart.yaml | sed -r 's|^version:[[:space:]]([0-9]+.[0-9]+.[0-9]+)$|\1|g')
-        if [ "$version" != "${GITHUB_REF##*/}" ]; then
-          echo "Need update version for Chart.yaml"
+        helm repo add jetstack https://charts.jetstack.io
+        helm repo update
+        helm dependency update deploy/charts/emqx-operator
+        if ! git diff --quiet; then
+          echo "Need run make generate"
           exit 1
         fi
+
         appVersion=$(egrep "^appVersion" deploy/charts/emqx-operator/Chart.yaml | sed -r 's|^appVersion:[[:space:]]([0-9]+.[0-9]+.[0-9]+)$|\1|g')
         if [ "$appVersion" != "${GITHUB_REF##*/}" ]; then
           echo "Need update appVersion for Chart.yaml"
           exit 1
         fi
+
+        version=$(egrep "^version" deploy/charts/emqx-operator/Chart.yaml | sed -r 's|^version:[[:space:]]([0-9]+.[0-9]+.[0-9]+)$|\1|g')
+        if [ "$version" != "${GITHUB_REF##*/}" ]; then
+          echo "Need update version for Chart.yaml"
+          exit 1
+        fi
+
+        helm dependency build deploy/charts/emqx-operator
+        helm package deploy/charts/emqx-operator
+        echo "package=$(ls emqx-operator-${version}.tgz)" >> $GITHUB_OUTPUT
     - uses: docker/setup-qemu-action@v2
     - uses: docker/setup-buildx-action@v2
     - uses: docker/metadata-action@v4
@@ -49,9 +63,9 @@ jobs:
     - id: prerelease
       run: |
         if echo "${{ github.ref_name }}" |egrep -q "^[0-9].[0-9].[0-9]$"; then
-          echo "::set-output name=prerelease::false"
+          echo "prerelease=false" >> $GITHUB_OUTPUT
         else
-          echo "::set-output name=prerelease::true"
+          echo "prerelease=true" >> $GITHUB_OUTPUT
         fi
     - uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
@@ -61,12 +75,18 @@ jobs:
         name: EMQX Operator ${{ github.ref_name }} Released
         body_path: RELEASE.md
         generate_release_notes: true
-    - name: Update helm repo
-      uses: emqx/push-helm-action@v1
+        files: |
+          ${{ steps.helm.outputs.package}}
+    - uses: aws-actions/configure-aws-credentials@v1
       with:
-        charts_dir: "${{ github.workspace }}/deploy/charts/emqx-operator"
-        version: ${{ github.ref_name }}
-        aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws_region: "us-west-2"
-        aws_bucket_name: "repos-emqx-io"
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-2
+    - name: Upload to AWS
+      run: |
+        mkdir -p /tmp/helm-repo
+        aws s3 sync "s3://repos-emqx-io/charts/" /tmp/helm-repo/
+        mv ${{ steps.helm.outputs.package}} /tmp/helm-repo
+        cd /tmp/helm-repo
+        helm repo index .
+        aws s3 sync . "s3://repos-emqx-io/charts"

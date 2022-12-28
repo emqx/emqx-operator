@@ -4,10 +4,6 @@
 
 ## 部署Operator控制器
 
-### 准备
-
-我们使用 [cert-manager](https://github.com/cert-manager/cert-manager)来给 webhook 服务提供证书。你可以通过 [cert manager 文档](https://cert-manager.io/docs/installation/)来安装。
-
 ### 安装
 
 1. 通过 Helm 安装

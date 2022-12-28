@@ -51,9 +51,6 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `nodeSelector` | Node labels for pod assignment | `{}` |
 | `affinity` | Node affinity for pod assignment | `{}` |
 | `tolerations` | Node tolerations for pod assignment | `[]` |
-| `webhooks.cert` | Manager TLS secret for operator webhook server | `{}` |
-| `webhooks.cert.secretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc` | `""` |
-| `webhooks.cert.cert-manager.enable` | Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it. | `false` |
 | `webhooks.conversion.patch` | add `.spec.conversion` fields in CRDs | `{}` |
 | `webhooks.conversion.patch.image.tag` | Image tag | `` |
 | `webhooks.conversion.patch.image.pullPolicy` | Image pull policy | `IfNotPresent` |
@@ -65,6 +62,9 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `webhooks.conversion.patch.nodeSelector` | Node labels for pod assignment | `{}` |
 | `webhooks.conversion.patch.affinity` | Node affinity for pod assignment | `{}` |
 | `webhooks.conversion.patch.tolerations` | Node tolerations for pod assignment | `[]` |
+| `cert-manager.enable` | We using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. | `true` |
+| `cert-manager.installCRDs` | If true, cret-manager CRD resources will be installed as part of the Helm chart.  | `true` |
+| `cert-manager.secretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc` | `""` |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

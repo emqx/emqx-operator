@@ -68,11 +68,14 @@ jobs:
         run: eval $(minikube docker-env) && docker build -t $IMG .
       - name: Deploy controller
         run: |
-          kubectl apply --server-side --force-conflicts -f deploy/charts/emqx-operator/crds
+          helm repo add jetstack https://charts.jetstack.io
+          helm dependency build deploy/charts/emqx-operator
+          kubectl apply -f deploy/charts/emqx-operator/crds
           helm upgrade --install emqx-operator deploy/charts/emqx-operator \
             --namespace emqx-operator-system \
             --create-namespace \
             --set image.tag=${{ github.sha }} \
+            --set cert-manager.installCRDs=false \
             --debug
       - name: Check operator
         env:
