@@ -7,20 +7,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (s *ServiceTemplate) MergePorts(ports []corev1.ServicePort) {
-	ports = append(s.Spec.Ports, ports...)
+func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
+	ports := append(ports1, ports2...)
 
 	result := make([]corev1.ServicePort, 0, len(ports))
-	temp := map[string]struct{}{}
+	tempName := map[string]struct{}{}
+	tempPort := map[int32]struct{}{}
 
 	for _, item := range ports {
-		if _, ok := temp[item.Name]; !ok {
-			temp[item.Name] = struct{}{}
+		_, nameOK := tempName[item.Name]
+		_, portOK := tempPort[item.Port]
+
+		if !nameOK && !portOK {
+			tempName[item.Name] = struct{}{}
+			tempPort[item.Port] = struct{}{}
 			result = append(result, item)
 		}
 	}
 
-	s.Spec.Ports = result
+	return result
 }
 
 // +kubebuilder:object:generate=false

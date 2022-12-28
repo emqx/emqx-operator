@@ -156,7 +156,6 @@ func TestMergeServicePorts(t *testing.T) {
 			},
 		}, MergeServicePorts(ports1, ports2))
 	})
-
 }
 
 func TestMergeMap(t *testing.T) {

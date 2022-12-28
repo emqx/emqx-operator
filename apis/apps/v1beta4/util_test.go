@@ -7,37 +7,80 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestMergePorts(t *testing.T) {
-	serviceTemplate := &ServiceTemplate{
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: "exist",
-					Port: 8080,
-				},
+func TestMergeServicePorts(t *testing.T) {
+	t.Run("duplicate name", func(t *testing.T) {
+		ports1 := []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 1883,
 			},
-		},
-	}
+			{
+				Name: "mqtts",
+				Port: 8883,
+			},
+		}
 
-	serviceTemplate.MergePorts([]corev1.ServicePort{
-		{
-			Name: "exist",
-			Port: 8081,
-		},
-		{
-			Name: "not-exist",
-			Port: 8082,
-		},
+		ports2 := []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 11883,
+			},
+			{
+				Name: "ws",
+				Port: 8083,
+			},
+		}
+
+		assert.Equal(t, []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "mqtts",
+				Port: 8883,
+			},
+			{
+				Name: "ws",
+				Port: 8083,
+			},
+		}, MergeServicePorts(ports1, ports2))
 	})
 
-	assert.ElementsMatch(t, serviceTemplate.Spec.Ports, []corev1.ServicePort{
-		{
-			Name: "exist",
-			Port: 8080,
-		},
-		{
-			Name: "not-exist",
-			Port: 8082,
-		},
+	t.Run("duplicate port", func(t *testing.T) {
+		ports1 := []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "mqtts",
+				Port: 8883,
+			},
+		}
+		ports2 := []corev1.ServicePort{
+			{
+				Name: "duplicate-mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "ws",
+				Port: 8083,
+			},
+		}
+		assert.Equal(t, []corev1.ServicePort{
+			{
+				Name: "mqtt",
+				Port: 1883,
+			},
+			{
+				Name: "mqtts",
+				Port: 8883,
+			},
+			{
+				Name: "ws",
+				Port: 8083,
+			},
+		}, MergeServicePorts(ports1, ports2))
 	})
 }
