@@ -1,4 +1,4 @@
-{{- if .Values.admissionWebhooks.conversion.enable -}}
+{{- if .Values.webhooks.conversion.enable -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -12,7 +12,7 @@ metadata:
 spec:
   template:
     metadata:
-      {{- with .Values.admissionWebhooks.conversion.patch.podAnnotations }}
+      {{- with .Values.webhooks.conversion.patch.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -23,7 +23,7 @@ spec:
       serviceAccountName: {{ include "emqx-operator.patchServiceAccountName" . }}
       containers:
       - name: conversion-patch
-        image: "{{ .Values.admissionWebhooks.conversion.patch.image.repository }}:{{ .Values.admissionWebhooks.conversion.patch.image.tag | default "latest" }}"
+        image: "{{ .Values.webhooks.conversion.patch.image.repository }}:{{ .Values.webhooks.conversion.patch.image.tag | default "latest" }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command:
         - bash
@@ -32,7 +32,7 @@ spec:
           set -euo pipefail
           set -x
           for r in emqxbrokers.apps.emqx.io emqxenterprises.apps.emqx.io emqxplugins.apps.emqx.io; do
-            {{- if (index .Values "admissionWebhooks" "cert" "cert-manager" "enable") }}
+            {{- if (index .Values "webhooks" "cert" "cert-manager" "enable") }}
             kubectl patch crd $r --type merge -p '
               {
                 "metadata": {
@@ -66,16 +66,16 @@ spec:
             '
           done
         resources:
-          {{- toYaml .Values.admissionWebhooks.conversion.patch.resources | nindent 12 }}
-      {{- with .Values.admissionWebhooks.conversion.patch.nodeSelector }}
+          {{- toYaml .Values.webhooks.conversion.patch.resources | nindent 12 }}
+      {{- with .Values.webhooks.conversion.patch.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.admissionWebhooks.conversion.patch.affinity }}
+      {{- with .Values.webhooks.conversion.patch.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.admissionWebhooks.conversion.patch.tolerations }}
+      {{- with .Values.webhooks.conversion.patch.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
