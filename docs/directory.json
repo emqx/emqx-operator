@@ -65,24 +65,24 @@
       "title": "Tasks",
       "children": [
         {
-          "title": "Configure EMQX logs collection",
-          "path": "tasks/configure-emqx-logs-collection"
-        },
-        {
-          "title": "Configure EMQX Core and Replicant nodes",
-          "path": "tasks/configure-emqx-core-replicant"
+          "title": "Configure EMQX License",
+          "path": "tasks/configure-emqx-license"
         },
         {
           "title": "Configure EMQX TLS certificate",
           "path": "tasks/configure-emqx-tls"
         },
         {
-          "title": "Configure EMQX License",
-          "path": "tasks/configure-emqx-license"
-        },
-        {
           "title": "Configure EMQX persistence",
           "path": "tasks/configure-emqx-persistence"
+        },
+        {
+          "title": "Configure EMQX Core and Replicant nodes",
+          "path": "tasks/configure-emqx-core-replicant"
+        },
+        {
+          "title": "Configure EMQX logs collection",
+          "path": "tasks/configure-emqx-logs-collection"
         }
       ]
     },
@@ -187,24 +187,24 @@
       "title": "任务",
       "children": [
         {
-          "title": "配置 EMQX logs 采集",
-          "path": "tasks/configure-emqx-logs-collection"
-        },
-        {
-          "title": "配置 EMQX Core 和 Replicant 节点",
-          "path": "tasks/configure-emqx-core-replicant"
+          "title": "配置 EMQX License",
+          "path": "tasks/configure-emqx-license"
         },
         {
           "title": "配置 EMQX TLS 证书 ",
           "path": "tasks/configure-emqx-tls"
         },
         {
-          "title": "配置 EMQX License",
-          "path": "tasks/configure-emqx-license"
-        },
-        {
           "title": "配置 EMQX 持久化",
           "path": "tasks/configure-emqx-persistence"
+        },
+        {
+          "title": "配置 EMQX Core 和 Replicant 节点",
+          "path": "tasks/configure-emqx-core-replicant"
+        },
+        {
+          "title": "配置 EMQX logs 采集",
+          "path": "tasks/configure-emqx-logs-collection"
         }
       ]
     },
