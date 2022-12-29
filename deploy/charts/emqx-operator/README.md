@@ -51,20 +51,8 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `nodeSelector` | Node labels for pod assignment | `{}` |
 | `affinity` | Node affinity for pod assignment | `{}` |
 | `tolerations` | Node tolerations for pod assignment | `[]` |
-| `webhooks.cert` | Manager TLS secret for operator webhook server | `{}` |
-| `webhooks.cert.secretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc` | `""` |
-| `webhooks.cert.cert-manager.enable` | Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it. | `false` |
-| `webhooks.conversion.patch` | add `.spec.conversion` fields in CRDs | `{}` |
-| `webhooks.conversion.patch.image.tag` | Image tag | `` |
-| `webhooks.conversion.patch.image.pullPolicy` | Image pull policy | `IfNotPresent` |
-| `webhooks.conversion.patch.imagePullSecrets` | Image pull secrets| `[]` |
-| `webhooks.conversion.patch.serviceAccount.create` | If `true`, create a new service account | `true` |
-| `webhooks.conversion.patch.serviceAccount.name` | Service account to be used. If not set and `serviceAccount.create` is `true`, a name is generated using the {fullname}-conversion-patch |  |
-| `webhooks.conversion.patch.serviceAccount.annotations` | Annotations to add to the service account |  |
-| `webhooks.conversion.patch.resources` | CPU/memory resource requests/limits | `{}` |
-| `webhooks.conversion.patch.nodeSelector` | Node labels for pod assignment | `{}` |
-| `webhooks.conversion.patch.affinity` | Node affinity for pod assignment | `{}` |
-| `webhooks.conversion.patch.tolerations` | Node tolerations for pod assignment | `[]` |
+| `cert-manager.enable` | Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server. You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it. | `false` |
+| `cert-manager.secretName` | TLS secret for certificates for the `${NAME}-webhook-service.${NAMESPACE}.svc` | `""` |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

@@ -67,7 +67,7 @@ spec:
       - name: cert
         secret:
           defaultMode: 420
-          secretName: {{ .Values.webhooks.cert.secretName | default (printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)) }}
+          secretName: {{ index .Values "cert-manager" "secretName" | default (printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)) }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
