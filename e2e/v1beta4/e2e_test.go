@@ -122,7 +122,7 @@ var _ = Describe("Base E2E Test", func() {
 			var ports []corev1.ServicePort
 			var headlessPort corev1.ServicePort
 
-			pluginList = []string{"emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
+			pluginList = []string{"emqx_eviction_agent, emqx_node_rebalance, emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
 			if _, ok := emqx.(*appsv1beta4.EmqxEnterprise); ok {
 				pluginList = append(pluginList, "emqx_modules")
 			}
@@ -355,18 +355,13 @@ var _ = Describe("Blue Green Update Test", func() {
 
 		It("blue green update", func() {
 			var existedStsList *appsv1.StatefulSetList
-			labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-				MatchLabels: emqx.GetLabels(),
-			})
 			existedStsList = &appsv1.StatefulSetList{}
 			Eventually(func() []appsv1.StatefulSet {
 				_ = k8sClient.List(
 					context.TODO(),
 					existedStsList,
-					&client.ListOptions{
-						Namespace:     emqx.GetNamespace(),
-						LabelSelector: labelSelector,
-					},
+					client.InNamespace(emqx.GetNamespace()),
+					client.MatchingLabels(emqx.GetLabels()),
 				)
 				return existedStsList.Items
 			}, timeout, interval).Should(HaveLen(1))
@@ -400,10 +395,8 @@ var _ = Describe("Blue Green Update Test", func() {
 				_ = k8sClient.List(
 					context.TODO(),
 					existedStsList,
-					&client.ListOptions{
-						Namespace:     emqx.GetNamespace(),
-						LabelSelector: labelSelector,
-					},
+					client.InNamespace(emqx.GetNamespace()),
+					client.MatchingLabels(emqx.GetLabels()),
 				)
 				return existedStsList.Items
 			}, timeout, interval).Should(HaveLen(2))
@@ -419,36 +412,26 @@ var _ = Describe("Blue Green Update Test", func() {
 
 			Eventually(func() []corev1.Pod {
 				podList := &corev1.PodList{}
-				selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"controller-revision-hash": sts.Status.CurrentRevision,
-					},
-				})
 				_ = k8sClient.List(
 					context.TODO(),
 					podList,
-					&client.ListOptions{
-						Namespace:     sts.GetNamespace(),
-						LabelSelector: selector,
-					},
+					client.InNamespace(sts.GetNamespace()),
+					client.MatchingLabels(map[string]string{
+						"controller-revision-hash": sts.Status.CurrentRevision,
+					}),
 				)
 				return podList.Items
 			}, timeout, interval).Should(HaveLen(0))
 
 			Eventually(func() []corev1.Pod {
 				podList := &corev1.PodList{}
-				selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"controller-revision-hash": newSts.Status.CurrentRevision,
-					},
-				})
 				_ = k8sClient.List(
 					context.TODO(),
 					podList,
-					&client.ListOptions{
-						Namespace:     newSts.GetNamespace(),
-						LabelSelector: selector,
-					},
+					client.InNamespace(newSts.GetNamespace()),
+					client.MatchingLabels(map[string]string{
+						"controller-revision-hash": newSts.Status.CurrentRevision,
+					}),
 				)
 				return podList.Items
 			}, timeout, interval).Should(HaveLen(int(*emqx.GetSpec().GetReplicas())))
