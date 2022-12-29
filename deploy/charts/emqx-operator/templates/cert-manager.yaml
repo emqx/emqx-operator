@@ -1,4 +1,4 @@
-{{- if (index .Values "webhooks" "cert" "cert-manager" "enable") }}
+{{- if (index .Values "cert-manager" "enable") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
@@ -20,5 +20,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: {{ include "emqx-operator.fullname" . }}-selfsigned-issuer
-  secretName: {{ .Values.webhooks.cert.secretName | default (printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)) }}
+  secretName: {{ index .Values "cert-manager" "secretName" | default (printf "%s-webhook-server-cert" (include "emqx-operator.fullname" .)) }}
 {{- end }}

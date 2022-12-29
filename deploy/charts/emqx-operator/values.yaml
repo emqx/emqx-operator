@@ -1,6 +1,9 @@
 # Default values for emqx-operator.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+
+skipCRDs: false
+
 replicaCount: 1
 
 image:
@@ -38,33 +41,10 @@ tolerations: []
 
 affinity: {}
 
-webhooks:
-  cert:
-    # If not set, a name is generated using the "${FULLNAME}-webhook-server-cert"
-    secretName: ""
-    # Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server.
-    # You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it.
-    # Or you can use your own certificate, You need create a TLS secret for provisioning the certificates for the "${FULLNAME}-webhook-service.${NAMESPACE}.svc"
-    cert-manager:
-      enable: true
-
-  conversion:
-    enable: true
-    patch:
-      image:
-        repository: docker.io/emqx/emqx-operator-kubectl
-        tag: "1.25"
-        pullPolicy: IfNotPresent
-      serviceAccount:
-        # Specifies whether a service account should be created
-        create: true
-        # Annotations to add to the service account
-        annotations: {}
-        # The name of the service account to use.
-        # If not set and create is true, a name is generated using the "${FULLNAME}-conversion-patch"
-        name: ""
-      resources: {}
-      podAnnotations: {}
-      nodeSelector: {}
-      affinity: {}
-      tolerations: []
+cert-manager:
+  # Using [cert manager](https://github.com/jetstack/cert-manager) for provisioning the certificates for the webhook server.
+  # You can follow [the cert manager documentation](https://cert-manager.io/docs/installation/) to install it.
+  # Or you can use your own certificate, You need create a TLS secret for provisioning the certificates for the "${FULLNAME}-webhook-service.${NAMESPACE}.svc"
+  enable: true
+  # If not set, a name is generated using the "${FULLNAME}-webhook-server-cert"
+  secretName: ""

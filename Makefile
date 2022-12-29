@@ -66,6 +66,16 @@ docker-build: test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
+helm-crd: manifests kustomize ## build CRDs to helm template
+	$(KUSTOMIZE) build config/crd > deploy/charts/emqx-operator/templates/crds.yaml
+	
+	yq -i '.metadata.annotations."cert-manager.io/inject-ca-from" = "{{ .Release.Namespace }}/{{ include \"emqx-operator.fullname\" . }}-serving-cert"' deploy/charts/emqx-operator/templates/crds.yaml
+	yq -i '.spec.conversion.webhook.clientConfig.service.namespace = "{{ include \"emqx-operator.fullname\" . }}-webhook-service"' deploy/charts/emqx-operator/templates/crds.yaml
+	yq -i '.spec.conversion.webhook.clientConfig.service.name = "{{ .Release.Namespace }}"' deploy/charts/emqx-operator/templates/crds.yaml
+
+	sed -i '1i {{- if not .Values.skipCRDs }}\n' deploy/charts/emqx-operator/templates/crds.yaml
+	echo -e '\n{{- end }}' >> deploy/charts/emqx-operator/templates/crds.yaml
+
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
