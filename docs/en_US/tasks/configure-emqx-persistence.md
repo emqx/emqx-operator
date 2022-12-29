@@ -57,6 +57,49 @@ spec:
 **NOTE**: The storageClassName field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs. The accessModes field indicates the access mode of the PV. Currently, By default the `ReadWriteOnce` mode is used. For more access modes, please refer to the document: [AccessModes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes). The `.spec.dashboardServiceTemplate` field configures the way the EMQX cluster exposes services to the outside world: NodePort, and specifies that the nodePort corresponding to port 18083 of the EMQX Dashboard service is 32016 (the value range of nodePort is: 30000-32767).
 
 :::
+::: tab v1beta4
+
+EMQX CRD supports configuring EMQX cluster persistence through the `.spec.persistent` field. The semantics and configuration of the `.spec.persistent` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
+
+When the user configures the `.spec.persistent` field, EMQX Operator will create a fixed PVC (PersistentVolumeClaim) for each Pod in the EMQX cluster to represent the user's request for persistence. When a Pod is deleted, its corresponding PVC is not automatically cleared. When a Pod is rebuilt, it will automatically match the existing PVC. If you no longer want to use the data of the old cluster, you need to manually clean up the PVC.
+
+PVC expresses the user's request for persistence, and what is responsible for storage is the persistent volume ([PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), PV), PVC and PV are bound one-to-one through PVC Name. PV is a piece of storage in the cluster, which can be manually prepared according to requirements, or can be dynamically created using storage classes ([StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/)) preparation. When a user is no longer using a PV resource, the PVC object can be manually deleted, allowing the PV resource to be recycled. Currently, there are two recycling strategies for PV: Retained (retained) and Deleted (deleted). For details of the recycling strategy, please refer to the document: [Reclaiming](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
+
+EMQX Operator uses PV to persist the data in the `/opt/emqx/data` directory of the EMQX node. The data stored in the `/opt/emqx/data` directory of the EMQX node mainly includes: loaded_plugins (loaded plug-in information), loaded_modules (loaded module information), mnesia database data (storing EMQX’s own operating data, such as alarm records, rules resources and rules created by the engine, Dashboard user information and other data).
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  persistent:
+    storageClassName: standard
+    resources:
+      requests:
+        storage: 20Mi
+    accessModes:
+    - ReadWriteOnce
+  template:
+    spec:
+      emqxContainer:
+        image: 
+          repository: emqx/emqx-ee
+          version: 4.4.8
+  serviceTemplate:
+    spec:
+      type: NodePort
+      ports:
+        - name: "http-dashboard-18083"
+          protocol: "TCP"
+          port: 18083
+          targetPort: 18083
+          nodePort: 32016
+```
+
+**NOTE**: The storageClassName field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs. The accessModes field indicates the access mode of the PV. Currently, By default the `ReadWriteOnce` mode is used. For more access modes, please refer to the document: [AccessModes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes). The `.spec.serviceTemplate` field configures the way the EMQX cluster exposes services to the outside world: NodePort, and specifies that the nodePort corresponding to port 18083 of the EMQX Dashboard service is 32016 (the value range of nodePort is: 30000-32767).
+
+:::
 ::: tab v1beta3
 
 EMQX CRD supports configuring EMQX cluster persistence through the `.spec.persistent` field. The semantics and configuration of the `.spec.persistent` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
@@ -148,6 +191,40 @@ The output is similar to:
 ```
 
 **NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `role` represents the EMQX node role type. `version` indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
+
+:::
+::: tab v1beta4
+
+```
+kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```
+
+The output is similar to:
+
+```
+[
+   {
+     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
+     "node_status": "Running",
+     "otp_release": "24.1.5/12.1.5",
+     "version": "4.4.8"
+   },
+   {
+     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
+     "node_status": "Running",
+     "otp_release": "24.1.5/12.1.5",
+     "version": "4.4.8"
+   },
+   {
+     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
+     "node_status": "Running",
+     "otp_release": "24.1.5/12.1.5",
+     "version": "4.4.8"
+   }
+]
+```
+
+**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `version` indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::: tab v1beta3
