@@ -57,6 +57,49 @@ spec:
 **说明**： storageClassName 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.dashboardServiceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
 
 :::
+::: tab v1beta4
+
+EMQX CRD 支持通过 `.spec.persistent` 字段配置 EMQX 集群持久化。`.spec.persistent` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core)。
+
+当用户配置了 `.spec.persistent` 字段时，EMQX Operator 会为 EMQX 集群中的 每一个 Pod 创建一个固定的 PVC（PersistentVolumeClaim）来表示用户对持久化的请求。当 Pod 被删除时，其对应的 PVC 不会自动清除。当 Pod 被重建时，会自动和已存在的 PVC 进行匹配。如果不想再使用旧集群的数据，需要手动清理 PVC。
+
+PVC 表达的是用户对持久化的请求，而负责存储的则是持久卷（[PersistentVolume](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/)，PV），PVC 和 PV 通过 PVC Name 一对一绑定。PV 是集群中的一块存储，可以根据需求手动制备，也可以使用存储类（[StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/))来动态制备。当用户不再使用 PV 资源时，可以手动删除 PVC 对象，从而允许该 PV 资源被回收再利用。目前，PV 的回收策略有两种：Retained（保留）和 Deleted（删除），其回收策略细节可以参考文档：[Reclaiming](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#reclaiming)。
+
+EMQX Operator 使用 PV 持久化 EMQX 节点 `/opt/emqx/data` 目录下的数据。EMQX 节点 `/opt/emqx/data` 目录存放的数据主要包含：loaded_plugins（已加载的插件信息），loaded_modules（已加载的模块信息），mnesia 数据库数据（存储 EMQX 自身运行数据，例如告警记录、规则引擎已创建的资源和规则、Dashboard 用户信息等数据）。
+
+``` yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  persistent:
+    storageClassName: standard
+    resources:
+      requests:
+        storage: 20Mi
+    accessModes:
+    - ReadWriteOnce
+  template:
+    spec:
+      emqxContainer:
+        image: 
+          repository: emqx/emqx-ee
+          version: 4.4.8
+  serviceTemplate:
+    spec:
+      type: NodePort
+      ports:
+        - name: "http-dashboard-18083"
+          protocol: "TCP"
+          port: 18083
+          targetPort: 18083
+          nodePort: 32016
+```
+
+**说明**： storageClassName 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.serviceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
+
+:::
 ::: tab v1beta3
 
 EMQX CRD 支持通过 `.spec.persistent` 字段配置 EMQX 集群持久化。`.spec.persistent` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core)。
@@ -148,6 +191,40 @@ kubectl get emqx emqx -o json | jq ".status.emqxNodes"
 ```
 
 **说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`role` 表示 EMQX 节点角色类型。`version` 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 replicant 节点数量应和这个 replicas 的值相等。
+
+:::
+::: tab v1beta4
+
+```
+kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```
+
+输出类似于：
+
+```
+[
+  {
+    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
+    "node_status": "Running",
+    "otp_release": "24.1.5/12.1.5",
+    "version": "4.4.8"
+  },
+  {
+    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
+    "node_status": "Running",
+    "otp_release": "24.1.5/12.1.5",
+    "version": "4.4.8"
+  },
+  {
+    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
+    "node_status": "Running",
+    "otp_release": "24.1.5/12.1.5",
+    "version": "4.4.8"
+  }
+]
+```
+
+**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`version` 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 :::
 ::: tab v1beta3
