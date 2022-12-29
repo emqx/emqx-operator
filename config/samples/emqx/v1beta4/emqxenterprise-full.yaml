@@ -32,7 +32,7 @@ spec:
       # nodeName:
       # nodeSelector:
       # affinity:
-      # toleRations:
+      # tolerations:
       emqxContainer:
         name: "emqx"
         image: emqx/emqx-ee:4.4.8
