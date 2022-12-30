@@ -2,7 +2,7 @@
 
 This project provides an operator for managing EMQX clusters on Kubernetes.
 
-**Note**: EMQX Operator Controller requires Kubernetes v1.20.0 and up.
+**Note**: EMQX Operator Controller requires Kubernetes v1.20.11 and up.
 
 ## Running the Operator
 
@@ -108,3 +108,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
     $ kubectl get pods
     $ kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
     ```
+
+## Remark
+
+1. The `MixedProtocolLBService` feature is enabled by default in Kubernetes 1.24 and above. For its documentation, please refer to: [ MixedProtocolLBService ](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features). The `MixedProtocolLBService` attribute allows different protocols to be used within the same Service instance of type `LoadBalancer`. Therefore, if the user deploys the EMQX cluster on Kubernetes and uses the `LoadBalancer` type of Service, there are both TCP and UDP protocols in the Service, please pay attention to upgrading the Kubernetes version to 1.24 or above, otherwise the Service creation will fail.

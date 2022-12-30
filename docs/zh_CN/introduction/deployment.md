@@ -1,5 +1,5 @@
 # 部署要求
 
-- Kubernetes版本1.20.0或者以上
-- Helm版本3或者以上
-- Kubectl工具
+- Kubernetes 版本1.20.11或者以上
+- Helm 版本3或者以上
+- Kubectl 工具
