@@ -126,7 +126,7 @@ func TestGenerateDefaultPluginsConfig(t *testing.T) {
 		Labels:      map[string]string{"foo": "bar"},
 		Annotations: map[string]string{"foo": "bar"},
 	})
-	assert.Len(t, got.Data, 45)
+	assert.Len(t, got.Data, 47)
 }
 
 func TestGenerateLicense(t *testing.T) {
