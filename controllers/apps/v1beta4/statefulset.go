@@ -248,9 +248,7 @@ func (r *EmqxReconciler) syncStatefulSet(instance appsv1beta4.Emqx, evacuationsS
 
 		r.EventRecorder.Event(instance, corev1.EventTypeNormal, "ScaleDown", fmt.Sprintf("scale down StatefulSet %s to %d", scaleDownSts.Name, scaleDown))
 		if err := r.Client.Update(context.TODO(), stsCopy); err != nil {
-			if !k8sErrors.IsConflict(err) {
-				return err
-			}
+			return err
 		}
 	}
 

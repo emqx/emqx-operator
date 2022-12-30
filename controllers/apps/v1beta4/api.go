@@ -69,17 +69,23 @@ func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, 
 			StopChannel:  stopChan,
 		},
 	}
-
-	return apiClient.Do(method, path, body)
+	resp, body, err := apiClient.Do(method, path, body)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, nil, emperror.Errorf("failed to request API: %s, status: %s", path, resp.Status)
+	}
+	if code := gjson.GetBytes(body, "code"); code.Int() != 0 {
+		return nil, nil, emperror.Errorf("failed to request API: %s, code: %d, message: %s", path, code.Int(), gjson.GetBytes(body, "message").String())
+	}
+	return resp, body, nil
 }
 
 func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
-	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/nodes", nil)
+	_, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/nodes", nil)
 	if err != nil {
 		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, emperror.Errorf("failed to get node statuses from API: %s", resp.Status)
 	}
 
 	emqxNodes := []appsv1beta4.EmqxNode{}
@@ -117,11 +123,8 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 		return ans
 	}
 
-	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/listeners", nil)
+	_, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/listeners", nil)
 	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
 		return nil, err
 	}
 
@@ -183,11 +186,8 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 }
 
 func (r *EmqxReconciler) getEvacuationStatusByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxEvacuationStatus, error) {
-	resp, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/load_rebalance/global_status", nil)
+	_, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
 		return nil, err
 	}
 
@@ -205,22 +205,19 @@ func (r *EmqxReconciler) evacuateNodeByAPI(instance appsv1beta4.Emqx, migrateToP
 		return emperror.New("failed to evacuate node, only support emqx enterprise")
 	}
 
-	type requestBody struct {
-		ConnEvictRate int32    `json:"conn_evict_rate"`
-		SessEvictRate int32    `json:"sess_evict_rate"`
-		WaitTakeover  int32    `json:"wait_takeover"`
-		MigrateTo     []string `json:"migrate_to"`
-	}
-
-	body := requestBody{
-		ConnEvictRate: enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.ConnEvictRate,
-		SessEvictRate: enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.SessEvictRate,
-		WaitTakeover:  enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.WaitTakeover,
-	}
-
+	migrateTo := []string{}
 	for _, pod := range migrateToPods {
 		emqxNodeName := getEmqxNodeName(instance, pod)
-		body.MigrateTo = append(body.MigrateTo, emqxNodeName)
+		migrateTo = append(migrateTo, emqxNodeName)
+	}
+
+	body := map[string]interface{}{
+		"conn_evict_rate": enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.ConnEvictRate,
+		"sess_evict_rate": enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.SessEvictRate,
+		"migrate_to":      migrateTo,
+	}
+	if enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.WaitTakeover > 0 {
+		body["wait_takeover"] = enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.WaitTakeover
 	}
 
 	b, err := json.Marshal(body)

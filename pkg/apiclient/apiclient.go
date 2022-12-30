@@ -75,6 +75,9 @@ func (c *APIClient) Do(method, path string, body []byte) (*http.Response, []byte
 		req.Close = true
 		resp, err := httpClient.Do(req)
 		if err != nil {
+			if err == io.EOF {
+				return nil, nil, err
+			}
 			return nil, nil, emperror.Wrap(err, "failed to do request")
 		}
 
