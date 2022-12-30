@@ -18,6 +18,7 @@ package v1beta4
 
 import (
 	"context"
+	"io"
 	"time"
 
 	emperror "emperror.dev/errors"
@@ -140,6 +141,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	resources = append(resources, acl, headlessSvc, sts)
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
+		if k8sErrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		instance.GetStatus().AddCondition(
 			appsv1beta4.ConditionRunning,
@@ -153,7 +157,20 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	// create resource done
 
 	// update status
-	r.updateEmqxStatus(instance)
+	emqxNodes, err := r.getNodeStatusesByAPI(instance)
+	if err != nil {
+		if err == io.EOF {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
+		instance.GetStatus().AddCondition(
+			appsv1beta4.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedToGetNodeStatues",
+			err.Error(),
+		)
+	}
+	r.updateEmqxStatus(instance, emqxNodes)
 	_ = r.Client.Status().Update(ctx, instance)
 
 	// create and update other resource
@@ -168,6 +185,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	svc.Spec.Selector = selector
 
 	if err := r.CreateOrUpdateList(instance, r.Scheme, []client.Object{svc}); err != nil {
+		if k8sErrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		instance.GetStatus().AddCondition(
 			appsv1beta4.ConditionRunning,
@@ -193,12 +213,18 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 			// because the blue-green update may be canceled after it is started
 			evacuationsStatus, err := r.getEvacuationStatusByAPI(instance)
 			if err != nil {
+				if err == io.EOF {
+					return ctrl.Result{RequeueAfter: time.Second}, nil
+				}
 				return ctrl.Result{}, emperror.Wrap(err, "get evacuation status by api failed")
 			}
 			enterprise.Status.EvacuationsStatus = evacuationsStatus
 			_ = r.Client.Status().Update(ctx, instance)
 
 			if err := r.syncStatefulSet(instance, evacuationsStatus); err != nil {
+				if k8sErrors.IsConflict(err) {
+					return ctrl.Result{RequeueAfter: time.Second}, nil
+				}
 				return ctrl.Result{}, emperror.Wrap(err, "sync statefulSet failed")
 			}
 		}
@@ -215,20 +241,8 @@ func (r *EmqxReconciler) createInitResources(instance appsv1beta4.Emqx, initReso
 	return nil
 }
 
-func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx) {
+func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx, emqxNodes []appsv1beta4.EmqxNode) {
 	instance.GetStatus().SetReplicas(*instance.GetSpec().GetReplicas())
-
-	emqxNodes, err := r.getNodeStatusesByAPI(instance)
-	if err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
-		instance.GetStatus().AddCondition(
-			appsv1beta4.ConditionRunning,
-			corev1.ConditionFalse,
-			"FailedToGetNodeStatues",
-			err.Error(),
-		)
-		return
-	}
 
 	if emqxNodes != nil {
 		readyReplicas := int32(0)

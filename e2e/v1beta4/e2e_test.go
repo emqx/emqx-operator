@@ -55,6 +55,9 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 						Repository: "emqx/emqx",
 						Version:    "4.4.9",
 					},
+					EmqxConfig: appsv1beta4.EmqxConfig{
+						"sysmon.long_schedule": "240h",
+					},
 				},
 			},
 		},
@@ -78,6 +81,9 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 					Image: appsv1beta4.EmqxImage{
 						Repository: "emqx/emqx-ee",
 						Version:    "4.4.9",
+					},
+					EmqxConfig: appsv1beta4.EmqxConfig{
+						"sysmon.long_schedule": "240h",
 					},
 				},
 			},
@@ -122,7 +128,7 @@ var _ = Describe("Base E2E Test", func() {
 			var ports []corev1.ServicePort
 			var headlessPort corev1.ServicePort
 
-			pluginList = []string{"emqx_eviction_agent, emqx_node_rebalance, emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
+			pluginList = []string{"emqx_eviction_agent", "emqx_node_rebalance", "emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
 			if _, ok := emqx.(*appsv1beta4.EmqxEnterprise); ok {
 				pluginList = append(pluginList, "emqx_modules")
 			}
@@ -333,15 +339,15 @@ var _ = Describe("Base E2E Test", func() {
 	)
 })
 
-var _ = Describe("Blue Green Update Test", func() {
+var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 	Describe("Just check enterprise", func() {
 		emqx := emqxEnterprise.DeepCopy()
 		emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
 		emqx.Spec.EmqxBlueGreenUpdate = &appsv1beta4.EmqxBlueGreenUpdate{
 			EvacuationStrategy: appsv1beta4.EvacuationStrategy{
-				WaitTakeover:  int32(200),
-				ConnEvictRate: int32(30),
-				SessEvictRate: int32(30),
+				WaitTakeover:  int32(0),
+				ConnEvictRate: int32(9999999),
+				SessEvictRate: int32(9999999),
 			},
 		}
 
@@ -385,8 +391,7 @@ var _ = Describe("Blue Green Update Test", func() {
 
 			By("update EMQX CR")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), emqx)).Should(Succeed())
-			emqx.Spec.Template.Spec.EmqxContainer.Image.Repository = "emqx/emqx-ee"
-			emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.10"
+			emqx.Spec.Template.Spec.EmqxContainer.Name = "new-emqx"
 			Expect(k8sClient.Update(context.Background(), emqx)).Should(Succeed())
 
 			By("wait create new sts")
