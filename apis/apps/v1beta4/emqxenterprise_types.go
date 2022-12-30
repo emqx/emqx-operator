@@ -43,8 +43,11 @@ type EmqxBlueGreenUpdate struct {
 }
 
 type EvacuationStrategy struct {
-	WaitTakeover  int32 `json:"waitTakeover,omitempty"`
+	//+kubebuilder:validation:Minimum=0
+	WaitTakeover int32 `json:"waitTakeover,omitempty"`
+	//+kubebuilder:validation:Minimum=1
 	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
+	//+kubebuilder:validation:Minimum=1
 	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
 }
 
