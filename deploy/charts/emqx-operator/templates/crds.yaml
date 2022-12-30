@@ -9950,12 +9950,15 @@ spec:
                       properties:
                         connEvictRate:
                           format: int32
+                          minimum: 1
                           type: integer
                         sessEvictRate:
                           format: int32
+                          minimum: 1
                           type: integer
                         waitTakeover:
                           format: int32
+                          minimum: 0
                           type: integer
                       type: object
                   type: object
