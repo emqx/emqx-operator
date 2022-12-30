@@ -19,6 +19,7 @@ package v1beta4
 import (
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"time"
 
@@ -125,17 +126,22 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		if !equalPluginConfig {
 			if err = r.loadPluginConfig(instance, emqx); err != nil {
-				return ctrl.Result{}, err
+				if !k8sErrors.IsConflict(err) {
+					return ctrl.Result{}, err
+				}
 			}
-			return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
+			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
 		if err := r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName); err != nil {
+			if err == io.EOF {
+				return ctrl.Result{RequeueAfter: time.Second}, nil
+			}
 			return ctrl.Result{}, err
 		}
 	}
 
-	return ctrl.Result{RequeueAfter: time.Duration(40) * time.Second}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

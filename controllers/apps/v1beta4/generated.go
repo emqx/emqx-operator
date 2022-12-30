@@ -184,6 +184,8 @@ func generateDefaultPluginsConfig(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 			Annotations: instance.GetAnnotations(),
 		},
 		Data: map[string]string{
+			"emqx_node_rebalance.conf":    "",
+			"emqx_eviction_agent.conf":    "",
 			"emqx_modules.conf":           "",
 			"emqx_management.conf":        "management.listener.http = 8081\nmanagement.default_application.id = admin\nmanagement.default_application.secret = public",
 			"emqx_dashboard.conf":         "dashboard.listener.http = 18083\ndashboard.default_user.login = admin\ndashboard.default_user.password = public",
