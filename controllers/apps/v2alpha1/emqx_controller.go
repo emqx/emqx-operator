@@ -77,6 +77,9 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
+		if k8sErrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
