@@ -6859,6 +6859,8 @@ spec:
                   - type
                   type: object
                 type: array
+              currentStatefulSetVersion:
+                type: string
               emqxNodes:
                 items:
                   properties:

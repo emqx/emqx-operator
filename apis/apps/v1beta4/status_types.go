@@ -34,18 +34,22 @@ type ConditionType string
 const (
 	ConditionInitResourceReady ConditionType = "InitResourceReady"
 	ConditionRunning           ConditionType = "Running"
+	ConditionBlueGreenUpdating ConditionType = "BlueGreenUpdating"
 )
 
 // +kubebuilder:object:generate=false
 type EmqxStatus interface {
-	IsRunning() bool
 	IsInitResourceReady() bool
+	IsRunning() bool
+	IsBlueGreenUpdating() bool
 	GetReplicas() int32
 	SetReplicas(replicas int32)
 	GetReadyReplicas() int32
 	SetReadyReplicas(readyReplicas int32)
 	GetEmqxNodes() []EmqxNode
 	SetEmqxNodes(nodes []EmqxNode)
+	GetCurrentStatefulSetVersion() string
+	SetCurrentStatefulSetVersion(version string)
 	GetConditions() []Condition
 	AddCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string)
 }
@@ -77,6 +81,13 @@ type EmqxEvacuationStatus struct {
 	SessionEvictionRate    int32               `json:"session_eviction_rate,omitempty"`
 	ConnectionGoal         int32               `json:"connection_goal,omitempty"`
 	ConnectionEvictionRate int32               `json:"connection_eviction_rate,omitempty"`
+}
+
+type EmqxBlueGreenUpdateStatus struct {
+	OriginStatefulSet  string                 `json:"originStatefulSet,omitempty"`
+	CurrentStatefulSet string                 `json:"currentStatefulSet,omitempty"`
+	StartedAt          metav1.Time            `json:"startedAt,omitempty"`
+	EvacuationsStatus  []EmqxEvacuationStatus `json:"evacuationsStatus,omitempty"`
 }
 
 func addCondition(conditions []Condition, c Condition) []Condition {

@@ -334,8 +334,13 @@ func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePo
 }
 
 func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
+	if instance.GetStatus().GetCurrentStatefulSetVersion() == "" {
+		return nil
+	}
 	serviceTemplate := instance.GetSpec().GetServiceTemplate()
 	serviceTemplate.Spec.Ports = appsv1beta4.MergeServicePorts(serviceTemplate.Spec.Ports, port)
+	serviceTemplate.Spec.Selector["controller-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
+
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",

@@ -62,6 +62,23 @@ _Appears in:_
 | `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ |  |
 
 
+#### EmqxBlueGreenUpdateStatus
+
+
+
+
+
+_Appears in:_
+- [EmqxEnterpriseStatus](#emqxenterprisestatus)
+
+| Field | Description |
+| --- | --- |
+| `originStatefulSet` _string_ |  |
+| `currentStatefulSet` _string_ |  |
+| `startedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ |  |
+| `evacuationsStatus` _[EmqxEvacuationStatus](#emqxevacuationstatus) array_ |  |
+
+
 #### EmqxBroker
 
 
@@ -111,6 +128,7 @@ _Appears in:_
 | `emqxNodes` _[EmqxNode](#emqxnode) array_ | Nodes of the EMQX cluster |
 | `replicas` _integer_ | replicas is the number of Pods created by the EMQX Custom Resource controller. |
 | `readyReplicas` _integer_ | readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready. |
+| `currentStatefulSetVersion` _string_ |  |
 
 
 
@@ -202,7 +220,8 @@ _Appears in:_
 | `emqxNodes` _[EmqxNode](#emqxnode) array_ | Nodes of the EMQX cluster |
 | `replicas` _integer_ | replicas is the number of Pods created by the EMQX Custom Resource controller. |
 | `readyReplicas` _integer_ | readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready. |
-| `evacuationsStatus` _[EmqxEvacuationStatus](#emqxevacuationstatus) array_ |  |
+| `currentStatefulSetVersion` _string_ |  |
+| `blueGreenUpdateStatus` _[EmqxBlueGreenUpdateStatus](#emqxbluegreenupdatestatus)_ |  |
 
 
 #### EmqxEvacuationStats
@@ -229,7 +248,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [EmqxEnterpriseStatus](#emqxenterprisestatus)
+- [EmqxBlueGreenUpdateStatus](#emqxbluegreenupdatestatus)
 
 | Field | Description |
 | --- | --- |
