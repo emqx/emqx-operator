@@ -76,11 +76,8 @@ type EmqxBrokerStatus struct {
 	Replicas int32 `json:"replicas,omitempty"`
 	// readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready.
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
-}
 
-func (s *EmqxBrokerStatus) IsRunning() bool {
-	index := indexCondition(s.Conditions, ConditionRunning)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
+	CurrentStatefulSetVersion string `json:"currentStatefulSetVersion,omitempty"`
 }
 
 func (s *EmqxBrokerStatus) IsInitResourceReady() bool {
@@ -89,6 +86,15 @@ func (s *EmqxBrokerStatus) IsInitResourceReady() bool {
 		return false
 	}
 	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
+}
+
+func (s *EmqxBrokerStatus) IsRunning() bool {
+	index := indexCondition(s.Conditions, ConditionRunning)
+	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
+}
+
+func (s *EmqxBrokerStatus) IsBlueGreenUpdating() bool {
+	return false
 }
 
 func (s *EmqxBrokerStatus) GetReplicas() int32 {
@@ -113,6 +119,14 @@ func (s *EmqxBrokerStatus) GetEmqxNodes() []EmqxNode {
 
 func (s *EmqxBrokerStatus) SetEmqxNodes(nodes []EmqxNode) {
 	s.EmqxNodes = nodes
+}
+
+func (s *EmqxBrokerStatus) GetCurrentStatefulSetVersion() string {
+	return s.CurrentStatefulSetVersion
+}
+
+func (s *EmqxBrokerStatus) SetCurrentStatefulSetVersion(version string) {
+	s.CurrentStatefulSetVersion = version
 }
 
 func (s *EmqxBrokerStatus) GetConditions() []Condition {

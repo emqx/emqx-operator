@@ -6870,6 +6870,8 @@ spec:
                       - type
                     type: object
                   type: array
+                currentStatefulSetVersion:
+                  type: string
                 emqxNodes:
                   items:
                     properties:
@@ -13790,6 +13792,56 @@ spec:
               type: object
             status:
               properties:
+                blueGreenUpdateStatus:
+                  properties:
+                    currentStatefulSet:
+                      type: string
+                    evacuationsStatus:
+                      items:
+                        properties:
+                          connection_eviction_rate:
+                            format: int32
+                            type: integer
+                          connection_goal:
+                            format: int32
+                            type: integer
+                          node:
+                            type: string
+                          session_eviction_rate:
+                            format: int32
+                            type: integer
+                          session_goal:
+                            format: int32
+                            type: integer
+                          session_recipients:
+                            items:
+                              type: string
+                            type: array
+                          state:
+                            type: string
+                          stats:
+                            properties:
+                              current_connected:
+                                format: int32
+                                type: integer
+                              current_sessions:
+                                format: int32
+                                type: integer
+                              initial_connected:
+                                format: int32
+                                type: integer
+                              initial_sessions:
+                                format: int32
+                                type: integer
+                            type: object
+                        type: object
+                      type: array
+                    originStatefulSet:
+                      type: string
+                    startedAt:
+                      format: date-time
+                      type: string
+                  type: object
                 conditions:
                   items:
                     properties:
@@ -13810,6 +13862,8 @@ spec:
                       - type
                     type: object
                   type: array
+                currentStatefulSetVersion:
+                  type: string
                 emqxNodes:
                   items:
                     properties:
@@ -13821,46 +13875,6 @@ spec:
                         type: string
                       version:
                         type: string
-                    type: object
-                  type: array
-                evacuationsStatus:
-                  items:
-                    properties:
-                      connection_eviction_rate:
-                        format: int32
-                        type: integer
-                      connection_goal:
-                        format: int32
-                        type: integer
-                      node:
-                        type: string
-                      session_eviction_rate:
-                        format: int32
-                        type: integer
-                      session_goal:
-                        format: int32
-                        type: integer
-                      session_recipients:
-                        items:
-                          type: string
-                        type: array
-                      state:
-                        type: string
-                      stats:
-                        properties:
-                          current_connected:
-                            format: int32
-                            type: integer
-                          current_sessions:
-                            format: int32
-                            type: integer
-                          initial_connected:
-                            format: int32
-                            type: integer
-                          initial_sessions:
-                            format: int32
-                            type: integer
-                        type: object
                     type: object
                   type: array
                 readyReplicas:
