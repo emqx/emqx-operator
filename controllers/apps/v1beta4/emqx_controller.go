@@ -18,7 +18,6 @@ package v1beta4
 
 import (
 	"context"
-	"io"
 	"time"
 
 	emperror "emperror.dev/errors"
@@ -29,9 +28,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -63,6 +60,11 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
+	emqxStatusMachine := newEmqxStatusMachine(instance, r, ctx)
+	if requeue := emqxStatusMachine.currentStatus.nextStatus(instance); requeue != nil {
+		return processRequeue(requeue)
+	}
+
 	// create resource start
 	var resources []client.Object
 	bootstrap_user := generateBootstrapUserSecret(instance)
@@ -75,22 +77,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		resources = append(resources, plugins...)
 		err := r.createInitResources(instance, resources)
 		if err != nil {
-			instance.GetStatus().AddCondition(
-				appsv1beta4.ConditionInitResourceReady,
-				corev1.ConditionFalse,
-				"PluginInitializeFailed",
-				err.Error(),
-			)
-			_ = r.Client.Status().Update(ctx, instance)
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 			return ctrl.Result{}, err
 		}
-		instance.GetStatus().AddCondition(
-			appsv1beta4.ConditionInitResourceReady,
-			corev1.ConditionTrue,
-			"PluginInitializeSuccessfully",
-			"All default plugins initialized",
-		)
-		_ = r.Client.Status().Update(ctx, instance)
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
@@ -120,6 +109,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	if instance.GetStatus().IsRunning() {
 		listenerPorts, _ = r.getListenerPortsByAPI(instance)
 	}
+	if svc := generateService(instance, listenerPorts...); svc != nil {
+		resources = append(resources, svc)
+	}
 	headlessSvc := generateHeadlessService(instance, listenerPorts...)
 	acl := generateEmqxACL(instance)
 
@@ -145,91 +137,22 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-		instance.GetStatus().AddCondition(
-			appsv1beta4.ConditionRunning,
-			corev1.ConditionFalse,
-			"FailedCreateOrUpdate",
-			err.Error(),
-		)
-		_ = r.Client.Status().Update(ctx, instance)
-		return ctrl.Result{}, err
-	}
-	// create resource done
-
-	// update status
-	emqxNodes, err := r.getNodeStatusesByAPI(instance)
-	if err != nil {
-		if err == io.EOF {
-			return ctrl.Result{RequeueAfter: time.Second}, nil
-		}
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
-		instance.GetStatus().AddCondition(
-			appsv1beta4.ConditionRunning,
-			corev1.ConditionFalse,
-			"FailedToGetNodeStatues",
-			err.Error(),
-		)
-	}
-	r.updateEmqxStatus(instance, emqxNodes)
-	_ = r.Client.Status().Update(ctx, instance)
-
-	// create and update other resource
-	latestReadySts, _ := r.getLatestReadyStatefulSet(instance, true)
-	if latestReadySts == nil {
-		// wait for the sts to be ready
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
-	svc := generateService(instance, listenerPorts...)
-	selector := svc.Spec.Selector
-	selector["controller-revision-hash"] = latestReadySts.Status.CurrentRevision
-	svc.Spec.Selector = selector
-
-	if err := r.CreateOrUpdateList(instance, r.Scheme, []client.Object{svc}); err != nil {
-		if k8sErrors.IsConflict(err) {
-			return ctrl.Result{RequeueAfter: time.Second}, nil
-		}
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-		instance.GetStatus().AddCondition(
-			appsv1beta4.ConditionRunning,
-			corev1.ConditionFalse,
-			"FailedCreateOrUpdate",
-			err.Error(),
-		)
-		_ = r.Client.Status().Update(ctx, instance)
 		return ctrl.Result{}, err
 	}
 
-	if instance.GetStatus().IsRunning() {
-		if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-			ok, err := r.checkEndpointSliceIsReady(instance, latestReadySts)
-			if err != nil {
-				return ctrl.Result{}, err
+	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
+	if ok && enterprise.Status.EmqxBlueGreenUpdateStatus != nil {
+		if err := r.syncStatefulSet(instance, enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus); err != nil {
+			if k8sErrors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
-			if !ok {
-				// wait for endpoint slice ready before blue green update
-				return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-			}
-			// always need do this, no-matter blue-green update enabled or not
-			// because the blue-green update may be canceled after it is started
-			evacuationsStatus, err := r.getEvacuationStatusByAPI(instance)
-			if err != nil {
-				if err == io.EOF {
-					return ctrl.Result{RequeueAfter: time.Second}, nil
-				}
-				return ctrl.Result{}, emperror.Wrap(err, "get evacuation status by api failed")
-			}
-			enterprise.Status.EvacuationsStatus = evacuationsStatus
-			_ = r.Client.Status().Update(ctx, instance)
-
-			if err := r.syncStatefulSet(instance, evacuationsStatus); err != nil {
-				if k8sErrors.IsConflict(err) {
-					return ctrl.Result{RequeueAfter: time.Second}, nil
-				}
-				return ctrl.Result{}, emperror.Wrap(err, "sync statefulSet failed")
-			}
+			return ctrl.Result{}, emperror.Wrap(err, "sync statefulSet failed")
 		}
 	}
 
+	if requeue := emqxStatusMachine.currentStatus.nextStatus(instance); requeue != nil {
+		return processRequeue(requeue)
+	}
 	return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
 }
 
@@ -241,37 +164,6 @@ func (r *EmqxReconciler) createInitResources(instance appsv1beta4.Emqx, initReso
 	return nil
 }
 
-func (r *EmqxReconciler) updateEmqxStatus(instance appsv1beta4.Emqx, emqxNodes []appsv1beta4.EmqxNode) {
-	instance.GetStatus().SetReplicas(*instance.GetSpec().GetReplicas())
-
-	if emqxNodes != nil {
-		readyReplicas := int32(0)
-		for _, node := range emqxNodes {
-			if node.NodeStatus == "Running" {
-				readyReplicas++
-			}
-		}
-		instance.GetStatus().SetReadyReplicas(readyReplicas)
-		instance.GetStatus().SetEmqxNodes(emqxNodes)
-	}
-
-	if instance.GetStatus().GetReadyReplicas() >= instance.GetStatus().GetReplicas() {
-		instance.GetStatus().AddCondition(
-			appsv1beta4.ConditionRunning,
-			corev1.ConditionTrue,
-			"ClusterReady",
-			"All resources are ready",
-		)
-	} else {
-		instance.GetStatus().AddCondition(
-			appsv1beta4.ConditionRunning,
-			corev1.ConditionFalse,
-			"ClusterNotReady",
-			"Some nodes are not ready",
-		)
-	}
-}
-
 func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]client.Object, error) {
 	pluginsList := &appsv1beta4.EmqxPluginList{}
 	err := r.Client.List(context.Background(), pluginsList, client.InNamespace(instance.GetNamespace()))
@@ -281,41 +173,4 @@ func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]clie
 	initPluginsList := generateInitPluginList(instance, pluginsList)
 	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
 	return append([]client.Object{defaultPluginsConfig}, initPluginsList...), nil
-}
-
-func (r *EmqxReconciler) checkEndpointSliceIsReady(instance appsv1beta4.Emqx, latestReadySts *appsv1.StatefulSet) (bool, error) {
-	// make sure that only latest ready sts is in endpoints
-	endpointSlice := &discoveryv1.EndpointSliceList{}
-	if err := r.Client.List(context.TODO(), endpointSlice,
-		client.InNamespace(instance.GetNamespace()),
-		client.MatchingLabels(instance.GetSpec().GetServiceTemplate().Labels),
-	); err != nil {
-		return false, err
-	}
-
-	podMap, _ := r.getPodMap(instance, []*appsv1.StatefulSet{latestReadySts})
-
-	hitEndpoints := 0
-	for _, endpointSlice := range endpointSlice.Items {
-		if len(endpointSlice.Endpoints) != int(*instance.GetSpec().GetReplicas()) {
-			continue
-		}
-		for _, endpoint := range endpointSlice.Endpoints {
-			if endpoint.Conditions.Ready == nil || !*endpoint.Conditions.Ready {
-				continue
-			}
-
-			for _, pod := range podMap[latestReadySts.UID] {
-				if endpoint.TargetRef.UID != pod.UID {
-					continue
-				}
-				hitEndpoints++
-			}
-		}
-	}
-	if hitEndpoints != len(podMap[latestReadySts.UID]) {
-		// Wait for endpoints to be ready
-		return false, nil
-	}
-	return true, nil
 }

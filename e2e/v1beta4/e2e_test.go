@@ -374,12 +374,21 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 
 			sts := existedStsList.Items[0].DeepCopy()
 
+			By("check service selector")
 			Eventually(func() map[string]string {
 				svc := &corev1.Service{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
 				return svc.Spec.Selector
 			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", sts.Status.CurrentRevision))
 
+			By("check currentStatefulSetVersion in CR status")
+			Eventually(func() string {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				return ee.Status.CurrentStatefulSetVersion
+			}, timeout, interval).Should(Equal(sts.Status.CurrentRevision))
+
+			By("check emqx nodes in CR status")
 			Eventually(func() string {
 				ee := &appsv1beta4.EmqxEnterprise{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
@@ -405,6 +414,20 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				)
 				return existedStsList.Items
 			}, timeout, interval).Should(HaveLen(2))
+
+			By("check readyReplicas in CR status")
+			Eventually(func() int {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				return int(ee.Status.ReadyReplicas)
+			}, timeout, interval).Should(Equal(2))
+
+			// By("check emqx nodes in CR status")
+			// Eventually(func() []appsv1beta4.EmqxNode {
+			// 	ee := &appsv1beta4.EmqxEnterprise{}
+			// 	_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+			// 	return ee.GetStatus().GetEmqxNodes()
+			// }, timeout, interval).Should(Equal(HaveLen(2)))
 
 			allSts := []*appsv1.StatefulSet{}
 			for _, es := range existedStsList.Items {
@@ -441,12 +464,21 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return podList.Items
 			}, timeout, interval).Should(HaveLen(int(*emqx.GetSpec().GetReplicas())))
 
+			By("check service selector")
 			Eventually(func() map[string]string {
 				svc := &corev1.Service{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
 				return svc.Spec.Selector
 			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", newSts.Status.CurrentRevision))
 
+			By("check currentStatefulSetVersion in CR status")
+			Eventually(func() string {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				return ee.Status.CurrentStatefulSetVersion
+			}, timeout, interval).Should(Equal(newSts.Status.CurrentRevision))
+
+			By("check emqx nodes in CR status")
 			Eventually(func() string {
 				ee := &appsv1beta4.EmqxEnterprise{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
