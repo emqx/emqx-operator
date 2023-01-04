@@ -3051,6 +3051,9 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
+                  initialDelaySeconds:
+                    format: int32
+                    type: integer
                 type: object
               license:
                 properties:
