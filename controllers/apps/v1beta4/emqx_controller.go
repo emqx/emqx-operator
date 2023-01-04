@@ -60,8 +60,7 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
-	emqxStatusMachine := newEmqxStatusMachine(instance, r, ctx)
-	if requeue := emqxStatusMachine.currentStatus.nextStatus(instance); requeue != nil {
+	if requeue := nextStatus(r, ctx, instance); requeue != nil {
 		return processRequeue(requeue)
 	}
 
@@ -147,7 +146,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		}
 	}
 
-	if requeue := emqxStatusMachine.currentStatus.nextStatus(instance); requeue != nil {
+	if requeue := nextStatus(r, ctx, instance); requeue != nil {
 		return processRequeue(requeue)
 	}
 	return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
