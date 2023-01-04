@@ -344,6 +344,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 		emqx := emqxEnterprise.DeepCopy()
 		emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
 		emqx.Spec.EmqxBlueGreenUpdate = &appsv1beta4.EmqxBlueGreenUpdate{
+			InitialDelaySeconds: 10,
 			EvacuationStrategy: appsv1beta4.EvacuationStrategy{
 				WaitTakeover:  int32(0),
 				ConnEvictRate: int32(9999999),

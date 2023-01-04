@@ -92,7 +92,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			for _, emqx := range emqxList {
 				if err := r.unloadPluginByAPI(emqx, instance.Spec.PluginName); err != nil {
 					if io.EOF == emperror.Unwrap(err) {
-						return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+						return ctrl.Result{RequeueAfter: time.Second}, nil
 					}
 					return ctrl.Result{}, err
 				}

@@ -129,7 +129,7 @@ func (s updateEmqxStatus) addRunningOrUpdating(r *EmqxReconciler, instance appsv
 		enterprise.GetStatus().AddCondition(
 			appsv1beta4.ConditionBlueGreenUpdating,
 			corev1.ConditionTrue,
-			"BlueGreenUpdateStarted",
+			"",
 			"",
 		)
 
@@ -137,18 +137,26 @@ func (s updateEmqxStatus) addRunningOrUpdating(r *EmqxReconciler, instance appsv
 		if err != nil {
 			return emperror.Wrap(err, "failed to check endpoint slice is ready")
 		}
-		if ok {
-			evacuationsStatus, err := r.getEvacuationStatusByAPI(enterprise)
-			if err != nil {
-				return emperror.Wrap(err, "failed to get evacuation status")
-			}
-			enterprise.Status.EmqxBlueGreenUpdateStatus = &appsv1beta4.EmqxBlueGreenUpdateStatus{
-				OriginStatefulSet:  originSts.Name,
-				CurrentStatefulSet: currentSts.Name,
-				StartedAt:          metav1.Now(),
-				EvacuationsStatus:  evacuationsStatus,
-			}
+		if !ok {
+			return nil
 		}
+
+		if enterprise.Status.EmqxBlueGreenUpdateStatus == nil {
+			enterprise.Status.EmqxBlueGreenUpdateStatus = &appsv1beta4.EmqxBlueGreenUpdateStatus{}
+		}
+		enterprise.Status.EmqxBlueGreenUpdateStatus.CurrentStatefulSet = currentSts.Name
+		enterprise.Status.EmqxBlueGreenUpdateStatus.OriginStatefulSet = originSts.Name
+
+		if enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt == nil {
+			now := metav1.Now()
+			enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt = &now
+		}
+
+		evacuationsStatus, err := r.getEvacuationStatusByAPI(enterprise)
+		if err != nil {
+			return emperror.Wrap(err, "failed to get evacuation status")
+		}
+		enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus = evacuationsStatus
 	}
 	return nil
 }

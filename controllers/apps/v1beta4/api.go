@@ -48,7 +48,7 @@ func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, 
 		return nil, nil, err
 	}
 	if len(podMap[latestReadySts.UID]) == 0 {
-		return nil, nil, emperror.New("no pod found")
+		return nil, nil, emperror.New("not found any Pod")
 	}
 	pod := podMap[latestReadySts.UID][0]
 
