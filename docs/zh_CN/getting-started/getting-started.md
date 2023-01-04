@@ -47,7 +47,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     完整的例子请查看 [`emqx-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml)
 
-    每个字段的详细解释，请参考 [v2alpha1-reference](../../en_US/reference/v2alpha1-reference.md)
+    每个字段的详细解释，请参考 [v2alpha1-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v2alpha1-reference.md)
 
 2. 检查 EMQX 自定义资源状态
 
@@ -74,7 +74,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     完整的例子请查看 [`emqxbroker-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxbroker-full.yaml)
 
-    每个字段的详细解释，请参考 [v1beta3-reference](../../en_US/reference/v1beta3-reference.md)
+    每个字段的详细解释，请参考 [v1beta3-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta3-reference.md)
 
 2. 检查 EMQX 自定义资源状态
 
@@ -103,7 +103,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     完整的例子请查看 [`emqxenterprise-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxenterprise-full.yaml)
 
-    每个字段的详细解释，请参考 [v1beta3-reference](../../en_US/reference/v1beta3-reference.md)
+    每个字段的详细解释，请参考 [v1beta3-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta3-reference.md)
 
 2. 检查 EMQX 自定义资源状态
 
@@ -114,4 +114,4 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 ## 备注
 
-1. 在 Kubernetes 1.24 及以上默认开启 `MixedProtocolLBService` 特性，其文档可以参考：[ MixedProtocolLBService ](https://kubernetes.io/zh-cn/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features)。`MixedProtocolLBService` 特性允许在同一 `LoadBalancer` 类型的 Service 实例中使用不同的协议。因此如果用户在 Kubernetes 上部署 EMQX 集群，并且使用 `LoadBalancer` 类型的 Service，Service 里面同时存在 TCP 和 UDP 两种协议，请注意升级 Kubernetes 版本到 1.24及以上，否则会导致 Service 创建失败。 
+1. 在 Kubernetes 1.24 及以上默认开启 `MixedProtocolLBService` 特性，其文档可以参考：[ MixedProtocolLBService ](https://kubernetes.io/zh-cn/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features)。`MixedProtocolLBService` 特性允许在同一 `LoadBalancer` 类型的 Service 实例中使用不同的协议。因此如果用户在 Kubernetes 上部署 EMQX 集群，并且使用 `LoadBalancer` 类型的 Service，Service 里面同时存在 TCP 和 UDP 两种协议，请注意升级 Kubernetes 版本到 1.24及以上，否则会导致 Service 创建失败。

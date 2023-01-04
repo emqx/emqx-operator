@@ -31,24 +31,6 @@
       ]
     },
     {
-      "title": "Config",
-      "children": [
-        {
-          "title": "v1beta3",
-          "children": [
-            {
-              "title": "Config EmqxBroker",
-              "path": "config/v1beta3/EmqxBroker"
-            },
-            {
-              "title": "Config EmqxEnterprise",
-              "path": "config/v1beta3/EmqxEnterprise"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "title": "Deployment on Public Cloud",
       "children": [
         {
@@ -87,6 +69,15 @@
       ]
     },
     {
+      "title": "FAQ",
+      "children": [
+        {
+          "title": "FAQ",
+          "path": "faq/faq"
+        }
+      ]
+    },
+    {
       "title": "reference",
       "children": [
         {
@@ -96,15 +87,6 @@
         {
           "title": "V2Alpha1 Reference",
           "path": "reference/v2alpha1-reference"
-        }
-      ]
-    },
-    {
-      "title": "FAQ",
-      "children": [
-        {
-          "title": "FAQ",
-          "path": "faq/faq"
         }
       ]
     }
@@ -137,24 +119,6 @@
         {
           "title": "部署 EMQX 插件",
           "path": "getting-started/install-emqx-prometheus-plugin"
-        }
-      ]
-    },
-    {
-      "title": "配置",
-      "children": [
-        {
-          "title": "v1beta3",
-          "children": [
-            {
-              "title": "配置 EmqxBroker",
-              "path": "config/v1beta3/EmqxBroker"
-            },
-            {
-              "title": "配置 EmqxEnterprise",
-              "path": "config/v1beta3/EmqxEnterprise"
-            }
-          ]
         }
       ]
     },

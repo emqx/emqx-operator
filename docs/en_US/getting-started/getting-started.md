@@ -46,7 +46,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     Full example please check [`emqx-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml).
 
-    Detailed explanation of each field please check [v2alpha1-reference](../reference/v2alpha1-reference.md)
+    Detailed explanation of each field please check [v2alpha1-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v2alpha1-reference.md)
 
 2. Check EMQX Custom Resource status
 
@@ -73,7 +73,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     Full example please check [`emqxbroker-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxbroker-full.yaml).
 
-    Detailed explanation of each field please check [v1beta3-reference](../reference/v1beta3-reference.md)
+    Detailed explanation of each field please check [v1beta3-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta3-reference.md)
 
 2. Check EMQX Custom Resource status
 
@@ -100,7 +100,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
     Full example please check [`emqxenterprise-full.yaml`](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta3/emqxenterprise-full.yaml).
 
-    Detailed explanation of each field please check [v1beta3-reference](../reference/v1beta3-reference.md)
+    Detailed explanation of each field please check [v1beta3-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta3-reference.md)
 
 2. Check EMQX Custom Resource status
 
