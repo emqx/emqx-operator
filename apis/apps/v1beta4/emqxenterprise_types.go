@@ -124,16 +124,6 @@ func (s *EmqxEnterpriseStatus) IsInitResourceReady() bool {
 	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
-func (s *EmqxEnterpriseStatus) IsRunning() bool {
-	index := indexCondition(s.Conditions, ConditionRunning)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
-func (s *EmqxEnterpriseStatus) IsBlueGreenUpdating() bool {
-	index := indexCondition(s.Conditions, ConditionBlueGreenUpdating)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
 func (s *EmqxEnterpriseStatus) GetReplicas() int32 {
 	return s.Replicas
 }

@@ -7,35 +7,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func TestEnterpriseIsRuning(t *testing.T) {
-	status := EmqxEnterpriseStatus{
-		Conditions: []Condition{
-			{
-				Type:   ConditionRunning,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-
-	got := status.IsRunning()
-	assert.True(t, got)
-
-	status = EmqxEnterpriseStatus{}
-	got = status.IsRunning()
-	assert.False(t, got)
-
-	status = EmqxEnterpriseStatus{
-		Conditions: []Condition{
-			{
-				Type:   ConditionRunning,
-				Status: v1.ConditionFalse,
-			},
-		},
-	}
-	got = status.IsRunning()
-	assert.False(t, got)
-}
-
 func TestEnterpriseIsInitResourceReady(t *testing.T) {
 	status := &EmqxEnterpriseStatus{
 		Conditions: []Condition{
