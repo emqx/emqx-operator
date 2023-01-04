@@ -14,33 +14,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func nextStatus(r *EmqxReconciler, ctx context.Context, instance appsv1beta4.Emqx) *requeue {
+type updateEmqxStatus struct{}
+
+func (s updateEmqxStatus) reconcile(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx, _ ...any) subResult {
 	if !instance.GetStatus().IsInitResourceReady() {
-		if err := addInitResourceReady(r, ctx, instance); err != nil {
-			return err
+		if err := s.addInitResourceReady(r, ctx, instance); err != nil {
+			return subResult{err: err}
 		}
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
-			return &requeue{err: emperror.Wrap(err, "failed to update emqx status")}
+			return subResult{err: emperror.Wrap(err, "failed to update emqx status")}
 		}
-		return nil
+		return subResult{}
 	}
 
-	if err := addReadyReplicas(r, instance); err != nil {
-		return &requeue{err: err}
+	if err := s.addReadyReplicas(r, instance); err != nil {
+		return subResult{err: err}
 	}
 
-	if err := addRunningOrUpdating(r, instance); err != nil {
-		return &requeue{err: err}
+	if err := s.addRunningOrUpdating(r, instance); err != nil {
+		return subResult{err: err}
 	}
 
 	if err := r.Client.Status().Update(ctx, instance); err != nil {
-		return &requeue{err: emperror.Wrap(err, "failed to update emqx status")}
+		return subResult{err: emperror.Wrap(err, "failed to update emqx status")}
 	}
 
-	return nil
+	return subResult{}
 }
 
-func addReadyReplicas(r *EmqxReconciler, instance appsv1beta4.Emqx) error {
+func (s updateEmqxStatus) addReadyReplicas(r *EmqxReconciler, instance appsv1beta4.Emqx) error {
 	emqxNodes, err := r.getNodeStatusesByAPI(instance)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
@@ -59,15 +61,12 @@ func addReadyReplicas(r *EmqxReconciler, instance appsv1beta4.Emqx) error {
 	return nil
 }
 
-func addInitResourceReady(r *EmqxReconciler, ctx context.Context, instance appsv1beta4.Emqx) *requeue {
-	bootstrap_user := generateBootstrapUserSecret(instance)
-	plugins, err := r.createInitPluginList(instance)
+func (s updateEmqxStatus) addInitResourceReady(r *EmqxReconciler, ctx context.Context, instance appsv1beta4.Emqx) error {
+	addEmqxInitResources := addEmqxInitResources{}
+	resources, err := addEmqxInitResources.getInitResources(ctx, r, instance)
 	if err != nil {
-		return &requeue{err: emperror.Wrap(err, "failed to get init plugin list")}
+		return emperror.Wrap(err, "failed to get init resources")
 	}
-	resources := []client.Object{}
-	resources = append(resources, bootstrap_user)
-	resources = append(resources, plugins...)
 
 	conditionStatus := corev1.ConditionTrue
 	for _, resource := range resources {
@@ -78,7 +77,7 @@ func addInitResourceReady(r *EmqxReconciler, ctx context.Context, instance appsv
 				conditionStatus = corev1.ConditionFalse
 				break
 			}
-			return &requeue{err: err}
+			return err
 		}
 	}
 
@@ -91,8 +90,8 @@ func addInitResourceReady(r *EmqxReconciler, ctx context.Context, instance appsv
 	return nil
 }
 
-func addRunningOrUpdating(r *EmqxReconciler, instance appsv1beta4.Emqx) error {
-	inClusterStss, err := r.getInClusterStatefulSets(instance)
+func (s updateEmqxStatus) addRunningOrUpdating(r *EmqxReconciler, instance appsv1beta4.Emqx) error {
+	inClusterStss, err := getInClusterStatefulSets(r.Client, instance)
 	if err != nil {
 		return emperror.Wrap(err, "failed to get in cluster statefulsets")
 	}
@@ -134,7 +133,7 @@ func addRunningOrUpdating(r *EmqxReconciler, instance appsv1beta4.Emqx) error {
 			"",
 		)
 
-		ok, err := checkEndpointSliceIsReady(r, enterprise, currentSts)
+		ok, err := s.checkEndpointSliceIsReady(r, enterprise, currentSts)
 		if err != nil {
 			return emperror.Wrap(err, "failed to check endpoint slice is ready")
 		}
@@ -154,7 +153,7 @@ func addRunningOrUpdating(r *EmqxReconciler, instance appsv1beta4.Emqx) error {
 	return nil
 }
 
-func checkEndpointSliceIsReady(r *EmqxReconciler, instance appsv1beta4.Emqx, currentSts *appsv1.StatefulSet) (bool, error) {
+func (s updateEmqxStatus) checkEndpointSliceIsReady(r *EmqxReconciler, instance appsv1beta4.Emqx, currentSts *appsv1.StatefulSet) (bool, error) {
 	// make sure that only latest ready sts is in endpoints
 	endpointSlice := &discoveryv1.EndpointSliceList{}
 	if err := r.Client.List(context.Background(), endpointSlice,
@@ -164,7 +163,7 @@ func checkEndpointSliceIsReady(r *EmqxReconciler, instance appsv1beta4.Emqx, cur
 		return false, err
 	}
 
-	podMap, _ := r.getPodMap(instance, []*appsv1.StatefulSet{currentSts})
+	podMap, _ := getPodMap(r.Client, instance, []*appsv1.StatefulSet{currentSts})
 
 	hitEndpoints := 0
 	for _, endpointSlice := range endpointSlice.Items {
