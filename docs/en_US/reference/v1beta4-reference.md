@@ -59,6 +59,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
+| `initialDelaySeconds` _integer_ | Number of seconds before evacuation connection start. |
 | `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ |  |
 
 
