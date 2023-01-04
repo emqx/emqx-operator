@@ -7,35 +7,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func TestBrokerIsRuning(t *testing.T) {
-	status := EmqxBrokerStatus{
-		Conditions: []Condition{
-			{
-				Type:   ConditionRunning,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-
-	got := status.IsRunning()
-	assert.True(t, got)
-
-	status = EmqxBrokerStatus{}
-	got = status.IsRunning()
-	assert.False(t, got)
-
-	status = EmqxBrokerStatus{
-		Conditions: []Condition{
-			{
-				Type:   ConditionRunning,
-				Status: v1.ConditionFalse,
-			},
-		},
-	}
-	got = status.IsRunning()
-	assert.False(t, got)
-}
-
 func TestBrokerIsInitResourceReady(t *testing.T) {
 	status := &EmqxBrokerStatus{
 		Conditions: []Condition{

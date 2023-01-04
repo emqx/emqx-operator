@@ -105,10 +105,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		resources = append(resources, license)
 	}
 
-	var listenerPorts []corev1.ServicePort
-	if instance.GetStatus().IsRunning() {
-		listenerPorts, _ = r.getListenerPortsByAPI(instance)
-	}
+	listenerPorts, _ := r.getListenerPortsByAPI(instance)
 	if svc := generateService(instance, listenerPorts...); svc != nil {
 		resources = append(resources, svc)
 	}
