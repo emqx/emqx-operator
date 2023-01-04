@@ -1,2 +1,5 @@
+codecov:
+  disable_default_path_fixes: true
+
 ignore:
 - "**/zz_generated.deepcopy.go"
