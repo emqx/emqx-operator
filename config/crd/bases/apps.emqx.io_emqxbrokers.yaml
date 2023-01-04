@@ -6843,8 +6843,10 @@ spec:
                 items:
                   properties:
                     lastTransitionTime:
+                      format: date-time
                       type: string
                     lastUpdateTime:
+                      format: date-time
                       type: string
                     message:
                       type: string

@@ -2,7 +2,6 @@ package v1beta4
 
 import (
 	"sort"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,10 +17,9 @@ type Condition struct {
 	// Status of the condition, one of True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`
 	// The last time this condition was updated.
-	LastUpdateTime string      `json:"lastUpdateTime,omitempty"`
-	LastUpdateAt   metav1.Time `json:"-"`
+	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 	// Last time the condition transitioned from one status to another.
-	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 	// The reason for the condition's last transition.
 	Reason string `json:"reason,omitempty"`
 	// A human readable message indicating details about the transition.
@@ -90,20 +88,19 @@ type EmqxBlueGreenUpdateStatus struct {
 
 func addCondition(conditions []Condition, c Condition) []Condition {
 	now := metav1.Now()
-	c.LastUpdateAt = now
-	c.LastUpdateTime = now.Format(time.RFC3339)
+	c.LastUpdateTime = now
 	pos := indexCondition(conditions, c.Type)
 	// condition exist
 	if pos >= 0 {
 		c.LastTransitionTime = conditions[pos].LastTransitionTime
 		conditions[pos] = c
 	} else { // condition not exist
-		c.LastTransitionTime = now.Format(time.RFC3339)
+		c.LastTransitionTime = now
 		conditions = append(conditions, c)
 	}
 
 	sort.Slice(conditions, func(i, j int) bool {
-		return conditions[j].LastUpdateAt.Before(&conditions[i].LastUpdateAt)
+		return conditions[j].LastUpdateTime.Before(&conditions[i].LastUpdateTime)
 	})
 	return conditions
 }

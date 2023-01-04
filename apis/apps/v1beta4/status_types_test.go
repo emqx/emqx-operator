@@ -16,7 +16,6 @@ func TestSetCondition(t *testing.T) {
 	}
 	got1 := addCondition(conditions, c1)
 	assert.Len(t, got1, 1)
-	assert.NotNil(t, got1[0].LastUpdateAt)
 	assert.NotNil(t, got1[0].LastUpdateTime)
 	assert.NotNil(t, got1[0].LastTransitionTime)
 
@@ -25,7 +24,6 @@ func TestSetCondition(t *testing.T) {
 
 	got2 := addCondition(got1, c2)
 	assert.Len(t, got2, 1)
-	assert.NotNil(t, got2[0].LastUpdateAt)
 	assert.NotNil(t, got2[0].LastUpdateTime)
 	assert.Equal(t, got1[0].LastTransitionTime, got2[0].LastTransitionTime)
 
