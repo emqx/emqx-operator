@@ -40,8 +40,6 @@ const (
 // +kubebuilder:object:generate=false
 type EmqxStatus interface {
 	IsInitResourceReady() bool
-	IsRunning() bool
-	IsBlueGreenUpdating() bool
 	GetReplicas() int32
 	SetReplicas(replicas int32)
 	GetReadyReplicas() int32
