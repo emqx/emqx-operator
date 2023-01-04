@@ -18,19 +18,18 @@ package v1beta4
 
 import (
 	"context"
+	"io"
+	"reflect"
 	"time"
 
 	emperror "emperror.dev/errors"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 
-	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -49,6 +48,17 @@ type EmqxReconciler struct {
 	clientset *kubernetes.Clientset
 }
 
+// subResult provides a wrapper around different results from a subreconciler.
+type subResult struct {
+	err    error
+	result *ctrl.Result
+	args   any
+}
+
+type emqxSubReconciler interface {
+	reconcile(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx, args ...any) subResult
+}
+
 func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 	return &EmqxReconciler{
 		Handler:       handler.NewHandler(mgr),
@@ -60,113 +70,43 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
-	if requeue := nextStatus(r, ctx, instance); requeue != nil {
-		return processRequeue(requeue)
+	var subResult subResult
+	var subReconcilers = []emqxSubReconciler{
+		updateEmqxStatus{},
+		addEmqxInitResources{},
+		addEmqxResources{},
+		addEmqxStatefulSet{},
+		updateEmqxStatus{},
 	}
-
-	// create resource start
-	var resources []client.Object
-	bootstrap_user := generateBootstrapUserSecret(instance)
-	plugins, err := r.createInitPluginList(instance)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if !instance.GetStatus().IsInitResourceReady() {
-		resources = append(resources, bootstrap_user)
-		resources = append(resources, plugins...)
-		err := r.createInitResources(instance, resources)
-		if err != nil {
-			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-	}
-
-	var license *corev1.Secret
-	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-		if enterprise.Spec.License.SecretName != "" {
-			license = &corev1.Secret{}
-			if err := r.Client.Get(
-				context.Background(),
-				types.NamespacedName{
-					Name:      enterprise.Spec.License.SecretName,
-					Namespace: instance.GetNamespace(),
-				},
-				license,
-			); err != nil {
-				return ctrl.Result{}, err
-			}
+	for i := range subReconcilers {
+		if reflect.ValueOf(subResult).FieldByName("args").IsValid() {
+			subResult = subReconcilers[i].reconcile(ctx, r, instance, subResult.args)
 		} else {
-			license = generateLicense(instance)
+			subResult = subReconcilers[i].reconcile(ctx, r, instance)
 		}
-	}
-	if license != nil {
-		resources = append(resources, license)
-	}
-
-	listenerPorts, _ := r.getListenerPortsByAPI(instance)
-	if svc := generateService(instance, listenerPorts...); svc != nil {
-		resources = append(resources, svc)
-	}
-	headlessSvc := generateHeadlessService(instance, listenerPorts...)
-	acl := generateEmqxACL(instance)
-
-	sts := generateStatefulSet(instance)
-	sts = updateStatefulSetForACL(sts, acl)
-	sts = updateStatefulSetForPluginsConfig(sts, generateDefaultPluginsConfig(instance))
-	sts = updateStatefulSetForLicense(sts, license)
-	sts = updateStatefulSetForBootstrapUser(sts, bootstrap_user)
-
-	if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-		if enterprise.Spec.EmqxBlueGreenUpdate != nil {
-			var err error
-			sts, err = r.getNewStatefulSet(instance, sts)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	}
-	resources = append(resources, acl, headlessSvc, sts)
-
-	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
-		if k8sErrors.IsConflict(err) {
-			return ctrl.Result{RequeueAfter: time.Second}, nil
-		}
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-		return ctrl.Result{}, err
-	}
-
-	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
-	if ok && enterprise.Status.EmqxBlueGreenUpdateStatus != nil {
-		if err := r.syncStatefulSet(instance, enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus); err != nil {
-			if k8sErrors.IsConflict(err) {
-				return ctrl.Result{RequeueAfter: time.Second}, nil
-			}
-			return ctrl.Result{}, emperror.Wrap(err, "sync statefulSet failed")
+		subResult, err, _ := processResult(subResult)
+		if err != nil || !subResult.IsZero() {
+			return subResult, err
 		}
 	}
 
-	if requeue := nextStatus(r, ctx, instance); requeue != nil {
-		return processRequeue(requeue)
-	}
 	return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
 }
 
-func (r *EmqxReconciler) createInitResources(instance appsv1beta4.Emqx, initResources []client.Object) error {
-	if err := r.CreateOrUpdateList(instance, r.Scheme, initResources); err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-		return err
+func processResult(subResult subResult) (ctrl.Result, error, any) {
+	if !subResult.result.IsZero() {
+		return *subResult.result, subResult.err, subResult.args
 	}
-	return nil
-}
-
-func (r *EmqxReconciler) createInitPluginList(instance appsv1beta4.Emqx) ([]client.Object, error) {
-	pluginsList := &appsv1beta4.EmqxPluginList{}
-	err := r.Client.List(context.Background(), pluginsList, client.InNamespace(instance.GetNamespace()))
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, err
+	// Common Errors
+	err := emperror.Unwrap(subResult.err)
+	if io.EOF == err {
+		return ctrl.Result{RequeueAfter: time.Second}, nil, subResult.args
 	}
-	initPluginsList := generateInitPluginList(instance, pluginsList)
-	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
-	return append([]client.Object{defaultPluginsConfig}, initPluginsList...), nil
+	if k8sErrors.IsNotFound(err) {
+		return ctrl.Result{RequeueAfter: time.Second}, nil, subResult.args
+	}
+	if k8sErrors.IsConflict(err) {
+		return ctrl.Result{RequeueAfter: time.Second}, nil, subResult.args
+	}
+	return ctrl.Result{}, subResult.err, subResult.args
 }
