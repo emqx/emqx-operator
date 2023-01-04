@@ -88,15 +88,6 @@ func (s *EmqxBrokerStatus) IsInitResourceReady() bool {
 	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
 }
 
-func (s *EmqxBrokerStatus) IsRunning() bool {
-	index := indexCondition(s.Conditions, ConditionRunning)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
-func (s *EmqxBrokerStatus) IsBlueGreenUpdating() bool {
-	return false
-}
-
 func (s *EmqxBrokerStatus) GetReplicas() int32 {
 	return s.Replicas
 }

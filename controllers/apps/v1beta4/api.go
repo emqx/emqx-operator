@@ -36,7 +36,7 @@ import (
 
 func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, path string, body []byte) (*http.Response, []byte, error) {
 	inCluster := true
-	if path == "api/v4/nodes" && !instance.GetStatus().IsRunning() {
+	if path == "api/v4/nodes" && instance.GetStatus().GetEmqxNodes() == nil {
 		inCluster = false
 	}
 	latestReadySts, err := r.getLatestReadyStatefulSet(instance, inCluster)
