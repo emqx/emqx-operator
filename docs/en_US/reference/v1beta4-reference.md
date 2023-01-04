@@ -29,8 +29,8 @@ _Appears in:_
 | --- | --- |
 | `type` _[ConditionType](#conditiontype)_ | Status of cluster condition. |
 | `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |
-| `lastUpdateTime` _string_ | The last time this condition was updated. |
-| `lastTransitionTime` _string_ | Last time the condition transitioned from one status to another. |
+| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | The last time this condition was updated. |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |
 | `reason` _string_ | The reason for the condition's last transition. |
 | `message` _string_ | A human readable message indicating details about the transition. |
 
