@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
@@ -13,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,7 +36,14 @@ func (a addEmqxStatefulSet) reconcile(ctx context.Context, r *EmqxReconciler, in
 		return subResult{}
 	}
 
-	if enterprise.Status.EmqxBlueGreenUpdateStatus != nil {
+	if enterprise.Status.EmqxBlueGreenUpdateStatus != nil &&
+		enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt != nil {
+		s := enterprise.Spec.EmqxBlueGreenUpdate.InitialDelaySeconds - int32(time.Since(enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt.Time).Seconds())
+		if s > 0 {
+			r.EventRecorder.Event(instance, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Delay %d seconds", s))
+			return subResult{result: &ctrl.Result{RequeueAfter: time.Duration(s) * time.Second}}
+		}
+
 		if err := a.syncStatefulSet(r, enterprise); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to sync statefulset")}
 		}
@@ -132,7 +141,7 @@ func (a addEmqxStatefulSet) syncStatefulSet(r *EmqxReconciler, enterprise *appsv
 		}
 		stsCopy.Spec.Replicas = &scaleDown
 
-		r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "ScaleDown", fmt.Sprintf("scale down StatefulSet %s to %d", originSts.Name, scaleDown))
+		r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "ScaleDown", fmt.Sprintf("Scale down StatefulSet %s to %d", originSts.Name, scaleDown))
 		if err := r.Client.Update(context.TODO(), stsCopy); err != nil {
 			return err
 		}
@@ -147,8 +156,9 @@ func (a addEmqxStatefulSet) syncStatefulSet(r *EmqxReconciler, enterprise *appsv
 		sort.Sort(PodsByNameNewer(pods))
 		emqxNodeName := getEmqxNodeName(enterprise, pods[0])
 
-		r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("evacuate node %s start", emqxNodeName))
+		r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuate node %s start", emqxNodeName))
 		if err := r.evacuateNodeByAPI(enterprise, podMap[currentSts.UID], emqxNodeName); err != nil {
+			r.EventRecorder.Event(enterprise, corev1.EventTypeWarning, "Evacuate", fmt.Sprintf("Evacuate node %s failed: %s", emqxNodeName, err.Error()))
 			return emperror.Wrap(err, "evacuate node failed")
 		}
 	}
@@ -165,7 +175,7 @@ func (a addEmqxStatefulSet) canBeScaledDown(r *EmqxReconciler, enterprise *appsv
 				// Get latest pod for sts
 				sort.Sort(PodsByNameNewer(pods))
 				if pods[0].Name == podName {
-					r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("evacuate node %s successfully", getEmqxNodeName(enterprise, pods[0])))
+					r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuate node %s successfully", getEmqxNodeName(enterprise, pods[0])))
 					return true
 				}
 			}

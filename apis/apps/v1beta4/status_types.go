@@ -82,7 +82,7 @@ type EmqxEvacuationStatus struct {
 type EmqxBlueGreenUpdateStatus struct {
 	OriginStatefulSet  string                 `json:"originStatefulSet,omitempty"`
 	CurrentStatefulSet string                 `json:"currentStatefulSet,omitempty"`
-	StartedAt          metav1.Time            `json:"startedAt,omitempty"`
+	StartedAt          *metav1.Time           `json:"startedAt,omitempty"`
 	EvacuationsStatus  []EmqxEvacuationStatus `json:"evacuationsStatus,omitempty"`
 }
 

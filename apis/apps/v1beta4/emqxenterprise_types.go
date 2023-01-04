@@ -39,7 +39,9 @@ type EmqxLicense struct {
 }
 
 type EmqxBlueGreenUpdate struct {
-	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
+	// Number of seconds before evacuation connection start.
+	InitialDelaySeconds int32              `json:"initialDelaySeconds,omitempty"`
+	EvacuationStrategy  EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 }
 
 type EvacuationStrategy struct {
