@@ -18,7 +18,6 @@ package v1beta4
 
 import (
 	"context"
-	"time"
 
 	emperror "emperror.dev/errors"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
@@ -127,20 +126,22 @@ func (s *initStatus) nextStatus(instance appsv1beta4.Emqx) *requeue {
 		resource = append(resource, bootstrap_user)
 		resource = append(resource, plugins...)
 
+		conditionStatus := corev1.ConditionTrue
 		for _, r := range resource {
 			u := &unstructured.Unstructured{}
 			u.SetGroupVersionKind(r.GetObjectKind().GroupVersionKind())
 			if err := s.emqxStatusMachine.EmqxReconciler.Client.Get(s.emqxStatusMachine.ctx, client.ObjectKeyFromObject(r), u); err != nil {
-				requeue := &requeue{err: err}
 				if k8sErrors.IsNotFound(err) {
-					requeue.result.RequeueAfter = time.Second
+					conditionStatus = corev1.ConditionFalse
+					break
 				}
+				return &requeue{err: err}
 			}
 		}
 
 		instance.GetStatus().AddCondition(
 			appsv1beta4.ConditionInitResourceReady,
-			corev1.ConditionTrue,
+			conditionStatus,
 			"",
 			"",
 		)
