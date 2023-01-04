@@ -35,17 +35,20 @@ import (
 )
 
 func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, path string, body []byte) (*http.Response, []byte, error) {
-	inCluster := true
+	list, err := getInClusterStatefulSets(r.Client, instance)
 	if path == "api/v4/nodes" && instance.GetStatus().GetEmqxNodes() == nil {
-		inCluster = false
+		list, err = getAllStatefulSet(r.Client, instance)
 	}
-	latestReadySts, err := r.getLatestReadyStatefulSet(instance, inCluster)
 	if err != nil {
 		return nil, nil, err
 	}
-	podMap, err := r.getPodMap(instance, []*appsv1.StatefulSet{latestReadySts})
+	latestReadySts := list[len(list)-1]
+	podMap, err := getPodMap(r.Client, instance, []*appsv1.StatefulSet{latestReadySts})
 	if err != nil {
 		return nil, nil, err
+	}
+	if len(podMap[latestReadySts.UID]) == 0 {
+		return nil, nil, emperror.New("no pod found")
 	}
 	pod := podMap[latestReadySts.UID][0]
 
