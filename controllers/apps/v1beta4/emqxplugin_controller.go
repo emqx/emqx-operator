@@ -31,7 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
 	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
@@ -54,6 +56,14 @@ type pluginListByAPIReturn struct {
 // EmqxPluginReconciler reconciles a EmqxPlugin object
 type EmqxPluginReconciler struct {
 	*handler.Handler
+	*apiClient.APIClient
+}
+
+func NewEmqxPluginReconciler(mgr manager.Manager) *EmqxPluginReconciler {
+	return &EmqxPluginReconciler{
+		Handler:   handler.NewHandler(mgr),
+		APIClient: apiClient.NewAPIClient(mgr),
+	}
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxplugins,verbs=get;list;watch;create;update;patch;delete
@@ -189,11 +199,11 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta4.Emqx, pluginNa
 }
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta4.Emqx, nodeName, pluginName, reloadOrUnload string) error {
-	return newRequestAPI(r.Client, r.Clientset, r.Config, emqx).loadPluginByAPI(emqx, nodeName, pluginName, reloadOrUnload)
+	return newRequestAPI(r.Client, r.APIClient, emqx).loadPluginByAPI(emqx, nodeName, pluginName, reloadOrUnload)
 }
 
 func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta4.Emqx) ([]pluginListByAPIReturn, error) {
-	return newRequestAPI(r.Client, r.Clientset, r.Config, emqx).getPluginsByAPI(emqx)
+	return newRequestAPI(r.Client, r.APIClient, emqx).getPluginsByAPI(emqx)
 }
 
 func (r *EmqxPluginReconciler) checkPluginConfig(plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) (bool, error) {

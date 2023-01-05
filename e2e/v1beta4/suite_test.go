@@ -33,7 +33,6 @@ import (
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
-	"github.com/emqx/emqx-operator/pkg/handler"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -102,9 +101,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&appscontrollersv1beta4.EmqxPluginReconciler{
-		Handler: handler.NewHandler(k8sManager),
-	}).SetupWithManager(k8sManager)
+	err = appscontrollersv1beta4.NewEmqxPluginReconciler(k8sManager).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 	go func() {
 		defer GinkgoRecover()

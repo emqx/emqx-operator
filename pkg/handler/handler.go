@@ -2,8 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"strings"
 
 	json "github.com/json-iterator/go"
@@ -11,16 +9,12 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
-	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
 
-	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -37,10 +31,8 @@ type Patcher struct {
 }
 
 type Handler struct {
-	Patcher   *Patcher
-	Client    client.Client
-	Clientset *kubernetes.Clientset
-	Config    *rest.Config
+	Patcher *Patcher
+	Client  client.Client
 }
 
 func newPatcher() *Patcher {
@@ -56,52 +48,9 @@ func newPatcher() *Patcher {
 
 func NewHandler(mgr manager.Manager) *Handler {
 	return &Handler{
-		Patcher:   newPatcher(),
-		Client:    mgr.GetClient(),
-		Clientset: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-		Config:    mgr.GetConfig(),
+		Patcher: newPatcher(),
+		Client:  mgr.GetClient(),
 	}
-}
-
-func (handler *Handler) RequestAPI(obj client.Object, containerName string, method, username, password, apiPort, path string, body []byte) (*http.Response, []byte, error) {
-	podList := &corev1.PodList{}
-	if err := handler.Client.List(
-		context.TODO(),
-		podList,
-		client.InNamespace(obj.GetNamespace()),
-		client.MatchingLabels(obj.GetLabels()),
-	); err != nil {
-		return nil, nil, err
-	}
-
-	if len(podList.Items) == 0 {
-		return nil, nil, innerErr.ErrPodNotReady
-	}
-
-	podName := findReadyEmqxPod(podList, containerName)
-	if podName == "" {
-		return nil, nil, innerErr.ErrPodNotReady
-	}
-
-	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
-
-	apiClient := apiClient.APIClient{
-		Username: username,
-		Password: password,
-		PortForwardOptions: apiClient.PortForwardOptions{
-			Namespace: obj.GetNamespace(),
-			PodName:   podName,
-			PodPorts: []string{
-				fmt.Sprintf(":%s", apiPort),
-			},
-			Clientset:    handler.Clientset,
-			Config:       handler.Config,
-			ReadyChannel: readyChan,
-			StopChannel:  stopChan,
-		},
-	}
-
-	return apiClient.Do(method, path, body)
 }
 
 func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runtime.Scheme, resources []client.Object) error {
@@ -260,15 +209,4 @@ func selectManagerContainer(obj []byte) ([]byte, error) {
 	podTemplate.Spec.Containers = containers
 	objMap["spec"].(map[string]interface{})["template"] = podTemplate
 	return json.ConfigCompatibleWithStandardLibrary.Marshal(objMap)
-}
-
-func findReadyEmqxPod(pods *corev1.PodList, containerName string) string {
-	for _, pod := range pods.Items {
-		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == containerName && status.Ready {
-				return pod.Name
-			}
-		}
-	}
-	return ""
 }
