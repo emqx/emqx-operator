@@ -41,7 +41,9 @@ func TestBrokerDefault(t *testing.T) {
 			Template: EmqxTemplate{
 				Spec: EmqxTemplateSpec{
 					EmqxContainer: EmqxContainer{
-						Name: "emqx",
+						Image: EmqxImage{
+							Version: "4.4.8",
+						},
 					},
 				},
 			},
