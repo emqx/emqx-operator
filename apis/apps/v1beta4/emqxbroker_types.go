@@ -80,14 +80,6 @@ type EmqxBrokerStatus struct {
 	CurrentStatefulSetVersion string `json:"currentStatefulSetVersion,omitempty"`
 }
 
-func (s *EmqxBrokerStatus) IsInitResourceReady() bool {
-	index := indexCondition(s.Conditions, ConditionInitResourceReady)
-	if index == -1 {
-		return false
-	}
-	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
 func (s *EmqxBrokerStatus) GetReplicas() int32 {
 	return s.Replicas
 }

@@ -30,14 +30,12 @@ type Condition struct {
 type ConditionType string
 
 const (
-	ConditionInitResourceReady ConditionType = "InitResourceReady"
 	ConditionRunning           ConditionType = "Running"
 	ConditionBlueGreenUpdating ConditionType = "BlueGreenUpdating"
 )
 
 // +kubebuilder:object:generate=false
 type EmqxStatus interface {
-	IsInitResourceReady() bool
 	GetReplicas() int32
 	SetReplicas(replicas int32)
 	GetReadyReplicas() int32
@@ -89,14 +87,17 @@ type EmqxBlueGreenUpdateStatus struct {
 func addCondition(conditions []Condition, c Condition) []Condition {
 	now := metav1.Now()
 	c.LastUpdateTime = now
-	pos := indexCondition(conditions, c.Type)
-	// condition exist
-	if pos >= 0 {
-		c.LastTransitionTime = conditions[pos].LastTransitionTime
-		conditions[pos] = c
-	} else { // condition not exist
-		c.LastTransitionTime = now
+	c.LastTransitionTime = now
+	index := indexCondition(conditions, c.Type)
+	if index == -1 {
 		conditions = append(conditions, c)
+	}
+	if index == 0 {
+		c.LastTransitionTime = conditions[0].LastTransitionTime
+		conditions[0] = c
+	}
+	if index > 0 {
+		conditions[index] = c
 	}
 
 	sort.Slice(conditions, func(i, j int) bool {
