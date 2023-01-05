@@ -18,23 +18,18 @@ package v1beta4
 
 import (
 	"context"
-	"io"
 	"reflect"
 	"time"
 
-	emperror "emperror.dev/errors"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 
+	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	innerErr "github.com/emqx/emqx-operator/pkg/errors"
+	"github.com/emqx/emqx-operator/pkg/handler"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	"github.com/emqx/emqx-operator/pkg/handler"
 )
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
@@ -44,8 +39,8 @@ type EmqxReconciler struct {
 	Scheme *runtime.Scheme
 	record.EventRecorder
 
-	config    *rest.Config
-	clientset *kubernetes.Clientset
+	// config    *rest.Config
+	// clientset *kubernetes.Clientset
 }
 
 // subResult provides a wrapper around different results from a subreconciler.
@@ -56,7 +51,7 @@ type subResult struct {
 }
 
 type emqxSubReconciler interface {
-	reconcile(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx, args ...any) subResult
+	reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult
 }
 
 func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
@@ -64,25 +59,27 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 		Handler:       handler.NewHandler(mgr),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
-		config:        mgr.GetConfig(),
-		clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		// config:        mgr.GetConfig(),
+		// clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
 	}
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
+	requestAPI := newRequestAPI(r.Client, r.Clientset, r.Config, instance)
+
 	var subResult subResult
 	var subReconcilers = []emqxSubReconciler{
-		updateEmqxStatus{},
-		addEmqxInitResources{},
-		addEmqxResources{},
-		addEmqxStatefulSet{},
-		updateEmqxStatus{},
+		updateEmqxStatus{EmqxReconciler: r, requestAPI: requestAPI},
+		addEmqxInitResources{EmqxReconciler: r},
+		addEmqxResources{EmqxReconciler: r, requestAPI: requestAPI},
+		addEmqxStatefulSet{EmqxReconciler: r, requestAPI: requestAPI},
+		updateEmqxStatus{EmqxReconciler: r, requestAPI: requestAPI},
 	}
 	for i := range subReconcilers {
 		if reflect.ValueOf(subResult).FieldByName("args").IsValid() {
-			subResult = subReconcilers[i].reconcile(ctx, r, instance, subResult.args)
+			subResult = subReconcilers[i].reconcile(ctx, instance, subResult.args)
 		} else {
-			subResult = subReconcilers[i].reconcile(ctx, r, instance)
+			subResult = subReconcilers[i].reconcile(ctx, instance)
 		}
 		subResult, err, _ := processResult(subResult)
 		if err != nil || !subResult.IsZero() {
@@ -98,15 +95,7 @@ func processResult(subResult subResult) (ctrl.Result, error, any) {
 		return *subResult.result, subResult.err, subResult.args
 	}
 	// Common Errors
-	err := emperror.Cause(subResult.err)
-
-	if io.EOF == err {
-		return ctrl.Result{RequeueAfter: time.Second}, nil, subResult.args
-	}
-	if k8sErrors.IsNotFound(err) {
-		return ctrl.Result{RequeueAfter: time.Second}, nil, subResult.args
-	}
-	if k8sErrors.IsConflict(err) {
+	if innerErr.IsCommonError(subResult.err) {
 		return ctrl.Result{RequeueAfter: time.Second}, nil, subResult.args
 	}
 	return ctrl.Result{}, subResult.err, subResult.args
