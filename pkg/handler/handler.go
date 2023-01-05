@@ -13,6 +13,7 @@ import (
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
 
+	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,8 +39,8 @@ type Patcher struct {
 type Handler struct {
 	Patcher   *Patcher
 	Client    client.Client
-	clientset *kubernetes.Clientset
-	config    *rest.Config
+	Clientset *kubernetes.Clientset
+	Config    *rest.Config
 }
 
 func newPatcher() *Patcher {
@@ -57,8 +58,8 @@ func NewHandler(mgr manager.Manager) *Handler {
 	return &Handler{
 		Patcher:   newPatcher(),
 		Client:    mgr.GetClient(),
-		clientset: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-		config:    mgr.GetConfig(),
+		Clientset: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		Config:    mgr.GetConfig(),
 	}
 }
 
@@ -74,12 +75,12 @@ func (handler *Handler) RequestAPI(obj client.Object, containerName string, meth
 	}
 
 	if len(podList.Items) == 0 {
-		return nil, nil, emperror.Errorf("not found pods")
+		return nil, nil, innerErr.ErrPodNotReady
 	}
 
 	podName := findReadyEmqxPod(podList, containerName)
 	if podName == "" {
-		return nil, nil, emperror.Errorf("pods not ready")
+		return nil, nil, innerErr.ErrPodNotReady
 	}
 
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
@@ -93,8 +94,8 @@ func (handler *Handler) RequestAPI(obj client.Object, containerName string, meth
 			PodPorts: []string{
 				fmt.Sprintf(":%s", apiPort),
 			},
-			Clientset:    handler.clientset,
-			Config:       handler.config,
+			Clientset:    handler.Clientset,
+			Config:       handler.Config,
 			ReadyChannel: readyChan,
 			StopChannel:  stopChan,
 		},
@@ -270,8 +271,4 @@ func findReadyEmqxPod(pods *corev1.PodList, containerName string) string {
 		}
 	}
 	return ""
-}
-
-func (handler *Handler) GetBootstrapUser(instance client.Object) (username, password string, err error) {
-	return "admin", "public", nil
 }

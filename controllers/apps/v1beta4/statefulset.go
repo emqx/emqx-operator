@@ -20,8 +20,8 @@ import (
 	"context"
 	"sort"
 
-	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,7 +96,7 @@ func getAllStatefulSet(k8sClient client.Client, instance appsv1beta4.Emqx) ([]*a
 	}
 
 	if len(allSts) == 0 {
-		return nil, emperror.Errorf("not found statefulSet for instance: %s", instance.GetName())
+		return nil, innerErr.ErrStsNotReady
 	}
 	sort.Sort(StatefulSetsBySizeNewer(allSts))
 	return allSts, nil
@@ -132,7 +132,7 @@ func getInClusterStatefulSets(k8sClient client.Client, instance appsv1beta4.Emqx
 		}
 	}
 	if len(inCluster) == 0 {
-		return nil, emperror.Errorf("not found in cluster statefulSets for instance: %s", instance.GetName())
+		return nil, innerErr.ErrStsNotReady
 	}
 	return inCluster, nil
 }

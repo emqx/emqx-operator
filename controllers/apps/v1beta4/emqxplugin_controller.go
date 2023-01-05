@@ -19,11 +19,9 @@ package v1beta4
 import (
 	"context"
 	"fmt"
-	"io"
 	"sort"
 	"time"
 
-	emperror "emperror.dev/errors"
 	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -33,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/emqx/emqx-operator/pkg/handler"
@@ -91,7 +91,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
 				if err := r.unloadPluginByAPI(emqx, instance.Spec.PluginName); err != nil {
-					if emperror.Cause(err) == io.EOF {
+					if innerErr.IsCommonError(err) {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
 					}
 					return ctrl.Result{}, err
@@ -133,7 +133,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		if err := r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName); err != nil {
-			if emperror.Cause(err) == io.EOF {
+			if innerErr.IsCommonError(err) {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
 			return ctrl.Result{}, err
@@ -189,40 +189,11 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta4.Emqx, pluginNa
 }
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta4.Emqx, nodeName, pluginName, reloadOrUnload string) error {
-	username, password, err := r.Handler.GetBootstrapUser(emqx)
-	if err != nil {
-		return err
-	}
-	resp, _, err := r.Handler.RequestAPI(emqx, emqx.GetSpec().GetTemplate().Spec.EmqxContainer.Name, "PUT", username, password, "8081", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		return emperror.Errorf("request api failed: %s", resp.Status)
-	}
-	return nil
+	return newRequestAPI(r.Client, r.Clientset, r.Config, emqx).loadPluginByAPI(emqx, nodeName, pluginName, reloadOrUnload)
 }
 
 func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta4.Emqx) ([]pluginListByAPIReturn, error) {
-	var data []pluginListByAPIReturn
-	username, password, err := r.Handler.GetBootstrapUser(emqx)
-	if err != nil {
-		return nil, err
-	}
-	resp, body, err := r.Handler.RequestAPI(emqx, emqx.GetSpec().GetTemplate().Spec.EmqxContainer.Name, "GET", username, password, "8081", "api/v4/plugins", nil)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, emperror.Errorf("request api failed: %s", resp.Status)
-	}
-
-	err = json.Unmarshal([]byte(gjson.GetBytes(body, "data").String()), &data)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	return newRequestAPI(r.Client, r.Clientset, r.Config, emqx).getPluginsByAPI(emqx)
 }
 
 func (r *EmqxPluginReconciler) checkPluginConfig(plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) (bool, error) {
