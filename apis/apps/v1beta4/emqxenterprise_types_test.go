@@ -7,39 +7,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func TestEnterpriseIsInitResourceReady(t *testing.T) {
-	status := &EmqxEnterpriseStatus{
-		Conditions: []Condition{
-			{
-				Type:   ConditionInitResourceReady,
-				Status: v1.ConditionTrue,
-			},
-			{
-				Type:   ConditionRunning,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-
-	got := status.IsInitResourceReady()
-	assert.False(t, got)
-
-	status = &EmqxEnterpriseStatus{}
-	got = status.IsInitResourceReady()
-	assert.False(t, got)
-
-	status = &EmqxEnterpriseStatus{
-		Conditions: []Condition{
-			{
-				Type:   ConditionInitResourceReady,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-	got = status.IsInitResourceReady()
-	assert.True(t, got)
-}
-
 func TestEnterpriseAddCondition(t *testing.T) {
 	status := &EmqxBrokerStatus{}
 

@@ -20,7 +20,7 @@ type updateEmqxStatus struct {
 }
 
 func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
-	if !instance.GetStatus().IsInitResourceReady() {
+	if instance.GetStatus().GetConditions() == nil {
 		if err := s.addInitResourceReady(ctx, instance); err != nil {
 			return subResult{err: err}
 		}
