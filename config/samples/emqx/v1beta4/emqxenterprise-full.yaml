@@ -34,7 +34,6 @@ spec:
       # affinity:
       # tolerations:
       emqxContainer:
-        name: "emqx"
         image:
           repository: emqx/emqx-ee
           version: 4.4.12

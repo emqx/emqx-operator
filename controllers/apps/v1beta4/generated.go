@@ -371,7 +371,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	}
 
 	emqxContainer := corev1.Container{
-		Name:            emqxTemplate.Spec.EmqxContainer.Name,
+		Name:            EmqxContainerName,
 		Image:           appsv1beta4.GetEmqxImage(instance),
 		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
 		Command:         emqxTemplate.Spec.EmqxContainer.Command,

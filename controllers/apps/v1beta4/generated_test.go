@@ -257,7 +257,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Name: "fake",
 		},
 	}
-	emqx.Spec.Template.Spec.EmqxContainer.Name = "emqx"
 	emqx.Spec.Template.Spec.EmqxContainer.Image.Repository = "emqx/emqx-ee"
 	emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
 	emqx.Spec.Template.Spec.EmqxContainer.Image.PullPolicy = corev1.PullAlways
