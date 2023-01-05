@@ -50,7 +50,6 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
-					Name: "emqx",
 					Image: appsv1beta4.EmqxImage{
 						Repository: "emqx/emqx",
 						Version:    "4.4.9",
@@ -77,7 +76,6 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
-					Name: "emqx",
 					Image: appsv1beta4.EmqxImage{
 						Repository: "emqx/emqx-ee",
 						Version:    "4.4.9",

@@ -33,6 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const EmqxContainerName string = "emqx"
+
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 type EmqxReconciler struct {
