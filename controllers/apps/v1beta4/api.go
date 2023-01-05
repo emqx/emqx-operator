@@ -76,32 +76,13 @@ func (r *requestAPI) requestAPI(instance appsv1beta4.Emqx, method, path string, 
 
 	for _, pod := range podMap[sts.UID] {
 		for _, container := range pod.Status.ContainerStatuses {
-			if container.Name == instance.GetSpec().GetTemplate().Spec.EmqxContainer.Name {
+			if container.Name == EmqxContainerName {
 				if container.Ready {
 					return r.APIClient.RequestAPI(pod, r.Username, r.Password, r.Port, method, path, body)
 				}
 			}
 		}
 	}
-
-	// labels := instance.GetLabels()
-	// if path != "api/v4/nodes" && instance.GetStatus().GetCurrentStatefulSetVersion() != "" {
-	// 	labels["controller-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
-	// }
-	// list := &corev1.PodList{}
-	// if err := r.Client.List(context.Background(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(labels)); err != nil {
-	// 	return nil, nil, err
-	// }
-
-	// for _, pod := range list.Items {
-	// 	for _, container := range pod.Status.ContainerStatuses {
-	// 		if container.Name == instance.GetSpec().GetTemplate().Spec.EmqxContainer.Name {
-	// 			if container.Ready {
-	// 				return r.APIClient.RequestAPI(&pod, r.Username, r.Password, r.Port, method, path, body)
-	// 			}
-	// 		}
-	// 	}
-	// }
 	return nil, nil, innerErr.ErrPodNotReady
 }
 

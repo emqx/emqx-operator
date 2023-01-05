@@ -3936,9 +3936,6 @@ spec:
                                 format: int32
                                 type: integer
                             type: object
-                          name:
-                            default: emqx
-                            type: string
                           ports:
                             items:
                               properties:

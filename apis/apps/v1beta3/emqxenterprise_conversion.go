@@ -50,7 +50,6 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	// Template
 	dst.Spec.Template.ObjectMeta.Labels = src.Labels
 	dst.Spec.Template.ObjectMeta.Annotations = src.Annotations
-	dst.Spec.Template.Spec.EmqxContainer.Name = "emqx"
 
 	compile := regexp.MustCompile(`(latest|[0-9]+(\.[0-9]+)?(\.[0-9]+)?(-(alpha|beta|rc)\.[0-9]+)?)`)
 	image := strings.Split(src.Spec.EmqxTemplate.Image, ":")
