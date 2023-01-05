@@ -34,7 +34,6 @@ import (
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	appscontrollersv2alpha1 "github.com/emqx/emqx-operator/controllers/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/pkg/handler"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -98,12 +97,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	handler := handler.NewHandler(k8sManager)
-	err = (&appscontrollersv2alpha1.EMQXReconciler{
-		Scheme:        k8sManager.GetScheme(),
-		Handler:       handler,
-		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
-	}).SetupWithManager(k8sManager)
+	err = appscontrollersv2alpha1.NewEMQXReconciler(k8sManager).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {

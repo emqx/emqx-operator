@@ -18,10 +18,14 @@ package apiclient
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
+	"net/url"
 
 	emperror "emperror.dev/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -29,14 +33,28 @@ import (
 
 type PortForwardOptions struct {
 	*kubernetes.Clientset
+	Config       *restclient.Config
 	Namespace    string
 	PodName      string
 	PodPorts     []string
-	Config       *restclient.Config
 	StopChannel  chan struct{}
 	ReadyChannel chan struct{}
 
 	*portforward.PortForwarder
+}
+
+func NewPortForwardOptions(clientset *kubernetes.Clientset, config *rest.Config, pod *corev1.Pod, port string) *PortForwardOptions {
+	return &PortForwardOptions{
+		Clientset: clientset,
+		Config:    config,
+		Namespace: pod.Namespace,
+		PodName:   pod.Name,
+		PodPorts: []string{
+			fmt.Sprintf(":%s", port),
+		},
+		ReadyChannel: make(chan struct{}),
+		StopChannel:  make(chan struct{}),
+	}
 }
 
 func (o *PortForwardOptions) New() error {
@@ -64,4 +82,42 @@ func (o *PortForwardOptions) New() error {
 	}
 	o.PortForwarder = fw
 	return nil
+}
+
+type DoHttpRequest func(username, password, method string, url url.URL, body []byte) (*http.Response, []byte, error)
+
+func (o *PortForwardOptions) Do(username, password, method, path string, body []byte, f DoHttpRequest) (*http.Response, []byte, error) {
+	err := o.New()
+	if err != nil {
+		return nil, nil, emperror.Wrap(err, "failed to create port forward")
+	}
+
+	defer close(o.StopChannel)
+
+	errChan := make(chan error)
+	go func() {
+		if err := o.ForwardPorts(); err != nil {
+			errChan <- err
+		}
+	}()
+
+	select {
+	case err := <-errChan:
+		return nil, nil, err
+	case <-o.ReadyChannel:
+		ports, err := o.GetPorts()
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(ports) == 0 {
+			return nil, nil, emperror.Errorf("not found listener port")
+		}
+
+		url := url.URL{
+			Scheme: "http",
+			Host:   fmt.Sprintf("localhost:%d", ports[0].Local),
+			Path:   path,
+		}
+		return f(username, password, method, url, body)
+	}
 }

@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	"github.com/emqx/emqx-operator/pkg/apiclient"
 	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 	"github.com/emqx/emqx-operator/pkg/handler"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,11 +37,9 @@ var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 type EmqxReconciler struct {
 	*handler.Handler
-	Scheme *runtime.Scheme
-	record.EventRecorder
-
-	// config    *rest.Config
-	// clientset *kubernetes.Clientset
+	APIClient     *apiclient.APIClient
+	Scheme        *runtime.Scheme
+	EventRecorder record.EventRecorder
 }
 
 // subResult provides a wrapper around different results from a subreconciler.
@@ -57,15 +56,14 @@ type emqxSubReconciler interface {
 func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 	return &EmqxReconciler{
 		Handler:       handler.NewHandler(mgr),
+		APIClient:     apiclient.NewAPIClient(mgr),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
-		// config:        mgr.GetConfig(),
-		// clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
 	}
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
-	requestAPI := newRequestAPI(r.Client, r.Clientset, r.Config, instance)
+	requestAPI := newRequestAPI(r.Client, r.APIClient, instance)
 
 	var subResult subResult
 	var subReconcilers = []emqxSubReconciler{
