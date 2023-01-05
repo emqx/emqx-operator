@@ -60,7 +60,7 @@ func generateNodeCookieSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 
 func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 	username := "emqx_operator_controller"
-	password, _ := password.Generate(64, 10, 0, true, true)
+	password, _ := password.Generate(32, 10, 0, true, true)
 
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{

@@ -81,7 +81,8 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 	assert.True(t, ok)
 
 	index := strings.Index(user, ":")
-	assert.Equal(t, "emqx_operator_controller", user[:index], user[index+1:])
+	assert.Equal(t, "emqx_operator_controller", user[:index])
+	assert.Equal(t, 32, len(user[index+1:]))
 }
 
 func TestGenerateBootstrapConfigMap(t *testing.T) {

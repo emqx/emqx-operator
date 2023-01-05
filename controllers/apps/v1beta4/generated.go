@@ -646,7 +646,7 @@ func mergeEnvAndConfig(instance appsv1beta4.Emqx, extraEnvs ...corev1.EnvVar) []
 func generateBootstrapUserSecret(instance appsv1beta4.Emqx) *corev1.Secret {
 	names := appsv1beta4.Names{Object: instance}
 	username := "emqx_operator_controller"
-	password, _ := password.Generate(64, 10, 0, true, true)
+	password, _ := password.Generate(32, 10, 0, true, true)
 
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
