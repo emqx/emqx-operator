@@ -70,7 +70,8 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	var subResult subResult
 	var subReconcilers = []emqxSubReconciler{
 		updateEmqxStatus{EmqxReconciler: r, requestAPI: requestAPI},
-		addEmqxInitResources{EmqxReconciler: r},
+		addEmqxBootstrapUser{EmqxReconciler: r},
+		addEmqxPlugins{EmqxReconciler: r},
 		addEmqxResources{EmqxReconciler: r, requestAPI: requestAPI},
 		addEmqxStatefulSet{EmqxReconciler: r, requestAPI: requestAPI},
 		updateEmqxStatus{EmqxReconciler: r, requestAPI: requestAPI},

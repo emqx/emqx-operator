@@ -8,9 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -20,23 +18,8 @@ type updateEmqxStatus struct {
 }
 
 func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
-	if !instance.GetStatus().IsInitResourceReady() {
-		if err := s.addInitResourceReady(ctx, instance); err != nil {
-			return subResult{err: err}
-		}
-		if err := s.Client.Status().Update(ctx, instance); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update emqx status")}
-		}
-		return subResult{}
-	}
-
-	if err := s.addReadyReplicas(instance); err != nil {
-		return subResult{err: err}
-	}
-
-	if err := s.addRunningOrUpdating(instance); err != nil {
-		return subResult{err: err}
-	}
+	_ = s.updateReadyReplicas(instance)
+	_ = s.updateCondition(instance)
 
 	if err := s.Client.Status().Update(ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update emqx status")}
@@ -45,7 +28,7 @@ func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Em
 	return subResult{}
 }
 
-func (s updateEmqxStatus) addReadyReplicas(instance appsv1beta4.Emqx) error {
+func (s updateEmqxStatus) updateReadyReplicas(instance appsv1beta4.Emqx) error {
 	emqxNodes, err := s.getNodeStatusesByAPI(instance)
 	if err != nil {
 		s.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
@@ -64,36 +47,7 @@ func (s updateEmqxStatus) addReadyReplicas(instance appsv1beta4.Emqx) error {
 	return nil
 }
 
-func (s updateEmqxStatus) addInitResourceReady(ctx context.Context, instance appsv1beta4.Emqx) error {
-	addEmqxInitResources := addEmqxInitResources{EmqxReconciler: s.EmqxReconciler}
-	resources, err := addEmqxInitResources.getInitResources(ctx, instance)
-	if err != nil {
-		return emperror.Wrap(err, "failed to get init resources")
-	}
-
-	conditionStatus := corev1.ConditionTrue
-	for _, resource := range resources {
-		u := &unstructured.Unstructured{}
-		u.SetGroupVersionKind(resource.GetObjectKind().GroupVersionKind())
-		if err := s.Client.Get(ctx, client.ObjectKeyFromObject(resource), u); err != nil {
-			if k8sErrors.IsNotFound(err) {
-				conditionStatus = corev1.ConditionFalse
-				break
-			}
-			return err
-		}
-	}
-
-	instance.GetStatus().AddCondition(
-		appsv1beta4.ConditionInitResourceReady,
-		conditionStatus,
-		"",
-		"",
-	)
-	return nil
-}
-
-func (s updateEmqxStatus) addRunningOrUpdating(instance appsv1beta4.Emqx) error {
+func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
 	inClusterStss, err := getInClusterStatefulSets(s.Client, instance)
 	if err != nil {
 		return emperror.Wrap(err, "failed to get in cluster statefulsets")

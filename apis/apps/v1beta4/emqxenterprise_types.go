@@ -118,14 +118,6 @@ type EmqxEnterpriseStatus struct {
 	EmqxBlueGreenUpdateStatus *EmqxBlueGreenUpdateStatus `json:"blueGreenUpdateStatus,omitempty"`
 }
 
-func (s *EmqxEnterpriseStatus) IsInitResourceReady() bool {
-	index := indexCondition(s.Conditions, ConditionInitResourceReady)
-	if index == -1 {
-		return false
-	}
-	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
 func (s *EmqxEnterpriseStatus) GetReplicas() int32 {
 	return s.Replicas
 }
