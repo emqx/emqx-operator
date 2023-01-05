@@ -91,7 +91,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
 				if err := r.unloadPluginByAPI(emqx, instance.Spec.PluginName); err != nil {
-					if io.EOF == emperror.Unwrap(err) {
+					if emperror.Cause(err) == io.EOF {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
 					}
 					return ctrl.Result{}, err
@@ -133,7 +133,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		if err := r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName); err != nil {
-			if err == io.EOF {
+			if emperror.Cause(err) == io.EOF {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
 			return ctrl.Result{}, err

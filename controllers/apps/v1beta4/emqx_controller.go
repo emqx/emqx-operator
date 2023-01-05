@@ -98,7 +98,8 @@ func processResult(subResult subResult) (ctrl.Result, error, any) {
 		return *subResult.result, subResult.err, subResult.args
 	}
 	// Common Errors
-	err := emperror.Unwrap(subResult.err)
+	err := emperror.Cause(subResult.err)
+
 	if io.EOF == err {
 		return ctrl.Result{RequeueAfter: time.Second}, nil, subResult.args
 	}
