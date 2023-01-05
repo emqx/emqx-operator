@@ -25,30 +25,27 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/emqx/emqx-operator/pkg/apiclient"
 	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type requestAPI struct {
-	Username  string
-	Password  string
-	Port      string
-	Client    client.Client
-	Clientset *kubernetes.Clientset
-	Config    *rest.Config
+	Username string
+	Password string
+	Port     string
+	client.Client
+	*apiclient.APIClient
 }
 
-func newRequestAPI(client client.Client, clientset *kubernetes.Clientset, config *rest.Config, instance appsv1beta4.Emqx) *requestAPI {
+func newRequestAPI(client client.Client, apiClient *apiclient.APIClient, instance appsv1beta4.Emqx) *requestAPI {
 	// TODO: get username and password from bootstrap user
 	// TODO: get port from emqx config
 	return &requestAPI{
@@ -56,8 +53,7 @@ func newRequestAPI(client client.Client, clientset *kubernetes.Clientset, config
 		Password:  "public",
 		Port:      "8081",
 		Client:    client,
-		Clientset: clientset,
-		Config:    config,
+		APIClient: apiClient,
 	}
 }
 
@@ -77,35 +73,36 @@ func (r *requestAPI) requestAPI(instance appsv1beta4.Emqx, method, path string, 
 	if len(podMap[sts.UID]) == 0 {
 		return nil, nil, innerErr.ErrPodNotReady
 	}
-	pod := podMap[sts.UID][0]
 
-	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
-	apiClient := apiClient.APIClient{
-		Username: r.Username,
-		Password: r.Password,
-		PortForwardOptions: apiClient.PortForwardOptions{
-			Namespace: pod.Namespace,
-			PodName:   pod.Name,
-			PodPorts: []string{
-				fmt.Sprintf(":%s", r.Port),
-			},
-			Clientset:    r.Clientset,
-			Config:       r.Config,
-			ReadyChannel: readyChan,
-			StopChannel:  stopChan,
-		},
+	for _, pod := range podMap[sts.UID] {
+		for _, container := range pod.Status.ContainerStatuses {
+			if container.Name == instance.GetSpec().GetTemplate().Spec.EmqxContainer.Name {
+				if container.Ready {
+					return r.APIClient.RequestAPI(pod, r.Username, r.Password, r.Port, method, path, body)
+				}
+			}
+		}
 	}
-	resp, body, err := apiClient.Do(method, path, body)
-	if err != nil {
-		return nil, nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, nil, emperror.Errorf("failed to request API: %s, status: %s", path, resp.Status)
-	}
-	if code := gjson.GetBytes(body, "code"); code.Int() != 0 {
-		return nil, nil, emperror.Errorf("failed to request API: %s, code: %d, message: %s", path, code.Int(), gjson.GetBytes(body, "message").String())
-	}
-	return resp, body, nil
+
+	// labels := instance.GetLabels()
+	// if path != "api/v4/nodes" && instance.GetStatus().GetCurrentStatefulSetVersion() != "" {
+	// 	labels["controller-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
+	// }
+	// list := &corev1.PodList{}
+	// if err := r.Client.List(context.Background(), list, client.InNamespace(instance.GetNamespace()), client.MatchingLabels(labels)); err != nil {
+	// 	return nil, nil, err
+	// }
+
+	// for _, pod := range list.Items {
+	// 	for _, container := range pod.Status.ContainerStatuses {
+	// 		if container.Name == instance.GetSpec().GetTemplate().Spec.EmqxContainer.Name {
+	// 			if container.Ready {
+	// 				return r.APIClient.RequestAPI(&pod, r.Username, r.Password, r.Port, method, path, body)
+	// 			}
+	// 		}
+	// 	}
+	// }
+	return nil, nil, innerErr.ErrPodNotReady
 }
 
 // Node
