@@ -357,7 +357,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 		})
 
 		AfterEach(func() {
-			deleteEmqx(emqx)
+			// deleteEmqx(emqx)
 		})
 
 		It("blue green update", func() {
@@ -401,7 +401,13 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 
 			By("update EMQX CR")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), emqx)).Should(Succeed())
-			emqx.Spec.Template.Spec.EmqxContainer.Name = "new-emqx"
+			emqx.Spec.Template.Spec.Volumes = append(emqx.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: "test-blue-green-update",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			})
+
 			Expect(k8sClient.Update(context.Background(), emqx)).Should(Succeed())
 
 			By("wait create new sts")

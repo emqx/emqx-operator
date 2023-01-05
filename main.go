@@ -39,7 +39,6 @@ import (
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
 	appscontrollersv2alpha1 "github.com/emqx/emqx-operator/controllers/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/pkg/handler"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -108,34 +107,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	emqxReconciler := appscontrollersv1beta4.NewEmqxReconciler(mgr)
 	if err = (&appscontrollersv1beta4.EmqxBrokerReconciler{
-		EmqxReconciler: emqxReconciler,
+		EmqxReconciler: appscontrollersv1beta4.NewEmqxReconciler(mgr),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxBroker")
 		os.Exit(1)
 	}
 
 	if err = (&appscontrollersv1beta4.EmqxEnterpriseReconciler{
-		EmqxReconciler: emqxReconciler,
+		EmqxReconciler: appscontrollersv1beta4.NewEmqxReconciler(mgr),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxEnterprise")
 		os.Exit(1)
 	}
 
-	handler := handler.NewHandler(mgr)
-	if err = (&appscontrollersv1beta4.EmqxPluginReconciler{
-		Handler: handler,
-	}).SetupWithManager(mgr); err != nil {
+	if err = appscontrollersv1beta4.NewEmqxPluginReconciler(mgr).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
 		os.Exit(1)
 	}
 
-	if err = (&appscontrollersv2alpha1.EMQXReconciler{
-		Handler:       handler,
-		Scheme:        mgr.GetScheme(),
-		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
-	}).SetupWithManager(mgr); err != nil {
+	if err = appscontrollersv2alpha1.NewEMQXReconciler(mgr).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX")
 		os.Exit(1)
 	}
