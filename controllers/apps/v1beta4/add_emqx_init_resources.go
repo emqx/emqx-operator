@@ -11,23 +11,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type addEmqxInitResources struct{}
+type addEmqxInitResources struct {
+	*EmqxReconciler
+}
 
-func (a addEmqxInitResources) reconcile(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx, _ ...any) subResult {
-	resources, err := a.getInitResources(ctx, r, instance)
+func (a addEmqxInitResources) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
+	resources, err := a.getInitResources(ctx, instance)
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get init resources")}
 	}
 
 	for _, resource := range resources {
-		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(resource), resource); err != nil {
+		if err := a.Client.Get(ctx, client.ObjectKeyFromObject(resource), resource); err != nil {
 			if k8sErrors.IsNotFound(err) {
-				if err := ctrl.SetControllerReference(instance, resource, r.Scheme); err != nil {
-					r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedSetControllerReference", err.Error())
+				if err := ctrl.SetControllerReference(instance, resource, a.Scheme); err != nil {
+					a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedSetControllerReference", err.Error())
 					return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
 				}
-				if err := r.Handler.Create(resource); err != nil {
-					r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreate", err.Error())
+				if err := a.Handler.Create(resource); err != nil {
+					a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreate", err.Error())
 					return subResult{err: emperror.Wrap(err, "failed to create resource")}
 				}
 			}
@@ -38,7 +40,7 @@ func (a addEmqxInitResources) reconcile(ctx context.Context, r *EmqxReconciler, 
 	return subResult{args: resources}
 }
 
-func (a addEmqxInitResources) getInitResources(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx) ([]client.Object, error) {
+func (a addEmqxInitResources) getInitResources(ctx context.Context, instance appsv1beta4.Emqx) ([]client.Object, error) {
 	var resources []client.Object
 
 	bootstrap_user := generateBootstrapUserSecret(instance)
@@ -47,7 +49,7 @@ func (a addEmqxInitResources) getInitResources(ctx context.Context, r *EmqxRecon
 	defaultPluginsConfig := generateDefaultPluginsConfig(instance)
 	resources = append(resources, defaultPluginsConfig)
 
-	plugins, err := a.getInitPluginList(ctx, r, instance)
+	plugins, err := a.getInitPluginList(ctx, instance)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get init plugin list")
 	}
@@ -56,9 +58,9 @@ func (a addEmqxInitResources) getInitResources(ctx context.Context, r *EmqxRecon
 	return resources, nil
 }
 
-func (a addEmqxInitResources) getInitPluginList(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx) ([]client.Object, error) {
+func (a addEmqxInitResources) getInitPluginList(ctx context.Context, instance appsv1beta4.Emqx) ([]client.Object, error) {
 	pluginsList := &appsv1beta4.EmqxPluginList{}
-	err := r.Client.List(ctx, pluginsList, client.InNamespace(instance.GetNamespace()))
+	err := a.Client.List(ctx, pluginsList, client.InNamespace(instance.GetNamespace()))
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}

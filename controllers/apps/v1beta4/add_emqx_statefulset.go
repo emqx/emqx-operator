@@ -18,16 +18,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type addEmqxStatefulSet struct{}
+type addEmqxStatefulSet struct {
+	*EmqxReconciler
+	*requestAPI
+}
 
-func (a addEmqxStatefulSet) reconcile(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx, args ...any) subResult {
+func (a addEmqxStatefulSet) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
 	sts := args[0].(*appsv1.StatefulSet)
-	newSts, err := a.getNewStatefulSet(r, instance, sts)
+	newSts, err := a.getNewStatefulSet(instance, sts)
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get new statefulset")}
 	}
-	if err := r.CreateOrUpdateList(instance, r.Scheme, []client.Object{newSts}); err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
+	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{newSts}); err != nil {
+		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		return subResult{err: emperror.Wrap(err, "failed to create or update statefulset")}
 	}
 
@@ -40,11 +43,11 @@ func (a addEmqxStatefulSet) reconcile(ctx context.Context, r *EmqxReconciler, in
 		enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt != nil {
 		s := enterprise.Spec.EmqxBlueGreenUpdate.InitialDelaySeconds - int32(time.Since(enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt.Time).Seconds())
 		if s > 0 {
-			r.EventRecorder.Event(instance, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Delay %d seconds", s))
+			a.EventRecorder.Event(instance, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Delay %d seconds", s))
 			return subResult{result: &ctrl.Result{RequeueAfter: time.Duration(s) * time.Second}}
 		}
 
-		if err := a.syncStatefulSet(r, enterprise); err != nil {
+		if err := a.syncStatefulSet(enterprise); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to sync statefulset")}
 		}
 	}
@@ -52,7 +55,7 @@ func (a addEmqxStatefulSet) reconcile(ctx context.Context, r *EmqxReconciler, in
 	return subResult{}
 }
 
-func (a addEmqxStatefulSet) getNewStatefulSet(r *EmqxReconciler, instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
+func (a addEmqxStatefulSet) getNewStatefulSet(instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
 	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
 	if !ok {
 		return sts, nil
@@ -61,14 +64,14 @@ func (a addEmqxStatefulSet) getNewStatefulSet(r *EmqxReconciler, instance appsv1
 		return sts, nil
 	}
 
-	allSts, _ := getAllStatefulSet(r.Client, instance)
+	allSts, _ := getAllStatefulSet(a.Client, instance)
 
 	patchOpts := []patch.CalculateOption{
 		justCheckPodTemplate(),
 	}
 
 	for i := range allSts {
-		patchResult, _ := r.Patcher.Calculate(
+		patchResult, _ := a.Patcher.Calculate(
 			allSts[i].DeepCopy(),
 			sts.DeepCopy(),
 			patchOpts...,
@@ -84,7 +87,7 @@ func (a addEmqxStatefulSet) getNewStatefulSet(r *EmqxReconciler, instance appsv1
 	for {
 		podTemplateSpecHash := computeHash(&sts.Spec.Template, collisionCount)
 		name := sts.Name + "-" + podTemplateSpecHash
-		err := r.Client.Get(context.TODO(), types.NamespacedName{
+		err := a.Client.Get(context.TODO(), types.NamespacedName{
 			Namespace: sts.Namespace,
 			Name:      name,
 		}, &appsv1.StatefulSet{})
@@ -100,23 +103,23 @@ func (a addEmqxStatefulSet) getNewStatefulSet(r *EmqxReconciler, instance appsv1
 	}
 }
 
-func (a addEmqxStatefulSet) syncStatefulSet(r *EmqxReconciler, enterprise *appsv1beta4.EmqxEnterprise) error {
+func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterprise) error {
 	if enterprise.Status.EmqxBlueGreenUpdateStatus == nil {
 		return nil
 	}
 
-	inClusterStss, err := getInClusterStatefulSets(r.Client, enterprise)
+	inClusterStss, err := getInClusterStatefulSets(a.Client, enterprise)
 	if err != nil {
 		return err
 	}
 
-	podMap, err := getPodMap(r.Client, enterprise, inClusterStss)
+	podMap, err := getPodMap(a.Client, enterprise, inClusterStss)
 	if err != nil {
 		return err
 	}
 
 	currentSts := &appsv1.StatefulSet{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+	if err := a.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: enterprise.Namespace,
 		Name:      enterprise.Status.EmqxBlueGreenUpdateStatus.CurrentStatefulSet,
 	}, currentSts); err != nil {
@@ -124,25 +127,25 @@ func (a addEmqxStatefulSet) syncStatefulSet(r *EmqxReconciler, enterprise *appsv
 	}
 
 	originSts := &appsv1.StatefulSet{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+	if err := a.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: enterprise.Namespace,
 		Name:      enterprise.Status.EmqxBlueGreenUpdateStatus.OriginStatefulSet,
 	}, originSts); err != nil {
 		return emperror.Wrap(err, "failed to get origin statefulset")
 	}
 
-	if a.canBeScaledDown(r, enterprise, originSts, podMap) {
+	if a.canBeScaledDown(enterprise, originSts, podMap) {
 		scaleDown := *originSts.Spec.Replicas - 1
 		stsCopy := originSts.DeepCopy()
-		if err := r.Client.Get(context.TODO(), client.ObjectKeyFromObject(stsCopy), stsCopy); err != nil {
+		if err := a.Client.Get(context.TODO(), client.ObjectKeyFromObject(stsCopy), stsCopy); err != nil {
 			if !k8sErrors.IsNotFound(err) {
 				return err
 			}
 		}
 		stsCopy.Spec.Replicas = &scaleDown
 
-		r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "ScaleDown", fmt.Sprintf("Scale down StatefulSet %s to %d", originSts.Name, scaleDown))
-		if err := r.Client.Update(context.TODO(), stsCopy); err != nil {
+		a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "ScaleDown", fmt.Sprintf("Scale down StatefulSet %s to %d", originSts.Name, scaleDown))
+		if err := a.Client.Update(context.TODO(), stsCopy); err != nil {
 			return err
 		}
 	}
@@ -156,9 +159,9 @@ func (a addEmqxStatefulSet) syncStatefulSet(r *EmqxReconciler, enterprise *appsv
 		sort.Sort(PodsByNameNewer(pods))
 		emqxNodeName := getEmqxNodeName(enterprise, pods[0])
 
-		r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuate node %s start", emqxNodeName))
-		if err := r.evacuateNodeByAPI(enterprise, podMap[currentSts.UID], emqxNodeName); err != nil {
-			r.EventRecorder.Event(enterprise, corev1.EventTypeWarning, "Evacuate", fmt.Sprintf("Evacuate node %s failed: %s", emqxNodeName, err.Error()))
+		a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuate node %s start", emqxNodeName))
+		if err := a.startEvacuateNodeByAPI(enterprise, podMap[currentSts.UID], emqxNodeName); err != nil {
+			a.EventRecorder.Event(enterprise, corev1.EventTypeWarning, "Evacuate", fmt.Sprintf("Evacuate node %s failed: %s", emqxNodeName, err.Error()))
 			return emperror.Wrap(err, "evacuate node failed")
 		}
 	}
@@ -166,7 +169,7 @@ func (a addEmqxStatefulSet) syncStatefulSet(r *EmqxReconciler, enterprise *appsv
 	return nil
 }
 
-func (a addEmqxStatefulSet) canBeScaledDown(r *EmqxReconciler, enterprise *appsv1beta4.EmqxEnterprise, originSts *appsv1.StatefulSet, podMap map[types.UID][]*corev1.Pod) bool {
+func (a addEmqxStatefulSet) canBeScaledDown(enterprise *appsv1beta4.EmqxEnterprise, originSts *appsv1.StatefulSet, podMap map[types.UID][]*corev1.Pod) bool {
 	for _, e := range enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus {
 		if *e.Stats.CurrentConnected == 0 && *e.Stats.CurrentSessions == 0 && e.State == "prohibiting" {
 			podName := strings.Split(strings.Split(e.Node, "@")[1], ".")[0]
@@ -175,7 +178,7 @@ func (a addEmqxStatefulSet) canBeScaledDown(r *EmqxReconciler, enterprise *appsv
 				// Get latest pod for sts
 				sort.Sort(PodsByNameNewer(pods))
 				if pods[0].Name == podName {
-					r.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuate node %s successfully", getEmqxNodeName(enterprise, pods[0])))
+					a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuate node %s successfully", getEmqxNodeName(enterprise, pods[0])))
 					return true
 				}
 			}

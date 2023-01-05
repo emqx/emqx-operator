@@ -9,16 +9,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type addEmqxResources struct{}
+type addEmqxResources struct {
+	*EmqxReconciler
+	*requestAPI
+}
 
-func (a addEmqxResources) reconcile(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx, args ...any) subResult {
+func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
 	initResources, ok := args[0].([]client.Object)
 	if !ok {
 		panic("args[0] is not []client.Object")
 	}
 
 	// ignore error, because if statefulSet is not created, the listener port will be not found
-	listenerPorts, _ := r.getListenerPortsByAPI(instance)
+	listenerPorts, _ := a.getListenerPortsByAPI(instance)
 
 	var resources []client.Object
 
@@ -33,13 +36,13 @@ func (a addEmqxResources) reconcile(ctx context.Context, r *EmqxReconciler, inst
 		resources = append(resources, svc)
 	}
 
-	license := a.getLicense(ctx, r, instance)
+	license := a.getLicense(ctx, instance)
 	if license != nil {
 		resources = append(resources, license)
 	}
 
-	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
+	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
+		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		return subResult{err: err}
 	}
 
@@ -62,7 +65,7 @@ func (a addEmqxResources) reconcile(ctx context.Context, r *EmqxReconciler, inst
 	return subResult{args: sts}
 }
 
-func (a addEmqxResources) getLicense(ctx context.Context, r *EmqxReconciler, instance appsv1beta4.Emqx) *corev1.Secret {
+func (a addEmqxResources) getLicense(ctx context.Context, instance appsv1beta4.Emqx) *corev1.Secret {
 	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
 	if !ok {
 		return nil
@@ -70,7 +73,7 @@ func (a addEmqxResources) getLicense(ctx context.Context, r *EmqxReconciler, ins
 
 	if enterprise.Spec.License.SecretName != "" {
 		license := &corev1.Secret{}
-		if err := r.Client.Get(
+		if err := a.Client.Get(
 			ctx,
 			types.NamespacedName{
 				Name:      enterprise.Spec.License.SecretName,
@@ -78,7 +81,7 @@ func (a addEmqxResources) getLicense(ctx context.Context, r *EmqxReconciler, ins
 			},
 			license,
 		); err != nil {
-			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedGetLicense", err.Error())
+			a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedGetLicense", err.Error())
 			return nil
 		}
 		return license
