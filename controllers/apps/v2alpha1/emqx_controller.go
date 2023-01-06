@@ -18,7 +18,6 @@ package v2alpha1
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
@@ -179,21 +178,4 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	emqxStatusMachine.CheckNodeCount(emqxNodes)
 	emqxStatusMachine.NextStatus(existedSts, existedDeploy)
 	return emqxStatusMachine.GetEMQX(), nil
-}
-
-func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username, password string, err error) {
-	secret := &corev1.Secret{}
-	if err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfBootStrapUser(), Namespace: instance.Namespace}, secret); err != nil {
-		return "", "", err
-	}
-
-	data, ok := secret.Data["bootstrap_user"]
-	if !ok {
-		return "", "", emperror.Errorf("the secret does not contain the bootstrap_user")
-	}
-
-	str := string(data)
-	index := strings.Index(str, ":")
-
-	return str[:index], str[index+1:], nil
 }

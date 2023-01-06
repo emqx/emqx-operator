@@ -32,6 +32,7 @@ import (
 	"github.com/emqx/emqx-operator/pkg/apiclient"
 	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -46,7 +47,7 @@ type requestAPI struct {
 
 func newRequestAPI(r *EMQXReconciler, instance *appsv2alpha1.EMQX) *requestAPI {
 	var username, password, port string
-	username, password, err := r.getBootstrapUser(instance)
+	username, password, err := getBootstrapUser(r.Client, instance)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
 	}
@@ -68,6 +69,23 @@ func newRequestAPI(r *EMQXReconciler, instance *appsv2alpha1.EMQX) *requestAPI {
 		Client:    r.Client,
 		APIClient: r.APIClient,
 	}
+}
+
+func getBootstrapUser(k8sClient client.Client, instance *appsv2alpha1.EMQX) (username, password string, err error) {
+	secret := &corev1.Secret{}
+	if err = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfBootStrapUser(), Namespace: instance.Namespace}, secret); err != nil {
+		return "", "", err
+	}
+
+	data, ok := secret.Data["bootstrap_user"]
+	if !ok {
+		return "", "", emperror.Errorf("the secret does not contain the bootstrap_user")
+	}
+
+	str := string(data)
+	index := strings.Index(str, ":")
+
+	return str[:index], str[index+1:], nil
 }
 
 func (r *requestAPI) requestAPI(obj client.Object, method, path string, body []byte) (*http.Response, []byte, error) {
