@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta4
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -33,6 +34,7 @@ import (
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,16 +47,38 @@ type requestAPI struct {
 	*apiclient.APIClient
 }
 
-func newRequestAPI(client client.Client, apiClient *apiclient.APIClient, instance appsv1beta4.Emqx) *requestAPI {
-	// TODO: get username and password from bootstrap user
-	// TODO: get port from emqx config
+func newRequestAPI(client client.Client, apiClient *apiclient.APIClient, instance appsv1beta4.Emqx) (*requestAPI, error) {
+	username, password, err := getBootstrapUser(client, instance)
+	if err != nil {
+		return nil, err
+	}
+
 	return &requestAPI{
-		Username:  "admin",
-		Password:  "public",
+		Username:  username,
+		Password:  password,
 		Port:      "8081",
 		Client:    client,
 		APIClient: apiClient,
+	}, nil
+}
+
+func getBootstrapUser(client client.Client, instance appsv1beta4.Emqx) (username, password string, err error) {
+	bootstrapUser := &corev1.Secret{}
+	if err := client.Get(context.Background(), types.NamespacedName{
+		Namespace: instance.GetNamespace(),
+		Name:      instance.GetName() + "-bootstrap-user",
+	}, bootstrapUser); err != nil {
+		return "", "", emperror.Wrap(err, "failed to get bootstrap user")
 	}
+
+	data, ok := bootstrapUser.Data["bootstrap_user"]
+	if !ok {
+		return "", "", emperror.Errorf("the secret does not contain the bootstrap_user")
+	}
+	str := string(data)
+	index := strings.Index(str, ":")
+
+	return str[:index], str[index+1:], nil
 }
 
 func (r *requestAPI) requestAPI(instance appsv1beta4.Emqx, method, path string, body []byte) (*http.Response, []byte, error) {
