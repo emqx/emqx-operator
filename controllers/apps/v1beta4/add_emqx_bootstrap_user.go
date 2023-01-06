@@ -5,7 +5,6 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,11 +20,9 @@ func (a addEmqxBootstrapUser) reconcile(ctx context.Context, instance appsv1beta
 	if err := a.Client.Get(ctx, client.ObjectKeyFromObject(bootstrapUser), bootstrapUser); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			if err := ctrl.SetControllerReference(instance, bootstrapUser, a.Scheme); err != nil {
-				a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedSetControllerReference", err.Error())
 				return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
 			}
 			if err := a.Handler.Create(bootstrapUser); err != nil {
-				a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreate", err.Error())
 				return subResult{err: emperror.Wrap(err, "failed to create resource")}
 			}
 		}
