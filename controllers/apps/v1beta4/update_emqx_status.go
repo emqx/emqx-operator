@@ -18,9 +18,12 @@ type updateEmqxStatus struct {
 }
 
 func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
-	_ = s.updateReadyReplicas(instance)
-	_ = s.updateCondition(instance)
-
+	if err := s.updateReadyReplicas(instance); err != nil {
+		return subResult{cont: true, err: emperror.Wrap(err, "failed to update ready replicas")}
+	}
+	if err := s.updateCondition(instance); err != nil {
+		return subResult{cont: true, err: emperror.Wrap(err, "failed to update condition")}
+	}
 	if err := s.Client.Status().Update(ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update emqx status")}
 	}
@@ -31,7 +34,6 @@ func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Em
 func (s updateEmqxStatus) updateReadyReplicas(instance appsv1beta4.Emqx) error {
 	emqxNodes, err := s.getNodeStatusesByAPI(instance)
 	if err != nil {
-		s.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
 		return emperror.Wrap(err, "failed to get node statuses")
 	}
 
