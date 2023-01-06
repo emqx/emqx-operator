@@ -203,6 +203,8 @@ var _ = Describe("Base E2E Test", func() {
 			Expect(emqx.GetStatus().GetReplicas()).Should(Equal(int32(1)))
 			Expect(emqx.GetStatus().GetReadyReplicas()).Should(Equal(int32(1)))
 			Expect(emqx.GetStatus().GetEmqxNodes()).Should(HaveLen(1))
+			Expect(emqx.GetStatus().GetCurrentStatefulSetVersion()).ShouldNot(BeEmpty())
+			Expect(emqx.GetStatus().GetConditions()).ShouldNot(BeEmpty())
 
 			By("check pod annotations")
 			sts := &appsv1.StatefulSet{}
@@ -342,11 +344,11 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 		emqx := emqxEnterprise.DeepCopy()
 		emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
 		emqx.Spec.EmqxBlueGreenUpdate = &appsv1beta4.EmqxBlueGreenUpdate{
-			InitialDelaySeconds: 10,
+			InitialDelaySeconds: 5,
 			EvacuationStrategy: appsv1beta4.EvacuationStrategy{
 				WaitTakeover:  int32(0),
-				ConnEvictRate: int32(9999999),
-				SessEvictRate: int32(9999999),
+				ConnEvictRate: int32(1),
+				SessEvictRate: int32(1),
 			},
 		}
 
@@ -355,7 +357,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 		})
 
 		AfterEach(func() {
-			// deleteEmqx(emqx)
+			deleteEmqx(emqx)
 		})
 
 		It("blue green update", func() {
@@ -372,6 +374,18 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			}, timeout, interval).Should(HaveLen(1))
 
 			sts := existedStsList.Items[0].DeepCopy()
+			Eventually(func() string {
+				// Wait sts ready
+				_ = k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Name:      sts.GetName(),
+						Namespace: sts.GetNamespace(),
+					},
+					sts,
+				)
+				return sts.Status.CurrentRevision
+			}, timeout, interval).ShouldNot(BeEmpty())
 
 			By("check service selector")
 			Eventually(func() map[string]string {
@@ -397,6 +411,16 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return ""
 			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace())))
 
+			By("check running condition in CR status")
+			Eventually(func() corev1.ConditionStatus {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionRunning {
+					return ee.GetStatus().GetConditions()[0].Status
+				}
+				return corev1.ConditionUnknown
+			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+
 			By("update EMQX CR")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), emqx)).Should(Succeed())
 			emqx.Spec.Template.Spec.Volumes = append(emqx.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -405,7 +429,6 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			})
-
 			Expect(k8sClient.Update(context.Background(), emqx)).Should(Succeed())
 
 			By("wait create new sts")
@@ -420,20 +443,6 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return existedStsList.Items
 			}, timeout, interval).Should(HaveLen(2))
 
-			By("check readyReplicas in CR status")
-			Eventually(func() int {
-				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				return int(ee.Status.ReadyReplicas)
-			}, timeout, interval).Should(Equal(2))
-
-			// By("check emqx nodes in CR status")
-			// Eventually(func() []appsv1beta4.EmqxNode {
-			// 	ee := &appsv1beta4.EmqxEnterprise{}
-			// 	_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-			// 	return ee.GetStatus().GetEmqxNodes()
-			// }, timeout, interval).Should(Equal(HaveLen(2)))
-
 			allSts := []*appsv1.StatefulSet{}
 			for _, es := range existedStsList.Items {
 				allSts = append(allSts, es.DeepCopy())
@@ -442,6 +451,58 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 
 			newSts := allSts[0].DeepCopy()
 			Expect(newSts.UID).ShouldNot(Equal(sts.UID))
+			Eventually(func() string {
+				// Wait sts ready
+				_ = k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Name:      newSts.GetName(),
+						Namespace: newSts.GetNamespace(),
+					},
+					newSts,
+				)
+				return sts.Status.CurrentRevision
+			}, timeout, interval).ShouldNot(BeEmpty())
+
+			By("check emqx nodes in CR status")
+			Eventually(func() []appsv1beta4.EmqxNode {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				return ee.GetStatus().GetEmqxNodes()
+			}, timeout, interval).Should(HaveLen(2))
+
+			By("check readyReplicas in CR status")
+			Eventually(func() int {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				return int(ee.Status.ReadyReplicas)
+			}, timeout, interval).Should(Equal(2))
+
+			By("check blue-green status in CR status")
+			blueGreenStatus := &appsv1beta4.EmqxBlueGreenUpdateStatus{}
+			Eventually(func() bool {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				if ee.Status.EmqxBlueGreenUpdateStatus != nil &&
+					ee.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus != nil &&
+					ee.Status.EmqxBlueGreenUpdateStatus.StartedAt != nil {
+					blueGreenStatus = ee.Status.EmqxBlueGreenUpdateStatus.DeepCopy()
+					return true
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+			Expect(blueGreenStatus.OriginStatefulSet).Should(Equal(sts.Name))
+			Expect(blueGreenStatus.CurrentStatefulSet).Should(Equal(newSts.Name))
+
+			By("check blue-green condition in CR status")
+			Eventually(func() corev1.ConditionStatus {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionBlueGreenUpdating {
+					return ee.GetStatus().GetConditions()[0].Status
+				}
+				return corev1.ConditionUnknown
+			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
 
 			Eventually(func() []corev1.Pod {
 				podList := &corev1.PodList{}
@@ -455,19 +516,6 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				)
 				return podList.Items
 			}, timeout, interval).Should(HaveLen(0))
-
-			Eventually(func() []corev1.Pod {
-				podList := &corev1.PodList{}
-				_ = k8sClient.List(
-					context.TODO(),
-					podList,
-					client.InNamespace(newSts.GetNamespace()),
-					client.MatchingLabels(map[string]string{
-						"controller-revision-hash": newSts.Status.CurrentRevision,
-					}),
-				)
-				return podList.Items
-			}, timeout, interval).Should(HaveLen(int(*emqx.GetSpec().GetReplicas())))
 
 			By("check service selector")
 			Eventually(func() map[string]string {
@@ -492,6 +540,16 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				}
 				return ""
 			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", newSts.Name, emqx.GetNamespace())))
+
+			By("check running condition in CR status")
+			Eventually(func() corev1.ConditionStatus {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionRunning {
+					return ee.GetStatus().GetConditions()[0].Status
+				}
+				return corev1.ConditionUnknown
+			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
 		})
 	})
 })
