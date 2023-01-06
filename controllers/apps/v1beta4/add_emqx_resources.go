@@ -3,6 +3,7 @@ package v1beta4
 import (
 	"context"
 
+	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,6 +26,14 @@ func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Em
 
 	var resources []client.Object
 
+	license, err := a.getLicense(ctx, instance)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to get license")}
+	}
+	if license != nil {
+		resources = append(resources, license)
+	}
+
 	acl := generateEmqxACL(instance)
 	resources = append(resources, acl)
 
@@ -36,14 +45,8 @@ func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Em
 		resources = append(resources, svc)
 	}
 
-	license := a.getLicense(ctx, instance)
-	if license != nil {
-		resources = append(resources, license)
-	}
-
 	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
-		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
-		return subResult{err: err}
+		return subResult{err: emperror.Wrap(err, "failed to create or update resource")}
 	}
 
 	sts := generateStatefulSet(instance)
@@ -65,10 +68,10 @@ func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Em
 	return subResult{args: sts}
 }
 
-func (a addEmqxResources) getLicense(ctx context.Context, instance appsv1beta4.Emqx) *corev1.Secret {
+func (a addEmqxResources) getLicense(ctx context.Context, instance appsv1beta4.Emqx) (*corev1.Secret, error) {
 	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	if enterprise.Spec.License.SecretName != "" {
@@ -81,10 +84,9 @@ func (a addEmqxResources) getLicense(ctx context.Context, instance appsv1beta4.E
 			},
 			license,
 		); err != nil {
-			a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedGetLicense", err.Error())
-			return nil
+			return nil, err
 		}
-		return license
+		return license, nil
 	}
-	return generateLicense(instance)
+	return generateLicense(instance), nil
 }

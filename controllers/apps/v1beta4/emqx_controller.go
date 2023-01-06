@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
@@ -46,8 +47,9 @@ type EmqxReconciler struct {
 
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
+	cont   bool // continue to next sub reconciler
 	err    error
-	result *ctrl.Result
+	result ctrl.Result
 	args   any
 }
 
@@ -86,7 +88,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		} else {
 			subResult = subReconcilers[i].reconcile(ctx, instance)
 		}
-		subResult, err, _ := processResult(subResult)
+		subResult, err := r.processResult(subResult, instance)
 		if err != nil || !subResult.IsZero() {
 			return subResult, err
 		}
@@ -95,13 +97,17 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
 }
 
-func processResult(subResult subResult) (ctrl.Result, error, any) {
-	if !subResult.result.IsZero() {
-		return *subResult.result, subResult.err, subResult.args
+func (r *EmqxReconciler) processResult(subResult subResult, instance appsv1beta4.Emqx) (ctrl.Result, error) {
+	if subResult.cont {
+		if subResult.err != nil {
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "ReconcileError", subResult.err.Error())
+		}
+		return ctrl.Result{}, nil
 	}
-	// Common Errors
-	if innerErr.IsCommonError(subResult.err) {
-		return ctrl.Result{RequeueAfter: time.Second}, nil, subResult.args
+
+	if subResult.err != nil && innerErr.IsCommonError(subResult.err) {
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
-	return ctrl.Result{}, subResult.err, subResult.args
+
+	return subResult.result, subResult.err
 }
