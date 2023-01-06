@@ -199,11 +199,19 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta4.Emqx, pluginNa
 }
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta4.Emqx, nodeName, pluginName, reloadOrUnload string) error {
-	return newRequestAPI(r.Client, r.APIClient, emqx).loadPluginByAPI(emqx, nodeName, pluginName, reloadOrUnload)
+	requestAPI, err := newRequestAPI(r.Client, r.APIClient, emqx)
+	if err != nil {
+		return err
+	}
+	return requestAPI.loadPluginByAPI(emqx, nodeName, pluginName, reloadOrUnload)
 }
 
 func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta4.Emqx) ([]pluginListByAPIReturn, error) {
-	return newRequestAPI(r.Client, r.APIClient, emqx).getPluginsByAPI(emqx)
+	requestAPI, err := newRequestAPI(r.Client, r.APIClient, emqx)
+	if err != nil {
+		return nil, err
+	}
+	return requestAPI.getPluginsByAPI(emqx)
 }
 
 func (r *EmqxPluginReconciler) checkPluginConfig(plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) (bool, error) {
