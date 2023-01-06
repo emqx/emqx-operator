@@ -70,7 +70,7 @@ func doHttpRequest(username, password, method string, url url.URL, body []byte) 
 	req.Close = true
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, nil, emperror.Wrap(err, "failed to do request")
+		return nil, nil, emperror.NewWithDetails("failed to request API", "url", url.Path, "method", method)
 	}
 
 	defer resp.Body.Close()

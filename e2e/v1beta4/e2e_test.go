@@ -52,7 +52,7 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 				EmqxContainer: appsv1beta4.EmqxContainer{
 					Image: appsv1beta4.EmqxImage{
 						Repository: "emqx/emqx",
-						Version:    "4.4.9",
+						Version:    "4.4.12",
 					},
 					EmqxConfig: appsv1beta4.EmqxConfig{
 						"sysmon.long_schedule": "240h",
@@ -78,7 +78,7 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 				EmqxContainer: appsv1beta4.EmqxContainer{
 					Image: appsv1beta4.EmqxImage{
 						Repository: "emqx/emqx-ee",
-						Version:    "4.4.9",
+						Version:    "4.4.12",
 					},
 					EmqxConfig: appsv1beta4.EmqxConfig{
 						"sysmon.long_schedule": "240h",

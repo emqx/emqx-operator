@@ -21,7 +21,9 @@ import (
 	"reflect"
 	"time"
 
+	emperror "emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
@@ -71,7 +73,14 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	requestAPI := newRequestAPI(r.Client, r.APIClient, instance)
+	requestAPI, err := newRequestAPI(r.Client, r.APIClient, instance)
+	if err != nil {
+		if k8sErrors.IsNotFound(emperror.Cause(err)) {
+			_ = addEmqxBootstrapUser{EmqxReconciler: r}.reconcile(ctx, instance)
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
+		return ctrl.Result{}, err
+	}
 
 	var subResult subResult
 	var subReconcilers = []emqxSubReconciler{
