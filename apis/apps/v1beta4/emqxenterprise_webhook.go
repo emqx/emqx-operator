@@ -17,9 +17,6 @@ limitations under the License.
 package v1beta4
 
 import (
-	"fmt"
-
-	semver "github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -63,11 +60,6 @@ func (r *EmqxEnterprise) ValidateCreate() error {
 		return err
 	}
 
-	if err := validateEmqxBlueGreenUpdate(r, r.Spec.Template.Spec.EmqxContainer.Image.Version); err != nil {
-		emqxbrokerlog.Error(err, "validate create failed")
-		return err
-	}
-
 	return nil
 }
 
@@ -81,10 +73,6 @@ func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 	}
 
 	oldEmqx := old.(*EmqxEnterprise)
-	if err := validateEmqxBlueGreenUpdate(r, oldEmqx.Spec.Template.Spec.EmqxContainer.Image.Version); err != nil {
-		emqxbrokerlog.Error(err, "validate create failed")
-		return err
-	}
 	if err := validateVolumeClaimTemplates(r, oldEmqx); err != nil {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
@@ -95,18 +83,6 @@ func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *EmqxEnterprise) ValidateDelete() error {
 	emqxenterpriselog.Info("validate delete", "name", r.Name)
-
-	return nil
-}
-
-func validateEmqxBlueGreenUpdate(r *EmqxEnterprise, originVersion string) error {
-	if r.Spec.EmqxBlueGreenUpdate == nil {
-		return nil
-	}
-
-	if semver.MustParse(originVersion).Compare(semver.MustParse("4.4.12")) < 0 {
-		return fmt.Errorf("image version %s is too old, please upgrade to 4.4.12 or later first to enable blue-green update", originVersion)
-	}
 
 	return nil
 }
