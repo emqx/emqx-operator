@@ -69,6 +69,10 @@
         {
           "title": "Configure EMQX Enterprise blue-green",
           "path": "tasks/configure-emqx-blueGreenUpdate"
+        },
+        {
+          "title": "Configure EMQX log level",
+          "path": "tasks/configure-emqx-log-level"
         }
       ]
     },
@@ -177,6 +181,10 @@
         {
           "title": "配置 EMQX 企业版蓝绿升级",
           "path": "tasks/configure-emqx-blueGreenUpdate"
+        },
+        {
+          "title": "配置 EMQX 日志等级",
+          "path": "tasks/configure-emqx-log-level"
         }
       ]
     },
