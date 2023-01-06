@@ -30,7 +30,6 @@ func (a addEmqxStatefulSet) reconcile(ctx context.Context, instance appsv1beta4.
 		return subResult{err: emperror.Wrap(err, "failed to get new statefulset")}
 	}
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{newSts}); err != nil {
-		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedCreateOrUpdate", err.Error())
 		return subResult{err: emperror.Wrap(err, "failed to create or update statefulset")}
 	}
 
@@ -44,7 +43,7 @@ func (a addEmqxStatefulSet) reconcile(ctx context.Context, instance appsv1beta4.
 		s := enterprise.Spec.EmqxBlueGreenUpdate.InitialDelaySeconds - int32(time.Since(enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt.Time).Seconds())
 		if s > 0 {
 			a.EventRecorder.Event(instance, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Delay %d seconds", s))
-			return subResult{result: &ctrl.Result{RequeueAfter: time.Duration(s) * time.Second}}
+			return subResult{result: ctrl.Result{RequeueAfter: time.Duration(s) * time.Second}}
 		}
 
 		if err := a.syncStatefulSet(enterprise); err != nil {
@@ -144,7 +143,7 @@ func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterpri
 		}
 		stsCopy.Spec.Replicas = &scaleDown
 
-		a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "ScaleDown", fmt.Sprintf("Scale down StatefulSet %s to %d", originSts.Name, scaleDown))
+		a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Scale down StatefulSet %s to %d", originSts.Name, scaleDown))
 		if err := a.Client.Update(context.TODO(), stsCopy); err != nil {
 			return err
 		}
@@ -161,8 +160,7 @@ func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterpri
 
 		a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuate node %s start", emqxNodeName))
 		if err := a.startEvacuateNodeByAPI(enterprise, podMap[currentSts.UID], emqxNodeName); err != nil {
-			a.EventRecorder.Event(enterprise, corev1.EventTypeWarning, "Evacuate", fmt.Sprintf("Evacuate node %s failed: %s", emqxNodeName, err.Error()))
-			return emperror.Wrap(err, "evacuate node failed")
+			return emperror.Wrapf(err, "Evacuate node %s failed: %s", emqxNodeName, err.Error())
 		}
 	}
 
