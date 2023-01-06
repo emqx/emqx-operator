@@ -65,6 +65,10 @@ func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctrl.Result, error) {
+	if instance.GetDeletionTimestamp() != nil {
+		return ctrl.Result{}, nil
+	}
+
 	requestAPI := newRequestAPI(r.Client, r.APIClient, instance)
 
 	var subResult subResult
