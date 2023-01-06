@@ -17,6 +17,7 @@ spec:
   #   accessModes:
   #     - ReadWriteOnce
   blueGreenUpdate:
+    initialDelaySeconds: 30
     evacuationStrategy:
       waitTakeover: 10
       connEvictRate: 200
