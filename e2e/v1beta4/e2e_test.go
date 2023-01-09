@@ -52,7 +52,7 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 				EmqxContainer: appsv1beta4.EmqxContainer{
 					Image: appsv1beta4.EmqxImage{
 						Repository: "emqx/emqx",
-						Version:    "4.4.12",
+						Version:    "4.4.14",
 					},
 					EmqxConfig: appsv1beta4.EmqxConfig{
 						"sysmon.long_schedule": "240h",
@@ -78,7 +78,7 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 				EmqxContainer: appsv1beta4.EmqxContainer{
 					Image: appsv1beta4.EmqxImage{
 						Repository: "emqx/emqx-ee",
-						Version:    "4.4.12",
+						Version:    "4.4.14",
 					},
 					EmqxConfig: appsv1beta4.EmqxConfig{
 						"sysmon.long_schedule": "240h",
@@ -342,7 +342,7 @@ var _ = Describe("Base E2E Test", func() {
 var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 	Describe("Just check enterprise", func() {
 		emqx := emqxEnterprise.DeepCopy()
-		emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
+		emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
 		emqx.Spec.EmqxBlueGreenUpdate = &appsv1beta4.EmqxBlueGreenUpdate{
 			InitialDelaySeconds: 5,
 			EvacuationStrategy: appsv1beta4.EvacuationStrategy{

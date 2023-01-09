@@ -217,8 +217,8 @@ func validateImageVersion(r Emqx) error {
 	if err != nil {
 		return fmt.Errorf("invalid image version: %s", version)
 	}
-	if v.Compare(semver.MustParse("4.4.12")) < 0 {
-		return fmt.Errorf("image version %s is too old, please upgrade to 4.4.12 or later", version)
+	if v.Compare(semver.MustParse("4.4.14")) < 0 {
+		return fmt.Errorf("image version %s is too old, please upgrade to 4.4.14 or later", version)
 	}
 	if v.Compare(semver.MustParse("5.0.0")) >= 0 {
 		return fmt.Errorf("image version %s is too new, please downgrade to 5.0.0 earlier", version)

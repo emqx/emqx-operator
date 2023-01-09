@@ -42,7 +42,7 @@ func TestEnterpriseDefault(t *testing.T) {
 				Spec: EmqxTemplateSpec{
 					EmqxContainer: EmqxContainer{
 						Image: EmqxImage{
-							Version: "4.4.12",
+							Version: "4.4.14",
 						},
 					},
 				},
@@ -137,7 +137,7 @@ func TestEnterpriseValidateCreate(t *testing.T) {
 				Spec: EmqxTemplateSpec{
 					EmqxContainer: EmqxContainer{
 						Image: EmqxImage{
-							Version: "4.4.12",
+							Version: "4.4.14",
 						},
 					},
 				},
@@ -149,9 +149,9 @@ func TestEnterpriseValidateCreate(t *testing.T) {
 		instance := enterprise.DeepCopy()
 		instance.Spec.EmqxBlueGreenUpdate = nil
 
-		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
 		assert.NoError(t, instance.ValidateCreate())
-		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.20"
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
 		assert.NoError(t, instance.ValidateCreate())
 		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.5.0"
 		assert.NoError(t, instance.ValidateCreate())
@@ -166,14 +166,14 @@ func TestEnterpriseValidateCreate(t *testing.T) {
 		assert.ErrorContains(t, instance.ValidateCreate(), "invalid image version")
 		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "fake"
 		assert.ErrorContains(t, instance.ValidateCreate(), "invalid image version")
-		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.7"
-		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.13"
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.14 or later")
 		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4"
-		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.14 or later")
 		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4.3"
-		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.14 or later")
 		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "4"
-		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.12 or later")
+		assert.ErrorContains(t, instance.ValidateCreate(), "please upgrade to 4.4.14 or later")
 		instance.Spec.Template.Spec.EmqxContainer.Image.Version = "5.0.0"
 		assert.ErrorContains(t, instance.ValidateCreate(), "please downgrade to 5.0.0 earlier")
 	})
@@ -193,7 +193,7 @@ func TestEnterpriseValidateUpdate(t *testing.T) {
 				Spec: EmqxTemplateSpec{
 					EmqxContainer: EmqxContainer{
 						Image: EmqxImage{
-							Version: "4.4.12",
+							Version: "4.4.14",
 						},
 					},
 				},
@@ -206,9 +206,9 @@ func TestEnterpriseValidateUpdate(t *testing.T) {
 		new := enterprise.DeepCopy()
 		new.Spec.EmqxBlueGreenUpdate = nil
 
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.12"
+		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
 		assert.NoError(t, new.ValidateUpdate(old))
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.20"
+		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
 		assert.NoError(t, new.ValidateUpdate(old))
 		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.5.0"
 		assert.NoError(t, new.ValidateUpdate(old))
@@ -223,14 +223,14 @@ func TestEnterpriseValidateUpdate(t *testing.T) {
 		assert.ErrorContains(t, new.ValidateUpdate(old), "invalid image version")
 		new.Spec.Template.Spec.EmqxContainer.Image.Version = "fake"
 		assert.ErrorContains(t, new.ValidateUpdate(old), "invalid image version")
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.7"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.12 or later")
+		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.13"
+		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
 		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.12 or later")
+		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
 		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.3"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.12 or later")
+		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
 		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.12 or later")
+		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
 		new.Spec.Template.Spec.EmqxContainer.Image.Version = "5.0.0"
 		assert.ErrorContains(t, new.ValidateUpdate(old), "please downgrade to 5.0.0 earlier")
 	})
