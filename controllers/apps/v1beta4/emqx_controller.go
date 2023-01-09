@@ -28,9 +28,9 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	"github.com/emqx/emqx-operator/pkg/apiclient"
-	innerErr "github.com/emqx/emqx-operator/pkg/errors"
-	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/emqx/emqx-operator/internal/apiclient"
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
+	"github.com/emqx/emqx-operator/internal/handler"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
