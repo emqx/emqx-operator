@@ -22,6 +22,7 @@ import (
 
 	emperror "emperror.dev/errors"
 
+	innerErr "github.com/emqx/emqx-operator/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -87,7 +88,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
-		if k8sErrors.IsConflict(err) {
+		if innerErr.IsCommonError(err) {
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 		return ctrl.Result{}, err
@@ -96,9 +97,14 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Update EMQX Custom Resource's status
 	instance, err = r.updateStatus(instance)
 	if err != nil {
-		return ctrl.Result{}, err
+		if innerErr.IsCommonError(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 	}
 	if err := r.Client.Status().Update(ctx, instance); err != nil {
+		if k8sErrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
