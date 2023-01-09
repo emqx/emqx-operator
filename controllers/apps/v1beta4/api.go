@@ -26,8 +26,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/emqx/emqx-operator/pkg/apiclient"
-	innerErr "github.com/emqx/emqx-operator/pkg/errors"
+	"github.com/emqx/emqx-operator/internal/apiclient"
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"

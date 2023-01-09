@@ -22,7 +22,7 @@ import (
 
 	emperror "emperror.dev/errors"
 
-	innerErr "github.com/emqx/emqx-operator/pkg/errors"
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,8 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/pkg/apiclient"
-	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/emqx/emqx-operator/internal/apiclient"
+	"github.com/emqx/emqx-operator/internal/handler"
 	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )

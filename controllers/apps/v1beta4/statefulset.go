@@ -21,7 +21,7 @@ import (
 	"sort"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	innerErr "github.com/emqx/emqx-operator/pkg/errors"
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
