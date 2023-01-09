@@ -29,8 +29,8 @@ import (
 	emperror "emperror.dev/errors"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/pkg/apiclient"
-	innerErr "github.com/emqx/emqx-operator/pkg/errors"
+	"github.com/emqx/emqx-operator/internal/apiclient"
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"

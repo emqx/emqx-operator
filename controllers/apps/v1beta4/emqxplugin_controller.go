@@ -33,11 +33,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
-	innerErr "github.com/emqx/emqx-operator/pkg/errors"
+	apiClient "github.com/emqx/emqx-operator/internal/apiclient"
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/emqx/emqx-operator/internal/handler"
 )
 
 type pluginByAPIReturn struct {
