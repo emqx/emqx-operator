@@ -73,6 +73,10 @@
         {
           "title": "Configure EMQX log level",
           "path": "tasks/configure-emqx-log-level"
+        },
+        {
+          "title": "Configure EMQX Service",
+          "path": "tasks/configure-emqx-service"
         }
       ]
     },
@@ -185,6 +189,10 @@
         {
           "title": "配置 EMQX 日志等级",
           "path": "tasks/configure-emqx-log-level"
+        },
+        {
+          "title": "配置 EMQX Service",
+          "path": "tasks/configure-emqx-service"
         }
       ]
     },
