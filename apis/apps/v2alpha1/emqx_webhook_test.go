@@ -45,11 +45,24 @@ func TestValidateCreate(t *testing.T) {
 	}
 	assert.Nil(t, instance.ValidateCreate())
 
-	instance.Spec.BootstrapConfig = "fake"
-	assert.ErrorContains(t, instance.ValidateCreate(), "failed to parse bootstrap config")
+	t.Run("should return error if bootstrap config is invalid", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Spec.BootstrapConfig = "fake"
+		assert.ErrorContains(t, emqx.ValidateCreate(), "failed to parse bootstrap config")
 
-	instance.Spec.BootstrapConfig = "foo = bar"
-	assert.Nil(t, instance.ValidateCreate())
+		emqx.Spec.BootstrapConfig = "foo = bar"
+		assert.Nil(t, emqx.ValidateCreate())
+	})
+
+	t.Run("should return error if emqx opensource version < 5.0.14", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Spec.Image = "emqx/emqx:5.0.13"
+		assert.ErrorContains(t, emqx.ValidateCreate(), "image version 5.0.13 is too old, please upgrade to 5.0.14 or later")
+
+		emqx.Spec.Image = "emqx/emqx-enterprise:5.0.0"
+		assert.Nil(t, emqx.ValidateCreate())
+	})
+
 }
 
 func TestValidateUpdate(t *testing.T) {
@@ -59,10 +72,19 @@ func TestValidateUpdate(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: EMQXSpec{
-			Image:           "emqx:latest",
-			BootstrapConfig: "fake",
+			Image: "emqx:latest",
 		},
 	}
+
+	t.Run("should return error if emqx opensource version < 5.0.14", func(t *testing.T) {
+		old := instance.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Spec.Image = "emqx/emqx:5.0.13"
+		assert.ErrorContains(t, emqx.ValidateUpdate(old), "image version 5.0.13 is too old, please upgrade to 5.0.14 or later")
+
+		emqx.Spec.Image = "emqx/emqx-enterprise:5.0.0"
+		assert.Nil(t, emqx.ValidateUpdate(old))
+	})
 
 	t.Run("should return error if bootstrap config is invalid", func(t *testing.T) {
 		old := instance.DeepCopy()

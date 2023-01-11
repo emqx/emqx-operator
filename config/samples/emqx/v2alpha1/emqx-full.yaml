@@ -3,7 +3,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: "emqx/emqx:5.0.9"
+  image: "emqx/emqx:5.0.14"
   imagePullPolicy: IfNotPresent
   # imagePullSecrets:
   #   - name: fake-secrets

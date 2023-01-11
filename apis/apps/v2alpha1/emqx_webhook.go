@@ -19,9 +19,12 @@ package v2alpha1
 import (
 	"fmt"
 	"reflect"
+	"regexp"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	// "github.com/gurkankaymak/hocon"
+	semver "github.com/Masterminds/semver/v3"
 	hocon "github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -65,6 +68,11 @@ var _ webhook.Validator = &EMQX{}
 func (r *EMQX) ValidateCreate() error {
 	emqxlog.Info("validate create", "name", r.Name)
 
+	if err := r.validateVersion(); err != nil {
+		emqxlog.Error(err, "validate create failed")
+		return err
+	}
+
 	if _, err := hocon.ParseString(r.Spec.BootstrapConfig); err != nil {
 		err = emperror.Wrap(err, "failed to parse bootstrap config")
 		emqxlog.Error(err, "validate create failed")
@@ -77,6 +85,11 @@ func (r *EMQX) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 	emqxlog.Info("validate update", "name", r.Name)
+
+	if err := r.validateVersion(); err != nil {
+		emqxlog.Error(err, "validate create failed")
+		return err
+	}
 
 	config, err := hocon.ParseString(r.Spec.BootstrapConfig)
 	if err != nil {
@@ -285,4 +298,32 @@ func (r *EMQX) defaultAnnotationsForService() {
 
 	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
 	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
+}
+
+func (r *EMQX) validateVersion() error {
+	image := strings.Split(r.Spec.Image, ":")
+	if strings.Contains(image[0], "enterprise") {
+		return nil
+	}
+
+	version := "latest"
+	compile := regexp.MustCompile(`[0-9]+(\.[0-9]+)?(\.[0-9]+)?(-(alpha|beta|rc)\.[0-9]+)?`)
+	if compile.MatchString(image[1]) {
+		version = compile.FindString(image[1])
+	}
+
+	if version == "latest" {
+		return nil
+	}
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return fmt.Errorf("invalid image version: %s", version)
+	}
+
+	if v.Compare(semver.MustParse("5.0.14")) < 0 {
+		return fmt.Errorf("image version %s is too old, please upgrade to 5.0.14 or later", version)
+	}
+
+	return nil
 }

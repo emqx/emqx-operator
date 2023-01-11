@@ -43,7 +43,6 @@ func NewAPIClient(mgr manager.Manager) *APIClient {
 }
 
 func (a *APIClient) RequestAPI(pod *corev1.Pod, username, password, port, method, path string, body []byte) (*http.Response, []byte, error) {
-
 	o := NewPortForwardOptions(a.Clientset, a.Config, pod, port)
 	resp, body, err := o.Do(username, password, method, path, body, doHttpRequest)
 
