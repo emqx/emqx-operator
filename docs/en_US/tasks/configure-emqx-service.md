@@ -94,7 +94,7 @@ spec:
            targetPort: 1883
 ```
 
-**NOTE:** EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` The port corresponding to ` is 18083, the port corresponding to `http-management-8081` is 8081, the port corresponding to `mqtt-ws-8083` is 8083, and the port corresponding to `mqtt-wss-8084` is 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
+**NOTE:** EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` corresponds to port 18083, `http-management-8081` corresponds to port 8081,`mqtt-ws-8083` corresponds to port 8083 and `mqtt-wss-8084` corresponds to port 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
 
 :::
 ::: tab v1beta3
@@ -127,7 +127,7 @@ spec:
              targetPort: 1883
 ```
 
-**NOTE:** EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` The port corresponding to ` is 18083, the port corresponding to `http-management-8081` is 8081, the port corresponding to `mqtt-ws-8083` is 8083, and the port corresponding to `mqtt-wss-8084` is 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
+**NOTE:** EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` corresponds to port 18083, `http-management-8081` corresponds to port 8081, `mqtt-ws-8083` corresponds to port 8083 and `mqtt-wss-8084` corresponds to port 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
 
 :::
 ::::
