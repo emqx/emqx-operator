@@ -18,12 +18,11 @@ package v2alpha1
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
 
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,9 +30,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/emqx/emqx-operator/internal/apiclient"
+	"github.com/emqx/emqx-operator/internal/handler"
 	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -42,9 +43,19 @@ const EMQXContainerName string = "emqx"
 
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
-	handler.Handler
-	Scheme *runtime.Scheme
-	record.EventRecorder
+	*handler.Handler
+	APIClient     *apiclient.APIClient
+	Scheme        *runtime.Scheme
+	EventRecorder record.EventRecorder
+}
+
+func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
+	return &EMQXReconciler{
+		Handler:       handler.NewHandler(mgr),
+		APIClient:     apiclient.NewAPIClient(mgr),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
+	}
 }
 
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=emqxes,verbs=get;list;watch;create;update;patch;delete
@@ -64,7 +75,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	_ = log.FromContext(ctx)
 
 	instance := &appsv2alpha1.EMQX{}
-	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -76,16 +87,24 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.CreateOrUpdateList(instance, r.Scheme, resources, func(client.Object) error { return nil }); err != nil {
+	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
+		if innerErr.IsCommonError(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
 	// Update EMQX Custom Resource's status
 	instance, err = r.updateStatus(instance)
 	if err != nil {
-		return ctrl.Result{}, err
+		if innerErr.IsCommonError(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 	}
-	if err := r.Status().Update(ctx, instance); err != nil {
+	if err := r.Client.Status().Update(ctx, instance); err != nil {
+		if k8sErrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -125,7 +144,7 @@ func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.
 		deploy = updateDeploymentForBootstrapConfig(deploy, bootstrapConfig)
 		resources = append(resources, deploy)
 
-		listenerPorts, err := r.generateRequestAPI(instance).getAllListenersByAPI(sts)
+		listenerPorts, err := newRequestAPI(r, instance).getAllListenersByAPI(sts)
 		if err != nil {
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 		}
@@ -143,7 +162,7 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
 	var err error
 
-	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return instance, nil
@@ -151,12 +170,12 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
 	}
 
-	err = r.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ReplicantTemplate.Name, Namespace: instance.Namespace}, existedDeploy)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ReplicantTemplate.Name, Namespace: instance.Namespace}, existedDeploy)
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, emperror.Wrap(err, "failed to get existed deployment")
 	}
 
-	emqxNodes, err = r.generateRequestAPI(instance).getNodeStatuesByAPI(existedSts)
+	emqxNodes, err = newRequestAPI(r, instance).getNodeStatuesByAPI(existedSts)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 	}
@@ -165,45 +184,4 @@ func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha
 	emqxStatusMachine.CheckNodeCount(emqxNodes)
 	emqxStatusMachine.NextStatus(existedSts, existedDeploy)
 	return emqxStatusMachine.GetEMQX(), nil
-}
-
-func (r *EMQXReconciler) getBootstrapUser(instance *appsv2alpha1.EMQX) (username, password string, err error) {
-	secret := &corev1.Secret{}
-	if err = r.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfBootStrapUser(), Namespace: instance.Namespace}, secret); err != nil {
-		return "", "", err
-	}
-
-	data, ok := secret.Data["bootstrap_user"]
-	if !ok {
-		return "", "", emperror.Errorf("the secret does not contain the bootstrap_user")
-	}
-
-	str := string(data)
-	index := strings.Index(str, ":")
-
-	return str[:index], str[index+1:], nil
-}
-
-func (r *EMQXReconciler) generateRequestAPI(instance *appsv2alpha1.EMQX) *requestAPI {
-	var username, password, port string
-	username, password, err := r.getBootstrapUser(instance)
-	if err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
-	}
-
-	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
-	if err != nil {
-		msg := fmt.Sprintf("Failed to get dashboard service port: %s, use 18083 port", err.Error())
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetDashboardServicePort", msg)
-		port = "18083"
-	}
-	if dashboardPort != nil {
-		port = dashboardPort.TargetPort.String()
-	}
-	return &requestAPI{
-		Username: username,
-		Password: password,
-		Port:     port,
-		Handler:  r.Handler,
-	}
 }

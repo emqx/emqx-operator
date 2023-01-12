@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v2alpha1 contains API Schema definitions for the apps v2alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=apps.emqx.io
+// +kubebuilder:object:generate=true
+// +groupName=apps.emqx.io
 package v2alpha1
 
 import (

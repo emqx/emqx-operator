@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.18.3'
+          go-version: '1.19.3'
       - name: install kubebuilder
         run: |
           OS=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -44,26 +44,11 @@ jobs:
           tar -zxvf kubebuilder-tools
           sudo mv kubebuilder/ /usr/local/kubebuilder
       - run: make test
-      - name: Install goveralls
-        run: go install github.com/mattn/goveralls@latest
-      - name: Send coverage
-        env:
-          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goveralls -coverprofile=cover.out -service=github -parallel -flagname=go-test-${{ matrix.kubernetes-version }}
-
-  finish:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-go@v3
+      - uses: codecov/codecov-action@v3
         with:
-          go-version: '1.18.3'
-      - name: Install goveralls
-        run: go install github.com/mattn/goveralls@latest
-      - name: Send coverage
-        env:
-          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goveralls -parallel-finish=true -service=github
+          files: ./cover.out # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
 
   build-image:
     runs-on: ubuntu-latest
@@ -113,12 +98,12 @@ jobs:
           - "v1.22.12"
           - "v1.23.9"
           - "v1.24.3"
-          - "v1.25.0"
+          - "v1.25.2"
         emqx:
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-slim.yaml"]
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-full.yaml"]
-          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-slim.yaml"]
-          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-full.yaml"]
+          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-slim.yaml"]
+          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
+          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-slim.yaml"]
+          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-full.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
 
@@ -133,7 +118,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.18.3'
+          go-version: '1.19.3'
       - name: Deploy operator
         timeout-minutes: 5
         uses: ./.github/actions/deploy-operator

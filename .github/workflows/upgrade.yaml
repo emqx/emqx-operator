@@ -34,7 +34,7 @@ jobs:
             --set installCRDs=true
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.18.3'
+          go-version: '1.19.3'
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -71,7 +71,8 @@ jobs:
           helm upgrade --install emqx-operator deploy/charts/emqx-operator \
             --namespace emqx-operator-system \
             --create-namespace \
-            --set image.tag=${{ github.sha }}
+            --set image.tag=${{ github.sha }} \
+            --debug
       - name: Check operator
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
@@ -100,4 +101,6 @@ jobs:
       - if: failure()
         run: kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json
       - if: failure()
-        run: kubectl get ${{ matrix.emqx[0] }} emqx -o json
+        run: kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }}  -o json
+      - if: failure()
+        run: kubectl get event

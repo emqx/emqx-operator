@@ -25,7 +25,6 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	"go.uber.org/zap/zapcore"
-	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,10 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
+	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	appscontrollersv1beta3 "github.com/emqx/emqx-operator/controllers/apps/v1beta3"
+	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
 	appscontrollersv2alpha1 "github.com/emqx/emqx-operator/controllers/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/pkg/handler"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -52,6 +51,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(appsv1beta3.AddToScheme(scheme))
+	utilruntime.Must(appsv1beta4.AddToScheme(scheme))
 	utilruntime.Must(appsv2alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -67,6 +67,7 @@ func init() {
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func main() {
@@ -106,65 +107,46 @@ func main() {
 		os.Exit(1)
 	}
 
-	config := mgr.GetConfig()
-	clientset, _ := kubernetes.NewForConfig(config)
-	handler := handler.Handler{
-		Client:    mgr.GetClient(),
-		Clientset: *clientset,
-		Config:    *config,
-	}
-
-	emqxReconciler := appscontrollersv1beta3.EmqxReconciler{
-		Handler:       handler,
-		Scheme:        mgr.GetScheme(),
-		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
-	}
-
-	if err := (&appscontrollersv1beta3.EmqxBrokerReconciler{
-		EmqxReconciler: emqxReconciler,
+	if err = (&appscontrollersv1beta4.EmqxBrokerReconciler{
+		EmqxReconciler: appscontrollersv1beta4.NewEmqxReconciler(mgr),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EMQX Broker")
+		setupLog.Error(err, "unable to create controller", "controller", "EmqxBroker")
 		os.Exit(1)
 	}
 
-	if err := (&appscontrollersv1beta3.EmqxEnterpriseReconciler{
-		EmqxReconciler: emqxReconciler,
+	if err = (&appscontrollersv1beta4.EmqxEnterpriseReconciler{
+		EmqxReconciler: appscontrollersv1beta4.NewEmqxReconciler(mgr),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EMQX Enterprise")
+		setupLog.Error(err, "unable to create controller", "controller", "EmqxEnterprise")
 		os.Exit(1)
 	}
 
-	if err = (&appscontrollersv1beta3.EmqxPluginReconciler{
-		Handler: handler,
-	}).SetupWithManager(mgr); err != nil {
+	if err = appscontrollersv1beta4.NewEmqxPluginReconciler(mgr).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxPlugin")
 		os.Exit(1)
 	}
 
-	if err = (&appscontrollersv2alpha1.EMQXReconciler{
-		Handler:       handler,
-		Scheme:        mgr.GetScheme(),
-		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
-	}).SetupWithManager(mgr); err != nil {
+	if err = appscontrollersv2alpha1.NewEMQXReconciler(mgr).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX")
 		os.Exit(1)
 	}
+
 	//+kubebuilder:scaffold:builder
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&appsv1beta3.EmqxPlugin{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&appsv1beta4.EmqxPlugin{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxPlugin")
 			os.Exit(1)
 		}
-
-		if err = (&appsv1beta3.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&appsv1beta4.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxBroker")
 			os.Exit(1)
 		}
-		if err = (&appsv1beta3.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&appsv1beta4.EmqxEnterprise{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxEnterprise")
 			os.Exit(1)
 		}
+
 		if err = (&appsv2alpha1.EMQX{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EMQX")
 			os.Exit(1)

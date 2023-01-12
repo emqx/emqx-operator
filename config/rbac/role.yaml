@@ -1,4 +1,3 @@
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -133,6 +132,7 @@ rules:
   - emqxbrokers
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -158,6 +158,7 @@ rules:
   - emqxenterprises
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -238,3 +239,14 @@ rules:
   - get
   - list
   - update
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch

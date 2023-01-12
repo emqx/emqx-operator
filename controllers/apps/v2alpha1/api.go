@@ -17,9 +17,11 @@ limitations under the License.
 package v2alpha1
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,8 +29,10 @@ import (
 	emperror "emperror.dev/errors"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/emqx/emqx-operator/internal/apiclient"
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,11 +41,73 @@ type requestAPI struct {
 	Username string
 	Password string
 	Port     string
-	handler.Handler
+	client.Client
+	APIClient *apiclient.APIClient
+}
+
+func newRequestAPI(r *EMQXReconciler, instance *appsv2alpha1.EMQX) *requestAPI {
+	var username, password, port string
+	username, password, err := getBootstrapUser(r.Client, instance)
+	if err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetBootStrapUserSecret", err.Error())
+	}
+
+	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to get dashboard service port: %s, use 18083 port", err.Error())
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetDashboardServicePort", msg)
+		port = "18083"
+	}
+	if dashboardPort != nil {
+		port = dashboardPort.TargetPort.String()
+	}
+
+	return &requestAPI{
+		Username:  username,
+		Password:  password,
+		Port:      port,
+		Client:    r.Client,
+		APIClient: r.APIClient,
+	}
+}
+
+func getBootstrapUser(k8sClient client.Client, instance *appsv2alpha1.EMQX) (username, password string, err error) {
+	secret := &corev1.Secret{}
+	if err = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.NameOfBootStrapUser(), Namespace: instance.Namespace}, secret); err != nil {
+		return "", "", err
+	}
+
+	data, ok := secret.Data["bootstrap_user"]
+	if !ok {
+		return "", "", emperror.Errorf("the secret does not contain the bootstrap_user")
+	}
+
+	str := string(data)
+	index := strings.Index(str, ":")
+
+	return str[:index], str[index+1:], nil
+}
+
+func (r *requestAPI) requestAPI(obj client.Object, method, path string, body []byte) (*http.Response, []byte, error) {
+	list := &corev1.PodList{}
+	err := r.Client.List(context.Background(), list, client.InNamespace(obj.GetNamespace()), client.MatchingLabels(obj.GetLabels()))
+	if err != nil {
+		return nil, nil, emperror.Wrap(err, "failed to list pods")
+	}
+	for _, pod := range list.Items {
+		for _, container := range pod.Status.ContainerStatuses {
+			if container.Name == EMQXContainerName {
+				if container.Ready {
+					return r.APIClient.RequestAPI(&pod, r.Username, r.Password, r.Port, method, path, body)
+				}
+			}
+		}
+	}
+	return nil, nil, innerErr.ErrPodNotReady
 }
 
 func (r *requestAPI) getNodeStatuesByAPI(obj client.Object) ([]appsv2alpha1.EMQXNode, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, "api/v5/nodes")
+	resp, body, err := r.requestAPI(obj, "GET", "api/v5/nodes", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
 	}
@@ -94,7 +160,7 @@ func (r *requestAPI) getAllListenersByAPI(obj client.Object) ([]corev1.ServicePo
 }
 
 func (r *requestAPI) getGatewaysByAPI(obj client.Object) ([]emqxGateway, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, "api/v5/gateway")
+	resp, body, err := r.requestAPI(obj, "GET", "api/v5/gateway", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/gateway")
 	}
@@ -109,7 +175,7 @@ func (r *requestAPI) getGatewaysByAPI(obj client.Object) ([]emqxGateway, error) 
 }
 
 func (r *requestAPI) getListenerPortsByAPI(obj client.Object, apiPath string) ([]corev1.ServicePort, error) {
-	resp, body, err := r.Handler.RequestAPI(obj, EMQXContainerName, "GET", r.Username, r.Password, r.Port, apiPath)
+	resp, body, err := r.requestAPI(obj, "GET", apiPath, nil)
 	if err != nil {
 		return nil, emperror.Wrapf(err, "failed to get API %s", apiPath)
 	}

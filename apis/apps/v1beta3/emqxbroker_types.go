@@ -134,7 +134,7 @@ type EmqxBrokerSpec struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
-//+kubebuilder:storageversion
+//+kubebuilder:deprecatedversion
 
 // EmqxBroker is the Schema for the emqxbrokers API
 type EmqxBroker struct {

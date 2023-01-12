@@ -25,7 +25,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +34,6 @@ import (
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	appscontrollersv2alpha1 "github.com/emqx/emqx-operator/controllers/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/pkg/handler"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -45,7 +43,6 @@ import (
 // var cfg *rest.Config
 var timeout, interval time.Duration
 var k8sClient client.Client
-var clientset *kubernetes.Clientset
 var testEnv *envtest.Environment
 
 func TestAPIs(t *testing.T) {
@@ -100,16 +97,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	clientset, _ = kubernetes.NewForConfig(cfg)
-	err = (&appscontrollersv2alpha1.EMQXReconciler{
-		Scheme: k8sManager.GetScheme(),
-		Handler: handler.Handler{
-			Client:    k8sClient,
-			Clientset: *clientset,
-			Config:    *cfg,
-		},
-		EventRecorder: k8sManager.GetEventRecorderFor("emqx-operator"),
-	}).SetupWithManager(k8sManager)
+	err = appscontrollersv2alpha1.NewEMQXReconciler(k8sManager).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {

@@ -1,8 +1,7 @@
 # Image URL to use all building/pushing image targets
 IMG ?= emqx/emqx-operator-controller:$(shell $(CURDIR)/scripts/get-version.sh)
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-#CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
-CRD_OPTIONS ?= "crd:maxDescLen=0,generateEmbeddedObjectMeta=true"
+# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+ENVTEST_K8S_VERSION = 1.25.0
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -38,7 +37,7 @@ help: ## Display this help.
 ##@ Development
 
 manifests: crd-ref-docs controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) crd:maxDescLen=0,generateEmbeddedObjectMeta=true rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	$(call gen-crd-ref-docs)
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -51,7 +50,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 test: manifests generate fmt vet envtest ## Run tests.
-	go test -coverpkg=./... -coverprofile=cover.out --timeout=30m ./...
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out --timeout=30m
 
 ##@ Build
 
@@ -66,6 +65,16 @@ docker-build: test ## Build docker image with the manager.
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
+
+helm-crds: manifests kustomize ## build CRDs to helm template
+	$(KUSTOMIZE) build config/crd > deploy/charts/emqx-operator/templates/crds.yaml
+	
+	yq -i '.metadata.annotations."cert-manager.io/inject-ca-from" = "{{ .Release.Namespace }}/{{ include \"emqx-operator.fullname\" . }}-serving-cert"' deploy/charts/emqx-operator/templates/crds.yaml
+	yq -i '.spec.conversion.webhook.clientConfig.service.namespace = "{{ include \"emqx-operator.fullname\" . }}-webhook-service"' deploy/charts/emqx-operator/templates/crds.yaml
+	yq -i '.spec.conversion.webhook.clientConfig.service.name = "{{ .Release.Namespace }}"' deploy/charts/emqx-operator/templates/crds.yaml
+
+	sed -i '1i {{- if not .Values.skipCRDs }}\n' deploy/charts/emqx-operator/templates/crds.yaml
+	echo -e '\n{{- end }}' >> deploy/charts/emqx-operator/templates/crds.yaml
 
 ##@ Deployment
 
@@ -86,31 +95,41 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
-CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2)
+## Location to install dependencies to
+LOCALBIN ?= $(PROJECT_DIR)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
 
-KUSTOMIZE = $(PROJECT_DIR)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
-
-ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
-envtest: ## Download envtest-setup locally if necessary.
-	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
-	$(ENVTEST) use 1.21
-
+## Tool Binaries
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+ENVTEST ?= $(LOCALBIN)/setup-envtest
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
-crd-ref-docs: ## Download crd-ref-docs locally if necessary.
-	$(call go-install-tool,$(CRD_REF_DOCS),github.com/elastic/crd-ref-docs@latest)
 
-# go-install-tool will 'go install' any package $2 and install it to $1.
-define go-install-tool
-@[ -f $(1) ] || { \
-set -e ;\
-echo "Install $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
-}
-endef
+## Tool Versions
+KUSTOMIZE_VERSION ?= v4.5.7
+CONTROLLER_TOOLS_VERSION ?= v0.9.2
+
+KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+$(KUSTOMIZE): $(LOCALBIN)
+	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	test -s $(LOCALBIN)/crd-ref-docs || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@latest
 
 define gen-crd-ref-docs
 @for API_DIR in $$(find $(PROJECT_DIR)/apis/apps -type d -d 1); do \
