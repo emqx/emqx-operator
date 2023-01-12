@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta4
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -25,65 +26,93 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/emqx/emqx-operator/internal/apiclient"
+	innerErr "github.com/emqx/emqx-operator/internal/errors"
+
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	apiClient "github.com/emqx/emqx-operator/pkg/apiclient"
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *EmqxReconciler) requestAPI(instance appsv1beta4.Emqx, method, apiPort, path string, body []byte) (*http.Response, []byte, error) {
-	inCluster := true
-	if path == "api/v4/nodes" && !instance.GetStatus().IsRunning() {
-		inCluster = false
-	}
-	latestReadySts, err := r.getLatestReadyStatefulSet(instance, inCluster)
-	if err != nil {
-		return nil, nil, err
-	}
-	podMap, err := r.getPodMap(instance, []*appsv1.StatefulSet{latestReadySts})
-	if err != nil {
-		return nil, nil, err
-	}
-	pod := podMap[latestReadySts.UID][0]
-
-	username, password, err := r.Handler.GetBootstrapUser(instance)
-	if err != nil {
-		return nil, nil, err
-	}
-	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
-	apiClient := apiClient.APIClient{
-		Username: username,
-		Password: password,
-		PortForwardOptions: apiClient.PortForwardOptions{
-			Namespace: pod.Namespace,
-			PodName:   pod.Name,
-			PodPorts: []string{
-				fmt.Sprintf(":%s", apiPort),
-			},
-			Clientset:    r.clientset,
-			Config:       r.config,
-			ReadyChannel: readyChan,
-			StopChannel:  stopChan,
-		},
-	}
-	resp, body, err := apiClient.Do(method, path, body)
-	if err != nil {
-		return nil, nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, nil, emperror.Errorf("failed to request API: %s, status: %s", path, resp.Status)
-	}
-	if code := gjson.GetBytes(body, "code"); code.Int() != 0 {
-		return nil, nil, emperror.Errorf("failed to request API: %s, code: %d, message: %s", path, code.Int(), gjson.GetBytes(body, "message").String())
-	}
-	return resp, body, nil
+type requestAPI struct {
+	Username string
+	Password string
+	Port     string
+	client.Client
+	*apiclient.APIClient
 }
 
-func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
-	_, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/nodes", nil)
+func newRequestAPI(client client.Client, apiClient *apiclient.APIClient, instance appsv1beta4.Emqx) (*requestAPI, error) {
+	username, password, err := getBootstrapUser(client, instance)
+	if err != nil {
+		return nil, err
+	}
+
+	return &requestAPI{
+		Username:  username,
+		Password:  password,
+		Port:      "8081",
+		Client:    client,
+		APIClient: apiClient,
+	}, nil
+}
+
+func getBootstrapUser(client client.Client, instance appsv1beta4.Emqx) (username, password string, err error) {
+	bootstrapUser := &corev1.Secret{}
+	if err := client.Get(context.Background(), types.NamespacedName{
+		Namespace: instance.GetNamespace(),
+		Name:      instance.GetName() + "-bootstrap-user",
+	}, bootstrapUser); err != nil {
+		return "", "", emperror.Wrap(err, "failed to get bootstrap user")
+	}
+
+	data, ok := bootstrapUser.Data["bootstrap_user"]
+	if !ok {
+		return "", "", emperror.Errorf("the secret does not contain the bootstrap_user")
+	}
+	str := string(data)
+	index := strings.Index(str, ":")
+
+	return str[:index], str[index+1:], nil
+}
+
+func (r *requestAPI) requestAPI(instance appsv1beta4.Emqx, method, path string, body []byte) (*http.Response, []byte, error) {
+	list, err := getInClusterStatefulSets(r.Client, instance)
+	if path == "api/v4/nodes" && instance.GetStatus().GetEmqxNodes() == nil {
+		list, err = getAllStatefulSet(r.Client, instance)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	sts := list[len(list)-1]
+	podMap, err := getPodMap(r.Client, instance, []*appsv1.StatefulSet{sts})
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(podMap[sts.UID]) == 0 {
+		return nil, nil, innerErr.ErrPodNotReady
+	}
+
+	for _, pod := range podMap[sts.UID] {
+		for _, container := range pod.Status.ContainerStatuses {
+			if container.Name == EmqxContainerName {
+				if container.Ready {
+					return r.APIClient.RequestAPI(pod, r.Username, r.Password, r.Port, method, path, body)
+				}
+			}
+		}
+	}
+	return nil, nil, innerErr.ErrPodNotReady
+}
+
+// Node
+func (r *requestAPI) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxNode, error) {
+	_, body, err := r.requestAPI(instance, "GET", "api/v4/nodes", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +125,7 @@ func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta4.Emqx) ([]apps
 	return emqxNodes, nil
 }
 
-func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]corev1.ServicePort, error) {
+func (r *requestAPI) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]corev1.ServicePort, error) {
 	type emqxListener struct {
 		Protocol string `json:"protocol"`
 		ListenOn string `json:"listen_on"`
@@ -123,7 +152,7 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 		return ans
 	}
 
-	_, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/listeners", nil)
+	_, body, err := r.requestAPI(instance, "GET", "api/v4/listeners", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -185,8 +214,9 @@ func (r *EmqxReconciler) getListenerPortsByAPI(instance appsv1beta4.Emqx) ([]cor
 	return ports, nil
 }
 
-func (r *EmqxReconciler) getEvacuationStatusByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxEvacuationStatus, error) {
-	_, body, err := r.requestAPI(instance, "GET", "8081", "api/v4/load_rebalance/global_status", nil)
+// Evacuation
+func (r *requestAPI) getEvacuationStatusByAPI(instance appsv1beta4.Emqx) ([]appsv1beta4.EmqxEvacuationStatus, error) {
+	_, body, err := r.requestAPI(instance, "GET", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +229,7 @@ func (r *EmqxReconciler) getEvacuationStatusByAPI(instance appsv1beta4.Emqx) ([]
 	return evacuationStatuses, nil
 }
 
-func (r *EmqxReconciler) evacuateNodeByAPI(instance appsv1beta4.Emqx, migrateToPods []*corev1.Pod, nodeName string) error {
+func (r *requestAPI) startEvacuateNodeByAPI(instance appsv1beta4.Emqx, migrateToPods []*corev1.Pod, nodeName string) error {
 	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
 	if !ok {
 		return emperror.New("failed to evacuate node, only support emqx enterprise")
@@ -225,6 +255,36 @@ func (r *EmqxReconciler) evacuateNodeByAPI(instance appsv1beta4.Emqx, migrateToP
 		return emperror.Wrap(err, "marshal body failed")
 	}
 
-	_, _, err = r.requestAPI(instance, "POST", "8081", "api/v4/load_rebalance/"+nodeName+"/evacuation/start", b)
+	_, _, err = r.requestAPI(instance, "POST", "api/v4/load_rebalance/"+nodeName+"/evacuation/start", b)
 	return err
+}
+
+// Plugin
+func (r *requestAPI) loadPluginByAPI(emqx appsv1beta4.Emqx, nodeName, pluginName, reloadOrUnload string) error {
+	resp, _, err := r.requestAPI(emqx, "PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return emperror.Errorf("request api failed: %s", resp.Status)
+	}
+	return nil
+}
+
+func (r *requestAPI) getPluginsByAPI(emqx appsv1beta4.Emqx) ([]pluginListByAPIReturn, error) {
+	var data []pluginListByAPIReturn
+	resp, body, err := r.requestAPI(emqx, "GET", "api/v4/plugins", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, emperror.Errorf("request api failed: %s", resp.Status)
+	}
+
+	err = json.Unmarshal([]byte(gjson.GetBytes(body, "data").String()), &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }

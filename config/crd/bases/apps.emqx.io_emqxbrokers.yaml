@@ -3936,9 +3936,6 @@ spec:
                                 format: int32
                                 type: integer
                             type: object
-                          name:
-                            default: emqx
-                            type: string
                           ports:
                             items:
                               properties:
@@ -6843,8 +6840,10 @@ spec:
                 items:
                   properties:
                     lastTransitionTime:
+                      format: date-time
                       type: string
                     lastUpdateTime:
+                      format: date-time
                       type: string
                     message:
                       type: string
@@ -6859,6 +6858,8 @@ spec:
                   - type
                   type: object
                 type: array
+              currentStatefulSetVersion:
+                type: string
               emqxNodes:
                 items:
                   properties:

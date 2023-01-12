@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	"github.com/emqx/emqx-operator/pkg/handler"
+	"github.com/emqx/emqx-operator/internal/handler"
 	"github.com/sethvargo/go-password/password"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -334,8 +334,13 @@ func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePo
 }
 
 func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
+	if instance.GetStatus().GetCurrentStatefulSetVersion() == "" {
+		return nil
+	}
 	serviceTemplate := instance.GetSpec().GetServiceTemplate()
 	serviceTemplate.Spec.Ports = appsv1beta4.MergeServicePorts(serviceTemplate.Spec.Ports, port)
+	serviceTemplate.Spec.Selector["controller-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
+
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
@@ -366,7 +371,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	}
 
 	emqxContainer := corev1.Container{
-		Name:            emqxTemplate.Spec.EmqxContainer.Name,
+		Name:            EmqxContainerName,
 		Image:           appsv1beta4.GetEmqxImage(instance),
 		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
 		Command:         emqxTemplate.Spec.EmqxContainer.Command,

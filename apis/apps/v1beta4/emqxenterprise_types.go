@@ -39,7 +39,9 @@ type EmqxLicense struct {
 }
 
 type EmqxBlueGreenUpdate struct {
-	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
+	// Number of seconds before evacuation connection start.
+	InitialDelaySeconds int32              `json:"initialDelaySeconds,omitempty"`
+	EvacuationStrategy  EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 }
 
 type EvacuationStrategy struct {
@@ -111,20 +113,9 @@ type EmqxEnterpriseStatus struct {
 	// readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready.
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 
-	EvacuationsStatus []EmqxEvacuationStatus `json:"evacuationsStatus,omitempty"`
-}
+	CurrentStatefulSetVersion string `json:"currentStatefulSetVersion,omitempty"`
 
-func (s *EmqxEnterpriseStatus) IsRunning() bool {
-	index := indexCondition(s.Conditions, ConditionRunning)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
-func (s *EmqxEnterpriseStatus) IsInitResourceReady() bool {
-	index := indexCondition(s.Conditions, ConditionInitResourceReady)
-	if index == -1 {
-		return false
-	}
-	return index == len(s.Conditions)-1 && s.Conditions[index].Status == corev1.ConditionTrue
+	EmqxBlueGreenUpdateStatus *EmqxBlueGreenUpdateStatus `json:"blueGreenUpdateStatus,omitempty"`
 }
 
 func (s *EmqxEnterpriseStatus) GetReplicas() int32 {
@@ -145,6 +136,14 @@ func (s *EmqxEnterpriseStatus) SetReadyReplicas(readyReplicas int32) {
 
 func (s *EmqxEnterpriseStatus) GetEmqxNodes() []EmqxNode {
 	return s.EmqxNodes
+}
+
+func (s *EmqxEnterpriseStatus) GetCurrentStatefulSetVersion() string {
+	return s.CurrentStatefulSetVersion
+}
+
+func (s *EmqxEnterpriseStatus) SetCurrentStatefulSetVersion(version string) {
+	s.CurrentStatefulSetVersion = version
 }
 
 func (s *EmqxEnterpriseStatus) SetEmqxNodes(nodes []EmqxNode) {

@@ -27,10 +27,9 @@ spec:
       # affinity:
       # tolerations:
       emqxContainer:
-        name: emqx
         image:
           repository: emqx/emqx
-          version: 4.4.8
+          version: 4.4.14
         emqxConfig:
           name: emqx
           cluster.discovery: dns

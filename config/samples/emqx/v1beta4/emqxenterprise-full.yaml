@@ -17,6 +17,7 @@ spec:
   #   accessModes:
   #     - ReadWriteOnce
   blueGreenUpdate:
+    initialDelaySeconds: 30
     evacuationStrategy:
       waitTakeover: 10
       connEvictRate: 200
@@ -34,10 +35,9 @@ spec:
       # affinity:
       # tolerations:
       emqxContainer:
-        name: "emqx"
         image:
           repository: emqx/emqx-ee
-          version: 4.4.12
+          version: 4.4.14
         emqxConfig:
           name: emqx-ee
           log.level: debug

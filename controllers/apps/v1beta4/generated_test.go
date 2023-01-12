@@ -209,40 +209,41 @@ func TestGenerateService(t *testing.T) {
 		},
 	}
 
-	expect := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: emqx.Spec.ServiceTemplate.ObjectMeta,
-		Spec:       emqx.Spec.ServiceTemplate.Spec,
-	}
+	t.Run("nil service", func(t *testing.T) {
+		assert.Nil(t, generateService(emqx))
+	})
 
 	t.Run("service", func(t *testing.T) {
-		expectService := expect.DeepCopy()
+		emqx.Status.CurrentStatefulSetVersion = "fake"
 
 		got := generateService(emqx)
-		assert.Equal(t, expectService, got)
+		assert.Equal(t, emqx.Spec.ServiceTemplate.ObjectMeta, got.ObjectMeta)
+		assert.Equal(t, emqx.Spec.ServiceTemplate.Spec.Ports, got.Spec.Ports)
+		assert.Equal(t, map[string]string{
+			"foo":                      "bar",
+			"controller-revision-hash": "fake",
+		}, got.Spec.Selector)
 	})
 
 	t.Run("headless service", func(t *testing.T) {
-		expectHeadless := expect.DeepCopy()
-		expectHeadless.Name = "emqx-headless"
-		expectHeadless.Namespace = "default"
-		expectHeadless.Spec.Type = corev1.ServiceTypeClusterIP
-		expectHeadless.Spec.ClusterIP = corev1.ClusterIPNone
-		expectHeadless.Spec.PublishNotReadyAddresses = true
-		expectHeadless.Spec.Ports = []corev1.ServicePort{
+		got := generateHeadlessService(emqx)
+		assert.Equal(t, "emqx-headless", got.Name)
+		assert.Equal(t, emqx.Spec.GetServiceTemplate().Namespace, got.Namespace)
+		assert.Equal(t, emqx.Spec.GetServiceTemplate().Labels, got.Labels)
+		assert.Equal(t, emqx.Spec.GetServiceTemplate().Annotations, got.Annotations)
+
+		assert.Equal(t, emqx.Spec.GetServiceTemplate().Labels, got.Spec.Selector)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, got.Spec.Type)
+		assert.Equal(t, corev1.ClusterIPNone, got.Spec.ClusterIP)
+		assert.Equal(t, true, got.Spec.PublishNotReadyAddresses)
+		assert.Equal(t, []corev1.ServicePort{
 			{
 				Name:       "http-management-8081",
 				Port:       8081,
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt(8081),
 			},
-		}
-
-		got := generateHeadlessService(emqx)
-		assert.Equal(t, expectHeadless, got)
+		}, got.Spec.Ports)
 	})
 }
 
@@ -256,7 +257,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Name: "fake",
 		},
 	}
-	emqx.Spec.Template.Spec.EmqxContainer.Name = "emqx"
 	emqx.Spec.Template.Spec.EmqxContainer.Image.Repository = "emqx/emqx-ee"
 	emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
 	emqx.Spec.Template.Spec.EmqxContainer.Image.PullPolicy = corev1.PullAlways

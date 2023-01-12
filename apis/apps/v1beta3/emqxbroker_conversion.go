@@ -51,7 +51,6 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	// Template
 	dst.Spec.Template.ObjectMeta.Labels = src.Labels
 	dst.Spec.Template.ObjectMeta.Annotations = src.Annotations
-	dst.Spec.Template.Spec.EmqxContainer.Name = "emqx"
 
 	dst.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
 	compile := regexp.MustCompile(`(latest|[0-9]+(\.[0-9]+)?(\.[0-9]+)?(-(alpha|beta|rc)\.[0-9]+)?)`)

@@ -6,6 +6,10 @@ concurrency:
 
 on:
   pull_request:
+  push:
+    ## For update codecov.io
+    branches:
+      - main**
 
 jobs:
   lint:
@@ -29,7 +33,7 @@ jobs:
         dir:
         - apis
         - controllers
-        - pkg
+        - internal 
         - e2e/v1beta4
         - e2e/v2alpha1
 
@@ -55,27 +59,35 @@ jobs:
           tar -zxvf kubebuilder-tools
           sudo mv kubebuilder/ /usr/local/kubebuilder
       - name: Run unit tests
-        run: go test -coverpkg=./... -coverprofile=cover.out --timeout=20m ./${{ matrix.dir }}/...
-      - name: Install goveralls
-        run: go install github.com/mattn/goveralls@latest
-      - name: Send coverage
         env:
-          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goveralls -coverprofile=cover.out -service=github -parallel -flagname=go-test-${{ matrix.dir }}
-
-  finish:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-go@v3
+          DIR: ${{ matrix.dir }}
+        run: go test -coverpkg=./... -coverprofile=${DIR/\//_}.out --timeout=20m ./${DIR}/...
+      - uses: actions/upload-artifact@v3
         with:
-          go-version: '1.19.3'
-      - name: Install goveralls
-        run: go install github.com/mattn/goveralls@latest
-      - name: Send coverage
-        env:
-          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goveralls -parallel-finish=true -service=github
+          name: coverprofile
+          path: |
+            *.out
+
+  codecov:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: coverprofile
+      - name: Get cover files
+        id: files
+        run: |
+          files="$(find -maxdepth 1 -name '*.out' -exec readlink -f '{}' ';' | tr '\n' ',' | sed 's/,$//g')"
+          echo "files=$files" >> $GITHUB_OUTPUT
+      - uses: codecov/codecov-action@v3
+        with:
+          files: ${{ steps.files.outputs.files }} # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+      - uses: geekyeggo/delete-artifact@v2
+        with:
+          name: coverprofile
 
   deployment:
     runs-on: ubuntu-latest
