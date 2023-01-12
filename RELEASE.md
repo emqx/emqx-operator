@@ -1,28 +1,24 @@
 ## Release Note 🍻
 
-EMQX Operator 2.0.3 is released.
+EMQX Operator 2.1.0 is released.
 
 ### Supported version
 
-- `apps.emqx.io/v1beta3`
+- `apps.emqx.io/v1beta4`
 
-  - `EMQX` at [4.4.8](https://www.emqx.com/en/changelogs/enterprise/4.4.8) and later
-  - `EMQX Enterprise` at [4.4.8](https://www.emqx.com/en/changelogs/broker/4.4.8) and later
+  - `EMQX` at [4.4.14](https://www.emqx.com/en/changelogs/broker/4.4.8) and later
+  - `EMQX Enterprise` at [4.4.14](https://www.emqx.com/en/changelogs/enterprise/4.4.8) and later
 
 - `apps.emqx.io/v2alpha1`
 
-  - `EMQX` at [5.0.8](https://www.emqx.com/en/changelogs/broker/5.0.8) and later
+  - `EMQX` at [5.0.14](https://www.emqx.com/en/changelogs/broker/5.0.14) and later
 
-### Fixes 🛠
+### Features 🌈
 
-- Fixes a conflict when a user defines a port in the service template that duplicates an EMQX listener
+New API version: `apps.emqx.io/v1beta4`, support for EMQX 4.4 and EMQX Enterprise 4.4, please check out reference docs
 
-- Fixes an issue with service resources not having annotation from Custom Resource resources
+- Fully compatible with  `apps.emqx.io/v1beta3`
+ 
+- The new blue-green updating feature ensures smooth migration of client connections during EMQX cluster upgrades, reducing peak server pressure, For more info please check: https://github.com/emqx/emqx-operator/blob/2.1.0/docs/en_US/tasks/configure-emqx-blueGreenUpdate.md
 
-- Fixed incorrect DNS Name of Certificate resource in Cert Manger from EMQX Operator Helm Chart 
-
-### Other changes
-
-- In EMQX Operator Helm Chart, add extra selectors to avoid conflicts with other stuff in the same namespace
-
-- Add More document
+- EMQX Operator now uses the EMQX Bootstrap user to access the EMQX API, no longer the EMQX Dashboard user
