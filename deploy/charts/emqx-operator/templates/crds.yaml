@@ -13,8 +13,8 @@ spec:
     webhook:
       clientConfig:
         service:
-          name: '{{ .Release.Namespace }}'
-          namespace: '{{ include "emqx-operator.fullname" . }}-webhook-service'
+          name: '{{ include "emqx-operator.fullname" . }}-webhook-service'
+          namespace: '{{ .Release.Namespace }}'
           path: /convert
       conversionReviewVersions:
         - v1
@@ -6913,8 +6913,8 @@ spec:
     webhook:
       clientConfig:
         service:
-          name: '{{ .Release.Namespace }}'
-          namespace: '{{ include "emqx-operator.fullname" . }}-webhook-service'
+          name: '{{ include "emqx-operator.fullname" . }}-webhook-service'
+          namespace: '{{ .Release.Namespace }}'
           path: /convert
       conversionReviewVersions:
         - v1
@@ -13907,8 +13907,8 @@ spec:
     webhook:
       clientConfig:
         service:
-          name: '{{ .Release.Namespace }}'
-          namespace: '{{ include "emqx-operator.fullname" . }}-webhook-service'
+          name: '{{ include "emqx-operator.fullname" . }}-webhook-service'
+          namespace: '{{ .Release.Namespace }}'
           path: /convert
       conversionReviewVersions:
         - v1
@@ -20348,8 +20348,8 @@ spec:
     webhook:
       clientConfig:
         service:
-          name: '{{ .Release.Namespace }}'
-          namespace: '{{ include "emqx-operator.fullname" . }}-webhook-service'
+          name: '{{ include "emqx-operator.fullname" . }}-webhook-service'
+          namespace: '{{ .Release.Namespace }}'
           path: /convert
       conversionReviewVersions:
         - v1
