@@ -1,5 +1,8 @@
 codecov:
   disable_default_path_fixes: true
 
+fixes:
+- "github.com/emqx/emqx-operator::"
+
 ignore:
 - "**/zz_generated.deepcopy.go"
