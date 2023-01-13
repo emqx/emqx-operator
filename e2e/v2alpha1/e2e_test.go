@@ -132,17 +132,20 @@ var _ = Describe("E2E Test", func() {
 
 		It("", func() {
 			By("Checking the EMQX Custom Resource's Status")
-			Eventually(func() []appsv2alpha1.Condition {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
-				return instance.Status.Conditions
-			}, timeout, interval).Should(ConsistOf(conditions))
-
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.9"))
-			Expect(instance.Status.EMQXNodes).Should(HaveLen(4))
-			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(3)))
+			for _, matcher := range []gomegaTypes.GomegaMatcher{
+				HaveField("Conditions", ConsistOf(conditions)),
+				HaveField("CurrentImage", Equal("emqx/emqx:5.0.9")),
+				HaveField("EMQXNodes", HaveLen(4)),
+				HaveField("CoreNodeReplicas", Equal(int32(1))),
+				HaveField("CoreNodeReadyReplicas", Equal(int32(1))),
+				HaveField("ReplicantNodeReplicas", Equal(int32(3))),
+				HaveField("ReplicantNodeReadyReplicas", Equal(int32(3))),
+			} {
+				Eventually(func() appsv2alpha1.EMQXStatus {
+					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
+					return instance.Status
+				}, timeout, interval).Should(matcher)
+			}
 
 			By("Checking the EMQX Custom Resource's Service")
 			svc := &corev1.Service{}
@@ -169,17 +172,20 @@ var _ = Describe("E2E Test", func() {
 		})
 		It("", func() {
 			By("Checking the EMQX Custom Resource's Status")
-			Eventually(func() []appsv2alpha1.Condition {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
-				return instance.Status.Conditions
-			}, timeout, interval).Should(ConsistOf(conditions))
-
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.9"))
-			Expect(instance.Status.EMQXNodes).Should(HaveLen(1))
-			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(0)))
-			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(0)))
+			for _, matcher := range []gomegaTypes.GomegaMatcher{
+				HaveField("Conditions", ConsistOf(conditions)),
+				HaveField("CurrentImage", Equal("emqx/emqx:5.0.9")),
+				HaveField("EMQXNodes", HaveLen(1)),
+				HaveField("CoreNodeReplicas", Equal(int32(1))),
+				HaveField("CoreNodeReadyReplicas", Equal(int32(1))),
+				HaveField("ReplicantNodeReplicas", Equal(int32(0))),
+				HaveField("ReplicantNodeReadyReplicas", Equal(int32(0))),
+			} {
+				Eventually(func() appsv2alpha1.EMQXStatus {
+					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
+					return instance.Status
+				}, timeout, interval).Should(matcher)
+			}
 
 			By("Checking the EMQX Custom Resource's Service")
 			svc := &corev1.Service{}
@@ -233,21 +239,20 @@ var _ = Describe("E2E Test", func() {
 			}, timeout, interval).Should(Equal("emqx/emqx:5.0.8"))
 
 			By("Checking the EMQX Custom Resource's Status")
-			Eventually(func() []appsv2alpha1.Condition {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
-				return instance.Status.Conditions
-			}, timeout, interval).Should(ConsistOf(conditions))
-
-			Eventually(func() string {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
-				return instance.Status.CurrentImage
-			}, timeout, interval).Should(Equal("emqx/emqx:5.0.8"))
-
-			Expect(instance.Status.EMQXNodes).Should(HaveLen(4))
-			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(1)))
-			Expect(instance.Status.ReplicantNodeReplicas).Should(Equal(int32(3)))
-			Expect(instance.Status.ReplicantNodeReadyReplicas).Should(Equal(int32(3)))
+			for _, matcher := range []gomegaTypes.GomegaMatcher{
+				HaveField("Conditions", ConsistOf(conditions)),
+				HaveField("CurrentImage", Equal("emqx/emqx:5.0.8")),
+				HaveField("EMQXNodes", HaveLen(4)),
+				HaveField("CoreNodeReplicas", Equal(int32(1))),
+				HaveField("CoreNodeReadyReplicas", Equal(int32(1))),
+				HaveField("ReplicantNodeReplicas", Equal(int32(3))),
+				HaveField("ReplicantNodeReadyReplicas", Equal(int32(3))),
+			} {
+				Eventually(func() appsv2alpha1.EMQXStatus {
+					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
+					return instance.Status
+				}, timeout, interval).Should(matcher)
+			}
 		})
 	})
 
