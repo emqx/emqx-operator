@@ -61,7 +61,7 @@ jobs:
       - name: Run unit tests
         env:
           DIR: ${{ matrix.dir }}
-        run: go test -coverpkg=./... -coverprofile=${DIR/\//_}.out --timeout=20m ./${DIR}/...
+        run: go test -race -covermode=atomic -coverpkg=./... -coverprofile=${DIR/\//_}.out --timeout=20m ./${DIR}/...
       - uses: actions/upload-artifact@v3
         with:
           name: coverprofile

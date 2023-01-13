@@ -238,7 +238,11 @@ var _ = Describe("E2E Test", func() {
 				return instance.Status.Conditions
 			}, timeout, interval).Should(ConsistOf(conditions))
 
-			Expect(instance.Status.CurrentImage).Should(Equal("emqx/emqx:5.0.8"))
+			Eventually(func() string {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
+				return instance.Status.CurrentImage
+			}, timeout, interval).Should(Equal("emqx/emqx:5.0.8"))
+
 			Expect(instance.Status.EMQXNodes).Should(HaveLen(4))
 			Expect(instance.Status.CoreNodeReplicas).Should(Equal(int32(1)))
 			Expect(instance.Status.CoreNodeReadyReplicas).Should(Equal(int32(1)))
