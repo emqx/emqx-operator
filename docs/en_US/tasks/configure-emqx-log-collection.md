@@ -1,4 +1,4 @@
-# Configure EMQX Logs Collection
+# Configure EMQX Log Collection
 
 ## Task target
 
@@ -136,6 +136,47 @@ spec:
 ```
 
 :::
+::: tab v1beta4
+
+`telegraf.influxdata.com/internal` Set to false to not collect the telegraf agent's own metrics
+
+`telegraf.influxdata.com/volume-mounts` Set the mount path of the log
+
+`telegraf.influxdata.com/class` logs references the name of the class specified above
+
+`spec.template.spec.emqxContainer.emqxConfig` Configure the output log to a file and the log level to debug
+
+`spec.template.spec.volumes` and `spec.template.spec.emqxContainer.VolumeMounts` Configure Log volume
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+  annotations:
+    telegraf.influxdata.com/internal: "false"
+    telegraf.influxdata.com/volume-mounts: "{\"log-volume\":\"/opt/emqx/log\"}"
+    telegraf.influxdata.com/class: "logs"
+spec:
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.14
+        emqxConfig:
+          log.level: debug
+          log.to: file
+        VolumeMounts:
+        - name: log-volume
+          mountPath: /opt/emqx/log
+      volumes:
+        - name: log-volume
+          emptyDir: {}
+```
+
+
+:::
 ::: tab v1beta3
 
 `telegraf.influxdata.com/internal` Set to false to not collect the telegraf agent's own metrics
@@ -159,7 +200,7 @@ metadata:
     telegraf.influxdata.com/class: "logs"
 spec:
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
+    image: emqx/emqx-ee:4.4.14
     config:
       log.to: file
       log.level: debug
@@ -205,6 +246,24 @@ emqx-replicant-c868c79cd-z8bvj   1/1     Running   0          41s
 
 
 :::
+::: tab v1beta4
+
+```shell
+kubectl get pods  -l  apps.emqx.io/instance=emqx-ee
+```
+
+The output is similar to:
+
+```shell
+NAME        READY   STATUS    RESTARTS   AGE
+emqx-ee-0   3/3     Running   0          8m37s
+emqx-ee-1   3/3     Running   0          8m37s
+emqx-ee-2   3/3     Running   0          8m37s
+```
+
+**Note:** When the telegraf sidecar is injected into the EMQX pod, the number of containers in the EQMX pod will reach 3
+
+:::
 ::: tab v1beta3
 
 ```shell
@@ -232,6 +291,13 @@ emqx-ee-2   3/3     Running   0          8m37s
 
 ```shell
 kubectl logs -f emqx-core-0 -c telegraf
+```
+
+:::
+::: tab v1beta4
+
+```shell
+kubectl logs -f emqx-ee-0 -c telegraf
 ```
 
 :::
