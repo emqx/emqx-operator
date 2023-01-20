@@ -33,33 +33,44 @@ func (a addEmqxStatefulSet) reconcile(ctx context.Context, instance appsv1beta4.
 		return subResult{err: emperror.Wrap(err, "failed to create or update statefulset")}
 	}
 
-	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
-	if !ok {
-		return subResult{}
-	}
-
-	if enterprise.Status.EmqxBlueGreenUpdateStatus != nil &&
-		enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt != nil {
-		s := enterprise.Spec.EmqxBlueGreenUpdate.InitialDelaySeconds - int32(time.Since(enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt.Time).Seconds())
-		if s > 0 {
-			a.EventRecorder.Event(instance, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Delay %d seconds", s))
-			return subResult{result: ctrl.Result{RequeueAfter: time.Duration(s) * time.Second}}
-		}
-
-		if err := a.syncStatefulSet(enterprise); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to sync statefulset")}
-		}
+	if isEnterprise, enterprise := a.isEmqxEnterprise(instance); isEnterprise {
+		return a.handleBlueGreenUpdate(enterprise)
 	}
 
 	return subResult{}
 }
 
-func (a addEmqxStatefulSet) getNewStatefulSet(instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
+// Check whether it is Emqx enterprise version
+func (a *addEmqxStatefulSet) isEmqxEnterprise(instance appsv1beta4.Emqx) (bool, *appsv1beta4.EmqxEnterprise) {
 	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
-	if !ok {
-		return sts, nil
+	return ok, enterprise
+}
+
+// Handle Emqx BlueGreen Update
+func (a *addEmqxStatefulSet) handleBlueGreenUpdate(enterprise *appsv1beta4.EmqxEnterprise) subResult {
+	if enterprise.Status.EmqxBlueGreenUpdateStatus == nil {
+		return subResult{}
 	}
-	if enterprise.Spec.EmqxBlueGreenUpdate == nil {
+	if enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt == nil {
+		return subResult{}
+	}
+
+	// Calculate the remaining delay time, and do not perform subsequent operations within the delay time
+	delay := enterprise.Spec.EmqxBlueGreenUpdate.InitialDelaySeconds - int32(time.Since(enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt.Time).Seconds())
+	if delay > 0 {
+		a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Delay %d seconds", delay))
+		return subResult{result: ctrl.Result{RequeueAfter: time.Duration(delay) * time.Second}}
+	}
+
+	if err := a.syncStatefulSet(enterprise); err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to sync statefulset")}
+	}
+	return subResult{}
+}
+
+func (a addEmqxStatefulSet) getNewStatefulSet(instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
+
+	if isEnterprise, enterprise := a.isEmqxEnterprise(instance); !isEnterprise || enterprise.Spec.EmqxBlueGreenUpdate == nil {
 		return sts, nil
 	}
 
@@ -168,19 +179,31 @@ func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterpri
 }
 
 func (a addEmqxStatefulSet) canBeScaledDown(enterprise *appsv1beta4.EmqxEnterprise, originSts *appsv1.StatefulSet, podMap map[types.UID][]*corev1.Pod) bool {
+	// Check if there are any nodes that are prohibiting and has 0 current connected and current sessions
 	for _, e := range enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus {
 		if *e.Stats.CurrentConnected == 0 && *e.Stats.CurrentSessions == 0 && e.State == "prohibiting" {
-			podName := strings.Split(strings.Split(e.Node, "@")[1], ".")[0]
+			// Extract the pod name from the node string
+			podName := extractPodName(e.Node)
+
+			// Check if pod belongs to the given StatefulSet
 			if strings.Contains(podName, originSts.Name) {
 				pods := podMap[originSts.UID]
-				// Get latest pod for sts
+
+				// Get the latest pod for the StatefulSet
 				sort.Sort(PodsByNameNewer(pods))
 				if pods[0].Name == podName {
-					a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuate node %s successfully", getEmqxNodeName(enterprise, pods[0])))
+					// Record event
+					a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Evacuated node %s successfully", getEmqxNodeName(enterprise, pods[0])))
 					return true
 				}
 			}
 		}
 	}
 	return false
+}
+
+// Extract the pod name from the node string
+func extractPodName(node string) string {
+	podName := strings.Split(strings.Split(node, "@")[1], ".")[0]
+	return podName
 }
