@@ -63,8 +63,8 @@
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
-          "title": "Configure EMQX logs collection",
-          "path": "tasks/configure-emqx-logs-collection"
+          "title": "Configure EMQX log collection",
+          "path": "tasks/configure-emqx-log-collection"
         },
         {
           "title": "Configure EMQX Enterprise blue-green",
@@ -179,8 +179,8 @@
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
-          "title": "配置 EMQX logs 采集",
-          "path": "tasks/configure-emqx-logs-collection"
+          "title": "配置 EMQX 日志采集",
+          "path": "tasks/configure-emqx-log-collection"
         },
         {
           "title": "配置 EMQX 企业版蓝绿升级",
