@@ -77,6 +77,10 @@
         {
           "title": "Configure EMQX Service",
           "path": "tasks/configure-emqx-service"
+        },
+        {
+          "title": "Configure EMQX Prometheus",
+          "path": "tasks/configure-emqx-prometheus"
         }
       ]
     },
@@ -193,6 +197,10 @@
         {
           "title": "配置 EMQX Service",
           "path": "tasks/configure-emqx-service"
+        },
+        {
+          "title": "配置 Prometheus 监控 EMQX",
+          "path": "tasks/configure-emqx-prometheus"
         }
       ]
     },
