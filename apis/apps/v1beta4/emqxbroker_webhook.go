@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	semver "github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -84,6 +85,12 @@ func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
+
+	if err := validateEmqxConfig(r, oldEmqx); err != nil {
+		emqxbrokerlog.Error(err, "validate update failed")
+		return err
+	}
+
 	return nil
 }
 
@@ -230,6 +237,23 @@ func validateImageVersion(r Emqx) error {
 func validateVolumeClaimTemplates(new, old Emqx) error {
 	if !reflect.DeepEqual(new.GetSpec().GetPersistent(), old.GetSpec().GetPersistent()) {
 		return errors.New("refuse to update Persistent ")
+	}
+	return nil
+}
+
+func validateEmqxConfig(new, old Emqx) error {
+	oldEmqxConfig := old.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig
+	newEmqxConfig := new.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig
+	if value, ok := newEmqxConfig["name"]; ok && value != oldEmqxConfig["name"] {
+		return errors.New(`refuse to update the "name" field in ".spec.template.spec.emqxContainer.emqxConfig"`)
+	}
+
+	for k, oldValue := range oldEmqxConfig {
+		if strings.HasPrefix(k, "cluster") {
+			if newValue, ok := newEmqxConfig[k]; ok && newValue != oldValue {
+				return errors.New(`refuse to update the "^cluster.*$" field in ".spec.template.spec.emqxContainer.emqxConfig"`)
+			}
+		}
 	}
 	return nil
 }

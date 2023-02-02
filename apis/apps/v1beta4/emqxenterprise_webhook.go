@@ -77,6 +77,12 @@ func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
+
+	if err := validateEmqxConfig(r, oldEmqx); err != nil {
+		emqxbrokerlog.Error(err, "validate update failed")
+		return err
+	}
+
 	return nil
 }
 
