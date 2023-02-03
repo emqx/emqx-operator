@@ -195,6 +195,14 @@ func TestEnterpriseValidateUpdate(t *testing.T) {
 						Image: EmqxImage{
 							Version: "4.4.14",
 						},
+						EmqxConfig: map[string]string{
+							"name":                  "emqx",
+							"cluster.discovery":     "dns",
+							"cluster.dns.type":      "srv",
+							"cluster.dns.app":       "emqx",
+							"cluster.dns.name":      "emqx-headless.default.svc.cluster.local",
+							"listener.tcp.internal": "0.0.0.0:1883",
+						},
 					},
 				},
 			},
@@ -247,5 +255,29 @@ func TestEnterpriseValidateUpdate(t *testing.T) {
 			},
 		}
 		assert.Error(t, new.ValidateUpdate(old))
+	})
+
+	t.Run("valid emqxConfig can not update", func(t *testing.T) {
+		old := enterprise.DeepCopy()
+		new := enterprise.DeepCopy()
+
+		assert.Nil(t, new.ValidateUpdate(old))
+
+		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx-test"
+		assert.Error(t, new.ValidateUpdate(old))
+
+		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx"
+		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["cluster.dns.app"] = "emqx-test"
+		assert.Error(t, new.ValidateUpdate(old))
+
+		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx"
+		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["cluster.dns.app"] = "emqx"
+		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["listener.tcp.internal"] = "0.0.0.0:1884"
+		assert.Nil(t, new.ValidateUpdate(old))
+
+		delete(new.Spec.Template.Spec.EmqxContainer.EmqxConfig, "name")
+		delete(new.Spec.Template.Spec.EmqxContainer.EmqxConfig, "cluster.dns.app")
+		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["listener.tcp.internal"] = "0.0.0.0:1885"
+		assert.Nil(t, new.ValidateUpdate(old))
 	})
 }
