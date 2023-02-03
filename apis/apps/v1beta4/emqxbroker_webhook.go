@@ -47,7 +47,7 @@ var _ webhook.Defaulter = &EmqxBroker{}
 func (r *EmqxBroker) Default() {
 	emqxbrokerlog.Info("default", "name", r.Name)
 
-	defaultLabels(r)
+	defaultLabelsAndAnnotations(r)
 	defaultEmqxImage(r)
 	defaultEmqxACL(r)
 	defaultEmqxConfig(r)
@@ -94,7 +94,7 @@ func (r *EmqxBroker) ValidateDelete() error {
 	return nil
 }
 
-func defaultLabels(r Emqx) {
+func defaultLabelsAndAnnotations(r Emqx) {
 	labels := r.GetLabels()
 	if labels == nil {
 		labels = make(map[string]string)
@@ -105,12 +105,8 @@ func defaultLabels(r Emqx) {
 	r.SetLabels(labels)
 
 	template := r.GetSpec().GetTemplate()
-	if template.Labels == nil {
-		template.Labels = make(map[string]string)
-	}
-	for k, v := range labels {
-		template.Labels[k] = v
-	}
+	template.Labels = mergeMap(template.Labels, labels)
+	template.Annotations = mergeMap(template.Annotations, r.GetAnnotations())
 	r.GetSpec().SetTemplate(template)
 }
 

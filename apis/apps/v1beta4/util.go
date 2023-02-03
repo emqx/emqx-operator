@@ -29,6 +29,19 @@ func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort
 	return result
 }
 
+func mergeMap(dst, src map[string]string) map[string]string {
+	if dst == nil {
+		dst = make(map[string]string)
+	}
+
+	for key, value := range src {
+		if _, ok := dst[key]; !ok {
+			dst[key] = value
+		}
+	}
+	return dst
+}
+
 func GetEmqxImage(instance Emqx) string {
 	image := instance.GetSpec().GetTemplate().Spec.EmqxContainer.Image
 	return fmt.Sprintf(
