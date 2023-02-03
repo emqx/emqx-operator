@@ -78,6 +78,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
+#   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
 spec:
   replicas: 3
   persistent:
@@ -94,6 +95,8 @@ spec:
         type: LoadBalancer
 EOF
 ```
+
+__默认情况下，AWS 创建 NLB 时会自动将实例所在的 VPC 下的所有区域加入网络映射，这意味客户端的流量会转发至所有区域，即便该区域未部署任何 K8S Node，导致概率网络不通的问题。因此我们需要根据实际情况通过注解`service.beta.kubernetes.io/aws-load-balancer-subnets`指定 NLB 的可用区域__
 
 ## 使用NLB 进行TLS 终结
 
@@ -124,6 +127,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls
     service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
+#   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
 spec:
   replicas: 3
   persistent:
