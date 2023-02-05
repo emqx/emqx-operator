@@ -65,6 +65,16 @@ func TestEnterpriseDefault(t *testing.T) {
 		}, instance.Spec.Template.Labels)
 	})
 
+	t.Run("default annotations", func(t *testing.T) {
+		assert.Equal(t, map[string]string{
+			"foo": "bar",
+		}, instance.Annotations)
+
+		assert.Equal(t, map[string]string{
+			"foo": "bar",
+		}, instance.Spec.Template.Annotations)
+	})
+
 	t.Run("default emqx image", func(t *testing.T) {
 		assert.Equal(t, "emqx/emqx-ee", instance.Spec.Template.Spec.EmqxContainer.Image.Repository)
 	})

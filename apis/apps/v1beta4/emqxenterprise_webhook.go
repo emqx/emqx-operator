@@ -40,7 +40,7 @@ var _ webhook.Defaulter = &EmqxEnterprise{}
 func (r *EmqxEnterprise) Default() {
 	emqxenterpriselog.Info("default", "name", r.Name)
 
-	defaultLabels(r)
+	defaultLabelsAndAnnotations(r)
 	defaultEmqxImage(r)
 	defaultEmqxACL(r)
 	defaultEmqxConfig(r)

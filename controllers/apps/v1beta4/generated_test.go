@@ -353,6 +353,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 	}, got.Spec.Template.Labels)
 	assert.Equal(t, map[string]string{
 		"apps.emqx.io/manage-containers": "emqx,reloader,fake",
+		"foo":                            "bar",
 	}, got.Spec.Template.Annotations)
 	assert.Equal(t, emqx.Spec.Template.Spec.Affinity, got.Spec.Template.Spec.Affinity)
 	assert.Equal(t, emqx.Spec.Template.Spec.Tolerations, got.Spec.Template.Spec.Tolerations)
