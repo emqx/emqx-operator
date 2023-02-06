@@ -91,6 +91,15 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
+.PHONY: dev
+dev: manifests kustomize local-webhook ## Instanll all the dependencies and run the controller locally
+	$(KUSTOMIZE) build config/dev | kubectl apply -f -
+
+.PHONY: undev
+undev: manifests kustomize local-webhook ## Uninstanll all the dependencies and run the controller locally
+	$(KUSTOMIZE) build config/dev | kubectl delete -f -
+
+
 ##@ Build Dependencies
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -109,6 +118,10 @@ CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4.5.7
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
+
+## Certs for webhook testing locally
+CERT_PATH=/tmp/k8s-webhook-server/serving-certs
+
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -141,3 +154,8 @@ define gen-crd-ref-docs
 		--log-level=error; \
 done
 endef
+
+.PHONY: local-webhook
+local-webhook: $(CERT_PATH)
+$(CERT_PATH): $(CERT_PATH)
+	test -s $(CERT_PATH)/tls.crt && test -s $(CERT_PATH)/tls.key || mkdir -p $(CERT_PATH) && cp config/dev/cert/* $(CERT_PATH)
