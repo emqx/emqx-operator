@@ -16,11 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Check line-break at EOF
+        run: ./.github/scripts/check-nl-at-eof.sh
       - uses: actions/setup-go@v3
         with:
           go-version: '1.19.3'
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@v3
         with:
           version: latest
           args: --timeout=5m
