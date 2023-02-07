@@ -276,6 +276,14 @@ type EMQXCoreTemplate struct {
 	Spec EMQXCoreTemplateSpec `json:"spec,omitempty"`
 }
 
+type BootsrapAPIKey struct {
+	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d_]+$`
+	Key string `json:"key"`
+	// +kubebuilder:validation:MinLength:=3
+	// +kubebuilder:validation:MaxLength:=32
+	Secret string `json:"secret"`
+}
+
 // EMQXSpec defines the desired state of EMQX
 type EMQXSpec struct {
 	// EMQX image name.
@@ -291,6 +299,9 @@ type EMQXSpec struct {
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	// EMQX bootstrap user
+	// Cannot be updated.
+	BootstrapAPIKeys []BootsrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
 	// EMQX bootstrap config, hocon style, like emqx.conf
 	// Cannot be updated.
 	BootstrapConfig string `json:"bootstrapConfig,omitempty"`

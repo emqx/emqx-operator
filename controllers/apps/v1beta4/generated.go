@@ -422,9 +422,9 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Volumes:         emqxTemplate.Spec.Volumes,
 		},
 	}
-	containerNames := []string{}
-	for _, c := range podTemplate.Spec.Containers {
-		containerNames = append(containerNames, c.Name)
+	containerNames := make([]string, len(podTemplate.Spec.Containers))
+	for i := range podTemplate.Spec.Containers {
+		containerNames[i] = podTemplate.Spec.Containers[i].Name
 	}
 
 	if podTemplate.Annotations == nil {

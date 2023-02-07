@@ -63,6 +63,12 @@ var _ = Describe("E2E Test", func() {
 			},
 			Spec: appsv2alpha1.EMQXSpec{
 				Image: "emqx/emqx:5.0.9",
+				BootstrapAPIKeys: []appsv2alpha1.BootsrapAPIKey{
+					{
+						Key:    "test_key",
+						Secret: "secret",
+					},
+				},
 				BootstrapConfig: `
 				gateway {
 					"lwm2m" {

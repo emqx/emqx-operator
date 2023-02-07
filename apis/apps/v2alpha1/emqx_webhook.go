@@ -17,10 +17,9 @@ limitations under the License.
 package v2alpha1
 
 import (
+	emperror "emperror.dev/errors"
 	"fmt"
 	"reflect"
-
-	emperror "emperror.dev/errors"
 	// "github.com/gurkankaymak/hocon"
 	hocon "github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
@@ -78,6 +77,13 @@ func (r *EMQX) ValidateCreate() error {
 func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 	emqxlog.Info("validate update", "name", r.Name)
 
+	oldEMQX := old.(*EMQX)
+	if !reflect.DeepEqual(oldEMQX.Spec.BootstrapAPIKeys, r.Spec.BootstrapAPIKeys) {
+		err := emperror.Errorf("bootstrap APIKey cannot be updated")
+		emqxlog.Error(err, "validate update failed")
+		return err
+	}
+
 	config, err := hocon.ParseString(r.Spec.BootstrapConfig)
 	if err != nil {
 		err = emperror.Wrap(err, "failed to parse bootstrap config")
@@ -85,7 +91,6 @@ func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 		return err
 	}
 
-	oldEMQX := old.(*EMQX)
 	oldConfig, _ := hocon.ParseString(oldEMQX.Spec.BootstrapConfig)
 	if !reflect.DeepEqual(oldConfig, config) {
 		err := emperror.Errorf("bootstrap config cannot be updated, old bootstrap config: %s, new bootstrap config: %s", oldEMQX.Spec.BootstrapConfig, r.Spec.BootstrapConfig)

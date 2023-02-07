@@ -46,7 +46,7 @@ func TestValidateCreate(t *testing.T) {
 	assert.Nil(t, instance.ValidateCreate())
 
 	instance.Spec.BootstrapConfig = "fake"
-	assert.ErrorContains(t, instance.ValidateCreate(), "failed to parse bootstrap config")
+	assert.Error(t, instance.ValidateCreate(), "failed to parse bootstrap config")
 
 	instance.Spec.BootstrapConfig = "foo = bar"
 	assert.Nil(t, instance.ValidateCreate())
@@ -67,13 +67,22 @@ func TestValidateUpdate(t *testing.T) {
 	t.Run("should return error if bootstrap config is invalid", func(t *testing.T) {
 		old := instance.DeepCopy()
 		instance.Spec.BootstrapConfig = "hello world"
-		assert.ErrorContains(t, instance.ValidateUpdate(old), "failed to parse bootstrap config")
+		assert.Error(t, instance.ValidateUpdate(old), "failed to parse bootstrap config")
 	})
 
-	t.Run("should return error if bootstrap config is update", func(t *testing.T) {
+	t.Run("should return error if bootstrap APIKeys is changed", func(t *testing.T) {
+		old := instance.DeepCopy()
+		instance.Spec.BootstrapAPIKeys = []BootsrapAPIKey{{
+			Key:    "test",
+			Secret: "test",
+		}}
+		assert.Error(t, instance.ValidateUpdate(old), "bootstrap APIKeys cannot be updated")
+	})
+
+	t.Run("should return error if bootstrap config is changed", func(t *testing.T) {
 		old := instance.DeepCopy()
 		instance.Spec.BootstrapConfig = "foo = bar"
-		assert.ErrorContains(t, instance.ValidateUpdate(old), "bootstrap config cannot be updated")
+		assert.Error(t, instance.ValidateUpdate(old), "bootstrap config cannot be updated")
 	})
 
 	t.Run("check bootstrap config is map", func(t *testing.T) {
@@ -87,13 +96,13 @@ func TestValidateUpdate(t *testing.T) {
 	t.Run("should return error if .spec.coreTemplate.metadata is update", func(t *testing.T) {
 		old := instance.DeepCopy()
 		old.Spec.CoreTemplate.Labels = map[string]string{"foo": "bar"}
-		assert.ErrorContains(t, instance.ValidateUpdate(old), "coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
+		assert.Error(t, instance.ValidateUpdate(old), "coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
 	})
 
 	t.Run("should return error if .spec.replicant.metadata is update", func(t *testing.T) {
 		old := instance.DeepCopy()
 		old.Spec.ReplicantTemplate.Labels = map[string]string{"foo": "bar"}
-		assert.ErrorContains(t, instance.ValidateUpdate(old), "coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
+		assert.Error(t, instance.ValidateUpdate(old), "coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
 	})
 }
 
