@@ -22,7 +22,7 @@ It is recommended to connect through the Cloud Shell provided by Azure. [For det
 
 NSF file storage is used here. Other StorageClass, please refer to [storage class](https://docs.microsoft.com/en-us/azure/aks/azure-files-csi)
 
-Create StroageClass
+Create StorageClass
 
 ```yaml
 cat << "EOF" | kubectl apply -f -
