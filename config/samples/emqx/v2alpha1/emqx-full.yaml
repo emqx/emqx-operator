@@ -7,6 +7,9 @@ spec:
   imagePullPolicy: IfNotPresent
   # imagePullSecrets:
   #   - name: fake-secrets
+  # boostrapAPIKeys:
+  #   - key: bootstrap_user_key
+  #     secret: bootstrap_secret
   bootstrapConfig: |
     node {
       cookie = emqxsecretcookie

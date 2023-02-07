@@ -29,6 +29,21 @@ spec:
             type: object
           spec:
             properties:
+              bootstrapAPIKeys:
+                items:
+                  properties:
+                    key:
+                      pattern: ^[a-zA-Z\d_]+$
+                      type: string
+                    secret:
+                      maxLength: 32
+                      minLength: 3
+                      type: string
+                  required:
+                  - key
+                  - secret
+                  type: object
+                type: array
               bootstrapConfig:
                 type: string
               coreTemplate:

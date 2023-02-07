@@ -17,7 +17,6 @@ limitations under the License.
 package v2alpha1
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -31,6 +30,8 @@ import (
 	"github.com/sethvargo/go-password/password"
 	appsv1 "k8s.io/api/apps/v1"
 )
+
+const defUsername = "emqx_operator_controller"
 
 func generateNodeCookieSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 	var cookie string
@@ -59,8 +60,13 @@ func generateNodeCookieSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 }
 
 func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
-	username := "emqx_operator_controller"
-	password, _ := password.Generate(64, 10, 0, true, true)
+	bootstrapUsers := ""
+	for _, apiKey := range instance.Spec.BootstrapAPIKeys {
+		bootstrapUsers += apiKey.Key + ":" + apiKey.Secret + "\n"
+	}
+
+	defPassword, _ := password.Generate(64, 10, 0, true, true)
+	bootstrapUsers += defUsername + ":" + defPassword
 
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -74,7 +80,7 @@ func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 			Annotations: instance.Annotations,
 		},
 		StringData: map[string]string{
-			"bootstrap_user": fmt.Sprintf("%s:%s", username, password),
+			"bootstrap_user": bootstrapUsers,
 		},
 	}
 }
