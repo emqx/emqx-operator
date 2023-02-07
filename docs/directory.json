@@ -23,10 +23,6 @@
         {
           "title": "Running the Operator",
           "path": "getting-started/getting-started"
-        },
-        {
-          "title": "Install EMQX plugin",
-          "path": "getting-started/install-emqx-prometheus-plugin"
         }
       ]
     },
@@ -127,10 +123,6 @@
         {
           "title": "部署 EMQX 集群",
           "path": "getting-started/getting-started"
-        },
-        {
-          "title": "部署 EMQX 插件",
-          "path": "getting-started/install-emqx-prometheus-plugin"
         }
       ]
     },
