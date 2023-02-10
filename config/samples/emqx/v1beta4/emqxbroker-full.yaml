@@ -8,12 +8,13 @@ metadata:
 spec:
   replicas: 3
   # persistent:
-  #   storageClassName: standard
-  #   resources:
-  #     requests:
-  #       storage: 20Mi
-  #   accessModes:
-  #     - ReadWriteOnce
+  #   spec:
+  #     storageClassName: standard
+  #     resources:
+  #       requests:
+  #         storage: 20Mi
+  #     accessModes:
+  #       - ReadWriteOnce
   template:
     metadata:
       labels:
