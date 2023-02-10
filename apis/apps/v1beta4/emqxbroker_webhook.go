@@ -81,7 +81,7 @@ func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 	}
 
 	oldEmqx := old.(*EmqxBroker)
-	if err := validateVolumeClaimTemplates(r, oldEmqx); err != nil {
+	if err := validatePersistent(r, oldEmqx); err != nil {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
@@ -230,7 +230,7 @@ func validateImageVersion(r Emqx) error {
 	return nil
 }
 
-func validateVolumeClaimTemplates(new, old Emqx) error {
+func validatePersistent(new, old Emqx) error {
 	if !reflect.DeepEqual(new.GetSpec().GetPersistent(), old.GetSpec().GetPersistent()) {
 		return errors.New("refuse to update Persistent ")
 	}

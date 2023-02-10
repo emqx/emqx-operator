@@ -73,7 +73,7 @@ func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 	}
 
 	oldEmqx := old.(*EmqxEnterprise)
-	if err := validateVolumeClaimTemplates(r, oldEmqx); err != nil {
+	if err := validatePersistent(r, oldEmqx); err != nil {
 		emqxbrokerlog.Error(err, "validate update failed")
 		return err
 	}
