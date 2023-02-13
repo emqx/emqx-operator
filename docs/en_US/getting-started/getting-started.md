@@ -22,6 +22,8 @@ Before deploying EMQX Operator, please confirm that the following components hav
 > Make sure the [cert-manager](https://cert-manager.io) is ready
 
 ```bash
+helm repo add emqx https://repos.emqx.io/charts
+helm repo update
 helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
 ```
 
