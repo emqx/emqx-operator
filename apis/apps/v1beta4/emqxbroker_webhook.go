@@ -53,6 +53,7 @@ func (r *EmqxBroker) Default() {
 	defaultEmqxACL(r)
 	defaultEmqxConfig(r)
 	defaultServiceTemplate(r)
+	defaultPersistent(r)
 }
 
 //+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-emqxbroker,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta4,name=validator.broker.emqx.io,admissionReviewVersions={v1,v1beta1}
@@ -208,6 +209,38 @@ func defaultServiceTemplate(r Emqx) {
 	)
 
 	r.GetSpec().SetServiceTemplate(s)
+}
+
+func defaultPersistent(r Emqx) {
+	p := r.GetSpec().GetPersistent()
+	if p == nil {
+		return
+	}
+
+	p.ObjectMeta.Namespace = r.GetNamespace()
+	if p.ObjectMeta.Name == "" {
+		names := Names{Object: r}
+		p.ObjectMeta.Name = names.Data()
+	}
+	if p.ObjectMeta.Labels == nil {
+		p.ObjectMeta.Labels = make(map[string]string)
+	}
+	for key, value := range r.GetLabels() {
+		if _, ok := p.ObjectMeta.Labels[key]; !ok {
+			p.ObjectMeta.Labels[key] = value
+		}
+	}
+	if p.ObjectMeta.Annotations == nil {
+		p.ObjectMeta.Annotations = map[string]string{}
+	}
+	for key, value := range r.GetAnnotations() {
+		if key == "kubectl.kubernetep.io/last-applied-configuration" {
+			continue
+		}
+		if _, ok := p.ObjectMeta.Annotations[key]; !ok {
+			p.ObjectMeta.Annotations[key] = value
+		}
+	}
 }
 
 func validateImageVersion(r Emqx) error {
