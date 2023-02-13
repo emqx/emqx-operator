@@ -131,6 +131,31 @@ func TestBrokerDefault(t *testing.T) {
 			},
 		}, instance.Spec.ServiceTemplate)
 	})
+
+	t.Run("default persistence", func(t *testing.T) {
+		assert.Nil(t, instance.GetSpec().GetPersistent())
+
+		instance.Spec.Persistent = &corev1.PersistentVolumeClaimTemplate{
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					corev1.ReadWriteOnce,
+				},
+			},
+		}
+		instance.Default()
+		assert.Equal(t, metav1.ObjectMeta{
+			Name:      "webhook-test-data",
+			Namespace: "default",
+			Labels: map[string]string{
+				"foo":                     "bar",
+				"apps.emqx.io/managed-by": "emqx-operator",
+				"apps.emqx.io/instance":   "webhook-test",
+			},
+			Annotations: map[string]string{
+				"foo": "bar",
+			},
+		}, instance.Spec.Persistent.ObjectMeta)
+	})
 }
 
 func TestBrokerValidateCreate(t *testing.T) {

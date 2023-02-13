@@ -321,6 +321,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			StorageClassName: &[]string{"fake"}[0],
 		},
 	}
+	emqx.Default()
 
 	got = generateStatefulSet(emqx)
 	assert.Equal(t, emqx.Spec.Persistent.ObjectMeta, got.Spec.VolumeClaimTemplates[0].ObjectMeta)
@@ -409,6 +410,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Value: "Bar",
 		},
 	}, got.Spec.Template.Spec.Containers[0].Env)
+
 	assert.Equal(t, []corev1.VolumeMount{
 		{
 			Name:      "fake",

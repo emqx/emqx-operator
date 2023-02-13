@@ -371,23 +371,17 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	}
 
 	emqxContainer := corev1.Container{
-		Name:            EmqxContainerName,
-		Image:           appsv1beta4.GetEmqxImage(instance),
-		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
-		Command:         emqxTemplate.Spec.EmqxContainer.Command,
-		Args:            emqxTemplate.Spec.EmqxContainer.Args,
-		WorkingDir:      emqxTemplate.Spec.EmqxContainer.WorkingDir,
-		Ports:           emqxTemplate.Spec.EmqxContainer.Ports,
-		EnvFrom:         emqxTemplate.Spec.EmqxContainer.EnvFrom,
-		Env:             mergeEnvAndConfig(instance),
-		Resources:       emqxTemplate.Spec.EmqxContainer.Resources,
-		VolumeMounts: append(
-			emqxTemplate.Spec.EmqxContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      names.Data(),
-				MountPath: "/opt/emqx/data",
-			},
-		),
+		Name:                     EmqxContainerName,
+		Image:                    appsv1beta4.GetEmqxImage(instance),
+		ImagePullPolicy:          emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
+		Command:                  emqxTemplate.Spec.EmqxContainer.Command,
+		Args:                     emqxTemplate.Spec.EmqxContainer.Args,
+		WorkingDir:               emqxTemplate.Spec.EmqxContainer.WorkingDir,
+		Ports:                    emqxTemplate.Spec.EmqxContainer.Ports,
+		EnvFrom:                  emqxTemplate.Spec.EmqxContainer.EnvFrom,
+		Env:                      mergeEnvAndConfig(instance),
+		Resources:                emqxTemplate.Spec.EmqxContainer.Resources,
+		VolumeMounts:             emqxTemplate.Spec.EmqxContainer.VolumeMounts,
 		VolumeDevices:            emqxTemplate.Spec.EmqxContainer.VolumeDevices,
 		LivenessProbe:            emqxTemplate.Spec.EmqxContainer.LivenessProbe,
 		ReadinessProbe:           emqxTemplate.Spec.EmqxContainer.ReadinessProbe,
@@ -460,6 +454,13 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	}
 
 	if instance.GetSpec().GetPersistent() == nil {
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      names.Data(),
+				MountPath: "/opt/emqx/data",
+			},
+		)
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
 			corev1.Volume{
@@ -470,6 +471,13 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			},
 		)
 	} else {
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      instance.GetSpec().GetPersistent().ObjectMeta.Name,
+				MountPath: "/opt/emqx/data",
+			},
+		)
 		sts.Spec.VolumeClaimTemplates = append(
 			sts.Spec.VolumeClaimTemplates,
 			corev1.PersistentVolumeClaim{
