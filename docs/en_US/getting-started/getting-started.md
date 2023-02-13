@@ -1,4 +1,4 @@
-# Product overview
+# Product Overview
 
 This project provides an Operator for managing EMQX clusters on Kubernetes.
 
@@ -10,53 +10,16 @@ Before deploying EMQX Operator, please confirm that the following components hav
 
 | Software                | Version Requirements |
 |:-----------------------:|:--------------------:|
-|  Kubernetes             |  >= 1.24             |          
-|  Helm                   |  >= 3                |
-|  cert-manager           |  >= 1.1.6            |
+|  [Kubernetes](https://kubernetes.io/)    |  >= 1.24        |
+|  [Helm](https://helm.sh)                 |  >= 3           |
+|  [cert-manager](https://cert-manager.io) |  >= 1.1.6       |
 
-**NOTE:** why we need kubernetes 1.24:
-
-The `MixedProtocolLBService` feature is enabled by default in Kubernetes 1.24 and above. For its documentation, please refer to: [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/). The `MixedProtocolLBService` attribute allows different protocols to be used within the same Service instance of type `LoadBalancer`. Therefore, if the user deploys the EMQX cluster on Kubernetes and uses the `LoadBalancer` type of Service, there are both TCP and UDP protocols in the Service, please pay attention to upgrading the Kubernetes version to 1.24 or above, otherwise the Service creation will fail.
-
-### Install Helm
-
-1. Install Helm
-
-Helm is a Kubernetes package management tool. Execute the following command to install Helm directly. For more Helm installation methods, please refer to: [Installing Helm](https://helm.sh/zh/docs/intro/install/).
-
-```bash
-curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-```
-
-2. Add Helm chart repository
-
-```bash
-helm repo add emqx https://repos.emqx.io/charts
-helm repo update
-```
-
-### Check if cert-manager is ready
-
-EMQX Operator uses [cert-manager](https://github.com/cert-manager/cert-manager) to provide certificates to webhook services. You can install cert-manager by referring to [Install cert-manager](https://cert-manager.io/docs/installation/) document.
-
-Check whether the cert-manager service is ready with the following command:
-
-```bash
-kubectl get pods -n cert-manager -l "app.kubernetes.io/instance=cert-manager"
-```
-
-The output is similar to:
-
-```
-NAME                                      READY   STATUS    RESTARTS       AGE
-cert-manager-6dc4964c9-b22bx              1/1     Running   0              20s
-cert-manager-cainjector-69d4647c6-lrgdb   1/1     Running   0              20s
-cert-manager-webhook-75f77865c8-8tgwj     1/1     Running   0              21s
-```
-
-**NOTE:** If the three pods related to cert-manager are in the Running state, it means that the cert-manager service is ready.
+> ### Why we need kubernetes 1.24:
+> The `MixedProtocolLBService` feature is enabled by default in Kubernetes 1.24 and above. For its documentation, please refer to: [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/). The `MixedProtocolLBService` attribute allows different protocols to be used within the same Service instance of type `LoadBalancer`. Therefore, if the user deploys the EMQX cluster on Kubernetes and uses the `LoadBalancer` type of Service, there are both TCP and UDP protocols in the Service, please pay attention to upgrading the Kubernetes version to 1.24 or above, otherwise the Service creation will fail.
 
 ### Install EMQX Operator
+
+> Make sure the [cert-manager](https://cert-manager.io) is ready
 
 ```bash
 helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
@@ -77,13 +40,13 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 ### Upgrade EMQX Operator
 
-Execute the following command to upgrade EMQX Operator. If you want to specify the upgraded version, you only need to add parameter --version=x.x.x 
+Execute the following command to upgrade EMQX Operator. If you want to specify the upgraded version, you only need to add parameter --version=x.x.x
 
 ```bash
 helm upgrade emqx-operator emqx/emqx-operator -n emqx-operator-system
 ```
 
-**NOTE:** Does not support version 1.x.x EMQX Operator upgrade to version 2.x.x .
+> Does not support version 1.x.x EMQX Operator upgrade to version 2.x.x .
 
 ### Uninstall EMQX Operator
 
@@ -115,8 +78,10 @@ For a complete example, please see [emqx-full.yaml](https://github.com/emqx/emqx
 2. Check whether the EMQX cluster is ready
 
 ```bash
-kubectl get emqx emqx -o json | jq .status.conditions[] | jq 'select( .reason == "ClusterRunning" and .status == "True")'
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
+
+This may take a while for the command to execute successfully, as it needs to wait for all EMQX nodes to start and join the cluster.
 
 The output is similar to:
 
@@ -151,27 +116,27 @@ spec:
 EOF
 ```
 
-For a complete example, please see [emqxbroker-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta4/emqxenterprise-full.yaml), For detailed explanation of each field please refer to [v1beta4-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
+For a complete example, please see [emqxbroker-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta4/emqxenterprise-full.yaml), For a detailed explanation of each field please refer to [v1beta4-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
 
 2. Check whether the EMQX cluster is ready
 
 ```bash
-kubectl get emqxbroker emqx -o json | jq .status.conditions[] | jq 'select( .reason == "ClusterRunning" and .status == "True")'
+kubectl get emqxBroker emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
+
+This may take a while for the command to execute successfully, as it needs to wait for all EMQX nodes to start and join the cluster.
 
 The output is similar to:
 
 ```bash
-[
-   {
-     "lastTransitionTime": "2023-02-07T02:42:05Z",
-     "lastUpdateTime": "2023-02-07T06:41:05Z",
-     "message": "All resources are ready",
-     "reason": "ClusterReady",
-     "status": "True",
-     "type": "Running"
-   }
-]
+{
+  "lastTransitionTime": "2023-02-13T02:38:25Z",
+  "lastUpdateTime": "2023-02-13T02:44:19Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
 
 ### Deploy EMQX Enterprise 4
@@ -199,20 +164,20 @@ For a complete example, please see [emqxenterprise-full.yaml](https://github.com
 2. Check whether the EMQX cluster is ready
 
 ```bash
-kubectl get EmqxEnterprise emq-ee -o json | jq .status.conditions[] | jq 'select( .reason == "ClusterRunning" and .status == "True")'
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
+
+This may take a while for the command to execute successfully, as it needs to wait for all EMQX nodes to start and join the cluster.
 
 The output is similar to:
 
 ```bash
-[
-   {
-     "lastTransitionTime": "2023-02-07T06:42:13Z",
-     "lastUpdateTime": "2023-02-07T06:45:12Z",
-     "message": "All resources are ready",
-     "reason": "ClusterReady",
-     "status": "True",
-     "type": "Running"
-   }
-]
+{
+  "lastTransitionTime": "2023-02-13T02:38:25Z",
+  "lastUpdateTime": "2023-02-13T02:44:19Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
