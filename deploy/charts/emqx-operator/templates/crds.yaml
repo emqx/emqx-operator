@@ -3647,6 +3647,21 @@ spec:
                               items:
                                 type: string
                               type: array
+                            bootstrapAPIKeys:
+                              items:
+                                properties:
+                                  key:
+                                    pattern: ^[a-zA-Z\d_]+$
+                                    type: string
+                                  secret:
+                                    maxLength: 32
+                                    minLength: 3
+                                    type: string
+                                required:
+                                  - key
+                                  - secret
+                                type: object
+                              type: array
                             command:
                               items:
                                 type: string
@@ -10590,6 +10605,21 @@ spec:
                             args:
                               items:
                                 type: string
+                              type: array
+                            bootstrapAPIKeys:
+                              items:
+                                properties:
+                                  key:
+                                    pattern: ^[a-zA-Z\d_]+$
+                                    type: string
+                                  secret:
+                                    maxLength: 32
+                                    minLength: 3
+                                    type: string
+                                required:
+                                  - key
+                                  - secret
+                                type: object
                               type: array
                             command:
                               items:

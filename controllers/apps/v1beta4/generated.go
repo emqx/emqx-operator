@@ -36,6 +36,7 @@ import (
 const (
 	ReloaderContainerName  = "reloader"
 	ReloaderContainerImage = "emqx/emqx-operator-reloader:0.0.2"
+	defUsername            = "emqx_operator_controller"
 )
 
 func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1beta4.EmqxPluginList) []client.Object {
@@ -658,8 +659,14 @@ func mergeEnvAndConfig(instance appsv1beta4.Emqx, extraEnvs ...corev1.EnvVar) []
 
 func generateBootstrapUserSecret(instance appsv1beta4.Emqx) *corev1.Secret {
 	names := appsv1beta4.Names{Object: instance}
-	username := "emqx_operator_controller"
-	password, _ := password.Generate(64, 10, 0, true, true)
+
+	bootstrapUsers := ""
+	for _, apiKey := range instance.GetSpec().GetTemplate().Spec.EmqxContainer.BootstrapAPIKeys {
+		bootstrapUsers += apiKey.Key + ":" + apiKey.Secret + "\n"
+	}
+
+	defPassword, _ := password.Generate(64, 10, 0, true, true)
+	bootstrapUsers += defUsername + ":" + defPassword
 
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -673,7 +680,7 @@ func generateBootstrapUserSecret(instance appsv1beta4.Emqx) *corev1.Secret {
 			Annotations: instance.GetAnnotations(),
 		},
 		StringData: map[string]string{
-			"bootstrap_user": fmt.Sprintf("%s:%s", username, password),
+			"bootstrap_user": bootstrapUsers,
 		},
 	}
 }

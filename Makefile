@@ -145,7 +145,7 @@ $(CRD_REF_DOCS): $(LOCALBIN)
 	test -s $(LOCALBIN)/crd-ref-docs || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@latest
 
 define gen-crd-ref-docs
-@for API_DIR in $$(find $(PROJECT_DIR)/apis/apps -type d -d 1); do \
+@for API_DIR in $$(find '$(PROJECT_DIR)/apis/apps' -maxdepth 1 -mindepth 1 -type d); do \
 	$(CRD_REF_DOCS) \
 		--source-path=$${API_DIR} \
 		--config=$(PROJECT_DIR)/crd-reference-config.yaml \
