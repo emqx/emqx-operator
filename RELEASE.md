@@ -1,33 +1,43 @@
-## Release Note 🍻
+# Release Note 🍻
 
-EMQX Operator 2.1.0 is released.
+EMQX Operator 2.1.1 is released.
 
-### Supported version
+## Supported version
+
+- `apps.emqx.io/v2alpha1`
+
+  - `EMQX` at [5.0.14](https://www.emqx.com/en/changelogs/broker/5.0.14) and later
+  - `EMQX Enterprise` at [5.0.0](https://www.emqx.com/en/changelogs/enterprise/5.0.0) and later
 
 - `apps.emqx.io/v1beta4`
 
   - `EMQX` at [4.4.14](https://www.emqx.com/en/changelogs/broker/4.4.8) and later
   - `EMQX Enterprise` at [4.4.14](https://www.emqx.com/en/changelogs/enterprise/4.4.8) and later
 
+## Features 🌈
+
+Add new field bootstrap API keys in `apps.emqx.io/v1beta4` and `apps.emqx.io/v2alpha1`
+
+Users can customize the keys and secrets required to request EMQX's API before EMQX is started, which helps with some of the operations tasks, until then, users must wait for EMQX to be ready and add them manually via the EMQX Dashboard.
+
+## Fixes 🛠
+
 - `apps.emqx.io/v2alpha1`
 
-  - `EMQX` at [5.0.14](https://www.emqx.com/en/changelogs/broker/5.0.14) and later
+  - Fix an issue with EMQX pods not inheriting EMQX Custom Resource annotations
 
-### Features 🌈
+- `apps.emqx.io/v1beta4`
 
-New API version: `apps.emqx.io/v1beta4`, support for EMQX 4.4 and EMQX Enterprise 4.4, please check out reference docs
+  - Fixed an issue where EMQX blue-green updating would not start in some cases
+  - Fixed an issue where `.spec.persistence` did not work in some cases
 
-- Fully compatible with  `apps.emqx.io/v1beta3`
+## How to install/upgrade EMQX Operator 2.1.1 💡
 
-- The new blue-green updating feature ensures smooth migration of client connections during EMQX cluster upgrades, reducing peak server pressure, For more info please check: https://github.com/emqx/emqx-operator/blob/2.1.0/docs/en_US/tasks/configure-emqx-blueGreenUpdate.md
-
-- EMQX Operator now uses the EMQX Bootstrap user to access the EMQX API, no longer the EMQX Dashboard user
-
-### How to upgrade EMQX Operator 2.1 from EMQX Operator 2.0 💡
-
-Take Helm Chart as an example:
+> Need make sure the [cert-manager](https://cert-manager.io) is ready
 
 ```
+helm repo add emqx https://repos.emqx.io/charts
+helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace
@@ -37,6 +47,6 @@ If you have deployed `apps.emqx.io/v1beta3` resources, EMQX Operator will automa
 
 The resources of `apps.emqx.io/v2alpha1` will not receive any impact.
 
-### Warning 🚨	
+## Warning 🚨
 
-`apps.emqx.io/v1beta3` will be dropped in EMQX Operator 2.1.1
+`apps.emqx.io/v1beta3` will be dropped soon

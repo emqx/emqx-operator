@@ -22,6 +22,8 @@ EMQX Operator 部署前，请确认以下组件已经安装：
 > 请先确认 [cert-manager](https://cert-manager.io) 已经就绪
 
 ```bash
+helm repo add emqx https://repos.emqx.io/charts
+helm repo update
 helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
 ```
 
