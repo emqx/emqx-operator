@@ -54,6 +54,9 @@ spec:
           sysmon.long_schedule: 240h
         emqxACL:
           - "{allow, all}."
+        #bootstrapAPIKeys:
+        #  - key: bootstrap_user_key
+        #    secret: bootstrap_secret
       # extraContainers:
       #   - name: extra
       #     image: busybox:stable

@@ -708,15 +708,33 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
+		Spec: appsv1beta4.EmqxBrokerSpec{
+			Template: appsv1beta4.EmqxTemplate{
+				Spec: appsv1beta4.EmqxTemplateSpec{
+					EmqxContainer: appsv1beta4.EmqxContainer{
+						BootstrapAPIKeys: []appsv1beta4.BootsrapAPIKey{
+							{
+								Key:    "test_key",
+								Secret: "secret",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	got := generateBootstrapUserSecret(instance)
 	assert.Equal(t, "emqx-bootstrap-user", got.Name)
-	user, ok := got.StringData["bootstrap_user"]
+	data, ok := got.StringData["bootstrap_user"]
 	assert.True(t, ok)
 
-	index := strings.Index(user, ":")
-	assert.Equal(t, "emqx_operator_controller", user[:index], user[index+1:])
+	users := strings.Split(data, "\n")
+	var usernames []string
+	for _, user := range users {
+		usernames = append(usernames, user[:strings.Index(user, ":")])
+	}
+	assert.ElementsMatch(t, usernames, []string{defUsername, "test_key"})
 }
 
 func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {

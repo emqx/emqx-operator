@@ -198,6 +198,17 @@ type EmqxContainer struct {
 
 	EmqxConfig map[string]string `json:"emqxConfig,omitempty"`
 	EmqxACL    []string          `json:"emqxACL,omitempty"`
+	// EMQX bootstrap user
+	// Cannot be updated.
+	BootstrapAPIKeys []BootsrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
+}
+
+type BootsrapAPIKey struct {
+	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d_]+$`
+	Key string `json:"key"`
+	// +kubebuilder:validation:MinLength:=3
+	// +kubebuilder:validation:MaxLength:=32
+	Secret string `json:"secret"`
 }
 
 type EmqxTemplateSpec struct {

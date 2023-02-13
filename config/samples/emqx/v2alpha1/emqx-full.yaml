@@ -7,7 +7,7 @@ spec:
   imagePullPolicy: IfNotPresent
   # imagePullSecrets:
   #   - name: fake-secrets
-  # boostrapAPIKeys:
+  # bootstrapAPIKeys:
   #   - key: bootstrap_user_key
   #     secret: bootstrap_secret
   bootstrapConfig: |

@@ -57,6 +57,12 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 					EmqxConfig: appsv1beta4.EmqxConfig{
 						"sysmon.long_schedule": "240h",
 					},
+					BootstrapAPIKeys: []appsv1beta4.BootsrapAPIKey{
+						{
+							Key:    "test_key",
+							Secret: "secret",
+						},
+					},
 				},
 			},
 		},
@@ -82,6 +88,12 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 					},
 					EmqxConfig: appsv1beta4.EmqxConfig{
 						"sysmon.long_schedule": "240h",
+					},
+					BootstrapAPIKeys: []appsv1beta4.BootsrapAPIKey{
+						{
+							Key:    "test_key",
+							Secret: "secret",
+						},
 					},
 				},
 			},
