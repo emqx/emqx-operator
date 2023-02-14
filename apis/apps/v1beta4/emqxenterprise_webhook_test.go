@@ -238,6 +238,12 @@ func TestEnterpriseValidateUpdate(t *testing.T) {
 							"cluster.dns.name":      "emqx-headless.default.svc.cluster.local",
 							"listener.tcp.internal": "0.0.0.0:1883",
 						},
+						BootstrapAPIKeys: []BootsrapAPIKey{
+							{
+								Key:    "test",
+								Secret: "test",
+							},
+						},
 					},
 				},
 			},
@@ -290,6 +296,15 @@ func TestEnterpriseValidateUpdate(t *testing.T) {
 			},
 		}
 		assert.Error(t, new.ValidateUpdate(old))
+	})
+
+	t.Run("should return error if bootstrap APIKeys is changed", func(t *testing.T) {
+		old := enterprise.DeepCopy()
+		enterprise.Spec.Template.Spec.EmqxContainer.BootstrapAPIKeys = []BootsrapAPIKey{{
+			Key:    "change_key",
+			Secret: "test",
+		}}
+		assert.Error(t, enterprise.ValidateUpdate(old), "bootstrap APIKeys cannot be updated")
 	})
 
 	t.Run("valid emqxConfig can not update", func(t *testing.T) {
