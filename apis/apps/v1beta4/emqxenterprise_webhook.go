@@ -56,7 +56,7 @@ var _ webhook.Validator = &EmqxEnterprise{}
 func (r *EmqxEnterprise) ValidateCreate() error {
 	emqxenterpriselog.Info("validate create", "name", r.Name)
 
-	if err := validateImageVersion(r); err != nil {
+	if err := validateImageVersion(r, nil); err != nil {
 		emqxbrokerlog.Error(err, "validate create failed")
 		return err
 	}
@@ -68,22 +68,18 @@ func (r *EmqxEnterprise) ValidateCreate() error {
 func (r *EmqxEnterprise) ValidateUpdate(old runtime.Object) error {
 	emqxenterpriselog.Info("validate update", "name", r.Name)
 
-	if err := validateImageVersion(r); err != nil {
-		emqxbrokerlog.Error(err, "validate create failed")
-		return err
+	callbacks := []func(new, old Emqx) error{
+		validateBootstrapAPIKey,
+		validateImageVersion,
+		validatePersistent,
+		validateEmqxConfig,
 	}
-
-	oldEmqx := old.(*EmqxEnterprise)
-	if err := validatePersistent(r, oldEmqx); err != nil {
-		emqxbrokerlog.Error(err, "validate update failed")
-		return err
+	for _, cb := range callbacks {
+		if err := cb(r, old.(*EmqxEnterprise)); err != nil {
+			emqxbrokerlog.Error(err, "validate create failed")
+			return err
+		}
 	}
-
-	if err := validateEmqxConfig(r, oldEmqx); err != nil {
-		emqxbrokerlog.Error(err, "validate update failed")
-		return err
-	}
-
 	return nil
 }
 

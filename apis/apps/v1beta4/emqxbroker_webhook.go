@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta4
 
 import (
+	emperror "emperror.dev/errors"
 	"errors"
 	"fmt"
 	"reflect"
@@ -64,7 +65,7 @@ var _ webhook.Validator = &EmqxBroker{}
 func (r *EmqxBroker) ValidateCreate() error {
 	emqxbrokerlog.Info("validate create", "name", r.Name)
 
-	if err := validateImageVersion(r); err != nil {
+	if err := validateImageVersion(r, nil); err != nil {
 		emqxbrokerlog.Error(err, "validate create failed")
 		return err
 	}
@@ -76,22 +77,18 @@ func (r *EmqxBroker) ValidateCreate() error {
 func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 	emqxbrokerlog.Info("validate update", "name", r.Name)
 
-	if err := validateImageVersion(r); err != nil {
-		emqxbrokerlog.Error(err, "validate create failed")
-		return err
+	callbacks := []func(new, old Emqx) error{
+		validateBootstrapAPIKey,
+		validateImageVersion,
+		validatePersistent,
+		validateEmqxConfig,
 	}
-
-	oldEmqx := old.(*EmqxBroker)
-	if err := validatePersistent(r, oldEmqx); err != nil {
-		emqxbrokerlog.Error(err, "validate update failed")
-		return err
+	for _, cb := range callbacks {
+		if err := cb(r, old.(*EmqxBroker)); err != nil {
+			emqxbrokerlog.Error(err, "validate create failed")
+			return err
+		}
 	}
-
-	if err := validateEmqxConfig(r, oldEmqx); err != nil {
-		emqxbrokerlog.Error(err, "validate update failed")
-		return err
-	}
-
 	return nil
 }
 
@@ -243,8 +240,8 @@ func defaultPersistent(r Emqx) {
 	}
 }
 
-func validateImageVersion(r Emqx) error {
-	version := r.GetSpec().GetTemplate().Spec.EmqxContainer.Image.Version
+func validateImageVersion(new, _ Emqx) error {
+	version := new.GetSpec().GetTemplate().Spec.EmqxContainer.Image.Version
 	if version == "latest" {
 		return fmt.Errorf("image version can not be latest")
 	}
@@ -283,6 +280,17 @@ func validateEmqxConfig(new, old Emqx) error {
 				return errors.New(`refuse to update the "^cluster.*$" field in ".spec.template.spec.emqxContainer.emqxConfig"`)
 			}
 		}
+	}
+	return nil
+}
+
+func validateBootstrapAPIKey(new, old Emqx) error {
+	oldAPIKey := old.GetSpec().GetTemplate().Spec.EmqxContainer.BootstrapAPIKeys
+	newAPIKey := new.GetSpec().GetTemplate().Spec.EmqxContainer.BootstrapAPIKeys
+	if !reflect.DeepEqual(oldAPIKey, newAPIKey) {
+		err := emperror.Errorf("bootstrap APIKey cannot be updated")
+		emqxbrokerlog.Error(err, "validate update failed")
+		return err
 	}
 	return nil
 }
