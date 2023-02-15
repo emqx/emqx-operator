@@ -10,9 +10,7 @@ AKS: Azure Kubernetes Service (AKS) simplifies deploying a managed Kubernetes cl
 
 ## Create AKS Cluster
 
-Log in to the Azure AKS dashboard, go to the Kubernetes service, and create a Kubernetes cluster. EMQX Operator requires Kubernetes version >= 1.20.0, so we choose Kubernetes 1.22.11 here, and network and other resource information according to your needs. [For details](https://docs.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-portal?tabs=azure-cli)
-
-
+Log in to the Azure AKS dashboard, go to the Kubernetes service, and create a Kubernetes cluster. [For details](https://docs.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-portal?tabs=azure-cli)
 
 ## Access Kubernetes cluster
 

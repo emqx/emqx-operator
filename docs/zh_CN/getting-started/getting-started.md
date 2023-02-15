@@ -15,7 +15,10 @@ EMQX Operator 部署前，请确认以下组件已经安装：
 |  [cert-manager](https://cert-manager.io) |  >= 1.1.6       |
 
 > ### 为什么我们需要 kubernetes 1.24：
+>
 > 在 Kubernetes 1.24 及以上默认开启 `MixedProtocolLBService` 特性，其文档可以参考：[ MixedProtocolLBService ](https://kubernetes.io/zh-cn/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features)。`MixedProtocolLBService` 特性允许在同一 `LoadBalancer` 类型的 Service 实例中使用不同的协议。因此如果用户在 Kubernetes 上部署 EMQX 集群，并且使用 `LoadBalancer` 类型的 Service，Service 里面同时存在 TCP 和 UDP 两种协议，请注意升级 Kubernetes 版本到 1.24及以上，否则会导致 Service 创建失败。
+>
+> 如果用户不需要 `MixedProtocolLBService` 特性, EMQX Operator 需要的 Kubernetes 集群版本为 `>=1.21`。
 
 ### 安装 EMQX Operator 
 

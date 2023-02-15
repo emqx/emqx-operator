@@ -14,7 +14,7 @@ NLB：AWS 提供的LoadBalancer
 
 ## 创建EKS集群
 
-登录 AWS EKS 控制台，进入创建eks 集群页面，EMQX Operator 要求Kubernetes 版本>=1.20.0 ，因此我们在此选择 Kubernetes 选择 1.22 ,网络与其他资源信息根据自身需求来制定。[细节请参考](https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html) 
+登录 AWS EKS 控制台，进入创建eks 集群页面，具体创建步骤参考：[云厂商文档](https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html)
 
 ## 访问EKS集群
 

@@ -2,6 +2,12 @@ apiVersion: v2
 name: emqx-operator
 description: A Helm chart for EMQX Operator Controller
 
+# The `MixedProtocolLBService` feature is enabled by default in Kubernetes 1.24 and above.
+# For its documentation, please refer to: [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+# If user use  `MixedProtocolLBService` feature, the EMQX Operator requires a Kubernetes cluster of version `>=1.24`.
+# If user doesn't need `MixedProtocolLBService` feature, the EMQX Operator requires a Kubernetes cluster of version `>=1.21`.
+kubeVersion: ">= 1.21"
+
 # A chart can be either an 'application' or a 'library' chart.
 #
 # Application charts are a collection of templates that can be packaged into versioned archives

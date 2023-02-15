@@ -10,13 +10,13 @@ AKS: Azure Kubernetes 服务 (AKS)。详见：[Azure 文档](https://docs.micros
 
 ## 创建AKS集群
 
-登录 Azure AKS 控制台，进入 Kubernetes 服务，创建 Kubernetes 集群。EMQX Operator 要求Kubernetes 版本>=1.20.0 ，因此我们在此选择 Kubernetes 选择 1.22.11，网络与其他资源信息根据自身需求来制定。[细节请参考](https://docs.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-portal?tabs=azure-cli)
+登录 Azure AKS 控制台，进入 Kubernetes 服务，创建 Kubernetes 集群。具体创建步骤参考：[云厂商文档](https://docs.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-portal?tabs=azure-cli)
 
 
 
 ## 访问 Kubernetes 集群
 
-建议通过 Azure 提供的 Cloud Shell 连接。[细节请参考](https://docs.microsoft.com/en-us/azure/cloud-shell/overview)
+建议通过 Azure 提供的 Cloud Shell 连接。具体创建步骤参考：[云厂商文档](https://docs.microsoft.com/en-us/azure/cloud-shell/overview)
 
 ## StorageClass 配置
 

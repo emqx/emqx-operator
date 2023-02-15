@@ -13,8 +13,7 @@ CLB：负载均衡（Cloud Load Balancer， CLB），[CLB 文档](https://cloud.
 
 ## 创建 TEK 集群
 
-登录腾讯云, 选择云产品  -> 容器服务，点击创建， 选择标准集群，EMQX Operator 要求Kubernetes 版本>=1.20.0，因此我们在此选择 Kubernetes 选择 1.22.5 ,网络与其他资源信息根据自身需求来制定。具体创建步骤参考： [创建标准集群](https://cloud.tencent.com/document/product/457/32189)
-
+登录腾讯云, 选择云产品  -> 容器服务，点击创建， 选择标准集群，具体创建步骤参考：[云厂商文档](https://cloud.tencent.com/document/product/457/32189)
 
 ## LoadBalancer 配置
 

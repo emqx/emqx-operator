@@ -18,12 +18,12 @@ jobs:
           - minikube
           - k3s
         kubernetes-version:
-          - "v1.20.15"
           - "v1.21.14"
-          - "v1.22.15"
-          - "v1.23.13"
-          - "v1.24.7"
-          - "v1.25.3"
+          - "v1.22.17"
+          - "v1.23.16"
+          - "v1.24.10"
+          - "v1.25.6"
+          - "v1.26.1"
     steps:
       - if: matrix.kubernetes-env == 'k3s'
         run: |
@@ -93,12 +93,12 @@ jobs:
           - minikube
           - k3s
         kubernetes-version:
-          - "v1.20.15"
           - "v1.21.14"
-          - "v1.22.12"
-          - "v1.23.9"
-          - "v1.24.3"
-          - "v1.25.2"
+          - "v1.22.17"
+          - "v1.23.16"
+          - "v1.24.10"
+          - "v1.25.6"
+          - "v1.26.1"
         emqx:
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-slim.yaml"]
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
