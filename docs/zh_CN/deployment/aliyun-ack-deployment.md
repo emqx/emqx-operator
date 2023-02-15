@@ -14,7 +14,7 @@ CLB：传统型负载均衡 CLB（Classic Load Balancer）是将访问流量根�
 
 ## 创建 ACK 集群
 
-登录阿里云，选择云产品  -> 容器服务 Kubernets 版，点击创建， 选择标准集群，EMQX Operator 要求Kubernetes 版本>=1.20.0，因此我们在此选择 Kubernetes 选择 1.22.10，网络与其他资源信息根据自身需求来制定。具体创建步骤参考： [创建标准集群](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/create-an-ack-managed-cluster)
+登录阿里云，选择云产品  -> 容器服务 Kubernets 版，点击创建， 选择标准集群，具体创建步骤参考：[云厂商文档](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/create-an-ack-managed-cluster)
 
 
 ## LoadBalancer 配置

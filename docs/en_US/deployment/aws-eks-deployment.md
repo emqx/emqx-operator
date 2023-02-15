@@ -13,7 +13,7 @@ NLB：AWS LoadBalancer
 
 ## Create EKS Cluster
 
-Log in AWS EKS console and enter the page for creating EKS Cluster. The EMQX Operator requires a Kubernetes cluster of version >=1.20.0, so we select Kubernetes 1.22. Network and other resource information can be customized according to your needs. For details: [Create EKS cluster](https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html) 
+Log in AWS EKS console and enter the page for creating EKS Cluster. For details: [Create EKS cluster](https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html) 
 
 ## Access Kubernetes cluster
 

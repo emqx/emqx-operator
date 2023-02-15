@@ -1,5 +1,5 @@
 # Deployment requirements
 
-- Kubernetes 1.20.11 or above
+- Kubernetes 1.24 or above
 - Helm 3 or above
 - Kubectl tool

@@ -10,7 +10,7 @@ GKE: Google Kubernetes Engine, For details: [GKE docs](https://cloud.google.com/
 
 ## Create GKE Cluster
 
-Log in Google Cloud GKE console and enter the page for creating GKE Cluster. The EMQX Operator requires a Kubernetes cluster of version >=1.20.0, so either a Private or Autopilot can be chosen. Network and other resource information can be customized according to your needs. For details: [Create GKE cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster)
+Log in Google Cloud GKE console and enter the page for creating GKE Cluster. For details: [Create GKE cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster)
 
 ## Access Kubernetes cluster
 

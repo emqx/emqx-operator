@@ -10,7 +10,7 @@ CCE: 云容器引擎（Cloud Container Engine，简称CCE）提供高度可扩�
 
 ## 创建CCE集群
 
-登录华为 CCE控制台，购买“Turbo集群”或者“CCE集群”，EMQX Operator 要求Kubernetes 版本>=1.20.0 ，因此我们在此选择 Kubernetes 选择 1.21，网络与其他资源信息根据自身需求来制定。另外需要添加节点。[细节请参考](https://support.huaweicloud.com/qs-cce/cce_qs_0008.html?utm_source=cce_Growth_map&utm_medium=display&utm_campaign=help_center&utm_content=Growth_map)
+登录华为 CCE控制台，购买“Turbo集群”或者“CCE集群”，具体创建步骤参考：[云厂商文档](https://support.huaweicloud.com/qs-cce/cce_qs_0008.html?utm_source=cce_Growth_map&utm_medium=display&utm_campaign=help_center&utm_content=Growth_map)
 
 注意：
 这里添加的节点必须可以访问外网（可以通过加NAT网关解决）
