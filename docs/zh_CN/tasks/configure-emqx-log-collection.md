@@ -101,7 +101,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.9
+  image: "emqx/emqx-enterprise:5.0.0"
   bootstrapConfig: |
     log {
       file_handlers {
@@ -147,7 +147,7 @@ spec:
 
 `spec.template.spec.emqxContainer.emqxConfig` 配置输出日志到文件，并且日志级别为 debug
 
-`spec.template.spec.volumes` 和 `spec.template.spec.emqxContainer.VolumeMounts` 配置日志挂载
+`spec.template.spec.volumes` 和 `spec.template.spec.emqxContainer.volumeMounts` 配置日志挂载
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
@@ -168,50 +168,12 @@ spec:
         emqxConfig:
           log.level: debug
           log.to: file
-        VolumeMounts:
+        volumeMounts:
         - name: log-volume
           mountPath: /opt/emqx/log
       volumes:
         - name: log-volume
           emptyDir: {}
-```
-
-
-:::
-::: tab v1beta3
-
-
-`telegraf.influxdata.com/internal` 设置为 false， 表示不收集 telegraf agent 自己的指标
-
-`telegraf.influxdata.com/volume-mounts` 设置日志的挂载路径
-
-`telegraf.influxdata.com/class` logs 引用上面指定的 class 的名称
-
-`spec.emqxTemplate.config` 配置输出日志到文件，并且日志级别为 debug
-
-`spec.emqxTemplate.extraVolumes` 和 `spec.emqxTemplate.extraVolumeMounts` 配置日志挂载
-
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-  annotations:
-    telegraf.influxdata.com/internal: "false"
-    telegraf.influxdata.com/volume-mounts: "{\"log-volume\":\"/opt/emqx/log\"}"
-    telegraf.influxdata.com/class: "logs"
-spec:
-  emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
-    config:
-      log.to: file
-      log.level: debug
-    extraVolumes:
-      - name: log-volume
-        emptyDir: {}
-    extraVolumeMounts:
-      - name: log-volume
-        mountPath: /opt/emqx/log
 ```
 
 :::
@@ -267,24 +229,6 @@ emqx-ee-2   3/3     Running   0          8m37s
 **备注：** 当 telegraf sidecar 注入到 EMQX  pod 中后，EQMX pod 中的容器数量会达到3个
 
 :::
-::: tab v1beta3
-
-```shell
-kubectl get pods  -l  apps.emqx.io/instance=emqx-ee
-```
-
-输出类似于：
-
-```shell
-NAME        READY   STATUS    RESTARTS   AGE
-emqx-ee-0   3/3     Running   0          8m37s
-emqx-ee-1   3/3     Running   0          8m37s
-emqx-ee-2   3/3     Running   0          8m37s
-```
-
-**备注：** 当 telegraf sidecar 注入到 EMQX  pod 中后，EQMX pod 中的容器数量会达到3个
-
-:::
 ::::
 
 - 查看收集到的日志
@@ -303,12 +247,6 @@ kubectl logs -f emqx-core-0 -c telegraf
 kubectl logs -f emqx-ee-0 -c telegraf
 ```
 
-:::
-::: tab v1beta3
-
-```shell
-kubectl logs -f emqx-ee-0 -c telegraf
-```
 
 :::
 ::::
