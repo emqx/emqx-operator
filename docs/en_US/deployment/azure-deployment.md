@@ -53,30 +53,102 @@ Operator installation refer to [Operator docs](https://github.com/emqx/emqx-oper
 
 After the Operator installation is complete, deploy the EMQX cluster on Azure using the following yaml
 
-```yaml
+
+:::: tabs type:card
+::: tab v2alpha1
+
+```shell
 cat << "EOF" | kubectl apply -f -
-apiVersion: apps.emqx.io/v1beta3
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: "emqx/emqx-enterprise:5.0.0"
+  imagePullPolicy: IfNotPresent
+  coreTemplate:
+    spec:
+      volumeClaimTemplates:
+        storageClassName: azurefile-csi-nfs
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+        - ReadWriteOnce
+      replicas: 1
+  replicantTemplate:
+    spec:
+      replicas: 3
+  dashboardServiceTemplate:
+    metadata:
+      name: emqx-dashboard
+    spec:
+      type: LoadBalancer
+      selector:
+        apps.emqx.io/db-role: core
+      ports:
+        - name: "dashboard-listeners-http-bind"
+          protocol: TCP
+          port: 18083
+          targetPort: 18083
+  listenersServiceTemplate:
+    metadata:
+      name: emqx-listeners
+    spec:
+      type: LoadBalancer
+      ports:
+        - name: "tcp-default"
+          protocol: TCP
+          port: 1883
+          targetPort: 1883
+EOF
+```
+
+:::
+::: tab v1beta4
+
+```shell
+cat << "EOF" | kubectl apply -f -
+apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
   labels:
-    "foo": "bar"
+    "apps.emqx.io/instance": "emqx-ee"
 spec:
-  replicas: 3
   persistent:
-     storageClassName: azurefile-csi-nfs
-     resources:
-       requests:
-         storage: 4Gi
-     accessModes:
-     - ReadWriteOnce
-  emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
-    serviceTemplate:
-      spec:
-        type: LoadBalancer
+    metadata:
+      name: emqx-ee
+      labels:
+        "apps.emqx.io/instance": "emqx-ee"
+    spec:
+      storageClassName: azurefile-csi-nfs
+      resources:
+        requests:
+          storage: 20Mi
+      accessModes:
+        - ReadWriteOnce
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.14
+  serviceTemplate:
+    metadata:
+      name: emqx-ee
+      namespace: default
+      labels:
+        "apps.emqx.io/instance": "emqx-ee"
+    spec:
+      type: LoadBalancer
+      selector:
+        "apps.emqx.io/instance": "emqx-ee"
 EOF
 ```
+
+:::
+::::
 
 Here the service type is LoadBalancer
 
