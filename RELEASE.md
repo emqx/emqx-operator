@@ -16,9 +16,17 @@ EMQX Operator 2.1.1 is released.
 
 ## Features 🌈
 
-Add new field bootstrap API keys in `apps.emqx.io/v1beta4` and `apps.emqx.io/v2alpha1`
++ Support EMQX Enterprise 5.0
 
-Users can customize the keys and secrets required to request EMQX's API before EMQX is started, which helps with some of the operations tasks, until then, users must wait for EMQX to be ready and add them manually via the EMQX Dashboard.
+  Users can deploy EMQX Enterprise 5.0 by creating an EMQX custom resource with the `spec.image` field set to `emqx/emqx-enterprise:5.0.0`.
+
+  And users can update to EMQX Enterprise 5.0 from EMQX 5.0, by just changing the `spec.image` field to `emqx/emqx-enterprise:5.0.0` in the EMQX custom resource when the EMQX cluster is running.
+
+  > Note: Just can updating to EMQX Enterprise 5.0 from EMQX 5.0, not support updating EMQX Enterprise 5.0 from EMQX 5.0.
+
++ Add new field bootstrap API keys in `apps.emqx.io/v1beta4` and `apps.emqx.io/v2alpha1`
+
+  Users can customize the keys and secrets required to request EMQX's API before EMQX is started, which helps with some of the operations tasks, until then, users must wait for EMQX to be ready and add them manually via the EMQX Dashboard.
 
 ## Fixes 🛠
 
