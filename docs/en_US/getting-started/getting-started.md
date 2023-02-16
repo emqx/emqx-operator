@@ -10,19 +10,12 @@ Before deploying EMQX Operator, please confirm that the following components hav
 
 | Software                | Version Requirements |
 |:-----------------------:|:--------------------:|
-|  [Kubernetes](https://kubernetes.io/)    |  >= 1.24        |
 |  [Helm](https://helm.sh)                 |  >= 3           |
 |  [cert-manager](https://cert-manager.io) |  >= 1.1.6       |
 
-> ### Why we need kubernetes 1.24:
->
-> The `MixedProtocolLBService` feature is enabled by default in Kubernetes 1.24 and above. For its documentation, please refer to: [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/). The `MixedProtocolLBService` attribute allows different protocols to be used within the same Service instance of type `LoadBalancer`. Therefore, if the user deploys the EMQX cluster on Kubernetes and uses the `LoadBalancer` type of Service, there are both TCP and UDP protocols in the Service, please pay attention to upgrading the Kubernetes version to 1.24 or above, otherwise the Service creation will fail.
->
-> **If user doesn't need `MixedProtocolLBService` feature, the EMQX Operator requires a Kubernetes cluster of version `>=1.21`.**
-
 ### Install EMQX Operator
 
-> Make sure the [cert-manager](https://cert-manager.io) is ready
+> Please make sure the [cert-manager](https://cert-manager.io) is ready
 
 ```bash
 helm repo add emqx https://repos.emqx.io/charts

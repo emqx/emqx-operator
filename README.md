@@ -2,7 +2,7 @@
 
 [![GitHub Release](https://img.shields.io/github/release/emqx/emqx-operator?color=brightgreen)](https://github.com/emqx/emqx-operator/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/emqx/emqx-operator-controller)](https://hub.docker.com/r/emqx/emqx-operator-controller)
-[![Coverage Status](https://coveralls.io/repos/github/emqx/emqx-operator/badge.svg?branch=main)](https://coveralls.io/github/emqx/emqx-operator?branch=main)
+[![codecov](https://codecov.io/gh/emqx/emqx-operator/branch/main/graph/badge.svg?token=RNMH7K52JZ)](https://codecov.io/gh/emqx/emqx-operator)
 
 A Kubernetes Operator for [EMQX](https://www.emqx.io)
 
@@ -22,11 +22,27 @@ For an introduction to the EMQX Operator, see the [introduction](docs/en_US/READ
 
 The EMQX Operator requires a Kubernetes cluster of version `>=1.24`.
 
-> ### Why we need kubernetes 1.24:
->
-> The `MixedProtocolLBService` feature is enabled by default in Kubernetes 1.24 and above. For its documentation, please refer to: [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/). The `MixedProtocolLBService` attribute allows different protocols to be used within the same Service instance of type `LoadBalancer`. Therefore, if the user deploys the EMQX cluster on Kubernetes and uses the `LoadBalancer` type of Service, there are both TCP and UDP protocols in the Service, please pay attention to upgrading the Kubernetes version to 1.24 or above, otherwise the Service creation will fail.
-> 
-> **If user doesn't need `MixedProtocolLBService` feature, the EMQX Operator requires a Kubernetes cluster of version `>=1.21`.**
+### How to selector Kubernetes version
+
++ Kubernetes version >= 1.24
+
+  All functions of the EMQX and EMQX Operator can be used
+
++ Kubernetes version >= 1.21 && < 1.24
+
+  The EMQX Operator can be used, but the [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) feature is not supported, it means in `LoadBalancer` type of Service, the EMQX cluster can only use one protocol, such as TCP or UDP, but not both, so some features of EMQX will not be available.
+
++ Kubernetes version >= 1.20 && < 1.21
+
+  The EMQX Operator can be used, but if use `NodePort` type of Service, user must manually assign the `.spec.ports[].nodePort`, otherwise every update to the Service will result in a change to the NodePort, more details please refer to [Kubernetes changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.20.md#bug-or-regression-4)
+
++ Kubernetes version >= 1.16 && < 1.20
+
+  The EMQX Operator can be used, but we do not recommend using it, because the Kubernetes version is too old, we did not conducted a full test.
+
++ Kubernetes version < 1.16
+
+  The EMQX Operator cannot be used, because the `apiextensions/v1` APIVersion is not supported.
 
 ## CustomResourceDefinitions
 
@@ -39,11 +55,12 @@ The EMQX Operator automatically detects changes on any of the above custom resou
 
 ## EMQX Operator compatibility
 
-|                          | EMQX 4.2 latest | EMQX 4.3 latest | EMQX 4.4 latest | EMQX 5.0 latest |
-|--------------------------|-----------------|-----------------|-----------------| ----------------|
-| EMQX Operator 1.1 latest | ✓               | ✓               |                 |                 |
-| EMQX Operator 1.2 latest |                 |                 | ✓               |                 |
-| EMQX Operator 2.0 latest |                 |                 | ✓               | ✓               |
+|                   | EMQX 4.2 | EMQX 4.3 | EMQX 4.4 | EMQX 5.0 |
+|-------------------|----------|----------|----------| ---------|
+| EMQX Operator 1.1 | ✓        | ✓        |          |          |
+| EMQX Operator 1.2 |          |          | ✓        |          |
+| EMQX Operator 2.0 |          |          | ✓        | ✓        |
+| EMQX Operator 2.1 |          |          | ✓        | ✓        |
 
 ## Getting Start
 
@@ -54,7 +71,8 @@ For more information on getting started, see the [getting started](docs/en_US/ge
 |  Public Cloud Platform   | Deployment Guide                                         |
 |--------------------------|----------------------------------------------------------|
 |    AWS                   | [EKS](docs/en_US/deployment/aws-eks-deployment.md)       |
-|    Azure                 | [Azure](docs/en_US/deployment/azure-deployment.md)       |
+|    Azure                 | [AKS](docs/en_US/deployment/azure-deployment.md)       |
+|    Google Cloud          | [GKE](docs/en_US/deployment/gcp-gke-deployment.md)       |
 |    Alibaba Cloud         | [ACK](docs/zh_CN/deployment/aliyun-ack-deployment.md)    |
 |    Huawei                | [CCE](docs/zh_CN/deployment/cce-deployment.md)           |
 |    Tencent               | [TKE](docs/zh_CN/deployment/tencent-tke-deployment.md)   |
