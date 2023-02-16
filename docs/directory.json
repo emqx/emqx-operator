@@ -10,10 +10,6 @@
         {
           "title": "Features",
           "path": "introduction/features"
-        },
-        {
-          "title": "Prepare",
-          "path": "introduction/deployment"
         }
       ]
     },
@@ -114,10 +110,6 @@
         {
           "title": "核心功能",
           "path": "introduction/features"
-        },
-        {
-          "title": "部署要求",
-          "path": "introduction/deployment"
         }
       ]
     },
