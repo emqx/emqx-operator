@@ -73,6 +73,10 @@
         {
           "title": "Configure EMQX Prometheus",
           "path": "tasks/configure-emqx-prometheus"
+        },
+        {
+          "title": "Configure EMQX cluster",
+          "path": "tasks/configure-emqx-bootstrapConfig"
         }
       ]
     },
@@ -185,6 +189,10 @@
         {
           "title": "配置 Prometheus 监控 EMQX",
           "path": "tasks/configure-emqx-prometheus"
+        },
+        {
+          "title": "配置 EMQX 集群",
+          "path": "tasks/configure-emqx-bootstrapConfig"
         }
       ]
     },
