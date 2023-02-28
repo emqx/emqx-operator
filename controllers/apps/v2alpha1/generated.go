@@ -48,7 +48,7 @@ func generateNodeCookieSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.NameOfNodeCookie(),
+			Name:        instance.NodeCookieNamespacedName().Name,
 			Namespace:   instance.Namespace,
 			Labels:      instance.Labels,
 			Annotations: instance.Annotations,
@@ -74,7 +74,7 @@ func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.NameOfBootStrapUser(),
+			Name:        instance.BootstrapUserNamespacedName().Name,
 			Namespace:   instance.Namespace,
 			Labels:      instance.Labels,
 			Annotations: instance.Annotations,
@@ -92,7 +92,7 @@ func generateBootstrapConfigMap(instance *appsv2alpha1.EMQX) *corev1.ConfigMap {
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.NameOfBootStrapConfig(),
+			Name:        instance.BootstrapConfigNamespacedName().Name,
 			Namespace:   instance.Namespace,
 			Labels:      instance.Labels,
 			Annotations: instance.Annotations,
@@ -110,7 +110,7 @@ func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.NameOfHeadlessService(),
+			Name:      instance.HeadlessServiceNamespacedName().Name,
 			Namespace: instance.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -163,6 +163,10 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 	} else {
 		instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
 	}
+	// We don't need to set the selector for the service
+	// because the Operator will manager the endpointSlice
+	// please check https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
+	// instance.Spec.ListenersServiceTemplate.Spec.Selector = map[string]string{}
 
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -229,7 +233,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 		StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
 		Lifecycle:       instance.Spec.CoreTemplate.Spec.Lifecycle,
 		VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
-			Name:      instance.NameOfCoreNodeData(),
+			Name:      instance.CoreNodeNamespacedName().Name + "-data",
 			MountPath: "/opt/emqx/data",
 		}),
 	}
@@ -243,7 +247,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 	if podAnnotation == nil {
 		podAnnotation = make(map[string]string)
 	}
-	podAnnotation["apps.emqx.io/headless-service-name"] = instance.NameOfHeadlessService()
+	podAnnotation["apps.emqx.io/headless-service-name"] = instance.HeadlessServiceNamespacedName().Name
 	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(containers)
 
 	podTemplate := corev1.PodTemplateSpec{
@@ -282,7 +286,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Annotations: annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: instance.NameOfHeadlessService(),
+			ServiceName: instance.HeadlessServiceNamespacedName().Name,
 			Replicas:    instance.Spec.CoreTemplate.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: instance.Spec.CoreTemplate.Labels,
@@ -295,7 +299,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      instance.NameOfCoreNodeData(),
+					Name:      instance.CoreNodeNamespacedName().Name + "-data",
 					Namespace: instance.Namespace,
 					Labels:    instance.Spec.CoreTemplate.Labels,
 				},
@@ -304,7 +308,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 		}
 	} else {
 		sts.Spec.Template.Spec.Volumes = append(sts.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: instance.NameOfCoreNodeData(),
+			Name: instance.CoreNodeNamespacedName().Name + "-data",
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
@@ -380,13 +384,13 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 							StartupProbe:    instance.Spec.ReplicantTemplate.Spec.StartupProbe,
 							Lifecycle:       instance.Spec.ReplicantTemplate.Spec.Lifecycle,
 							VolumeMounts: append(instance.Spec.ReplicantTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
-								Name:      instance.NameOfReplicantNodeData(),
+								Name:      instance.ReplicantNodeNamespacedName().Name + "-data",
 								MountPath: "/opt/emqx/data",
 							}),
 						},
 					}, instance.Spec.ReplicantTemplate.Spec.ExtraContainers...),
 					Volumes: append(instance.Spec.ReplicantTemplate.Spec.ExtraVolumes, corev1.Volume{
-						Name: instance.NameOfReplicantNodeData(),
+						Name: instance.ReplicantNodeNamespacedName().Name + "-data",
 						VolumeSource: corev1.VolumeSource{
 							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
@@ -454,7 +458,7 @@ func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *c
 	return sts
 }
 
-func updateStatefulSetForBootstrapConfig(sts *appsv1.StatefulSet, bootstrapConfig *corev1.ConfigMap) *appsv1.StatefulSet {
+func updateStatefulSetForBootstrapConf(sts *appsv1.StatefulSet, bootstrapConfig *corev1.ConfigMap) *appsv1.StatefulSet {
 	volume := corev1.Volume{
 		Name: "bootstrap-config",
 		VolumeSource: corev1.VolumeSource{

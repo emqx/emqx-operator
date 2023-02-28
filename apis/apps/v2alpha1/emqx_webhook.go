@@ -17,9 +17,11 @@ limitations under the License.
 package v2alpha1
 
 import (
-	emperror "emperror.dev/errors"
 	"fmt"
 	"reflect"
+
+	emperror "emperror.dev/errors"
+
 	// "github.com/gurkankaymak/hocon"
 	hocon "github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
@@ -122,19 +124,19 @@ func (r *EMQX) defaultNames() {
 	}
 
 	if r.Spec.CoreTemplate.Name == "" {
-		r.Spec.CoreTemplate.Name = r.NameOfCoreNode()
+		r.Spec.CoreTemplate.Name = r.CoreNodeNamespacedName().Name
 	}
 
 	if r.Spec.ReplicantTemplate.Name == "" {
-		r.Spec.ReplicantTemplate.Name = r.NameOfReplicantNode()
+		r.Spec.ReplicantTemplate.Name = r.ReplicantNodeNamespacedName().Name
 	}
 
 	if r.Spec.DashboardServiceTemplate.Name == "" {
-		r.Spec.DashboardServiceTemplate.Name = r.NameOfDashboardService()
+		r.Spec.DashboardServiceTemplate.Name = r.DashboardServiceNamespacedName().Name
 	}
 
 	if r.Spec.ListenersServiceTemplate.Name == "" {
-		r.Spec.ListenersServiceTemplate.Name = r.NameOfListenersService()
+		r.Spec.ListenersServiceTemplate.Name = r.ListenersServiceNamespacedName().Name
 	}
 }
 
@@ -177,7 +179,7 @@ func (r *EMQX) defaultLabels() {
 }
 
 func (r *EMQX) defaultBootstrapConfig() {
-	dnsName := fmt.Sprintf("%s.%s.svc.cluster.local", r.NameOfHeadlessService(), r.Namespace)
+	dnsName := fmt.Sprintf("%s.%s.svc.cluster.local", r.HeadlessServiceNamespacedName().Name, r.Namespace)
 	defaultBootstrapConfigStr := fmt.Sprintf(`
 	node {
 	  data_dir = data

@@ -16,44 +16,64 @@ limitations under the License.
 
 package v2alpha1
 
-import "fmt"
+import (
+	"fmt"
 
-func (instance *EMQX) NameOfCoreNode() string {
-	return fmt.Sprintf("%s-core", instance.Name)
+	"k8s.io/apimachinery/pkg/types"
+)
+
+func (instance *EMQX) CoreNodeNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-core", instance.Name),
+	}
 }
 
-func (instance *EMQX) NameOfCoreNodeData() string {
-	return fmt.Sprintf("%s-core-data", instance.Name)
+func (instance *EMQX) ReplicantNodeNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-replicant", instance.Name),
+	}
 }
 
-func (instance *EMQX) NameOfReplicantNode() string {
-	return fmt.Sprintf("%s-replicant", instance.Name)
+func (instance *EMQX) HeadlessServiceNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-headless", instance.Name),
+	}
 }
 
-func (instance *EMQX) NameOfReplicantNodeData() string {
-	return fmt.Sprintf("%s-replicant-data", instance.Name)
+func (instance *EMQX) DashboardServiceNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-dashboard", instance.Name),
+	}
 }
 
-func (instance *EMQX) NameOfHeadlessService() string {
-	return fmt.Sprintf("%s-headless", instance.Name)
+func (instance *EMQX) ListenersServiceNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-listeners", instance.Name),
+	}
 }
 
-func (instance *EMQX) NameOfDashboardService() string {
-	return fmt.Sprintf("%s-dashboard", instance.Name)
+func (instance *EMQX) NodeCookieNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-node-cookie", instance.Name),
+	}
 }
 
-func (instance *EMQX) NameOfListenersService() string {
-	return fmt.Sprintf("%s-listeners", instance.Name)
+func (instance *EMQX) BootstrapUserNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-bootstrap-user", instance.Name),
+	}
 }
 
-func (instance *EMQX) NameOfNodeCookie() string {
-	return fmt.Sprintf("%s-node-cookie", instance.Name)
-}
-
-func (instance *EMQX) NameOfBootStrapUser() string {
-	return fmt.Sprintf("%s-bootstrap-user", instance.Name)
-}
-
-func (instance *EMQX) NameOfBootStrapConfig() string {
-	return fmt.Sprintf("%s-bootstrap-config", instance.Name)
+func (instance *EMQX) BootstrapConfigNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-bootstrap-config", instance.Name),
+	}
 }

@@ -32,7 +32,6 @@ import (
 	"github.com/emqx/emqx-operator/internal/apiclient"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -74,10 +73,7 @@ func newRequestAPI(r *EMQXReconciler, instance *appsv2alpha1.EMQX) *requestAPI {
 func getBootstrapUser(k8sClient client.Client, instance *appsv2alpha1.EMQX) (username, password string, err error) {
 	secret := &corev1.Secret{}
 	if err = k8sClient.Get(context.TODO(),
-		types.NamespacedName{
-			Name:      instance.NameOfBootStrapUser(),
-			Namespace: instance.Namespace,
-		},
+		instance.BootstrapUserNamespacedName(),
 		secret); err != nil {
 		err = emperror.Wrap(err, "get secret failed")
 		return
