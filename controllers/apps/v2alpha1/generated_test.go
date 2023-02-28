@@ -1071,7 +1071,7 @@ func TestUpdateStatefulSetForBootstrapConfig(t *testing.T) {
 		},
 	}
 
-	got := updateStatefulSetForBootstrapConfig(sts, bootstrapConfig)
+	got := updateStatefulSetForBootstrapConf(sts, bootstrapConfig)
 
 	assert.Equal(t, []corev1.Volume{{
 		Name: "bootstrap-config",

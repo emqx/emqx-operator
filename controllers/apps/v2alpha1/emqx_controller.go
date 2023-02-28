@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -40,6 +39,15 @@ import (
 )
 
 const EMQXContainerName string = "emqx"
+
+// subResult provides a wrapper around different results from a subreconciler.
+type subResult struct {
+	err error
+}
+
+type subReconciler interface {
+	reconcile(ctx context.Context, instance *appsv2alpha1.EMQX) subResult
+}
 
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
@@ -82,20 +90,23 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// Create Resources
-	resources, err := r.createResources(instance)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.CreateOrUpdateList(instance, r.Scheme, resources); err != nil {
-		if innerErr.IsCommonError(err) {
-			return ctrl.Result{RequeueAfter: time.Second}, nil
+	for _, subReconciler := range []subReconciler{
+		&addBootstrap{r},
+		&addSvc{r},
+		&addCore{r},
+		&addRepl{r},
+	} {
+		subResult := subReconciler.reconcile(ctx, instance)
+		if subResult.err != nil {
+			if innerErr.IsCommonError(subResult.err) {
+				return ctrl.Result{RequeueAfter: time.Second}, nil
+			}
+			return ctrl.Result{}, subResult.err
 		}
-		return ctrl.Result{}, err
 	}
 
 	// Update EMQX Custom Resource's status
-	instance, err = r.updateStatus(instance)
+	instance, err := r.updateStatus(instance)
 	if err != nil {
 		if innerErr.IsCommonError(err) {
 			return ctrl.Result{RequeueAfter: time.Second}, nil
@@ -119,41 +130,6 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv2alpha1.EMQX{}).
 		Complete(r)
-}
-
-func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.Object, error) {
-	var resources []client.Object
-	nodeCookie := generateNodeCookieSecret(instance)
-	bootstrapUser := generateBootstrapUserSecret(instance)
-	bootstrapConfig := generateBootstrapConfigMap(instance)
-	if instance.Status.IsCreating() {
-		resources = append(resources, nodeCookie, bootstrapUser, bootstrapConfig)
-	}
-
-	dashboardSvc := generateDashboardService(instance)
-	headlessSvc := generateHeadlessService(instance)
-	sts := generateStatefulSet(instance)
-	sts = updateStatefulSetForNodeCookie(sts, nodeCookie)
-	sts = updateStatefulSetForBootstrapUser(sts, bootstrapUser)
-	sts = updateStatefulSetForBootstrapConfig(sts, bootstrapConfig)
-	resources = append(resources, dashboardSvc, headlessSvc, sts)
-
-	if instance.Status.IsRunning() || instance.Status.IsCoreNodesReady() {
-		deploy := generateDeployment(instance)
-		deploy = updateDeploymentForNodeCookie(deploy, nodeCookie)
-		deploy = updateDeploymentForBootstrapConfig(deploy, bootstrapConfig)
-		resources = append(resources, deploy)
-
-		listenerPorts, err := newRequestAPI(r, instance).getAllListenersByAPI(sts)
-		if err != nil {
-			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
-		}
-
-		if listenersSvc := generateListenerService(instance, listenerPorts); listenersSvc != nil {
-			resources = append(resources, listenersSvc)
-		}
-	}
-	return resources, nil
 }
 
 func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha1.EMQX, error) {
