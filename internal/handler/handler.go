@@ -210,3 +210,16 @@ func selectManagerContainer(obj []byte) ([]byte, error) {
 	objMap["spec"].(map[string]interface{})["template"] = podTemplate
 	return json.ConfigCompatibleWithStandardLibrary.Marshal(objMap)
 }
+
+func SetManagerContainerAnnotation(annotations map[string]string, containers []corev1.Container) map[string]string {
+	containersName := []string{}
+	for _, container := range containers {
+		containersName = append(containersName, container.Name)
+	}
+
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations[ManageContainersAnnotation] = strings.Join(containersName, ",")
+	return annotations
+}

@@ -164,3 +164,15 @@ func TestIgnoreOtherContainerForDeploy(t *testing.T) {
 	assert.Nil(t, err)
 	assert.False(t, patchResult.IsEmpty())
 }
+
+func TestSetManagerContainerAnnotation(t *testing.T) {
+	var a map[string]string
+
+	got := handler.SetManagerContainerAnnotation(a, []corev1.Container{
+		{Name: "emqx"},
+		{Name: "reloader"},
+	})
+	assert.Equal(t, map[string]string{
+		handler.ManageContainersAnnotation: "emqx,reloader",
+	}, got)
+}
