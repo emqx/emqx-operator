@@ -51,8 +51,8 @@ func (r *EMQX) Default() {
 
 	r.defaultNames()
 	r.defaultLabels()
+	r.defaultAnnotations()
 	r.defaultBootstrapConfig()
-	r.defaultAnnotationsForService()
 	r.defaultDashboardServiceTemplate()
 	r.defaultProbe()
 }
@@ -178,6 +178,19 @@ func (r *EMQX) defaultLabels() {
 	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 }
 
+func (r *EMQX) defaultAnnotations() {
+	annotations := r.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
+	r.Spec.CoreTemplate.Annotations = mergeMap(r.Spec.CoreTemplate.Annotations, annotations)
+	r.Spec.ReplicantTemplate.Annotations = mergeMap(r.Spec.ReplicantTemplate.Annotations, annotations)
+	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
+	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
+}
+
 func (r *EMQX) defaultBootstrapConfig() {
 	dnsName := fmt.Sprintf("%s.%s.svc.cluster.local", r.HeadlessServiceNamespacedName().Name, r.Namespace)
 	defaultBootstrapConfigStr := fmt.Sprintf(`
@@ -281,15 +294,4 @@ func (r *EMQX) defaultProbe() {
 	if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
 		r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
 	}
-}
-
-func (r *EMQX) defaultAnnotationsForService() {
-	annotations := r.Annotations
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
-
-	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
-	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
 }

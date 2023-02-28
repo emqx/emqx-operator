@@ -417,15 +417,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Volumes:         emqxTemplate.Spec.Volumes,
 		},
 	}
-	containerNames := make([]string, len(podTemplate.Spec.Containers))
-	for i := range podTemplate.Spec.Containers {
-		containerNames[i] = podTemplate.Spec.Containers[i].Name
-	}
-
-	if podTemplate.Annotations == nil {
-		podTemplate.Annotations = make(map[string]string)
-	}
-	podTemplate.Annotations[handler.ManageContainersAnnotation] = strings.Join(containerNames, ",")
+	podTemplate.Annotations = handler.SetManagerContainerAnnotation(podTemplate.Annotations, podTemplate.Spec.Containers)
 
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
