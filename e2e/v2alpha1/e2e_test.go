@@ -165,46 +165,6 @@ var _ = Describe("E2E Test", func() {
 		})
 	})
 
-	Context("Check EMQX Custom Resource when replicant replicas == 0", func() {
-		instance := &appsv2alpha1.EMQX{}
-		JustBeforeEach(func() {
-			By("Update the EMQX Custom Resource, add replicant nodes")
-			Eventually(func() error {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
-				replicant := int32(0)
-				instance.Spec.ReplicantTemplate.Spec.Replicas = &replicant
-				return k8sClient.Update(context.TODO(), instance)
-			}, timeout, interval).Should(Succeed())
-		})
-		It("", func() {
-			By("Checking the EMQX Custom Resource's Status")
-			for _, matcher := range []gomegaTypes.GomegaMatcher{
-				HaveField("Conditions", ConsistOf(conditions)),
-				HaveField("CurrentImage", Equal("emqx/emqx:5.0.9")),
-				HaveField("EMQXNodes", HaveLen(1)),
-				HaveField("CoreNodeReplicas", Equal(int32(1))),
-				HaveField("CoreNodeReadyReplicas", Equal(int32(1))),
-				HaveField("ReplicantNodeReplicas", Equal(int32(0))),
-				HaveField("ReplicantNodeReadyReplicas", Equal(int32(0))),
-			} {
-				Eventually(func() appsv2alpha1.EMQXStatus {
-					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
-					return instance.Status
-				}, timeout, interval).Should(matcher)
-			}
-
-			By("Checking the EMQX Custom Resource's Service")
-			svc := &corev1.Service{}
-			Eventually(func() map[string]string {
-				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "e2e-test-v2alpha1"}, svc)
-				return svc.Spec.Selector
-			}, timeout, interval).Should(HaveKeyWithValue("apps.emqx.io/db-role", "core"))
-
-			Expect(svc.Spec.Ports).Should(ConsistOf(listenerPorts))
-
-		})
-	})
-
 	Context("Update EMQX Custom Resource, change image", func() {
 		instance := &appsv2alpha1.EMQX{}
 		JustBeforeEach(func() {

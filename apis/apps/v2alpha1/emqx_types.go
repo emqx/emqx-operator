@@ -56,6 +56,7 @@ type EMQXReplicantTemplateSpec struct {
 	// same Template, but individual replicas also have a consistent identity.
 	// If unspecified, defaults to 3.
 	//+kubebuilder:default:=3
+	//+kubebuilder:validation:Minimum=1
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Entrypoint array. Not executed within a shell.
 	// The container image's ENTRYPOINT is used if this is not provided.

@@ -121,8 +121,6 @@ func TestGenerateDashboardService(t *testing.T) {
 }
 
 func TestGenerateListenerService(t *testing.T) {
-	var replicas int32 = 3
-
 	listenerPorts := []corev1.ServicePort{
 		{
 			Name:       "mqtt",
@@ -139,8 +137,16 @@ func TestGenerateListenerService(t *testing.T) {
 		},
 		Spec: appsv2alpha1.EMQXSpec{
 			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
+				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
+					Replicas: &[]int32{1}[0],
+				},
+			},
+			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: coreLabels,
+					Labels: replicantLabels,
+				},
+				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
+					Replicas: &[]int32{1}[0],
 				},
 			},
 			ListenersServiceTemplate: corev1.Service{
@@ -157,7 +163,6 @@ func TestGenerateListenerService(t *testing.T) {
 			},
 		},
 	}
-
 	assert.Nil(t, generateListenerService(instance, []corev1.ServicePort{}))
 
 	expect := &corev1.Service{
@@ -176,22 +181,9 @@ func TestGenerateListenerService(t *testing.T) {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: coreLabels,
+			Selector: replicantLabels,
 			Ports:    listenerPorts,
 		},
 	}
-
-	assert.Equal(t, expect, generateListenerService(instance, listenerPorts))
-
-	instance.Spec.ReplicantTemplate = appsv2alpha1.EMQXReplicantTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: replicantLabels,
-		},
-		Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
-			Replicas: &replicas,
-		},
-	}
-	expect.Spec.Selector = replicantLabels
-
 	assert.Equal(t, expect, generateListenerService(instance, listenerPorts))
 }

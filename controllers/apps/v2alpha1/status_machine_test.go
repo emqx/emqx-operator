@@ -29,36 +29,6 @@ import (
 func TestCheckNodeCount(t *testing.T) {
 	replicas := int32(1)
 
-	t.Run("no replicant nodes", func(t *testing.T) {
-		emqx := &appsv2alpha1.EMQX{
-			Spec: appsv2alpha1.EMQXSpec{
-				CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-					Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-						Replicas: &replicas,
-					},
-				},
-			},
-		}
-
-		emqxNodes := []appsv2alpha1.EMQXNode{
-			{
-				Role:       "core",
-				NodeStatus: "running",
-			},
-			{
-				Role:       "fake role",
-				NodeStatus: "stop",
-			},
-		}
-
-		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		emqxStatusMachine.CheckNodeCount(emqxNodes)
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeReplicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeReadyReplicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeReplicas, int32(0))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeReadyReplicas, int32(0))
-	})
-
 	t.Run("have replicant nodes", func(t *testing.T) {
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{

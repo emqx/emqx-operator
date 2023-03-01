@@ -20202,6 +20202,7 @@ spec:
                         replicas:
                           default: 3
                           format: int32
+                          minimum: 1
                           type: integer
                         resources:
                           properties:
