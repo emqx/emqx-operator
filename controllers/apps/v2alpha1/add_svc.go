@@ -94,6 +94,7 @@ func generateDashboardService(instance *appsv2alpha1.EMQX) *corev1.Service {
 }
 
 func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1.ServicePort) *corev1.Service {
+	instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
 	instance.Spec.ListenersServiceTemplate.Spec.Ports = appsv2alpha1.MergeServicePorts(
 		instance.Spec.ListenersServiceTemplate.Spec.Ports,
 		listenerPorts,
@@ -103,11 +104,6 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 		return nil
 	}
 
-	if isExistReplicant(instance) {
-		instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
-	} else {
-		instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
-	}
 	// We don't need to set the selector for the service
 	// because the Operator will manager the endpointSlice
 	// please check https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
