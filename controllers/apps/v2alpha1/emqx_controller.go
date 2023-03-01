@@ -20,12 +20,8 @@ import (
 	"context"
 	"time"
 
-	emperror "emperror.dev/errors"
-
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -34,7 +30,6 @@ import (
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/internal/apiclient"
 	"github.com/emqx/emqx-operator/internal/handler"
-	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -42,7 +37,8 @@ const EMQXContainerName string = "emqx"
 
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
-	err error
+	err    error
+	result ctrl.Result
 }
 
 type subReconciler interface {
@@ -95,32 +91,18 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addSvc{r},
 		&addCore{r},
 		&addRepl{r},
+		&updateStatus{r},
 	} {
 		subResult := subReconciler.reconcile(ctx, instance)
+		if !subResult.result.IsZero() {
+			return subResult.result, nil
+		}
 		if subResult.err != nil {
 			if innerErr.IsCommonError(subResult.err) {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
 			return ctrl.Result{}, subResult.err
 		}
-	}
-
-	// Update EMQX Custom Resource's status
-	instance, err := r.updateStatus(instance)
-	if err != nil {
-		if innerErr.IsCommonError(err) {
-			return ctrl.Result{RequeueAfter: time.Second}, nil
-		}
-	}
-	if err := r.Client.Status().Update(ctx, instance); err != nil {
-		if k8sErrors.IsConflict(err) {
-			return ctrl.Result{RequeueAfter: time.Second}, nil
-		}
-		return ctrl.Result{}, err
-	}
-
-	if !instance.Status.IsRunning() {
-		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, nil
 	}
 	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
 }
@@ -130,34 +112,4 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv2alpha1.EMQX{}).
 		Complete(r)
-}
-
-func (r *EMQXReconciler) updateStatus(instance *appsv2alpha1.EMQX) (*appsv2alpha1.EMQX, error) {
-	var emqxNodes []appsv2alpha1.EMQXNode
-	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
-	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
-	var err error
-
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return instance, nil
-		}
-		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
-	}
-
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ReplicantTemplate.Name, Namespace: instance.Namespace}, existedDeploy)
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, emperror.Wrap(err, "failed to get existed deployment")
-	}
-
-	emqxNodes, err = newRequestAPI(r, instance).getNodeStatuesByAPI(existedSts)
-	if err != nil {
-		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
-	}
-
-	emqxStatusMachine := newEMQXStatusMachine(instance)
-	emqxStatusMachine.CheckNodeCount(emqxNodes)
-	emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-	return emqxStatusMachine.GetEMQX(), nil
 }
