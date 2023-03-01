@@ -13952,7 +13952,17 @@ spec:
     singular: emqx
   scope: Namespaced
   versions:
-    - name: v2alpha1
+    - additionalPrinterColumns:
+        - jsonPath: .status.currentImage
+          name: Image
+          type: string
+        - jsonPath: .status.conditions[?(@.status=="True")].type
+          name: Status
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v2alpha1
       schema:
         openAPIV3Schema:
           properties:
