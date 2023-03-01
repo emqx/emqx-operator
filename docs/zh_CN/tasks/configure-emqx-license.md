@@ -42,7 +42,7 @@ spec:
           nodePort: 32012
 ```
 
-**说明**：`bootstrapConfig` 字段里面的 `license.key` 表示 Licesne 内容，此例中 License 内容被省略，请用户自行填充。
+> `bootstrapConfig` 字段里面的 `license.key` 表示 Licesne 内容，此例中 License 内容被省略，请用户自行填充。
 
 :::
 ::: tab v1beta4
@@ -55,7 +55,7 @@ Secret 是一种包含少量敏感信息例如密码、令牌或密钥的对象�
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file
 ```
 
-**说明**：`/path/to/license/file` 表示 EMQX 企业版 License 文件路径，可以是绝对路径，也可以是相对路径。更多使用 kubectl 创建 Secret 的细节可以参考文档：[使用 kubectl 创建 secret](https://kubernetes.io/zh-cn/docs/tasks/configmap-secret/managing-secret-using-kubectl/)。
+> `/path/to/license/file` 表示 EMQX 企业版 License 文件路径，可以是绝对路径，也可以是相对路径。更多使用 kubectl 创建 Secret 的细节可以参考文档：[使用 kubectl 创建 secret](https://kubernetes.io/zh-cn/docs/tasks/configmap-secret/managing-secret-using-kubectl/)。
 
 输出类似于：
 
@@ -83,7 +83,7 @@ spec:
           version: 4.4.14
 ```
 
-**说明**：`secretName` 表示上一步中创建的 Secret 名称。
+> `secretName` 表示上一步中创建的 Secret 名称。
 
 :::
 ::: tab v1beta3
@@ -96,7 +96,7 @@ Secret 是一种包含少量敏感信息例如密码、令牌或密钥的对象�
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file
 ```
 
-**说明**：`/path/to/license/file` 表示 EMQX 企业版 License 文件路径，可以是绝对路径，也可以是相对路径。更多使用 kubectl 创建 Secret 的细节可以参考文档：[使用 kubectl 创建 secret](https://kubernetes.io/zh-cn/docs/tasks/configmap-secret/managing-secret-using-kubectl/)。
+> `/path/to/license/file` 表示 EMQX 企业版 License 文件路径，可以是绝对路径，也可以是相对路径。更多使用 kubectl 创建 Secret 的细节可以参考文档：[使用 kubectl 创建 secret](https://kubernetes.io/zh-cn/docs/tasks/configmap-secret/managing-secret-using-kubectl/)。
 
 输出类似于：
 
@@ -119,14 +119,14 @@ spec:
     license:
       secretName: test
 ```
-**说明**：`secretName` 表示上一步中创建的 Secret 名称。
+> `secretName` 表示上一步中创建的 Secret 名称。
 
 :::
 ::::
 
 将上述内容保存为：emqx-license.yaml，执行如下命令部署 EMQX 企业版集群。
 
-```
+```bash
 kubectl apply -f emqx-license.yaml
 ```
 
@@ -142,118 +142,73 @@ emqx.apps.emqx.io/emqx-ee created
 ::: tab v2alpha1
 
 ```bash
-kubectl get emqx emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx@emqx-ee-core-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.0"
-  },
-  {
-    "node": "emqx@emqx-ee-core-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.0"
-  },
-  {
-    "node": "emqx@emqx-ee-core-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.0"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。role 表示 EMQX 节点角色类型。version 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 replicant 节点数量应和这个 replicas 的值相等。
 
 ::: 
 ::: tab v1beta4
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.14"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.14"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.14"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。version 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 ::: 
 ::: tab v1beta3
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.14"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.14"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.14"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。version 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 ::: 
 ::::
 
 - 检查 EMQX 企业版 License 信息 
 
-```
+```bash
 kubectl exec -it emqx-ee-core-0 -c emqx -- emqx_ctl license info 
 ```
 
 输出类似于：
 
-```
+```bash
 customer        : EMQ
 email           : cloudnative@emqx.io
 deployment      : deployment-6159820
@@ -265,7 +220,7 @@ customer_type   : 0
 expiry          : false
 ```
 
-**说明**：从输出结果可以看到我们申请的 License 的基本信息，包括申请人的信息和 License 支持最大连接数以及 License 过期时间等。
+> 从输出结果可以看到我们申请的 License 的基本信息，包括申请人的信息和 License 支持最大连接数以及 License 过期时间等。
 
 ## 更新 EMQX 企业版 License  
 
@@ -293,7 +248,7 @@ expiry          : false
 
 - 更新 EMQX 企业版 License Secret
 
-```
+```bash
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file --dry-run -o yaml | kubectl apply -f -
 ```
 
@@ -305,13 +260,13 @@ secret/test configured
 
 - 查看 EMQX 集群 License 是否被更新
 
-```
+```bash
 kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info 
 ```
 
 输出类似于：
 
-```
+```bash
 customer                 : cloudnative
 email                    : cloudnative@emqx.io
 max_connections          : 100000
@@ -325,14 +280,14 @@ customer_type            : 2
 expiry                   : false
 ```
 
-**说明**：若证书信息没有更新，可以等待一会，License 的更新会有些时延。从上面输出的结果可以看出，License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。 
+> 若证书信息没有更新，可以等待一会，License 的更新会有些时延。从上面输出的结果可以看出，License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。 
 
 ::: 
 ::: tab v1beta3
 
 - 更新 EMQX 企业版 License Secret
 
-```
+```bash
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file --dry-run -o yaml | kubectl apply -f -
 ```
 
@@ -344,13 +299,13 @@ secret/test configured
 
 - 查看 EMQX 集群 License 是否被更新
 
-```
+```bash
 kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info 
 ```
 
 输出类似于：
 
-```
+```bash
 customer                 : cloudnative
 email                    : cloudnative@emqx.io
 max_connections          : 100000
@@ -364,7 +319,7 @@ customer_type            : 2
 expiry                   : false
 ```
 
-**说明**：若证书信息没有更新，可以等待一会，License 的更新会有些时延。从上面输出的结果可以看出，License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。 
+> 若证书信息没有更新，可以等待一会，License 的更新会有些时延。从上面输出的结果可以看出，License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。 
 
 ::: 
 ::::

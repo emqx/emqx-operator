@@ -94,113 +94,61 @@ emqx.apps.emqx.io/emqx created
 ::: tab v2alpha1
 
 ```bash
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx@10.244.2.13",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "replicant",
-     "version": "5.0.12"
-   },
-   {
-     "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.12"
-   },
-   {
-     "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.12"
-   },
-   {
-     "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.12"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. role represents the EMQX node role type. version indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
 
 :::
 ::: tab v1beta4
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::: tab v1beta3
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::::
@@ -245,7 +193,7 @@ spec:
        apps.emqx.io/instance: emqx
 ```
 
-**NOTE:** `path` indicates the path of the indicator collection interface. In EMQX 5, the path is: `/api/v5/prometheus/stats`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx`.
+> `path` indicates the path of the indicator collection interface. In EMQX 5, the path is: `/api/v5/prometheus/stats`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx`.
 
 :::
 ::: tab v1beta4
@@ -285,7 +233,7 @@ spec:
        apps.emqx.io/instance: emqx-ee
 ```
 
-**NOTE:** `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx-ee`.
+> `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx-ee`.
 
 :::
 ::: tab v1beta3
@@ -325,14 +273,14 @@ spec:
        apps.emqx.io/instance: emqx-ee
 ```
 
-**NOTE:** `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` means matching the label of Service: `apps.emqx.io/instance: emqx-ee`.
+> `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` means matching the label of Service: `apps.emqx.io/instance: emqx-ee`.
 
 :::
 ::::
 
 Save the above content as: monitor.yaml and execute the following command:
 
-```
+```bash
 kubectl apply -f monitor.yaml
 ```
 
@@ -352,7 +300,7 @@ stringData:
 
 Save the above content as: secret.yaml and create Secret
 
-```
+```bash
 kubectl apply -f secret.yaml
 ```
 

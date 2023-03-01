@@ -10,7 +10,7 @@ Telegraf 是 InfluxData 开发的一个开源数据采集代理，可以收集�
 
 执行如下命令部署 telegraf-operator
 
-```shell
+```bash
 helm repo add influxdata https://helm.influxdata.com/
 helm upgrade --install telegraf-operator influxdata/telegraf-operator
 ```
@@ -193,40 +193,47 @@ kubectl apply -f emqx-telegraf.yaml
 ::: tab v2alpha1
 
 
-```shell
-kubectl get pods  -l  apps.emqx.io/instance=emqx
+```bash
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
-```shell
-NAME                             READY   STATUS    RESTARTS   AGE
-emqx-core-0                      2/2     Running   0          54s
-emqx-replicant-c868c79cd-9m5rw   1/1     Running   0          41s
-emqx-replicant-c868c79cd-qv8mk   1/1     Running   0          41s
-emqx-replicant-c868c79cd-z8bvj   1/1     Running   0          41s
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
 
-**备注：** 当 telegraf sidecar 注入到 EMQX core pod 中后，EQMX core pod 中的容器数量会达到2个
+> 当 telegraf sidecar 注入到 EMQX core pod 中后，EQMX core pod 中的容器数量会达到2个
 
 
 :::
 ::: tab v1beta4
 
-```shell
-kubectl get pods  -l  apps.emqx.io/instance=emqx-ee
+```bash
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
-```shell
-NAME        READY   STATUS    RESTARTS   AGE
-emqx-ee-0   3/3     Running   0          8m37s
-emqx-ee-1   3/3     Running   0          8m37s
-emqx-ee-2   3/3     Running   0          8m37s
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
 
-**备注：** 当 telegraf sidecar 注入到 EMQX  pod 中后，EQMX pod 中的容器数量会达到3个
+> 当 telegraf sidecar 注入到 EMQX  pod 中后，EQMX pod 中的容器数量会达到3个
 
 :::
 ::::
@@ -246,7 +253,6 @@ kubectl logs -f emqx-core-0 -c telegraf
 ```shell
 kubectl logs -f emqx-ee-0 -c telegraf
 ```
-
 
 :::
 ::::

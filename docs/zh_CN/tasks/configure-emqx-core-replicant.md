@@ -25,7 +25,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: "emqx/emqx:5.0.9"
+  image: emqx/emqx:5.0.14
   coreTemplate:
     spec:
       replicas: 3
@@ -52,11 +52,11 @@ spec:
           nodePort: 32016
 ```
 
-**说明**：如果 EMQX 集群配置了 Replicant 节点，MQTT 客户端的请求会连接 Rplicant 节点，否则会连接到 Core 节点。访问 EMQX Dashboard 的请求只会连接到 Core 节点。在 `.spec.dashboardServiceTemplate` 里面我们配置了 EMQX 集群对外暴露 Dashboard 服务的方式为 NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32015（nodePort 取值范围为：30000-32767）。在 `.spec.listenersServiceTemplate` 里面我们配置了 EMQX 集群监听器对外暴露服务的方式为 NodePort，并指定了 EMQX 监听器 1883 端口对应的 nodePort 为 32016。**请注意：EMQX 集群中至少要配置一个 Core 节点**。
+> 如果 EMQX 集群配置了 Replicant 节点，MQTT 客户端的请求会连接 Rplicant 节点，否则会连接到 Core 节点。访问 EMQX Dashboard 的请求只会连接到 Core 节点。在 `.spec.dashboardServiceTemplate` 里面我们配置了 EMQX 集群对外暴露 Dashboard 服务的方式为 NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32015（nodePort 取值范围为：30000-32767）。在 `.spec.listenersServiceTemplate` 里面我们配置了 EMQX 集群监听器对外暴露服务的方式为 NodePort，并指定了 EMQX 监听器 1883 端口对应的 nodePort 为 32016。**请注意：EMQX 集群中至少要配置一个 Core 节点**。
 
 将上述内容保存为：emqx-core.yaml，并执行如下命令部署 EMQX 集群：
 
-```
+```bash
 kubectl apply -f emqx-core.yaml
 ```
 
@@ -68,39 +68,22 @@ emqx.apps.emqx.io/emqx created
 
 - 检查 EMQX 集群是否就绪
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+```bash
+ kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
-```
-
-**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`role` 表示 EMQX 节点角色类型。`version` 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 relicant 节点数量应和这个 replicas 的值相等。
 
 - 使用 MQTT X 连接 EMQX 集群发送消息
 
@@ -136,7 +119,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: "emqx/emqx:5.0.9"
+  image: emqx/emqx:5.0.14
   coreTemplate:
     spec:
       replicas: 3
@@ -165,7 +148,7 @@ spec:
 
 将上述内容保存为：emqx-replicant.yaml，并执行如下命令部署 EMQX 集群：
 
-```
+```bash
 kubectl apply -f emqx-replicant.yaml 
 ```
 
@@ -177,57 +160,21 @@ emqx.apps.emqx.io/emqx created
 
 - 检查 EMQX 集群是否就绪
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+```bash
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
-```
-[
-  {
-    "node": "emqx@10.244.0.213",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@10.244.1.130",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@10.244.2.252",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
 
 - 使用 MQTT X 连接 EMQX 集群发送消息

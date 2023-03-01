@@ -17,7 +17,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.9
+  image: emqx/emqx:5.0.14
   imagePullPolicy: IfNotPresent
   bootstrapConfig: |
     listeners.quic.default {
@@ -57,7 +57,7 @@ spec:
           nodePort: 32011
 ```
 
-**说明：** EMQX 默认会开启一个 MQTT TCP 监听器 `tcp-default` 对应的端口为1883 以及 Dashboard 监听器 `dashboard-listeners-http-bind` 对应的端口为18083 。用户可以通过 `.spec.bootstrapConfig` 字段或者 EMQX Dashboard 增加新的监听器。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
+> EMQX 默认会开启一个 MQTT TCP 监听器 `tcp-default` 对应的端口为1883 以及 Dashboard 监听器 `dashboard-listeners-http-bind` 对应的端口为18083 。用户可以通过 `.spec.bootstrapConfig` 字段或者 EMQX Dashboard 增加新的监听器。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
 
 :::
 ::: tab v1beta4
@@ -75,7 +75,7 @@ spec:
       emqxContainer:
         image:
           repository: emqx/emqx-ee
-          version: 4.4.8
+          version: 4.4.14
   serviceTemplate:
     spec:
       type: NodePort
@@ -94,7 +94,7 @@ spec:
           targetPort: 1883
 ```
 
-**说明：** EMQX 默认会开启6个监听器，分别是：`mqtt-ssl-8883` 对应的端口为8883，`mqtt-tcp-1883` 对应的端口为1883，`http-dashboard-18083` 对应的端口为18083，`http-management-8081` 对应的端口为8081，`mqtt-ws-8083` 对应的端口为8083，`mqtt-wss-8084` 对应的端口为8084。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（ name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
+> EMQX 默认会开启6个监听器，分别是：`mqtt-ssl-8883` 对应的端口为8883，`mqtt-tcp-1883` 对应的端口为1883，`http-dashboard-18083` 对应的端口为18083，`http-management-8081` 对应的端口为8081，`mqtt-ws-8083` 对应的端口为8083，`mqtt-wss-8084` 对应的端口为8084。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（ name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
 
 :::
 ::: tab v1beta3
@@ -108,7 +108,7 @@ metadata:
   name: emqx-ee
 spec:
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
+    image: emqx/emqx-ee:4.4.14
     serviceTemplate:
       spec:
         type: NodePort
@@ -127,7 +127,7 @@ spec:
             targetPort: 1883
 ```
 
-**说明：** EMQX 默认会开启6个监听器，分别是：`mqtt-ssl-8883` 对应的端口为8883，`mqtt-tcp-1883` 对应的端口为1883，`http-dashboard-18083` 对应的端口为18083，`http-management-8081` 对应的端口为8081，`mqtt-ws-8083` 对应的端口为8083，`mqtt-wss-8084` 对应的端口为8084。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（ name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
+> EMQX 默认会开启6个监听器，分别是：`mqtt-ssl-8883` 对应的端口为8883，`mqtt-tcp-1883` 对应的端口为1883，`http-dashboard-18083` 对应的端口为18083，`http-management-8081` 对应的端口为8081，`mqtt-ws-8083` 对应的端口为8083，`mqtt-wss-8084` 对应的端口为8084。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（ name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
 
 :::
 ::::
@@ -150,105 +150,60 @@ emqx.apps.emqx.io/emqx created
 ::: tab v2alpha1
 
 ```bash
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。role 表示 EMQX 节点角色类型。version 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 replicant 节点数量应和这个 replicas 的值相等。
 
 ::: 
 ::: tab v1beta4
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}  
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。version 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 ::: 
 ::: tab v1beta3
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+} 
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。version 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 ::: 
 ::::
@@ -263,7 +218,7 @@ kubectl get svc -l apps.emqx.io/instance=emqx
 
 输出类似于：
 
-```
+```bash
 NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                          AGE
 emqx-dashboard   NodePort   10.101.225.238   <none>        18083:32012/TCP                  32s
 emqx-listeners   NodePort   10.97.59.150     <none>        1883:32010/TCP,14567:32011/UDP   10s
@@ -303,7 +258,7 @@ kubectl get svc -l apps.emqx.io/instance=emqx
 
 输出类似于：
 
-```
+```bash
 NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                                         AGE
 emqx-dashboard   NodePort   10.105.110.235   <none>        18083:32012/TCP                                 13m
 emqx-listeners   NodePort   10.106.1.58      <none>        1883:32010/TCP,14567:32011/UDP,1884:30763/TCP   12m

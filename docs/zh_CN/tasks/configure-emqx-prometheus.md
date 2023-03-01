@@ -79,7 +79,11 @@ spec:
 :::
 ::::
 
-将上述内容保存为：emqx.yaml 并部署 EMQX 集群
+将上述内容保存为：emqx.yaml，并执行如下命令部署 EMQX 集群：
+
+```bash
+kubectl apply -f emqx.yaml
+```
 
 输出类似于：
 
@@ -94,113 +98,61 @@ emqx.apps.emqx.io/emqx created
 ::: tab v2alpha1
 
 ```bash
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx@10.244.2.13",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "replicant",
-    "version": "5.0.12"
-  },
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.12"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.12"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.12"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。role 表示 EMQX 节点角色类型。version 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 replicant 节点数量应和这个 replicas 的值相等。
 
 ::: 
 ::: tab v1beta4
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.14"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.14"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.14"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。version 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 ::: 
 ::: tab v1beta3
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.14"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.14"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.14"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。version 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 ::: 
 ::::
@@ -245,7 +197,7 @@ spec:
       apps.emqx.io/instance: emqx
 ```
 
-**说明：** `path` 表示指标采集接口路径，在 EMQX 5 里面路径为：`/api/v5/prometheus/stats`。`selector.matchLabels` 表示匹配 Pod 的 label： `apps.emqx.io/instance: emqx`。
+> `path` 表示指标采集接口路径，在 EMQX 5 里面路径为：`/api/v5/prometheus/stats`。`selector.matchLabels` 表示匹配 Pod 的 label： `apps.emqx.io/instance: emqx`。
 
 :::
 ::: tab v1beta4
@@ -285,7 +237,7 @@ spec:
       apps.emqx.io/instance: emqx-ee
 ```
 
-**说明：** `path` 表示指标采集接口路径，在 EMQX 4 里面路径为：`/api/v4/emqx_prometheus`。`selector.matchLabels` 表示匹配 Pod 的 label： `apps.emqx.io/instance: emqx-ee`。
+> `path` 表示指标采集接口路径，在 EMQX 4 里面路径为：`/api/v4/emqx_prometheus`。`selector.matchLabels` 表示匹配 Pod 的 label： `apps.emqx.io/instance: emqx-ee`。
 
 :::
 ::: tab v1beta3
@@ -325,14 +277,14 @@ spec:
       apps.emqx.io/instance: emqx-ee
 ```
 
-**说明：** `path` 表示指标采集接口路径，在 EMQX 4 里面路径为：`/api/v4/emqx_prometheus`。`selector.matchLabels` 表示匹配 Service 的 label： `apps.emqx.io/instance: emqx-ee`。
+> `path` 表示指标采集接口路径，在 EMQX 4 里面路径为：`/api/v4/emqx_prometheus`。`selector.matchLabels` 表示匹配 Service 的 label： `apps.emqx.io/instance: emqx-ee`。
 
 ::: 
 ::::
 
 将上述内容保存为：monitor.yaml 并执行如下命令：
 
-```
+```bash
 kubectl apply -f monitor.yaml
 ```
 
@@ -352,7 +304,7 @@ stringData:
 
 将上述内容保存为：secret.yaml 并创建 Secret
 
-```
+```bash
 kubectl apply -f secret.yaml
 ```
 

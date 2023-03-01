@@ -31,7 +31,7 @@ spec:
        replicas: 0
 ```
 
-**NOTE:** In the `.spec.bootstrapConfig` field, we have configured a TCP listener for the EMQX cluster. The name of this listener is: test, and the listening port is: 1884.
+> In the `.spec.bootstrapConfig` field, we have configured a TCP listener for the EMQX cluster. The name of this listener is: test, and the listening port is: 1884.
 
 Save the above content as: emqx-bootstrapConfig.yaml, and execute the following command to deploy the EMQX cluster:
 
@@ -48,52 +48,34 @@ emqx.apps.emqx.io/emqx created
 - Check whether the EMQX cluster is ready
 
 ```bash
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.14"
-   },
-   {
-     "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.14"
-   },
-   {
-     "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.14"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. role represents the EMQX node role type. version indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
-
 
 ## Verify whether the EMQX cluster configuration is valid
 
 - View EMQX cluster listener information
 
-```
+```bash
 kubectl exec -it emqx-core-0 -c emqx -- emqx_ctl listeners
 ```
 
 The output is similar to:
 
-```
-tcp: default
+```bash
+tcp:default
    listen_on: 0.0.0.0:1883
    acceptors: 16
    proxy_protocol : false
@@ -109,4 +91,4 @@ tcp:test
    max_conns : 1024000
 ```
 
-**NOTE**: From the output results, we can see that the listener we configured named test has taken effect.
+> From the output results, we can see that the listener we configured named test has taken effect.

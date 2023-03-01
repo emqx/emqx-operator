@@ -28,7 +28,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.9
+  image: emqx/emqx:5.0.14
   imagePullPolicy: IfNotPresent
   coreTemplate:
     spec:
@@ -54,7 +54,7 @@ spec:
           nodePort: 32016
 ```
 
-**说明**： storageClassName 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.dashboardServiceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
+> `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.dashboardServiceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
 
 :::
 ::: tab v1beta4
@@ -85,7 +85,7 @@ spec:
       emqxContainer:
         image: 
           repository: emqx/emqx-ee
-          version: 4.4.8
+          version: 4.4.14
   serviceTemplate:
     spec:
       type: NodePort
@@ -97,7 +97,7 @@ spec:
           nodePort: 32016
 ```
 
-**说明**： storageClassName 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.serviceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
+> `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.serviceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
 
 :::
 ::: tab v1beta3
@@ -124,7 +124,7 @@ spec:
     accessModes:
     - ReadWriteOnce
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
+    image: emqx/emqx-ee:4.4.14
     serviceTemplate:
       spec:
         type: NodePort
@@ -135,15 +135,14 @@ spec:
             targetPort: 18083
             nodePort: 32016
 ```
-
-**说明**： storageClassName 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.emqxTemplate.serviceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
+> `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.emqxTemplate.serviceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
 
 :::
 ::::
 
 将上述内容保存为：emqx-persistent.yaml，执行如下命令部署 EMQX 集群：
 
-```
+```bash
 kubectl apply -f emqx-persistent.yaml
 ```
 
@@ -158,107 +157,62 @@ emqx.apps.emqx.io/emqx created
 :::: tabs type:card
 ::: tab v2alpha1
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+```bash
+ kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
-```
-
-**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`role` 表示 EMQX 节点角色类型。`version` 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 replicant 节点数量应和这个 replicas 的值相等。
 
 :::
 ::: tab v1beta4
 
 ```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  }
-]
-```
-
-**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`version` 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 :::
 ::: tab v1beta3
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```bash
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  }
-]
-```
-
-**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`version` 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 :::
 ::::
@@ -281,11 +235,11 @@ kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
 
 执行如下命令删除 EMQX 集群：
 
-```
+```bash
 kubectl delete -f  emqx-persistent.yaml
 ```
 
-**说明**：emqx-persistent.yaml 是本文中第一次部署 EMQX 集群所使用的 YAML 文件，这个文件不需要做任何的改动。
+> emqx-persistent.yaml 是本文中第一次部署 EMQX 集群所使用的 YAML 文件，这个文件不需要做任何的改动。
 
 输出类似于：
 
@@ -295,7 +249,7 @@ emqx.apps.emqx.io "emqx" deleted
 
 执行如下命令查看 EMQX 集群是否被删除：
 
-```
+```bash
 kubectl get emqx emqx -o json | jq ".status.emqxNodes"
 ```
 
@@ -309,7 +263,7 @@ Error from server (NotFound): emqxes.apps.emqx.io "emqx" not found
 
 执行如下命令重新创建 EMQX 集群：
 
-```
+```bash
 kubectl apply -f  emqx-persistent.yaml
 ```
 
@@ -321,36 +275,21 @@ emqx.apps.emqx.io/emqx created
 
 接下来执行如下命令查看 EMQX 集群是否就绪：
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+```bash
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")
 ```
 
 输出类似于：
 
-```
-[
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
 
 最后通过浏览器访问 EMQX Dashboard 查看之前创建的规则是否存在，如下如图所示：

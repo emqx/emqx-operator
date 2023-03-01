@@ -192,39 +192,46 @@ kubectl apply -f emqx-telegraf.yaml
 ::: tab v2alpha1
 
 ```shell
-kubectl get pods  -l  apps.emqx.io/instance=emqx
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
 ```shell
-NAME                             READY   STATUS    RESTARTS   AGE
-emqx-core-0                      2/2     Running   0          54s
-emqx-replicant-c868c79cd-9m5rw   1/1     Running   0          41s
-emqx-replicant-c868c79cd-qv8mk   1/1     Running   0          41s
-emqx-replicant-c868c79cd-z8bvj   1/1     Running   0          41s
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
 ```
 
-**Note:** When the telegraf sidecar is injected into the EMQX core pod, the number of containers in the EQMX core pod will reach 2
+> When the telegraf sidecar is injected into the EMQX core pod, the number of containers in the EQMX core pod will reach 2
 
 
 :::
 ::: tab v1beta4
 
 ```shell
-kubectl get pods  -l  apps.emqx.io/instance=emqx-ee
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
 ```shell
-NAME        READY   STATUS    RESTARTS   AGE
-emqx-ee-0   3/3     Running   0          8m37s
-emqx-ee-1   3/3     Running   0          8m37s
-emqx-ee-2   3/3     Running   0          8m37s
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
 
-**Note:** When the telegraf sidecar is injected into the EMQX pod, the number of containers in the EQMX pod will reach 3
+> When the telegraf sidecar is injected into the EMQX pod, the number of containers in the EQMX pod will reach 3
 
 :::
 ::::

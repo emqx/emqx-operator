@@ -54,11 +54,11 @@ spec:
            nodePort: 32010
 ```
 
-**NOTE:** `waitTakeover` indicates the waiting time (unit is second) before the current node starts session evacuation. `connEvictRate` indicates the client disconnection rate of the current node (unit: count/second). `sessEvictRate` indicates the current node client session evacuation rate (unit: count/second). The `.spec.license.stringData` field is filled with the content of the license certificate. In this article, the content of this field is omitted. Please fill it with the content of your own certificate.
+> `waitTakeover` indicates the waiting time (unit is second) before the current node starts session evacuation. `connEvictRate` indicates the client disconnection rate of the current node (unit: count/second). `sessEvictRate` indicates the current node client session evacuation rate (unit: count/second). The `.spec.license.stringData` field is filled with the content of the license certificate. In this article, the content of this field is omitted. Please fill it with the content of your own certificate.
 
 Save the above content as: emqx-update.yaml, execute the following command to deploy the EMQX Enterprise Edition cluster:
 
-```
+```bash
 kubectl apply -f emqx-update.yaml
 ```
 
@@ -70,36 +70,22 @@ emqxenterprise.apps.emqx.io/emqx-ee created
 
 - Check whether the EMQX Enterprise Edition cluster is ready
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```bash
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-54fc496fb4-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.12"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-54fc496fb4-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.12"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-54fc496fb4-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.12"
-   }
-]
-```
-
-**NOTE:**`node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `version` indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 ## Deploy Prometheus to collect EMQX statistical indicators
 
@@ -168,7 +154,7 @@ stringData:
 
 Save the above content as: secret.yaml and create a Secret.
 
-```
+```bash
 kubectl apply -f secret.yaml
 ```
 
@@ -192,11 +178,11 @@ Execute the following command to connect to the EMQX cluster:
 mqttx bench conn -h 47.103.65.17 -p 32010 -c 3000
 ```
 
-**NOTE:**`-h` indicates the IP of the host where the EMQX Pod is located. `-p` means nodePort port. `-c` indicates the number of connections to create. When deploying the EMQX cluster, this article usesThe NodePort pattern exposes services. If the service is exposed by LoadBalancer, `-h` should be the IP of LoadBalancer, and `-p` should be the EMQX MQTT service port.
+> `-h` indicates the IP of the host where the EMQX Pod is located. `-p` means nodePort port. `-c` indicates the number of connections to create. When deploying the EMQX cluster, this article usesThe NodePort pattern exposes services. If the service is exposed by LoadBalancer, `-h` should be the IP of LoadBalancer, and `-p` should be the EMQX MQTT service port.
 
 The output is similar to:
 
-```
+```bash
 [10:05:21 AM] › ℹ Start the connect benchmarking, connections: 3000, req interval: 10ms
 ✔ success [3000/3000] - Connected
 [10:06:13 AM] › ℹ Done, total time: 31.113s
@@ -206,7 +192,7 @@ The output is similar to:
 
 Modifying any content of the `.spec.template` field of the EmqxEnterprise object will trigger EMQX Operator to perform a blue-green upgrade. In this article, we modify the EMQX Container Name to trigger the upgrade, and users can modify it according to actual needs.
 
-```
+```bash
 kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": {"spec": {"emqxContainer": {"name": "emqx-ee-a"}} }}}'
 ```
 
@@ -219,12 +205,12 @@ emqxenterprise.apps.emqx.io/emqx-ee patched
 - Check the status of the blue-green upgrade
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
+kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
 ```
 
 The output is similar to:
 
-```
+```bash
 [
   {
     "connection_eviction_rate": 10,
@@ -248,7 +234,7 @@ The output is similar to:
 ]
 ```
 
-**NOTE:**`connection_eviction_rate` indicates the rate of node evacuation(unit: count/second). `node` indicates the node currently being evacuated. `session_eviction_rate` indicates the rate of node session evacuation(unit: count/second). `session_recipients` represents the list of recipients for session evacuation. `state` indicates the node evacuation phase. `stats` indicates the statistical indicators of the evacuated node, including the current number of connections (current_connected), the number of current sessions (current_sessions), the number of initial connections (initial_connected), and the number of initial sessions (initial_sessions).
+> `connection_eviction_rate` indicates the rate of node evacuation(unit: count/second). `node` indicates the node currently being evacuated. `session_eviction_rate` indicates the rate of node session evacuation(unit: count/second). `session_recipients` represents the list of recipients for session evacuation. `state` indicates the node evacuation phase. `stats` indicates the statistical indicators of the evacuated node, including the current number of connections (current_connected), the number of current sessions (current_sessions), the number of initial connections (initial_connected), and the number of initial sessions (initial_sessions).
 
 - Use Prometheus to view the client connection status during the blue-green upgrade process
 

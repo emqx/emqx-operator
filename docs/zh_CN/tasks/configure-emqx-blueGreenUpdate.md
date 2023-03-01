@@ -54,52 +54,38 @@ spec:
           nodePort: 32010
 ```
 
-**说明：**`waitTakeover` 表示当前节点开始 session 疏散之前等待的时间（单位为 second）。`connEvictRate` 表示当前节点客户端断开速率（单位为：count/second）。`sessEvictRate` 表示当前节点客户端 session 疏散速率（单位为：count/second）。`.spec.license.stringData` 字段填充的是 License 证书内容，在本文该字段的内容被省略，请用自己证书的内容进行填充。
+> `waitTakeover` 表示当前节点开始 session 疏散之前等待的时间（单位为 second）。`connEvictRate` 表示当前节点客户端断开速率（单位为：count/second）。`sessEvictRate` 表示当前节点客户端 session 疏散速率（单位为：count/second）。`.spec.license.stringData` 字段填充的是 License 证书内容，在本文该字段的内容被省略，请用自己证书的内容进行填充。
 
 将上述内容保存为：emqx-update.yaml，执行如下命令部署 EMQX 企业版集群：
 
-```
+```bash
 kubectl apply -f emqx-update.yaml
 ```
 
 输出类似于：
 
-```
+```bash
 emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
 - 检查 EMQX 企业版集群是否就绪
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```bash
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-54fc496fb4-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.12"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-54fc496fb4-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.12"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-54fc496fb4-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.3.4.2/12.3.2.2",
-    "version": "4.4.12"
-  }
-]
-```
-
-**说明：**`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`version` 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 ## 部署 Prometheus 采集 EMQX 统计指标
 
@@ -168,7 +154,7 @@ stringData:
 
 将上述内容保存为：secret.yaml 并创建 Secret。
 
-```
+```bash
 kubectl apply -f secret.yaml
 ```
 
@@ -192,11 +178,11 @@ MQTT X CLI 是开源一个的，支持自动重连的 MQTT 5.0 CLI Client，也�
 mqttx bench  conn -h 47.103.65.17  -p 32010   -c 3000
 ```
 
-**说明：**`-h` 表示 EMQX Pod 所在宿主机 IP。`-p` 表示 nodePort 端口。`-c` 表示创建的连接数。本文在部署 EMQX 集群的时候采用的是 NodePort 模式暴露服务。如果采用 LoadBalancer 的方式暴露服务则 `-h` 应为 LoadBalancer 的 IP，`-p` 应为 EMQX MQTT 服务端口。
+> `-h` 表示 EMQX Pod 所在宿主机 IP。`-p` 表示 nodePort 端口。`-c` 表示创建的连接数。本文在部署 EMQX 集群的时候采用的是 NodePort 模式暴露服务。如果采用 LoadBalancer 的方式暴露服务则 `-h` 应为 LoadBalancer 的 IP，`-p` 应为 EMQX MQTT 服务端口。
 
 输出类似于：
 
-```
+```bash
 [10:05:21 AM] › ℹ  Start the connect benchmarking, connections: 3000, req interval: 10ms
 ✔  success   [3000/3000] - Connected
 [10:06:13 AM] › ℹ  Done, total time: 31.113s
@@ -206,7 +192,7 @@ mqttx bench  conn -h 47.103.65.17  -p 32010   -c 3000
 
 修改 EmqxEnterprise 对象 `.spec.template` 字段的任意内容都会触发 EMQX Operator 进行蓝绿升级。在本文中通过我们修改 EMQX Container Name 来触发升级，用户可根据实际需求自行修改。
 
-```
+```bash
 kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": {"spec": {"emqxContainer": {"emqxConfig": {"name": "emqx-ee-a"}}}}}}'
 ```
 
@@ -219,12 +205,12 @@ emqxenterprise.apps.emqx.io/emqx-ee patched
 - 检查蓝绿升级的状态
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
+kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
 ```
 
 输出类似于：
 
-```
+```bash
 [
   {
     "connection_eviction_rate": 10,
@@ -248,7 +234,7 @@ kubectl get emqxenterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.e
 ]
 ```
 
-**说明：**`connection_eviction_rate` 表示节点疏散速率（单位：count/second）。`node` 表示当前正在进行疏散的节点。`session_eviction_rate` 表示节点 session 疏散速率(单位：count/second)。`session_recipients` 表示 session 疏散的接受者列表。`state` 表示节点疏散阶段。`stats` 表示疏散节点的统计指标，包括当前连接数（current_connected），当前 session 数（current_sessions），初始连接数（initial_connected），初始 session 数（initial_sessions）。
+> `connection_eviction_rate` 表示节点疏散速率（单位：count/second）。`node` 表示当前正在进行疏散的节点。`session_eviction_rate` 表示节点 session 疏散速率(单位：count/second)。`session_recipients` 表示 session 疏散的接受者列表。`state` 表示节点疏散阶段。`stats` 表示疏散节点的统计指标，包括当前连接数（current_connected），当前 session 数（current_sessions），初始连接数（initial_connected），初始 session 数（initial_sessions）。
 
 - 使用 Prometheus 查看蓝绿升级过程中客户端连接情况
 

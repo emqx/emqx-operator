@@ -23,7 +23,7 @@ kind: EMQX
 metadata:
    name: emqx
 spec:
-   image: "emqx/emqx:5.0.9"
+   image: emqx/emqx:5.0.14
    coreTemplate:
      spec:
        replicas: 3
@@ -50,11 +50,11 @@ spec:
            nodePort: 32016
 ```
 
-**NOTE**: If the EMQX cluster is configured with a Replicant node, the MQTT client's request will connect to the Rplicant node, otherwise it will connect to the Core node. The request to access EMQX Dashboard will only connect to the Core node. In `.spec.dashboardServiceTemplate`, we configured the way the EMQX cluster exposes the Dashboard service to the outside world as NodePort, and specified the nodePort corresponding to port 18083 of the EMQX Dashboard service as 32015 (the value range of nodePort is: 30000-32767). In `.spec.listenersServiceTemplate`, we configured the way the EMQX cluster listener exposes services to the outside world as NodePort, and specified the nodePort corresponding to port 1883 of the EMQX listener as 32016. **Please note: At least one Core node must be configured in the EMQX cluster**.
+> If the EMQX cluster is configured with a Replicant node, the MQTT client's request will connect to the Rplicant node, otherwise it will connect to the Core node. The request to access EMQX Dashboard will only connect to the Core node. In `.spec.dashboardServiceTemplate`, we configured the way the EMQX cluster exposes the Dashboard service to the outside world as NodePort, and specified the nodePort corresponding to port 18083 of the EMQX Dashboard service as 32015 (the value range of nodePort is: 30000-32767). In `.spec.listenersServiceTemplate`, we configured the way the EMQX cluster listener exposes services to the outside world as NodePort, and specified the nodePort corresponding to port 1883 of the EMQX listener as 32016. **Please note: At least one Core node must be configured in the EMQX cluster**.
 
 Save the above content as: emqx-core.yaml, and execute the following command to deploy the EMQX cluster:
 
-```
+```bash
 kubectl apply -f emqx-core.yaml
 ```
 
@@ -66,39 +66,20 @@ emqx.apps.emqx.io/emqx created
 
 - Check whether the EMQX cluster is ready
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-```
-
-The output is similar to:
-
-```
-[
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
+```bash
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
-**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `role` represents the EMQX node role type. `version` indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
+```bash
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
+```
 
 - Use MQTT X to connect to the EMQX cluster to send messages
 
@@ -134,7 +115,7 @@ kind: EMQX
 metadata:
    name: emqx
 spec:
-   image: "emqx/emqx:5.0.9"
+   image: emqx/emqx:5.0.14
    coreTemplate:
      spec:
        replicas: 3
@@ -163,7 +144,7 @@ spec:
 
 Save the above content as: emqx-replicant.yaml, and execute the following command to deploy the EMQX cluster:
 
-```
+```bash
 kubectl apply -f emqx-replicant.yaml
 ```
 
@@ -175,57 +156,21 @@ emqx.apps.emqx.io/emqx created
 
 - Check whether the EMQX cluster is ready
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+```bash
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
-```
-[
-  {
-    "node": "emqx@10.244.0.213",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@10.244.1.130",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@10.244.2.252",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
+```bash
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
 ```
 
 - Use MQTT X to connect to the EMQX cluster to send messages

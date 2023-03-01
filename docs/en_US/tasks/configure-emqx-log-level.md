@@ -17,7 +17,7 @@ kind: EMQX
 metadata:
    name: emqx
 spec:
-   image: emqx/emqx:5.0.9
+   image: emqx/emqx:5.0.14
    imagePullPolicy: IfNotPresent
    bootstrapConfig: |
      log {
@@ -42,7 +42,7 @@ spec:
            nodePort: 32010
 ```
 
-**NOTE:** The `.spec.bootstrapConfig` field configures the EMQX cluster log level to `debug`.
+> The `.spec.bootstrapConfig` field configures the EMQX cluster log level to `debug`.
 
 :::
 ::: tab v1beta4
@@ -60,7 +60,7 @@ spec:
        emqxContainer:
          image:
            repository: emqx/emqx-ee
-           version: 4.4.8
+           version: 4.4.14
          emqxConfig:
            log.level: debug
    serviceTemplate:
@@ -74,7 +74,7 @@ spec:
            nodePort: 32010
 ```
 
-**NOTE:** The `.spec.template.spec.emqxContainer.emqxConfig` field configures the EMQX cluster log level to `debug`.
+> The `.spec.template.spec.emqxContainer.emqxConfig` field configures the EMQX cluster log level to `debug`.
 
 :::
 ::: tab v1beta3
@@ -88,7 +88,7 @@ metadata:
    name: emqx-ee
 spec:
    emqxTemplate:
-     image: emqx/emqx-ee:4.4.8
+     image: emqx/emqx-ee:4.4.14
      config:
        log.level: debug
      serviceTemplate:
@@ -102,7 +102,7 @@ spec:
              nodePort: 32010
 ```
 
-**NOTE:** The `.spec.emqxTemplate.config` field configures the log level of the EMQX cluster to `debug`.
+> The `.spec.emqxTemplate.config` field configures the log level of the EMQX cluster to `debug`.
 
 :::
 ::::
@@ -125,105 +125,60 @@ emqx.apps.emqx.io/emqx created
 ::: tab v2alpha1
 
 ```bash
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   },
-   {
-     "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   },
-   {
-     "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. role represents the EMQX node role type. version indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
 
 :::
 ::: tab v1beta4
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::: tab v1beta3
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+} 
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::::
