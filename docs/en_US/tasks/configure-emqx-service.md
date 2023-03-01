@@ -17,7 +17,7 @@ kind: EMQX
 metadata:
    name: emqx
 spec:
-   image: emqx/emqx:5.0.9
+   image: emqx/emqx:5.0.14
    imagePullPolicy: IfNotPresent
    bootstrapConfig: |
      listeners.quic.default {
@@ -57,7 +57,7 @@ spec:
            nodePort: 32011
 ```
 
-**NOTE:** By default, EMQX will open an MQTT TCP listener `tcp-default` corresponding to port 1883 and Dashboard listener `dashboard-listeners-http-bind` corresponding to port 18083. Users can add new listeners through `.spec.bootstrapConfig` field or EMQX Dashboard. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (name or port fields are repeated), EMQX Operator will use the user's configuration prevail.
+> By default, EMQX will open an MQTT TCP listener `tcp-default` corresponding to port 1883 and Dashboard listener `dashboard-listeners-http-bind` corresponding to port 18083. Users can add new listeners through `.spec.bootstrapConfig` field or EMQX Dashboard. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (name or port fields are repeated), EMQX Operator will use the user's configuration prevail.
 
 :::
 ::: tab v1beta4
@@ -75,7 +75,7 @@ spec:
        emqxContainer:
          image:
            repository: emqx/emqx-ee
-           version: 4.4.8
+           version: 4.4.14
    serviceTemplate:
      spec:
        type: NodePort
@@ -94,7 +94,7 @@ spec:
            targetPort: 1883
 ```
 
-**NOTE:** EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` corresponds to port 18083, `http-management-8081` corresponds to port 8081,`mqtt-ws-8083` corresponds to port 8083 and `mqtt-wss-8084` corresponds to port 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
+> EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` corresponds to port 18083, `http-management-8081` corresponds to port 8081,`mqtt-ws-8083` corresponds to port 8083 and `mqtt-wss-8084` corresponds to port 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
 
 :::
 ::: tab v1beta3
@@ -108,7 +108,7 @@ metadata:
    name: emqx-ee
 spec:
    emqxTemplate:
-     image: emqx/emqx-ee:4.4.8
+     image: emqx/emqx-ee:4.4.14
      serviceTemplate:
        spec:
          type: NodePort
@@ -127,7 +127,7 @@ spec:
              targetPort: 1883
 ```
 
-**NOTE:** EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` corresponds to port 18083, `http-management-8081` corresponds to port 8081, `mqtt-ws-8083` corresponds to port 8083 and `mqtt-wss-8084` corresponds to port 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
+> EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` corresponds to port 18083, `http-management-8081` corresponds to port 8081, `mqtt-ws-8083` corresponds to port 8083 and `mqtt-wss-8084` corresponds to port 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
 
 :::
 ::::
@@ -150,105 +150,60 @@ emqx.apps.emqx.io/emqx created
 ::: tab v2alpha1
 
 ```bash
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   },
-   {
-     "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   },
-   {
-     "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. role represents the EMQX node role type. version indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
 
 :::
 ::: tab v1beta4
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::: tab v1beta3
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::::
@@ -263,7 +218,7 @@ kubectl get svc -l apps.emqx.io/instance=emqx
 
 The output is similar to:
 
-```
+```bash
 NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                          AGE
 emqx-dashboard   NodePort   10.101.225.238   <none>        18083:32012/TCP                  32s
 emqx-listeners   NodePort   10.97.59.150     <none>        1883:32010/TCP,14567:32011/UDP   10s
@@ -303,7 +258,7 @@ kubectl get svc -l apps.emqx.io/instance=emqx
 
 The output is similar to:
 
-```
+```bash
 NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                                         AGE
 emqx-dashboard   NodePort   10.105.110.235   <none>        18083:32012/TCP                                 13m
 emqx-listeners   NodePort   10.106.1.58      <none>        1883:32010/TCP,14567:32011/UDP,1884:30763/TCP   12m

@@ -31,7 +31,7 @@ stringData:
     -----END RSA PRIVATE KEY-----
 ```
 
-**说明**：`ca.crt` 表示 CA 证书内容，`tls.crt` 表示服务端证书内容，`tls.key` 表示服务端私钥内容。此例中上述三个字段的内容被省略，请用自己证书的内容进行填充。
+> `ca.crt` 表示 CA 证书内容，`tls.crt` 表示服务端证书内容，`tls.key` 表示服务端私钥内容。此例中上述三个字段的内容被省略，请用自己证书的内容进行填充。
 
 将上述文件保存为：secret-tls.yaml，并执行如下命令创建 secret：
 
@@ -60,7 +60,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: "emqx/emqx:5.0.9"
+  image: emqx/emqx:5.0.14
   bootstrapConfig: |
     listeners.ssl.default {
       bind = "0.0.0.0:8883"
@@ -110,7 +110,7 @@ spec:
           nodePort: 32016
 ```
 
-**说明**：`.spec.coreTemplate.extraVolumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.coreTemplate.extraVolumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.bootstrapConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[ssllistener](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html#broker-mqtt-ssl-listener)。 `.spec.listenersServiceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX ssl-default 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
+> `.spec.coreTemplate.extraVolumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.coreTemplate.extraVolumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.bootstrapConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[ssllistener](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html#broker-mqtt-ssl-listener)。 `.spec.listenersServiceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX ssl-default 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
 
 :::
 ::: tab v1beta4
@@ -130,7 +130,7 @@ spec:
       emqxContainer:
         image:
           repository: emqx/emqx-ee
-          version: 4.4.8
+          version: 4.4.14
         emqxConfig:
           listener.ssl.external.cacertfile: /mounted/cert/ca.crt
           listener.ssl.external.certfile: /mounted/cert/tls.crt
@@ -154,7 +154,7 @@ spec:
           nodePort: 32016
 ```
 
-**说明**：`.spec.template.spec.volumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.template.spec.emqxContainer.volumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.template.spec.emqxContainer.emqxConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。 `.spec.serviceTemplate` 配置字段了 EMQX 集群对外暴露服务的方式为：NodePort ，并指定了 EMQX mqtt-ssl-8883 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
+> `.spec.template.spec.volumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.template.spec.emqxContainer.volumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.template.spec.emqxContainer.emqxConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。 `.spec.serviceTemplate` 配置字段了 EMQX 集群对外暴露服务的方式为：NodePort ，并指定了 EMQX mqtt-ssl-8883 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
 
 :::
 ::: tab v1beta3
@@ -170,7 +170,7 @@ metadata:
   name: emqx-ee
 spec:
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
+    image: emqx/emqx-ee:4.4.14
     extraVolumes:
       - name: emqx-tls
         secret:
@@ -194,7 +194,7 @@ spec:
             nodePort: 32016
 ```
 
-**说明**：`.spec.emqxTemplate.extraVolumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.emqxTemplate.extraVolumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.emqxTemplate.config` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。 `.spec.emqxTemplate.serviceTemplate` 配置字段了 EMQX 集群对外暴露服务的方式为：NodePort ，并指定了 EMQX mqtt-ssl-8883 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
+> `.spec.emqxTemplate.extraVolumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。`.spec.emqxTemplate.extraVolumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。`.spec.emqxTemplate.config` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。 `.spec.emqxTemplate.serviceTemplate` 配置字段了 EMQX 集群对外暴露服务的方式为：NodePort ，并指定了 EMQX mqtt-ssl-8883 监听器 8883 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767）。
 
 :::
 ::::
@@ -216,107 +216,62 @@ emqx.apps.emqx.io/emqx created
 :::: tabs type:card
 ::: tab v2alpha1
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+```bash
+ kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
-```
-
-**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`role` 表示 EMQX 节点角色类型。`version` 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 replicant 节点数量应和这个 replicas 的值相等。
 
 :::
 ::: tab v1beta4
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```bash
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  }
-]
-```
-
-**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`version` 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 :::
 ::: tab v1beta3
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+```bash
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  },
-  {
-    "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-    "node_status": "Running",
-    "otp_release": "24.1.5/12.1.5",
-    "version": "4.4.8"
-  }
-]
-```
-
-**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`version` 表示 EMQX 版本。EMQX Operator 默认会拉起三个节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的节点信息。如果你配置了 `.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行节点数量应和 replicas 的值相等。
 
 :::
 ::::

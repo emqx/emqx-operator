@@ -42,7 +42,7 @@ spec:
            nodePort: 32012
 ```
 
-**NOTE**: `license.key` in the `bootstrapConfig` field indicates the content of the license. In this example, the content of the license is omitted, please fill it in by the user.
+>  `license.key` in the `bootstrapConfig` field indicates the content of the license. In this example, the content of the license is omitted, please fill it in by the user.
 
 :::
 ::: tab v1beta4
@@ -55,7 +55,7 @@ A Secret is an object that contains a small amount of sensitive information such
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file
 ```
 
-**NOTE**: `/path/to/license/file` indicates the path of the EMQX Enterprise Edition License file, which can be an absolute path or a relative path. For more details on using kubectl to create a Secret, please refer to the document: [Using kubectl to create a secret](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/).
+> `/path/to/license/file` indicates the path of the EMQX Enterprise Edition License file, which can be an absolute path or a relative path. For more details on using kubectl to create a Secret, please refer to the document: [Using kubectl to create a secret](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/).
 
 The output is similar to:
 
@@ -83,7 +83,7 @@ spec:
           version: 4.4.14
 ```
 
-**NOTE**: `secretName` indicates the name of the Secret created in the previous step.
+> `secretName` indicates the name of the Secret created in the previous step.
 
 :::
 ::: tab v1beta3
@@ -92,11 +92,11 @@ spec:
 
 A Secret is an object that contains a small amount of sensitive information such as a password, token, or key. For more detailed documentation on Secret, please refer to: [Secret](https://kubernetes.i/docs/concepts/configuration/secret/). EMQX Operator supports using Secret to mount License information, so we need to create a Secret based on the License before creating an EMQX cluster.
 
-```
+```bash
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file
 ```
 
-**NOTE**: `/path/to/license/file` indicates the path of the EMQX Enterprise Edition License file, which can be an absolute path or a relative path. For more details on using kubectl to create a Secret, please refer to the document: [Using kubectl to create a secret](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/).
+> `/path/to/license/file` indicates the path of the EMQX Enterprise Edition License file, which can be an absolute path or a relative path. For more details on using kubectl to create a Secret, please refer to the document: [Using kubectl to create a secret](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/).
 
 The output is similar to:
 
@@ -119,14 +119,15 @@ spec:
      license:
        secretName: test
 ```
-**NOTE**: `secretName` indicates the name of the Secret created in the previous step.
+
+>  `secretName` indicates the name of the Secret created in the previous step.
 
 :::
 ::::
 
 Save the above content as: emqx-license.yaml, and execute the following command to deploy the EMQX Enterprise Edition cluster.
 
-```
+```bash
 kubectl apply -f emqx-license.yaml
 ```
 
@@ -142,118 +143,74 @@ emqx.apps.emqx.io/emqx-ee created
 ::: tab v2alpha1
 
 ```bash
-kubectl get emqx emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
+
 ```
 
 The output is similar to:
 
+```bash
+{
+   "lastTransitionTime": "2023-02-10T02:46:36Z",
+   "lastUpdateTime": "2023-02-07T06:46:36Z",
+   "message": "Cluster is running",
+   "reason": "ClusterRunning",
+   "status": "True",
+   "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx@emqx-ee-core-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.0"
-   },
-   {
-     "node": "emqx@emqx-ee-core-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.0"
-   },
-   {
-     "node": "emqx@emqx-ee-core-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.0"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. role represents the EMQX node role type. version indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
 
 :::
 ::: tab v1beta4
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.14"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::: tab v1beta3
 
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 The output is similar to:
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:49:22Z",
+  "lastUpdateTime": "2023-03-01T02:49:23Z",
+  "message": "All resources are ready",
+  "reason": "ClusterReady",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.14"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
 
 :::
 ::::
 
 - Check the EMQX Enterprise Edition License information
 
-```
+```bash
 kubectl exec -it emqx-ee-core-0 -c emqx -- emqx_ctl license info
 ```
 
 The output is similar to:
 
-```
+```bash
 customer        : EMQ
 email           : cloudnative@emqx.io
 deployment      : deployment-6159820
@@ -266,7 +223,7 @@ expiry          : false
 
 ```
 
-**NOTE**: From the output results, you can see the basic information of the license we applied for, including applicant information, the maximum number of connections supported by the license, and the expiration time of the license.
+> From the output results, you can see the basic information of the license we applied for, including applicant information, the maximum number of connections supported by the license, and the expiration time of the license.
 
 ## Update EMQX Enterprise Edition License
 
@@ -294,7 +251,7 @@ As can be seen from the above figure, the content of the license has been update
 
 - Update EMQX Enterprise Edition License Secret
 
-```
+```bash
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file --dry-run -o yaml | kubectl apply -f -
 ```
 
@@ -306,13 +263,13 @@ secret/test configured
 
 - Check whether the EMQX cluster license has been updated
 
-```
+```bash
 kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
 ```
 
 The output is similar to:
 
-```
+```bash
 customer                 : cloudnative
 email                    : cloudnative@emqx.io
 max_connections          : 100000
@@ -326,14 +283,14 @@ customer_type            : 2
 expiry                   : false
 ```
 
-**NOTE**: If the certificate information is not updated, you can wait for a while, the update of the license will be delayed. From the above output results, we can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully.
+> If the certificate information is not updated, you can wait for a while, the update of the license will be delayed. From the above output results, we can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully.
 
 :::
 ::: tab v1beta3
 
 - Update EMQX Enterprise Edition License Secret
 
-```
+```bash
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file --dry-run -o yaml | kubectl apply -f -
 ```
 
@@ -345,13 +302,13 @@ secret/test configured
 
 - Check whether the EMQX cluster license has been updated
 
-```
+```bash
 kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
 ```
 
 The output is similar to:
 
-```
+```bash
 customer                 : cloudnative
 email                    : cloudnative@emqx.io
 max_connections          : 100000
@@ -365,7 +322,7 @@ customer_type            : 2
 expiry                   : false
 ```
 
-**NOTE**: If the certificate information is not updated, you can wait for a while, the update of the license will be delayed. From the above output results, we can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully.
+> If the certificate information is not updated, you can wait for a while, the update of the license will be delayed. From the above output results, we can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully.
 
 :::
 ::::

@@ -31,7 +31,7 @@ spec:
       replicas: 0
 ```
 
-**说明：** 在 `.spec.bootstrapConfig` 字段里面，我们为 EMQX 集群配置了一个 TCP listener，这个 listener 名称为：test，监听的端口为：1884。
+> 在 `.spec.bootstrapConfig` 字段里面，我们为 EMQX 集群配置了一个 TCP listener，这个 listener 名称为：test，监听的端口为：1884。
 
 将上述内容保存为：emqx-bootstrapConfig.yaml，并执行如下命令部署 EMQX 集群：
 
@@ -48,51 +48,33 @@ emqx.apps.emqx.io/emqx created
 - 检查 EMQX 集群是否就绪
 
 ```bash
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
 
 输出类似于：
 
+```bash
+{
+  "lastTransitionTime": "2023-03-01T02:17:03Z",
+  "lastUpdateTime": "2023-03-01T02:17:03Z",
+  "message": "Cluster is running",
+  "reason": "ClusterRunning",
+  "status": "True",
+  "type": "Running"
+}
 ```
-[
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.14"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.14"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-1/12.3.2.2",
-    "role": "core",
-    "version": "5.0.14"
-  }
-]
-```
-
-**说明：** node 表示 EMQX 节点在集群的唯一标识。node_status 表示 EMQX 节点的状态。otp_release 表示 EMQX 使用的 Erlang 的版本。role 表示 EMQX 节点角色类型。version 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 replicant 节点数量应和这个 replicas 的值相等。
-
 
 ## 验证 EMQX 集群配置是否生效
 
 - 查看 EMQX 集群 listener 信息 
 
-```
+```bash
 kubectl exec -it emqx-core-0 -c emqx -- emqx_ctl listeners 
 ```
 
 输出类似于：
 
-```
+```bash
 tcp:default
   listen_on       : 0.0.0.0:1883
   acceptors       : 16
@@ -109,4 +91,4 @@ tcp:test
   max_conns       : 1024000
 ```
 
-**说明**：从输出结果可以看到我们配置的名称为 test 的 listener 已经生效。
+从输出结果可以看到我们配置的名称为 test 的 listener 已经生效。
