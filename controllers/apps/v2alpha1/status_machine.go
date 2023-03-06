@@ -196,15 +196,16 @@ func (s *coreReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDepl
 	}
 
 	// statefulSet is ready
-	if existedSts == nil ||
+	if existedSts.UID == "" ||
 		existedSts.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
 		existedSts.Status.ReadyReplicas != existedSts.Status.Replicas ||
 		existedSts.Status.UpdatedReplicas != existedSts.Status.Replicas ||
 		existedSts.Status.UpdateRevision != existedSts.Status.CurrentRevision {
 		return
 	}
+
 	// deployment is ready
-	if existedDeploy == nil ||
+	if existedDeploy.UID == "" ||
 		existedDeploy.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
 		existedDeploy.Status.UpdatedReplicas != existedDeploy.Status.Replicas ||
 		existedDeploy.Status.ReadyReplicas != existedDeploy.Status.Replicas {

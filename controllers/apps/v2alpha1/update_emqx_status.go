@@ -2,7 +2,6 @@ package v2alpha1
 
 import (
 	"context"
-	"time"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
@@ -10,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type updateStatus struct {
@@ -25,9 +23,6 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQ
 	}
 	if u.Client.Status().Update(ctx, instance) != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}
-	}
-	if !instance.Status.IsRunning() {
-		return subResult{result: ctrl.Result{RequeueAfter: time.Second}}
 	}
 	return subResult{}
 }

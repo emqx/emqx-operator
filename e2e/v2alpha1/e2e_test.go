@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -155,13 +156,32 @@ var _ = Describe("E2E Test", func() {
 
 			By("Checking the EMQX Custom Resource's Service")
 			svc := &corev1.Service{}
-			Eventually(func() map[string]string {
+			Eventually(func() []corev1.ServicePort {
 				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "e2e-test-v2alpha1"}, svc)
-				return svc.Spec.Selector
-			}, timeout, interval).Should(HaveKeyWithValue("apps.emqx.io/db-role", "replicant"))
+				return svc.Spec.Ports
+			}, timeout, interval).Should(ConsistOf(listenerPorts))
 
-			Expect(svc.Spec.Ports).Should(ConsistOf(listenerPorts))
-
+			By("Checking the EMQX Custom Resource's EndpointSlice")
+			ep := &discoveryv1.EndpointSlice{}
+			Eventually(func() []discoveryv1.Endpoint {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "e2e-test-v2alpha1"}, ep)
+				return ep.Endpoints
+			}, timeout, interval).Should(HaveLen(3))
+			Eventually(func() []discoveryv1.EndpointPort {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test-listeners", Namespace: "e2e-test-v2alpha1"}, ep)
+				return ep.Ports
+			}, timeout, interval).Should(ConsistOf([]discoveryv1.EndpointPort{
+				{
+					Name:     &[]string{listenerPorts[0].Name}[0],
+					Port:     &[]int32{listenerPorts[0].Port}[0],
+					Protocol: &[]corev1.Protocol{listenerPorts[0].Protocol}[0],
+				},
+				{
+					Name:     &[]string{listenerPorts[1].Name}[0],
+					Port:     &[]int32{listenerPorts[1].Port}[0],
+					Protocol: &[]corev1.Protocol{listenerPorts[1].Protocol}[0],
+				},
+			}))
 		})
 	})
 

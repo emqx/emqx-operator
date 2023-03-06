@@ -24,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestCheckNodeCount(t *testing.T) {
@@ -231,6 +232,9 @@ func TestNextStatusForCoreReady(t *testing.T) {
 
 	t.Run("next status", func(t *testing.T) {
 		existedSts := &appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				UID: types.UID("fake"),
+			},
 			Spec: appsv1.StatefulSetSpec{
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -246,6 +250,9 @@ func TestNextStatusForCoreReady(t *testing.T) {
 			},
 		}
 		existedDeploy := &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				UID: types.UID("fake"),
+			},
 			Spec: appsv1.DeploymentSpec{
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{

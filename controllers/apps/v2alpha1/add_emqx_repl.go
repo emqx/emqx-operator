@@ -2,12 +2,14 @@ package v2alpha1
 
 import (
 	"context"
+	"time"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -16,11 +18,13 @@ type addRepl struct {
 }
 
 func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX) subResult {
-	if instance.Status.IsRunning() || instance.Status.IsCoreNodesReady() {
-		deploy := generateDeployment(instance)
-		if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{deploy}); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to create or update deployment")}
-		}
+	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
+		return subResult{result: ctrl.Result{RequeueAfter: time.Second}}
+	}
+
+	deploy := generateDeployment(instance)
+	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{deploy}); err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to create or update deployment")}
 	}
 
 	return subResult{}
