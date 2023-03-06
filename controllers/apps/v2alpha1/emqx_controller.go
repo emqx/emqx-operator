@@ -87,10 +87,12 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	for _, subReconciler := range []subReconciler{
+		&updateStatus{r},
 		&addBootstrap{r},
 		&addSvc{r},
 		&addCore{r},
 		&addRepl{r},
+		&addListener{r},
 		&updateStatus{r},
 	} {
 		subResult := subReconciler.reconcile(ctx, instance)
