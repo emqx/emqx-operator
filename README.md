@@ -30,26 +30,27 @@ The EMQX Operator requires a Kubernetes cluster of version `>=1.24`.
 
 + Kubernetes version >= 1.21 && < 1.24
 
-  The EMQX Operator can be used, but the [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) feature is not supported, it means in `LoadBalancer` type of Service, the EMQX cluster can only use one protocol, such as TCP or UDP, but not both, so some features of EMQX will not be available.
+  The EMQX Operator can be used, but the [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) feature is not supported, it means in the `LoadBalancer` type of Service, the EMQX cluster can only use one protocol, such as TCP or UDP, but not both, so some features of EMQX will not be available.
 
 + Kubernetes version >= 1.20 && < 1.21
 
-  The EMQX Operator can be used, but if use `NodePort` type of Service, user must manually assign the `.spec.ports[].nodePort`, otherwise every update to the Service will result in a change to the NodePort, more details please refer to [Kubernetes changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.20.md#bug-or-regression-4)
+  The EMQX Operator can be used, but if using the `NodePort` type of Service, the user must manually assign the `.spec.ports[].nodePort`, otherwise every update to the Service will result in a change to the NodePort, For more details please refer to [Kubernetes changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.20.md#bug-or-regression-4)
 
-+ Kubernetes version >= 1.16 && < 1.20
++ Kubernetes version >= 1.19 && < 1.20
 
-  The EMQX Operator can be used, but we do not recommend using it, because the Kubernetes version is too old, we did not conducted a full test.
+  The EMQX Operator can be used, but we do not recommend using it, because the Kubernetes version is too old, we did not conduct a full test.
 
-+ Kubernetes version < 1.16
++ Kubernetes version < 1.19
 
-  The EMQX Operator cannot be used, because the `apiextensions/v1` APIVersion is not supported.
+  The EMQX Operator cannot be used, because the `discovery.k8s.io/v1` APIVersion is not supported.
+
 
 ## CustomResourceDefinitions
 
 A core feature of the EMQX Operator is to monitor the Kubernetes API server for changes to specific objects and ensure that the running EMQX deployments match these objects.
 The Operator acts on the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/).
 
-For the example of EMQX, see the [`emqx-full.yaml`](config/samples/emqx/v2alpha1/emqx-full.yaml).
+For more details on EMQX, please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v2alpha1-reference.md).
 
 The EMQX Operator automatically detects changes on any of the above custom resource objects and ensures that running deployments are kept in sync with the changes.
 
