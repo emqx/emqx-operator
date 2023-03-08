@@ -71,8 +71,6 @@ spec:
 EOF
 ```
 
-完整的例子请查看 [emqx-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml)，每个字段的详细解释请参考 [v2alpha1-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v2alpha1-reference.md)。
-
 2. 检查 EMQX 集群是否就绪
 
 ```bash
@@ -114,8 +112,6 @@ spec:
 EOF
 ```
 
-完整的例子请查看 [emqxbroker-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta4/emqxenterprise-full.yaml)，每个字段的详细解释请参考 [v1beta4-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md)。
-
 2. 检查 EMQX 集群是否就绪
 
 ```bash
@@ -156,8 +152,6 @@ spec:
           version: 4.4.14
 EOF
 ```
-
-完整的例子请查看 [emqxenterprise-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta4/emqxenterprise-full.yaml)，每个字段的详细解释请参考 [v1beta4-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md)。
 
 2. 检查 EMQX 集群是否就绪
 

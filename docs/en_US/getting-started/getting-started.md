@@ -38,7 +38,7 @@ emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0         
 
 ### Upgrade EMQX Operator
 
-Execute the following command to upgrade EMQX Operator. If you want to specify the upgraded version, you only need to add parameter --version=x.x.x
+Execute the following command to upgrade EMQX Operator. If you want to specify the upgraded version, you only need to add the parameter --version=x.x.x
 
 ```bash
 helm upgrade emqx-operator emqx/emqx-operator -n emqx-operator-system
@@ -71,7 +71,7 @@ spec:
 EOF
 ```
 
-For a complete example, please see [emqx-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml), For detailed explanation of each field please refer to [v2alpha1-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v2alpha1-reference.md).
+For more details please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v2alpha1-reference.md).
 
 2. Check whether the EMQX cluster is ready
 
@@ -114,7 +114,7 @@ spec:
 EOF
 ```
 
-For a complete example, please see [emqxbroker-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta4/emqxenterprise-full.yaml), For a detailed explanation of each field please refer to [v1beta4-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
+For more details please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
 
 2. Check whether the EMQX cluster is ready
 
@@ -157,7 +157,7 @@ spec:
 EOF
 ```
 
-For a complete example, please see [emqxenterprise-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta4/emqxenterprise-full.yaml), For a detailed explanation of each field please refer to [v1beta4-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
+For more details please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
 
 2. Check whether the EMQX cluster is ready
 
