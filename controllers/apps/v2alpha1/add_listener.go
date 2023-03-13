@@ -2,15 +2,20 @@ package v2alpha1
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -19,13 +24,13 @@ type addListener struct {
 	*EMQXReconciler
 }
 
-func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX) subResult {
+func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
 		return subResult{result: ctrl.Result{RequeueAfter: time.Second}}
 	}
 
 	resources := []client.Object{}
-	svc := a.generateListenerService(ctx, instance)
+	svc := a.generateListenerService(ctx, instance, p)
 	if svc == nil {
 		return subResult{}
 	}
@@ -44,14 +49,14 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX
 	return subResult{}
 }
 
-func (a *addListener) generateListenerService(ctx context.Context, instance *appsv2alpha1.EMQX) *corev1.Service {
+func (a *addListener) generateListenerService(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) *corev1.Service {
 	// We don't need to set the selector for the service
 	// because the Operator will manager the endpointSlice
 	// please check https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 	instance.Spec.ListenersServiceTemplate.Spec.Selector = map[string]string{}
 	instance.Spec.ListenersServiceTemplate.Spec.Ports = appsv2alpha1.MergeServicePorts(
 		instance.Spec.ListenersServiceTemplate.Spec.Ports,
-		a.getServicePorts(ctx, instance),
+		a.getServicePorts(instance, p),
 	)
 	if len(instance.Spec.ListenersServiceTemplate.Spec.Ports) == 0 {
 		return nil
@@ -110,21 +115,6 @@ func (a *addListener) generateEndpointSlice(ctx context.Context, instance *appsv
 	return endpointSlice
 }
 
-func (a *addListener) getServicePorts(ctx context.Context, instance *appsv2alpha1.EMQX) []corev1.ServicePort {
-	sts := &appsv1.StatefulSet{}
-	_ = a.Client.Get(ctx, types.NamespacedName{
-		Namespace: instance.Namespace,
-		Name:      instance.Spec.CoreTemplate.Name,
-	}, sts)
-
-	listenerPorts, err := newRequestAPI(a.EMQXReconciler, instance).getAllListenersByAPI(sts)
-	if err != nil {
-		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
-	}
-
-	return listenerPorts
-}
-
 func (a *addListener) getEndpoints(ctx context.Context, instance *appsv2alpha1.EMQX) []discoveryv1.Endpoint {
 	podList := &corev1.PodList{}
 	_ = a.Client.List(ctx, podList,
@@ -158,6 +148,106 @@ func (a *addListener) getEndpoints(ctx context.Context, instance *appsv2alpha1.E
 		}
 	}
 	return endpoints
+}
+
+func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, p *portForwardAPI) []corev1.ServicePort {
+	listenerPorts, err := getAllListenersByAPI(p)
+	if err != nil {
+		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
+	}
+
+	return listenerPorts
+}
+
+type emqxGateway struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+type emqxListener struct {
+	Enable bool   `json:"enable"`
+	ID     string `json:"id"`
+	Bind   string `json:"bind"`
+	Type   string `json:"type"`
+}
+
+func getAllListenersByAPI(p *portForwardAPI) ([]corev1.ServicePort, error) {
+	ports, err := getListenerPortsByAPI(p, "api/v5/listeners")
+	if err != nil {
+		return nil, err
+	}
+
+	gateways, err := getGatewaysByAPI(p)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, gateway := range gateways {
+		if strings.ToLower(gateway.Status) == "running" {
+			apiPath := fmt.Sprintf("api/v5/gateway/%s/listeners", gateway.Name)
+			gatewayPorts, err := getListenerPortsByAPI(p, apiPath)
+			if err != nil {
+				return nil, err
+			}
+			ports = append(ports, gatewayPorts...)
+		}
+	}
+
+	return ports, nil
+}
+
+func getGatewaysByAPI(p *portForwardAPI) ([]emqxGateway, error) {
+	resp, body, err := p.requestAPI("GET", "api/v5/gateway", nil)
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to get API api/v5/gateway")
+	}
+	if resp.StatusCode != 200 {
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/gateway", resp.Status, body)
+	}
+	gateway := []emqxGateway{}
+	if err := json.Unmarshal(body, &gateway); err != nil {
+		return nil, emperror.Wrap(err, "failed to parse gateway")
+	}
+	return gateway, nil
+}
+
+func getListenerPortsByAPI(p *portForwardAPI, apiPath string) ([]corev1.ServicePort, error) {
+	resp, body, err := p.requestAPI("GET", apiPath, nil)
+	if err != nil {
+		return nil, emperror.Wrapf(err, "failed to get API %s", apiPath)
+	}
+	if resp.StatusCode != 200 {
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", apiPath, resp.Status, body)
+	}
+	ports := []corev1.ServicePort{}
+	listeners := []emqxListener{}
+	if err := json.Unmarshal(body, &listeners); err != nil {
+		return nil, emperror.Wrap(err, "failed to parse listeners")
+	}
+	for _, listener := range listeners {
+		if !listener.Enable {
+			continue
+		}
+
+		var protocol corev1.Protocol
+		compile := regexp.MustCompile(".*(udp|dtls|quic).*")
+		if compile.MatchString(listener.Type) {
+			protocol = corev1.ProtocolUDP
+		} else {
+			protocol = corev1.ProtocolTCP
+		}
+
+		_, strPort, _ := net.SplitHostPort(listener.Bind)
+		intPort, _ := strconv.Atoi(strPort)
+
+		ports = append(ports, corev1.ServicePort{
+			Name:       strings.ReplaceAll(listener.ID, ":", "-"),
+			Protocol:   protocol,
+			Port:       int32(intPort),
+			TargetPort: intstr.FromInt(intPort),
+		})
+	}
+	return ports, nil
 }
 
 // ParseIP parses s as an IP address, returning the result.
