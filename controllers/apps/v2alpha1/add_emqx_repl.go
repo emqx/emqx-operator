@@ -17,7 +17,7 @@ type addRepl struct {
 	*EMQXReconciler
 }
 
-func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX) subResult {
+func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
 		return subResult{result: ctrl.Result{RequeueAfter: time.Second}}
 	}

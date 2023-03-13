@@ -18,12 +18,19 @@ package v2alpha1
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
+	emperror "emperror.dev/errors"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
+	innerPortFW "github.com/emqx/emqx-operator/internal/portforward"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -35,6 +42,13 @@ import (
 
 const EMQXContainerName string = "emqx"
 
+// portForwardAPI provides a wrapper around the port-forward API.
+type portForwardAPI struct {
+	Username string
+	Password string
+	Options  *innerPortFW.PortForwardOptions
+}
+
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
 	err    error
@@ -42,7 +56,7 @@ type subResult struct {
 }
 
 type subReconciler interface {
-	reconcile(ctx context.Context, instance *appsv2alpha1.EMQX) subResult
+	reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult
 }
 
 // EMQXReconciler reconciles a EMQX object
@@ -86,16 +100,42 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	username, password, err := r.getBootstrapUser(ctx, instance)
+	if err != nil {
+		if k8sErrors.IsNotFound(emperror.Cause(err)) {
+			_ = (&addBootstrap{r}).reconcile(ctx, instance, nil)
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
+		return ctrl.Result{}, emperror.Wrap(err, "failed to get bootstrap user")
+	}
+
+	o, err := r.newPortForwardOptions(ctx, instance)
+	if err != nil {
+		return ctrl.Result{}, emperror.Wrap(err, "failed to create port forwarding options")
+	}
+	if o != nil {
+		defer close(o.StopChannel)
+		if err := o.ForwardPorts(); err != nil {
+			return ctrl.Result{}, emperror.Wrap(err, "failed to forward ports")
+		}
+	}
+
+	p := &portForwardAPI{
+		Username: username,
+		Password: password,
+		Options:  o,
+	}
+
 	for _, subReconciler := range []subReconciler{
-		&updateStatus{r},
 		&addBootstrap{r},
+		&updateStatus{r},
 		&addSvc{r},
 		&addCore{r},
 		&addRepl{r},
 		&addListener{r},
 		&updateStatus{r},
 	} {
-		subResult := subReconciler.reconcile(ctx, instance)
+		subResult := subReconciler.reconcile(ctx, instance, p)
 		if !subResult.result.IsZero() {
 			return subResult.result, nil
 		}
@@ -114,4 +154,73 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv2alpha1.EMQX{}).
 		Complete(r)
+}
+
+func (r *EMQXReconciler) newPortForwardOptions(ctx context.Context, instance *appsv2alpha1.EMQX) (*innerPortFW.PortForwardOptions, error) {
+	pods := &corev1.PodList{}
+	err := r.Client.List(ctx, pods, client.InNamespace(instance.Namespace), client.MatchingLabels(instance.Spec.CoreTemplate.Labels))
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to list pods")
+	}
+
+	var port string
+	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to get dashboard service port: %s, use 18083 port", err.Error())
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetDashboardServicePort", msg)
+		port = "18083"
+	}
+	if dashboardPort != nil {
+		port = dashboardPort.TargetPort.String()
+	}
+
+	for _, pod := range pods.Items {
+		for _, container := range pod.Status.ContainerStatuses {
+			if container.Name == EMQXContainerName {
+				if container.Ready {
+					o, err := innerPortFW.NewPortForwardOptions(r.APIClient.Clientset, r.APIClient.Config, &pod, port)
+					if err != nil {
+						return nil, emperror.Wrap(err, "failed to create port forward")
+					}
+					return o, nil
+				}
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+func (r *EMQXReconciler) getBootstrapUser(ctx context.Context, instance *appsv2alpha1.EMQX) (username, password string, err error) {
+	secret := &corev1.Secret{}
+	if err = r.Client.Get(
+		ctx,
+		instance.BootstrapUserNamespacedName(),
+		secret,
+	); err != nil {
+		err = emperror.Wrap(err, "get secret failed")
+		return
+	}
+
+	if data, ok := secret.Data["bootstrap_user"]; ok {
+		users := strings.Split(string(data), "\n")
+		for _, user := range users {
+			index := strings.Index(user, ":")
+			if index > 0 && user[:index] == defUsername {
+				username = user[:index]
+				password = user[index+1:]
+				return
+			}
+		}
+	}
+
+	err = emperror.Errorf("the secret does not contain the bootstrap_user")
+	return
+}
+
+func (p *portForwardAPI) requestAPI(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+	if p.Options == nil {
+		return nil, nil, emperror.Errorf("failed to %s %s, portForward is not ready", method, path)
+	}
+	return p.Options.RequestAPI(p.Username, p.Password, method, path, body)
 }
