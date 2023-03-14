@@ -22,18 +22,20 @@ import (
 	"sort"
 	"time"
 
+	emperror "emperror.dev/errors"
 	json "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	apiClient "github.com/emqx/emqx-operator/internal/apiclient"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
@@ -56,13 +58,15 @@ type pluginListByAPIReturn struct {
 // EmqxPluginReconciler reconciles a EmqxPlugin object
 type EmqxPluginReconciler struct {
 	*handler.Handler
-	*apiClient.APIClient
+	Clientset *kubernetes.Clientset
+	Config    *rest.Config
 }
 
 func NewEmqxPluginReconciler(mgr manager.Manager) *EmqxPluginReconciler {
 	return &EmqxPluginReconciler{
 		Handler:   handler.NewHandler(mgr),
-		APIClient: apiClient.NewAPIClient(mgr),
+		Clientset: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		Config:    mgr.GetConfig(),
 	}
 }
 
@@ -100,7 +104,16 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
-				if err := r.unloadPluginByAPI(emqx, instance.Spec.PluginName); err != nil {
+				p, _ := newPortForwardAPI(ctx, r.Client, r.Clientset, r.Config, emqx)
+				if p == nil {
+					// The EMQX is not ready, requeue
+					return ctrl.Result{RequeueAfter: time.Second}, nil
+				}
+				defer close(p.Options.StopChannel)
+				if err := p.Options.ForwardPorts(); err != nil {
+					return ctrl.Result{}, emperror.Wrap(err, "failed to forward ports")
+				}
+				if err := r.unloadPluginByAPI(p, instance.Spec.PluginName); err != nil {
 					if innerErr.IsCommonError(err) {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
 					}
@@ -142,7 +155,16 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
-		if err := r.checkPluginStatusByAPI(emqx, instance.Spec.PluginName); err != nil {
+		// The EMQX is not ready, requeue
+		p, _ := newPortForwardAPI(ctx, r.Client, r.Clientset, r.Config, emqx)
+		if p == nil {
+			continue
+		}
+		defer close(p.Options.StopChannel)
+		if err := p.Options.ForwardPorts(); err != nil {
+			return ctrl.Result{}, emperror.Wrap(err, "failed to forward ports")
+		}
+		if err := r.checkPluginStatusByAPI(p, instance.Spec.PluginName); err != nil {
 			if innerErr.IsCommonError(err) {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
@@ -160,8 +182,8 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EmqxPluginReconciler) checkPluginStatusByAPI(emqx appsv1beta4.Emqx, pluginName string) error {
-	list, err := r.getPluginsByAPI(emqx)
+func (r *EmqxPluginReconciler) checkPluginStatusByAPI(p *portForwardAPI, pluginName string) error {
+	list, err := r.getPluginsByAPI(p)
 	if err != nil {
 		return err
 	}
@@ -169,7 +191,7 @@ func (r *EmqxPluginReconciler) checkPluginStatusByAPI(emqx appsv1beta4.Emqx, plu
 		for _, plugin := range node.Plugins {
 			if plugin.Name == pluginName {
 				if !plugin.Active {
-					err := r.doLoadPluginByAPI(emqx, node.Node, plugin.Name, "reload")
+					err := r.doLoadPluginByAPI(p, node.Node, plugin.Name, "reload")
 					if err != nil {
 						return err
 					}
@@ -180,15 +202,15 @@ func (r *EmqxPluginReconciler) checkPluginStatusByAPI(emqx appsv1beta4.Emqx, plu
 	return nil
 }
 
-func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta4.Emqx, pluginName string) error {
-	list, err := r.getPluginsByAPI(emqx)
+func (r *EmqxPluginReconciler) unloadPluginByAPI(p *portForwardAPI, pluginName string) error {
+	list, err := r.getPluginsByAPI(p)
 	if err != nil {
 		return err
 	}
 	for _, node := range list {
 		for _, plugin := range node.Plugins {
 			if plugin.Name == pluginName {
-				err := r.doLoadPluginByAPI(emqx, node.Node, plugin.Name, "unload")
+				err := r.doLoadPluginByAPI(p, node.Node, plugin.Name, "unload")
 				if err != nil {
 					return err
 				}
@@ -198,20 +220,33 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(emqx appsv1beta4.Emqx, pluginNa
 	return nil
 }
 
-func (r *EmqxPluginReconciler) doLoadPluginByAPI(emqx appsv1beta4.Emqx, nodeName, pluginName, reloadOrUnload string) error {
-	requestAPI, err := newRequestAPI(r.Client, r.APIClient, emqx)
+func (r *EmqxPluginReconciler) doLoadPluginByAPI(p *portForwardAPI, nodeName, pluginName, reloadOrUnload string) error {
+	resp, _, err := p.requestAPI("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
 	if err != nil {
 		return err
 	}
-	return requestAPI.loadPluginByAPI(emqx, nodeName, pluginName, reloadOrUnload)
+	if resp.StatusCode != 200 {
+		return emperror.Errorf("request api failed: %s", resp.Status)
+	}
+	return nil
 }
 
-func (r *EmqxPluginReconciler) getPluginsByAPI(emqx appsv1beta4.Emqx) ([]pluginListByAPIReturn, error) {
-	requestAPI, err := newRequestAPI(r.Client, r.APIClient, emqx)
+func (r *EmqxPluginReconciler) getPluginsByAPI(p *portForwardAPI) ([]pluginListByAPIReturn, error) {
+	var data []pluginListByAPIReturn
+	resp, body, err := p.requestAPI("GET", "api/v4/plugins", nil)
 	if err != nil {
 		return nil, err
 	}
-	return requestAPI.getPluginsByAPI(emqx)
+	if resp.StatusCode != 200 {
+		return nil, emperror.Errorf("request api failed: %s", resp.Status)
+	}
+
+	err = json.Unmarshal([]byte(gjson.GetBytes(body, "data").String()), &data)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func (r *EmqxPluginReconciler) checkPluginConfig(plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) (bool, error) {
