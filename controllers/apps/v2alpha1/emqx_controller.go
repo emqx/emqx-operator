@@ -28,6 +28,8 @@ import (
 	innerPortFW "github.com/emqx/emqx-operator/internal/portforward"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/internal/apiclient"
 	"github.com/emqx/emqx-operator/internal/handler"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -62,7 +63,8 @@ type subReconciler interface {
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
 	*handler.Handler
-	APIClient     *apiclient.APIClient
+	Clientset     *kubernetes.Clientset
+	Config        *rest.Config
 	Scheme        *runtime.Scheme
 	EventRecorder record.EventRecorder
 }
@@ -70,7 +72,8 @@ type EMQXReconciler struct {
 func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 	return &EMQXReconciler{
 		Handler:       handler.NewHandler(mgr),
-		APIClient:     apiclient.NewAPIClient(mgr),
+		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		Config:        mgr.GetConfig(),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}
@@ -161,12 +164,6 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *EMQXReconciler) newPortForwardOptions(ctx context.Context, instance *appsv2alpha1.EMQX) (*innerPortFW.PortForwardOptions, error) {
-	pods := &corev1.PodList{}
-	err := r.Client.List(ctx, pods, client.InNamespace(instance.Namespace), client.MatchingLabels(instance.Spec.CoreTemplate.Labels))
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to list pods")
-	}
-
 	var port string
 	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
 	if err != nil {
@@ -178,10 +175,18 @@ func (r *EMQXReconciler) newPortForwardOptions(ctx context.Context, instance *ap
 		port = dashboardPort.TargetPort.String()
 	}
 
+	pods := &corev1.PodList{}
+	if err := r.Client.List(ctx, pods,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+	); err != nil {
+		return nil, emperror.Wrap(err, "failed to list pods")
+	}
+
 	for _, pod := range pods.Items {
 		for _, c := range pod.Status.Conditions {
-			if c.Type == corev1.PodReady && c.Status != corev1.ConditionTrue {
-				o, err := innerPortFW.NewPortForwardOptions(r.APIClient.Clientset, r.APIClient.Config, &pod, port)
+			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+				o, err := innerPortFW.NewPortForwardOptions(r.Clientset, r.Config, &pod, port)
 				if err != nil {
 					return nil, emperror.Wrap(err, "failed to create port forward")
 				}
