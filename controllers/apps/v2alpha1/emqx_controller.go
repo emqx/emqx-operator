@@ -100,6 +100,10 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	if instance.GetDeletionTimestamp() != nil {
+		return ctrl.Result{}, nil
+	}
+
 	username, password, err := r.getBootstrapUser(ctx, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
@@ -175,15 +179,13 @@ func (r *EMQXReconciler) newPortForwardOptions(ctx context.Context, instance *ap
 	}
 
 	for _, pod := range pods.Items {
-		for _, container := range pod.Status.ContainerStatuses {
-			if container.Name == EMQXContainerName {
-				if container.Ready {
-					o, err := innerPortFW.NewPortForwardOptions(r.APIClient.Clientset, r.APIClient.Config, &pod, port)
-					if err != nil {
-						return nil, emperror.Wrap(err, "failed to create port forward")
-					}
-					return o, nil
+		for _, c := range pod.Status.Conditions {
+			if c.Type == corev1.PodReady && c.Status != corev1.ConditionTrue {
+				o, err := innerPortFW.NewPortForwardOptions(r.APIClient.Clientset, r.APIClient.Config, &pod, port)
+				if err != nil {
+					return nil, emperror.Wrap(err, "failed to create port forward")
 				}
+				return o, nil
 			}
 		}
 	}

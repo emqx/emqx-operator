@@ -91,7 +91,7 @@ func (o *PortForwardOptions) RequestAPI(username, password, method, path string,
 	req.Close = true
 	resp, err = httpClient.Do(req)
 	if err != nil {
-		return nil, nil, emperror.NewWithDetails("failed to request API", "url", url.Path, "method", method)
+		return nil, nil, emperror.Wrapf(err, "failed to request API %s %s", method, url.Path)
 	}
 
 	defer resp.Body.Close()
