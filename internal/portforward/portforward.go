@@ -39,9 +39,9 @@ func NewPortForwardOptions(clientset *kubernetes.Clientset, config *rest.Config,
 		URL()
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", portForwardURL)
 
-	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
+	// out, errOut := new(bytes.Buffer), new(bytes.Buffer)
 	readyChan, stopChan := make(chan struct{}), make(chan struct{})
-	fw, err := portforward.New(dialer, []string{fmt.Sprintf(":%s", port)}, stopChan, readyChan, out, errOut)
+	fw, err := portforward.New(dialer, []string{fmt.Sprintf(":%s", port)}, stopChan, readyChan, nil, nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "error creating a new PortForwarder with localhost listen addresses")
 	}
@@ -91,7 +91,7 @@ func (o *PortForwardOptions) RequestAPI(username, password, method, path string,
 	req.Close = true
 	resp, err = httpClient.Do(req)
 	if err != nil {
-		return nil, nil, emperror.Wrapf(err, "failed to request API %s %s", method, url.Path)
+		return nil, nil, emperror.NewWithDetails("failed to request API", "method", method, "path", url.Path)
 	}
 
 	defer resp.Body.Close()

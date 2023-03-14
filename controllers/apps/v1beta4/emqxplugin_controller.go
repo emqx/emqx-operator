@@ -142,6 +142,11 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	for _, emqx := range emqxList {
+		if len(emqx.GetStatus().GetEmqxNodes()) == 0 {
+			// The EMQX is not ready, requeue
+			continue
+		}
+
 		equalPluginConfig, err := r.checkPluginConfig(instance, emqx)
 		if err != nil {
 			return ctrl.Result{}, err
