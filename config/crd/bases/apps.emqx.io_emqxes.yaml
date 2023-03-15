@@ -2871,7 +2871,6 @@ spec:
                             type: integer
                         type: object
                       replicas:
-                        default: 3
                         format: int32
                         minimum: 1
                         type: integer
@@ -6275,7 +6274,6 @@ spec:
                             type: integer
                         type: object
                       replicas:
-                        default: 3
                         format: int32
                         minimum: 1
                         type: integer

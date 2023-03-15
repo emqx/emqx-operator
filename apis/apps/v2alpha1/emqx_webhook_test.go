@@ -250,6 +250,13 @@ func TestDefaultBootstrapConfig(t *testing.T) {
 	})
 }
 
+func TestDefaultReplicas(t *testing.T) {
+	instance := &EMQX{}
+	instance.defaultReplicas()
+	assert.Equal(t, int32(1), *instance.Spec.CoreTemplate.Spec.Replicas)
+	assert.Equal(t, int32(3), *instance.Spec.ReplicantTemplate.Spec.Replicas)
+}
+
 func TestDefaultDashboardServiceTemplate(t *testing.T) {
 	t.Run("failed to get dashboard listeners", func(t *testing.T) {
 		instance := &EMQX{}

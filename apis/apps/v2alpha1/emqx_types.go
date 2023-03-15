@@ -54,8 +54,7 @@ type EMQXReplicantTemplateSpec struct {
 	// Replicas is the desired number of replicas of the given Template.
 	// These are replicas in the sense that they are instantiations of the
 	// same Template, but individual replicas also have a consistent identity.
-	// If unspecified, defaults to 3.
-	//+kubebuilder:default:=3
+	// Defaults to 1 if EMQX core node, or 3 if EMQX replicant node.
 	//+kubebuilder:validation:Minimum=1
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Entrypoint array. Not executed within a shell.

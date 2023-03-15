@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -53,6 +54,7 @@ func (r *EMQX) Default() {
 	r.defaultLabels()
 	r.defaultAnnotations()
 	r.defaultBootstrapConfig()
+	r.defaultReplicas()
 	r.defaultDashboardServiceTemplate()
 	r.defaultProbe()
 }
@@ -225,6 +227,15 @@ func (r *EMQX) defaultBootstrapConfig() {
 	}
 
 	r.Spec.BootstrapConfig = config.String()
+}
+
+func (r *EMQX) defaultReplicas() {
+	if r.Spec.CoreTemplate.Spec.Replicas == nil {
+		r.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
+	}
+	if r.Spec.ReplicantTemplate.Spec.Replicas == nil {
+		r.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(3)
+	}
 }
 
 func (r *EMQX) defaultDashboardServiceTemplate() {
