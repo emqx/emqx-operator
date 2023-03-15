@@ -309,6 +309,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 		},
 		{
+			Name: "emqx-log",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
+		{
 			Name: "emqx-data",
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
@@ -415,6 +421,10 @@ func TestGenerateStatefulSet(t *testing.T) {
 		{
 			Name:      "fake",
 			MountPath: "/fake",
+		},
+		{
+			Name:      "emqx-log",
+			MountPath: "/opt/emqx/log",
 		},
 		{
 			Name:      "emqx-data",

@@ -211,6 +211,10 @@ func TestGenerateD(t *testing.T) {
 				ReadOnly:  true,
 			},
 			{
+				Name:      "emqx-replicant-log",
+				MountPath: "/opt/emqx/log",
+			},
+			{
 				Name:      "emqx-replicant-data",
 				MountPath: "/opt/emqx/data",
 			},
@@ -242,6 +246,12 @@ func TestGenerateD(t *testing.T) {
 							Name: emqx.BootstrapConfigNamespacedName().Name,
 						},
 					},
+				},
+			},
+			{
+				Name: "emqx-replicant-log",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			},
 			{

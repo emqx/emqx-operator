@@ -117,6 +117,10 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 							ReadOnly:  true,
 						},
 						{
+							Name:      instance.CoreNodeNamespacedName().Name + "-log",
+							MountPath: "/opt/emqx/log",
+						},
+						{
 							Name:      instance.CoreNodeNamespacedName().Name + "-data",
 							MountPath: "/opt/emqx/data",
 						},
@@ -140,6 +144,12 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 								Name: instance.BootstrapConfigNamespacedName().Name,
 							},
 						},
+					},
+				},
+				{
+					Name: instance.CoreNodeNamespacedName().Name + "-log",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 				},
 			}, instance.Spec.CoreTemplate.Spec.ExtraVolumes...),
