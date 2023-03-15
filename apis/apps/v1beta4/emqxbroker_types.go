@@ -129,6 +129,8 @@ func (s *EmqxBrokerStatus) AddCondition(condType ConditionType, status corev1.Co
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
 //+kubebuilder:storageversion
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // EmqxBroker is the Schema for the emqxbrokers API
 type EmqxBroker struct {
