@@ -167,6 +167,8 @@ func (s *EmqxEnterpriseStatus) AddCondition(condType ConditionType, status corev
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas
 //+kubebuilder:storageversion
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // EmqxEnterprise is the Schema for the emqxenterprises API
 type EmqxEnterprise struct {

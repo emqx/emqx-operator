@@ -3020,7 +3020,14 @@ spec:
           specReplicasPath: .spec.replicas
           statusReplicasPath: .status.replicas
         status: {}
-    - name: v1beta4
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.status=="True")].type
+          name: Status
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1beta4
       schema:
         openAPIV3Schema:
           properties:
@@ -9948,7 +9955,14 @@ spec:
           specReplicasPath: .spec.replicas
           statusReplicasPath: .status.replicas
         status: {}
-    - name: v1beta4
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.status=="True")].type
+          name: Status
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1beta4
       schema:
         openAPIV3Schema:
           properties:
