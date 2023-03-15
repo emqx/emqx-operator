@@ -118,6 +118,10 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 									ReadOnly:  true,
 								},
 								{
+									Name:      instance.ReplicantNodeNamespacedName().Name + "-log",
+									MountPath: "/opt/emqx/log",
+								},
+								{
 									Name:      instance.ReplicantNodeNamespacedName().Name + "-data",
 									MountPath: "/opt/emqx/data",
 								},
@@ -141,6 +145,12 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 										Name: instance.BootstrapConfigNamespacedName().Name,
 									},
 								},
+							},
+						},
+						{
+							Name: instance.ReplicantNodeNamespacedName().Name + "-log",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 						{

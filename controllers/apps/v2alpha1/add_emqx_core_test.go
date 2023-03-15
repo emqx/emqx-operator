@@ -234,6 +234,10 @@ func TestGenerateStatefulSet(t *testing.T) {
 				ReadOnly:  true,
 			},
 			{
+				Name:      "emqx-core-log",
+				MountPath: "/opt/emqx/log",
+			},
+			{
 				Name:      "emqx-core-data",
 				MountPath: "/opt/emqx/data",
 			},
@@ -271,6 +275,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 							Name: emqx.BootstrapConfigNamespacedName().Name,
 						},
 					},
+				},
+			},
+			{
+				Name: "emqx-core-log",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			},
 			{

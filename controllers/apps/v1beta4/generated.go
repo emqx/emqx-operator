@@ -372,17 +372,20 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	}
 
 	emqxContainer := corev1.Container{
-		Name:                     EmqxContainerName,
-		Image:                    appsv1beta4.GetEmqxImage(instance),
-		ImagePullPolicy:          emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
-		Command:                  emqxTemplate.Spec.EmqxContainer.Command,
-		Args:                     emqxTemplate.Spec.EmqxContainer.Args,
-		WorkingDir:               emqxTemplate.Spec.EmqxContainer.WorkingDir,
-		Ports:                    emqxTemplate.Spec.EmqxContainer.Ports,
-		EnvFrom:                  emqxTemplate.Spec.EmqxContainer.EnvFrom,
-		Env:                      mergeEnvAndConfig(instance),
-		Resources:                emqxTemplate.Spec.EmqxContainer.Resources,
-		VolumeMounts:             emqxTemplate.Spec.EmqxContainer.VolumeMounts,
+		Name:            EmqxContainerName,
+		Image:           appsv1beta4.GetEmqxImage(instance),
+		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
+		Command:         emqxTemplate.Spec.EmqxContainer.Command,
+		Args:            emqxTemplate.Spec.EmqxContainer.Args,
+		WorkingDir:      emqxTemplate.Spec.EmqxContainer.WorkingDir,
+		Ports:           emqxTemplate.Spec.EmqxContainer.Ports,
+		EnvFrom:         emqxTemplate.Spec.EmqxContainer.EnvFrom,
+		Env:             mergeEnvAndConfig(instance),
+		Resources:       emqxTemplate.Spec.EmqxContainer.Resources,
+		VolumeMounts: append(emqxTemplate.Spec.EmqxContainer.VolumeMounts, corev1.VolumeMount{
+			Name:      "emqx-log",
+			MountPath: "/opt/emqx/log",
+		}),
 		VolumeDevices:            emqxTemplate.Spec.EmqxContainer.VolumeDevices,
 		LivenessProbe:            emqxTemplate.Spec.EmqxContainer.LivenessProbe,
 		ReadinessProbe:           emqxTemplate.Spec.EmqxContainer.ReadinessProbe,
@@ -414,7 +417,12 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			}, emqxTemplate.Spec.ExtraContainers...),
 
 			SecurityContext: emqxTemplate.Spec.PodSecurityContext,
-			Volumes:         emqxTemplate.Spec.Volumes,
+			Volumes: append(emqxTemplate.Spec.Volumes, corev1.Volume{
+				Name: "emqx-log",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			}),
 		},
 	}
 	podTemplate.Annotations = handler.SetManagerContainerAnnotation(podTemplate.Annotations, podTemplate.Spec.Containers)
