@@ -7,5 +7,5 @@ spec:
     spec:
       emqxContainer:
         image:
-          repository: emqx/emqx
-          version: 4.4.14
+          repository: emqx
+          version: 4.4.15
