@@ -722,7 +722,7 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 			Template: appsv1beta4.EmqxTemplate{
 				Spec: appsv1beta4.EmqxTemplateSpec{
 					EmqxContainer: appsv1beta4.EmqxContainer{
-						BootstrapAPIKeys: []appsv1beta4.BootsrapAPIKey{
+						BootstrapAPIKeys: []appsv1beta4.BootstrapAPIKey{
 							{
 								Key:    "test_key",
 								Secret: "secret",
