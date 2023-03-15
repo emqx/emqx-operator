@@ -72,7 +72,7 @@ func TestValidateUpdate(t *testing.T) {
 
 	t.Run("should return error if bootstrap APIKeys is changed", func(t *testing.T) {
 		old := instance.DeepCopy()
-		instance.Spec.BootstrapAPIKeys = []BootsrapAPIKey{{
+		instance.Spec.BootstrapAPIKeys = []BootstrapAPIKey{{
 			Key:    "test",
 			Secret: "test",
 		}}

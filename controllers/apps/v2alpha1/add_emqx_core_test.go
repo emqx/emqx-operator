@@ -26,13 +26,9 @@ func TestGenerateStatefulSet(t *testing.T) {
 		},
 		Spec: appsv2alpha1.EMQXSpec{
 			Image: "emqx/emqx:5.0",
-			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-					Replicas: &[]int32{3}[0],
-				},
-			},
 		},
 	}
+	instance.Spec.CoreTemplate.Spec.Replicas = &[]int32{3}[0]
 	instance.Default()
 	assert.Nil(t, instance.ValidateCreate())
 
