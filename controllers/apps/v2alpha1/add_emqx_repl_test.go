@@ -2,9 +2,11 @@ package v2alpha1
 
 import (
 	"testing"
+	"time"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +19,236 @@ var replicantLabels = map[string]string{
 	"apps.emqx.io/db-role":    "replicant",
 }
 
-func TestGenerateD(t *testing.T) {
+func TestHandlerDeploymentList(t *testing.T) {
+	t.Run("filter not ready deployment", func(t *testing.T) {
+		list := &appsv1.DeploymentList{
+			Items: []appsv1.Deployment{
+				{
+					Status: appsv1.DeploymentStatus{
+						Replicas: 0,
+					},
+				},
+				{
+					Status: appsv1.DeploymentStatus{
+						Replicas:      1,
+						ReadyReplicas: 0,
+					},
+				},
+				{
+					Status: appsv1.DeploymentStatus{
+						Replicas:      1,
+						ReadyReplicas: 1,
+					},
+				},
+			},
+		}
+		assert.Len(t, handlerDeploymentList(list), 1)
+	})
+
+	t.Run("sort deployment list", func(t *testing.T) {
+		list := &appsv1.DeploymentList{
+			Items: []appsv1.Deployment{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "emqx-1",
+						CreationTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, 1)},
+					},
+					Status: appsv1.DeploymentStatus{
+						Replicas:      1,
+						ReadyReplicas: 1,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "emqx-0",
+						CreationTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+					},
+					Status: appsv1.DeploymentStatus{
+						Replicas:      1,
+						ReadyReplicas: 1,
+					},
+				},
+			},
+		}
+
+		var l []string
+		for _, d := range handlerDeploymentList(list) {
+			l = append(l, d.DeepCopy().Name)
+		}
+		assert.ElementsMatch(t, []string{"emqx-0", "emqx-1"}, l)
+	})
+}
+
+func TestHandlerEventList(t *testing.T) {
+	t.Run("filter event", func(t *testing.T) {
+		list := &corev1.EventList{
+			Items: []corev1.Event{
+				{
+					Reason: "SuccessfulCreate",
+				},
+				{
+					Reason: "ScalingReplicaSet",
+				},
+			},
+		}
+		assert.Len(t, handlerEventList(list), 1)
+	})
+
+	t.Run("sort event list", func(t *testing.T) {
+		list := &corev1.EventList{
+			Items: []corev1.Event{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "emqx-1",
+					},
+					LastTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, 1)},
+					Reason:        "ScalingReplicaSet",
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "emqx-0",
+					},
+					LastTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+					Reason:        "ScalingReplicaSet",
+				},
+			},
+		}
+
+		var l []string
+		for _, e := range handlerEventList(list) {
+			l = append(l, e.DeepCopy().Name)
+		}
+		assert.ElementsMatch(t, []string{"emqx-0", "emqx-1"}, l)
+	})
+}
+
+func TestCanBeScaledDown(t *testing.T) {
+	t.Run("event list is empty, current deployment is not available, can not scale down", func(t *testing.T) {
+		assert.False(t, canBeScaledDown(&appsv2alpha1.EMQX{}, &appsv1.Deployment{}, []*corev1.Event{}))
+	})
+
+	t.Run("event list is empty, initialDelaySeconds not ready, can not scale down", func(t *testing.T) {
+		emqx := &appsv2alpha1.EMQX{
+			Spec: appsv2alpha1.EMQXSpec{
+				BlueGreenUpdate: appsv2alpha1.BlueGreenUpdate{
+					InitialDelaySeconds: 999999999,
+				},
+			},
+		}
+		currentDeployment := &appsv1.Deployment{
+			Status: appsv1.DeploymentStatus{
+				Conditions: []appsv1.DeploymentCondition{
+					{
+						Type:               appsv1.DeploymentAvailable,
+						Status:             corev1.ConditionTrue,
+						LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, 1)},
+					},
+				},
+			},
+		}
+
+		assert.False(t, canBeScaledDown(emqx, currentDeployment, []*corev1.Event{}))
+	})
+
+	t.Run("event list is empty, initialDelaySeconds is ready, can scale down", func(t *testing.T) {
+		emqx := &appsv2alpha1.EMQX{
+			Spec: appsv2alpha1.EMQXSpec{
+				BlueGreenUpdate: appsv2alpha1.BlueGreenUpdate{
+					InitialDelaySeconds: 1,
+				},
+			},
+		}
+		currentDeployment := &appsv1.Deployment{
+			Status: appsv1.DeploymentStatus{
+				Conditions: []appsv1.DeploymentCondition{
+					{
+						Type:               appsv1.DeploymentAvailable,
+						Status:             corev1.ConditionTrue,
+						LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+					},
+				},
+			},
+		}
+
+		assert.True(t, canBeScaledDown(emqx, currentDeployment, []*corev1.Event{}))
+	})
+
+	t.Run("event list not empty, current deployment is not available, can not scale down", func(t *testing.T) {
+		assert.False(t, canBeScaledDown(&appsv2alpha1.EMQX{}, &appsv1.Deployment{}, []*corev1.Event{
+			{
+				LastTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, 1)},
+			},
+		}))
+	})
+
+	t.Run("event list is not empty, initialDelaySeconds is ready, waitTakeover not ready, can not scale down", func(t *testing.T) {
+		emqx := &appsv2alpha1.EMQX{
+			Spec: appsv2alpha1.EMQXSpec{
+				BlueGreenUpdate: appsv2alpha1.BlueGreenUpdate{
+					InitialDelaySeconds: 1,
+					EvacuationStrategy: appsv2alpha1.EvacuationStrategy{
+						WaitTakeover: 999999999,
+					},
+				},
+			},
+		}
+
+		currentDeployment := &appsv1.Deployment{
+			Status: appsv1.DeploymentStatus{
+				Conditions: []appsv1.DeploymentCondition{
+					{
+						Type:               appsv1.DeploymentAvailable,
+						Status:             corev1.ConditionTrue,
+						LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+					},
+				},
+			},
+		}
+
+		eventList := []*corev1.Event{
+			{
+				LastTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, 1)},
+			},
+		}
+
+		assert.False(t, canBeScaledDown(emqx, currentDeployment, eventList))
+	})
+
+	t.Run("event list is not empty,initialDelaySeconds is ready, waitTakeover is ready, can scale down", func(t *testing.T) {
+		emqx := &appsv2alpha1.EMQX{
+			Spec: appsv2alpha1.EMQXSpec{
+				BlueGreenUpdate: appsv2alpha1.BlueGreenUpdate{
+					InitialDelaySeconds: 1,
+					EvacuationStrategy: appsv2alpha1.EvacuationStrategy{
+						WaitTakeover: 1,
+					},
+				},
+			},
+		}
+
+		currentDeployment := &appsv1.Deployment{
+			Status: appsv1.DeploymentStatus{
+				Conditions: []appsv1.DeploymentCondition{
+					{
+						Type:               appsv1.DeploymentAvailable,
+						Status:             corev1.ConditionTrue,
+						LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+					},
+				},
+			},
+		}
+
+		eventList := []*corev1.Event{
+			{
+				LastTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+			},
+		}
+
+		assert.True(t, canBeScaledDown(emqx, currentDeployment, eventList))
+	})
+}
+
+func TestGenerateDeployment(t *testing.T) {
 	instance := &appsv2alpha1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",

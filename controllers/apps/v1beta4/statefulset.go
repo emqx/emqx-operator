@@ -64,7 +64,7 @@ func getPodMap(k8sClient client.Client, instance appsv1beta4.Emqx, allSts []*app
 		}
 	}
 	for i, pods := range podMap {
-		sort.Sort(PodsByNameOlder(pods))
+		sort.Sort(PodsByNameNewer(pods))
 		podMap[i] = pods
 	}
 
@@ -135,4 +135,80 @@ func getInClusterStatefulSets(k8sClient client.Client, instance appsv1beta4.Emqx
 		return nil, innerErr.ErrStsNotReady
 	}
 	return inCluster, nil
+}
+
+// StatefulSetsByCreationTimestamp sorts a list of StatefulSet by creation timestamp, using their names as a tie breaker.
+type StatefulSetsByCreationTimestamp []*appsv1.StatefulSet
+
+func (o StatefulSetsByCreationTimestamp) Len() int      { return len(o) }
+func (o StatefulSetsByCreationTimestamp) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o StatefulSetsByCreationTimestamp) Less(i, j int) bool {
+	if o[i].CreationTimestamp.Equal(&o[j].CreationTimestamp) {
+		return o[i].Name < o[j].Name
+	}
+	return o[i].CreationTimestamp.Before(&o[j].CreationTimestamp)
+}
+
+// StatefulSetsBySizeOlder sorts a list of StatefulSet by size in descending order, using their creation timestamp or name as a tie breaker.
+// By using the creation timestamp, this sorts from old to new replica sets.
+type StatefulSetsBySizeOlder []*appsv1.StatefulSet
+
+func (o StatefulSetsBySizeOlder) Len() int      { return len(o) }
+func (o StatefulSetsBySizeOlder) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o StatefulSetsBySizeOlder) Less(i, j int) bool {
+	if *(o[i].Spec.Replicas) == *(o[j].Spec.Replicas) {
+		return StatefulSetsByCreationTimestamp(o).Less(i, j)
+	}
+	return *(o[i].Spec.Replicas) > *(o[j].Spec.Replicas)
+}
+
+// StatefulSetsBySizeNewer sorts a list of StatefulSet by size in descending order, using their creation timestamp or name as a tie breaker.
+// By using the creation timestamp, this sorts from new to old replica sets.
+type StatefulSetsBySizeNewer []*appsv1.StatefulSet
+
+func (o StatefulSetsBySizeNewer) Len() int      { return len(o) }
+func (o StatefulSetsBySizeNewer) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o StatefulSetsBySizeNewer) Less(i, j int) bool {
+	if *(o[i].Spec.Replicas) == *(o[j].Spec.Replicas) {
+		return StatefulSetsByCreationTimestamp(o).Less(j, i)
+	}
+	return *(o[i].Spec.Replicas) > *(o[j].Spec.Replicas)
+}
+
+// PodsByCreationTimestamp sorts a list of Pod by creation timestamp, using their names as a tie breaker.
+type PodsByCreationTimestamp []*corev1.Pod
+
+func (o PodsByCreationTimestamp) Len() int      { return len(o) }
+func (o PodsByCreationTimestamp) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o PodsByCreationTimestamp) Less(i, j int) bool {
+	if o[i].CreationTimestamp.Equal(&o[j].CreationTimestamp) {
+		return o[i].Name < o[j].Name
+	}
+	return o[i].CreationTimestamp.Before(&o[j].CreationTimestamp)
+}
+
+// PodsByNameOlder sorts a list of Pod by size in descending order, using their creation timestamp or name as a tie breaker.
+// By using the creation timestamp, this sorts from old to new replica sets.
+type PodsByNameOlder []*corev1.Pod
+
+func (o PodsByNameOlder) Len() int      { return len(o) }
+func (o PodsByNameOlder) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o PodsByNameOlder) Less(i, j int) bool {
+	if o[i].Name == o[j].Name {
+		return PodsByCreationTimestamp(o).Less(i, j)
+	}
+	return o[i].Name > o[j].Name
+}
+
+// PodsByNameNewer sorts a list of Pod by size in descending order, using their creation timestamp or name as a tie breaker.
+// By using the creation timestamp, this sorts from new to old replica sets.
+type PodsByNameNewer []*corev1.Pod
+
+func (o PodsByNameNewer) Len() int      { return len(o) }
+func (o PodsByNameNewer) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o PodsByNameNewer) Less(i, j int) bool {
+	if o[i].Name == o[j].Name {
+		return PodsByCreationTimestamp(o).Less(j, i)
+	}
+	return o[i].Name > o[j].Name
 }
