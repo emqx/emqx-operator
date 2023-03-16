@@ -2,13 +2,18 @@ package v2alpha1
 
 import (
 	"context"
+	"encoding/json"
+	"sort"
 	"time"
 
 	emperror "emperror.dev/errors"
+	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -22,12 +27,130 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p 
 		return subResult{result: ctrl.Result{RequeueAfter: time.Second}}
 	}
 
-	deploy := generateDeployment(instance)
+	deploy := a.getNewDeployment(ctx, instance)
+	if deploy.UID == "" {
+		if err := ctrl.SetControllerReference(instance, deploy, a.Scheme); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
+		}
+		if err := a.Handler.Create(deploy); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to create deployment")}
+		}
+		return subResult{result: ctrl.Result{}}
+	}
+
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{deploy}); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update deployment")}
 	}
 
+	if err := a.syncDeployment(ctx, instance); err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to sync deployment")}
+	}
+
 	return subResult{}
+}
+
+func (a *addRepl) getNewDeployment(ctx context.Context, instance *appsv2alpha1.EMQX) *appsv1.Deployment {
+	list := &appsv1.DeploymentList{}
+	_ = a.Client.List(ctx, list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+	)
+
+	deploy := generateDeployment(instance)
+
+	patchOpts := []patch.CalculateOption{
+		justCheckPodTemplate(),
+	}
+
+	for _, d := range list.Items {
+		patchResult, _ := a.Patcher.Calculate(
+			d.DeepCopy(),
+			deploy.DeepCopy(),
+			patchOpts...,
+		)
+		if patchResult.IsEmpty() {
+			deploy.ObjectMeta = *d.ObjectMeta.DeepCopy()
+			return deploy
+		}
+	}
+
+	return deploy
+}
+
+func (a *addRepl) syncDeployment(ctx context.Context, instance *appsv2alpha1.EMQX) error {
+	list := &appsv1.DeploymentList{}
+	_ = a.Client.List(ctx, list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+	)
+	dList := handlerDeploymentList(list)
+	if len(dList) <= 1 {
+		return nil
+	}
+
+	old := dList[0].DeepCopy()
+	// https://github.com/kubernetes-sigs/kubebuilder/issues/547#issuecomment-450772300
+	eventList, _ := a.Clientset.CoreV1().Events(old.Namespace).List(context.Background(), metav1.ListOptions{
+		FieldSelector: "involvedObject.name=" + old.Name,
+	})
+	eList := handlerEventList(eventList)
+
+	if canBeScaledDown(instance, dList[len(dList)-1].DeepCopy(), eList) {
+		old.Spec.Replicas = pointer.Int32Ptr(old.Status.Replicas - 1)
+		if err := a.Client.Update(ctx, old); err != nil {
+			return emperror.Wrap(err, "failed to scale down old deployment")
+		}
+		return nil
+	}
+	return nil
+}
+
+func handlerDeploymentList(list *appsv1.DeploymentList) []*appsv1.Deployment {
+	dList := []*appsv1.Deployment{}
+	for _, d := range list.Items {
+		if d.Status.Replicas != 0 && d.Status.ReadyReplicas == d.Status.Replicas {
+			dList = append(dList, d.DeepCopy())
+		}
+	}
+	sort.Sort(DeploymentsByCreationTimestamp(dList))
+	return dList
+}
+
+func handlerEventList(list *corev1.EventList) []*corev1.Event {
+	eList := []*corev1.Event{}
+	for _, e := range list.Items {
+		if e.Reason == "ScalingReplicaSet" {
+			eList = append(eList, e.DeepCopy())
+		}
+	}
+	sort.Sort(EventsByLastTimestamp(eList))
+	return eList
+}
+
+func canBeScaledDown(instance *appsv2alpha1.EMQX, currentDeployment *appsv1.Deployment, eList []*corev1.Event) bool {
+	var initialDelaySecondsReady bool
+	var waitTakeover bool
+	for _, c := range currentDeployment.Status.Conditions {
+		if c.Type == appsv1.DeploymentAvailable && c.Status == corev1.ConditionTrue {
+			delay := time.Since(c.LastTransitionTime.Time).Seconds()
+			if int32(delay) > instance.Spec.BlueGreenUpdate.InitialDelaySeconds {
+				initialDelaySecondsReady = true
+			}
+		}
+	}
+
+	if len(eList) == 0 {
+		waitTakeover = true
+		return initialDelaySecondsReady && waitTakeover
+	}
+
+	lastEvent := eList[len(eList)-1]
+	delay := time.Since(lastEvent.LastTimestamp.Time).Seconds()
+	if int32(delay) > instance.Spec.BlueGreenUpdate.EvacuationStrategy.WaitTakeover {
+		waitTakeover = true
+	}
+
+	return initialDelaySecondsReady && waitTakeover
 }
 
 func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
@@ -37,10 +160,10 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   instance.Namespace,
-			Name:        instance.Spec.ReplicantTemplate.Name,
-			Labels:      instance.Spec.ReplicantTemplate.Labels,
-			Annotations: instance.Spec.ReplicantTemplate.Annotations,
+			Namespace:    instance.Namespace,
+			GenerateName: instance.Spec.ReplicantTemplate.Name + "-",
+			Labels:       instance.Spec.ReplicantTemplate.Labels,
+			Annotations:  instance.Spec.ReplicantTemplate.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: instance.Spec.ReplicantTemplate.Spec.Replicas,
@@ -169,4 +292,55 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 			},
 		},
 	}
+}
+
+// JustCheckPodTemplate will check only the differences between the podTemplate of the two statefulSets
+func justCheckPodTemplate() patch.CalculateOption {
+	getPodTemplate := func(obj []byte) ([]byte, error) {
+		podTemplateJson := gjson.GetBytes(obj, "spec.template")
+		podTemplate := &corev1.PodTemplateSpec{}
+		_ = json.Unmarshal([]byte(podTemplateJson.String()), podTemplate)
+
+		emptySts := &appsv1.StatefulSet{}
+		emptySts.Spec.Template = *podTemplate
+		return json.Marshal(emptySts)
+	}
+
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := getPodTemplate(current)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
+		}
+
+		modified, err = getPodTemplate(modified)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+// DeploymentsByCreationTimestamp sorts a list of Deployment by creation timestamp, using their names as a tie breaker.
+type DeploymentsByCreationTimestamp []*appsv1.Deployment
+
+func (o DeploymentsByCreationTimestamp) Len() int      { return len(o) }
+func (o DeploymentsByCreationTimestamp) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o DeploymentsByCreationTimestamp) Less(i, j int) bool {
+	if o[i].CreationTimestamp.Equal(&o[j].CreationTimestamp) {
+		return o[i].Name < o[j].Name
+	}
+	return o[i].CreationTimestamp.Before(&o[j].CreationTimestamp)
+}
+
+// EventsByLastTimestamp sorts a list of Event by last timestamp, using their creation timestamp as a tie breaker.
+type EventsByLastTimestamp []*corev1.Event
+
+func (o EventsByLastTimestamp) Len() int      { return len(o) }
+func (o EventsByLastTimestamp) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o EventsByLastTimestamp) Less(i, j int) bool {
+	if o[i].LastTimestamp.Equal(&o[j].LastTimestamp) {
+		return o[i].CreationTimestamp.Second() < o[j].CreationTimestamp.Second()
+	}
+	return o[i].LastTimestamp.Before(&o[j].LastTimestamp)
 }
