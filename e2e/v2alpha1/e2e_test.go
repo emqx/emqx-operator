@@ -28,6 +28,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gomegaTypes "github.com/onsi/gomega/types"
 
@@ -134,25 +135,31 @@ var _ = Describe("E2E Test", func() {
 		}, timeout, interval).Should(BeTrue())
 	})
 
-	Context("Check EMQX Custom Resource", func() {
+	Context("Check EMQX Custom Resource", Label("base"), func() {
 		instance := &appsv2alpha1.EMQX{}
 
 		It("", func() {
-			By("Checking the EMQX Custom Resource's Status")
-			for _, matcher := range []gomegaTypes.GomegaMatcher{
-				HaveField("Conditions", ConsistOf(conditions)),
-				HaveField("CurrentImage", Equal("emqx:5.0")),
-				HaveField("EMQXNodes", HaveLen(4)),
-				HaveField("CoreNodeReplicas", Equal(int32(1))),
-				HaveField("CoreNodeReadyReplicas", Equal(int32(1))),
-				HaveField("ReplicantNodeReplicas", Equal(int32(3))),
-				HaveField("ReplicantNodeReadyReplicas", Equal(int32(3))),
-			} {
-				Eventually(func() appsv2alpha1.EMQXStatus {
-					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
-					return instance.Status
-				}, timeout, interval).Should(matcher)
-			}
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)).Should(Succeed())
+
+			By("Checking the EMQX Replicant Pod Conditions")
+			Eventually(func() []corev1.PodStatus {
+				pods := &corev1.PodList{}
+				_ = k8sClient.List(context.TODO(), pods,
+					client.InNamespace("e2e-test-v2alpha1"),
+					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+				)
+				s := []corev1.PodStatus{}
+				for _, pod := range pods.Items {
+					if pod.Status.Phase == corev1.PodRunning {
+						s = append(s, pod.Status)
+					}
+				}
+				return s
+			}, timeout, interval).Should(HaveEach(
+				HaveField("Conditions", ContainElements(
+					HaveField("Type", appsv2alpha1.PodInCluster),
+					HaveField("Type", corev1.PodReady),
+				))))
 
 			By("Checking the EMQX Custom Resource's Service")
 			svc := &corev1.Service{}
@@ -182,6 +189,23 @@ var _ = Describe("E2E Test", func() {
 					Protocol: &[]corev1.Protocol{listenerPorts[1].Protocol}[0],
 				},
 			}))
+
+			By("Checking the EMQX Custom Resource's Status")
+			for _, matcher := range []gomegaTypes.GomegaMatcher{
+				HaveField("Conditions", ConsistOf(conditions)),
+				HaveField("CurrentImage", Equal("emqx:5.0")),
+				HaveField("EMQXNodes", HaveLen(4)),
+				HaveField("CoreNodeReplicas", Equal(int32(1))),
+				HaveField("CoreNodeReadyReplicas", Equal(int32(1))),
+				HaveField("ReplicantNodeReplicas", Equal(int32(3))),
+				HaveField("ReplicantNodeReadyReplicas", Equal(int32(3))),
+			} {
+				Eventually(func() appsv2alpha1.EMQXStatus {
+					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: "e2e-test", Namespace: "e2e-test-v2alpha1"}, instance)
+					return instance.Status
+				}, timeout, interval).Should(matcher)
+			}
+
 		})
 	})
 
