@@ -63,6 +63,7 @@ func init() {
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups="",resources=pods/portforward,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=pods/status,verbs=patch
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch

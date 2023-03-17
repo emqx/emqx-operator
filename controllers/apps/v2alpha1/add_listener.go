@@ -124,11 +124,8 @@ func (a *addListener) getEndpoints(ctx context.Context, instance *appsv2alpha1.E
 
 	endpoints := []discoveryv1.Endpoint{}
 	for _, pod := range podList.Items {
-		if pod.Status.Phase != corev1.PodRunning {
-			continue
-		}
-		for _, node := range instance.Status.EMQXNodes {
-			if node.Node == "emqx@"+pod.Status.PodIP {
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
 				endpoints = append(endpoints, discoveryv1.Endpoint{
 					Addresses: []string{pod.Status.PodIP},
 					Conditions: discoveryv1.EndpointConditions{

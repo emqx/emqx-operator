@@ -53,6 +53,11 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 					Annotations: instance.Spec.ReplicantTemplate.Annotations,
 				},
 				Spec: corev1.PodSpec{
+					ReadinessGates: []corev1.PodReadinessGate{
+						{
+							ConditionType: appsv2alpha1.PodInCluster,
+						},
+					},
 					ImagePullSecrets: instance.Spec.ImagePullSecrets,
 					SecurityContext:  instance.Spec.ReplicantTemplate.Spec.PodSecurityContext,
 					Affinity:         instance.Spec.ReplicantTemplate.Spec.Affinity,

@@ -27,6 +27,11 @@ import (
 type ConditionType string
 
 const (
+	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
+	PodInCluster corev1.PodConditionType = "apps.emqx.io/in-cluster"
+)
+
+const (
 	ClusterCreating     ConditionType = "Creating"
 	ClusterCoreUpdating ConditionType = "CoreNodesUpdating"
 	ClusterCoreReady    ConditionType = "CoreNodesReady"

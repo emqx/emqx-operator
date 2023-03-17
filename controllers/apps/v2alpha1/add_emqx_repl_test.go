@@ -68,12 +68,16 @@ func TestGenerateD(t *testing.T) {
 
 	t.Run("check deploy template spec", func(t *testing.T) {
 		emqx := instance.DeepCopy()
+		got := generateDeployment(emqx)
+		assert.Equal(t, []corev1.PodReadinessGate{
+			{ConditionType: appsv2alpha1.PodInCluster},
+		}, got.Spec.Template.Spec.ReadinessGates)
 
 		emqx.Spec.ReplicantTemplate.Spec.Affinity = &corev1.Affinity{}
 		emqx.Spec.ReplicantTemplate.Spec.ToleRations = []corev1.Toleration{{Key: "fake"}}
 		emqx.Spec.ReplicantTemplate.Spec.NodeSelector = map[string]string{"fake": "fake"}
 		emqx.Spec.ReplicantTemplate.Spec.NodeName = "fake"
-		got := generateDeployment(emqx)
+		got = generateDeployment(emqx)
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Spec.Affinity, got.Spec.Template.Spec.Affinity)
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Spec.ToleRations, got.Spec.Template.Spec.Tolerations)
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Spec.NodeSelector, got.Spec.Template.Spec.NodeSelector)
