@@ -14,6 +14,21 @@ Package v2alpha1 contains API Schema definitions for the apps v2alpha1 API group
 
 
 
+#### BlueGreenUpdate
+
+
+
+
+
+_Appears in:_
+- [EMQXSpec](#emqxspec)
+
+| Field | Description |
+| --- | --- |
+| `initialDelaySeconds` _integer_ | Number of seconds before evacuation connection start. |
+| `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ | Number of seconds before evacuation connection timeout. |
+
+
 #### BootstrapAPIKey
 
 
@@ -205,6 +220,7 @@ _Appears in:_
 | `image` _string_ | EMQX image name. More info: https://kubernetes.io/docs/concepts/containers/images |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
+| `blueGreenUpdate` _[BlueGreenUpdate](#bluegreenupdate)_ | BlueGreenUpdate is the object that describes the EMQX blue-green update strategy |
 | `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
 | `bootstrapConfig` _string_ | EMQX bootstrap config, HOCON style, like emqx.conf Cannot be updated. |
 | `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | CoreTemplate is the object that describes the EMQX core node that will be created |
@@ -231,6 +247,22 @@ _Appears in:_
 | `replicantNodeReadyReplicas` _integer_ | ReplicantNodeReadyReplicas is the number of EMQX replicant node Pods created for this EMQX Custom Resource with a Ready Condition. |
 | `emqxNodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
 | `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
+
+
+#### EvacuationStrategy
+
+
+
+
+
+_Appears in:_
+- [BlueGreenUpdate](#bluegreenupdate)
+
+| Field | Description |
+| --- | --- |
+| `waitTakeover` _integer_ |  |
+| `connEvictRate` _integer_ | Just work in EMQX Enterprise Edition. |
+| `sessEvictRate` _integer_ | Just work in EMQX Enterprise Edition. |
 
 
 
