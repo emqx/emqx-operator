@@ -179,6 +179,24 @@ type BootstrapAPIKey struct {
 	Secret string `json:"secret"`
 }
 
+type EvacuationStrategy struct {
+	//+kubebuilder:validation:Minimum=0
+	WaitTakeover int32 `json:"waitTakeover,omitempty"`
+	// Just work in EMQX Enterprise Edition.
+	//+kubebuilder:validation:Minimum=1
+	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
+	// Just work in EMQX Enterprise Edition.
+	//+kubebuilder:validation:Minimum=1
+	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
+}
+
+type BlueGreenUpdate struct {
+	// Number of seconds before evacuation connection start.
+	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
+	// Number of seconds before evacuation connection timeout.
+	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
+}
+
 // EMQXSpec defines the desired state of EMQX
 type EMQXSpec struct {
 	// EMQX image name.
@@ -194,6 +212,8 @@ type EMQXSpec struct {
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	// BlueGreenUpdate is the object that describes the EMQX blue-green update strategy
+	BlueGreenUpdate BlueGreenUpdate `json:"blueGreenUpdate,omitempty"`
 	// EMQX bootstrap user
 	// Cannot be updated.
 	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`

@@ -13988,6 +13988,27 @@ spec:
               type: object
             spec:
               properties:
+                blueGreenUpdate:
+                  properties:
+                    evacuationStrategy:
+                      properties:
+                        connEvictRate:
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        sessEvictRate:
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        waitTakeover:
+                          format: int32
+                          minimum: 0
+                          type: integer
+                      type: object
+                    initialDelaySeconds:
+                      format: int32
+                      type: integer
+                  type: object
                 bootstrapAPIKeys:
                   items:
                     properties:
