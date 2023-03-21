@@ -26,8 +26,10 @@ import (
 	"github.com/emqx/emqx-operator/internal/handler"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	gomegaTypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -131,13 +133,45 @@ var lwm2m = &appsv1beta4.EmqxPlugin{
 	},
 }
 
+var ports = []corev1.ServicePort{
+	{
+		Name:       "mqtt-tcp-1883",
+		Port:       1883,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(1883),
+	},
+	{
+		Name:       "mqtt-ssl-8883",
+		Port:       8883,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(8883),
+	},
+	{
+		Name:       "mqtt-ws-8083",
+		Port:       8083,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(8083),
+	},
+	{
+		Name:       "mqtt-wss-8084",
+		Port:       8084,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(8084),
+	},
+}
+
+var headlessPort = corev1.ServicePort{
+	Name:       "http-management-8081",
+	Port:       8081,
+	Protocol:   corev1.ProtocolTCP,
+	TargetPort: intstr.FromInt(8081),
+}
+
 var _ = Describe("Base E2E Test", func() {
 	DescribeTable("",
 		func(emqx appsv1beta4.Emqx, plugin *appsv1beta4.EmqxPlugin) {
 			var pluginList []string
 			var pluginPorts []corev1.ServicePort
-			var ports []corev1.ServicePort
-			var headlessPort corev1.ServicePort
 
 			pluginList = []string{"emqx_eviction_agent", "emqx_node_rebalance", "emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
 			if _, ok := emqx.(*appsv1beta4.EmqxEnterprise); ok {
@@ -171,39 +205,6 @@ var _ = Describe("Base E2E Test", func() {
 				},
 			}
 
-			ports = []corev1.ServicePort{
-				{
-					Name:       "mqtt-tcp-1883",
-					Port:       1883,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(1883),
-				},
-				{
-					Name:       "mqtt-ssl-8883",
-					Port:       8883,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8883),
-				},
-				{
-					Name:       "mqtt-ws-8083",
-					Port:       8083,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8083),
-				},
-				{
-					Name:       "mqtt-wss-8084",
-					Port:       8084,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8084),
-				},
-			}
-
-			headlessPort = corev1.ServicePort{
-				Name:       "http-management-8081",
-				Port:       8081,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(8081),
-			}
 			By("create EMQX CR")
 			createEmqx(emqx)
 
@@ -223,6 +224,10 @@ var _ = Describe("Base E2E Test", func() {
 			sts := &appsv1.StatefulSet{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), sts)).Should(Succeed())
 			Expect(sts.Spec.Template.Annotations).Should(HaveKey(handler.ManageContainersAnnotation))
+
+			By("checking the EMQX Custom Resource's EndpointSlice", func() {
+				checkPodAndEndpointSlice(emqx, ports, pluginPorts, headlessPort, 1)
+			})
 
 			By("check plugins")
 			Eventually(func() []string {
@@ -268,19 +273,9 @@ var _ = Describe("Base E2E Test", func() {
 				return svc.Spec.Ports
 			}, timeout, interval).Should(ContainElements(headlessPort))
 
-			By("check service ports")
-			Eventually(func() []corev1.ServicePort {
-				svc := &corev1.Service{}
-				_ = k8sClient.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      emqx.GetName(),
-						Namespace: emqx.GetNamespace(),
-					},
-					svc,
-				)
-				return svc.Spec.Ports
-			}, timeout, interval).Should(ContainElements(append(pluginPorts, append(ports, headlessPort)...)))
+			By("check service ports", func() {
+				checkService(emqx, ports, pluginPorts, headlessPort)
+			})
 
 			By("update EMQX Plugin")
 			Eventually(func() error {
@@ -330,19 +325,9 @@ var _ = Describe("Base E2E Test", func() {
 				},
 			}
 
-			By("check service ports")
-			Eventually(func() []corev1.ServicePort {
-				svc := &corev1.Service{}
-				_ = k8sClient.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      emqx.GetName(),
-						Namespace: emqx.GetNamespace(),
-					},
-					svc,
-				)
-				return svc.Spec.Ports
-			}, timeout, interval).Should(ContainElements(append(pluginPorts, append(ports, headlessPort)...)))
+			By("check service ports", func() {
+				checkService(emqx, ports, pluginPorts, headlessPort)
+			})
 
 			By("delete EMQX CR and EMQX Plugin")
 			deleteEmqx(emqx)
@@ -400,13 +385,6 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return sts.Status.CurrentRevision
 			}, timeout, interval).ShouldNot(BeEmpty())
 
-			By("check service selector")
-			Eventually(func() map[string]string {
-				svc := &corev1.Service{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
-				return svc.Spec.Selector
-			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", sts.Status.CurrentRevision))
-
 			By("check currentStatefulSetVersion in CR status")
 			Eventually(func() string {
 				ee := &appsv1beta4.EmqxEnterprise{}
@@ -433,6 +411,10 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				}
 				return corev1.ConditionUnknown
 			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+
+			By("checking the EMQX Custom Resource's EndpointSlice", func() {
+				checkPodAndEndpointSlice(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
+			})
 
 			By("update EMQX CR")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), emqx)).Should(Succeed())
@@ -517,6 +499,10 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return corev1.ConditionUnknown
 			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
 
+			By("checking the EMQX Custom Resource's EndpointSlice when blue-green", func() {
+				checkPodAndEndpointSlice(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
+			})
+
 			Eventually(func() []corev1.Pod {
 				podList := &corev1.PodList{}
 				_ = k8sClient.List(
@@ -529,13 +515,6 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				)
 				return podList.Items
 			}, timeout, interval).Should(HaveLen(0))
-
-			By("check service selector")
-			Eventually(func() map[string]string {
-				svc := &corev1.Service{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
-				return svc.Spec.Selector
-			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", newSts.Status.CurrentRevision))
 
 			By("check currentStatefulSetVersion in CR status")
 			Eventually(func() string {
@@ -617,4 +596,84 @@ func deleteEmqx(emqx appsv1beta4.Emqx) {
 		err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetNamespace()}, &corev1.Namespace{})
 		return k8sErrors.IsNotFound(err)
 	}, timeout, interval).Should(BeTrue())
+}
+
+func checkService(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1.ServicePort, headlessPort corev1.ServicePort) {
+	Eventually(func() []corev1.ServicePort {
+		svc := &corev1.Service{}
+		_ = k8sClient.Get(
+			context.Background(),
+			types.NamespacedName{
+				Name:      emqx.GetName(),
+				Namespace: emqx.GetNamespace(),
+			},
+			svc,
+		)
+		return svc.Spec.Ports
+	}, timeout, interval).Should(ContainElements(append(pluginPorts, append(ports, headlessPort)...)))
+}
+
+func checkPodAndEndpointSlice(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1.ServicePort, headlessPort corev1.ServicePort, count int) {
+	podList := &corev1.PodList{}
+	Eventually(func() []corev1.Pod {
+		_ = k8sClient.List(context.TODO(), podList,
+			client.InNamespace(emqx.GetNamespace()),
+			client.MatchingLabels(emqx.GetSpec().GetTemplate().Labels),
+		)
+		return podList.Items
+	}, timeout, interval).Should(
+		And(
+			HaveLen(count),
+			HaveEach(
+				HaveField("Status", And(
+					HaveField("Phase", corev1.PodRunning),
+					HaveField("Conditions", ContainElements(
+						HaveField("Type", appsv1beta4.PodOnServing),
+						HaveField("Type", corev1.PodReady),
+					))),
+				)),
+		),
+	)
+
+	matchers := []gomegaTypes.GomegaMatcher{}
+	for _, p := range podList.Items {
+		pod := p.DeepCopy()
+		m := And(
+			HaveField("Addresses", ConsistOf([]string{pod.Status.PodIP})),
+			HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
+			HaveField("Conditions", And(
+				HaveField("Ready", HaveValue(BeTrue())),
+				HaveField("Serving", HaveValue(BeTrue())),
+				HaveField("Terminating", BeNil()),
+			)),
+			HaveField("TargetRef", And(
+				HaveField("Kind", "Pod"),
+				HaveField("UID", pod.GetUID()),
+				HaveField("Name", pod.GetName()),
+				HaveField("Namespace", pod.GetNamespace()),
+			)),
+		)
+		matchers = append(matchers, m)
+	}
+
+	servicePorts := append(pluginPorts, append(ports, headlessPort)...)
+	endpointPorts := []discoveryv1.EndpointPort{}
+	for _, port := range servicePorts {
+		endpointPorts = append(endpointPorts, discoveryv1.EndpointPort{
+			Name:     pointer.String(port.Name),
+			Port:     pointer.Int32(port.Port),
+			Protocol: &[]corev1.Protocol{port.Protocol}[0],
+		})
+	}
+
+	ep := &discoveryv1.EndpointSlice{}
+	Eventually(func() *discoveryv1.EndpointSlice {
+		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetSpec().GetServiceTemplate().Name, Namespace: emqx.GetSpec().GetServiceTemplate().Namespace}, ep)
+		return ep
+	}, timeout, interval).Should(
+		And(
+			HaveField("Endpoints", ConsistOf(matchers)),
+			HaveField("Ports", ContainElements(endpointPorts)),
+		),
+	)
 }
