@@ -7,6 +7,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
+	PodInCluster corev1.PodConditionType = "apps.emqx.io/in-cluster"
+
+	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-Serving"
+)
+
 // Phase of the RF status
 type Phase string
 
@@ -113,4 +120,17 @@ func indexCondition(conditions []Condition, t ConditionType) int {
 		}
 	}
 	return -1
+}
+
+func IsClusterReady(s EmqxStatus) bool {
+	index := indexCondition(s.GetConditions(), ConditionRunning)
+	if index == 0 && s.GetConditions()[index].Status == corev1.ConditionTrue {
+		return true
+	}
+	index = indexCondition(s.GetConditions(), ConditionBlueGreenUpdating)
+	if index == 0 && s.GetConditions()[index].Status == corev1.ConditionTrue {
+		return true
+	}
+
+	return false
 }

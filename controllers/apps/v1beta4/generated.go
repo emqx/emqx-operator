@@ -19,10 +19,10 @@ package v1beta4
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/emqx/emqx-operator/internal/handler"
 	"github.com/sethvargo/go-password/password"
@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -292,7 +293,7 @@ func generateEmqxACL(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 	}
 }
 
-func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
+func generateHeadlessService(instance appsv1beta4.Emqx) *corev1.Service {
 	names := appsv1beta4.Names{Object: instance}
 
 	headlessSvc := &corev1.Service{
@@ -311,45 +312,17 @@ func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePo
 			Type:                     corev1.ServiceTypeClusterIP,
 			ClusterIP:                corev1.ClusterIPNone,
 			PublishNotReadyAddresses: true,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http-management-8081",
+					Port:       8081,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8081),
+				},
+			},
 		},
-	}
-
-	compile := regexp.MustCompile(".*management.*")
-
-	for _, port := range appsv1beta4.MergeServicePorts(
-		instance.GetSpec().GetServiceTemplate().Spec.Ports,
-		port,
-	) {
-		if compile.MatchString(port.Name) {
-			// Headless services must not set nodePort
-			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, corev1.ServicePort{
-				Name:        port.Name,
-				Protocol:    port.Protocol,
-				AppProtocol: port.AppProtocol,
-				TargetPort:  port.TargetPort,
-				Port:        port.Port,
-			})
-		}
 	}
 	return headlessSvc
-}
-
-func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
-	if instance.GetStatus().GetCurrentStatefulSetVersion() == "" {
-		return nil
-	}
-	serviceTemplate := instance.GetSpec().GetServiceTemplate()
-	serviceTemplate.Spec.Ports = appsv1beta4.MergeServicePorts(serviceTemplate.Spec.Ports, port)
-	serviceTemplate.Spec.Selector["controller-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
-
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: serviceTemplate.ObjectMeta,
-		Spec:       serviceTemplate.Spec,
-	}
 }
 
 func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
@@ -399,12 +372,22 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 		TTY:                      emqxTemplate.Spec.EmqxContainer.TTY,
 	}
 
+	emqxTemplate.Labels["apps.emqx.io/statefulSet-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
+
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      emqxTemplate.Labels,
 			Annotations: emqxTemplate.Annotations,
 		},
 		Spec: corev1.PodSpec{
+			ReadinessGates: []corev1.PodReadinessGate{
+				{
+					ConditionType: v1beta4.PodInCluster,
+				},
+				{
+					ConditionType: v1beta4.PodOnServing,
+				},
+			},
 			Affinity:            emqxTemplate.Spec.Affinity,
 			Tolerations:         emqxTemplate.Spec.Tolerations,
 			NodeName:            emqxTemplate.Spec.NodeName,

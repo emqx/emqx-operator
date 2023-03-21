@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
 	"github.com/emqx/emqx-operator/internal/handler"
@@ -28,6 +29,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -223,6 +225,50 @@ var _ = Describe("Base E2E Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), sts)).Should(Succeed())
 			Expect(sts.Spec.Template.Annotations).Should(HaveKey(handler.ManageContainersAnnotation))
 
+			By("Checking the EMQX Pod Conditions")
+			Eventually(func() []corev1.PodStatus {
+				pods := &corev1.PodList{}
+				_ = k8sClient.List(context.TODO(), pods,
+					client.InNamespace(emqx.GetNamespace()),
+					client.MatchingLabels(emqx.GetLabels()),
+				)
+				s := []corev1.PodStatus{}
+				for _, pod := range pods.Items {
+					if pod.Status.Phase == corev1.PodRunning {
+						s = append(s, pod.Status)
+					}
+				}
+				return s
+			}, timeout, interval).Should(HaveEach(
+				HaveField("Conditions", ContainElements(
+					HaveField("Type", v1beta4.PodInCluster),
+					HaveField("Type", corev1.PodReady),
+					HaveField("Type", v1beta4.PodOnServing),
+				))))
+
+			By("Checking the EMQX Custom Resource's EndpointSlice")
+			ep := &discoveryv1.EndpointSlice{}
+			Eventually(func() []discoveryv1.Endpoint {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetSpec().GetServiceTemplate().Name, Namespace: emqx.GetSpec().GetServiceTemplate().Namespace}, ep)
+				return ep.Endpoints
+			}, timeout, interval).Should(HaveLen(3))
+
+			Eventually(func() []discoveryv1.EndpointPort {
+				_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetSpec().GetServiceTemplate().Name, Namespace: emqx.GetSpec().GetServiceTemplate().Namespace}, ep)
+				return ep.Ports
+			}, timeout, interval).Should(ConsistOf([]discoveryv1.EndpointPort{
+				{
+					Name:     &[]string{ports[0].Name}[0],
+					Port:     &[]int32{ports[0].Port}[0],
+					Protocol: &[]corev1.Protocol{ports[0].Protocol}[0],
+				},
+				{
+					Name:     &[]string{ports[1].Name}[0],
+					Port:     &[]int32{ports[1].Port}[0],
+					Protocol: &[]corev1.Protocol{ports[1].Protocol}[0],
+				},
+			}))
+
 			By("check plugins")
 			Eventually(func() []string {
 				list := appsv1beta4.EmqxPluginList{}
@@ -265,7 +311,7 @@ var _ = Describe("Base E2E Test", func() {
 					svc,
 				)
 				return svc.Spec.Ports
-			}, timeout, interval).Should(ContainElements(headlessPort))
+			}, timeout, interval).Should(Equal(headlessPort))
 
 			By("check service ports")
 			Eventually(func() []corev1.ServicePort {
@@ -399,13 +445,6 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return sts.Status.CurrentRevision
 			}, timeout, interval).ShouldNot(BeEmpty())
 
-			By("check service selector")
-			Eventually(func() map[string]string {
-				svc := &corev1.Service{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
-				return svc.Spec.Selector
-			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", sts.Status.CurrentRevision))
-
 			By("check currentStatefulSetVersion in CR status")
 			Eventually(func() string {
 				ee := &appsv1beta4.EmqxEnterprise{}
@@ -528,13 +567,6 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				)
 				return podList.Items
 			}, timeout, interval).Should(HaveLen(0))
-
-			By("check service selector")
-			Eventually(func() map[string]string {
-				svc := &corev1.Service{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), svc)
-				return svc.Spec.Selector
-			}, timeout, interval).Should(HaveKeyWithValue("controller-revision-hash", newSts.Status.CurrentRevision))
 
 			By("check currentStatefulSetVersion in CR status")
 			Eventually(func() string {
