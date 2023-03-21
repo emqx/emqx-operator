@@ -2893,7 +2893,7 @@ spec:
                         type: object
                       replicas:
                         format: int32
-                        minimum: 1
+                        minimum: 2
                         type: integer
                       resources:
                         properties:
@@ -6296,7 +6296,7 @@ spec:
                         type: object
                       replicas:
                         format: int32
-                        minimum: 1
+                        minimum: 2
                         type: integer
                       resources:
                         properties:

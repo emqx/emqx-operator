@@ -154,7 +154,7 @@ var _ = Describe("Base Test", func() {
 				Eventually(func() []discoveryv1.Endpoint {
 					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
 					return ep.Endpoints
-				}, timeout, interval).Should(HaveLen(int(instance.Status.ReplicantNodeReplicas)))
+				}, timeout, interval).Should(HaveLen(int(*instance.Spec.ReplicantTemplate.Spec.Replicas)))
 				Eventually(func() []discoveryv1.EndpointPort {
 					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
 					return ep.Ports
@@ -356,9 +356,9 @@ func deleteResource(instance *appsv2alpha1.EMQX) {
 
 func checkRunning(instance *appsv2alpha1.EMQX) {
 	for _, matcher := range []gomegaTypes.GomegaMatcher{
-		HaveField("EMQXNodes", HaveLen(3)),
-		HaveField("CoreNodeReplicas", Equal(int32(1))),
-		HaveField("CoreNodeReadyReplicas", Equal(int32(1))),
+		HaveField("EMQXNodes", HaveLen(4)),
+		HaveField("CoreNodeReplicas", Equal(int32(2))),
+		HaveField("CoreNodeReadyReplicas", Equal(int32(2))),
 		HaveField("ReplicantNodeReplicas", Equal(int32(2))),
 		HaveField("ReplicantNodeReadyReplicas", Equal(int32(2))),
 		HaveField("Conditions", ConsistOf(

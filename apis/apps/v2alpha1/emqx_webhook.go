@@ -231,7 +231,7 @@ func (r *EMQX) defaultBootstrapConfig() {
 
 func (r *EMQX) defaultReplicas() {
 	if r.Spec.CoreTemplate.Spec.Replicas == nil {
-		r.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
+		r.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
 	}
 	if r.Spec.ReplicantTemplate.Spec.Replicas == nil {
 		r.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(3)
