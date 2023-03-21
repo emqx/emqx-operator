@@ -38,12 +38,6 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 		if containersReady && !podReady && !podInCluster {
 			for _, node := range instance.Status.EMQXNodes {
 				if node.Node == "emqx@"+pod.Status.PodIP {
-					annotations := pod.Annotations
-					if annotations == nil {
-						annotations = map[string]string{}
-					}
-					annotations[string(appsv2alpha1.PodInCluster)] = "true"
-					pod.Annotations = annotations
 					patch := []map[string]interface{}{
 						{
 							"op":   "add",
