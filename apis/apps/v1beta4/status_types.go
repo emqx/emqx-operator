@@ -7,6 +7,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
+)
+
 // Phase of the RF status
 type Phase string
 

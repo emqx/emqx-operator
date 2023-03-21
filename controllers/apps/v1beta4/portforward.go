@@ -65,7 +65,7 @@ func newPortForwardOptions(client client.Client, clientset *kubernetes.Clientset
 
 	for _, pod := range podMap[sts.UID] {
 		for _, c := range pod.Status.Conditions {
-			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+			if c.Type == corev1.ContainersReady && c.Status == corev1.ConditionTrue {
 				o, err := innerPortFW.NewPortForwardOptions(clientset, config, pod, "8081")
 				if err != nil {
 					return nil, emperror.Wrap(err, "failed to create port forward")
