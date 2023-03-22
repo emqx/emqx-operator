@@ -25,7 +25,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -44,6 +47,7 @@ import (
 var timeout, interval time.Duration
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var emqx *appsv2alpha1.EMQX
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -58,6 +62,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+	emqx = genEMQX()
 	timeout = time.Minute * 5
 	interval = time.Second * 1
 
@@ -112,3 +117,51 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+func genEMQX() *appsv2alpha1.EMQX {
+	emqx := &appsv2alpha1.EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "e2e-test-v2alpha1" + "-" + rand.String(5),
+		},
+		Spec: appsv2alpha1.EMQXSpec{
+			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
+				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
+					Replicas: pointer.Int32(2),
+				},
+			},
+			Image: "emqx:5.0",
+			BootstrapConfig: `
+			gateway.lwm2m {
+			  auto_observe = true
+			  enable_stats = true
+			  idle_timeout = "30s"
+			  lifetime_max = "86400s"
+			  lifetime_min = "1s"
+			  listeners {
+			    udp {
+			      default {
+			        bind = "5783"
+			        max_conn_rate = 1000
+			        max_connections = 1024000
+			      }
+			    }
+			  }
+			  mountpoint = ""
+			  qmode_time_window = "22s"
+			  translators {
+			    command {qos = 0, topic = "dn/#"}
+			    notify {qos = 0, topic = "up/notify"}
+			    register {qos = 0, topic = "up/resp"}
+			    response {qos = 0, topic = "up/resp"}
+			    update {qos = 0, topic = "up/update"}
+			  }
+			  update_msg_publish_condition = "contains_object_list"
+			  xml_dir = "etc/lwm2m_xml/"
+			}
+			`,
+		},
+	}
+	emqx.Default()
+	return emqx
+}

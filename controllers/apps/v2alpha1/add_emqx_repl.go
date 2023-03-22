@@ -280,12 +280,12 @@ func justCheckPodTemplate() patch.CalculateOption {
 	return func(current, modified []byte) ([]byte, []byte, error) {
 		current, err := getPodTemplate(current)
 		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not get pod template field from current byte sequence")
 		}
 
 		modified, err = getPodTemplate(modified)
 		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not get pod template field from modified byte sequence")
 		}
 
 		return current, modified, nil
