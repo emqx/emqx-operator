@@ -35,78 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 var _ = Describe("Base Test", func() {
-	var emqx *appsv2alpha1.EMQX
-	listenerPorts := []corev1.ServicePort{
-		{
-			Name:       "tcp-default",
-			Port:       1883,
-			Protocol:   corev1.ProtocolTCP,
-			TargetPort: intstr.FromInt(1883),
-		},
-		{
-			Name:       "lwm2m-udp-default",
-			Port:       5783,
-			Protocol:   corev1.ProtocolUDP,
-			TargetPort: intstr.FromInt(5783),
-		},
-	}
-
 	BeforeEach(func() {
-		emqx = &appsv2alpha1.EMQX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "emqx",
-				Namespace: "e2e-test-v2alpha1" + "-" + rand.String(5),
-			},
-			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx:5.0",
-				BootstrapAPIKeys: []appsv2alpha1.BootstrapAPIKey{
-					{
-						Key:    "test_key",
-						Secret: "secret",
-					},
-				},
-				BootstrapConfig: `
-				gateway {
-					"lwm2m" {
-					  auto_observe = true
-					  enable_stats = true
-					  idle_timeout = "30s"
-					  lifetime_max = "86400s"
-					  lifetime_min = "1s"
-					  listeners {
-						udp {
-						  default {
-							bind = "5783"
-							max_conn_rate = 1000
-							max_connections = 1024000
-						  }
-						}
-					  }
-					  mountpoint = ""
-					  qmode_time_window = "22s"
-					  translators {
-						command {qos = 0, topic = "dn/#"}
-						notify {qos = 0, topic = "up/notify"}
-						register {qos = 0, topic = "up/resp"}
-						response {qos = 0, topic = "up/resp"}
-						update {qos = 0, topic = "up/update"}
-					  }
-					  update_msg_publish_condition = "contains_object_list"
-					  xml_dir = "etc/lwm2m_xml/"
-					}
-				  }
-				`,
-				ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
-					Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
-						Replicas: pointer.Int32(2),
-					},
-				},
-			},
-		}
 		createResource(emqx.DeepCopy())
 	})
 
@@ -117,75 +49,15 @@ var _ = Describe("Base Test", func() {
 	Context("Check EMQX Custom Resource", Label("base"), func() {
 		instance := &appsv2alpha1.EMQX{}
 
-		It("", func() {
+		It("Base Check", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), instance)).Should(Succeed())
 
 			By("Checking the EMQX Custom Resource's Pod and EndpointSlice", func() {
-				podList := &corev1.PodList{}
-				Eventually(func() []corev1.Pod {
-					_ = k8sClient.List(context.TODO(), podList,
-						client.InNamespace(instance.Namespace),
-						client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-					)
-					return podList.Items
-				}, timeout, interval).Should(
-					And(
-						HaveLen(int(instance.Status.ReplicantNodeReplicas)),
-						HaveEach(
-							HaveField("Status", And(
-								HaveField("Phase", corev1.PodRunning),
-								HaveField("Conditions", ContainElements(
-									HaveField("Type", appsv2alpha1.PodInCluster),
-									HaveField("Type", corev1.PodReady),
-								)))),
-						),
-					),
-				)
-
-				matchers := []gomegaTypes.GomegaMatcher{}
-				for _, p := range podList.Items {
-					pod := p.DeepCopy()
-					m := And(
-						HaveField("Addresses", ConsistOf([]string{pod.Status.PodIP})),
-						HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
-						HaveField("TargetRef", And(
-							HaveField("Kind", "Pod"),
-							HaveField("UID", pod.GetUID()),
-							HaveField("Name", pod.GetName()),
-							HaveField("Namespace", pod.GetNamespace()),
-						)),
-					)
-					matchers = append(matchers, m)
-				}
-
-				ep := &discoveryv1.EndpointSlice{}
-				Eventually(func() []discoveryv1.Endpoint {
-					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
-					return ep.Endpoints
-				}, timeout, interval).Should(ConsistOf(matchers))
-				Eventually(func() []discoveryv1.EndpointPort {
-					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
-					return ep.Ports
-				}, timeout, interval).Should(ConsistOf([]discoveryv1.EndpointPort{
-					{
-						Name:     &[]string{listenerPorts[0].Name}[0],
-						Port:     &[]int32{listenerPorts[0].Port}[0],
-						Protocol: &[]corev1.Protocol{listenerPorts[0].Protocol}[0],
-					},
-					{
-						Name:     &[]string{listenerPorts[1].Name}[0],
-						Port:     &[]int32{listenerPorts[1].Port}[0],
-						Protocol: &[]corev1.Protocol{listenerPorts[1].Protocol}[0],
-					},
-				}))
+				checkPodAndEndpointSlices(instance, 2)
 			})
 
 			By("Checking the EMQX Custom Resource's Service", func() {
-				svc := &corev1.Service{}
-				Eventually(func() []corev1.ServicePort {
-					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, svc)
-					return svc.Spec.Ports
-				}, timeout, interval).Should(ConsistOf(listenerPorts))
+				checkService(instance)
 			})
 
 			By("Checking the EMQX Custom Resource's Status", func() {
@@ -193,37 +65,8 @@ var _ = Describe("Base Test", func() {
 			})
 		})
 	})
-})
 
-var _ = Describe("EMQX Update Test", func() {
-	var emqx *appsv2alpha1.EMQX
-	var storeImage string = "emqx:5.0"
-	var currentImage string = "emqx:5"
-	BeforeEach(func() {
-		emqx = &appsv2alpha1.EMQX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "emqx",
-				Namespace: "e2e-test-v2alpha1" + "-" + rand.String(5),
-				Labels: map[string]string{
-					"test": "e2e",
-				},
-			},
-			Spec: appsv2alpha1.EMQXSpec{
-				Image: storeImage,
-				ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
-					Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
-						Replicas: pointer.Int32Ptr(2),
-					},
-				},
-			},
-		}
-		createResource(emqx.DeepCopy())
-	})
-	AfterEach(func() {
-		deleteResource(emqx.DeepCopy())
-	})
-
-	Context("Direct Update", func() {
+	Context("Direct Update", Label("update"), func() {
 		instance := &appsv2alpha1.EMQX{}
 		JustBeforeEach(func() {
 			By("Wait EMQX cluster ready")
@@ -236,7 +79,7 @@ var _ = Describe("EMQX Update Test", func() {
 		})
 
 		It("Check Direct Update", func() {
-			By("Checking deployment", func() {
+			By("Checking just once deployment", func() {
 				var deployments *appsv1.DeploymentList
 				Eventually(func() int {
 					deployments = &appsv1.DeploymentList{}
@@ -250,21 +93,19 @@ var _ = Describe("EMQX Update Test", func() {
 				Expect(deployments.Items[0].Status.Replicas).Should(Equal(instance.Status.ReplicantNodeReplicas))
 			})
 
-			By("Checking endpointScales list", func() {
-				ep := &discoveryv1.EndpointSlice{}
-				Eventually(func() []discoveryv1.Endpoint {
-					_ = k8sClient.Get(context.TODO(), types.NamespacedName{
-						Namespace: instance.Namespace,
-						Name:      instance.Spec.ListenersServiceTemplate.Name,
-					}, ep)
-					return ep.Endpoints
-				}, timeout, interval).Should(HaveLen(int(instance.Status.ReplicantNodeReplicas)))
+			By("Checking the EMQX Custom Resource's Pod and EndpointSlice", func() {
+				checkPodAndEndpointSlices(instance, 3)
+			})
+
+			By("Checking the EMQX Custom Resource's Service", func() {
+				checkService(instance)
 			})
 		})
 	})
 
 	Context("Blue Green Update", Label("blue"), func() {
 		instance := &appsv2alpha1.EMQX{}
+		currentImage := "emqx:5"
 		JustBeforeEach(func() {
 			By("Wait EMQX cluster ready")
 			checkRunning(emqx.DeepCopy())
@@ -305,7 +146,7 @@ var _ = Describe("EMQX Update Test", func() {
 				sort.Sort(appscontrollersv2alpha1.DeploymentsByCreationTimestamp(dList))
 
 				old := dList[0].DeepCopy()
-				Expect(old.Spec.Template.Spec.Containers[0].Image).Should(Equal(storeImage))
+				Expect(old.Spec.Template.Spec.Containers[0].Image).Should(Equal(emqx.DeepCopy().Spec.Image))
 				Eventually(func() int32 {
 					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(old), old)
 					return old.Status.Replicas
@@ -320,48 +161,11 @@ var _ = Describe("EMQX Update Test", func() {
 			})
 
 			By("Checking endpointScales list", func() {
-				podList := &corev1.PodList{}
-				Eventually(func() []corev1.Pod {
-					_ = k8sClient.List(context.TODO(), podList,
-						client.InNamespace(instance.Namespace),
-						client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-					)
-					return podList.Items
-				}, timeout, interval).Should(
-					And(
-						HaveLen(int(instance.Status.ReplicantNodeReplicas)),
-						HaveEach(
-							HaveField("Status", And(
-								HaveField("Phase", corev1.PodRunning),
-								HaveField("Conditions", ContainElements(
-									HaveField("Type", appsv2alpha1.PodInCluster),
-									HaveField("Type", corev1.PodReady),
-								)))),
-						),
-					),
-				)
+				checkPodAndEndpointSlices(instance, 2)
+			})
 
-				matchers := []gomegaTypes.GomegaMatcher{}
-				for _, p := range podList.Items {
-					pod := p.DeepCopy()
-					m := And(
-						HaveField("Addresses", ConsistOf([]string{pod.Status.PodIP})),
-						HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
-						HaveField("TargetRef", And(
-							HaveField("Kind", "Pod"),
-							HaveField("UID", pod.GetUID()),
-							HaveField("Name", pod.GetName()),
-							HaveField("Namespace", pod.GetNamespace()),
-						)),
-					)
-					matchers = append(matchers, m)
-				}
-
-				ep := &discoveryv1.EndpointSlice{}
-				Eventually(func() []discoveryv1.Endpoint {
-					_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
-					return ep.Endpoints
-				}, timeout, interval).Should(ConsistOf(matchers))
+			By("Checking the EMQX Custom Resource's Service", func() {
+				checkService(instance)
 			})
 
 			By("Checking the EMQX Custom Resource status", func() {
@@ -404,23 +208,110 @@ func deleteResource(instance *appsv2alpha1.EMQX) {
 	}, timeout, interval).Should(BeTrue())
 }
 
-func checkRunning(instance *appsv2alpha1.EMQX) {
-	for _, matcher := range []gomegaTypes.GomegaMatcher{
-		HaveField("EMQXNodes", HaveLen(4)),
-		HaveField("CoreNodeReplicas", Equal(instance.Spec.CoreTemplate.Spec.Replicas)),
-		HaveField("CoreNodeReadyReplicas", Equal(instance.Spec.CoreTemplate.Spec.Replicas)),
-		HaveField("ReplicantNodeReplicas", Equal(instance.Spec.ReplicantTemplate.Spec.Replicas)),
-		HaveField("ReplicantNodeReadyReplicas", Equal(instance.Spec.ReplicantTemplate.Spec.Replicas)),
-		HaveField("Conditions", ConsistOf(
-			HaveField("Type", appsv2alpha1.ClusterRunning),
-			HaveField("Type", appsv2alpha1.ClusterCoreReady),
-			HaveField("Type", appsv2alpha1.ClusterCoreUpdating),
-			HaveField("Type", appsv2alpha1.ClusterCreating),
-		)),
-	} {
-		Eventually(func() appsv2alpha1.EMQXStatus {
-			_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
-			return instance.Status
-		}, timeout, interval).Should(matcher)
+func checkPodAndEndpointSlices(instance *appsv2alpha1.EMQX, count int) {
+	podList := &corev1.PodList{}
+	Eventually(func() []corev1.Pod {
+		_ = k8sClient.List(context.TODO(), podList,
+			client.InNamespace(instance.Namespace),
+			client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+		)
+		return podList.Items
+	}, timeout, interval).Should(
+		And(
+			HaveLen(count),
+			HaveEach(
+				HaveField("Status", And(
+					HaveField("Phase", corev1.PodRunning),
+					HaveField("Conditions", ContainElements(
+						HaveField("Type", appsv2alpha1.PodInCluster),
+						HaveField("Type", corev1.PodReady),
+					)))),
+			),
+		),
+	)
+
+	matchers := []gomegaTypes.GomegaMatcher{}
+	for _, p := range podList.Items {
+		pod := p.DeepCopy()
+		m := And(
+			HaveField("Addresses", ConsistOf([]string{pod.Status.PodIP})),
+			HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
+			HaveField("TargetRef", And(
+				HaveField("Kind", "Pod"),
+				HaveField("UID", pod.GetUID()),
+				HaveField("Name", pod.GetName()),
+				HaveField("Namespace", pod.GetNamespace()),
+			)),
+		)
+		matchers = append(matchers, m)
 	}
+
+	ep := &discoveryv1.EndpointSlice{}
+	Eventually(func() []discoveryv1.Endpoint {
+		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
+		return ep.Endpoints
+	}, timeout, interval).Should(
+		And(
+			HaveLen(count),
+			ConsistOf(matchers),
+		),
+	)
+
+	Eventually(func() []discoveryv1.EndpointPort {
+		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
+		return ep.Ports
+	}, timeout, interval).Should(ConsistOf([]discoveryv1.EndpointPort{
+		{
+			Name:     pointer.String("tcp-default"),
+			Port:     pointer.Int32(1883),
+			Protocol: &[]corev1.Protocol{corev1.ProtocolTCP}[0],
+		},
+		{
+			Name:     pointer.String("lwm2m-udp-default"),
+			Port:     pointer.Int32(5783),
+			Protocol: &[]corev1.Protocol{corev1.ProtocolUDP}[0],
+		},
+	}))
+}
+
+func checkService(instance *appsv2alpha1.EMQX) {
+	svc := &corev1.Service{}
+	Eventually(func() []corev1.ServicePort {
+		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, svc)
+		return svc.Spec.Ports
+	}, timeout, interval).Should(ConsistOf([]corev1.ServicePort{
+		{
+			Name:       "tcp-default",
+			Port:       1883,
+			Protocol:   corev1.ProtocolTCP,
+			TargetPort: intstr.FromInt(1883),
+		},
+		{
+			Name:       "lwm2m-udp-default",
+			Port:       5783,
+			Protocol:   corev1.ProtocolUDP,
+			TargetPort: intstr.FromInt(5783),
+		},
+	}))
+}
+
+func checkRunning(instance *appsv2alpha1.EMQX) {
+	Eventually(func() appsv2alpha1.EMQXStatus {
+		_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+		return instance.Status
+	}, timeout, interval).Should(
+		And(
+			HaveField("EMQXNodes", HaveLen(4)),
+			HaveField("CoreNodeReplicas", Equal(int32(2))),
+			HaveField("CoreNodeReadyReplicas", Equal(int32(2))),
+			HaveField("ReplicantNodeReplicas", Equal(int32(2))),
+			HaveField("ReplicantNodeReadyReplicas", Equal(int32(2))),
+			HaveField("Conditions", ConsistOf(
+				HaveField("Type", appsv2alpha1.ClusterRunning),
+				HaveField("Type", appsv2alpha1.ClusterCoreReady),
+				HaveField("Type", appsv2alpha1.ClusterCoreUpdating),
+				HaveField("Type", appsv2alpha1.ClusterCreating),
+			)),
+		),
+	)
 }
