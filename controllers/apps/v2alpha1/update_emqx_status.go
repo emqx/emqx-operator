@@ -43,12 +43,10 @@ func (u *updateStatus) updateStatus(ctx context.Context, instance *appsv2alpha1.
 		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
 	}
 
-	deploymentList := &appsv1.DeploymentList{}
-	_ = u.Client.List(ctx, deploymentList,
+	dList := getDeploymentList(ctx, u.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
-	dList := handlerDeploymentList(deploymentList)
 	if len(dList) > 0 {
 		existedDeploy = dList[len(dList)-1]
 	}
