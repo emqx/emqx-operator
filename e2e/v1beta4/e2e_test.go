@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -46,7 +47,7 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 		},
 	},
 	Spec: appsv1beta4.EmqxBrokerSpec{
-		Replicas: &[]int32{1}[0],
+		Replicas: pointer.Int32Ptr(1),
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
@@ -78,7 +79,7 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 		},
 	},
 	Spec: appsv1beta4.EmqxEnterpriseSpec{
-		Replicas: &[]int32{1}[0],
+		Replicas: pointer.Int32(1),
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{

@@ -107,8 +107,8 @@ func (a *addListener) generateEndpointSlice(ctx context.Context, instance *appsv
 
 	for _, port := range svc.Spec.Ports {
 		endpointSlice.Ports = append(endpointSlice.Ports, discoveryv1.EndpointPort{
-			Name:     &[]string{port.Name}[0],
-			Port:     &[]int32{port.Port}[0],
+			Name:     pointer.String(port.Name),
+			Port:     pointer.Int32(port.Port),
 			Protocol: &[]corev1.Protocol{port.Protocol}[0],
 		})
 	}

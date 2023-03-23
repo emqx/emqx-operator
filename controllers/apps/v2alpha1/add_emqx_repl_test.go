@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 var replicantLabels = map[string]string{
@@ -155,7 +156,7 @@ func TestGenerateDeployment(t *testing.T) {
 			Image: "emqx/emqx:5.0",
 			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
 				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
-					Replicas: &[]int32{3}[0],
+					Replicas: pointer.Int32(3),
 				},
 			},
 		},
@@ -216,9 +217,9 @@ func TestGenerateDeployment(t *testing.T) {
 		assert.Equal(t, emqx.Spec.ImagePullSecrets, got.Spec.Template.Spec.ImagePullSecrets)
 
 		emqx.Spec.ReplicantTemplate.Spec.PodSecurityContext = &corev1.PodSecurityContext{
-			RunAsUser:  &[]int64{1001}[0],
-			RunAsGroup: &[]int64{1001}[0],
-			FSGroup:    &[]int64{1001}[0],
+			RunAsUser:  pointer.Int64(1000),
+			RunAsGroup: pointer.Int64(1000),
+			FSGroup:    pointer.Int64(1000),
 		}
 		got = generateDeployment(emqx)
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Spec.PodSecurityContext, got.Spec.Template.Spec.SecurityContext)
@@ -261,9 +262,9 @@ func TestGenerateDeployment(t *testing.T) {
 			},
 		}
 		emqx.Spec.ReplicantTemplate.Spec.ContainerSecurityContext = &corev1.SecurityContext{
-			RunAsUser:    &[]int64{1001}[0],
-			RunAsGroup:   &[]int64{1001}[0],
-			RunAsNonRoot: &[]bool{true}[0],
+			RunAsUser:    pointer.Int64(1000),
+			RunAsGroup:   pointer.Int64(1000),
+			RunAsNonRoot: pointer.Bool(true),
 		}
 		emqx.Spec.ReplicantTemplate.Spec.ReadinessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{

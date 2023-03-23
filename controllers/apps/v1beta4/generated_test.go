@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 var instance = appsv1beta4.EmqxEnterprise{
@@ -251,7 +252,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 	emqx := instance.DeepCopy()
 	emqx.Default()
 
-	emqx.Spec.Replicas = &[]int32{3}[0]
+	emqx.Spec.Replicas = pointer.Int32(3)
 	emqx.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
 		{
 			Name: "fake",
@@ -324,7 +325,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 
 	emqx.Spec.Persistent = &corev1.PersistentVolumeClaimTemplate{
 		Spec: corev1.PersistentVolumeClaimSpec{
-			StorageClassName: &[]string{"fake"}[0],
+			StorageClassName: pointer.String("fake"),
 		},
 	}
 	emqx.Default()
