@@ -2,13 +2,14 @@ name: Code Review
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 on:
   pull_request:
 
 jobs:
-  test:
+  review:
     runs-on: ubuntu-latest
     steps:
       - uses: anc95/ChatGPT-CodeReview@main
