@@ -16,7 +16,7 @@ type updatePodConditions struct {
 	*EMQXReconciler
 }
 
-func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
+func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ *portForwardAPI) subResult {
 	pods := &corev1.PodList{}
 	_ = u.Client.List(ctx, pods,
 		client.InNamespace(instance.Namespace),

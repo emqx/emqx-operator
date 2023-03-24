@@ -17,7 +17,7 @@ type addCore struct {
 	*EMQXReconciler
 }
 
-func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
+func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ *portForwardAPI) subResult {
 	sts := generateStatefulSet(instance)
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{sts}); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update statefulSet")}

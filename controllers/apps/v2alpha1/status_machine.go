@@ -81,7 +81,7 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha1.EMQX) {
 	}
 }
 
-func (s *emqxStatusMachine) CheckNodeCount(emqxNodes []appsv2alpha1.EMQXNode) {
+func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha1.EMQXNode) {
 	s.emqx.Status.CoreNodeReplicas = *s.emqx.Spec.CoreTemplate.Spec.Replicas
 	s.emqx.Status.ReplicantNodeReplicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
 

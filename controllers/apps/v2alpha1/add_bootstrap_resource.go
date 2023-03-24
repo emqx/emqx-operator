@@ -21,7 +21,7 @@ type addBootstrap struct {
 	*EMQXReconciler
 }
 
-func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
+func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ *portForwardAPI) subResult {
 	for _, resource := range []client.Object{
 		generateNodeCookieSecret(instance),
 		generateBootstrapUserSecret(instance),
