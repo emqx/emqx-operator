@@ -1,6 +1,5 @@
 # 使用 EMQX Operator 在腾讯云 TKE 上部署 EMQX 集群
 
-
 ## 名词解释
 
 EMQX：The most scalable open-source MQTT broker for IoT，[EMQX 文档](https://github.com/emqx/emqx)
@@ -25,11 +24,9 @@ service.cloud.tencent.com/direct-access: "true"
 
 **备注**: 开启直连模式需要在 kube-system/tke-service-controller-config ConfigMap 中新增 GlobalRouteDirectAccess: "true" 以开启 GlobalRoute 直连能力。
 
-
 ## 创建 StorageClass
 
-点击集群名称进入集群详情页面，点击存储 -> StorageClass 创建需要的StorageClass, 具体步骤参考：[创建StorageClass](https://console.cloud.tencent.com/tke2/cluster/sub/create/storage/sc?rid=16&clusterId=cls-mm0it4nz)
-
+点击集群名称进入集群详情页面，点击存储 -> StorageClass 创建需要的 StorageClass, 具体步骤参考：[创建StorageClass](https://console.cloud.tencent.com/tke2/cluster/sub/create/storage/sc?rid=16&clusterId=cls-mm0it4nz)
 
 ## 使用 EMQX Operator 部署 EQMX 集群
 
@@ -37,38 +34,113 @@ EMQX Operator 安装参考：[EMQX Operator 安装](https://github.com/emqx/emqx
 
 EMQX Operator 安装完成后，使用以下命令在 TKE 上进行部署 EMQX 集群：
 
-```shell
-cat << EOF | kubectl apply -f -
+:::: tabs type:card 
+::: tab v2alpha1
+
+```yaml
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
+metadata:
+  name: emqx
+  annotations:
+    ##开启LB 直连 Pod 模式
+    service.cloud.tencent.com/direct-access: "true"
+spec:
+  image: emqx/emqx:5.0.14
+  imagePullPolicy: IfNotPresent
+  coreTemplate:
+    spec:
+      volumeClaimTemplates:
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+        - ReadWriteOnce
+      replicas: 3
+  replicantTemplate:
+    spec:
+      replicas: 0
+  dashboardServiceTemplate:
+    spec:
+      type: LoadBalancer
+      ports:
+        - name: "dashboard-listeners-http-bind"
+          protocol: TCP
+          port: 18083
+          targetPort: 18083
+```
+:::
+::: tab v1beta4
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+  annotations:
+    ##开启LB 直连 Pod 模式
+    service.cloud.tencent.com/direct-access: "true"
+spec:
+  persistent:
+    metadata:
+      name: emqx-ee
+      labels:
+        "apps.emqx.io/instance": "emqx-ee"
+    spec:
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 20Mi
+      accessModes:
+        - ReadWriteOnce
+  template:
+    spec:
+      emqxContainer:
+        image: 
+          repository: emqx/emqx-ee
+          version: 4.4.14
+  serviceTemplate:
+    spec:
+      type: LoadBalancer
+      ports:
+        - name: "http-dashboard-18083"
+          protocol: "TCP"
+          port: 18083
+          targetPort: 18083
+```
+:::
+::: tab v1beta3
+
+```yaml
 apiVersion: apps.emqx.io/v1beta3
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
-  labels:
-    "apps.emqx.io/instance": "emqx-ee"
   annotations:
-    service.cloud.tencent.com/direct-access: "true" ##开启LB 直连 Pod 模式
+    ##开启LB 直连 Pod 模式
+    service.cloud.tencent.com/direct-access: "true"
 spec:
-  emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
-    serviceTemplate:
-      metadata:
-        name: emqx-ee
-        namespace: default
-        labels:
-          "apps.emqx.io/instance": "emqx-ee"
-      spec:
-        type: LoadBalancer
-        selector:
-          "apps.emqx.io/instance": "emqx-ee"
-  persistent:
-    accessModes: 
+   persistent:
+      storageClassName: standard
+      resources:
+          requests:
+            storage: 20Mi
+      accessModes:
       - ReadWriteOnce
-    resources:
-        requests:
-          storage: 10Gi 
-    storageClassName: emqx-test
-EOF
+   emqxTemplate:
+     image: emqx/emqx-ee:4.4.14
+     serviceTemplate:
+       spec:
+         type: LoadBalancer
+         ports:
+           - name: "http-dashboard-18083"
+             protocol: "TCP"
+             port: 18083
+             targetPort: 18083
 ```
+::: 
+::::
 
 ## 使用 LB 终结 TCP TLS 方案
 

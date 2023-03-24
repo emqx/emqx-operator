@@ -74,12 +74,17 @@ metadata:
   name: emqx-ee
 spec:
   persistent:
-    storageClassName: standard
-    resources:
-      requests:
-        storage: 20Mi
-    accessModes:
-    - ReadWriteOnce
+    metadata:
+      name: emqx-ee
+      labels:
+        "apps.emqx.io/instance": "emqx-ee"
+    spec:
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 20Mi
+      accessModes:
+        - ReadWriteOnce
   template:
     spec:
       emqxContainer:

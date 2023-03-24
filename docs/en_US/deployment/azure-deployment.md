@@ -23,7 +23,6 @@ NSF file storage is used here. Other StorageClass, please refer to [storage clas
 Create StorageClass
 
 ```yaml
-cat << "EOF" | kubectl apply -f -
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -34,7 +33,6 @@ parameters:
   protocol: nfs
 mountOptions:
   - nconnect=8
-EOF
 ```
 
 Check if the StroageClass was created successfully
@@ -55,8 +53,7 @@ After the Operator installation is complete, deploy the EMQX cluster on Azure us
 :::: tabs type:card
 ::: tab v2alpha1
 
-```shell
-cat << "EOF" | kubectl apply -f -
+```yaml
 apiVersion: apps.emqx.io/v2alpha1
 kind: EMQX
 metadata:
@@ -99,26 +96,20 @@ spec:
           protocol: TCP
           port: 1883
           targetPort: 1883
-EOF
 ```
 
 :::
 ::: tab v1beta4
 
-```shell
-cat << "EOF" | kubectl apply -f -
+```yaml
 apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
-  labels:
-    "apps.emqx.io/instance": "emqx-ee"
 spec:
   persistent:
     metadata:
       name: emqx-ee
-      labels:
-        "apps.emqx.io/instance": "emqx-ee"
     spec:
       storageClassName: azurefile-csi-nfs
       resources:
@@ -135,21 +126,37 @@ spec:
   serviceTemplate:
     metadata:
       name: emqx-ee
-      namespace: default
-      labels:
-        "apps.emqx.io/instance": "emqx-ee"
     spec:
       type: LoadBalancer
       selector:
         "apps.emqx.io/instance": "emqx-ee"
-EOF
 ```
-
 :::
+::: tab v1beta3
+
+```yaml
+apiVersion: apps.emqx.io/v1beta3
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  persistent:
+    storageClassName: azurefile-csi-nfs
+    resources:
+      requests:
+        storage: 20Mi
+    accessModes:
+    - ReadWriteOnce
+  emqxTemplate:
+    image: emqx/emqx-ee:4.4.14
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+```
+::: 
 ::::
 
 Here the service type is LoadBalancer
-
 
 ## About LoadBalancer offloading TLS
 
