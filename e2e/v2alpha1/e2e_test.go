@@ -236,6 +236,11 @@ func checkPodAndEndpointSlices(instance *appsv2alpha1.EMQX, count int) {
 		m := And(
 			HaveField("Addresses", ConsistOf([]string{pod.Status.PodIP})),
 			HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
+			HaveField("Conditions", And(
+				HaveField("Ready", HaveValue(BeTrue())),
+				HaveField("Serving", HaveValue(BeTrue())),
+				HaveField("Terminating", BeNil()),
+			)),
 			HaveField("TargetRef", And(
 				HaveField("Kind", "Pod"),
 				HaveField("UID", pod.GetUID()),
@@ -246,32 +251,27 @@ func checkPodAndEndpointSlices(instance *appsv2alpha1.EMQX, count int) {
 		matchers = append(matchers, m)
 	}
 
-	ep := &discoveryv1.EndpointSlice{}
-	Eventually(func() []discoveryv1.Endpoint {
+	Eventually(func() *discoveryv1.EndpointSlice {
+		ep := &discoveryv1.EndpointSlice{}
 		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
-		return ep.Endpoints
+		return ep
 	}, timeout, interval).Should(
 		And(
-			HaveLen(count),
-			ConsistOf(matchers),
+			HaveField("Endpoints", ConsistOf(matchers)),
+			HaveField("Ports", ConsistOf([]discoveryv1.EndpointPort{
+				{
+					Name:     pointer.String("tcp-default"),
+					Port:     pointer.Int32(1883),
+					Protocol: &[]corev1.Protocol{corev1.ProtocolTCP}[0],
+				},
+				{
+					Name:     pointer.String("lwm2m-udp-default"),
+					Port:     pointer.Int32(5783),
+					Protocol: &[]corev1.Protocol{corev1.ProtocolUDP}[0],
+				},
+			})),
 		),
 	)
-
-	Eventually(func() []discoveryv1.EndpointPort {
-		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
-		return ep.Ports
-	}, timeout, interval).Should(ConsistOf([]discoveryv1.EndpointPort{
-		{
-			Name:     pointer.String("tcp-default"),
-			Port:     pointer.Int32(1883),
-			Protocol: &[]corev1.Protocol{corev1.ProtocolTCP}[0],
-		},
-		{
-			Name:     pointer.String("lwm2m-udp-default"),
-			Port:     pointer.Int32(5783),
-			Protocol: &[]corev1.Protocol{corev1.ProtocolUDP}[0],
-		},
-	}))
 }
 
 func checkService(instance *appsv2alpha1.EMQX) {
