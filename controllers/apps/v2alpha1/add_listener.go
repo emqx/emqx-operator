@@ -139,9 +139,8 @@ func (a *addListener) getEndpoints(ctx context.Context, instance *appsv2alpha1.E
 				endpoints = append(endpoints, discoveryv1.Endpoint{
 					Addresses: []string{pod.Status.PodIP},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready:       pointer.Bool(true),
-						Serving:     pointer.Bool(true),
-						Terminating: pointer.Bool(false),
+						Ready:   pointer.Bool(true),
+						Serving: pointer.Bool(true),
 					},
 					NodeName: pointer.String(pod.Spec.NodeName),
 					TargetRef: &corev1.ObjectReference{
