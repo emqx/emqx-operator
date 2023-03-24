@@ -15,7 +15,7 @@ type addSvc struct {
 	*EMQXReconciler
 }
 
-func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
+func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ *portForwardAPI) subResult {
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{
 		generateHeadlessService(instance),
 		generateDashboardService(instance),

@@ -21,9 +21,9 @@ type addRepl struct {
 	*EMQXReconciler
 }
 
-func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
+func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ *portForwardAPI) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
-		return subResult{result: ctrl.Result{RequeueAfter: time.Second}}
+		return subResult{}
 	}
 
 	deploy := a.getNewDeployment(ctx, instance)

@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
@@ -17,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -27,7 +25,10 @@ type addListener struct {
 
 func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
-		return subResult{result: ctrl.Result{RequeueAfter: time.Second}}
+		return subResult{}
+	}
+	if p == nil {
+		return subResult{}
 	}
 
 	resources := []client.Object{}

@@ -228,8 +228,5 @@ func (r *EMQXReconciler) getBootstrapUser(ctx context.Context, instance *appsv2a
 }
 
 func (p *portForwardAPI) requestAPI(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
-	if p.Options == nil {
-		return nil, nil, emperror.Errorf("failed to %s %s, portForward is not ready", method, path)
-	}
 	return p.Options.RequestAPI(p.Username, p.Password, method, path, body)
 }
