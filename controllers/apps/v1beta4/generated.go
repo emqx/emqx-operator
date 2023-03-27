@@ -22,7 +22,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/emqx/emqx-operator/internal/handler"
 	"github.com/sethvargo/go-password/password"
@@ -325,6 +324,24 @@ func generateHeadlessService(instance appsv1beta4.Emqx) *corev1.Service {
 	return headlessSvc
 }
 
+func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
+	if instance.GetStatus().GetCurrentStatefulSetVersion() == "" {
+		return nil
+	}
+	serviceTemplate := instance.GetSpec().GetServiceTemplate()
+	serviceTemplate.Spec.Ports = appsv1beta4.MergeServicePorts(serviceTemplate.Spec.Ports, port)
+	serviceTemplate.Spec.Selector["controller-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
+
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: serviceTemplate.ObjectMeta,
+		Spec:       serviceTemplate.Spec,
+	}
+}
+
 func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	names := appsv1beta4.Names{Object: instance}
 
@@ -380,14 +397,6 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Annotations: emqxTemplate.Annotations,
 		},
 		Spec: corev1.PodSpec{
-			ReadinessGates: []corev1.PodReadinessGate{
-				{
-					ConditionType: v1beta4.PodInCluster,
-				},
-				{
-					ConditionType: v1beta4.PodOnServing,
-				},
-			},
 			Affinity:            emqxTemplate.Spec.Affinity,
 			Tolerations:         emqxTemplate.Spec.Tolerations,
 			NodeName:            emqxTemplate.Spec.NodeName,
@@ -408,6 +417,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			}),
 		},
 	}
+
 	podTemplate.Annotations = handler.SetManagerContainerAnnotation(podTemplate.Annotations, podTemplate.Spec.Containers)
 
 	sts := &appsv1.StatefulSet{
@@ -427,8 +437,10 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podTemplate.Labels,
 			},
-			PodManagementPolicy: appsv1.ParallelPodManagement,
-			Template:            podTemplate,
+			PodManagementPolicy:                  appsv1.ParallelPodManagement,
+			MinReadySeconds:                      0,
+			PersistentVolumeClaimRetentionPolicy: nil,
+			Template:                             podTemplate,
 		},
 	}
 

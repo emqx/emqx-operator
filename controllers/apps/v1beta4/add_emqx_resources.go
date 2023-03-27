@@ -29,6 +29,9 @@ func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Em
 		panic("args[0] is not []client.Object")
 	}
 
+	// ignore error, because if statefulSet is not created, the listener port will be not found
+	listenerPorts, _ := a.getListenerPortsByAPI()
+
 	var resources []client.Object
 
 	license, err := a.getLicense(ctx, instance)
@@ -44,6 +47,11 @@ func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Em
 
 	headlessSvc := generateHeadlessService(instance)
 	resources = append(resources, headlessSvc)
+
+	svc := generateService(instance, listenerPorts...)
+	if svc != nil {
+		resources = append(resources, svc)
+	}
 
 	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update resource")}

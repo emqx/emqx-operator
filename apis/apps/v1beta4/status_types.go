@@ -39,6 +39,9 @@ type ConditionType string
 const (
 	ConditionRunning           ConditionType = "Running"
 	ConditionBlueGreenUpdating ConditionType = "BlueGreenUpdating"
+	ConditionProcess           ConditionType = "Process"
+	ConditionComplete          ConditionType = "Complete"
+	ConditionFailed            ConditionType = "Failed"
 )
 
 // +kubebuilder:object:generate=false

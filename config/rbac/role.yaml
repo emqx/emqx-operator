@@ -237,6 +237,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxrebalances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxrebalances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxrebalances/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - coordination.k8s.io
   resources:
   - leases

@@ -29,12 +29,14 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -648,4 +650,86 @@ func deleteEmqx(emqx appsv1beta4.Emqx) {
 		err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetNamespace()}, &corev1.Namespace{})
 		return k8sErrors.IsNotFound(err)
 	}, timeout, interval).Should(BeTrue())
+}
+
+var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
+	Describe("Just for enterprise", func() {
+		emqx := emqxEnterprise.DeepCopy()
+		emqx.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.16"
+		BeforeEach(func() {
+			createEmqx(emqx)
+		})
+
+		AfterEach(func() {
+			deleteEmqx(emqx)
+		})
+
+		By("check emqx running condition in CR status")
+		Eventually(func() corev1.ConditionStatus {
+			ee := &appsv1beta4.EmqxEnterprise{}
+			_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+			if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionRunning {
+				return ee.GetStatus().GetConditions()[0].Status
+			}
+			return corev1.ConditionUnknown
+		}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+
+		By("create emqx rebalance CR ")
+		createRebalance(emqx)
+
+		By("check emqx rebalance condition in CR status")
+		Eventually(func() v1beta4.Condition {
+			emqxRebalance := &appsv1beta4.EmqxRebalance{}
+			_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqxRebalance), emqxRebalance)
+			if emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
+				return emqxRebalance.Status.Conditions[0]
+			}
+			return v1beta4.Condition{}
+		}, timeout, interval).Should(Equal(v1beta4.Condition{
+			Type:    appsv1beta4.ConditionComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "Complete",
+			Message: "[\"nothing_to_balance\"]",
+		}))
+
+		By("check emqx rebalance condition in CR status")
+		Eventually(func() v1beta4.Condition {
+			emqxRebalance := &appsv1beta4.EmqxRebalance{}
+			_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqxRebalance), emqxRebalance)
+			if emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
+				return emqxRebalance.Status.Conditions[0]
+			}
+			return v1beta4.Condition{}
+		}, timeout, interval).Should(Equal(v1beta4.Condition{
+			Type:    appsv1beta4.ConditionComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "Complete",
+			Message: "emqx rebalance has already completed",
+		}))
+
+	})
+})
+
+func createRebalance(emqx appsv1beta4.Emqx) {
+	emqxRebalance := appsv1beta4.EmqxRebalance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rand.String(5),
+			Namespace: emqx.GetNamespace(),
+		},
+		Spec: appsv1beta4.EmqxRebalanceSpec{
+			EmqxInstance: emqx.GetName(),
+			RebalanceStrategy: &appsv1beta4.RebalanceStrategy{
+				WaitTakeover:     pointer.Int32(10),
+				ConnEvictRate:    pointer.Int32(10),
+				SessEvictRate:    pointer.Int32(10),
+				WaitHealthCheck:  pointer.Int32(10),
+				AbsSessThreshold: pointer.Int32(100),
+				RelConnThreshold: pointer.String("1.2"),
+				AbsConnThreshold: pointer.Int32(100),
+				RelSessThreshold: pointer.String("1.2"),
+			},
+		},
+	}
+	Expect(emqxRebalance.ValidateCreate()).Should(Succeed())
+	Expect(k8sClient.Create(context.TODO(), &emqxRebalance)).Should(Succeed())
 }

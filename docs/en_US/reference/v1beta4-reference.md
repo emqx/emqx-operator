@@ -12,6 +12,8 @@ Package v1beta4 contains API Schema definitions for the apps v1beta4 API group
 - [EmqxBroker](#emqxbroker)
 - [EmqxEnterprise](#emqxenterprise)
 - [EmqxPlugin](#emqxplugin)
+- [EmqxRebalance](#emqxrebalance)
+- [EmqxRebalanceList](#emqxrebalancelist)
 
 
 
@@ -39,6 +41,7 @@ Condition saves the state information of the EMQX cluster
 _Appears in:_
 - [EmqxBrokerStatus](#emqxbrokerstatus)
 - [EmqxEnterpriseStatus](#emqxenterprisestatus)
+- [EmqxRebalanceStatus](#emqxrebalancestatus)
 
 | Field | Description |
 | --- | --- |
@@ -363,6 +366,73 @@ _Appears in:_
 | `config` _object (keys:string, values:string)_ | Config defines the configurations of the EMQX plugins |
 
 
+#### EmqxRebalance
+
+
+
+EmqxRebalance is the Schema for the emqxrebalances API
+
+_Appears in:_
+- [EmqxRebalanceList](#emqxrebalancelist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
+| `kind` _string_ | `EmqxRebalance`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EmqxRebalanceSpec](#emqxrebalancespec)_ |  |
+| `status` _[EmqxRebalanceStatus](#emqxrebalancestatus)_ |  |
+
+
+#### EmqxRebalanceList
+
+
+
+EmqxRebalanceList contains a list of EmqxRebalance
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
+| `kind` _string_ | `EmqxRebalanceList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[EmqxRebalance](#emqxrebalance) array_ |  |
+
+
+#### EmqxRebalanceSpec
+
+
+
+EmqxRebalanceSpec defines the desired state of EmqxRebalance
+
+_Appears in:_
+- [EmqxRebalance](#emqxrebalance)
+
+| Field | Description |
+| --- | --- |
+| `emqxItance` _string_ |  |
+| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ |  |
+
+
+#### EmqxRebalanceStatus
+
+
+
+EmqxRebalanceStatus defines the observed state of EmqxRebalance
+
+_Appears in:_
+- [EmqxRebalance](#emqxrebalance)
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](#condition) array_ |  |
+| `phase` _string_ |  |
+| `rebalances` _[Rebalance](#rebalance) array_ |  |
+| `startedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ |  |
+| `endedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ |  |
+
+
 
 
 
@@ -423,6 +493,47 @@ _Appears in:_
 | `sessEvictRate` _integer_ |  |
 
 
+
+
+#### Rebalance
+
+
+
+
+
+_Appears in:_
+- [EmqxRebalanceStatus](#emqxrebalancestatus)
+
+| Field | Description |
+| --- | --- |
+| `state` _string_ |  |
+| `sessionEvictionRate` _integer_ |  |
+| `recipients` _string array_ |  |
+| `node` _string_ |  |
+| `donors` _string array_ |  |
+| `coordinatorNodebalances` _string_ |  |
+| `connectionEvictionRate` _integer_ |  |
+
+
+#### RebalanceStrategy
+
+
+
+
+
+_Appears in:_
+- [EmqxRebalanceSpec](#emqxrebalancespec)
+
+| Field | Description |
+| --- | --- |
+| `connEvictRate` _integer_ |  |
+| `sessEvictRate` _integer_ |  |
+| `waitTakeover` _integer_ |  |
+| `waitHealthCheck` _integer_ |  |
+| `absConnThreshold` _integer_ |  |
+| `relConnThreshold` _string_ |  |
+| `absSessThreshold` _integer_ |  |
+| `relSessThreshold` _string_ |  |
 
 
 #### ServiceTemplate

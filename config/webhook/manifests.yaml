@@ -70,6 +70,26 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-apps-emqx-io-v1beta4-emqxrebalance
+  failurePolicy: Fail
+  name: memqxrebalance.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta4
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxrebalances
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
   - v1beta1
   clientConfig:
     service:
@@ -158,6 +178,26 @@ webhooks:
     - UPDATE
     resources:
     - emqxplugins
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-apps-emqx-io-v1beta4-emqxrebalance
+  failurePolicy: Fail
+  name: vemqxrebalance.kb.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta4
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxrebalances
   sideEffects: None
 - admissionReviewVersions:
   - v1
