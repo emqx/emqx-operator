@@ -19,6 +19,8 @@ package v1beta4
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"time"
 
 	emperror "emperror.dev/errors"
@@ -158,14 +160,15 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		emqxRebalance.Status.Phase = "Process"
 		condition := appsv1beta4.Condition{
-			Type:    appsv1beta4.ConditionComplete,
+			Type:    appsv1beta4.ConditionProcess,
 			Status:  corev1.ConditionTrue,
 			Reason:  "Process",
 			Message: "rebalance is processing",
 		}
 		r.udpateRebalanceCondition(emqxRebalance, condition)
-		requeueAfter = time.Duration(10)
+		requeueAfter = time.Duration(20)
 	}
+	emqxRebalance.Status.Rebalances = rebalances
 	if err := r.Client.Status().Update(ctx, emqxRebalance); err != nil {
 		return ctrl.Result{}, emperror.Wrap(err, "failed to update emqx status")
 	}
@@ -237,10 +240,20 @@ func (r *EmqxRebalanceReconciler) startRebalance(emqxRebalance *appsv1beta4.Emqx
 		"wait_takeover":      emqxRebalance.Spec.RebalanceStrategy.WaitTakeover,
 		"wait_health_check":  emqxRebalance.Spec.RebalanceStrategy.WaitHealthCheck,
 		"abs_conn_threshold": emqxRebalance.Spec.RebalanceStrategy.AbsConnThreshold,
-		"rel_conn_threshold": emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold,
 		"abs_sess_threshold": emqxRebalance.Spec.RebalanceStrategy.AbsSessThreshold,
-		"rel_sess_threshold": emqxRebalance.Spec.RebalanceStrategy.RelSessThreshold,
-		"nodes":              nodes,
+		// "rel_sess_threshold": emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold,
+		// "rel_conn_threshold": emqxRebalance.Spec.RebalanceStrategy.RelSessThreshold,
+		"nodes": nodes,
+	}
+
+	relConnThreshold, _ := strconv.ParseFloat(emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold, 32)
+	if len(emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
+		body["rel_conn_threshold"] = relConnThreshold
+	}
+
+	relSessThreshold, _ := strconv.ParseFloat(emqxRebalance.Spec.RebalanceStrategy.RelSessThreshold, 32)
+	if len(emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
+		body["rel_sess_threshold"] = relSessThreshold
 	}
 
 	bytes, err := json.Marshal(body)
@@ -248,13 +261,15 @@ func (r *EmqxRebalanceReconciler) startRebalance(emqxRebalance *appsv1beta4.Emqx
 		return emperror.Wrap(err, "marshal body failed")
 	}
 
+	fmt.Println("srtat rebalance")
+
 	emqxNodeName := getEmqxNodeName(emqxEnterprise, pod)
 	_, respBody, err := p.requestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
 	if err != nil {
 		return err
 	}
 	code := gjson.GetBytes(respBody, "code")
-	if code.String() != "200" {
+	if code.String() == "400" {
 		message := gjson.GetBytes(respBody, "message")
 		return emperror.New(message.String())
 	}
@@ -289,9 +304,11 @@ func (r *EmqxRebalanceReconciler) getRebalanceStatus(emqxEnterprise *appsv1beta4
 
 	_, body, err := p.requestAPI("GET", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
+		fmt.Println("request API error:", err.Error())
 		return nil, err
 	}
 
+	fmt.Println("body:", string(body))
 	rebalances := []appsv1beta4.Rebalance{}
 	data := gjson.GetBytes(body, "rebalances")
 	if err := json.Unmarshal([]byte(data.Raw), &rebalances); err != nil {

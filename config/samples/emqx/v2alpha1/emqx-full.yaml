@@ -43,7 +43,7 @@ spec:
         apps.emqx.io/db-role: core
       annotations:
     spec:
-      replicas: 1
+      replicas: 2
       # volumeClaimTemplates:
       #   storageClassName: standard
       #   resources:

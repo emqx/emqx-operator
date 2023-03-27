@@ -1,6 +1,5 @@
 # This article mainly introduces how to deploy EMQX cluster on AWS EKS with EMQX Operator. The main contents including:
 
-
 ## Terminology explanation
 
 EMQX: The most scalable open-source MQTT broker for IoT, For details: [EMQX docs](https://github.com/emqx/emqx) 
@@ -9,7 +8,7 @@ EMQX Operator: A Kubernetes Operator for EMQX, For details: [EMQX Operator docs]
 
 EKS:  Amazon Elastic Kubernetes Service , For details: [EKS docs](https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html) 
 
-NLB：AWS LoadBalancer
+NLB: AWS LoadBalancer
 
 ## Create EKS Cluster
 
@@ -64,14 +63,14 @@ kubectl apply -f storageclass.yaml
 
 After Operator is installed, deploy EMQX cluster in AWS EKS console using the following yaml
 
+:::: tabs type:card 
+::: tab v2alpha1
+
 ```yaml
-cat << "EOF" | kubectl apply -f -
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
 metadata:
-  name: emqx-ee
-  labels:
-    "foo": "bar"
+  name: emqx
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "external"
     service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
@@ -79,22 +78,96 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
+#   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
 spec:
-  replicas: 3
+  image: emqx/emqx:5.0.14
+  imagePullPolicy: IfNotPresent
+  coreTemplate:
+    spec:
+      volumeClaimTemplates:
+        storageClassName: ebs-sc
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+        - ReadWriteOnce
+      replicas: 3
+  replicantTemplate:
+    spec:
+      replicas: 0
+  listenersServiceTemplate:
+    spec:
+      type: LoadBalancer
+```
+::: 
+::: tab v1beta4
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
+#   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
+spec:
   persistent:
-     storageClassName: ebs-sc
-     resources:
-       requests:
-         storage: 4Gi
-     accessModes:
-     - ReadWriteOnce
+    metadata:
+      name: emqx-ee
+    spec:
+      storageClassName: ebs-sc
+      resources:
+        requests:
+          storage: 20Mi
+      accessModes:
+        - ReadWriteOnce
+  template:
+    spec:
+      emqxContainer:
+        image: 
+          repository: emqx/emqx-ee
+          version: 4.4.14
+  serviceTemplate:
+    spec:
+      type: LoadBalancer
+```
+::: 
+::: tab v1beta3
+
+```yaml
+apiVersion: apps.emqx.io/v1beta3
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
+#   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
+spec:
+  persistent:
+    storageClassName: ebs-sc
+    resources:
+      requests:
+        storage: 20Mi
+    accessModes:
+    - ReadWriteOnce
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
+    image: emqx/emqx-ee:4.4.14
     serviceTemplate:
       spec:
         type: LoadBalancer
-EOF
 ```
+::: 
+::::
 
 ## TLS termination  
 We recommend that you choose to do TLS termination on NLB, which you can do in following steps:
@@ -106,14 +179,14 @@ Import relevant certificates in [AWS Console](https://us-east-2.console.aws.amaz
 
 ### Upadte the deployment yaml
 
+:::: tabs type:card 
+::: tab v2alpha1
+
 ```yaml
-cat << "EOF" | kubectl apply -f -
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
 metadata:
-  name: emqx-ee
-  labels:
-    "foo": "bar"
+  name: emqx
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "external"
     service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
@@ -124,26 +197,106 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls
     service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
+#   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
 spec:
-  replicas: 3
+  image: emqx/emqx:5.0.14
+  imagePullPolicy: IfNotPresent
+  coreTemplate:
+    spec:
+      volumeClaimTemplates:
+        storageClassName: ebs-sc
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+        - ReadWriteOnce
+      replicas: 3
+  replicantTemplate:
+    spec:
+      replicas: 0
+  listenersServiceTemplate:
+    spec:
+      type: LoadBalancer
+```
+::: 
+::: tab v1beta4
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:arn:arn:aws:acm:us-east-1:609217282285:certificate/326649a0-f3b3-4bdb-a478-5691b4ba0ef3
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
+#   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
+spec:
   persistent:
-     storageClassName: ebs-sc
-     resources:
-       requests:
-         storage: 4Gi
-     accessModes:
-     - ReadWriteOnce
+    metadata:
+      name: emqx-ee
+    spec:
+      storageClassName: ebs-sc
+      resources:
+        requests:
+          storage: 20Mi
+      accessModes:
+        - ReadWriteOnce
+  template:
+    spec:
+      emqxContainer:
+        image: 
+          repository: emqx/emqx-ee
+          version: 4.4.14
+  serviceTemplate:
+    spec:
+      type: LoadBalancer
+```
+::: 
+::: tab v1beta3
+
+```yaml
+apiVersion: apps.emqx.io/v1beta3
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:arn:arn:aws:acm:us-east-1:609217282285:certificate/326649a0-f3b3-4bdb-a478-5691b4ba0ef3
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
+#   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
+spec:
+  persistent:
+    storageClassName: ebs-sc
+    resources:
+      requests:
+        storage: 20Mi
+    accessModes:
+    - ReadWriteOnce
   emqxTemplate:
-    image: emqx/emqx-ee:4.4.8
+    image: emqx/emqx-ee:4.4.14
     serviceTemplate:
       spec:
         type: LoadBalancer
-EOF
 ```
+::: 
+::::
 
 In using NLB to terminate TLS, we have added several annotations. The value of service.beta.kubernetes.io/aws-load-balancer-ssl-cert is the ARN information we copied in step 1.
 
-```shell
+```yaml
 service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:arn:arn:aws:acm:us-east-1:609217282285:certificate/326649a0-f3b3-4bdb-a478-5691b4ba0ef3
 service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
 service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls

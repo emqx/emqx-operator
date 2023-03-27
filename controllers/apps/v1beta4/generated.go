@@ -324,24 +324,6 @@ func generateHeadlessService(instance appsv1beta4.Emqx) *corev1.Service {
 	return headlessSvc
 }
 
-func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
-	if instance.GetStatus().GetCurrentStatefulSetVersion() == "" {
-		return nil
-	}
-	serviceTemplate := instance.GetSpec().GetServiceTemplate()
-	serviceTemplate.Spec.Ports = appsv1beta4.MergeServicePorts(serviceTemplate.Spec.Ports, port)
-	serviceTemplate.Spec.Selector["controller-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
-
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: serviceTemplate.ObjectMeta,
-		Spec:       serviceTemplate.Spec,
-	}
-}
-
 func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 	names := appsv1beta4.Names{Object: instance}
 
@@ -395,6 +377,11 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Annotations: emqxTemplate.Annotations,
 		},
 		Spec: corev1.PodSpec{
+			ReadinessGates: []corev1.PodReadinessGate{
+				{
+					ConditionType: appsv1beta4.PodOnServing,
+				},
+			},
 			Affinity:            emqxTemplate.Spec.Affinity,
 			Tolerations:         emqxTemplate.Spec.Tolerations,
 			NodeName:            emqxTemplate.Spec.NodeName,

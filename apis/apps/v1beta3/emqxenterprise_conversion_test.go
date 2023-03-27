@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 var v1bete3EmqxEnterprise = &EmqxEnterprise{
@@ -39,7 +40,7 @@ var v1bete3EmqxEnterprise = &EmqxEnterprise{
 		},
 	},
 	Spec: EmqxEnterpriseSpec{
-		Replicas: &[]int32{3}[0],
+		Replicas: pointer.Int32(3),
 		Env: []corev1.EnvVar{
 			{
 				Name:  "foo",
@@ -76,7 +77,7 @@ var v1bete3EmqxEnterprise = &EmqxEnterprise{
 			},
 		},
 		Persistent: corev1.PersistentVolumeClaimSpec{
-			StorageClassName: &[]string{"foo"}[0],
+			StorageClassName: pointer.String("foo"),
 		},
 		InitContainers: []corev1.Container{
 			{
@@ -99,9 +100,9 @@ var v1bete3EmqxEnterprise = &EmqxEnterprise{
 			ACL:             []string{"allow, all."},
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			SecurityContext: &corev1.PodSecurityContext{
-				RunAsUser:           &[]int64{1000}[0],
-				RunAsGroup:          &[]int64{1000}[0],
-				FSGroup:             &[]int64{1000}[0],
+				RunAsUser:           pointer.Int64(1000),
+				RunAsGroup:          pointer.Int64(1000),
+				FSGroup:             pointer.Int64(1000),
 				FSGroupChangePolicy: &[]corev1.PodFSGroupChangePolicy{corev1.FSGroupChangeAlways}[0],
 			},
 			ExtraVolumes: []corev1.Volume{
@@ -204,13 +205,13 @@ var v1beta4EmqxEnterprise = &v1beta4.EmqxEnterprise{
 		},
 	},
 	Spec: v1beta4.EmqxEnterpriseSpec{
-		Replicas: &[]int32{3}[0],
+		Replicas: pointer.Int32(3),
 		License: v1beta4.EmqxLicense{
 			SecretName: "fake-license-secret",
 		},
 		Persistent: &corev1.PersistentVolumeClaimTemplate{
 			Spec: corev1.PersistentVolumeClaimSpec{
-				StorageClassName: &[]string{"foo"}[0],
+				StorageClassName: pointer.String("foo"),
 			},
 		},
 		Template: v1beta4.EmqxTemplate{
@@ -338,9 +339,9 @@ var v1beta4EmqxEnterprise = &v1beta4.EmqxEnterprise{
 					},
 				},
 				PodSecurityContext: &corev1.PodSecurityContext{
-					RunAsUser:           &[]int64{1000}[0],
-					RunAsGroup:          &[]int64{1000}[0],
-					FSGroup:             &[]int64{1000}[0],
+					RunAsUser:           pointer.Int64(1000),
+					RunAsGroup:          pointer.Int64(1000),
+					FSGroup:             pointer.Int64(1000),
 					FSGroupChangePolicy: &[]corev1.PodFSGroupChangePolicy{corev1.FSGroupChangeAlways}[0],
 				},
 			},

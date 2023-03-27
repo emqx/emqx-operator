@@ -100,7 +100,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		addEmqxPlugins{EmqxReconciler: r},
 		addEmqxResources{EmqxReconciler: r, portForwardAPI: p},
 		addEmqxStatefulSet{EmqxReconciler: r, portForwardAPI: p},
+		addListener{EmqxReconciler: r, portForwardAPI: p},
 		updateEmqxStatus{EmqxReconciler: r, portForwardAPI: p},
+		updatePodConditions{EmqxReconciler: r, portForwardAPI: p},
 	}
 	for i := range subReconcilers {
 		if reflect.ValueOf(subResult).FieldByName("args").IsValid() {

@@ -124,6 +124,13 @@ rules:
 - apiGroups:
   - apps
   resources:
+  - replicasets
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - apps
+  resources:
   - statefulsets
   verbs:
   - create

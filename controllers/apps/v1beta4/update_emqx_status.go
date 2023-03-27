@@ -165,7 +165,6 @@ func (s updateEmqxStatus) getNodeStatusesByAPI() ([]appsv1beta4.EmqxNode, error)
 	if err != nil {
 		return nil, err
 	}
-
 	emqxNodes := []appsv1beta4.EmqxNode{}
 	data := gjson.GetBytes(body, "data")
 	if err := json.Unmarshal([]byte(data.Raw), &emqxNodes); err != nil {

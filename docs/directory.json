@@ -32,6 +32,10 @@
         {
           "title": "Azure AKS",
           "path": "deployment/azure-deployment"
+        },
+        {
+          "title": "Google GKE",
+          "path": "deployment/gcp-gke-deployment"
         }
       ]
     },

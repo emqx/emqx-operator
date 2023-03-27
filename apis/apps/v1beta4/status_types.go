@@ -8,10 +8,7 @@ import (
 )
 
 const (
-	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
-	PodInCluster corev1.PodConditionType = "apps.emqx.io/in-cluster"
-
-	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-Serving"
+	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
 )
 
 // Phase of the RF status

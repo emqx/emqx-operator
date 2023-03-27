@@ -74,12 +74,17 @@ metadata:
   name: emqx-ee
 spec:
   persistent:
-    storageClassName: standard
-    resources:
-      requests:
-        storage: 20Mi
-    accessModes:
-    - ReadWriteOnce
+    metadata:
+      name: emqx-ee
+      labels:
+        "apps.emqx.io/instance": "emqx-ee"
+    spec:
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 20Mi
+      accessModes:
+        - ReadWriteOnce
   template:
     spec:
       emqxContainer:
@@ -116,24 +121,24 @@ kind: EmqxEnterprise
 metadata:
    name: emqx-ee
 spec:
-   persistent:
-     storageClassName: standard
-     resources:
-       requests:
-         storage: 20Mi
-     accessModes:
-     - ReadWriteOnce
-   emqxTemplate:
-     image: emqx/emqx-ee:4.4.14
-     serviceTemplate:
-       spec:
-         type: NodePort
-         ports:
-           - name: "http-dashboard-18083"
-             protocol: "TCP"
-             port: 18083
-             targetPort: 18083
-             nodePort: 32016
+  persistent:
+    storageClassName: standard
+    resources:
+      requests:
+        storage: 20Mi
+    accessModes:
+    - ReadWriteOnce
+  emqxTemplate:
+    image: emqx/emqx-ee:4.4.14
+    serviceTemplate:
+      spec:
+        type: NodePort
+        ports:
+          - name: "http-dashboard-18083"
+            protocol: "TCP"
+            port: 18083
+            targetPort: 18083
+            nodePort: 32016
 ```
 
 > The `storageClassName` field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs. The accessModes field indicates the access mode of the PV. Currently, By default the `ReadWriteOnce` mode is used. For more access modes, please refer to the document: [AccessModes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes). The `.spec.emqxTemplate.serviceTemplate` field configures the way the EMQX cluster exposes services to the outside world: NodePort, and specifies that the nodePort corresponding to port 18083 of the EMQX Dashboard service is 32016 (the value range of nodePort is: 30000-32767).

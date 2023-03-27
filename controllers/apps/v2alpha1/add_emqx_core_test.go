@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 var coreLabels = map[string]string{
@@ -28,7 +29,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Image: "emqx/emqx:5.0",
 		},
 	}
-	instance.Spec.CoreTemplate.Spec.Replicas = &[]int32{3}[0]
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(3)
 	instance.Default()
 	assert.Nil(t, instance.ValidateCreate())
 
@@ -83,9 +84,9 @@ func TestGenerateStatefulSet(t *testing.T) {
 		assert.Equal(t, emqx.Spec.ImagePullSecrets, got.Spec.Template.Spec.ImagePullSecrets)
 
 		emqx.Spec.CoreTemplate.Spec.PodSecurityContext = &corev1.PodSecurityContext{
-			RunAsUser:  &[]int64{1001}[0],
-			RunAsGroup: &[]int64{1001}[0],
-			FSGroup:    &[]int64{1001}[0],
+			RunAsUser:  pointer.Int64(1000),
+			RunAsGroup: pointer.Int64(1000),
+			FSGroup:    pointer.Int64(1000),
 		}
 		got = generateStatefulSet(emqx)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.PodSecurityContext, got.Spec.Template.Spec.SecurityContext)
@@ -128,9 +129,9 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 		}
 		emqx.Spec.CoreTemplate.Spec.ContainerSecurityContext = &corev1.SecurityContext{
-			RunAsUser:    &[]int64{1001}[0],
-			RunAsGroup:   &[]int64{1001}[0],
-			RunAsNonRoot: &[]bool{true}[0],
+			RunAsUser:    pointer.Int64(1000),
+			RunAsGroup:   pointer.Int64(1000),
+			RunAsNonRoot: pointer.Bool(true),
 		}
 		emqx.Spec.CoreTemplate.Spec.ReadinessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{

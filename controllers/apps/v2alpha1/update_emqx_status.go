@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type updateStatus struct {
@@ -18,23 +19,23 @@ type updateStatus struct {
 
 func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
 	var err error
-	instance, err = u.updateStatus(instance, p)
+	instance, err = u.updateStatus(ctx, instance, p)
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}
 	}
-	if u.Client.Status().Update(ctx, instance) != nil {
+	if err := u.Client.Status().Update(ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}
 	}
 	return subResult{}
 }
 
-func (u *updateStatus) updateStatus(instance *appsv2alpha1.EMQX, p *portForwardAPI) (*appsv2alpha1.EMQX, error) {
+func (u *updateStatus) updateStatus(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) (*appsv2alpha1.EMQX, error) {
 	var emqxNodes []appsv2alpha1.EMQXNode
 	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
 	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
 	var err error
 
-	err = u.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
+	err = u.Client.Get(ctx, types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return instance, nil
@@ -42,9 +43,12 @@ func (u *updateStatus) updateStatus(instance *appsv2alpha1.EMQX, p *portForwardA
 		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
 	}
 
-	err = u.Client.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ReplicantTemplate.Name, Namespace: instance.Namespace}, existedDeploy)
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return nil, emperror.Wrap(err, "failed to get existed deployment")
+	dList := getDeploymentList(ctx, u.Client,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+	)
+	if len(dList) > 0 {
+		existedDeploy = dList[len(dList)-1]
 	}
 
 	emqxNodes, err = getNodeStatuesByAPI(p)

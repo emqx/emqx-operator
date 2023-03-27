@@ -16,6 +16,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -106,8 +107,8 @@ func (a *addListener) generateEndpointSlice(ctx context.Context, instance *appsv
 
 	for _, port := range svc.Spec.Ports {
 		endpointSlice.Ports = append(endpointSlice.Ports, discoveryv1.EndpointPort{
-			Name:     &[]string{port.Name}[0],
-			Port:     &[]int32{port.Port}[0],
+			Name:     pointer.String(port.Name),
+			Port:     pointer.Int32(port.Port),
 			Protocol: &[]corev1.Protocol{port.Protocol}[0],
 		})
 	}
@@ -116,29 +117,37 @@ func (a *addListener) generateEndpointSlice(ctx context.Context, instance *appsv
 }
 
 func (a *addListener) getEndpoints(ctx context.Context, instance *appsv2alpha1.EMQX) []discoveryv1.Endpoint {
-	podList := &corev1.PodList{}
-	_ = a.Client.List(ctx, podList,
+	dList := getDeploymentList(ctx, a.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
+	if len(dList) == 0 {
+		return nil
+	}
+	currentDeployment := dList[len(dList)-1]
+
+	podMap := getPodMap(ctx, a.Client,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+	)
+	podList := podMap[currentDeployment.UID]
 
 	endpoints := []discoveryv1.Endpoint{}
-	for _, pod := range podList.Items {
+	for _, pod := range podList {
 		for _, condition := range pod.Status.Conditions {
 			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
 				endpoints = append(endpoints, discoveryv1.Endpoint{
 					Addresses: []string{pod.Status.PodIP},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready:       &[]bool{true}[0],
-						Serving:     &[]bool{true}[0],
-						Terminating: &[]bool{false}[0],
+						Ready:   pointer.Bool(true),
+						Serving: pointer.Bool(true),
 					},
-					NodeName: &[]string{pod.Spec.NodeName}[0],
+					NodeName: pointer.String(pod.Spec.NodeName),
 					TargetRef: &corev1.ObjectReference{
-						Kind:      pod.Kind,
-						UID:       pod.UID,
-						Name:      pod.Name,
-						Namespace: pod.Namespace,
+						Kind:      pod.DeepCopy().Kind,
+						UID:       pod.DeepCopy().UID,
+						Name:      pod.DeepCopy().Name,
+						Namespace: pod.DeepCopy().Namespace,
 					},
 				})
 			}

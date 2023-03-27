@@ -27,14 +27,14 @@ type EmqxRebalanceSpec struct {
 }
 
 type RebalanceStrategy struct {
-	ConnEvictRate    *int32  `json:"connEvictRate,omitempty"`
-	SessEvictRate    *int32  `json:"sessEvictRate,omitempty"`
-	WaitTakeover     *int32  `json:"waitTakeover,omitempty"`
-	WaitHealthCheck  *int32  `json:"waitHealthCheck,omitempty"`
-	AbsConnThreshold *int32  `json:"absConnThreshold,omitempty"`
-	RelConnThreshold *string `json:"relConnThreshold,omitempty"`
-	AbsSessThreshold *int32  `json:"absSessThreshold,omitempty"`
-	RelSessThreshold *string `json:"relSessThreshold,omitempty"`
+	ConnEvictRate    int32  `json:"connEvictRate,omitempty"`
+	SessEvictRate    int32  `json:"sessEvictRate,omitempty"`
+	WaitTakeover     int32  `json:"waitTakeover,omitempty"`
+	WaitHealthCheck  int32  `json:"waitHealthCheck,omitempty"`
+	AbsConnThreshold int32  `json:"absConnThreshold,omitempty"`
+	RelConnThreshold string `json:"relConnThreshold,omitempty"`
+	AbsSessThreshold int32  `json:"absSessThreshold,omitempty"`
+	RelSessThreshold string `json:"relSessThreshold,omitempty"`
 }
 
 // EmqxRebalanceStatus defines the observed state of EmqxRebalance
