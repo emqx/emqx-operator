@@ -35,23 +35,25 @@ func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4
 			continue
 		}
 
-		hash := make(map[corev1.PodConditionType]corev1.ConditionStatus)
+		hash := make(map[corev1.PodConditionType]corev1.PodCondition)
 
 		for _, condition := range pod.Status.Conditions {
-			hash[condition.Type] = condition.Status
+			hash[condition.Type] = condition
 		}
 
-		if s, ok := hash[corev1.PodReady]; !ok || s != corev1.ConditionTrue {
+		if c, ok := hash[corev1.ContainersReady]; !ok || c.Status != corev1.ConditionTrue {
 			continue
 		}
 
 		onServerCondition := corev1.PodCondition{
-			Type:   appsv1beta4.PodOnServing,
-			Status: corev1.ConditionFalse,
+			Type:               appsv1beta4.PodOnServing,
+			Status:             corev1.ConditionFalse,
+			LastProbeTime:      metav1.Now(),
+			LastTransitionTime: metav1.Now(),
 		}
 
-		if _, ok := hash[appsv1beta4.PodOnServing]; !ok {
-			onServerCondition.LastTransitionTime = metav1.Now()
+		if c, ok := hash[appsv1beta4.PodOnServing]; ok {
+			onServerCondition.LastTransitionTime = c.LastTransitionTime
 		}
 
 		if h, ok := pod.Labels["controller-revision-hash"]; ok && h == instance.GetStatus().GetCurrentStatefulSetVersion() {
