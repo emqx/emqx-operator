@@ -15,6 +15,7 @@ import (
 
 type updatePodConditions struct {
 	*EmqxReconciler
+	*portForwardAPI
 }
 
 func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
@@ -77,37 +78,20 @@ func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4
 	return subResult{}
 }
 
-func (u updatePodConditions) getPortForwardAPI(instance appsv1beta4.Emqx, pod *corev1.Pod) (*portForwardAPI, error) {
+func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnterprise, pod *corev1.Pod) (corev1.ConditionStatus, error) {
 	o, err := innerPortFW.NewPortForwardOptions(u.Clientset, u.Config, pod, "8081")
 	if err != nil {
-		return nil, emperror.Wrap(err, "failed to create port forward options")
+		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to create port forward options")
 	}
-
-	username, password, err := getBootstrapUser(context.Background(), u.Client, instance)
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to get bootstrap user")
-	}
-	return &portForwardAPI{
-		Username: username,
-		Password: password,
-		Options:  o,
-	}, nil
-}
-
-func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnterprise, pod *corev1.Pod) (corev1.ConditionStatus, error) {
-	p, err := u.getPortForwardAPI(instance, pod)
-	if err != nil {
-		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to get portForwardAPI")
-	}
-	if p == nil {
-		return corev1.ConditionUnknown, emperror.New("portForwardAPI is nil")
-	}
-	defer close(p.Options.StopChannel)
-	if err := p.Options.ForwardPorts(); err != nil {
+	defer close(o.StopChannel)
+	if o.ForwardPorts(); err != nil {
 		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to forward ports")
 	}
-
-	resp, _, err := p.requestAPI("GET", "api/v4/load_rebalance/availability_check", nil)
+	resp, _, err := (&portForwardAPI{
+		Username: u.portForwardAPI.Username,
+		Password: u.portForwardAPI.Password,
+		Options:  o,
+	}).requestAPI("GET", "api/v4/load_rebalance/availability_check", nil)
 	if err != nil {
 		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to check pod availability")
 	}
