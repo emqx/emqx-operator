@@ -23,13 +23,12 @@ $ helm repo update
 $ helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
 ```
 
-Check whether the cert-manager service is ready with the following command:
+Wait EMQX Operator ready
 
 ```bash
-$ kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system
+$ kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 
-NAME                                                READY   STATUS    RESTARTS   AGE
-emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0          15s
+pod/emqx-operator-controller-manager-57bd7b8bd4-h2mcr condition met
 ```
 
 ### Upgrade EMQX Operator
@@ -66,14 +65,14 @@ $ helm uninstall emqx-operator -n emqx-operator-system
       image: emqx:5.0
    EOF
    ```
-   
+
    For more details please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v2alpha1-reference.md).
-   
+
 2. Wait the EMQX cluster is running
 
    ```bash
    $ kubectl get emqx
-   
+
    NAME   IMAGE      STATUS    AGE
    emqx   emqx:5.0   Running   2m55s
    ```
@@ -99,13 +98,13 @@ $ helm uninstall emqx-operator -n emqx-operator-system
               version: 4.4
    EOF
    ```
-   
+
    For more details please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
-   
+
 2. Wait the EMQX cluster is running
 
    ```bash
-   $ kubectl get emqxbrokers                                         
+   $ kubectl get emqxbrokers
 
    NAME   STATUS   AGE
    emqx   Running  8m33s
