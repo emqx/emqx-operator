@@ -34,58 +34,44 @@ func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4
 			continue
 		}
 
-		findCondition := func(podConditionType corev1.PodConditionType, conditions []corev1.PodCondition) (corev1.PodCondition, bool) {
-			for _, condition := range conditions {
-				if condition.Type == podConditionType {
-					return condition, true
-				}
-			}
-			return corev1.PodCondition{}, false
+		hash := make(map[corev1.PodConditionType]corev1.ConditionStatus)
+
+		for _, condition := range pod.Status.Conditions {
+			hash[condition.Type] = condition.Status
 		}
 
-		containersCondition, _ := findCondition(corev1.ContainersReady, pod.Status.Conditions)
-		if containersCondition.Status == corev1.ConditionTrue {
-			var podConditions []corev1.PodCondition
+		if s, ok := hash[corev1.PodReady]; !ok || s != corev1.ConditionTrue {
+			continue
+		}
 
-			podOnServingCondition, exist := findCondition(appsv1beta4.PodOnServing, pod.Status.Conditions)
-			if !exist {
-				podConditions = []corev1.PodCondition{
-					{
-						Type:               appsv1beta4.PodOnServing,
-						Status:             corev1.ConditionTrue,
-						LastTransitionTime: metav1.Now(),
-					},
-				}
+		onServerCondition := corev1.PodCondition{
+			Type:   appsv1beta4.PodOnServing,
+			Status: corev1.ConditionFalse,
+		}
 
-			} else {
-				podConditions = []corev1.PodCondition{
-					podOnServingCondition,
-				}
-			}
+		if _, ok := hash[appsv1beta4.PodOnServing]; !ok {
+			onServerCondition.LastTransitionTime = metav1.Now()
+		}
 
-			if pod.Labels["controller-revision-hash"] != instance.GetStatus().GetCurrentStatefulSetVersion() {
-				podConditions[0].Status = corev1.ConditionFalse
-			}
-			if _, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-				available, err := u.checkPodAvailability(instance, &pod)
+		if h, ok := pod.Labels["controller-revision-hash"]; ok && h == instance.GetStatus().GetCurrentStatefulSetVersion() {
+			onServerCondition.Status = corev1.ConditionTrue
+			if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
+				s, err := u.checkRebalanceStatus(enterprise, pod.DeepCopy())
 				if err != nil {
 					return subResult{err: err}
 				}
-				if !available {
-					podConditions[0].Status = corev1.ConditionFalse
-				}
+				onServerCondition.Status = s
 			}
+		}
 
-			patchBytes, _ := json.Marshal(
-				corev1.Pod{
-					Status: corev1.PodStatus{
-						Conditions: podConditions,
-					},
-				})
-			err := u.Client.Status().Patch(ctx, &pod, client.RawPatch(types.StrategicMergePatchType, patchBytes))
-			if err != nil {
-				return subResult{err: emperror.Wrap(err, "failed to patch pod conditions")}
-			}
+		patchBytes, _ := json.Marshal(corev1.Pod{
+			Status: corev1.PodStatus{
+				Conditions: []corev1.PodCondition{onServerCondition},
+			},
+		})
+		err := u.Client.Status().Patch(ctx, &pod, client.RawPatch(types.StrategicMergePatchType, patchBytes))
+		if err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to patch pod conditions")}
 		}
 	}
 	return subResult{}
@@ -108,25 +94,25 @@ func (u updatePodConditions) getPortForwardAPI(instance appsv1beta4.Emqx, pod *c
 	}, nil
 }
 
-func (u updatePodConditions) checkPodAvailability(instance appsv1beta4.Emqx, pod *corev1.Pod) (bool, error) {
+func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnterprise, pod *corev1.Pod) (corev1.ConditionStatus, error) {
 	p, err := u.getPortForwardAPI(instance, pod)
 	if err != nil {
-		return false, emperror.Wrap(err, "failed to get portForwardAPI")
+		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to get portForwardAPI")
 	}
 	if p == nil {
-		return false, emperror.New("portForwardAPI is nil")
+		return corev1.ConditionUnknown, emperror.New("portForwardAPI is nil")
 	}
 	defer close(p.Options.StopChannel)
 	if err := p.Options.ForwardPorts(); err != nil {
-		return false, emperror.Wrap(err, "failed to forward ports")
+		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to forward ports")
 	}
 
 	resp, _, err := p.requestAPI("GET", "api/v4/load_rebalance/availability_check", nil)
 	if err != nil {
-		return false, emperror.Wrap(err, "failed to check pod availability")
+		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to check pod availability")
 	}
 	if resp == nil || resp.StatusCode != 200 {
-		return false, emperror.Errorf("pod %s-%s is unAvailable", pod.Namespace, pod.Name)
+		return corev1.ConditionFalse, emperror.Errorf("pod %s-%s is unAvailable", pod.Namespace, pod.Name)
 	}
-	return true, nil
+	return corev1.ConditionTrue, nil
 }
