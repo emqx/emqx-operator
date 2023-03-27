@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/utils/pointer"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -80,17 +81,12 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	opts := zap.Options{
-		Development: true,
-		Level:       zapcore.InfoLevel,
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	leaseDuration := time.Second * 30
-	renewDeadline := time.Second * 20
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -99,8 +95,8 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "19fd6fcc.emqx.io",
-		LeaseDuration:          &leaseDuration,
-		RenewDeadline:          &renewDeadline,
+		LeaseDuration:          pointer.Duration(time.Second * 30),
+		RenewDeadline:          pointer.Duration(time.Second * 20),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
