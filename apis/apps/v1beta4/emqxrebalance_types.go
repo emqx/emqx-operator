@@ -22,7 +22,7 @@ import (
 
 // EmqxRebalanceSpec defines the desired state of EmqxRebalance
 type EmqxRebalanceSpec struct {
-	EmqxInstance      string             `json:"emqxItance,omitempty"`
+	EmqxInstance      string             `json:"emqxInstance,omitempty"`
 	RebalanceStrategy *RebalanceStrategy `json:"rebalanceStrategy,omitempty"`
 }
 
@@ -56,9 +56,11 @@ type Rebalance struct {
 	ConnectionEvictionRate int32    `json:"connectionEvictionRate,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:storageversion
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // EmqxRebalance is the Schema for the emqxrebalances API
 type EmqxRebalance struct {
 	metav1.TypeMeta   `json:",inline"`

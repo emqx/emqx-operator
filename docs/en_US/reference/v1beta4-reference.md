@@ -411,7 +411,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `emqxItance` _string_ |  |
+| `emqxInstance` _string_ |  |
 | `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ |  |
 
 

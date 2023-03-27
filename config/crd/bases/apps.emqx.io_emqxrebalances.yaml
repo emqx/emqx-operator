@@ -15,7 +15,14 @@ spec:
     singular: emqxrebalance
   scope: Namespaced
   versions:
-  - name: v1beta4
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta4
     schema:
       openAPIV3Schema:
         properties:
@@ -27,7 +34,7 @@ spec:
             type: object
           spec:
             properties:
-              emqxItance:
+              emqxInstance:
                 type: string
               rebalanceStrategy:
                 properties:

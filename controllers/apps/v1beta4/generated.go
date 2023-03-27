@@ -389,8 +389,6 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 		TTY:                      emqxTemplate.Spec.EmqxContainer.TTY,
 	}
 
-	emqxTemplate.Labels["apps.emqx.io/statefulSet-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
-
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      emqxTemplate.Labels,
@@ -437,10 +435,8 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podTemplate.Labels,
 			},
-			PodManagementPolicy:                  appsv1.ParallelPodManagement,
-			MinReadySeconds:                      0,
-			PersistentVolumeClaimRetentionPolicy: nil,
-			Template:                             podTemplate,
+			PodManagementPolicy: appsv1.ParallelPodManagement,
+			Template:            podTemplate,
 		},
 	}
 

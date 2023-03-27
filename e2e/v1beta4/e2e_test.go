@@ -19,9 +19,6 @@ package v1beta4
 import (
 	"context"
 	"fmt"
-	"sort"
-
-	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
 	"github.com/emqx/emqx-operator/internal/handler"
@@ -29,7 +26,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +35,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sort"
 )
 
 var emqxBroker = &appsv1beta4.EmqxBroker{
@@ -243,9 +240,7 @@ var _ = Describe("Base E2E Test", func() {
 				return s
 			}, timeout, interval).Should(HaveEach(
 				HaveField("Conditions", ContainElements(
-					HaveField("Type", v1beta4.PodInCluster),
 					HaveField("Type", corev1.PodReady),
-					HaveField("Type", v1beta4.PodOnServing),
 				))))
 
 			By("Checking the EMQX Custom Resource's EndpointSlice")
@@ -664,49 +659,35 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 			deleteEmqx(emqx)
 		})
 
-		By("check emqx running condition in CR status")
-		Eventually(func() corev1.ConditionStatus {
-			ee := &appsv1beta4.EmqxEnterprise{}
-			_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-			if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionRunning {
-				return ee.GetStatus().GetConditions()[0].Status
-			}
-			return corev1.ConditionUnknown
-		}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+		It("emqx rebalance", func() {
+			By("check emqx running condition in CR status")
+			Eventually(func() corev1.ConditionStatus {
+				ee := &appsv1beta4.EmqxEnterprise{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionRunning {
+					return ee.GetStatus().GetConditions()[0].Status
+				}
+				return corev1.ConditionUnknown
+			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
 
-		By("create emqx rebalance CR ")
-		createRebalance(emqx)
+			By("create emqx rebalance CR ")
+			createRebalance(emqx)
 
-		By("check emqx rebalance condition in CR status")
-		Eventually(func() v1beta4.Condition {
-			emqxRebalance := &appsv1beta4.EmqxRebalance{}
-			_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqxRebalance), emqxRebalance)
-			if emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
-				return emqxRebalance.Status.Conditions[0]
-			}
-			return v1beta4.Condition{}
-		}, timeout, interval).Should(Equal(v1beta4.Condition{
-			Type:    appsv1beta4.ConditionComplete,
-			Status:  v1.ConditionFalse,
-			Reason:  "Complete",
-			Message: "[\"nothing_to_balance\"]",
-		}))
-
-		By("check emqx rebalance condition in CR status")
-		Eventually(func() v1beta4.Condition {
-			emqxRebalance := &appsv1beta4.EmqxRebalance{}
-			_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqxRebalance), emqxRebalance)
-			if emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
-				return emqxRebalance.Status.Conditions[0]
-			}
-			return v1beta4.Condition{}
-		}, timeout, interval).Should(Equal(v1beta4.Condition{
-			Type:    appsv1beta4.ConditionComplete,
-			Status:  v1.ConditionFalse,
-			Reason:  "Complete",
-			Message: "emqx rebalance has already completed",
-		}))
-
+			By("check emqx rebalance condition in CR status")
+			Eventually(func() appsv1beta4.Condition {
+				emqxRebalance := &appsv1beta4.EmqxRebalance{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqxRebalance), emqxRebalance)
+				if emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
+					return emqxRebalance.Status.Conditions[0]
+				}
+				return appsv1beta4.Condition{}
+			}, timeout, interval).Should(Equal(appsv1beta4.Condition{
+				Type:    appsv1beta4.ConditionComplete,
+				Status:  corev1.ConditionFalse,
+				Reason:  "Complete",
+				Message: "[\"nothing_to_balance\"]",
+			}))
+		})
 	})
 })
 

@@ -3,7 +3,7 @@ kind: EmqxRebalance
 metadata:
   name: emqxrebalance-sample
 spec:
-  istance: emqx-ee
+  emqxInstance: emqx-ee
   rebalanceStrategy:
     connEvictRate: 10
     sessEvictRate: 10

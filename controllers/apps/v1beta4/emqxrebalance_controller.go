@@ -85,7 +85,7 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		Namespace: emqxRebalance.Namespace, Name: emqxRebalance.Spec.EmqxInstance,
 	}, emqxEnterprise); err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, err
 	}
@@ -104,6 +104,7 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, emperror.Wrap(err, "failed to update emqx rabalance status")
 		}
 		return ctrl.Result{}, err
+
 	}
 
 	if len(emqxRebalance.Status.Rebalances) == 0 {
@@ -137,7 +138,7 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if err := r.Client.Status().Update(ctx, emqxRebalance); err != nil {
 			return ctrl.Result{}, emperror.Wrap(err, "failed to update emqx rebalance status")
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 	}
 
 	requeueAfter := time.Duration(0)
@@ -204,7 +205,7 @@ func (r *EmqxRebalanceReconciler) canExecuteRebalance(emqxRabalance *appsv1beta4
 
 	conditions = emqxRabalance.Status.Conditions
 	if len(conditions) > 0 && conditions[0].Type == appsv1beta4.ConditionComplete {
-		return false, emperror.New("emqx rebalance has already completed")
+		return false, emperror.New(conditions[0].Message)
 	}
 
 	return true, nil
@@ -212,7 +213,7 @@ func (r *EmqxRebalanceReconciler) canExecuteRebalance(emqxRabalance *appsv1beta4
 
 func (r *EmqxRebalanceReconciler) startRebalance(emqxRebalance *appsv1beta4.EmqxRebalance, emqxEnterprise *appsv1beta4.EmqxEnterprise) error {
 
-	pod := r.getOnePodInCluster(emqxEnterprise)
+	pod := r.getPodInCluster(emqxEnterprise)
 	if pod == nil {
 		return emperror.New("failed to get in-cluster pod")
 	}
@@ -248,15 +249,13 @@ func (r *EmqxRebalanceReconciler) startRebalance(emqxRebalance *appsv1beta4.Emqx
 	}
 
 	emqxNodeName := getEmqxNodeName(emqxEnterprise, pod)
-	_, resBody, err := p.requestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/load_rebalance/start", bytes)
+	_, respBody, err := p.requestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
 	if err != nil {
-
 		return err
 	}
-
-	code := gjson.GetBytes(resBody, "code")
+	code := gjson.GetBytes(respBody, "code")
 	if code.String() != "200" {
-		message := gjson.GetBytes(resBody, "message")
+		message := gjson.GetBytes(respBody, "message")
 		return emperror.New(message.String())
 	}
 	return nil
@@ -264,6 +263,7 @@ func (r *EmqxRebalanceReconciler) startRebalance(emqxRebalance *appsv1beta4.Emqx
 
 func (r *EmqxRebalanceReconciler) udpateRebalanceCondition(emqxRebalance *appsv1beta4.EmqxRebalance, condition appsv1beta4.Condition) {
 	if len(emqxRebalance.Status.Conditions) == 0 {
+		condition.LastTransitionTime = metav1.Now()
 		emqxRebalance.Status.Conditions = []appsv1beta4.Condition{
 			condition,
 		}
@@ -300,7 +300,7 @@ func (r *EmqxRebalanceReconciler) getRebalanceStatus(emqxEnterprise *appsv1beta4
 	return rebalances, nil
 }
 
-func (r *EmqxRebalanceReconciler) getOnePodInCluster(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Pod {
+func (r *EmqxRebalanceReconciler) getPodInCluster(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Pod {
 	podList := &corev1.PodList{}
 	_ = r.Client.List(context.Background(), podList,
 		client.InNamespace(emqxEnterprise.GetNamespace()),
