@@ -79,24 +79,27 @@ func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4
 }
 
 func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnterprise, pod *corev1.Pod) (corev1.ConditionStatus, error) {
+	// Need check every pods, so must create new port forward options
 	o, err := innerPortFW.NewPortForwardOptions(u.Clientset, u.Config, pod, "8081")
 	if err != nil {
-		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to create port forward options")
+		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to create port forward options for pod/%s", pod.Name)
 	}
 	defer close(o.StopChannel)
 	if o.ForwardPorts(); err != nil {
-		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to forward ports")
+		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to forward ports for pod/%s", pod.Name)
 	}
 	resp, _, err := (&portForwardAPI{
+		// Doesn't need get username and password from secret
+		// because they are same as the emqx cluster
 		Username: u.portForwardAPI.Username,
 		Password: u.portForwardAPI.Password,
 		Options:  o,
 	}).requestAPI("GET", "api/v4/load_rebalance/availability_check", nil)
 	if err != nil {
-		return corev1.ConditionUnknown, emperror.Wrap(err, "failed to check pod availability")
+		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to check availability for pod/%s", pod.Name)
 	}
-	if resp == nil || resp.StatusCode != 200 {
-		return corev1.ConditionFalse, emperror.Errorf("pod %s-%s is unAvailable", pod.Namespace, pod.Name)
+	if resp.StatusCode != 200 {
+		return corev1.ConditionFalse, nil
 	}
 	return corev1.ConditionTrue, nil
 }
