@@ -36,9 +36,6 @@ type ConditionType string
 const (
 	ConditionRunning           ConditionType = "Running"
 	ConditionBlueGreenUpdating ConditionType = "BlueGreenUpdating"
-	ConditionProcess           ConditionType = "Process"
-	ConditionComplete          ConditionType = "Complete"
-	ConditionFailed            ConditionType = "Failed"
 )
 
 // +kubebuilder:object:generate=false
@@ -120,17 +117,4 @@ func indexCondition(conditions []Condition, t ConditionType) int {
 		}
 	}
 	return -1
-}
-
-func IsClusterReady(s EmqxStatus) bool {
-	index := indexCondition(s.GetConditions(), ConditionRunning)
-	if index == 0 && s.GetConditions()[index].Status == corev1.ConditionTrue {
-		return true
-	}
-	index = indexCondition(s.GetConditions(), ConditionBlueGreenUpdating)
-	if index == 0 && s.GetConditions()[index].Status == corev1.ConditionTrue {
-		return true
-	}
-
-	return false
 }

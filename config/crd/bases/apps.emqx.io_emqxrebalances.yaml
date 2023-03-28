@@ -34,7 +34,7 @@ spec:
             type: object
           spec:
             properties:
-              emqxInstance:
+              instanceName:
                 type: string
               rebalanceStrategy:
                 properties:
@@ -64,6 +64,9 @@ spec:
             type: object
           status:
             properties:
+              completionTime:
+                format: date-time
+                type: string
               conditions:
                 items:
                   properties:
@@ -86,9 +89,6 @@ spec:
                   - type
                   type: object
                 type: array
-              endedAt:
-                format: date-time
-                type: string
               phase:
                 type: string
               rebalances:
@@ -116,7 +116,7 @@ spec:
                       type: string
                   type: object
                 type: array
-              startedAt:
+              startTime:
                 format: date-time
                 type: string
             type: object

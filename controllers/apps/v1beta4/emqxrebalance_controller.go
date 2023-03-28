@@ -82,30 +82,33 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	if emqxRebalance.DeletionTimestamp != nil {
+		return ctrl.Result{}, nil
+	}
 	emqxEnterprise := &appsv1beta4.EmqxEnterprise{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
-		Namespace: emqxRebalance.Namespace, Name: emqxRebalance.Spec.EmqxInstance,
+		Namespace: emqxRebalance.Namespace, Name: emqxRebalance.Spec.InstanceName,
 	}, emqxEnterprise); err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	can, err := r.canExecuteRebalance(emqxRebalance, emqxEnterprise)
-	if !can {
+	enable, err := r.canExecuteRebalance(emqxRebalance, emqxEnterprise)
+	if !enable {
 		emqxRebalance.Status.Phase = "Complete"
-		condition := appsv1beta4.Condition{
+		r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
 			Type:    appsv1beta4.ConditionComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Complete",
 			Message: err.Error(),
-		}
-		r.udpateRebalanceCondition(emqxRebalance, condition)
-		if err := r.Client.Status().Update(ctx, emqxRebalance); err != nil {
+		})
+		err = r.Client.Status().Update(ctx, emqxRebalance)
+		if err != nil {
 			return ctrl.Result{}, emperror.Wrap(err, "failed to update emqx rabalance status")
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 
 	}
 
@@ -113,67 +116,63 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		err := r.startRebalance(emqxRebalance, emqxEnterprise)
 		if err != nil {
 			emqxRebalance.Status.Phase = "Complete"
-			condition := appsv1beta4.Condition{
+			r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
 				Type:    appsv1beta4.ConditionComplete,
 				Status:  corev1.ConditionFalse,
 				Reason:  "Complete",
 				Message: err.Error(),
-			}
-			r.udpateRebalanceCondition(emqxRebalance, condition)
+			})
 			if err := r.Client.Status().Update(ctx, emqxRebalance); err != nil {
 				return ctrl.Result{}, emperror.Wrap(err, "failed to update emqx rebalance status")
 			}
-			return ctrl.Result{}, err
+			return ctrl.Result{}, nil
 		}
 	}
 
 	rebalances, err := r.getRebalanceStatus(emqxEnterprise)
 	if err != nil {
 		emqxRebalance.Status.Phase = "Complete"
-		condition := appsv1beta4.Condition{
+		r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
 			Type:    appsv1beta4.ConditionComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  "Complete",
 			Message: err.Error(),
-		}
-		r.udpateRebalanceCondition(emqxRebalance, condition)
+		})
 		if err := r.Client.Status().Update(ctx, emqxRebalance); err != nil {
 			return ctrl.Result{}, emperror.Wrap(err, "failed to update emqx rebalance status")
 		}
 		return ctrl.Result{}, nil
 	}
 
-	requeueAfter := time.Duration(0)
+	requeueAfter := 0
 	if len(rebalances) == 0 {
 		emqxRebalance.Status.Phase = "Complete"
-		emqxRebalance.Status.EndedAt = metav1.Now()
-		condition := appsv1beta4.Condition{
+		emqxRebalance.Status.CompletionTime = metav1.Now()
+		r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
 			Type:    appsv1beta4.ConditionComplete,
 			Status:  corev1.ConditionTrue,
 			Reason:  "Complete",
 			Message: "rebalance has completed",
-		}
-		r.udpateRebalanceCondition(emqxRebalance, condition)
+		})
 	} else {
-		if emqxRebalance.Status.StartedAt.IsZero() {
-			emqxRebalance.Status.StartedAt = metav1.Now()
+		if emqxRebalance.Status.StartTime.IsZero() {
+			emqxRebalance.Status.StartTime = metav1.Now()
 		}
 		emqxRebalance.Status.Phase = "Process"
-		condition := appsv1beta4.Condition{
+		r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
 			Type:    appsv1beta4.ConditionProcess,
 			Status:  corev1.ConditionTrue,
 			Reason:  "Process",
 			Message: "rebalance is processing",
-		}
-		r.udpateRebalanceCondition(emqxRebalance, condition)
-		requeueAfter = time.Duration(20)
+		})
+		requeueAfter = 10
 	}
 	emqxRebalance.Status.Rebalances = rebalances
 	if err := r.Client.Status().Update(ctx, emqxRebalance); err != nil {
 		return ctrl.Result{}, emperror.Wrap(err, "failed to update emqx status")
 	}
 
-	return ctrl.Result{RequeueAfter: requeueAfter * time.Second}, nil
+	return ctrl.Result{RequeueAfter: time.Duration(requeueAfter) * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -195,20 +194,20 @@ func (r *EmqxRebalanceReconciler) canExecuteRebalance(emqxRabalance *appsv1beta4
 	emqxRebalanceList := &appsv1beta4.EmqxRebalanceList{}
 	if err := r.Client.List(context.Background(), emqxRebalanceList, client.InNamespace(emqxRabalance.Namespace)); err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return false, emperror.New("there has no emqx rebalance job")
+			return false, emperror.New("there has no rebalance job")
 		}
-		return false, emperror.New("failed to list emqx rebalance job")
+		return false, emperror.New("failed to list rebalance job")
 	}
 
 	for _, item := range emqxRebalanceList.Items {
 		if item.Status.Phase == "Process" && item.Name != emqxRabalance.Name {
-			return false, emperror.New("there is already a running emqx rebalance job")
+			return false, emperror.New("there is already a running rebalance job")
 		}
 	}
 
-	conditions = emqxRabalance.Status.Conditions
-	if len(conditions) > 0 && conditions[0].Type == appsv1beta4.ConditionComplete {
-		return false, emperror.New(conditions[0].Message)
+	rebalanceConditions := emqxRabalance.Status.Conditions
+	if len(rebalanceConditions) > 0 && rebalanceConditions[0].Type == appsv1beta4.ConditionComplete {
+		return false, emperror.New(rebalanceConditions[0].Message)
 	}
 
 	return true, nil
@@ -241,18 +240,16 @@ func (r *EmqxRebalanceReconciler) startRebalance(emqxRebalance *appsv1beta4.Emqx
 		"wait_health_check":  emqxRebalance.Spec.RebalanceStrategy.WaitHealthCheck,
 		"abs_conn_threshold": emqxRebalance.Spec.RebalanceStrategy.AbsConnThreshold,
 		"abs_sess_threshold": emqxRebalance.Spec.RebalanceStrategy.AbsSessThreshold,
-		// "rel_sess_threshold": emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold,
-		// "rel_conn_threshold": emqxRebalance.Spec.RebalanceStrategy.RelSessThreshold,
-		"nodes": nodes,
+		"nodes":              nodes,
 	}
 
-	relConnThreshold, _ := strconv.ParseFloat(emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold, 32)
 	if len(emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
+		relConnThreshold, _ := strconv.ParseFloat(emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold, 32)
 		body["rel_conn_threshold"] = relConnThreshold
 	}
 
-	relSessThreshold, _ := strconv.ParseFloat(emqxRebalance.Spec.RebalanceStrategy.RelSessThreshold, 32)
 	if len(emqxRebalance.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
+		relSessThreshold, _ := strconv.ParseFloat(emqxRebalance.Spec.RebalanceStrategy.RelSessThreshold, 32)
 		body["rel_sess_threshold"] = relSessThreshold
 	}
 
@@ -261,11 +258,10 @@ func (r *EmqxRebalanceReconciler) startRebalance(emqxRebalance *appsv1beta4.Emqx
 		return emperror.Wrap(err, "marshal body failed")
 	}
 
-	fmt.Println("srtat rebalance")
-
 	emqxNodeName := getEmqxNodeName(emqxEnterprise, pod)
 	_, respBody, err := p.requestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
 	if err != nil {
+		fmt.Println("err:", err.Error())
 		return err
 	}
 	code := gjson.GetBytes(respBody, "code")
@@ -276,16 +272,15 @@ func (r *EmqxRebalanceReconciler) startRebalance(emqxRebalance *appsv1beta4.Emqx
 	return nil
 }
 
-func (r *EmqxRebalanceReconciler) udpateRebalanceCondition(emqxRebalance *appsv1beta4.EmqxRebalance, condition appsv1beta4.Condition) {
+func (r *EmqxRebalanceReconciler) udpateRebalanceCondition(emqxRebalance *appsv1beta4.EmqxRebalance, condition appsv1beta4.RebalanceCondition) {
 	if len(emqxRebalance.Status.Conditions) == 0 {
 		condition.LastTransitionTime = metav1.Now()
-		emqxRebalance.Status.Conditions = []appsv1beta4.Condition{
+		emqxRebalance.Status.Conditions = []appsv1beta4.RebalanceCondition{
 			condition,
 		}
 		return
 	}
 	currCondition := emqxRebalance.Status.Conditions[0]
-	condition.LastUpdateTime = metav1.Now()
 	if currCondition.Type != condition.Type {
 		condition.LastTransitionTime = metav1.Now()
 	}
@@ -304,11 +299,9 @@ func (r *EmqxRebalanceReconciler) getRebalanceStatus(emqxEnterprise *appsv1beta4
 
 	_, body, err := p.requestAPI("GET", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
-		fmt.Println("request API error:", err.Error())
 		return nil, err
 	}
 
-	fmt.Println("body:", string(body))
 	rebalances := []appsv1beta4.Rebalance{}
 	data := gjson.GetBytes(body, "rebalances")
 	if err := json.Unmarshal([]byte(data.Raw), &rebalances); err != nil {
@@ -333,7 +326,7 @@ func (r *EmqxRebalanceReconciler) getPodInCluster(emqxEnterprise *appsv1beta4.Em
 			continue
 		}
 		for _, c := range pod.Status.Conditions {
-			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+			if c.Type == corev1.ContainersReady && c.Status == corev1.ConditionTrue {
 				return &pod
 			}
 		}

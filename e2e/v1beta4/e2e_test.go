@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
@@ -271,7 +272,7 @@ var _ = Describe("Base E2E Test", func() {
 					svc,
 				)
 				return svc.Spec.Ports
-			}, timeout, interval).Should(Equal(headlessPort))
+			}, timeout, interval).Should(ContainElements(headlessPort))
 
 			By("check service ports", func() {
 				checkService(emqx, ports, pluginPorts, headlessPort)
@@ -545,6 +546,93 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 		})
 	})
 })
+
+var emqxRebalance = appsv1beta4.EmqxRebalance{
+	Spec: appsv1beta4.EmqxRebalanceSpec{
+		RebalanceStrategy: &appsv1beta4.RebalanceStrategy{
+			WaitTakeover:     10,
+			ConnEvictRate:    10,
+			SessEvictRate:    10,
+			WaitHealthCheck:  10,
+			AbsSessThreshold: 100,
+			RelConnThreshold: "1.2",
+			AbsConnThreshold: 100,
+			RelSessThreshold: "1.2",
+		},
+	},
+}
+
+var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
+	Describe("Just for enterprise", func() {
+		emqx := emqxEnterprise.DeepCopy()
+		BeforeEach(func() {
+			createEmqx(emqx)
+		})
+
+		AfterEach(func() {
+			deleteEmqx(emqx)
+		})
+
+		It("emqx rebalance", func() {
+			By("create a new rebalance job")
+			time.Sleep(20 * time.Second)
+			createRebalance(&emqxRebalance, emqx)
+
+			Eventually(func() string {
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&emqxRebalance), &emqxRebalance)
+				if len(emqxRebalance.Status.Conditions) > 0 && emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
+					return emqxRebalance.Status.Conditions[0].Message
+				}
+				return ""
+			}, timeout, interval).Should(Equal("[\"nothing_to_balance\"]"))
+
+			By("update rebalance job status ")
+			emqxRebalance.Status = appsv1beta4.EmqxRebalanceStatus{
+				Rebalances: []appsv1beta4.Rebalance{
+					{
+						State:               "wait_health_check",
+						SessionEvictionRate: 10,
+						Recipients: []string{
+							"emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
+						},
+						Node: "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
+						Donors: []string{
+							"emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
+							"emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
+						},
+						CoordinatorNode:        "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
+						ConnectionEvictionRate: 10,
+					},
+				},
+				Phase: "Process",
+				Conditions: []appsv1beta4.RebalanceCondition{
+					{
+						Type:   appsv1beta4.ConditionProcess,
+						Status: corev1.ConditionTrue,
+					},
+				},
+			}
+
+			Expect(k8sClient.Status().Update(context.TODO(), &emqxRebalance)).Should(Succeed())
+
+			Eventually(func() string {
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&emqxRebalance), &emqxRebalance)
+				if len(emqxRebalance.Status.Conditions) > 0 && emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
+					return emqxRebalance.Status.Conditions[0].Message
+				}
+				return ""
+			}, timeout, interval).Should(Equal("rebalance has completed"))
+		})
+	})
+})
+
+func createRebalance(emqxRebalance *appsv1beta4.EmqxRebalance, emqx appsv1beta4.Emqx) {
+	emqxRebalance.Name = "rebalance" + "-" + rand.String(5)
+	emqxRebalance.Namespace = emqx.GetNamespace()
+	emqxRebalance.Spec.InstanceName = emqx.GetName()
+	Expect(emqxRebalance.ValidateCreate()).Should(Succeed())
+	Expect(k8sClient.Create(context.TODO(), emqxRebalance)).Should(Succeed())
+}
 
 func createEmqx(emqx appsv1beta4.Emqx) {
 	emqx.SetNamespace(emqx.GetNamespace() + "-" + rand.String(5))

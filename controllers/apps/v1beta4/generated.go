@@ -402,7 +402,6 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			}),
 		},
 	}
-
 	podTemplate.Annotations = handler.SetManagerContainerAnnotation(podTemplate.Annotations, podTemplate.Spec.Containers)
 
 	sts := &appsv1.StatefulSet{

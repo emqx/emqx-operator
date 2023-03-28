@@ -7,8 +7,8 @@ spec:
   rebalanceStrategy:
     connEvictRate: 5
     sessEvictRate: 5
-    waitTakeover: 20
-    waitHealthCheck: 20
+    waitTakeover: 5
+    waitHealthCheck: 10
     absConnThreshold: 10
     absSessThreshold: 10
     relConnThreshold: "1.2"

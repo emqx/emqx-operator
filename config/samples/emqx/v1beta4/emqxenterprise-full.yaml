@@ -4,32 +4,29 @@ metadata:
   name: emqx-ee
   labels:
     "apps.emqx.io/instance": "emqx-ee"
-  annotations:
-    service.beta.kubernetes.io/backend-type: "eni"
 spec:
-  replicas: 3
+  replicas: 1
   license:
     # stringData:
-    data: 
-      LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVLakNDQXhLZ0F3SUJBZ0lERzV6Wk1BMEdDU3FHU0liM0RRRUJDd1VBTUlHRE1Rc3dDUVlEVlFRR0V3SkQKVGpFUk1BOEdBMVVFQ0F3SVdtaGxhbWxoYm1jeEVUQVBCZ05WQkFjTUNFaGhibWQ2YUc5MU1Rd3dDZ1lEVlFRSwpEQU5GVFZFeEREQUtCZ05WQkFzTUEwVk5VVEVTTUJBR0ExVUVBd3dKS2k1bGJYRjRMbWx2TVI0d0hBWUpLb1pJCmh2Y05BUWtCRmc5NmFHRnVaM2RvUUdWdGNYZ3VhVzh3SGhjTk1qTXdNekEzTURVMU5ESTRXaGNOTWpNd05qQTEKTURVMU5ESTRXakJOTVFzd0NRWURWUVFHRXdKRFRqRU1NQW9HQTFVRUNnd0RSVTFSTVF3d0NnWURWUVFEREFORgpUVkV4SWpBZ0Jna3Foa2lHOXcwQkNRRVdFMk5zYjNWa2JtRjBhWFpsUUdWdGNYZ3VhVzh3Z2dFaU1BMEdDU3FHClNJYjNEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUURBV0djN3RNUllZYnVHbnlJWDk2OGdvQkIyZG11ck9pQWIKV0hBS3o5aUR1V1RhdlQ5NjloUHMvcE05anFTdFVuZk5mRXZzWHExeldLbEtzVmp1WWNnNFNPVDFpTjJ1cXRPQwowdXBsanVaV1hlOFlIYVdvV3lqcXNPdnl2di9qVTVwT3pwMFlDamtoQUZRb0E3NnZiK1p1T3dKcjY1WG5MRGV6CjRGazlWeGRmOU5IUTJ5YmFQQ3pkUktoY2ViaVBvYmdKeFV4WmY0bWEvRjFsWHc2TlMyQ1hXcDNOSlFQYlludlYKWVBxWGJWM2lybUpkYW5iTXdSM3lWY3pDVjRMZWNkV0pUbFpscGR0NHh6S1dXWm5YZ3RyZDBrbDZTenRkV3B4bApjQTBSYmJ5TTFRQ1JMbWowbzJGUW4rMVhvSXMrQ2RuSEVZTkt0QzQrQzRic3AweGNXWG8vQWdNQkFBR2pnZHN3CmdkZ3dGQVlKS3dZQkJBR0RtaDBCQkFjTUJUSXdNREF3TUlHYUJna3JCZ0VFQVlPYUhRSUVnWXdNZ1lsbGJYRjQKWDJKaFkydGxibVJmY21Wa2FYTXNJR1Z0Y1hoZlltRmphMlZ1WkY5dGVYTnhiQ3dnWlcxeGVGOWlZV05yWlc1awpYM0JuYzNGc0xDQmxiWEY0WDJKaFkydGxibVJmYlc5dVoyOHNJR1Z0Y1hoZlltRmphMlZ1WkY5allYTnpZU3dnClpXMXhlRjlpY21sa1oyVmZhMkZtYTJFc0lHVnRjWGhmWW5KcFpHZGxYM0poWW1KcGREQVFCZ2tyQmdFRUFZT2EKSFFNRUF3d0JNREFSQmdrckJnRUVBWU9hSFFRRUJBd0NMVEV3RFFZSktvWklodmNOQVFFTEJRQURnZ0VCQUEyeApVR2FOSmJFek96eDlNRXI0d2xwZ09PUUtQUytNamg5S1didmxnb2hYL0NTZjBXdzlzVUFBdlFxbmV6WTliRGdECmdKb3ZENktJSG1uaFdDOUJjbmhkbFd2NFF0SUJtN3hKYWwxSnR2cVMrcnk2N04xZnR2MUtWUG9OcHpuYXN0bXgKSElnTEFBb1lRWWpKeG9id0tvYXl1OWJaWmNKMTEvLzJTU2EwUUNjWGI3MWF5L1l2NjVqNVZOVk9xQ0pCT05QMAp4aHJxbFU5NGhQMjZUdnhiYXJJM0lVMXVvdldBQ09SZDYyY1JaMWx2YXMwYzNSNnFvL1R3K1NjTjBSYm9iOVVTCnN2WWNqRzBOZHJOYmVQb3BUeHluMVlDSTZIc2ZXRnY4ZVJSRmVZV0cyUzIvTEV5SDlpeXlkSkRIcXRSNnZNLzQKMUF0WnV3NXUxeHRHZUI0dnB6OD0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-  # persistent:
-  #   metadata:
-  #     name: emqx-ee
-  #     labels:
-  #       "apps.emqx.io/instance": "emqx-ee"
-  #   spec:
-  #     storageClassName: standard
-  #     resources:
-  #       requests:
-  #         storage: 20Mi
-  #     accessModes:
-  #       - ReadWriteOnce
-  # blueGreenUpdate:
-  #   initialDelaySeconds: 30
-  #   evacuationStrategy:
-  #     waitTakeover: 10
-  #     connEvictRate: 200
-  #     sessEvictRate: 200
+    data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVOekNDQXgrZ0F3SUJBZ0lEZE12Vk1BMEdDU3FHU0liM0RRRUJCUVVBTUlHRE1Rc3dDUVlEVlFRR0V3SkQKVGpFUk1BOEdBMVVFQ0F3SVdtaGxhbWxoYm1jeEVUQVBCZ05WQkFjTUNFaGhibWQ2YUc5MU1Rd3dDZ1lEVlFRSwpEQU5GVFZFeEREQUtCZ05WQkFzTUEwVk5VVEVTTUJBR0ExVUVBd3dKS2k1bGJYRjRMbWx2TVI0d0hBWUpLb1pJCmh2Y05BUWtCRmc5NmFHRnVaM2RvUUdWdGNYZ3VhVzh3SGhjTk1qQXdOakl3TURNd01qVXlXaGNOTkRrd01UQXgKTURNd01qVXlXakJqTVFzd0NRWURWUVFHRXdKRFRqRVpNQmNHQTFVRUNnd1FSVTFSSUZnZ1JYWmhiSFZoZEdsdgpiakVaTUJjR0ExVUVBd3dRUlUxUklGZ2dSWFpoYkhWaGRHbHZiakVlTUJ3R0NTcUdTSWIzRFFFSkFSWVBZMjl1CmRHRmpkRUJsYlhGNExtbHZNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXJ3KzMKMnc5QjdScjNNN0lPaU1jN09EM056djJLVXd0SzZPU1EwN1k3aWtESmgwanluV2N3NlFhbVRpUldNMkFsZThqcgowWEFtS2d3VVNJNDIrZjR3ODRuUHBBSDRrMUwwenVwYVIxMFZZS0lvd1pxWFZFdlN5VjhHMk43MDkxKzZKY29uCkRjYU5CcVpMUmUxRGlaWE1KbGhYbkRncTE0RlBBeGZmS2hDWGlDZ1l0bHVMRERMS3YrdzlCYVFHWlZqeGxGZTUKY3czMit6L3hIVTM2Nm5wSEJwYWZDYnhCdFdzTnZjaE1WdExCcXY5eVBtck1xZUJST3lvSmFJM25MNzh4RGdwZApjUm9ycW8rdVExSFdkY002SW5FRkVUNnB3a2V1QUY4L2pKUmxUMTJYR2daS0tnRlFUQ2taaTRodjdheXdrR0JFCkpydVBpZi93bEswWXVQSnU2UUlEQVFBQm80SFNNSUhQTUJFR0NTc0dBUVFCZzVvZEFRUUVEQUl4TURDQmxBWUoKS3dZQkJBR0RtaDBDQklHR0RJR0RaVzF4ZUY5aVlXTnJaVzVrWDNKbFpHbHpMR1Z0Y1hoZlltRmphMlZ1WkY5dAplWE54YkN4bGJYRjRYMkpoWTJ0bGJtUmZjR2R6Y1d3c1pXMXhlRjlpWVdOclpXNWtYMjF2Ym1kdkxHVnRjWGhmClltRmphMlZ1WkY5allYTnpZU3hsYlhGNFgySnlhV1JuWlY5cllXWnJZU3hsYlhGNFgySnlhV1JuWlY5eVlXSmkKYVhRd0VBWUpLd1lCQkFHRG1oMERCQU1NQVRFd0VRWUpLd1lCQkFHRG1oMEVCQVFNQWpFd01BMEdDU3FHU0liMwpEUUVCQlFVQUE0SUJBUURIVWU2K1AyVTRqTUQyM3U5NnZ4Q2VRcmhjL3JYV3ZwbVU1WEI4US9WR25KVG12M3lVCkVQeVRGS3RFWllWWDI5ejE2eG9pcFVFNmNybEhoRVRPZmV6WXNtOUswRHhGM2ZOaWxPTFJLa2c5VkVXY2I1aGoKaUwzYTJ0ZFo0c3EraC9aMWVsSVhENzFKSkJBSW1qcjZCbGpUSWRVQ2ZWdE52eGxFOE0wRC9yS1NuMmp3enNqSQpVclc4OFRITXRsejlzYjU2a21NM0pJT29JSm9lcDZ4TkVhaklCbm9DaFNHanRCWUZORnd6ZHdTVENvZFlrZ1B1CkppZnF4VEtTdXdBR1NscXhKVXdoaldHOHVsekwzL3BDQVlFd2xXbWQyK25zZm90UWRpQU5kYVBuZXo3bzB6MHMKRXVqT0NaTWJLOHFOZlNieW81MHE1aUlYaHoyWklHbCs0aGRwCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  persistent:
+    metadata:
+      name: emqx-ee
+      labels:
+        "apps.emqx.io/instance": "emqx-ee"
+    spec:
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 20Mi
+      accessModes:
+        - ReadWriteOnce
+  blueGreenUpdate:
+    initialDelaySeconds: 30
+    evacuationStrategy:
+      waitTakeover: 10
+      connEvictRate: 200
+      sessEvictRate: 200
   template:
     metadata:
       labels:
@@ -46,9 +43,6 @@ spec:
         image:
           repository: emqx/emqx-ee
           version: 4.4.15
-        ports:
-          - name: http-management
-            containerPort: 8081
         emqxConfig:
           name: emqx-ee
           log.level: debug
@@ -121,12 +115,33 @@ spec:
       selector:
         "apps.emqx.io/instance": "emqx-ee"
       ports:
-        - name: "http-dashboard-18083"
+        - name: "http-management-8081"
+          port: 8081
           protocol: "TCP"
+          targetPort: 8081
+          nodePort: 32001
+        - name: "http-dashboard-18083"
           port: 18083
+          protocol: "TCP"
           targetPort: 18083
+          nodePort: 30648
         - name: "mqtt-tcp-1883"
           protocol: "TCP"
           port: 1883
           targetPort: 1883
-          nodePort: 32001
+          nodePort: 32002
+        - name: "mqtt-tcp-11883"
+          protocol: "TCP"
+          port: 11883
+          targetPort: 11883
+          nodePort: 30650
+        - name: "mqtt-ws-8083"
+          protocol: "TCP"
+          port: 8083
+          targetPort: 8083
+          nodePort: 30651
+        - name: "mqtt-wss-8084"
+          protocol: "TCP"
+          port: 8084
+          targetPort: 8084
+          nodePort: 30652

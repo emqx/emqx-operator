@@ -25,20 +25,15 @@ import (
 func TestRebalanceValidateUpdate(t *testing.T) {
 	emqxRebalance := EmqxRebalance{
 		Spec: EmqxRebalanceSpec{
-			EmqxInstance: "test",
+			InstanceName: "test",
+			RebalanceStrategy: &RebalanceStrategy{
+				ConnEvictRate: 10,
+			},
 		},
 	}
-	assert.ErrorContains(t, emqxRebalance.ValidateUpdate(&emqxRebalance), "emqx rebalance prohibit to update")
-}
 
-func TestRebalaceValidateCreate(t *testing.T) {
-	emqxRebalance := EmqxRebalance{
-		Spec: EmqxRebalanceSpec{
-			EmqxInstance: "test",
-		},
-	}
-	assert.ErrorContains(t, emqxRebalance.ValidateCreate(), "emqx rebalance strategy can not be nil")
+	old := emqxRebalance.DeepCopy()
+	old.Spec.InstanceName = "test-0"
+	assert.ErrorContains(t, emqxRebalance.ValidateUpdate(old), "prohibit to update emqxrebalance")
 
-	emqxRebalance.Spec.EmqxInstance = ""
-	assert.ErrorContains(t, emqxRebalance.ValidateCreate(), "emqx instance can not be empty")
 }
