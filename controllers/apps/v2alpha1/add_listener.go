@@ -27,9 +27,6 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
 		return subResult{}
 	}
-	if p == nil {
-		return subResult{}
-	}
 
 	resources := []client.Object{}
 	svc := a.generateListenerService(ctx, instance, p)

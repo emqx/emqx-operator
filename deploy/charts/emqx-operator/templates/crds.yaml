@@ -20396,6 +20396,8 @@ spec:
                 emqxNodes:
                   items:
                     properties:
+                      edition:
+                        type: string
                       node:
                         type: string
                       node_status:

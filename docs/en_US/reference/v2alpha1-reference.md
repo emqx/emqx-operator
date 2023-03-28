@@ -153,7 +153,8 @@ _Appears in:_
 | `node_status` _string_ | EMQX node status, example: Running |
 | `otp_release` _string_ | Erlang/OTP version used by EMQX, example: 24.2/12.2 |
 | `version` _string_ | EMQX version |
-| `role` _string_ | EMQX cluster node role |
+| `role` _string_ | EMQX cluster node role, enum: "core" "replicant" |
+| `edition` _string_ | EMQX cluster node edition, enum: "Opensource" "Enterprise" |
 
 
 #### EMQXReplicantTemplate

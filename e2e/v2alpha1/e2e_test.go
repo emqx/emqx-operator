@@ -223,7 +223,7 @@ func checkPodAndEndpointSlices(instance *appsv2alpha1.EMQX, count int) {
 				HaveField("Status", And(
 					HaveField("Phase", corev1.PodRunning),
 					HaveField("Conditions", ContainElements(
-						HaveField("Type", appsv2alpha1.PodInCluster),
+						HaveField("Type", appsv2alpha1.PodOnServing),
 						HaveField("Type", corev1.PodReady),
 					)))),
 			),
