@@ -28,7 +28,7 @@ type ConditionType string
 
 const (
 	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
-	PodInCluster corev1.PodConditionType = "apps.emqx.io/in-cluster"
+	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
 )
 
 const (
@@ -63,8 +63,10 @@ type EMQXNode struct {
 	OTPRelease string `json:"otp_release,omitempty"`
 	// EMQX version
 	Version string `json:"version,omitempty"`
-	// EMQX cluster node role
+	// EMQX cluster node role, enum: "core" "replicant"
 	Role string `json:"role,omitempty"`
+	// EMQX cluster node edition, enum: "Opensource" "Enterprise"
+	Edition string `json:"edition,omitempty"`
 }
 
 // EMQXStatus defines the observed state of EMQX

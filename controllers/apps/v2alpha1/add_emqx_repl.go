@@ -149,7 +149,7 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 				Spec: corev1.PodSpec{
 					ReadinessGates: []corev1.PodReadinessGate{
 						{
-							ConditionType: appsv2alpha1.PodInCluster,
+							ConditionType: appsv2alpha1.PodOnServing,
 						},
 					},
 					ImagePullSecrets: instance.Spec.ImagePullSecrets,

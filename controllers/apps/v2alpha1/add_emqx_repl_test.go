@@ -199,7 +199,7 @@ func TestGenerateDeployment(t *testing.T) {
 		emqx := instance.DeepCopy()
 		got := generateDeployment(emqx)
 		assert.Equal(t, []corev1.PodReadinessGate{
-			{ConditionType: appsv2alpha1.PodInCluster},
+			{ConditionType: appsv2alpha1.PodOnServing},
 		}, got.Spec.Template.Spec.ReadinessGates)
 
 		emqx.Spec.ReplicantTemplate.Spec.Affinity = &corev1.Affinity{}

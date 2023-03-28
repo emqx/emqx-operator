@@ -23,7 +23,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQ
 	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
 	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
 
-	if p != nil && p.Options != nil {
+	if p.Options != nil {
 		if emqxNodes, err = getNodeStatuesByAPI(p); err != nil {
 			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 		}
