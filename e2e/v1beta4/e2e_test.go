@@ -245,19 +245,21 @@ var _ = Describe("Base E2E Test", func() {
 				return l
 			}, timeout, interval).Should(ConsistOf(pluginList))
 
-			for _, pluginName := range pluginList {
-				Eventually(func() map[string]string {
-					cm := &corev1.ConfigMap{}
-					_ = k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{
-							Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "plugins-config"),
-							Namespace: emqx.GetNamespace(),
-						}, cm,
-					)
-					return cm.Data
-				}, timeout, interval).Should(HaveKey(pluginName + ".conf"))
+			matchers := []gomegaTypes.GomegaMatcher{}
+			for _, plugin := range pluginList {
+				matchers = append(matchers, HaveKey(plugin+".conf"))
 			}
+			Eventually(func() map[string]string {
+				cm := &corev1.ConfigMap{}
+				_ = k8sClient.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "plugins-config"),
+						Namespace: emqx.GetNamespace(),
+					}, cm,
+				)
+				return cm.Data
+			}, timeout, interval).Should(And(matchers...))
 
 			By("check headless service ports")
 			Eventually(func() []corev1.ServicePort {
