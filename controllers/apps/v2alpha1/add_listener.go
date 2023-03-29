@@ -28,18 +28,21 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX
 		return subResult{}
 	}
 
+	pods := a.getPodList(ctx, instance)
+	if len(pods) == 0 {
+		return subResult{}
+	}
+
 	resources := []client.Object{}
-	svc := a.generateListenerService(ctx, instance, p)
+	svc := generateListenerService(instance, a.getServicePorts(instance, p))
 	if svc == nil {
 		return subResult{}
 	}
-	resources = append(resources, svc)
 
-	endpointSlice := a.generateEndpointSlice(ctx, instance, svc)
-	if endpointSlice == nil {
-		return subResult{}
-	}
-	resources = append(resources, endpointSlice)
+	resources = append(resources, svc,
+		generateEndpoints(svc, pods),
+		generateEndpointSlice(svc, pods),
+	)
 
 	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update listener service and endpointSlice")}
@@ -48,73 +51,7 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX
 	return subResult{}
 }
 
-func (a *addListener) generateListenerService(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) *corev1.Service {
-	// We don't need to set the selector for the service
-	// because the Operator will manager the endpointSlice
-	// please check https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
-	instance.Spec.ListenersServiceTemplate.Spec.Selector = map[string]string{}
-	instance.Spec.ListenersServiceTemplate.Spec.Ports = appsv2alpha1.MergeServicePorts(
-		instance.Spec.ListenersServiceTemplate.Spec.Ports,
-		a.getServicePorts(instance, p),
-	)
-	if len(instance.Spec.ListenersServiceTemplate.Spec.Ports) == 0 {
-		return nil
-	}
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   instance.Namespace,
-			Name:        instance.Spec.ListenersServiceTemplate.Name,
-			Labels:      instance.Spec.ListenersServiceTemplate.Labels,
-			Annotations: instance.Spec.ListenersServiceTemplate.Annotations,
-		},
-		Spec: instance.Spec.ListenersServiceTemplate.Spec,
-	}
-}
-
-func (a *addListener) generateEndpointSlice(ctx context.Context, instance *appsv2alpha1.EMQX, svc *corev1.Service) *discoveryv1.EndpointSlice {
-	endpoints := a.getEndpoints(ctx, instance)
-	if len(endpoints) == 0 {
-		return nil
-	}
-	addressType := parseIP(endpoints[0].Addresses[0])
-
-	labels := instance.Spec.ListenersServiceTemplate.Labels
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	labels["kubernetes.io/service-name"] = svc.Name
-
-	endpointSlice := &discoveryv1.EndpointSlice{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "discovery.k8s.io/v1",
-			Kind:       "EndpointSlice",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   svc.Namespace,
-			Name:        svc.Name,
-			Annotations: svc.Annotations,
-			Labels:      labels,
-		},
-		AddressType: addressType,
-		Endpoints:   endpoints,
-	}
-
-	for _, port := range svc.Spec.Ports {
-		endpointSlice.Ports = append(endpointSlice.Ports, discoveryv1.EndpointPort{
-			Name:     pointer.String(port.Name),
-			Port:     pointer.Int32(port.Port),
-			Protocol: &[]corev1.Protocol{port.Protocol}[0],
-		})
-	}
-
-	return endpointSlice
-}
-
-func (a *addListener) getEndpoints(ctx context.Context, instance *appsv2alpha1.EMQX) []discoveryv1.Endpoint {
+func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha1.EMQX) []*corev1.Pod {
 	dList := getDeploymentList(ctx, a.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
@@ -128,30 +65,7 @@ func (a *addListener) getEndpoints(ctx context.Context, instance *appsv2alpha1.E
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
-	podList := podMap[currentDeployment.UID]
-
-	endpoints := []discoveryv1.Endpoint{}
-	for _, pod := range podList {
-		for _, condition := range pod.Status.Conditions {
-			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
-				endpoints = append(endpoints, discoveryv1.Endpoint{
-					Addresses: []string{pod.Status.PodIP},
-					Conditions: discoveryv1.EndpointConditions{
-						Ready:   pointer.Bool(true),
-						Serving: pointer.Bool(true),
-					},
-					NodeName: pointer.String(pod.Spec.NodeName),
-					TargetRef: &corev1.ObjectReference{
-						Kind:      pod.DeepCopy().Kind,
-						UID:       pod.DeepCopy().UID,
-						Name:      pod.DeepCopy().Name,
-						Namespace: pod.DeepCopy().Namespace,
-					},
-				})
-			}
-		}
-	}
-	return endpoints
+	return podMap[currentDeployment.UID]
 }
 
 func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, p *portForwardAPI) []corev1.ServicePort {
@@ -163,6 +77,139 @@ func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, p *portForwar
 	return listenerPorts
 }
 
+func generateListenerService(instance *appsv2alpha1.EMQX, ports []corev1.ServicePort) *corev1.Service {
+	listener := instance.Spec.ListenersServiceTemplate.DeepCopy()
+	// We don't need to set the selector for the service
+	// because the Operator will manager the endpointSlice
+	// please check https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
+	listener.Spec.Selector = map[string]string{}
+	listener.Spec.Ports = appsv2alpha1.MergeServicePorts(
+		listener.Spec.Ports,
+		ports,
+	)
+	if len(listener.Spec.Ports) == 0 {
+		return nil
+	}
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   instance.Namespace,
+			Name:        listener.Name,
+			Labels:      listener.Labels,
+			Annotations: listener.Annotations,
+		},
+		Spec: listener.Spec,
+	}
+}
+
+func generateEndpoints(svc *corev1.Service, pods []*corev1.Pod) *corev1.Endpoints {
+	subSet := corev1.EndpointSubset{}
+	for _, port := range svc.Spec.Ports {
+		subSet.Ports = append(subSet.Ports, corev1.EndpointPort{
+			Name:     port.Name,
+			Port:     port.Port,
+			Protocol: port.Protocol,
+		})
+	}
+	for _, p := range pods {
+		pod := p.DeepCopy()
+		subSet.Addresses = append(subSet.Addresses, corev1.EndpointAddress{
+			IP:       pod.Status.PodIP,
+			NodeName: pointer.String(pod.Spec.NodeName),
+			TargetRef: &corev1.ObjectReference{
+				Kind:      "Pod",
+				Namespace: pod.Namespace,
+				Name:      pod.Name,
+				UID:       pod.UID,
+			},
+		})
+
+	}
+
+	return &corev1.Endpoints{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Endpoints",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   svc.Namespace,
+			Name:        svc.Name,
+			Annotations: svc.Annotations,
+			Labels:      svc.Labels,
+		},
+		Subsets: []corev1.EndpointSubset{subSet},
+	}
+}
+
+func generateEndpointSlice(svc *corev1.Service, pods []*corev1.Pod) *discoveryv1.EndpointSlice {
+	ports := []discoveryv1.EndpointPort{}
+	for _, port := range svc.Spec.Ports {
+		ports = append(ports, discoveryv1.EndpointPort{
+			Name:     pointer.String(port.Name),
+			Port:     pointer.Int32(port.Port),
+			Protocol: &[]corev1.Protocol{port.Protocol}[0],
+		})
+	}
+
+	endpoints := []discoveryv1.Endpoint{}
+	for _, p := range pods {
+		pod := p.DeepCopy()
+		endpoints = append(endpoints, discoveryv1.Endpoint{
+			Addresses: []string{pod.Status.PodIP},
+			Conditions: discoveryv1.EndpointConditions{
+				Ready:   pointer.Bool(true),
+				Serving: pointer.Bool(true),
+			},
+			NodeName: pointer.String(pod.Spec.NodeName),
+			TargetRef: &corev1.ObjectReference{
+				Kind:      "Pod",
+				UID:       pod.UID,
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+			},
+		})
+	}
+
+	labels := svc.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels["kubernetes.io/service-name"] = svc.Name
+
+	return &discoveryv1.EndpointSlice{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   svc.Namespace,
+			Name:        svc.Name,
+			Annotations: svc.Annotations,
+			Labels:      labels,
+		},
+		AddressType: parseIP(endpoints[0].Addresses[0]),
+		Endpoints:   endpoints,
+		Ports:       ports,
+	}
+}
+
+// ParseIP parses s as an IP address, returning the result.
+func parseIP(s string) discoveryv1.AddressType {
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '.':
+			return discoveryv1.AddressTypeIPv4
+		case ':':
+			return discoveryv1.AddressTypeIPv6
+		}
+	}
+	panic("unreachable")
+}
+
+// Access EMQX API to get all listeners
 type emqxGateway struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
@@ -252,17 +299,4 @@ func getListenerPortsByAPI(p *portForwardAPI, apiPath string) ([]corev1.ServiceP
 		})
 	}
 	return ports, nil
-}
-
-// ParseIP parses s as an IP address, returning the result.
-func parseIP(s string) discoveryv1.AddressType {
-	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '.':
-			return discoveryv1.AddressTypeIPv4
-		case ':':
-			return discoveryv1.AddressTypeIPv6
-		}
-	}
-	panic("unreachable")
 }
