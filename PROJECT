@@ -109,8 +109,6 @@ resources:
   path: github.com/emqx/emqx-operator/apis/apps/v1beta4
   version: v1beta4
   webhooks:
-    conversion: true
-    defaulting: true
     validation: true
     webhookVersion: v1
 version: "3"

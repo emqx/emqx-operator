@@ -159,7 +159,7 @@ func main() {
 		}
 
 		if err = (&appsv1beta4.EmqxRebalance{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "EMQX")
+			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxRebalance")
 			os.Exit(1)
 		}
 	}

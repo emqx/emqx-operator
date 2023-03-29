@@ -97,11 +97,11 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	enable, err := r.canExecuteRebalance(emqxRebalance, emqxEnterprise)
 	if !enable {
-		emqxRebalance.Status.Phase = "Complete"
+		emqxRebalance.Status.Phase = "Failed"
 		r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.ConditionComplete,
+			Type:    appsv1beta4.RebalancFailed,
 			Status:  corev1.ConditionFalse,
-			Reason:  "Complete",
+			Reason:  "Failed",
 			Message: err.Error(),
 		})
 		err = r.Client.Status().Update(ctx, emqxRebalance)
@@ -117,7 +117,7 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if err != nil {
 			emqxRebalance.Status.Phase = "Complete"
 			r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
-				Type:    appsv1beta4.ConditionComplete,
+				Type:    appsv1beta4.RebalancFailed,
 				Status:  corev1.ConditionFalse,
 				Reason:  "Complete",
 				Message: err.Error(),
@@ -131,11 +131,11 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	rebalances, err := r.getRebalanceStatus(emqxEnterprise)
 	if err != nil {
-		emqxRebalance.Status.Phase = "Complete"
+		emqxRebalance.Status.Phase = "Failed"
 		r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.ConditionComplete,
+			Type:    appsv1beta4.RebalancFailed,
 			Status:  corev1.ConditionFalse,
-			Reason:  "Complete",
+			Reason:  "Failed",
 			Message: err.Error(),
 		})
 		if err := r.Client.Status().Update(ctx, emqxRebalance); err != nil {
@@ -149,7 +149,7 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		emqxRebalance.Status.Phase = "Complete"
 		emqxRebalance.Status.CompletionTime = metav1.Now()
 		r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.ConditionComplete,
+			Type:    appsv1beta4.RebalancComplete,
 			Status:  corev1.ConditionTrue,
 			Reason:  "Complete",
 			Message: "rebalance has completed",
@@ -160,7 +160,7 @@ func (r *EmqxRebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		emqxRebalance.Status.Phase = "Process"
 		r.udpateRebalanceCondition(emqxRebalance, appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.ConditionProcess,
+			Type:    appsv1beta4.RebalanceProcess,
 			Status:  corev1.ConditionTrue,
 			Reason:  "Process",
 			Message: "rebalance is processing",
@@ -206,7 +206,7 @@ func (r *EmqxRebalanceReconciler) canExecuteRebalance(emqxRabalance *appsv1beta4
 	}
 
 	rebalanceConditions := emqxRabalance.Status.Conditions
-	if len(rebalanceConditions) > 0 && rebalanceConditions[0].Type == appsv1beta4.ConditionComplete {
+	if len(rebalanceConditions) > 0 && rebalanceConditions[0].Type == appsv1beta4.RebalancComplete {
 		return false, emperror.New(rebalanceConditions[0].Message)
 	}
 

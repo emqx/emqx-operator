@@ -75,27 +75,6 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-apps-emqx-io-v1beta4-emqxrebalance
-  failurePolicy: Fail
-  name: memqxrebalance.kb.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta4
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxrebalances
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
       path: /mutate-apps-emqx-io-v2alpha1-emqx
   failurePolicy: Fail
   name: mutating.apps.emqx.io
@@ -189,7 +168,7 @@ webhooks:
       namespace: system
       path: /validate-apps-emqx-io-v1beta4-emqxrebalance
   failurePolicy: Fail
-  name: vemqxrebalance.kb.io
+  name: validator.emqxrebalance.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io

@@ -403,15 +403,15 @@ EmqxRebalanceList contains a list of EmqxRebalance
 
 
 
-EmqxRebalanceSpec defines the desired spec of EmqxRebalance
+EmqxRebalanceSpec represents the desired spec of EmqxRebalance
 
 _Appears in:_
 - [EmqxRebalance](#emqxrebalance)
 
 | Field | Description |
 | --- | --- |
-| `instanceName` _string_ |  |
-| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ |  |
+| `instanceName` _string_ | InstanceName represents the name of EmqxEnterprise CR |
+| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |
 
 
 #### EmqxRebalanceStatus
@@ -425,11 +425,11 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[RebalanceCondition](#rebalancecondition) array_ | Conditions represents the condition of emqxrebalance |
-| `phase` _string_ | Phase represents the  phase of emqxrebalance |
+| `conditions` _[RebalanceCondition](#rebalancecondition) array_ | The latest available observations of an object's current state. When a rebalancing Job fails, the condition will have type "Failed" and status false. when the Job is in processing , the condition will have a type "InProcessing" and status true When a Job is completed, one of the condition will have a type "Complete" and status true. |
+| `phase` _string_ | Phase represents the phase of emqxrebalance. |
 | `rebalances` _[Rebalance](#rebalance) array_ |  |
-| `startTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Represents the time when rebalance job start |
-| `completionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Represents the time when the rebalance job was completed. |
+| `startTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | StartTime Represents the time when rebalance job start. |
+| `completionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | CompletionTime Represents the time when the rebalance job was completed. |
 
 
 
@@ -498,19 +498,19 @@ _Appears in:_
 
 
 
-Rebalance defines the observed Rebalance state of EMQX More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing
+Rebalance defines the observed Rebalancing state of EMQX
 
 _Appears in:_
 - [EmqxRebalanceStatus](#emqxrebalancestatus)
 
 | Field | Description |
 | --- | --- |
-| `state` _string_ | Represents the state of emqx cluster rebalancing |
+| `state` _string_ | Represents the state of emqx cluster rebalancing. |
 | `sessionEvictionRate` _integer_ | SessionEvictionRate represents the node session evacuation rate per second. |
-| `recipients` _string array_ | Recipients represent the target node for rebalancing |
-| `node` _string_ | Node represents the rebalancing scheduling node |
-| `donors` _string array_ | Recipients represent rebalanced source nodes |
-| `coordinatorNodebalances` _string_ | CoordinatorNode represents the node currently undergoing rebalancing |
+| `recipients` _string array_ | Recipients represent the target node for rebalancing. |
+| `node` _string_ | Node represents the rebalancing scheduling node. |
+| `donors` _string array_ | Recipients represent rebalanced source nodes. |
+| `coordinatorNodebalances` _string_ | CoordinatorNode represents the node currently undergoing rebalancing. |
 | `connectionEvictionRate` _integer_ | ConnectionEvictionRate represents the node session evacuation rate per second. |
 
 
@@ -518,14 +518,14 @@ _Appears in:_
 
 
 
-
+RebalanceCondition describes current state of a EMQX rebalancing job.
 
 _Appears in:_
 - [EmqxRebalanceStatus](#emqxrebalancestatus)
 
 | Field | Description |
 | --- | --- |
-| `type` _[RebalanceConditionType](#rebalanceconditiontype)_ | Status of rebalance condition type. |
+| `type` _[RebalanceConditionType](#rebalanceconditiontype)_ | Status of rebalance condition type. one of InProcessing, Complete, Failed. |
 | `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |
 | `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | The last time this condition was updated. |
 | `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |
@@ -548,21 +548,21 @@ _Appears in:_
 
 
 
-
+RebalanceStrategy represents the strategy of EMQX rebalancing
 
 _Appears in:_
 - [EmqxRebalanceSpec](#emqxrebalancespec)
 
 | Field | Description |
 | --- | --- |
-| `connEvictRate` _integer_ | ConnEvictRate represents the source node client disconnect rate per second. |
-| `sessEvictRate` _integer_ | SessEvictRate represents the source node session evacuation rate per second. |
-| `waitTakeover` _integer_ | WaitTakeover represents the time in seconds to wait for a client to reconnect to take over the session after all connections are disconnected. |
-| `waitHealthCheck` _integer_ | WaitHealthCheck represents the time (in seconds) to wait for the LB to remove the source node from the list of active backend nodes. After the specified waiting time is exceeded,the rebalancing task will start. |
-| `absConnThreshold` _integer_ | AbsConnThreshold represents the absolute threshold for checking connection balance. |
-| `relConnThreshold` _string_ | RelConnThreshold represents the relative threshold for checking connection balance. |
-| `absSessThreshold` _integer_ | AbsSessThreshold represents the absolute threshold for checking session connection balance. |
-| `relSessThreshold` _string_ | RelSessThreshold represents the relative threshold for checking session connection balance. |
+| `connEvictRate` _integer_ | ConnEvictRate represents the source node client disconnect rate per second. same to conn-evict-rate in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) |
+| `sessEvictRate` _integer_ | SessEvictRate represents the source node session evacuation rate per second. same to sess-evict-rate in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) |
+| `waitTakeover` _integer_ | WaitTakeover represents the time in seconds to wait for a client to reconnect to take over the session after all connections are disconnected. same to wait-takeover in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) |
+| `waitHealthCheck` _integer_ | WaitHealthCheck represents the time (in seconds) to wait for the LB to remove the source node from the list of active backend nodes. After the specified waiting time is exceeded,the rebalancing task will start. same to wait-health-check in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) |
+| `absConnThreshold` _integer_ | AbsConnThreshold represents the absolute threshold for checking connection balance. same to abs-conn-threshold in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) |
+| `relConnThreshold` _string_ | RelConnThreshold represents the relative threshold for checkin connection balance. same to rel-conn-threshold in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) |
+| `absSessThreshold` _integer_ | AbsSessThreshold represents the absolute threshold for checking session connection balance. same to abs-sess-threshold in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) |
+| `relSessThreshold` _string_ | RelSessThreshold represents the relative threshold for checking session connection balance. same to rel-sess-threshold in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) |
 
 
 #### ServiceTemplate

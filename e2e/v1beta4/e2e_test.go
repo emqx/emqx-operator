@@ -580,7 +580,7 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 
 			Eventually(func() string {
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&emqxRebalance), &emqxRebalance)
-				if len(emqxRebalance.Status.Conditions) > 0 && emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
+				if len(emqxRebalance.Status.Conditions) > 0 && emqxRebalance.Status.Conditions[0].Type == appsv1beta4.RebalancFailed {
 					return emqxRebalance.Status.Conditions[0].Message
 				}
 				return ""
@@ -607,7 +607,7 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 				Phase: "Process",
 				Conditions: []appsv1beta4.RebalanceCondition{
 					{
-						Type:   appsv1beta4.ConditionProcess,
+						Type:   appsv1beta4.RebalanceProcess,
 						Status: corev1.ConditionTrue,
 					},
 				},
@@ -617,7 +617,7 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 
 			Eventually(func() string {
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&emqxRebalance), &emqxRebalance)
-				if len(emqxRebalance.Status.Conditions) > 0 && emqxRebalance.Status.Conditions[0].Type == appsv1beta4.ConditionComplete {
+				if len(emqxRebalance.Status.Conditions) > 0 && emqxRebalance.Status.Conditions[0].Type == appsv1beta4.RebalancComplete {
 					return emqxRebalance.Status.Conditions[0].Message
 				}
 				return ""
