@@ -135,6 +135,12 @@ var lwm2m = &appsv1beta4.EmqxPlugin{
 
 var ports = []corev1.ServicePort{
 	{
+		Name:       "http-dashboard-18083",
+		Port:       18083,
+		Protocol:   corev1.ProtocolTCP,
+		TargetPort: intstr.FromInt(18083),
+	},
+	{
 		Name:       "mqtt-tcp-1883",
 		Port:       1883,
 		Protocol:   corev1.ProtocolTCP,
@@ -226,7 +232,7 @@ var _ = Describe("Base E2E Test", func() {
 			Expect(sts.Spec.Template.Annotations).Should(HaveKey(handler.ManageContainersAnnotation))
 
 			By("checking the EMQX Custom Resource's EndpointSlice", func() {
-				checkPodAndEndpointSlice(emqx, ports, pluginPorts, headlessPort, 1)
+				checkPodAndEndpointsAndEndpointSlices(emqx, ports, pluginPorts, headlessPort, 1)
 			})
 
 			By("check plugins")
@@ -415,7 +421,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
 
 			By("checking the EMQX Custom Resource's EndpointSlice", func() {
-				checkPodAndEndpointSlice(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
+				checkPodAndEndpointsAndEndpointSlices(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
 			})
 
 			By("update EMQX CR")
@@ -502,7 +508,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
 
 			By("checking the EMQX Custom Resource's EndpointSlice when blue-green", func() {
-				checkPodAndEndpointSlice(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
+				checkPodAndEndpointsAndEndpointSlices(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
 			})
 
 			Eventually(func() []corev1.Pod {
@@ -615,7 +621,7 @@ func checkService(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1.ServicePort
 	}, timeout, interval).Should(ContainElements(append(pluginPorts, append(ports, headlessPort)...)))
 }
 
-func checkPodAndEndpointSlice(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1.ServicePort, headlessPort corev1.ServicePort, count int) {
+func checkPodAndEndpointsAndEndpointSlices(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1.ServicePort, headlessPort corev1.ServicePort, count int) {
 	podList := &corev1.PodList{}
 	Eventually(func() []corev1.Pod {
 		_ = k8sClient.List(context.TODO(), podList,
@@ -637,10 +643,23 @@ func checkPodAndEndpointSlice(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1
 		),
 	)
 
-	matchers := []gomegaTypes.GomegaMatcher{}
+	endPointsMatcher := []gomegaTypes.GomegaMatcher{}
+	endpointSliceMatcher := []gomegaTypes.GomegaMatcher{}
 	for _, p := range podList.Items {
 		pod := p.DeepCopy()
-		m := And(
+		ep := And(
+			HaveField("IP", pod.Status.PodIP),
+			HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
+			HaveField("TargetRef", And(
+				HaveField("Kind", "Pod"),
+				HaveField("UID", pod.GetUID()),
+				HaveField("Name", pod.GetName()),
+				HaveField("Namespace", pod.GetNamespace()),
+			)),
+		)
+		endPointsMatcher = append(endPointsMatcher, ep)
+
+		eps := And(
 			HaveField("Addresses", ConsistOf([]string{pod.Status.PodIP})),
 			HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
 			HaveField("Conditions", And(
@@ -655,27 +674,49 @@ func checkPodAndEndpointSlice(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1
 				HaveField("Namespace", pod.GetNamespace()),
 			)),
 		)
-		matchers = append(matchers, m)
+		endpointSliceMatcher = append(endpointSliceMatcher, eps)
 	}
 
 	servicePorts := append(pluginPorts, append(ports, headlessPort)...)
-	endpointPorts := []discoveryv1.EndpointPort{}
+	endpointsPorts := []corev1.EndpointPort{}
+	endpointSlicePorts := []discoveryv1.EndpointPort{}
 	for _, port := range servicePorts {
-		endpointPorts = append(endpointPorts, discoveryv1.EndpointPort{
+		endpointsPorts = append(endpointsPorts, corev1.EndpointPort{
+			Name:     port.Name,
+			Port:     port.Port,
+			Protocol: port.Protocol,
+		})
+		endpointSlicePorts = append(endpointSlicePorts, discoveryv1.EndpointPort{
 			Name:     pointer.String(port.Name),
 			Port:     pointer.Int32(port.Port),
 			Protocol: &[]corev1.Protocol{port.Protocol}[0],
 		})
 	}
 
-	ep := &discoveryv1.EndpointSlice{}
-	Eventually(func() *discoveryv1.EndpointSlice {
+	Eventually(func() *corev1.Endpoints {
+		ep := &corev1.Endpoints{}
 		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetSpec().GetServiceTemplate().Name, Namespace: emqx.GetSpec().GetServiceTemplate().Namespace}, ep)
 		return ep
+	}, timeout, interval).Should(HaveField("Subsets",
+		And(
+			HaveLen(1),
+			ContainElement(
+				HaveField("Addresses", ConsistOf(endPointsMatcher)),
+			),
+			ContainElement(
+				HaveField("Ports", ConsistOf(endpointsPorts)),
+			),
+		),
+	))
+
+	Eventually(func() *discoveryv1.EndpointSlice {
+		eps := &discoveryv1.EndpointSlice{}
+		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetSpec().GetServiceTemplate().Name, Namespace: emqx.GetSpec().GetServiceTemplate().Namespace}, eps)
+		return eps
 	}, timeout, interval).Should(
 		And(
-			HaveField("Endpoints", ConsistOf(matchers)),
-			HaveField("Ports", ContainElements(endpointPorts)),
+			HaveField("Endpoints", ConsistOf(endpointSliceMatcher)),
+			HaveField("Ports", ContainElements(endpointSlicePorts)),
 		),
 	)
 }
