@@ -13,7 +13,6 @@ import (
 	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/tidwall/gjson"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
@@ -52,9 +51,9 @@ func (a addListener) reconcile(ctx context.Context, instance v1beta4.Emqx, _ ...
 	if svc == nil {
 		return subResult{}
 	}
-	resources = append(resources, svc,
+	resources = append(resources,
 		generateEndpoints(svc, pods),
-		generateEndpointSlice(svc, pods),
+		svc,
 	)
 
 	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
@@ -128,58 +127,6 @@ func generateEndpoints(svc *corev1.Service, pods []*corev1.Pod) *corev1.Endpoint
 			Labels:      svc.Labels,
 		},
 		Subsets: []corev1.EndpointSubset{subSet},
-	}
-}
-
-func generateEndpointSlice(svc *corev1.Service, pods []*corev1.Pod) *discoveryv1.EndpointSlice {
-	ports := []discoveryv1.EndpointPort{}
-	for _, port := range svc.Spec.Ports {
-		ports = append(ports, discoveryv1.EndpointPort{
-			Name:     pointer.String(port.Name),
-			Port:     pointer.Int32(port.Port),
-			Protocol: &[]corev1.Protocol{port.Protocol}[0],
-		})
-	}
-
-	endpoints := []discoveryv1.Endpoint{}
-	for _, p := range pods {
-		pod := p.DeepCopy()
-		endpoints = append(endpoints, discoveryv1.Endpoint{
-			Addresses: []string{pod.Status.PodIP},
-			Conditions: discoveryv1.EndpointConditions{
-				Ready:   pointer.Bool(true),
-				Serving: pointer.Bool(true),
-			},
-			NodeName: pointer.String(pod.Spec.NodeName),
-			TargetRef: &corev1.ObjectReference{
-				Kind:      "Pod",
-				UID:       pod.UID,
-				Name:      pod.Name,
-				Namespace: pod.Namespace,
-			},
-		})
-	}
-
-	labels := svc.Labels
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	labels["kubernetes.io/service-name"] = svc.Name
-
-	return &discoveryv1.EndpointSlice{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "discovery.k8s.io/v1",
-			Kind:       "EndpointSlice",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   svc.Namespace,
-			Name:        svc.Name,
-			Annotations: svc.Annotations,
-			Labels:      labels,
-		},
-		AddressType: parseIP(endpoints[0].Addresses[0]),
-		Endpoints:   endpoints,
-		Ports:       ports,
 	}
 }
 
@@ -270,17 +217,4 @@ func (a addListener) getListenerPortsByAPI() ([]corev1.ServicePort, error) {
 		})
 	}
 	return ports, nil
-}
-
-// ParseIP parses s as an IP address, returning the result.
-func parseIP(s string) discoveryv1.AddressType {
-	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '.':
-			return discoveryv1.AddressTypeIPv4
-		case ':':
-			return discoveryv1.AddressTypeIPv6
-		}
-	}
-	panic("unreachable")
 }

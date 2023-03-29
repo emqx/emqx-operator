@@ -251,7 +251,7 @@ func checkPodAndEndpointsAndEndpointSlices(instance *appsv2alpha1.EMQX, count in
 			HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
 			HaveField("Conditions", And(
 				HaveField("Ready", HaveValue(BeTrue())),
-				HaveField("Serving", HaveValue(BeTrue())),
+				HaveField("Serving", BeNil()),
 				HaveField("Terminating", BeNil()),
 			)),
 			HaveField("TargetRef", And(
@@ -291,25 +291,38 @@ func checkPodAndEndpointsAndEndpointSlices(instance *appsv2alpha1.EMQX, count in
 		),
 	))
 
-	Eventually(func() *discoveryv1.EndpointSlice {
-		eps := &discoveryv1.EndpointSlice{}
-		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, eps)
-		return eps
+	Eventually(func() []discoveryv1.EndpointSlice {
+		list := &discoveryv1.EndpointSliceList{}
+		_ = k8sClient.List(
+			context.TODO(), list,
+			client.InNamespace(instance.Namespace),
+			client.MatchingLabels(
+				map[string]string{
+					"kubernetes.io/service-name": instance.Spec.ListenersServiceTemplate.Name,
+				},
+			),
+		)
+		return list.Items
 	}, timeout, interval).Should(
 		And(
-			HaveField("Endpoints", ConsistOf(endpointSliceMatcher)),
-			HaveField("Ports", ConsistOf([]discoveryv1.EndpointPort{
-				{
-					Name:     pointer.String("tcp-default"),
-					Port:     pointer.Int32(1883),
-					Protocol: &[]corev1.Protocol{corev1.ProtocolTCP}[0],
-				},
-				{
-					Name:     pointer.String("lwm2m-udp-default"),
-					Port:     pointer.Int32(5783),
-					Protocol: &[]corev1.Protocol{corev1.ProtocolUDP}[0],
-				},
-			})),
+			HaveLen(1),
+			ContainElement(
+				HaveField("Endpoints", ConsistOf(endpointSliceMatcher)),
+			),
+			ContainElement(
+				HaveField("Ports", ConsistOf([]discoveryv1.EndpointPort{
+					{
+						Name:     pointer.String("tcp-default"),
+						Port:     pointer.Int32(1883),
+						Protocol: &[]corev1.Protocol{corev1.ProtocolTCP}[0],
+					},
+					{
+						Name:     pointer.String("lwm2m-udp-default"),
+						Port:     pointer.Int32(5783),
+						Protocol: &[]corev1.Protocol{corev1.ProtocolUDP}[0],
+					},
+				})),
+			),
 		),
 	)
 }

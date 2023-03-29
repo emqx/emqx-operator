@@ -464,7 +464,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 					},
 					newSts,
 				)
-				return sts.Status.CurrentRevision
+				return newSts.Status.CurrentRevision
 			}, timeout, interval).ShouldNot(BeEmpty())
 
 			By("check emqx nodes in CR status")
@@ -664,7 +664,7 @@ func checkPodAndEndpointsAndEndpointSlices(emqx appsv1beta4.Emqx, ports, pluginP
 			HaveField("NodeName", HaveValue(Equal(pod.Spec.NodeName))),
 			HaveField("Conditions", And(
 				HaveField("Ready", HaveValue(BeTrue())),
-				HaveField("Serving", HaveValue(BeTrue())),
+				HaveField("Serving", BeNil()),
 				HaveField("Terminating", BeNil()),
 			)),
 			HaveField("TargetRef", And(
@@ -709,14 +709,27 @@ func checkPodAndEndpointsAndEndpointSlices(emqx appsv1beta4.Emqx, ports, pluginP
 		),
 	))
 
-	Eventually(func() *discoveryv1.EndpointSlice {
-		eps := &discoveryv1.EndpointSlice{}
-		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetSpec().GetServiceTemplate().Name, Namespace: emqx.GetSpec().GetServiceTemplate().Namespace}, eps)
-		return eps
+	Eventually(func() []discoveryv1.EndpointSlice {
+		list := &discoveryv1.EndpointSliceList{}
+		_ = k8sClient.List(
+			context.TODO(), list,
+			client.InNamespace(emqx.GetNamespace()),
+			client.MatchingLabels(
+				map[string]string{
+					"kubernetes.io/service-name": emqx.GetSpec().GetServiceTemplate().Name,
+				},
+			),
+		)
+		return list.Items
 	}, timeout, interval).Should(
 		And(
-			HaveField("Endpoints", ConsistOf(endpointSliceMatcher)),
-			HaveField("Ports", ContainElements(endpointSlicePorts)),
+			HaveLen(1),
+			ContainElement(
+				HaveField("Endpoints", ConsistOf(endpointSliceMatcher)),
+			),
+			ContainElement(
+				HaveField("Ports", ConsistOf(endpointSlicePorts)),
+			),
 		),
 	)
 }
