@@ -20,8 +20,8 @@ import (
 )
 
 func TestRebalanceValidateUpdate(t *testing.T) {
-	emqxRebalance := EmqxRebalance{
-		Spec: EmqxRebalanceSpec{
+	emqxRebalance := Rebalance{
+		Spec: RebalanceSpec{
 			InstanceName: "test",
 			RebalanceStrategy: &RebalanceStrategy{
 				ConnEvictRate: 10,

@@ -26,9 +26,9 @@ import (
 )
 
 // log is for logging in this package.
-var emqxrebalancelog = logf.Log.WithName("emqxrebalance-resource")
+var rebalancelog = logf.Log.WithName("rebalance-resource")
 
-func (r *EmqxRebalance) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *Rebalance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
@@ -37,28 +37,29 @@ func (r *EmqxRebalance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-emqxrebalance,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxrebalances,verbs=create;update,versions=v1beta4,name=vemqxrebalance.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-rebalance,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=rebalances,verbs=create;update,versions=v1beta4,name=vrebalance.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &EmqxRebalance{}
+var _ webhook.Validator = &Rebalance{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxRebalance) ValidateCreate() error {
-	emqxrebalancelog.Info("validate create", "name", r.Name)
+func (r *Rebalance) ValidateCreate() error {
+	rebalancelog.Info("validate create", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxRebalance) ValidateUpdate(old runtime.Object) error {
-	emqxrebalancelog.Info("validate update", "name", r.Name)
+func (r *Rebalance) ValidateUpdate(old runtime.Object) error {
+	rebalancelog.Info("validate update", "name", r.Name)
+
 	// TODO(user): fill in your validation logic upon object update.
 	return errors.New("prohibit to update emqxrebalance")
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxRebalance) ValidateDelete() error {
-	emqxrebalancelog.Info("validate delete", "name", r.Name)
+func (r *Rebalance) ValidateDelete() error {
+	rebalancelog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil

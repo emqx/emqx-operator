@@ -21,8 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EmqxRebalanceSpec represents the desired spec of EmqxRebalance
-type EmqxRebalanceSpec struct {
+// RebalanceSpec represents the desired spec of Rebalance
+type RebalanceSpec struct {
 	// +kubebuilder:validation:required
 	// InstanceName represents the name of EmqxEnterprise CR
 	InstanceName string `json:"instanceName,omitempty"`
@@ -63,16 +63,16 @@ type RebalanceStrategy struct {
 	RelSessThreshold string `json:"relSessThreshold,omitempty"`
 }
 
-// EmqxRebalanceStatus represents the current state of EmqxRebalance
-type EmqxRebalanceStatus struct {
-	// The latest available observations of an object's current state. When a rebalancing Job
-	// fails, the condition will have type "Failed" and status false.
-	// when the Job is in processing , the condition will have a type "InProcessing" and status true
-	// When a Job is completed, one of the condition will have a type "Complete" and status true.
+// RebalanceStatus represents the current state of Rebalance
+type RebalanceStatus struct {
+	// The latest available observations of an object's current state.
+	// When Rebalance fails, the condition will have type "Failed" and status false.
+	// When Rebalance is in processing, the condition will have a type "Processing" and status true.
+	// When Rebalance is completed, the condition will have a type "Complete" and status true.
 	Conditions []RebalanceCondition `json:"conditions,omitempty"`
-	// Phase represents the phase of emqxrebalance.
-	Phase      string      `json:"phase,omitempty"`
-	Rebalances []Rebalance `json:"rebalances,omitempty"`
+	// Phase represents the phase of Rebalance.
+	Phase           string           `json:"phase,omitempty"`
+	RebalanceStates []RebalanceState `json:"rebalanceStates,omitempty"`
 	// StartTime Represents the time when rebalance job start.
 	StartTime metav1.Time `json:"startTime,omitempty"`
 	// CompletionTime Represents the time when the rebalance job was completed.
@@ -80,8 +80,8 @@ type EmqxRebalanceStatus struct {
 }
 
 // Rebalance defines the observed Rebalancing state of EMQX
-type Rebalance struct {
-	// Represents the state of emqx cluster rebalancing.
+type RebalanceState struct {
+	// State represents the state of emqx cluster rebalancing.
 	State string `json:"state,omitempty"`
 	// SessionEvictionRate represents the node session evacuation rate per second.
 	SessionEvictionRate int32 `json:"sessionEvictionRate,omitempty"`
@@ -89,7 +89,7 @@ type Rebalance struct {
 	Recipients []string `json:"recipients,omitempty"`
 	// Node represents the rebalancing scheduling node.
 	Node string `json:"node,omitempty"`
-	// Recipients represent rebalanced source nodes.
+	// Donors represent the source nodes for rebalancing.
 	Donors []string `json:"donors,omitempty"`
 	// CoordinatorNode represents the node currently undergoing rebalancing.
 	CoordinatorNode string `json:"coordinatorNodebalances,omitempty"`
@@ -102,27 +102,27 @@ type Rebalance struct {
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-// EmqxRebalance is the Schema for the emqxrebalances API
-type EmqxRebalance struct {
+// Rebalance is the Schema for the rebalances API
+type Rebalance struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EmqxRebalanceSpec   `json:"spec,omitempty"`
-	Status EmqxRebalanceStatus `json:"status,omitempty"`
+	Spec   RebalanceSpec   `json:"spec,omitempty"`
+	Status RebalanceStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// EmqxRebalanceList contains a list of EmqxRebalance
-type EmqxRebalanceList struct {
+// RebalanceList contains a list of Rebalance
+type RebalanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []EmqxRebalance `json:"items"`
+	Items           []Rebalance `json:"items"`
 }
 
 // RebalanceCondition describes current state of a EMQX rebalancing job.
 type RebalanceCondition struct {
-	// Status of rebalance condition type. one of InProcessing, Complete, Failed.
+	// Status of rebalance condition type. one of Processing, Complete, Failed.
 	Type RebalanceConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`
@@ -140,11 +140,11 @@ type RebalanceConditionType string
 
 // These are built-in conditions of a EMQX rebalancing job.
 const (
-	RebalanceProcess RebalanceConditionType = "InProcessing"
-	RebalancComplete RebalanceConditionType = "Complete"
-	RebalancFailed   RebalanceConditionType = "Failed"
+	RebalanceProcessing RebalanceConditionType = "Processing"
+	RebalanceComplete   RebalanceConditionType = "Complete"
+	RebalanceFailed     RebalanceConditionType = "Failed"
 )
 
 func init() {
-	SchemeBuilder.Register(&EmqxRebalance{}, &EmqxRebalanceList{})
+	SchemeBuilder.Register(&Rebalance{}, &RebalanceList{})
 }

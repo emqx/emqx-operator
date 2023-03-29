@@ -161,14 +161,13 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-apps-emqx-io-v1beta4-emqxrebalance
+      path: /validate-apps-emqx-io-v1beta4-rebalance
   failurePolicy: Fail
-  name: validator.emqxrebalance.emqx.io
+  name: vrebalance.kb.io
   rules:
   - apiGroups:
     - apps.emqx.io
@@ -178,7 +177,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - emqxrebalances
+    - rebalances
   sideEffects: None
 - admissionReviewVersions:
   - v1

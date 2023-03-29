@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: emqxrebalances.apps.emqx.io
+  name: rebalances.apps.emqx.io
 spec:
   group: apps.emqx.io
   names:
-    kind: EmqxRebalance
-    listKind: EmqxRebalanceList
-    plural: emqxrebalances
-    singular: emqxrebalance
+    kind: Rebalance
+    listKind: RebalanceList
+    plural: rebalances
+    singular: rebalance
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -91,7 +91,7 @@ spec:
                 type: array
               phase:
                 type: string
-              rebalances:
+              rebalanceStates:
                 items:
                   properties:
                     connectionEvictionRate:

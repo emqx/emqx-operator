@@ -133,7 +133,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = appscontrollersv1beta4.NewEmqxRebalanceReconciler(mgr).SetupWithManager(mgr); err != nil {
+	if err = appscontrollersv1beta4.NewRebalanceReconciler(mgr).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EmqxRebalance")
 		os.Exit(1)
 	}
@@ -158,7 +158,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err = (&appsv1beta4.EmqxRebalance{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&appsv1beta4.Rebalance{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxRebalance")
 			os.Exit(1)
 		}

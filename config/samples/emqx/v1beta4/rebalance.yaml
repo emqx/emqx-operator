@@ -1,0 +1,15 @@
+apiVersion: apps.emqx.io/v1beta4
+kind: Rebalance
+metadata:
+  name: rebalance-sample
+spec:
+  emqxInstance: emqx-ee
+  rebalanceStrategy:
+    connEvictRate: 5
+    sessEvictRate: 5
+    waitTakeover: 5
+    waitHealthCheck: 10
+    absConnThreshold: 10
+    absSessThreshold: 10
+    relConnThreshold: "1.2"
+    relSessThreshold: "1.2"

@@ -12,8 +12,8 @@ Package v1beta4 contains API Schema definitions for the apps v1beta4 API group
 - [EmqxBroker](#emqxbroker)
 - [EmqxEnterprise](#emqxenterprise)
 - [EmqxPlugin](#emqxplugin)
-- [EmqxRebalance](#emqxrebalance)
-- [EmqxRebalanceList](#emqxrebalancelist)
+- [Rebalance](#rebalance)
+- [RebalanceList](#rebalancelist)
 
 
 
@@ -365,73 +365,6 @@ _Appears in:_
 | `config` _object (keys:string, values:string)_ | Config defines the configurations of the EMQX plugins |
 
 
-#### EmqxRebalance
-
-
-
-EmqxRebalance is the Schema for the emqxrebalances API
-
-_Appears in:_
-- [EmqxRebalanceList](#emqxrebalancelist)
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
-| `kind` _string_ | `EmqxRebalance`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[EmqxRebalanceSpec](#emqxrebalancespec)_ |  |
-| `status` _[EmqxRebalanceStatus](#emqxrebalancestatus)_ |  |
-
-
-#### EmqxRebalanceList
-
-
-
-EmqxRebalanceList contains a list of EmqxRebalance
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
-| `kind` _string_ | `EmqxRebalanceList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` _[EmqxRebalance](#emqxrebalance) array_ |  |
-
-
-#### EmqxRebalanceSpec
-
-
-
-EmqxRebalanceSpec represents the desired spec of EmqxRebalance
-
-_Appears in:_
-- [EmqxRebalance](#emqxrebalance)
-
-| Field | Description |
-| --- | --- |
-| `instanceName` _string_ | InstanceName represents the name of EmqxEnterprise CR |
-| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |
-
-
-#### EmqxRebalanceStatus
-
-
-
-EmqxRebalanceStatus represents the current state of EmqxRebalance
-
-_Appears in:_
-- [EmqxRebalance](#emqxrebalance)
-
-| Field | Description |
-| --- | --- |
-| `conditions` _[RebalanceCondition](#rebalancecondition) array_ | The latest available observations of an object's current state. When a rebalancing Job fails, the condition will have type "Failed" and status false. when the Job is in processing , the condition will have a type "InProcessing" and status true When a Job is completed, one of the condition will have a type "Complete" and status true. |
-| `phase` _string_ | Phase represents the phase of emqxrebalance. |
-| `rebalances` _[Rebalance](#rebalance) array_ |  |
-| `startTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | StartTime Represents the time when rebalance job start. |
-| `completionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | CompletionTime Represents the time when the rebalance job was completed. |
-
-
 
 
 
@@ -498,20 +431,18 @@ _Appears in:_
 
 
 
-Rebalance defines the observed Rebalancing state of EMQX
+Rebalance is the Schema for the rebalances API
 
 _Appears in:_
-- [EmqxRebalanceStatus](#emqxrebalancestatus)
+- [RebalanceList](#rebalancelist)
 
 | Field | Description |
 | --- | --- |
-| `state` _string_ | Represents the state of emqx cluster rebalancing. |
-| `sessionEvictionRate` _integer_ | SessionEvictionRate represents the node session evacuation rate per second. |
-| `recipients` _string array_ | Recipients represent the target node for rebalancing. |
-| `node` _string_ | Node represents the rebalancing scheduling node. |
-| `donors` _string array_ | Recipients represent rebalanced source nodes. |
-| `coordinatorNodebalances` _string_ | CoordinatorNode represents the node currently undergoing rebalancing. |
-| `connectionEvictionRate` _integer_ | ConnectionEvictionRate represents the node session evacuation rate per second. |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
+| `kind` _string_ | `Rebalance`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[RebalanceSpec](#rebalancespec)_ |  |
+| `status` _[RebalanceStatus](#rebalancestatus)_ |  |
 
 
 #### RebalanceCondition
@@ -521,11 +452,11 @@ _Appears in:_
 RebalanceCondition describes current state of a EMQX rebalancing job.
 
 _Appears in:_
-- [EmqxRebalanceStatus](#emqxrebalancestatus)
+- [RebalanceStatus](#rebalancestatus)
 
 | Field | Description |
 | --- | --- |
-| `type` _[RebalanceConditionType](#rebalanceconditiontype)_ | Status of rebalance condition type. one of InProcessing, Complete, Failed. |
+| `type` _[RebalanceConditionType](#rebalanceconditiontype)_ | Status of rebalance condition type. one of Processing, Complete, Failed. |
 | `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |
 | `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | The last time this condition was updated. |
 | `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |
@@ -544,6 +475,75 @@ _Appears in:_
 
 
 
+#### RebalanceList
+
+
+
+RebalanceList contains a list of Rebalance
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
+| `kind` _string_ | `RebalanceList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[Rebalance](#rebalance) array_ |  |
+
+
+#### RebalanceSpec
+
+
+
+RebalanceSpec represents the desired spec of Rebalance
+
+_Appears in:_
+- [Rebalance](#rebalance)
+
+| Field | Description |
+| --- | --- |
+| `instanceName` _string_ | InstanceName represents the name of EmqxEnterprise CR |
+| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |
+
+
+#### RebalanceState
+
+
+
+Rebalance defines the observed Rebalancing state of EMQX
+
+_Appears in:_
+- [RebalanceStatus](#rebalancestatus)
+
+| Field | Description |
+| --- | --- |
+| `state` _string_ | State represents the state of emqx cluster rebalancing. |
+| `sessionEvictionRate` _integer_ | SessionEvictionRate represents the node session evacuation rate per second. |
+| `recipients` _string array_ | Recipients represent the target node for rebalancing. |
+| `node` _string_ | Node represents the rebalancing scheduling node. |
+| `donors` _string array_ | Donors represent the source nodes for rebalancing. |
+| `coordinatorNodebalances` _string_ | CoordinatorNode represents the node currently undergoing rebalancing. |
+| `connectionEvictionRate` _integer_ | ConnectionEvictionRate represents the node session evacuation rate per second. |
+
+
+#### RebalanceStatus
+
+
+
+RebalanceStatus represents the current state of Rebalance
+
+_Appears in:_
+- [Rebalance](#rebalance)
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[RebalanceCondition](#rebalancecondition) array_ | The latest available observations of an object's current state. When Rebalance fails, the condition will have type "Failed" and status false. When Rebalance is in processing, the condition will have a type "Processing" and status true. When Rebalance is completed, the condition will have a type "Complete" and status true. |
+| `phase` _string_ | Phase represents the phase of Rebalance. |
+| `rebalanceStates` _[RebalanceState](#rebalancestate) array_ |  |
+| `startTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | StartTime Represents the time when rebalance job start. |
+| `completionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | CompletionTime Represents the time when the rebalance job was completed. |
+
+
 #### RebalanceStrategy
 
 
@@ -551,7 +551,7 @@ _Appears in:_
 RebalanceStrategy represents the strategy of EMQX rebalancing
 
 _Appears in:_
-- [EmqxRebalanceSpec](#emqxrebalancespec)
+- [RebalanceSpec](#rebalancespec)
 
 | Field | Description |
 | --- | --- |

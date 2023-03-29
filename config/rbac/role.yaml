@@ -246,7 +246,7 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
-  - emqxrebalances
+  - rebalances
   verbs:
   - create
   - delete
@@ -258,13 +258,13 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
-  - emqxrebalances/finalizers
+  - rebalances/finalizers
   verbs:
   - update
 - apiGroups:
   - apps.emqx.io
   resources:
-  - emqxrebalances/status
+  - rebalances/status
   verbs:
   - get
   - patch
