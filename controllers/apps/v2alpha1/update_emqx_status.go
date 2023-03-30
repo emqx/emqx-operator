@@ -19,28 +19,20 @@ type updateStatus struct {
 
 func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
 	var err error
-	instance, err = u.updateStatus(ctx, instance, p)
-	if err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to update status")}
-	}
-	if err := u.Client.Status().Update(ctx, instance); err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to update status")}
-	}
-	return subResult{}
-}
-
-func (u *updateStatus) updateStatus(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) (*appsv2alpha1.EMQX, error) {
 	var emqxNodes []appsv2alpha1.EMQXNode
 	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
 	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
-	var err error
 
-	err = u.Client.Get(ctx, types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return instance, nil
+	if p.Options != nil {
+		if emqxNodes, err = getNodeStatuesByAPI(p); err != nil {
+			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 		}
-		return nil, emperror.Wrap(err, "failed to get existed statefulSet")
+	}
+
+	if err = u.Client.Get(ctx, types.NamespacedName{Name: instance.Spec.CoreTemplate.Name, Namespace: instance.Namespace}, existedSts); err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return subResult{err: emperror.Wrap(err, "failed to get existed statefulSet")}
+		}
 	}
 
 	dList := getDeploymentList(ctx, u.Client,
@@ -51,15 +43,15 @@ func (u *updateStatus) updateStatus(ctx context.Context, instance *appsv2alpha1.
 		existedDeploy = dList[len(dList)-1]
 	}
 
-	emqxNodes, err = getNodeStatuesByAPI(p)
-	if err != nil {
-		u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
-	}
-
 	emqxStatusMachine := newEMQXStatusMachine(instance)
-	emqxStatusMachine.CheckNodeCount(emqxNodes)
+	emqxStatusMachine.UpdateNodeCount(emqxNodes)
 	emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-	return emqxStatusMachine.GetEMQX(), nil
+	emqxStatusMachine.GetEMQX()
+
+	if err := u.Client.Status().Update(ctx, instance); err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to update status")}
+	}
+	return subResult{}
 }
 
 func getNodeStatuesByAPI(p *portForwardAPI) ([]appsv2alpha1.EMQXNode, error) {

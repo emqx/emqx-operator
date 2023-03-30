@@ -51,7 +51,7 @@ func TestCheckNodeCount(t *testing.T) {
 		}
 
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		emqxStatusMachine.CheckNodeCount(emqxNodes)
+		emqxStatusMachine.UpdateNodeCount(emqxNodes)
 		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeReplicas, int32(1))
 		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeReadyReplicas, int32(1))
 		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeReplicas, int32(1))
