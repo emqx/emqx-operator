@@ -48,14 +48,15 @@ func (r *Rebalance) ValidateCreate() error {
 
 	if len(r.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
 		_, err := strconv.ParseFloat(r.Spec.RebalanceStrategy.RelConnThreshold, 64)
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(r.Spec.RebalanceStrategy.RelSessThreshold) > 0 {
 		_, err := strconv.ParseFloat(r.Spec.RebalanceStrategy.RelSessThreshold, 64)
 		return err
 	}
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 

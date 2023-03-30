@@ -29,7 +29,7 @@ type RebalanceSpec struct {
 	// +kubebuilder:validation:required
 	// RebalanceStrategy represents the strategy of EMQX rebalancing
 	// More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing
-	RebalanceStrategy *RebalanceStrategy `json:"rebalanceStrategy,omitempty"`
+	RebalanceStrategy RebalanceStrategy `json:"rebalanceStrategy,omitempty"`
 }
 
 // RebalanceStrategy represents the strategy of EMQX rebalancing

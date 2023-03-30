@@ -23,7 +23,7 @@ func TestRebalanceValidateCreate(t *testing.T) {
 	rebalance := Rebalance{
 		Spec: RebalanceSpec{
 			InstanceName: "test",
-			RebalanceStrategy: &RebalanceStrategy{
+			RebalanceStrategy: RebalanceStrategy{
 				ConnEvictRate: 10,
 			},
 		},
@@ -47,13 +47,20 @@ func TestRebalanceValidateCreate(t *testing.T) {
 	r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
 	assert.NoError(t, r.ValidateCreate())
 
+	r = rebalance.DeepCopy()
+	r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
+	r.Spec.RebalanceStrategy.RelSessThreshold = "test"
+	assert.ErrorContains(t, r.ValidateCreate(), "invalid syntax")
+
+	r = rebalance.DeepCopy()
+	assert.NoError(t, r.ValidateCreate())
 }
 
 func TestRebalanceValidateUpdate(t *testing.T) {
 	rebalance := Rebalance{
 		Spec: RebalanceSpec{
 			InstanceName: "test",
-			RebalanceStrategy: &RebalanceStrategy{
+			RebalanceStrategy: RebalanceStrategy{
 				ConnEvictRate: 10,
 			},
 		},
