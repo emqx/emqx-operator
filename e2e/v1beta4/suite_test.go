@@ -103,6 +103,9 @@ var _ = BeforeSuite(func() {
 
 	err = appscontrollersv1beta4.NewEmqxPluginReconciler(k8sManager).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
+
+	err = appscontrollersv1beta4.NewRebalanceReconciler(k8sManager).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
 	go func() {
 		defer GinkgoRecover()
 		err = k8sManager.Start(ctrl.SetupSignalHandler())

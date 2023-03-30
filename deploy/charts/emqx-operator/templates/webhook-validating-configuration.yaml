@@ -95,8 +95,8 @@ webhooks:
   - v1beta1
   clientConfig:
     service:
-      name: webhook-service
-      namespace: system
+      name: {{ include "emqx-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
       path: /validate-apps-emqx-io-v1beta4-rebalance
   failurePolicy: Fail
   name: validator.rebalance.emqx.io
