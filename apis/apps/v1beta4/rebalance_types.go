@@ -54,12 +54,16 @@ type RebalanceStrategy struct {
 	AbsConnThreshold int32 `json:"absConnThreshold,omitempty"`
 	// RelConnThreshold represents the relative threshold for checkin connection balance.
 	// same to rel-conn-threshold in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+	// the usage of float highly discouraged, as support for them varies across languages.
+	// So we define the RelConnThreshold field as string type and you not float type
 	RelConnThreshold string `json:"relConnThreshold,omitempty"`
 	// AbsSessThreshold represents the absolute threshold for checking session connection balance.
 	// same to abs-sess-threshold in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
 	AbsSessThreshold int32 `json:"absSessThreshold,omitempty"`
 	// RelSessThreshold represents the relative threshold for checking session connection balance.
 	// same to rel-sess-threshold in [EMQX Document](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+	// the usage of float highly discouraged, as support for them varies across languages.
+	// So we define the RelSessThreshold field as string type and you not float type
 	RelSessThreshold string `json:"relSessThreshold,omitempty"`
 }
 

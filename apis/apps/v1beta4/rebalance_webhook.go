@@ -18,6 +18,7 @@ package v1beta4
 
 import (
 	"errors"
+	"strconv"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,7 +38,7 @@ func (r *Rebalance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-rebalance,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=rebalances,verbs=create;update,versions=v1beta4,name=vrebalance.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-rebalance,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=rebalances,verbs=create;update,versions=v1beta4,name=validator.rebalance.emqx.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &Rebalance{}
 
@@ -45,6 +46,15 @@ var _ webhook.Validator = &Rebalance{}
 func (r *Rebalance) ValidateCreate() error {
 	rebalancelog.Info("validate create", "name", r.Name)
 
+	if len(r.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
+		_, err := strconv.ParseFloat(r.Spec.RebalanceStrategy.RelConnThreshold, 64)
+		return err
+	}
+
+	if len(r.Spec.RebalanceStrategy.RelSessThreshold) > 0 {
+		_, err := strconv.ParseFloat(r.Spec.RebalanceStrategy.RelSessThreshold, 64)
+		return err
+	}
 	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
@@ -54,7 +64,7 @@ func (r *Rebalance) ValidateUpdate(old runtime.Object) error {
 	rebalancelog.Info("validate update", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
-	return errors.New("prohibit to update emqxrebalance")
+	return errors.New("prohibit to update rebalance")
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type

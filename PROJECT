@@ -105,7 +105,7 @@ resources:
   controller: true
   domain: emqx.io
   group: apps
-  kind: EmqxRebalance
+  kind: Rebalance
   path: github.com/emqx/emqx-operator/apis/apps/v1beta4
   version: v1beta4
   webhooks:

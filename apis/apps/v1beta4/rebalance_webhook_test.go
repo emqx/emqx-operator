@@ -19,8 +19,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRebalanceValidateUpdate(t *testing.T) {
-	emqxRebalance := Rebalance{
+func TestRebalanceValidateCreate(t *testing.T) {
+	rebalance := Rebalance{
 		Spec: RebalanceSpec{
 			InstanceName: "test",
 			RebalanceStrategy: &RebalanceStrategy{
@@ -29,7 +29,37 @@ func TestRebalanceValidateUpdate(t *testing.T) {
 		},
 	}
 
-	old := emqxRebalance.DeepCopy()
+	assert.NoError(t, rebalance.ValidateCreate())
+
+	r := rebalance.DeepCopy()
+	r.Spec.RebalanceStrategy.RelConnThreshold = "test"
+	assert.ErrorContains(t, r.ValidateCreate(), "invalid syntax")
+
+	r = rebalance.DeepCopy()
+	r.Spec.RebalanceStrategy.RelSessThreshold = "test-0"
+	assert.ErrorContains(t, r.ValidateCreate(), "invalid syntax")
+
+	r = rebalance.DeepCopy()
+	r.Spec.RebalanceStrategy.RelSessThreshold = "1.2"
+	assert.NoError(t, r.ValidateCreate())
+
+	r = rebalance.DeepCopy()
+	r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
+	assert.NoError(t, r.ValidateCreate())
+
+}
+
+func TestRebalanceValidateUpdate(t *testing.T) {
+	rebalance := Rebalance{
+		Spec: RebalanceSpec{
+			InstanceName: "test",
+			RebalanceStrategy: &RebalanceStrategy{
+				ConnEvictRate: 10,
+			},
+		},
+	}
+
+	old := rebalance.DeepCopy()
 	old.Spec.InstanceName = "test-0"
-	assert.ErrorContains(t, emqxRebalance.ValidateUpdate(old), "prohibit to update emqxrebalance")
+	assert.ErrorContains(t, rebalance.ValidateUpdate(old), "prohibit to update rebalance")
 }
