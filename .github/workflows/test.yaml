@@ -16,8 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Check line-break at EOF
-        run: ./.github/scripts/check-nl-at-eof.sh
       - uses: actions/setup-go@v3
         with:
           go-version: '1.19'
@@ -25,6 +23,13 @@ jobs:
         with:
           version: latest
           args: --timeout=5m
+      - name: Check line-break at EOF
+        run: ./.github/scripts/check-nl-at-eof.sh
+      - name: Run shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
+          ./.github/scripts/shellcheck.sh
 
   test:
     runs-on: ubuntu-latest

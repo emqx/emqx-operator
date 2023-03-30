@@ -11,7 +11,7 @@ SED_REPLACE="sed -i "
 case $(sed --help 2>&1) in
     *GNU*) SED_REPLACE="sed -i ";;
     *BusyBox*) SED_REPLACE="sed -i ";;
-    *) SED_REPLACE="sed -i '' ";;
+    *) SED_REPLACE="sed -i () ";;
 esac
 
 ${SED_REPLACE} -r "s|^version:.*|version: ${tag}|g" deploy/charts/emqx-operator/Chart.yaml
