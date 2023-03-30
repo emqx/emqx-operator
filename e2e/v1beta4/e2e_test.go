@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
@@ -554,6 +555,66 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 	})
 })
 
+var rebalance = appsv1beta4.Rebalance{
+	Spec: appsv1beta4.RebalanceSpec{
+		RebalanceStrategy: appsv1beta4.RebalanceStrategy{
+			WaitTakeover:     10,
+			ConnEvictRate:    10,
+			SessEvictRate:    10,
+			WaitHealthCheck:  10,
+			AbsSessThreshold: 100,
+			RelConnThreshold: "1.2",
+			AbsConnThreshold: 100,
+			RelSessThreshold: "1.2",
+		},
+	},
+}
+
+var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
+	Describe("Just for enterprise", func() {
+		emqx := emqxEnterprise.DeepCopy()
+		BeforeEach(func() {
+			createEmqx(emqx)
+		})
+
+		AfterEach(func() {
+			deleteEmqx(emqx)
+		})
+
+		It("emqx rebalance", func() {
+			By("create a new rebalance job")
+			time.Sleep(20 * time.Second)
+			createRebalance(&rebalance, emqx)
+
+			Eventually(func() []string {
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&rebalance), &rebalance)
+				return rebalance.Finalizers
+			}, timeout, interval).Should(ConsistOf("apps.emqx.io/finalizer"))
+
+			Eventually(func() string {
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&rebalance), &rebalance)
+				if len(rebalance.Status.Conditions) > 0 && rebalance.Status.Conditions[0].Type == appsv1beta4.RebalanceFailed {
+					return rebalance.Status.Conditions[0].Message
+				}
+				return ""
+			}, timeout, interval).Should(Equal("[\"nothing_to_balance\"]"))
+
+			Eventually(func() error {
+				return k8sClient.Delete(context.TODO(), &rebalance)
+			}, timeout, interval).Should(Succeed())
+
+		})
+	})
+})
+
+func createRebalance(rebalance *appsv1beta4.Rebalance, emqx appsv1beta4.Emqx) {
+	rebalance.Name = "rebalance" + "-" + rand.String(5)
+	rebalance.Namespace = emqx.GetNamespace()
+	rebalance.Spec.InstanceName = emqx.GetName()
+	Expect(rebalance.ValidateCreate()).Should(Succeed())
+	Expect(k8sClient.Create(context.TODO(), rebalance)).Should(Succeed())
+}
+
 func createEmqx(emqx appsv1beta4.Emqx) {
 	emqx.SetNamespace(emqx.GetNamespace() + "-" + rand.String(5))
 	emqx.Default()
@@ -594,6 +655,7 @@ func deleteEmqx(emqx appsv1beta4.Emqx) {
 		Expect(k8sClient.Delete(context.Background(), &plugin)).Should(Succeed())
 	}
 	Expect(k8sClient.Delete(context.TODO(), emqx)).Should(Succeed())
+
 	Expect(k8sClient.Delete(context.TODO(), &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: emqx.GetNamespace(),

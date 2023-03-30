@@ -17,6 +17,8 @@ limitations under the License.
 package v1beta4
 
 import (
+	"sort"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -138,6 +140,39 @@ type RebalanceCondition struct {
 	Reason string `json:"reason,omitempty"`
 	// A human readable message indicating details about the transition.
 	Message string `json:"message,omitempty"`
+}
+
+func (s *RebalanceStatus) SetCondition(condType RebalanceConditionType, status corev1.ConditionStatus, reason, message string) {
+	newCondition := RebalanceCondition{
+		Type:               condType,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		LastUpdateTime:     metav1.Now(),
+		LastTransitionTime: metav1.Now(),
+	}
+
+	pos := getConditionIndex(s, condType)
+	if pos >= 0 {
+		if s.Conditions[pos].Status == newCondition.Status {
+			newCondition.LastTransitionTime = s.Conditions[pos].LastTransitionTime
+		}
+		s.Conditions[pos] = newCondition
+	} else {
+		s.Conditions = append(s.Conditions, newCondition)
+	}
+	sort.Slice(s.Conditions, func(i, j int) bool {
+		return s.Conditions[j].LastUpdateTime.Before(&s.Conditions[i].LastUpdateTime)
+	})
+}
+
+func getConditionIndex(status *RebalanceStatus, condType RebalanceConditionType) int {
+	for i, c := range status.Conditions {
+		if condType == c.Type {
+			return i
+		}
+	}
+	return -1
 }
 
 type RebalanceConditionType string
