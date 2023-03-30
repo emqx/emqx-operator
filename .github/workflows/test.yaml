@@ -24,12 +24,12 @@ jobs:
           version: latest
           args: --timeout=5m
       - name: Check line-break at EOF
-        run: ./.github/scripts/check-nl-at-eof.sh
+        run: ./scripts/check-nl-at-eof.sh
       - name: Run shellcheck
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends shellcheck
-          ./.github/scripts/shellcheck.sh
+          ./scripts/shellcheck.sh
 
   test:
     runs-on: ubuntu-latest
