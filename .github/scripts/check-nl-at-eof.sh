@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-cd -P -- "$(dirname -- "$0")/.."
+cd -P -- "$(dirname -- "$0")/../.."
 
 nl_at_eof() {
     local file="$1"
