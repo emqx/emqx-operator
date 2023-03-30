@@ -29,32 +29,42 @@ func TestRebalanceValidateCreate(t *testing.T) {
 			},
 		},
 	}
-
 	assert.NoError(t, rebalance.ValidateCreate())
 
-	r := rebalance.DeepCopy()
-	r.Spec.RebalanceStrategy.RelConnThreshold = "test"
-	assert.ErrorContains(t, r.ValidateCreate(), "invalid syntax")
+	t.Run("valid RelConnThreshold must be float", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		r.Spec.RebalanceStrategy.RelConnThreshold = "test"
+		assert.ErrorContains(t, r.ValidateCreate(), "must be float64")
 
-	r = rebalance.DeepCopy()
-	r.Spec.RebalanceStrategy.RelSessThreshold = "test-0"
-	assert.ErrorContains(t, r.ValidateCreate(), "invalid syntax")
+		r = rebalance.DeepCopy()
+		r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
+		assert.NoError(t, r.ValidateCreate())
+	})
 
-	r = rebalance.DeepCopy()
-	r.Spec.RebalanceStrategy.RelSessThreshold = "1.2"
-	assert.NoError(t, r.ValidateCreate())
+	t.Run("valid RelSessThreshold must be float", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		r.Spec.RebalanceStrategy.RelSessThreshold = "test-0"
+		assert.ErrorContains(t, r.ValidateCreate(), "must be float64")
 
-	r = rebalance.DeepCopy()
-	r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
-	assert.NoError(t, r.ValidateCreate())
+		r = rebalance.DeepCopy()
+		r.Spec.RebalanceStrategy.RelSessThreshold = "1.2"
+		assert.NoError(t, r.ValidateCreate())
+	})
 
-	r = rebalance.DeepCopy()
-	r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
-	r.Spec.RebalanceStrategy.RelSessThreshold = "test"
-	assert.ErrorContains(t, r.ValidateCreate(), "invalid syntax")
+	t.Run("valid RelSessThreshold and RelConnThreshold must be float64", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
+		r.Spec.RebalanceStrategy.RelSessThreshold = "test"
+		assert.ErrorContains(t, r.ValidateCreate(), "must be float64")
 
-	r = rebalance.DeepCopy()
-	assert.NoError(t, r.ValidateCreate())
+		r.Spec.RebalanceStrategy.RelConnThreshold = "test"
+		r.Spec.RebalanceStrategy.RelSessThreshold = "1.2"
+		assert.ErrorContains(t, r.ValidateCreate(), "must be float64")
+
+		r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
+		r.Spec.RebalanceStrategy.RelSessThreshold = "1.2"
+		assert.NoError(t, r.ValidateCreate())
+	})
 }
 
 func TestRebalanceValidateUpdate(t *testing.T) {
@@ -72,22 +82,25 @@ func TestRebalanceValidateUpdate(t *testing.T) {
 		},
 	}
 
-	old := rebalance.DeepCopy()
-	old.Spec.InstanceName = "test-0"
-	assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance don't allow update")
+	t.Run("valid only Annotations can update ", func(t *testing.T) {
+		old := rebalance.DeepCopy()
+		old.Annotations = map[string]string{
+			"test":   "rebalance",
+			"test-0": "rebalance",
+		}
+		assert.NoError(t, rebalance.ValidateUpdate(old))
 
-	old = rebalance.DeepCopy()
-	old.Annotations = map[string]string{
-		"test":   "rebalance",
-		"test-0": "rebalance",
-	}
-	assert.NoError(t, rebalance.ValidateUpdate(old))
+		old = rebalance.DeepCopy()
+		old.Annotations = map[string]string{
+			"test":   "rebalance",
+			"test-0": "rebalance",
+		}
+		old.Spec.InstanceName = "test-0"
+		assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance don't allow update")
 
-	old = rebalance.DeepCopy()
-	old.Annotations = map[string]string{
-		"test":   "rebalance",
-		"test-0": "rebalance",
-	}
-	old.Spec.InstanceName = "test-0"
-	assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance don't allow update")
+		old = rebalance.DeepCopy()
+		old.Spec.InstanceName = "test-0"
+		assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance don't allow update")
+	})
+
 }

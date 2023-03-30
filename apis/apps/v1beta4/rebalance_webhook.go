@@ -68,9 +68,11 @@ func (r *Rebalance) ValidateUpdate(old runtime.Object) error {
 	rebalancelog.Info("validate update", "name", r.Name)
 	oldRebalance := old.(*Rebalance)
 
-	r.Annotations = map[string]string{}
-	oldRebalance.Annotations = map[string]string{}
-	if !reflect.DeepEqual(r, oldRebalance) {
+	newCopyRebalance := r.DeepCopy()
+	oldCopyRebalance := oldRebalance.DeepCopy()
+	newCopyRebalance.Annotations = map[string]string{}
+	oldCopyRebalance.Annotations = map[string]string{}
+	if !reflect.DeepEqual(newCopyRebalance, oldCopyRebalance) {
 		return errors.New("the Rebalance don't allow update, you can delete this and create new one")
 	}
 	return nil
