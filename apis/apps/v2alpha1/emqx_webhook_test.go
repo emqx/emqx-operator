@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 func TestDefault(t *testing.T) {
@@ -420,4 +421,30 @@ func TestDefaultAnnotations(t *testing.T) {
 		"foo":       "bar",
 		"listeners": "test",
 	}, instance.Spec.ListenersServiceTemplate.Annotations)
+}
+
+func TestDefaultSecurityContext(t *testing.T) {
+	instance := &EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "webhook-test",
+			Namespace: "default",
+		},
+	}
+	instance.defaultSecurityContext()
+
+	assert.Equal(t, corev1.PodSecurityContext{
+		RunAsUser:           pointer.Int64(1000),
+		RunAsGroup:          pointer.Int64(1000),
+		FSGroup:             pointer.Int64(1000),
+		FSGroupChangePolicy: (*corev1.PodFSGroupChangePolicy)(pointer.String("Always")),
+		SupplementalGroups:  []int64{1000},
+	}, *instance.Spec.CoreTemplate.Spec.PodSecurityContext)
+
+	assert.Equal(t, corev1.PodSecurityContext{
+		RunAsUser:           pointer.Int64(1000),
+		RunAsGroup:          pointer.Int64(1000),
+		FSGroup:             pointer.Int64(1000),
+		FSGroupChangePolicy: (*corev1.PodFSGroupChangePolicy)(pointer.String("Always")),
+		SupplementalGroups:  []int64{1000},
+	}, *instance.Spec.ReplicantTemplate.Spec.PodSecurityContext)
 }

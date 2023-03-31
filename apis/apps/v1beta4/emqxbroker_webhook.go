@@ -17,16 +17,18 @@ limitations under the License.
 package v1beta4
 
 import (
-	emperror "emperror.dev/errors"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
+	emperror "emperror.dev/errors"
+
 	semver "github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -55,6 +57,7 @@ func (r *EmqxBroker) Default() {
 	defaultEmqxConfig(r)
 	defaultServiceTemplate(r)
 	defaultPersistent(r)
+	defaultSecurityContext(r)
 }
 
 //+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-emqxbroker,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta4,name=validator.broker.emqx.io,admissionReviewVersions={v1,v1beta1}
@@ -237,6 +240,23 @@ func defaultPersistent(r Emqx) {
 		if _, ok := p.ObjectMeta.Annotations[key]; !ok {
 			p.ObjectMeta.Annotations[key] = value
 		}
+	}
+}
+
+func defaultSecurityContext(r Emqx) {
+	if r.GetSpec().GetTemplate().Spec.PodSecurityContext == nil {
+		sc := &corev1.PodSecurityContext{
+			RunAsUser:  pointer.Int64(1000),
+			RunAsGroup: pointer.Int64(1000),
+			FSGroup:    pointer.Int64(1000),
+		}
+
+		sc.FSGroupChangePolicy = (*corev1.PodFSGroupChangePolicy)(pointer.String("Always"))
+		sc.SupplementalGroups = []int64{1000}
+
+		template := r.GetSpec().GetTemplate()
+		template.Spec.PodSecurityContext = sc
+		r.GetSpec().SetTemplate(template)
 	}
 }
 

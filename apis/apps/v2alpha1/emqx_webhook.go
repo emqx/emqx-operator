@@ -57,6 +57,7 @@ func (r *EMQX) Default() {
 	r.defaultReplicas()
 	r.defaultDashboardServiceTemplate()
 	r.defaultProbe()
+	r.defaultSecurityContext()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -304,5 +305,29 @@ func (r *EMQX) defaultProbe() {
 	}
 	if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
 		r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
+	}
+}
+
+func (r *EMQX) defaultSecurityContext() {
+	if r.Spec.CoreTemplate.Spec.PodSecurityContext == nil {
+		r.Spec.CoreTemplate.Spec.PodSecurityContext = &corev1.PodSecurityContext{
+			RunAsUser:  pointer.Int64(1000),
+			RunAsGroup: pointer.Int64(1000),
+			FSGroup:    pointer.Int64(1000),
+		}
+
+		r.Spec.CoreTemplate.Spec.PodSecurityContext.FSGroupChangePolicy = (*corev1.PodFSGroupChangePolicy)(pointer.String("Always"))
+		r.Spec.CoreTemplate.Spec.PodSecurityContext.SupplementalGroups = []int64{1000}
+	}
+
+	if r.Spec.ReplicantTemplate.Spec.PodSecurityContext == nil {
+		r.Spec.ReplicantTemplate.Spec.PodSecurityContext = &corev1.PodSecurityContext{
+			RunAsUser:  pointer.Int64(1000),
+			RunAsGroup: pointer.Int64(1000),
+			FSGroup:    pointer.Int64(1000),
+		}
+
+		r.Spec.ReplicantTemplate.Spec.PodSecurityContext.FSGroupChangePolicy = (*corev1.PodFSGroupChangePolicy)(pointer.String("Always"))
+		r.Spec.ReplicantTemplate.Spec.PodSecurityContext.SupplementalGroups = []int64{1000}
 	}
 }
