@@ -6459,6 +6459,9 @@ spec:
                 emqxNodes:
                   items:
                     properties:
+                      connections:
+                        format: int64
+                        type: integer
                       edition:
                         type: string
                       node:

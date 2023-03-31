@@ -6885,6 +6885,9 @@ spec:
               emqxNodes:
                 items:
                   properties:
+                    connections:
+                      format: int64
+                      type: integer
                     node:
                       type: string
                     node_status:

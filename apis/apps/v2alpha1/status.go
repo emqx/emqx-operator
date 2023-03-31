@@ -67,6 +67,8 @@ type EMQXNode struct {
 	Role string `json:"role,omitempty"`
 	// EMQX cluster node edition, enum: "Opensource" "Enterprise"
 	Edition string `json:"edition,omitempty"`
+	// MQTT connection count
+	Connections int64 `json:"connections,omitempty"`
 }
 
 // EMQXStatus defines the observed state of EMQX
