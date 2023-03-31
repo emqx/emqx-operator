@@ -603,6 +603,11 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 				return k8sClient.Delete(context.TODO(), &rebalance)
 			}, timeout, interval).Should(Succeed())
 
+			Eventually(func() bool {
+				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&rebalance), &rebalance)
+				return k8sErrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+
 		})
 	})
 })
