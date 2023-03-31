@@ -168,6 +168,32 @@ func TestIndexCondition(t *testing.T) {
 	assert.Equal(t, 1, idx)
 }
 
+func TestSetEMQXNodes(t *testing.T) {
+	status := &EMQXStatus{}
+
+	nodes := []EMQXNode{
+		{
+			Node:   "emqx-0",
+			Uptime: 10000,
+		},
+		{
+			Node:   "emqx-1",
+			Uptime: 10,
+		},
+	}
+	status.SetEMQXNodes(nodes)
+	assert.Equal(t, []EMQXNode{
+		{
+			Node:   "emqx-1",
+			Uptime: 10,
+		},
+		{
+			Node:   "emqx-0",
+			Uptime: 10000,
+		},
+	}, status.EMQXNodes)
+}
+
 func TestSetCondition(t *testing.T) {
 	c0 := Condition{
 		Type:   ClusterCreating,

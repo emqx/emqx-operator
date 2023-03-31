@@ -67,6 +67,8 @@ type EMQXNode struct {
 	Role string `json:"role,omitempty"`
 	// EMQX cluster node edition, enum: "Opensource" "Enterprise"
 	Edition string `json:"edition,omitempty"`
+	// EMQX node uptime, milliseconds
+	Uptime int64 `json:"uptime,omitempty"`
 	// MQTT connection count
 	Connections int64 `json:"connections,omitempty"`
 }
@@ -117,6 +119,13 @@ func (s *EMQXStatus) IsCoreNodesReady() bool {
 func (s *EMQXStatus) IsRunning() bool {
 	index := indexCondition(s, ClusterRunning)
 	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
+}
+
+func (s *EMQXStatus) SetEMQXNodes(nodes []EMQXNode) {
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].Uptime < nodes[j].Uptime
+	})
+	s.EMQXNodes = nodes
 }
 
 func (s *EMQXStatus) SetCondition(c Condition) {
