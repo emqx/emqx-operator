@@ -155,6 +155,7 @@ _Appears in:_
 | `version` _string_ | EMQX version |
 | `role` _string_ | EMQX cluster node role, enum: "core" "replicant" |
 | `edition` _string_ | EMQX cluster node edition, enum: "Opensource" "Enterprise" |
+| `uptime` _integer_ | EMQX node uptime, milliseconds |
 | `connections` _integer_ | MQTT connection count |
 
 

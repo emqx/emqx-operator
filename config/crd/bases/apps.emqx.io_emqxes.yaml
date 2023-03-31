@@ -6460,6 +6460,9 @@ spec:
                       type: string
                     role:
                       type: string
+                    uptime:
+                      format: int64
+                      type: integer
                     version:
                       type: string
                   type: object
