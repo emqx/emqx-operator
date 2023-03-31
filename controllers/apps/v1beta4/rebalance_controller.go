@@ -19,7 +19,6 @@ package v1beta4
 import (
 	"context"
 	"encoding/json"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -121,8 +120,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 		controllerutil.RemoveFinalizer(rebalance, finalizer)
-		err = r.Client.Update(ctx, rebalance)
-		return ctrl.Result{}, err
+		return ctrl.Result{}, r.Client.Update(ctx, rebalance)
 	}
 
 	if !controllerutil.ContainsFinalizer(rebalance, finalizer) {
@@ -153,7 +151,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if err := r.Client.Status().Update(ctx, rebalance); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 	}
 	if len(rebalanceStates) == 0 {
 		rebalance.Status.Phase = "Completed"
@@ -177,13 +175,7 @@ func (r *RebalanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&appsv1beta4.Rebalance{}).
 		WithEventFilter(predicate.Funcs{
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				oldRebalance := e.ObjectOld.DeepCopyObject().(*appsv1beta4.Rebalance)
-				newRebalance := e.ObjectNew.DeepCopyObject().(*appsv1beta4.Rebalance)
-				oldRebalance.Finalizers = []string{}
-				oldRebalance.DeletionTimestamp = &metav1.Time{}
-				newRebalance.Finalizers = []string{}
-				newRebalance.DeletionTimestamp = &metav1.Time{}
-				return reflect.DeepEqual(oldRebalance, newRebalance)
+				return !e.ObjectNew.GetDeletionTimestamp().IsZero()
 			},
 		}).
 		Complete(r)
