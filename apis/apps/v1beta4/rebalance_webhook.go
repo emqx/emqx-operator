@@ -70,10 +70,9 @@ func (r *Rebalance) ValidateUpdate(old runtime.Object) error {
 
 	newCopyRebalance := r.DeepCopy()
 	oldCopyRebalance := oldRebalance.DeepCopy()
-	newCopyRebalance.Annotations = map[string]string{}
-	oldCopyRebalance.Annotations = map[string]string{}
-	if !reflect.DeepEqual(newCopyRebalance, oldCopyRebalance) {
-		return errors.New("the Rebalance don't allow update, you can delete this and create new one")
+
+	if !reflect.DeepEqual(oldCopyRebalance.Spec, newCopyRebalance.Spec) {
+		return errors.New("the Rebalance spec don't allow update, you can delete this and create new one")
 	}
 	return nil
 }

@@ -93,10 +93,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 		rebalance.Status.Phase = "Failed"
 		rebalance.Status.SetCondition(appsv1beta4.RebalanceFailed, corev1.ConditionFalse, "Failed", err.Error())
-		if err := r.Client.Status().Update(ctx, rebalance); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
 
 	pod := r.getReadyPod(emqx)
@@ -114,9 +111,8 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	finalizer := "apps.emqx.io/finalizer"
-	emqxNodeName := getEmqxNodeName(emqx, pod)
-	if rebalance.DeletionTimestamp != nil {
-		if err := stopRebalance(portForward, rebalance, emqxNodeName); err != nil {
+	if !rebalance.DeletionTimestamp.IsZero() {
+		if err := stopRebalance(portForward, rebalance); err != nil {
 			return ctrl.Result{}, err
 		}
 		controllerutil.RemoveFinalizer(rebalance, finalizer)
@@ -131,11 +127,11 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if rebalance.Status.Phase == "" {
+		emqxNodeName := getEmqxNodeName(emqx, pod)
 		if err := startRebalance(portForward, rebalance, emqx, emqxNodeName); err != nil {
 			rebalance.Status.Phase = "Failed"
 			rebalance.Status.SetCondition(appsv1beta4.RebalanceFailed, corev1.ConditionFalse, "Failed", err.Error())
-			err := r.Client.Status().Update(ctx, rebalance)
-			return ctrl.Result{}, err
+			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 		}
 		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", " rebalance has started successfully")
 		rebalance.Status.StartTime = metav1.Now()
@@ -148,25 +144,21 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		rebalance.Status.Phase = "Failed"
 		rebalance.Status.RebalanceStates = []appsv1beta4.RebalanceState{}
 		rebalance.Status.SetCondition(appsv1beta4.RebalanceFailed, corev1.ConditionFalse, "Failed", err.Error())
-		if err := r.Client.Status().Update(ctx, rebalance); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
 	if len(rebalanceStates) == 0 {
 		rebalance.Status.Phase = "Completed"
 		rebalance.Status.CompletionTime = metav1.Now()
+		rebalance.Status.RebalanceStates = []appsv1beta4.RebalanceState{}
 		rebalance.Status.SetCondition(appsv1beta4.RebalanceCompleted, corev1.ConditionTrue, "Completed", "Rebalance has Completed")
 		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", " rebalance has completed successfully")
+		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
 	rebalance.Status.RebalanceStates = rebalanceStates
 	if err := r.Client.Status().Update(ctx, rebalance); err != nil {
 		return ctrl.Result{}, err
 	}
-	if rebalance.Status.Phase == "Processing" {
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -175,7 +167,7 @@ func (r *RebalanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&appsv1beta4.Rebalance{}).
 		WithEventFilter(predicate.Funcs{
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				return !e.ObjectNew.GetDeletionTimestamp().IsZero()
+				return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration()
 			},
 		}).
 		Complete(r)
@@ -244,10 +236,11 @@ func getRebalanceStatus(p *portForwardAPI) ([]appsv1beta4.RebalanceState, error)
 	return rebalanceStates, nil
 }
 
-func stopRebalance(p *portForwardAPI, rebalance *appsv1beta4.Rebalance, emqxNodeName string) error {
+func stopRebalance(p *portForwardAPI, rebalance *appsv1beta4.Rebalance) error {
 	if rebalance.Status.Phase != "Processing" {
 		return nil
 	}
+	emqxNodeName := rebalance.Status.RebalanceStates[0].Node
 	resp, respBody, err := p.requestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
 	if err != nil {
 		return err

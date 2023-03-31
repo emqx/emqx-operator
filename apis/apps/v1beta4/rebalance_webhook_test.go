@@ -15,6 +15,7 @@ package v1beta4
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,11 +70,6 @@ func TestRebalanceValidateCreate(t *testing.T) {
 
 func TestRebalanceValidateUpdate(t *testing.T) {
 	rebalance := Rebalance{
-		ObjectMeta: v1.ObjectMeta{
-			Annotations: map[string]string{
-				"test": "rebalance",
-			},
-		},
 		Spec: RebalanceSpec{
 			InstanceName: "test",
 			RebalanceStrategy: RebalanceStrategy{
@@ -82,25 +78,28 @@ func TestRebalanceValidateUpdate(t *testing.T) {
 		},
 	}
 
-	t.Run("valid only Annotations can update ", func(t *testing.T) {
+	t.Run("valid update instanceName ", func(t *testing.T) {
 		old := rebalance.DeepCopy()
-		old.Annotations = map[string]string{
-			"test":   "rebalance",
-			"test-0": "rebalance",
-		}
 		assert.NoError(t, rebalance.ValidateUpdate(old))
 
 		old = rebalance.DeepCopy()
-		old.Annotations = map[string]string{
-			"test":   "rebalance",
-			"test-0": "rebalance",
-		}
 		old.Spec.InstanceName = "test-0"
-		assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance don't allow update")
+		assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance spec don't allow update")
+
+		old.Spec.InstanceName = "test"
+		old.Spec.RebalanceStrategy = RebalanceStrategy{
+			ConnEvictRate: 11,
+		}
+	})
+
+	t.Run("valid other field instead of spec ", func(t *testing.T) {
+		old := rebalance.DeepCopy()
+		old.Finalizers = []string{"test", "test-0"}
+		assert.NoError(t, rebalance.ValidateUpdate(old))
 
 		old = rebalance.DeepCopy()
-		old.Spec.InstanceName = "test-0"
-		assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance don't allow update")
+		old.DeletionTimestamp = &v1.Time{Time: time.Now()}
+		assert.NoError(t, rebalance.ValidateUpdate(old))
 	})
 
 }
