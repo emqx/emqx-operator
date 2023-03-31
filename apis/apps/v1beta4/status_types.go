@@ -61,6 +61,8 @@ type EmqxNode struct {
 	OTPRelease string `json:"otp_release,omitempty"`
 	// EMQX version
 	Version string `json:"version,omitempty"`
+	// MQTT connection count
+	Connections int64 `json:"connections,omitempty"`
 }
 
 type EmqxEvacuationStats struct {
