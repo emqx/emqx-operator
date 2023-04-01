@@ -90,7 +90,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
 ```

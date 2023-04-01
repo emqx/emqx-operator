@@ -8,7 +8,7 @@
 
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 EMQX CRD 支持使用 `.spec.bootstrapConfig` 来配置 EMQX 集群日志等级，bootstrapConfig 的配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。
@@ -28,7 +28,7 @@ spec:
     log {
        console_handler {
           level  =  debug
-        } 
+        }
     }
 ```
 
@@ -113,7 +113,7 @@ emqx-ee   Running  8m33s
 -  使用命令行查看 EMQX 集群日志信息
 
 ```bash
-kubectl logs emqx-core-0 -c emqx 
+kubectl logs emqx-core-0 -c emqx
 ```
 
 输出如下图所示：

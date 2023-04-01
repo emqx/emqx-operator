@@ -18,7 +18,7 @@ EMQX Custom Resource 使用 StoreClass 来保存 EMQX 运行时的状态。在�
 
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -63,7 +63,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
 ```
@@ -83,11 +83,11 @@ TkeServiceConfig 并不会帮您直接配置并修改协议和端口，您需要
 
 `spec.loadBalancer.l4Listeners.port`：监听端口
 
-创建 Loadbalancer 模式 Service 时，设置注解 `service.cloud.tencent.com/tke-service-config-auto: "true"`，将自动创建 \<ServiceName>-auto-service-config。您也可以通过 **service.cloud.tencent.com/tke-service-config:\<config-name>** 直接指定您自行创建的 TkeServiceConfig。两个注解不可同时使用。  
+创建 Loadbalancer 模式 Service 时，设置注解 `service.cloud.tencent.com/tke-service-config-auto: "true"`，将自动创建 \<ServiceName>-auto-service-config。您也可以通过 **service.cloud.tencent.com/tke-service-config:\<config-name>** 直接指定您自行创建的 TkeServiceConfig。两个注解不可同时使用。
 
 除了 TkeServiceConfig，您可以通过其他 Annotation 注解配置 Service，以实现更丰富的负载均衡的能力。详情请查看[Service Annotation 说明](https://cloud.tencent.com/document/product/457/51258)
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -96,7 +96,7 @@ kind: EMQX
 metadata:
   name: emqx
   annotations:
-    service.cloud.tencent.com/tke-service-config-auto: "true" 
+    service.cloud.tencent.com/tke-service-config-auto: "true"
     # 自动创建 tke-service-config
     # service.cloud.tencent.com/tke-service-config: emqx-service-config
     # 指定已有的 tke-service-config
@@ -116,7 +116,7 @@ kind: EmqxEnterprise
 metadata:
   name: emqx-ee
   annotations:
-    service.cloud.tencent.com/tke-service-config-auto: "true" 
+    service.cloud.tencent.com/tke-service-config-auto: "true"
     # 自动创建 tke-service-config
     # service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
     # 指定已有的 tke-service-config
@@ -124,7 +124,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
   serviceTemplate:
@@ -151,7 +151,7 @@ spec:
 需要在 `kube-system/tke-service-controller-config` ConfigMap 中新增 `GlobalRouteDirectAccess: "true"` 以开启 GlobalRoute 直连能力。
 :::
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -160,7 +160,7 @@ kind: EMQX
 metadata:
   name: emqx
   annotations:
-    service.cloud.tencent.com/tke-service-config-auto: "true" 
+    service.cloud.tencent.com/tke-service-config-auto: "true"
    	service.cloud.tencent.com/tke-service-config: emqx-service-config
 spec:
   image: emqx:5.0
@@ -184,7 +184,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
   serviceTemplate:

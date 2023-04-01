@@ -111,10 +111,10 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## 检查 License 信息 
+## 检查 License 信息
 
 ```bash
-kubectl exec -it emqx-ee-core-0 -c emqx -- emqx_ctl license info 
+kubectl exec -it emqx-ee-core-0 -c emqx -- emqx_ctl license info
 ```
 
 输出类似于：
@@ -133,7 +133,7 @@ expiry          : false
 
 > 从输出结果可以看到我们申请的 License 的基本信息，包括申请人的信息和 License 支持最大连接数以及 License 过期时间等。
 
-## 更新 License  
+
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -154,7 +154,7 @@ expiry          : false
 
 从上面的图中可以看出，License 的内容已经更新，则说明 License 更新成功。
 
-::: 
+:::
 ::: tab v1beta4
 
 - 更新 EMQX 企业版 License Secret
@@ -172,7 +172,7 @@ secret/test configured
 - 查看 EMQX 集群 License 是否被更新
 
 ```bash
-kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info 
+kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
 ```
 
 输出类似于：
@@ -191,7 +191,7 @@ customer_type            : 2
 expiry                   : false
 ```
 
-> 若证书信息没有更新，可以等待一会，License 的更新会有些时延。从上面输出的结果可以看出，License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。 
+> 若证书信息没有更新，可以等待一会，License 的更新会有些时延。从上面输出的结果可以看出，License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。
 
 :::
 ::::

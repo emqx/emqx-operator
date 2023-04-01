@@ -109,7 +109,7 @@ patches:
           NWgwUCtOM2wKYXluOG9mcDBFdFJaTHlRSlZQdTNWYTJWaFE0QVdaMklVZ2UvRWExNlpPUjREL3pa
           MW5ZMG9wb3RiRzdTNFE2VApDV0g3eGljRVlGdmhsVFREVlFGU1JMdz0KLS0tLS1FTkQgQ0VSVElG
           SUNBVEUtLS0tLQo=
-        
+
       - op: "add"
         path: "/webhooks/3/clientConfig/url"
         value: "https://host.docker.internal:9443/mutate-apps-emqx-io-v2alpha1-emqx"
@@ -249,7 +249,7 @@ patches:
           NWgwUCtOM2wKYXluOG9mcDBFdFJaTHlRSlZQdTNWYTJWaFE0QVdaMklVZ2UvRWExNlpPUjREL3pa
           MW5ZMG9wb3RiRzdTNFE2VApDV0g3eGljRVlGdmhsVFREVlFGU1JMdz0KLS0tLS1FTkQgQ0VSVElG
           SUNBVEUtLS0tLQo=
-        
+
       - op: "add"
         path: "/webhooks/3/clientConfig/url"
         value: "https://host.docker.internal:9443/validate-apps-emqx-io-v2alpha1-emqx"

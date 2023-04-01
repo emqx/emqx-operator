@@ -8,11 +8,11 @@ How to change EMQX configuration by `.spec.bootstrapConfig` in EMQX Custom Resou
 
 The main configuration file of EMQX is `emqx.conf`. Starting from version 5.0, EMQX adopts [HOCON](https://www.emqx.io/docs/en/v5.0/configuration/configuration.html#hocon-configuration-format) as the configuration file format.
 
-EMQX CRD supports using the `.spec.bootstrapConfig` field to configure the EMQX cluster. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster and does not support updating. 
+EMQX CRD supports using the `.spec.bootstrapConfig` field to configure the EMQX cluster. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster and does not support updating.
 
-:::tip 
+:::tip
 
-This is only applicable before EMQX is started. If you need to modify the cluster configuration after creating EMQX, please modify it through EMQX Dashboard. 
+This is only applicable before EMQX is started. If you need to modify the cluster configuration after creating EMQX, please modify it through EMQX Dashboard.
 
 :::
 

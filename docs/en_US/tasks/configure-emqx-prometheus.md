@@ -24,7 +24,6 @@ metadata:
   name: emqx
 spec:
   image: emqx:5.0
-  imagePullPolicy: IfNotPresent    
   coreTemplate:
     spec:
       ports:
@@ -70,7 +69,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
         ports:

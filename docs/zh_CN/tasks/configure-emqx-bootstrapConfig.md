@@ -10,7 +10,7 @@ EMQX 主配置文件为 emqx.conf，从 5.0 版本开始，EMQX 采用 [HOCON](h
 
 EMQX CRD 支持使用 `.spec.bootstrapConfig` 字段配置 EMQX 集群，bootstrapConfig 配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。
 
-:::tip 
+:::tip
 
 如果在创建 EMQX 之后需要修改集群配置，请通过 EMQX Dashboard 进行修改。
 :::
@@ -50,10 +50,10 @@ emqx   emqx:5.0   Running   2m55s
 
 ## 验证配置更改
 
-查看 EMQX 集群 listener 信息 
+查看 EMQX 集群 listener 信息
 
 ```bash
-kubectl exec -it emqx-core-0 -c emqx -- emqx_ctl listeners 
+kubectl exec -it emqx-core-0 -c emqx -- emqx_ctl listeners
 ```
 
 输出类似于：

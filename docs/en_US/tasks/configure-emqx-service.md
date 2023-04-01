@@ -63,7 +63,7 @@ spec:
           version: 4.4.14
   serviceTemplate:
     spec:
-      type: LoabBalancer 
+      type: LoabBalancer
 ```
 
 > EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` corresponds to port 18083, `http-management-8081` corresponds to port 8081,`mqtt-ws-8083` corresponds to port 8083 and `mqtt-wss-8084` corresponds to port 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
@@ -90,7 +90,7 @@ emqx-ee   Running  8m33s
 
 ## Use MQTT X Client to Connect EMQX Cluster
 
-Check EMQX service 
+Check EMQX service
 
 ```bash
 $ kubectl get svc -l apps.emqx.io/instance=emqx

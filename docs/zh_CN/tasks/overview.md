@@ -19,7 +19,7 @@
 
 - 升级
   - [配置蓝绿发布 (EMQX 企业版)](./configure-emqx-blueGreenUpdate.md)
-- 日志管理 
+- 日志管理
   - [在 Kubernetes 中采集 EMQX 的日志](./configure-emqx-log-collection.md)
   - [修改 EMQX 日志等级](./configure-emqx-log-level.md)
 

@@ -39,7 +39,7 @@ jobs:
         dir:
         - apis
         - controllers
-        - internal 
+        - internal
         - e2e/v1beta4
         - e2e/v2alpha1
 
