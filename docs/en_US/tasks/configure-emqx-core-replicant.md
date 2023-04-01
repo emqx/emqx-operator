@@ -1,4 +1,4 @@
-# Enable Core + Replicant Mode (EMQX 5.x)
+# Enable Core + Replicant Cluster (EMQX 5.x)
 
 ## Task Target
 
@@ -13,13 +13,11 @@ In EMQX 5.0, in order to realize the horizontal expansion capability of the clus
 
 The behaviour of Core nodes is consistent with that of EMQX 4 nodes: Core nodes form a cluster in a fully connected manner, and each node can initiate transactions, hold locks, and so on. Therefore, EMQX 5.0 still requires Core nodes to be as reliable as possible in deployment. 
 
-:::tip 
-
-There must be at least one Core node in the EMQX cluster.
-
-:::
-
 EMQX CRD supports the configuration of EMQX cluster Core nodes through `.spec.coreTemplate` field, the specific description of the coreTemplate field can refer to [coreTemplate](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v2alpha1-reference.md#emqxcoretemplate). Use the `.spec.replicantTemplate` field to configure the Replicant node of the EMQX cluster. The specific description of the `replicantTemplate` field can refer to [emqxreplicanttemplate](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v2alpha1-reference.md#emqxreplicanttemplate).
+
+:::tip 
+There must be at least one Core node in the EMQX cluster. For the purpose of high availability, EMQX Operator requires the EMQX cluster to have at least two Core nodes and two Replicant nodes.
+:::
 
 ## Configure EMQX Cluster
 

@@ -1,4 +1,4 @@
-# 通过 LoabBalancer 访问 EMQX 集群
+# 通过 Kubernetes Service 访问 EMQX 集群
 
 ## 任务目标
 
@@ -112,11 +112,11 @@ $ mqttx conn -h broker.emqx.io
 
 打开浏览器，输入 EMQX Pod 所在宿主机 `IP` 和 端口 `32012` 登录 EMQX 集群 Dashboard（Dashboard 默认用户名为：admin ，默认密码为：public），进入 Dashboard 点击 Configuration → Listeners 进入监听器的页面，我们先点击 Add Listener 的按钮添加一个名称为 test，端口为1884的监听器，如下图所示：
 
- <img src="./assets/configure-service/emqx-add-listener.png" style="zoom:50%;" /> 
+ <img src="./assets/configure-service/emqx-add-listener.png" style="zoom: 33%;" />
 
 然后点击 Add 按钮创建监听器，如下图所示：
 
-![](./assets/configure-service/emqx-listeners.png)
+<img src="./assets/configure-service/emqx-listeners.png" style="zoom:50%;" />
 
 从图中可以看出，我们创建的 test 监听器已经生效。
 

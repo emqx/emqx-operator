@@ -1,19 +1,24 @@
-# 全新的 EMQX 5.0 集群架构
+# 开启 Core + Replicant 集群 (EMQX 5.x)
 
 ## 任务目标
 
 - 如何通过 coreTemplate 字段配置 EMQX 集群 Core 节点。
 - 如何通过 replicantTemplate 字段配置 EMQX 集群 Replicant 节点。
 
-## EMQX 5.0 集群架构
+## Core 节点与 Replicant 节点
 
 在 EMQX 5.0 中，为了实现集群横向扩展能力，可以将集群中的 EMQX 节点分成两个角色：核心（Core）节点和 复制（Replicant）节点。其拓扑结构如下图所示：
 
  <img src="./assets/configure-core-replicant/mria-core-repliant.png" style="zoom:50%;" />
 
-Core 节点的行为与 EMQX 4.x 中节点一致：Core 节点使用全连接的方式组成集群，每个节点都可以发起事务、持有锁等。因此，EMQX 5.0 仍然要求 Core 节点在部署上要尽量的可靠。**请注意：EMQX 集群中至少要有一个 Core 节点**。
+Core 节点的行为与 EMQX 4.x 中节点一致：Core 节点使用全连接的方式组成集群，每个节点都可以发起事务、持有锁等。因此，EMQX 5.0 仍然要求 Core 节点在部署上要尽量的可靠。
 
 Replicant 节点不再直接参与事务的处理。但它们会连接到 Core 节点，并被动地复制来自 Core 节点的数据更新。Replicant 节点不允许执行任何的写操作。而是将其转交给 Core 节点代为执行。另外，由于 Replicant 会复制来自 Core 节点的数据，所以它们有一份完整的本地数据副本，以达到最高的读操作的效率，这样有助于降低 EMQX 路由的时延。另外，Replicant 节点被设计成是无状态的，添加或删除它们不会导致集群数据的丢失、也不会影响其他节点的服务状态，所以 Replicant 节点可以被放在一个自动扩展组中。
+
+
+::: tip
+EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX Operator 要求 EMQX 集群至少有两个 Core 节点和两个 Replicant 节点。
+:::
 
 ## 部署 EMQX 集群
 
@@ -52,6 +57,8 @@ emqx   emqx:5.0   Running   10m
 ```
 
 ## 检查 EMQX 集群
+
+可以通过检查 EMQX 自定义资源的状态来获取所有集群中节点的信息，节点的 `role` 字段表示它们在集群中的角色，在上文中部署了一个由两个 Core 节点与三个 Replicant 节点组成的集群。
 
 ```bash
 $ kubectl get emqx emqx -o json | jq .status.emqxNodes

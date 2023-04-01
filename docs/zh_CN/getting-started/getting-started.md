@@ -1,17 +1,19 @@
 ## 部署 EMQX Operator
 
+在本文中，我们将指导您完成高效设置 EMQX Operator 环境、安装 EMQX Operator，然后使用它部署 EMQX 所需的步骤。通过遵循本节中概述的指南，您将能够使用 EMQX Operator 有效地安装和管理 EMQX。
+
 ### 准备环境
 
 EMQX Operator 部署前，请确认以下组件已经安装：
 
 |   软件                   |   版本要求       |
 |:-----------------------:|:---------------:|
-|  [Helm](https://helm.sh)                 |  >= 3           |
-|  [cert-manager](https://cert-manager.io) |  >= 1.1.6       |
+|  [Helm](https://helm.sh)                 |  3 或更高          |
+|  [cert-manager](https://cert-manager.io) |  1.1.6 或更高  |
 
 ### 安装 EMQX Operator
 
-> 请先确认 [cert-manager](https://cert-manager.io) 已经就绪
+运行以下命令来安装 EMQX Operator
 
 ```bash
 $ helm repo add emqx https://repos.emqx.io/charts
@@ -19,13 +21,16 @@ $ helm repo update
 $ helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
 ```
 
-等待 EMQX Operator 就绪
+等待 EMQX Operator 就绪：
 
 ```bash
 $ kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 
 pod/emqx-operator-controller-manager-57bd7b8bd4-h2mcr condition met
 ```
+
+现在你已经成功的安装的 EMQX Operator，你可以继续下一步了。在部署 EMQX 部分中，您将学习如何使用 EMQX Operator 来部署 EMQX。
+
 
 ### 升级 EMQX Operator
 
@@ -35,7 +40,7 @@ pod/emqx-operator-controller-manager-57bd7b8bd4-h2mcr condition met
 $ helm upgrade emqx-operator emqx/emqx-operator -n emqx-operator-system
 ```
 
-> 不支持 1.x.x 版本 EMQX Operator 升级到 2.x.x 版本。
+> 不支持从版本1.x.x 升级到版本 2.x.x。
 
 ### 卸载 EMQX Operator
 
@@ -49,7 +54,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
 ### 部署 EMQX 5
 
-1. 部署 EMQX
+1. 部署 EMQX。
 
    ```bash
    $ cat << "EOF" | kubectl apply -f -
@@ -66,14 +71,14 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
    ```bash
    $ kubectl get emqx
-
+   
    NAME   IMAGE      STATUS    AGE
    emqx   emqx:5.0   Running   2m55s
    ```
 
 ### 部署 EMQX 4
 
-1. 部署 EMQX
+1. 部署 EMQX。
 
    ```bash
    $ cat << "EOF" | kubectl apply -f -
@@ -91,11 +96,11 @@ $ helm uninstall emqx-operator -n emqx-operator-system
    EOF
    ```
 
-2. 等待 EMQX 集群就绪
+2. 等待 EMQX 集群就绪。
 
    ```bash
    $ kubectl get emqxbrokers
-
+   
    NAME   STATUS   AGE
    emqx   Running  8m33s
    ```
@@ -104,7 +109,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
 ### 部署 EMQX Enterprise 4
 
-1. 部署 EMQX
+1. 部署 EMQX。
 
     ```bash
     $ cat << "EOF" | kubectl apply -f -
@@ -122,11 +127,11 @@ $ helm uninstall emqx-operator -n emqx-operator-system
     EOF
     ```
 
-2. 等待 EMQX 集群就绪
+2. 等待 EMQX 集群就绪。
 
    ```bash
    $ kubectl get emqxenterprises
-
+   
    NAME      STATUS   AGE
    emqx-ee   Running  8m33s
    ```

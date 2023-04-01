@@ -11,7 +11,11 @@
 :::: tabs type:card 
 ::: tab v2alpha1
 
-EMQX CRD 支持使用 `.spec.bootstrapConfig` 来配置 EMQX 集群日志等级，bootstrapConfig 的配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。**注意：** 如果在创建 EMQX 之后需要修改集群日志等级，请通过 EMQX Dashboard 进行修改。
+EMQX CRD 支持使用 `.spec.bootstrapConfig` 来配置 EMQX 集群日志等级，bootstrapConfig 的配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。
+
+:::tip
+如果在创建 EMQX 之后需要修改集群日志等级，请通过 EMQX Dashboard 进行修改。
+:::
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -90,21 +94,21 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## 验证 EMQX 集群日志等级配置是否生效
+## 验证日志等级修改
 
 - 使用 MQTT X 连接 EMQX 集群发送消息
 
 在 MQTT X 页面点击创建新连接的按钮，按照如图所示配置 EMQX 集群节点信息，在配置好连接信息之后，点击 connect 按钮连接 EMQX 集群：
 
-![](./assets/configure-log-level/mqtt-connected.png)
+<img src="./assets/configure-log-level/mqtt-connected.png" style="zoom:50%;" />
 
 然后点击订阅按钮新建订阅，如图所示 MQTT X 已成功连接 EMQX 集群并且已经成功创建订阅：
 
-![](./assets/configure-log-level/mqtt-sub.png)
+<img src="./assets/configure-log-level/mqtt-sub.png" style="zoom:33%;" />
 
 在成功连接 EMQX 集群并创建订阅之后，我们就可以向 EMQX 集群发送消息，如下图所示：
 
-![](./assets/configure-log-level/mqtt-pub.png)
+<img src="./assets/configure-log-level/mqtt-pub.png" style="zoom:50%;" />
 
 -  使用命令行查看 EMQX 集群日志信息
 
@@ -114,6 +118,6 @@ kubectl logs emqx-core-0 -c emqx
 
 输出如下图所示：
 
-![](./assets/configure-log-level/emqx-debug-log.png)
+<img src="./assets/configure-log-level/emqx-debug-log.png" style="zoom:33%;" />
 
 从图中可以看到刚才使用 MQTT 连接 EMQX 集群建立连接以及发送消息的 debug 日志信息。

@@ -1,4 +1,4 @@
-# 通过 Prometheus 监控 EMQX 集群
+# 设置 Prometheus 监控 EMQX 集群
 
 ## 任务目标
 
@@ -211,6 +211,6 @@ kubectl apply -f secret.yaml
 
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-metrics.png)
 
-切换到 Status → Targets 页面，显示如下图，可以看到集群中所有被监控的 EMQX Pod 信息：
+切换到 **Status** → **Targets** 页面，显示如下图，可以看到集群中所有被监控的 EMQX Pod 信息：
 
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-target.png)

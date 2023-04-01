@@ -2,7 +2,7 @@
 
 ## Task Target 
 
-Customize TLS certificate through the extraVolumes and extraVolumeMounts fields.
+Customize TLS certificate through the `extraVolumes` and `extraVolumeMounts` fields.
 
 ## Create Secret Based on TLS Certificate
 

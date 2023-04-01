@@ -145,7 +145,7 @@ The output is similar to:
 
 > `connection_eviction_rate` indicates the rate of node evacuation(unit: count/second). `node` indicates the node currently being evacuated. `session_eviction_rate` indicates the rate of node session evacuation(unit: count/second). `session_recipients` represents the list of recipients for session evacuation. `state` indicates the node evacuation phase. `stats` indicates the statistical indicators of the evacuated node, including the current number of connections (current_connected), the number of current sessions (current_sessions), the number of initial connections (initial_connected), and the number of initial sessions (initial_sessions).
 
-### Use Prometheus to Monitor Client Connections  During Upgrade
+### Use Prometheus to Monitor Client Connections During Upgrade
 
 Use a browser to access the Prometheus web service, click Graph, enter `emqx_connections_count` in the search box, and click Execute, as shown in the following figure:
 

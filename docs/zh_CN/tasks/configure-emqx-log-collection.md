@@ -1,4 +1,4 @@
-# 采集 EMQX 的日志
+# 在 Kubernetes 中采集 EMQX 的日志
 
 ## 任务目标
 
@@ -15,7 +15,7 @@ helm repo add influxdata https://helm.influxdata.com/
 helm upgrade --install telegraf-operator influxdata/telegraf-operator
 ```
 
-## 全局配置 - classes
+## 全局配置 - `classes`
 
 全局配置通过 secret 挂载，指定 class 名称为 logs
 
@@ -56,7 +56,7 @@ stringData:
       files = ["stdout"]
 ```
 
-将上述内容保存为：classes.yaml
+将上述内容保存为 `classes.yaml`
 
 - 创建 secret
 
