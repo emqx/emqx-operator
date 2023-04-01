@@ -1,4 +1,4 @@
-# 通过蓝绿发布优雅的升级 EMQX 集群
+# 配置蓝绿发布（EMQX 企业版）
 
 ## 任务目标
 
@@ -10,9 +10,16 @@ EMQX 提供的是长连接服务，在 Kubernets 中，现有升级策略除了�
 
 ![](./assets/configure-emqx-blueGreenUpdate/blueGreenUpdate.png)
 
-EMQX 节点疏散功能用于疏散节点中的所有连接，手动/自动的将客户端连接和会话移动到集群中的其他节点或者其他集群。关于 EMQX 节点疏散的详细介绍可以参考文档：[Node Evacuation](https://docs.emqx.com/zh/enterprise/v4.4/advanced/rebalancing.html#%E8%8A%82%E7%82%B9%E7%96%8F%E6%95%A3) 。**注意	：** 节点疏散功能仅在 EMQX 企业版 4.4.12 版本才开放。
+EMQX 节点疏散功能用于疏散节点中的所有连接，手动/自动的将客户端连接和会话移动到集群中的其他节点或者其他集群。关于 EMQX 节点疏散的详细介绍可以参考文档：[Node Evacuation](https://docs.emqx.com/zh/enterprise/v4.4/advanced/rebalancing.html#%E8%8A%82%E7%82%B9%E7%96%8F%E6%95%A3) 。
 
-## 部署 EMQX 集群
+:::tip 
+
+节点疏散功能仅在 EMQX 企业版 4.4.12 版本才开放。
+
+:::
+
+
+## 如何使用蓝绿发布
 
 EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnterprise 支持通过 `.spec.blueGreenUpdate` 字段来配置 EMQX 企业版蓝绿升级，blueGreenUpdate 字段的具体描述可以参考：[blueGreenUpdate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#evacuationstrategy)。
 
@@ -75,7 +82,7 @@ mqttx bench  conn -h 47.103.65.17  -p 32010   -c 3000
 [10:06:13 AM] › ℹ  Done, total time: 31.113s
 ```
 
-### 修改 EMQX 触发 EMQX Operator 进行蓝绿升级
+### 触发 EMQX Operator 进行蓝绿升级
 
 修改 EmqxEnterprise 对象 `.spec.template` 字段的任意内容都会触发 EMQX Operator 进行蓝绿升级。在本文中通过我们修改 EMQX Container Name 来触发升级，用户可根据实际需求自行修改。
 
@@ -115,7 +122,7 @@ $ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus
 
 > `connection_eviction_rate` 表示节点疏散速率（单位：count/second）。`node` 表示当前正在进行疏散的节点。`session_eviction_rate` 表示节点 session 疏散速率(单位：count/second)。`session_recipients` 表示 session 疏散的接受者列表。`state` 表示节点疏散阶段。`stats` 表示疏散节点的统计指标，包括当前连接数（current_connected），当前 session 数（current_sessions），初始连接数（initial_connected），初始 session 数（initial_sessions）。
 
-### 使用 Prometheus 查看蓝绿升级过程中客户端连接情况
+### 在升级期间使用 Prometheus 监控客户端连接
 
 使用浏览器访问 Prometheus Web 服务，点击 Graph，在收索框输入 `emqx_connections_count`，并点击 Execute，显示如下图所示：
 

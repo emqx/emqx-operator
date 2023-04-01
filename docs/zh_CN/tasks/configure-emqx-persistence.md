@@ -1,9 +1,9 @@
-# 持久化 EMQX 集群数据
+# 在 EMQX 集群中配置持久化
 
 ## 任务目标
 
-- 如何通过 persistent 字段 配置 EMQX 4.x 集群持久化。
-- 如何通过 volumeClaimTemplates 字段配置 EMQX 5.x 集群 Core 节点持久化。
+- 如何通过 `persistent` 字段 配置 EMQX 4.x 集群持久化。
+- 如何通过 `volumeClaimTemplates` 字段配置 EMQX 5.x 集群 Core 节点持久化。
 
 ## EMQX 集群持久化配置
 
@@ -117,7 +117,7 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## 验证 EMQX 集群持久化是否生效
+## 验证 EMQX 集群持久化
 
 验证方案： 1）在旧 EMQX 集群中通过 Dashboard 创建一条测试规则；2）删除旧集群；3） 重新创建 EMQX 集群，通过 Dashboard 查看之前创建的规则是否存在。
 

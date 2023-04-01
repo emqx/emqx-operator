@@ -43,7 +43,7 @@
           "path": "tasks/configure-emqx-bootstrapConfig"
         },
         {
-          "title": "Enable Core + Replicant Mode (EMQX 5.x)",
+          "title": "Enable Core + Replicant Cluster (EMQX 5.x)",
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
@@ -55,7 +55,7 @@
           "path": "tasks/configure-emqx-service"
         },
         {
-          "title": "Configure Blue-Green Upgrade (EMQX Enterprise Edition",
+          "title": "Configure Blue-Green Upgrade (EMQX Enterprise Edition)",
           "path": "tasks/configure-emqx-blueGreenUpdate"
         },
         {
@@ -104,64 +104,66 @@
       "path": "getting-started/getting-started"
     },
     {
-      "title": "在公有云部署 EMQX",
+      "title": "在公有云中部署 EMQX",
+      "path": "deployment/overview",
       "children": [
         {
-          "title": "在阿里云上部署 EMQX",
+          "title": "在阿里云中部署 EMQX",
           "path": "deployment/on-alibaba-cloud"
         },
         {
-          "title": "在华为云上部署 EMQX ",
+          "title": "在华为云中部署 EMQX ",
           "path": "deployment/on-huawei-cloud"
         },
         {
-          "title": "在腾讯云上部署 EMQX",
+          "title": "在腾讯云中部署 EMQX",
           "path": "deployment/on-tencent-cloud"
         }
       ]
     },
     {
       "title": "管理 EMQX 集群",
+      "path": "tasks/overview",
       "children": [
         {
-          "title": "为 EMQX Enterprise 配置 License 文件",
+          "title": "License 配置 (EMQX 企业版)",
           "path": "tasks/configure-emqx-license"
         },
         {
-          "title": "持久化 EMQX 集群数据",
-          "path": "tasks/configure-emqx-persistence"
-        },
-        {
-          "title": "通过 LoabBalancer 访问 EMQX 集群",
-          "path": "tasks/configure-emqx-service"
-        },
-        {
-          "title": "通过 TLS 连接访问 EMQX 集群",
+          "title": "在 EMQX 中开启 TLS",
           "path": "tasks/configure-emqx-tls"
         },
         {
-          "title": "通过 EMQX CR 修改 EMQX 节点的配置",
+          "title": "通过 EMQX Operator 修改 EMQX 配置",
           "path": "tasks/configure-emqx-bootstrapConfig"
+        },
+        {
+          "title": "开启 Core + Replicant 集群 (EMQX 5.x)",
+          "path": "tasks/configure-emqx-core-replicant"
+        },
+        {
+          "title": "在 EMQX 集群中配置持久化",
+          "path": "tasks/configure-emqx-persistence"
+        },
+        {
+          "title": "通过 Kubernetes Service 访问 EMQX 集群",
+          "path": "tasks/configure-emqx-service"
+        },
+        {
+          "title": "配置蓝绿发布 (EMQX 企业版)",
+          "path": "tasks/configure-emqx-blueGreenUpdate"
+        },
+        {
+          "title": "在 Kubernetes 中采集 EMQX 的日志",
+          "path": "tasks/configure-emqx-log-collection"
         },
         {
           "title": "修改 EMQX 日志等级",
           "path": "tasks/configure-emqx-log-level"
         },
         {
-          "title": "采集 EMQX 的日志",
-          "path": "tasks/configure-emqx-log-collection"
-        },
-        {
           "title": "通过 Prometheus 监控 EMQX 集群",
           "path": "tasks/configure-emqx-prometheus"
-        },
-        {
-          "title": "全新的 EMQX 5.0 集群架构",
-          "path": "tasks/configure-emqx-core-replicant"
-        },
-        {
-          "title": "通过蓝绿发布优雅的升级 EMQX 集群",
-          "path": "tasks/configure-emqx-blueGreenUpdate"
         }
       ]
     },

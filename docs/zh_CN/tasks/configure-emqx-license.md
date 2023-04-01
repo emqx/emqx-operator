@@ -1,11 +1,11 @@
-# 为 EMQX Enterprise 配置 License 文件
+# License 配置 (EMQX 企业版)
 
 ## 任务目标
 
 - 如何配置 EMQX 企业版 License。
 - 如何更新 EMQX 企业版 License。
 
-## 配置 EMQX 企业版 License
+## 配置 License
 
 EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版 License](https://www.emqx.com/zh/apply-licenses/emqx)。
 
@@ -111,7 +111,7 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## 检查 EMQX 企业版 License 信息 
+## 检查 License 信息 
 
 ```bash
 kubectl exec -it emqx-ee-core-0 -c emqx -- emqx_ctl license info 
@@ -133,7 +133,7 @@ expiry          : false
 
 > 从输出结果可以看到我们申请的 License 的基本信息，包括申请人的信息和 License 支持最大连接数以及 License 过期时间等。
 
-## 更新 EMQX 企业版 License  
+## 更新 License  
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -144,11 +144,11 @@ expiry          : false
 
 ![](./assets/configure-emqx-license/emqx-dashboard-license.png)
 
-然后点击 Update License 按钮上传最新的 License Key 内容，如下图所示：
+然后点击 **Update License** 按钮上传最新的 License Key 内容，如下图所示：
 
 ![](./assets/configure-emqx-license/emqx-license-upload.png)
 
-最后点击 Save 按钮保存更新，下图是更新后的 License 信息：
+最后点击 **Save** 按钮保存更新，下图是更新后的 License 信息：
 
 ![](./assets/configure-emqx-license/emqx-license-update.png)
 

@@ -77,10 +77,6 @@ TkeServiceConfig 是腾讯云容器服务提供的自定义资源 CRD， 通过 
 
 使用 TkeServiceConfig 能够帮您快速进行负载均衡器的配置。通过 Service 注解 `service.cloud.tencent.com/tke-service-config:<config-name>`，您可以指定目标配置并应用到 Service 中。
 
-> **注意**
->
-> TkeServiceConfig 资源需要与 Service 处于同一命名空间。
-
 TkeServiceConfig 并不会帮您直接配置并修改协议和端口，您需要在配置中描述协议和端口以便指定配置下发的监听器。在一个 TkeServiceConfig 中可以声明多组监听器配置，目前主要针对负载均衡的健康检查以及对后端访问提供配置。 通过指定协议和端口，配置能够被准确的下发到对应监听器：
 
 `spec.loadBalancer.l4Listeners.protocol`：四层协议
@@ -151,9 +147,9 @@ spec:
 
 直连 Pod 模式 Service 的 YAML 配置与普通 Service YAML 配置相同，示例中的 annotation 即代表是否开启直连 Pod 模式。
 
-> **注意: **
->
-> 需要在 `kube-system/tke-service-controller-config` ConfigMap 中新增 `GlobalRouteDirectAccess: "true"` 以开启 GlobalRoute 直连能力。
+::: tip
+需要在 `kube-system/tke-service-controller-config` ConfigMap 中新增 `GlobalRouteDirectAccess: "true"` 以开启 GlobalRoute 直连能力。
+:::
 
 :::: tabs type:card 
 ::: tab v2alpha1

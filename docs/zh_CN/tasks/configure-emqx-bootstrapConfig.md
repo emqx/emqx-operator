@@ -1,4 +1,4 @@
-# 通过 EMQX CR 修改 EMQX 节点的配置 
+# 通过 EMQX Operator 修改 EMQX 配置
 
 ## 任务目标
 
@@ -8,7 +8,12 @@
 
 EMQX 主配置文件为 emqx.conf，从 5.0 版本开始，EMQX 采用 [HOCON](https://www.emqx.io/docs/zh/v5.0/configuration/configuration.html#hocon-%E9%85%8D%E7%BD%AE%E6%A0%BC%E5%BC%8F) 作为配置文件格式。
 
-EMQX CRD 支持使用 `.spec.bootstrapConfig` 字段配置 EMQX 集群，bootstrapConfig 配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。**注意：** 如果在创建 EMQX 之后需要修改集群配置，请通过 EMQX Dashboard 进行修改。
+EMQX CRD 支持使用 `.spec.bootstrapConfig` 字段配置 EMQX 集群，bootstrapConfig 配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。
+
+:::tip 
+
+如果在创建 EMQX 之后需要修改集群配置，请通过 EMQX Dashboard 进行修改。
+:::
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -43,7 +48,7 @@ NAME   IMAGE      STATUS    AGE
 emqx   emqx:5.0   Running   2m55s
 ```
 
-## 验证 EMQX 集群配置是否生效
+## 验证配置更改
 
 查看 EMQX 集群 listener 信息 
 

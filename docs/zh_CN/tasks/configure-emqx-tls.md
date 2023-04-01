@@ -1,8 +1,8 @@
-# 通过 TLS 连接访问 EMQX 集群
+# 在 EMQX 中开启 TLS
 
 ## 任务目标 
 
-通过 extraVolumes 和 extraVolumeMounts 字段自定义 TLS 证书。
+通过 `extraVolumes` 和 `extraVolumeMounts` 字段自定义 TLS 证书。
 
 ## 基于 TLS 证书创建 Secret
 
@@ -31,7 +31,7 @@ stringData:
 
 > `ca.crt` 表示 CA 证书内容，`tls.crt` 表示服务端证书内容，`tls.key` 表示服务端私钥内容。此例中上述三个字段的内容被省略，请用自己证书的内容进行填充。
 
-将上述文件保存为：secret-tls.yaml，并执行如下命令创建 secret：
+将上述文件保存为 `secret-tls.yaml`，并执行如下命令创建 secret：
 
 ```
 kubectl apply -f secret-tls.yaml 
