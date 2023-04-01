@@ -9,18 +9,18 @@
       "path": "getting-started/getting-started"
     },
     {
-      "title": "Deployment On Public Cloud",
+      "title": "Deployment EMQX on Public Cloud",
       "children": [
         {
-          "title": "EMQX On AWS",
+          "title": "Deploy EMQX On AWS",
           "path": "deployment/on-aws-eks"
         },
         {
-          "title": "EMQX On Azure",
+          "title": "Deploy EMQX On Azure",
           "path": "deployment/on-azure-aks"
         },
         {
-          "title": "EMQX On Google Cloud",
+          "title": "Deploy EMQX On Google Cloud",
           "path": "deployment/on-gcp-gke"
         }
       ]
@@ -29,7 +29,7 @@
       "title": "Manage EMQX Cluster",
       "children": [
         {
-          "title": "Configure License For EMQX Enterprise",
+          "title": "Configure License for EMQX Enterprise",
           "path": "tasks/configure-emqx-license"
         },
         {
@@ -37,15 +37,15 @@
           "path": "tasks/configure-emqx-persistence"
         },
        {
-          "title": "Access EMQX Cluster By Kubernetes Service",
+          "title": "Access EMQX Cluster by Kubernetes Service",
           "path": "tasks/configure-emqx-service"
         },
         {
-          "title": "Access EMQX Cluster through TLS Connection",
+          "title": "Access EMQX Cluster Through TLS Connection",
           "path": "tasks/configure-emqx-tls"
         },
         {
-          "title": "Change EMQX Configuration In EMQX Custom Resource",
+          "title": "Change EMQX Configurationin EMQX Custom Resource",
           "path": "tasks/configure-emqx-bootstrapConfig"
         },
         {
@@ -53,19 +53,19 @@
           "path": "tasks/configure-emqx-log-level"
         },
         {
-          "title": "Collect EMQX Logs In Kubernetes",
+          "title": "Collect EMQX Logs in Kubernetes",
           "path": "tasks/configure-emqx-log-collection"
         },
         {
-          "title": "Monitor EMQX Cluster By Prometheus",
+          "title": "Monitor EMQX Cluster by Prometheus",
           "path": "tasks/configure-emqx-prometheus"
         },
         {
-          "title": "The Brand New EMQX 5.0 Cluster Architecture",
+          "title": "Brand New EMQX 5.0 Cluster Architecture",
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
-          "title": "Blue Green Upgrade Of EMQX Cluster",
+          "title": "Blue Green Upgrade of EMQX Cluster",
           "path": "tasks/configure-emqx-blueGreenUpdate"
         }
       ]
@@ -102,7 +102,7 @@
       "path": "getting-started/getting-started"
     },
     {
-      "title": "公有云平台部署指南",
+      "title": "在公有云部署 EMQX",
       "children": [
         {
           "title": "在阿里云上部署 EMQX",
