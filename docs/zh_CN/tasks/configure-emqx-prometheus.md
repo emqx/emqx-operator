@@ -1,14 +1,16 @@
-# 配置 Prometheus 监控 EMQX 集群
+# 通过 Prometheus 监控 EMQX 集群
 
 ## 任务目标
 
-- 如何通过 Prometheus 监控 EMQX 集群。
+如何通过 Prometheus 监控 EMQX 集群。
 
 ## 部署 Prometheus 
 
 Prometheus 部署文档可以参考：[Prometheus](https://github.com/prometheus-operator/prometheus-operator)
 
 ## 部署 EMQX 集群
+
+下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
 :::: tabs type:card 
 ::: tab v2alpha1
@@ -21,20 +23,35 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.14
+  image: emqx:5.0
   imagePullPolicy: IfNotPresent    
   coreTemplate:
     spec:
-      replicas: 3
       ports:
         - name: http-dashboard
           containerPort: 18083
   replicantTemplate:
     spec:
-      replicas: 1
       ports:
         - name: http-dashboard
           containerPort: 18083
+```
+
+将上述内容保存为：`emqx.yaml`，并执行如下命令部署 EMQX 集群：
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqx.apps.emqx.io/emqx created
+```
+
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+```bash
+$ kubectl get emqx emqx
+
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   10m
 ```
 
 :::
@@ -48,7 +65,6 @@ kind: EmqxEnterprise
 metadata:
   name: emqx-ee
 spec:
-  replicas: 3
   template:
     spec:
       emqxContainer:
@@ -60,109 +76,32 @@ spec:
             containerPort: 8081
 ```
 
+将上述内容保存为：emqx.yaml，执行如下命令部署 EMQX 集群：
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqxenterprise.apps.emqx.io/emqx-ee created
+```
+
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+```bash
+$ kubectl get emqxenterprises
+
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+```
+
 :::
-::: tab v1beta3
-
-EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[HTTP API](https://www.emqx.io/docs/zh/v4.4/advanced/http-api.html#%E7%BB%9F%E8%AE%A1%E6%8C%87%E6%A0%87) 
-
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  replicas: 3
-  emqxTemplate:
-      image: emqx/emqx-ee:4.4.14
-```
-
-:::
-::::
-
-将上述内容保存为：emqx.yaml，并执行如下命令部署 EMQX 集群：
-
-```bash
-kubectl apply -f emqx.yaml
-```
-
-输出类似于：
-
-```
-emqx.apps.emqx.io/emqx created
-```
-
-- 检查 EMQX 集群是否就绪
-
-
-:::: tabs type:card 
-::: tab v2alpha1
-
-```bash
-kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:17:03Z",
-  "lastUpdateTime": "2023-03-01T02:17:03Z",
-  "message": "Cluster is running",
-  "reason": "ClusterRunning",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-::: 
-::: tab v1beta4
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-::: 
-::: tab v1beta3
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-::: 
 ::::
 
 ## 配置 Prometheus Monitor 
 
+PodMonitor 自定义资源定义 (CRD) 允许以声明方式定义应如何监视一组动态服务。使用标签选择来定义选择哪些服务以使用所需配置进行监视，其文档可以参考：[PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
+
 :::: tabs type:card 
 ::: tab v2alpha1
-
-PodMonitor 自定义资源定义 (CRD) 允许以声明方式定义应如何监视一组动态服务。使用标签选择来定义选择哪些服务以使用所需配置进行监视，其文档可以参考：[PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -202,8 +141,6 @@ spec:
 :::
 ::: tab v1beta4
 
-PodMonitor 自定义资源定义 (CRD) 允许以声明方式定义应如何监视一组动态服务。使用标签选择来定义选择哪些服务以使用所需配置进行监视，其文档可以参考：[PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
-
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -240,46 +177,6 @@ spec:
 > `path` 表示指标采集接口路径，在 EMQX 4 里面路径为：`/api/v4/emqx_prometheus`。`selector.matchLabels` 表示匹配 Pod 的 label： `apps.emqx.io/instance: emqx-ee`。
 
 :::
-::: tab v1beta3
-
-ServiceMonitor 自定义资源定义 (CRD) 允许以声明方式定义应如何监视一组动态服务。使用标签选择来定义选择哪些服务以使用所需配置进行监视，其文档可以参考：[ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor)
-
-```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: emqx
-  namespace: default
-  labels:
-    app.kubernetes.io/name: emqx
-spec:
-  jobLabel: emqx-scraping
-  namespaceSelector:
-    matchNames:
-    - default
-  ServiceMetricsEndpoints:
-  - basicAuth:
-      password:
-        key: password
-        name: emqx-basic-auth
-      username:
-        key: username
-        name: emqx-basic-auth
-    interval: 10s
-    params:
-      type:
-      - prometheus
-    path: /api/v4/emqx_prometheus
-    port: http-management-8081
-    scheme: http
-  selector:
-    matchLabels:
-      apps.emqx.io/instance: emqx-ee
-```
-
-> `path` 表示指标采集接口路径，在 EMQX 4 里面路径为：`/api/v4/emqx_prometheus`。`selector.matchLabels` 表示匹配 Service 的 label： `apps.emqx.io/instance: emqx-ee`。
-
-::: 
 ::::
 
 将上述内容保存为：monitor.yaml 并执行如下命令：

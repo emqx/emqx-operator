@@ -1,7 +1,3 @@
-# 产品概览
-
-该项目提供了一个 Operator，用于在 Kubernetes 上管理 EMQX 集群。
-
 ## 部署 EMQX Operator
 
 ### 准备环境
@@ -66,7 +62,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
    EOF
    ```
 
-2. 等待 EMQX 集群就绪
+2. 检查 EMQX 集群状态，请确保 STATUS 为 Running，这可能需要一些时间等待 EMQX 集群准备就绪。
 
    ```bash
    $ kubectl get emqx
@@ -74,8 +70,6 @@ $ helm uninstall emqx-operator -n emqx-operator-system
    NAME   IMAGE      STATUS    AGE
    emqx   emqx:5.0   Running   2m55s
    ```
-
-  请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
 
 ### 部署 EMQX 4
 

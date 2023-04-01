@@ -1,7 +1,7 @@
-# 配置 EMQX 企业版 License
+# 为 EMQX Enterprise 配置 License 文件
 
 ## 任务目标
- 
+
 - 如何配置 EMQX 企业版 License。
 - 如何更新 EMQX 企业版 License。
 
@@ -9,10 +9,12 @@
 
 EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版 License](https://www.emqx.com/zh/apply-licenses/emqx)。
 
+下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
+
 :::: tabs type:card
 ::: tab v2alpha1
 
-- 配置 EMQX 集群
+配置 EMQX 集群
 
 EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EMQX ，EMQX CRD 支持使用 `.spec.bootstrapConfig` 配置 EMQX 集群 License ，bootstrapConfig 的配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。**注意：** 在创建 EMQX 集群之后，如果需要更新 License，请通过 EMQX Dashboard 进行更新。
 
@@ -27,27 +29,31 @@ spec:
       key = "..."
     }
   image: emqx/emqx-enterprise:5.0.0
-  dashboardServiceTemplate:
-    metadata:
-      name: emqx-dashboard
-    spec:
-      type: NodePort
-      selector:
-        apps.emqx.io/db-role: core
-      ports:
-        - name: "dashboard-listeners-http-bind"
-          protocol: TCP
-          port: 18083
-          targetPort: 18083
-          nodePort: 32012
 ```
 
 > `bootstrapConfig` 字段里面的 `license.key` 表示 Licesne 内容，此例中 License 内容被省略，请用户自行填充。
 
+将上述内容保存为：`emqx.yaml`，并执行如下命令部署 EMQX 集群：
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqx.apps.emqx.io/emqx created
+```
+
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+```bash
+$ kubectl get emqx emqx
+
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   10m
+```
+
 :::
 ::: tab v1beta4
 
-- 基于 License 文件创建 Secret
+创建基于 License 文件的 Secret
 
 Secret 是一种包含少量敏感信息例如密码、令牌或密钥的对象。关于 Secret 更加详尽的文档可以参考：[Secret](https://kubernetes.io/zh-cn/docs/concepts/configuration/secret/)。EMQX Operator 支持使用 Secret 挂载 License 信息，因此在创建 EMQX 集群之前我们需要基于 License 创建好 Secret。
 
@@ -63,7 +69,7 @@ kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file
 secret/test created
 ```
 
-- 配置 EMQX 集群
+配置 EMQX 集群
 
 EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnterprise 支持通过 `.spec.license.secretName` 字段来配置 EMQX 企业版 License，secretName 字段的具体描述可以参考：[secretName](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#emqxlicense)。
 
@@ -85,122 +91,27 @@ spec:
 
 > `secretName` 表示上一步中创建的 Secret 名称。
 
-:::
-::: tab v1beta3
+将上述内容保存为：emqx.yaml，执行如下命令部署 EMQX 集群：
 
-- 基于 License 文件创建 Secret
+```bash
+$ kubectl apply -f emqx.yaml
 
-Secret 是一种包含少量敏感信息例如密码、令牌或密钥的对象。关于 Secret 更加详尽的文档可以参考：[Secret](https://kubernetes.io/zh-cn/docs/concepts/configuration/secret/)。EMQX Operator 支持使用 Secret 挂载 License 信息，因此在创建 EMQX 集群之前我们需要基于 License 创建好 Secret。
-
-```
-kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file
+emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
-> `/path/to/license/file` 表示 EMQX 企业版 License 文件路径，可以是绝对路径，也可以是相对路径。更多使用 kubectl 创建 Secret 的细节可以参考文档：[使用 kubectl 创建 secret](https://kubernetes.io/zh-cn/docs/tasks/configmap-secret/managing-secret-using-kubectl/)。
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
 
-输出类似于：
+   ```bash
+$ kubectl get emqxenterprises
 
-```
-secret/test created
-```
-
-- 配置 EMQX 集群
-
-EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnterprise 支持通过 `.spec.emqxTemplate.license.secretName` 字段来配置 EMQX 企业版 License，secretName 字段的具体描述可以参考：[secretName](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v1beta3-reference.md#license)。
-
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  emqxTemplate:
-    image: emqx/emqx-ee:4.4.14
-    license:
-      secretName: test
-```
-> `secretName` 表示上一步中创建的 Secret 名称。
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+   ```
 
 :::
 ::::
 
-将上述内容保存为：emqx-license.yaml，执行如下命令部署 EMQX 企业版集群。
-
-```bash
-kubectl apply -f emqx-license.yaml
-```
-
-输出类似于：
-
-```
-emqx.apps.emqx.io/emqx-ee created
-```
-
-- 检查 EMQX 企业版集群是否就绪
-
-:::: tabs type:card 
-::: tab v2alpha1
-
-```bash
-kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-输出类似于：
-
-```bash
-{
-   "lastTransitionTime": "2023-02-10T02:46:36Z",
-   "lastUpdateTime": "2023-02-07T06:46:36Z",
-   "message": "Cluster is running",
-   "reason": "ClusterRunning",
-   "status": "True",
-   "type": "Running"
-}
-```
-
-::: 
-::: tab v1beta4
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-::: 
-::: tab v1beta3
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-::: 
-::::
-
-- 检查 EMQX 企业版 License 信息 
+## 检查 EMQX 企业版 License 信息 
 
 ```bash
 kubectl exec -it emqx-ee-core-0 -c emqx -- emqx_ctl license info 
@@ -282,44 +193,5 @@ expiry                   : false
 
 > 若证书信息没有更新，可以等待一会，License 的更新会有些时延。从上面输出的结果可以看出，License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。 
 
-::: 
-::: tab v1beta3
-
-- 更新 EMQX 企业版 License Secret
-
-```bash
-kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file --dry-run -o yaml | kubectl apply -f -
-```
-
-输出类似于：
-
-```
-secret/test configured
-```
-
-- 查看 EMQX 集群 License 是否被更新
-
-```bash
-kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info 
-```
-
-输出类似于：
-
-```bash
-customer                 : cloudnative
-email                    : cloudnative@emqx.io
-max_connections          : 100000
-original_max_connections : 100000
-issued_at                : 2022-11-21 02:49:35
-expiry_at                : 2022-12-01 02:49:35
-vendor                   : EMQ Technologies Co., Ltd.
-version                  : 4.4.14
-type                     : official
-customer_type            : 2
-expiry                   : false
-```
-
-> 若证书信息没有更新，可以等待一会，License 的更新会有些时延。从上面输出的结果可以看出，License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。 
-
-::: 
+:::
 ::::

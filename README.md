@@ -16,7 +16,7 @@ The EMQX Operator includes, but is not limited to, the following features:
 
 * **Simplified Deployment Configuration**: Configure the fundamentals of EMQX Cluster, including persistence, configuration, license, etc., in a Kubernetes-native way.
 
-For an introduction to the EMQX Operator, see the [introduction](docs/en_US/README.md).
+![](.docs/../docs/en_US/introduction/assets/architecture.png)
 
 ## Prerequisites
 
@@ -56,12 +56,15 @@ The EMQX Operator automatically detects changes on any of the above custom resou
 
 ## EMQX Operator compatibility
 
-|                   | EMQX 4.2 | EMQX 4.3 | EMQX 4.4 | EMQX 5.0 |
-|-------------------|----------|----------|----------| ---------|
-| EMQX Operator 1.1 | ✓        | ✓        |          |          |
-| EMQX Operator 1.2 |          |          | ✓        |          |
-| EMQX Operator 2.0 |          |          | ✓        | ✓        |
-| EMQX Operator 2.1 |          |          | ✓        | ✓        |
+|      EMQX Version      |     EMQX Operator Version                            |     APIVersion    | 
+|:----------------------:|:----------------------------------------------------:|:-----------------:| 
+| 4.3.x <= EMQX < 4.4    | 1.2.1，1.2.2，1.2.3                                   |  v1beta3          |
+| 4.4.6 <= EMQX < 4.4.8  | 1.2.5                                                 | v1beta3          | 
+| 4.4.8 <= EMQX < 4.4.14 | 1.2.6，1.2.7，1.2.8，2.0.0，2.0.1，2.0.2, 2.0.3        |  v1beta3          |
+| 4.4.14 <= EMQX         | 2.1.0                                                 |  v1beta4          |
+| 5.0.6 <= EMQX < 5.0.8  | 2.0.0，2.0.1, 2.0.3 .                                 |  v2alpha1         |
+| 5.0.8 <= EMQX < 5.0.14 | 2.0.2                                                 |  v2alpha1         |
+| 5.0.14 <= EMQX         | 2.1.0                                                 |  v2alpha1         |
 
 ## Getting Start
 

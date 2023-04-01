@@ -1,10 +1,12 @@
-# 配置 EMQX 日志等级
+# 修改 EMQX 日志等级
 
 ## 任务目标
 
-- 如何配置 EMQX 集群日志等级。
+如何修改 EMQX 集群日志等级。
 
 ## 配置 EMQX 集群
+
+下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
 :::: tabs type:card 
 ::: tab v2alpha1
@@ -17,32 +19,33 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.14
-  imagePullPolicy: IfNotPresent
+  image: emqx5.0
   bootstrapConfig: |
     log {
        console_handler {
           level  =  debug
         } 
     }
-  coreTemplate:
-    spec:
-      replicas: 3
-  replicantTemplate:
-    spec:
-      replicas: 0
-  listenersServiceTemplate:
-    spec:
-      type: NodePort
-      ports:
-        - name: "tcp-default"
-          protocol: TCP
-          port: 1883
-          targetPort: 1883
-          nodePort: 32010
 ```
 
 > `.spec.bootstrapConfig` 字段配置 EMQX 集群日志等级为 `debug`。
+
+将上述内容保存为：`emqx.yaml`，并执行如下命令部署 EMQX 集群：
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqx.apps.emqx.io/emqx created
+```
+
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+```bash
+$ kubectl get emqx emqx
+
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   10m
+```
 
 :::
 ::: tab v1beta4
@@ -63,124 +66,28 @@ spec:
           version: 4.4.14
         emqxConfig:
           log.level: debug
-  serviceTemplate:
-    spec:
-      type: NodePort
-      ports:
-        - name: "mqtt-tcp-1883"
-          protocol: "TCP"
-          port: 1883
-          targetPort: 1883
-          nodePort: 32010
 ```
 
 > `.spec.template.spec.emqxContainer.emqxConfig` 字段配置 EMQX 集群日志等级为 `debug`。
 
-:::
-::: tab v1beta3
+将上述内容保存为：emqx.yaml，执行如下命令部署 EMQX 集群：
 
-EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnterprise 支持通过 `.spec.emqxTemplate.config` 字段配置集群日志等级。config 字段的描述可以参考文档：[config](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta3-reference.md#emqxenterprisetemplate)
+```bash
+$ kubectl apply -f emqx.yaml
 
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  emqxTemplate:
-    image: emqx/emqx-ee:4.4.14
-    config:
-      log.level: debug
-    serviceTemplate:
-      spec:
-        type: NodePort
-        ports:
-          - name: "mqtt-tcp-1883"
-            protocol: "TCP"
-            port: 1883
-            targetPort: 1883
-            nodePort: 32010
+emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
-> `.spec.emqxTemplate.config` 字段配置 EMQX 集群日志等级为 `debug`。
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+```bash
+$ kubectl get emqxenterprises
+
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+```
 
 :::
-::::
-
-将上述内容保存为：emqx-log-level.yaml，并执行如下命令部署 EMQX 集群：
-
-```bash
-kubectl apply -f emqx-log-level.yaml
-```
-
-输出类似于：
-
-```
-emqx.apps.emqx.io/emqx created
-```
-
-- 检查 EMQX 集群是否就绪
-
-:::: tabs type:card 
-::: tab v2alpha1
-
-```bash
-kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:17:03Z",
-  "lastUpdateTime": "2023-03-01T02:17:03Z",
-  "message": "Cluster is running",
-  "reason": "ClusterRunning",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-::: 
-::: tab v1beta4
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")
-```
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-::: 
-::: tab v1beta3
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")
-```
-
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-::: 
 ::::
 
 ## 验证 EMQX 集群日志等级配置是否生效

@@ -1,14 +1,16 @@
-# Configure Prometheus to monitor EMQX cluster
+# Monitor EMQX Cluster By Prometheus
 
 ## Task target
 
-- How to monitor EMQX cluster through Prometheus.
+How to monitor EMQX cluster through Prometheus.
 
 ## Deploy Prometheus
 
 Prometheus deployment documentation can refer to: [Prometheus](https://github.com/prometheus-operator/prometheus-operator)
 
 ## Deploy EMQX cluster
+
+Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -19,23 +21,40 @@ EMQX supports exposing indicators through the http interface. For all statistica
 apiVersion: apps.emqx.io/v2alpha1
 kind: EMQX
 metadata:
-   name: emqx
+  name: emqx
 spec:
-   image: emqx/emqx:5.0.14
-   imagePullPolicy: IfNotPresent
-   coreTemplate:
-     spec:
-       replicas: 3
-       ports:
-         - name: http-dashboard
-           containerPort: 18083
-   replicantTemplate:
-     spec:
-       replicas: 1
-       ports:
-         - name: http-dashboard
-           containerPort: 18083
+  image: emqx:5.0
+  imagePullPolicy: IfNotPresent    
+  coreTemplate:
+    spec:
+      ports:
+        - name: http-dashboard
+          containerPort: 18083
+  replicantTemplate:
+    spec:
+      ports:
+        - name: http-dashboard
+          containerPort: 18083
 ```
+
+Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqx.apps.emqx.io/emqx created
+```
+
+Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
+
+```bash
+$ kubectl get emqx emqx
+
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   10m
+```
+
+
 
 :::
 ::: tab v1beta4
@@ -46,119 +65,46 @@ EMQX supports exposing indicators through the http interface. For all statistica
 apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
-   name: emqx-ee
+  name: emqx-ee
 spec:
-   replicas: 3
-   template:
-     spec:
-       emqxContainer:
-         image:
-           repository: emqx/emqx-ee
-           version: 4.4.14
-         ports:
-           - name: http-management
-             containerPort: 8081
+  template:
+    spec:
+      emqxContainer:
+        image: 
+          repository: emqx/emqx-ee
+          version: 4.4.14
+        ports:
+          - name: http-management
+            containerPort: 8081
 ```
 
-:::
-::: tab v1beta3
-
-EMQX supports exposing indicators through the http interface. For all statistical indicators under the cluster, you can refer to the document: [HTTP API](https://www.emqx.io/docs/en/v4.4/advanced/http-api.html#%E7%BB%9F%E8%AE%A1%E6%8C%87%E6%A0%87)
-
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-   name: emqx-ee
-spec:
-   replicas: 3
-   emqxTemplate:
-       image: emqx/emqx-ee:4.4.14
-```
-
-:::
-::::
-
-Save the above content as: emqx.yaml and deploy the EMQX cluster
-
-The output is similar to:
-
-```
-emqx.apps.emqx.io/emqx created
-```
-
-- Check whether the EMQX cluster is ready
-
-
-:::: tabs type:card
-::: tab v2alpha1
+Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
 
 ```bash
-kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
+$ kubectl apply -f emqx.yaml
+
+emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
-The output is similar to:
+Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
 
 ```bash
-{
-   "lastTransitionTime": "2023-02-10T02:46:36Z",
-   "lastUpdateTime": "2023-02-07T06:46:36Z",
-   "message": "Cluster is running",
-   "reason": "ClusterRunning",
-   "status": "True",
-   "type": "Running"
-}
+$ kubectl get emqxenterprises
+
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
 ```
 
-:::
-::: tab v1beta4
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-The output is similar to:
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-:::
-::: tab v1beta3
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-The output is similar to:
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
 
 :::
 ::::
 
 ## Configure Prometheus Monitor
 
+A PodMonitor Custom Resource Definition (CRD) allows to declaratively define how a dynamic set of services should be monitored. Use label selection to define which services are selected to monitor with the desired configuration, and its documentation can be referred to: [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
+
 :::: tabs type:card
 ::: tab v2alpha1
-
-A PodMonitor Custom Resource Definition (CRD) allows to declaratively define how a dynamic set of services should be monitored. Use label selection to define which services are selected to monitor with the desired configuration, and its documentation can be referred to: [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
@@ -198,8 +144,6 @@ spec:
 :::
 ::: tab v1beta4
 
-A PodMonitor Custom Resource Definition (CRD) allows to declaratively define how a dynamic set of services should be monitored. Use label selection to define which services are selected to monitor with the desired configuration, and its documentation can refer to: [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
-
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -236,52 +180,12 @@ spec:
 > `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx-ee`.
 
 :::
-::: tab v1beta3
-
-A ServiceMonitor Custom Resource Definition (CRD) allows to declaratively define how a dynamic set of services should be monitored. Use label selection to define which services are selected to monitor with the desired configuration, and its documentation can be referred to: [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor)
-
-```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-   name: emqx
-   namespace: default
-   labels:
-     app.kubernetes.io/name: emqx
-spec:
-   jobLabel: emqx-scraping
-   namespaceSelector:
-     matchNames:
-     - default
-   ServiceMetricsEndpoints:
-   - basicAuth:
-       password:
-         key: password
-         name: emqx-basic-auth
-       username:
-         key: username
-         name: emqx-basic-auth
-     interval: 10s
-     params:
-       type:
-       -prometheus
-     path: /api/v4/emqx_prometheus
-     port: http-management-8081
-     scheme: http
-   selector:
-     matchLabels:
-       apps.emqx.io/instance: emqx-ee
-```
-
-> `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` means matching the label of Service: `apps.emqx.io/instance: emqx-ee`.
-
-:::
 ::::
 
-Save the above content as: monitor.yaml and execute the following command:
+Save the above content as `monitor.yaml` and execute the following command:
 
 ```bash
-kubectl apply -f monitor.yaml
+$ kubectl apply -f monitor.yaml
 ```
 
 Use basicAuth to provide Monitor with password and account information for accessing EMQX interface
@@ -298,10 +202,10 @@ stringData:
    password: public
 ```
 
-Save the above content as: secret.yaml and create Secret
+Save the above content as `secret.yaml` and create a Secret
 
 ```bash
-kubectl apply -f secret.yaml
+$ kubectl apply -f secret.yaml
 ```
 
 ## Visit Prometheus to view the indicators of EMQX cluster

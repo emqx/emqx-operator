@@ -1,8 +1,8 @@
-# 配置 EMQX 日志采集
+# 采集 EMQX 的日志
 
 ## 任务目标
 
-- 如何通过 Telegraf 收集 EMQX 集群日志，并且输出到容器的标准输出
+如何通过 Telegraf 收集 EMQX 集群日志，并且输出到容器的标准输出
 
 ## 部署 telegraf-operator
 
@@ -100,6 +100,10 @@ apiVersion: apps.emqx.io/v2alpha1
 kind: EMQX
 metadata:
   name: emqx
+  annotations:
+    telegraf.influxdata.com/class: "logs"
+    telegraf.influxdata.com/internal: "false"
+    telegraf.influxdata.com/volume-mounts: "{\"log-volume\":\"/opt/emqx/log\"}"
 spec:
   image: "emqx/emqx-enterprise:5.0.0"
   bootstrapConfig: |
@@ -117,23 +121,38 @@ spec:
       }
     }
   coreTemplate:
-    metadata:
-      name: emqx-core
-      labels:
-        apps.emqx.io/instance: emqx
-        apps.emqx.io/db-role: core
-      annotations:
-        telegraf.influxdata.com/class: "logs"
-        telegraf.influxdata.com/internal: "false"
-        telegraf.influxdata.com/volume-mounts: "{\"log-volume\":\"/opt/emqx/log\"}"
     spec:
-      replicas: 1
       extraVolumes:
         - name: log-volume
           emptyDir: {}
       extraVolumeMounts:
         - name: log-volume
           mountPath: /opt/emqx/log
+  replicantTemplate:
+    spec:
+      extraVolumes:
+        - name: log-volume
+          emptyDir: {}
+      extraVolumeMounts:
+        - name: log-volume
+          mountPath: /opt/emqx/log
+```
+
+将上述内容保存为：`emqx.yaml`，并执行如下命令部署 EMQX 集群：
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqx.apps.emqx.io/emqx created
+```
+
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+```bash
+$ kubectl get emqx emqx
+
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   10m
 ```
 
 :::
@@ -176,85 +195,29 @@ spec:
           emptyDir: {}
 ```
 
-:::
-::::
-
-将上述内容保存为：emqx-telegraf.yaml
-
-- 部署 EMQX 集群
-
-```shell
-kubectl apply -f emqx-telegraf.yaml
-```
-
-- 检查 EMQX 集群状态
-
-:::: tabs type:card
-::: tab v2alpha1
-
+将上述内容保存为：emqx.yaml，执行如下命令部署 EMQX 集群：
 
 ```bash
-kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
+$ kubectl apply -f emqx.yaml
+
+emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
-输出类似于：
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
 
 ```bash
-{
-  "lastTransitionTime": "2023-03-01T02:17:03Z",
-  "lastUpdateTime": "2023-03-01T02:17:03Z",
-  "message": "Cluster is running",
-  "reason": "ClusterRunning",
-  "status": "True",
-  "type": "Running"
-}
-```
+$ kubectl get emqxenterprises
 
-> 当 telegraf sidecar 注入到 EMQX core pod 中后，EQMX core pod 中的容器数量会达到2个
-
-
-:::
-::: tab v1beta4
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:17:03Z",
-  "lastUpdateTime": "2023-03-01T02:17:03Z",
-  "message": "Cluster is running",
-  "reason": "ClusterRunning",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-> 当 telegraf sidecar 注入到 EMQX  pod 中后，EQMX pod 中的容器数量会达到3个
-
-:::
-::::
-
-- 查看收集到的日志
-
-:::: tabs type:card
-::: tab v2alpha1
-
-```shell
-kubectl logs -f emqx-core-0 -c telegraf
-```
-
-:::
-::: tab v1beta4
-
-```shell
-kubectl logs -f emqx-ee-0 -c telegraf
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
 ```
 
 :::
 ::::
 
-采集到的 EMQX log 都输出到了标准输出
+## 检查 Telegraf 收集的日志
+
+```
+kubectl logs -f $pod_name -c telegraf
+```
+
