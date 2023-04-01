@@ -1,10 +1,12 @@
-# Configure EMQX log level
+# Change EMQX Log Level
 
 ## Task target
 
-- How to configure the log level of EMQX cluster.
+How to configure the log level of EMQX cluster.
 
 ## Configure EMQX cluster
+
+Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -15,34 +17,35 @@ EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level 
 apiVersion: apps.emqx.io/v2alpha1
 kind: EMQX
 metadata:
-   name: emqx
+  name: emqx
 spec:
-   image: emqx/emqx:5.0.14
-   imagePullPolicy: IfNotPresent
-   bootstrapConfig: |
-     log {
-        console_handler {
-           level = debug
-         }
-     }
-   coreTemplate:
-     spec:
-       replicas: 3
-   replicantTemplate:
-     spec:
-       replicas: 0
-   listenersServiceTemplate:
-     spec:
-       type: NodePort
-       ports:
-         - name: "tcp-default"
-           protocol: TCP
-           port: 1883
-           targetPort: 1883
-           nodePort: 32010
+  image: emqx5.0
+  bootstrapConfig: |
+    log {
+       console_handler {
+          level  =  debug
+        } 
+    }
 ```
 
 > The `.spec.bootstrapConfig` field configures the EMQX cluster log level to `debug`.
+
+Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqx.apps.emqx.io/emqx created
+```
+
+Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
+
+```bash
+$ kubectl get emqx emqx
+
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   10m
+```
 
 :::
 ::: tab v1beta4
@@ -53,131 +56,35 @@ The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterpr
 apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
-   name: emqx-ee
+  name: emqx-ee
 spec:
-   template:
-     spec:
-       emqxContainer:
-         image:
-           repository: emqx/emqx-ee
-           version: 4.4.14
-         emqxConfig:
-           log.level: debug
-   serviceTemplate:
-     spec:
-       type: NodePort
-       ports:
-         - name: "mqtt-tcp-1883"
-           protocol: "TCP"
-           port: 1883
-           targetPort: 1883
-           nodePort: 32010
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.14
+        emqxConfig:
+          log.level: debug
 ```
 
 > The `.spec.template.spec.emqxContainer.emqxConfig` field configures the EMQX cluster log level to `debug`.
 
-:::
-::: tab v1beta3
-
-The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise, and EmqxEnterprise supports configuring the cluster log level through `.spec.emqxTemplate.config` field. The description of the config field can refer to the document: [config](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta3-reference.md#emqxenterprisetemplate)
-
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-   name: emqx-ee
-spec:
-   emqxTemplate:
-     image: emqx/emqx-ee:4.4.14
-     config:
-       log.level: debug
-     serviceTemplate:
-       spec:
-         type: NodePort
-         ports:
-           - name: "mqtt-tcp-1883"
-             protocol: "TCP"
-             port: 1883
-             targetPort: 1883
-             nodePort: 32010
-```
-
-> The `.spec.emqxTemplate.config` field configures the log level of the EMQX cluster to `debug`.
-
-:::
-::::
-
-Save the above content as: emqx-log-level.yaml, and execute the following command to deploy the EMQX cluster:
+Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
 
 ```bash
-kubectl apply -f emqx-log-level.yaml
+$ kubectl apply -f emqx.yaml
+
+emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
-The output is similar to:
-
-```
-emqx.apps.emqx.io/emqx created
-```
-
-- Check whether the EMQX cluster is ready
-
-:::: tabs type:card
-::: tab v2alpha1
+Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
 
 ```bash
-kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
+$ kubectl get emqxenterprises
 
-The output is similar to:
-
-```bash
-{
-   "lastTransitionTime": "2023-02-10T02:46:36Z",
-   "lastUpdateTime": "2023-02-07T06:46:36Z",
-   "message": "Cluster is running",
-   "reason": "ClusterRunning",
-   "status": "True",
-   "type": "Running"
-}
-```
-
-:::
-::: tab v1beta4
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-The output is similar to:
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
-
-:::
-::: tab v1beta3
-
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
-
-The output is similar to:
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-} 
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
 ```
 
 :::

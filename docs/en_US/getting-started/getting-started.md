@@ -1,7 +1,3 @@
-# Product Overview
-
-This project provides an Operator for managing EMQX clusters on Kubernetes.
-
 ## Deploy EMQX Operator
 
 ### Prepare the environment

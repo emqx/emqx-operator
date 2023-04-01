@@ -1,12 +1,6 @@
-# This article mainly introduces how to deploy EMQX cluster on Google Cloud Platform GKE with EMQX Operator. The main contents including:
+# Deploy EMQX cluster on Google Cloud GKE
 
-## Terminology explanation
-
-EMQX: The most scalable open-source MQTT broker for IoT, For details: [EMQX docs](https://github.com/emqx/emqx)
-
-EMQX Operator: A Kubernetes Operator for EMQX, For details: [EMQX Operator docs](https://github.com/emqx/emqx-operator)
-
-GKE: Google Kubernetes Engine, For details: [GKE docs](https://cloud.google.com/kubernetes-engine/)
+Google Kubernetes Engine (GKE) provides a managed environment for deploying, managing, and scaling your containerized applications using Google infrastructure. The GKE environment consists of multiple machines (specifically, Compute Engine instances) grouped together to form a cluster.
 
 ## Create GKE Cluster
 

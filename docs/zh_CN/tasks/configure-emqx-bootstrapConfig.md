@@ -1,8 +1,8 @@
-# 配置 EMQX 集群 
+# 通过 EMQX CR 修改 EMQX 节点的配置 
 
 ## 任务目标
 
-- 如何使用 bootstrapConfig 字段配置 EMQX 集群。
+如何使用 bootstrapConfig 字段修改 EMQX 节点配置。
 
 ## 配置 EMQX 集群
 
@@ -16,19 +16,12 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.14
-  imagePullPolicy: IfNotPresent
+  image: emqx:5.0
   bootstrapConfig: |
    listeners.tcp.test {
       bind = "0.0.0.0:1884"
       max_connections = 1024000
     }
-  coreTemplate:
-    spec:
-      replicas: 3
-  replicantTemplate:
-    spec:
-      replicas: 0
 ```
 
 > 在 `.spec.bootstrapConfig` 字段里面，我们为 EMQX 集群配置了一个 TCP listener，这个 listener 名称为：test，监听的端口为：1884。
@@ -36,37 +29,23 @@ spec:
 将上述内容保存为：emqx-bootstrapConfig.yaml，并执行如下命令部署 EMQX 集群：
 
 ```bash
-kubectl apply -f emqx-bootstrapConfig.yaml
-```
+$ kubectl apply -f emqx-bootstrapConfig.yaml
 
-输出类似于：
-
-```
 emqx.apps.emqx.io/emqx created
 ```
 
-- 检查 EMQX 集群是否就绪
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
 
-```bash
-kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
 ```
+$ kubectl get emqx
 
-输出类似于：
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:17:03Z",
-  "lastUpdateTime": "2023-03-01T02:17:03Z",
-  "message": "Cluster is running",
-  "reason": "ClusterRunning",
-  "status": "True",
-  "type": "Running"
-}
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   2m55s
 ```
 
 ## 验证 EMQX 集群配置是否生效
 
-- 查看 EMQX 集群 listener 信息 
+查看 EMQX 集群 listener 信息 
 
 ```bash
 kubectl exec -it emqx-core-0 -c emqx -- emqx_ctl listeners 
