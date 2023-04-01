@@ -45,7 +45,7 @@ spec:
         args:
         - --leader-elect
         - --metrics-bind-address=:8080
-        - --health-probe-bind-address=:8081        
+        - --health-probe-bind-address=:8081
         image: controller:latest
         name: manager
         securityContext:
@@ -53,7 +53,7 @@ spec:
         ports:
         - containerPort: 8080
           name: metrics
-          protocol: TCP        
+          protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz

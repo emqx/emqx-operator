@@ -33,7 +33,7 @@ csi-local-topology  everest-csi-provisioner         17d          # 本地持久�
 
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -53,7 +53,7 @@ spec:
         accessModes:
         - ReadWriteOnce
 ```
-::: 
+:::
 ::: tab v1beta4
 
 ```yaml
@@ -75,11 +75,11 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
 ```
-::: 
+:::
 ::::
 
 ## 通过 LoadBalancer 访问 EMQX 集群
@@ -90,7 +90,7 @@ spec:
 
 修改 EMQX Custom Resource 的配置，添加相应的 Annotation，并将 Service Type 设置为 LoadBalancer，如下所示:
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -119,7 +119,7 @@ spec:
       type: LoadBalancer
 ```
 
-::: 
+:::
 ::: tab v1beta4
 
 ```yaml
@@ -131,7 +131,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
   serviceTemplate:
@@ -153,6 +153,6 @@ spec:
       type: LoadBalancer
 ```
 
-::: 
+:::
 ::::
 

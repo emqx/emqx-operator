@@ -1,6 +1,6 @@
 # Enable TLS in EMQX
 
-## Task Target 
+## Task Target
 
 Customize TLS certificate through the `extraVolumes` and `extraVolumeMounts` fields.
 
@@ -154,7 +154,7 @@ spec:
           listener.ssl.external.keyfile: /mounted/cert/tls.key
           listener.ssl.external: "0.0.0.0:8883"
         volumeMounts:
-          - name: emqx-tls 
+          - name: emqx-tls
             mountPath: /mounted/cert
       volumes:
         - name: emqx-tls

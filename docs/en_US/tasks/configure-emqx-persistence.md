@@ -1,4 +1,4 @@
-# Enable Persistence in EMQX Cluster 
+# Enable Persistence in EMQX Cluster
 
 ## Task target
 
@@ -90,7 +90,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
 ```

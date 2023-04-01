@@ -21,5 +21,5 @@ A clear and concise description of what you expected to happen.
 **Environment details:**:
 - Kubernetes version:
 - Cloud-provider/provisioner:
-- emqx-operator version: 
+- emqx-operator version:
 - Install method: e.g. helm/static manifests

@@ -22,7 +22,7 @@ EMQX Custom Resource 使用 StoreClass 来保存 EMQX 运行时的状态。在�
 
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -68,7 +68,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
 ```
@@ -90,7 +90,7 @@ spec:
 
 修改 EMQX Custom Resource 的配置，添加相应的 Annotation，并将 Service Type 设置为 LoadBalancer，如下所示:
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -118,7 +118,7 @@ spec:
           protocol: TCP
           targetPort: 1883
 ```
-::: 
+:::
 ::: tab v1beta4
 
 ```yaml
@@ -139,7 +139,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
   serviceTemplate:
@@ -151,7 +151,7 @@ spec:
         protocol: TCP
         targetPort: 1883
 ```
-::: 
+:::
 ::::
 
 可用区域的组成规则为服务器所在区域+专有网络中[交换机](https://vpc.console.aliyun.com/vpc/cn-shanghai/switches)的实例ID

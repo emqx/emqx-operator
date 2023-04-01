@@ -1,8 +1,8 @@
 # Manage EMQX Clusters
 
-This chapter provides step-by-step instructions for performing common tasks and operations with EMQX in a Kubernetes cluster. 
+This chapter provides step-by-step instructions for performing common tasks and operations with EMQX in a Kubernetes cluster.
 
-The chapter is divided into sections covering 
+The chapter is divided into sections covering
 
 **Configuration and Setup**
 

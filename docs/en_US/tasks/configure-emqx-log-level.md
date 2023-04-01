@@ -11,7 +11,7 @@ Here are the relevant configurations for EMQX Custom Resource. You can choose th
 :::: tabs type:card
 ::: tab v2alpha1
 
-EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level of the EMQX cluster. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating. 
+EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level of the EMQX cluster. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating.
 
 :::tip
 
@@ -30,7 +30,7 @@ spec:
     log {
        console_handler {
           level  =  debug
-        } 
+        }
     }
 ```
 

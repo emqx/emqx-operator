@@ -8,9 +8,9 @@ How to use the blueGreenUpdate field to configure the blue-green upgrade of EMQX
 
 EMQX provides a long-term connection service. In Kubernetes, the existing upgrade strategy requires restarting the EMQX service except for hot upgrade. This upgrade strategy will cause disconnection of the device. If the device has a reconnection mechanism, a large number of devices will appear Simultaneously requesting connections, which triggers an avalanche, eventually causing a large number of clients to be temporarily unserviced. Therefore, EMQX Operator implements a blue-green upgrade based on the Node Evacuation function of EMQX Enterprise to solve the above problems.
 
-The EMQX node evacuation function is used to evacuate all connections in the node, and manually/automatically move client connections and sessions to other nodes in the cluster or other clusters. For a detailed introduction to EMQX node evacuation, please refer to the document: [Node Evacuation](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#evacuation). 
+The EMQX node evacuation function is used to evacuate all connections in the node, and manually/automatically move client connections and sessions to other nodes in the cluster or other clusters. For a detailed introduction to EMQX node evacuation, please refer to the document: [Node Evacuation](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#evacuation).
 
-:::tip 
+:::tip
 
 The node evacuation function is only available in EMQX Enterprise 4.4.12.
 
@@ -27,7 +27,7 @@ metadata:
    name: emqx-ee
 spec:
    replicas: 3
-   blueGreenUpdate: 
+   blueGreenUpdate:
     initialDelaySeconds: 5
     evacuationStrategy:
       waitTakeover: 5
@@ -36,7 +36,7 @@ spec:
    template:
      spec:
        emqxContainer:
-         image: 
+         image:
            repository: emqx/emqx-ee
            version: 4.4.14
          ports:

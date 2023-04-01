@@ -8,7 +8,7 @@
 
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 EMQX CRD 支持使用 `.spec.dashboardServiceTemplate` 配置 EMQX 集群 Dashboard Service ，使用 `.spec.listenersServiceTemplate` 配置 EMQX 集群 listener Service，其文档可以参考：[Service](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v2alpha1-reference.md)。
@@ -63,7 +63,7 @@ spec:
           version: 4.4.14
   serviceTemplate:
     spec:
-      type: LoabBalancer 
+      type: LoabBalancer
 ```
 
 > EMQX 默认会开启6个监听器，分别是：`mqtt-ssl-8883` 对应的端口为8883，`mqtt-tcp-1883` 对应的端口为1883，`http-dashboard-18083` 对应的端口为18083，`http-management-8081` 对应的端口为8081，`mqtt-ws-8083` 对应的端口为8083，`mqtt-wss-8084` 对应的端口为8084。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（ name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
@@ -90,7 +90,7 @@ emqx-ee   Running  8m33s
 
 ## 使用 MQTTX 连接 EMQX Cluster
 
-检查 EMQX Service 
+检查 EMQX Service
 
 ```bash
 $ kubectl get svc -l apps.emqx.io/instance=emqx
@@ -120,7 +120,7 @@ $ mqttx conn -h broker.emqx.io
 
 从图中可以看出，我们创建的 test 监听器已经生效。
 
-- 查看新增的监听器是否注入 Service 
+- 查看新增的监听器是否注入 Service
 
 ```bash
 kubectl get svc -l apps.emqx.io/instance=emqx

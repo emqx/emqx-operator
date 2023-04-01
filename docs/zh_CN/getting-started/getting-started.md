@@ -71,7 +71,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
    ```bash
    $ kubectl get emqx
-   
+
    NAME   IMAGE      STATUS    AGE
    emqx   emqx:5.0   Running   2m55s
    ```
@@ -100,7 +100,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
    ```bash
    $ kubectl get emqxbrokers
-   
+
    NAME   STATUS   AGE
    emqx   Running  8m33s
    ```
@@ -131,7 +131,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
    ```bash
    $ kubectl get emqxenterprises
-   
+
    NAME      STATUS   AGE
    emqx-ee   Running  8m33s
    ```

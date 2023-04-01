@@ -1,6 +1,6 @@
 # 在 EMQX 中开启 TLS
 
-## 任务目标 
+## 任务目标
 
 通过 `extraVolumes` 和 `extraVolumeMounts` 字段自定义 TLS 证书。
 
@@ -34,7 +34,7 @@ stringData:
 将上述文件保存为 `secret-tls.yaml`，并执行如下命令创建 secret：
 
 ```
-kubectl apply -f secret-tls.yaml 
+kubectl apply -f secret-tls.yaml
 ```
 
 输出类似于：
@@ -77,7 +77,7 @@ spec:
           secret:
             secretName: emqx-tls
       extraVolumeMounts:
-        - name: emqx-tls 
+        - name: emqx-tls
           mountPath: /mounted/cert
   replicantTemplate:
     spec:
@@ -86,7 +86,7 @@ spec:
           secret:
             secretName: emqx-tls
       extraVolumeMounts:
-        - name: emqx-tls 
+        - name: emqx-tls
           mountPath: /mounted/cert
   listenersServiceTemplate:
     spec:
@@ -143,7 +143,7 @@ spec:
           listener.ssl.external.keyfile: /mounted/cert/tls.key
           listener.ssl.external: "0.0.0.0:8883"
         volumeMounts:
-          - name: emqx-tls 
+          - name: emqx-tls
             mountPath: /mounted/cert
       volumes:
         - name: emqx-tls

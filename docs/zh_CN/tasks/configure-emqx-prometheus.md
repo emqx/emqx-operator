@@ -4,7 +4,7 @@
 
 如何通过 Prometheus 监控 EMQX 集群。
 
-## 部署 Prometheus 
+## 部署 Prometheus
 
 Prometheus 部署文档可以参考：[Prometheus](https://github.com/prometheus-operator/prometheus-operator)
 
@@ -12,10 +12,10 @@ Prometheus 部署文档可以参考：[Prometheus](https://github.com/prometheus
 
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
-EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[HTTP API](https://www.emqx.io/docs/zh/v5.0/observability/prometheus.html) 
+EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[HTTP API](https://www.emqx.io/docs/zh/v5.0/observability/prometheus.html)
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -24,7 +24,7 @@ metadata:
   name: emqx
 spec:
   image: emqx:5.0
-  imagePullPolicy: IfNotPresent    
+
   coreTemplate:
     spec:
       ports:
@@ -57,7 +57,7 @@ emqx   emqx:5.0   Running   10m
 :::
 ::: tab v1beta4
 
-EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[HTTP API](https://www.emqx.io/docs/zh/v4.4/advanced/http-api.html#%E7%BB%9F%E8%AE%A1%E6%8C%87%E6%A0%87) 
+EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[HTTP API](https://www.emqx.io/docs/zh/v4.4/advanced/http-api.html#%E7%BB%9F%E8%AE%A1%E6%8C%87%E6%A0%87)
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
@@ -68,7 +68,7 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
         ports:
@@ -96,11 +96,11 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## 配置 Prometheus Monitor 
+## 配置 Prometheus Monitor
 
 PodMonitor 自定义资源定义 (CRD) 允许以声明方式定义应如何监视一组动态服务。使用标签选择来定义选择哪些服务以使用所需配置进行监视，其文档可以参考：[PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml

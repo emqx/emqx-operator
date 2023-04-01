@@ -17,7 +17,7 @@ EMQX custom resources use StoreClass to save the state of the EMQX runtime. Befo
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -37,7 +37,7 @@ spec:
         accessModes:
         - ReadWriteOnce
 ```
-::: 
+:::
 ::: tab v1beta4
 
 ```yaml
@@ -57,11 +57,11 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
 ```
-::: 
+:::
 ::::
 
 ## Access EMQX Cluster
@@ -69,7 +69,7 @@ In public cloud providers, you can use the LoadBalancer to access the EMQX clust
 
 Modify the configuration of EMQX Custom Resource, add corresponding annotations, and set the Service Type to LoadBalancer as shown below:
 
-:::: tabs type:card 
+:::: tabs type:card
 ::: tab v2alpha1
 
 ```yaml
@@ -92,7 +92,7 @@ spec:
     spec:
       type: LoadBalancer
 ```
-::: 
+:::
 ::: tab v1beta4
 
 ```yaml
@@ -112,17 +112,17 @@ spec:
   template:
     spec:
       emqxContainer:
-        image: 
+        image:
           repository: emqx/emqx-ee
           version: 4.4.14
   serviceTemplate:
     spec:
       type: LoadBalancer
 ```
-::: 
+:::
 ::::
 
-## TLS Termination  
+## TLS Termination
 In Amazon EKS, you can use the NLB to do TLS termination, which you can do in the following steps:
 
 1. Import relevant certificates in [AWS Console](https://us-east-2.console.aws.amazon.com/acm/home), then enter the details page by clicking the certificate ID,  after that copy ARN, just as shown in the picture below:
@@ -137,5 +137,5 @@ In Amazon EKS, you can use the NLB to do TLS termination, which you can do in th
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls
     ```
-    
+
     > The value of `service.beta.kubernetes.io/aws-load-balancer-ssl-cert` is the ARN information we copied in step 1.
