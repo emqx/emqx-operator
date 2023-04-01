@@ -2,12 +2,12 @@
 
 ## Task Target
 
-- How to configure EMQX Enterprise Edition License.
-- How to update the EMQX Enterprise Edition License.
+- How to configure EMQX Enterprise License.
+- How to update the EMQX Enterprise License.
 
 ## Configure License
 
-EMQX Enterprise Edition License can be applied for free on EMQ's official website: [Apply for EMQX Enterprise Edition License](https://www.emqx.com/en/apply-licenses/emqx).
+EMQX Enterprise License can be applied for free on EMQ's official website: [Apply for EMQX Enterprise License](https://www.emqx.com/en/apply-licenses/emqx).
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
@@ -16,7 +16,7 @@ Here are the relevant configurations for EMQX Custom Resource. You can choose th
 
 - Configure EMQX Cluster
 
-The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EMQX. EMQX CRD supports using `.spec.bootstrapConfig` to configure the EMQX cluster license. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster and does not support updating. **Note:** After creating an EMQX cluster, if you need to update the license, please update it through the EMQX Dashboard.
+The corresponding CRD of EMQX Enterprise in EMQX Operator is EMQX. EMQX CRD supports using `.spec.bootstrapConfig` to configure the EMQX cluster license. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster and does not support updating. **Note:** After creating an EMQX cluster, if you need to update the license, please update it through the EMQX Dashboard.
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -60,7 +60,7 @@ A Secret is an object that contains a small amount of sensitive information such
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file
 ```
 
-> `/path/to/license/file` indicates the path of the EMQX Enterprise Edition License file, which can be an absolute path or a relative path. For more details on using kubectl to create a Secret, please refer to the document: [Using kubectl to create a secret](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/).
+> `/path/to/license/file` indicates the path of the EMQX Enterprise License file, which can be an absolute path or a relative path. For more details on using kubectl to create a Secret, please refer to the document: [Using kubectl to create a secret](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/).
 
 The output is similar to:
 
@@ -70,7 +70,7 @@ secret/test created
 
 - Configure EMQX Cluster
 
-The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring EMQX Enterprise Edition License through `.spec.license.secretName` field. For the specific description of the secretName field, please refer to [secretName](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#emqxlicense).
+The corresponding CRD of EMQX Enterprise in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring EMQX Enterprise License through `.spec.license.secretName` field. For the specific description of the secretName field, please refer to [secretName](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#emqxlicense).
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
@@ -157,7 +157,7 @@ As can be seen from the above figure, the content of the license has been update
 :::
 ::: tab v1beta4
 
-- Update EMQX Enterprise Edition License Secret
+- Update EMQX Enterprise License Secret
 
 ```bash
 kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file --dry-run -o yaml | kubectl apply -f -
@@ -191,7 +191,7 @@ customer_type            : 2
 expiry                   : false
 ```
 
-> If the certificate information is not updated, you can wait for a while, the update of the license will be delayed. From the above output results, we can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully.
+> If the certificate information is not updated, you can wait for a while, the update of the license will be delayed. From the above output results, we can see that the content of the License has been updated, which means that the EMQX Enterprise License has been updated successfully.
 
 :::
 ::::

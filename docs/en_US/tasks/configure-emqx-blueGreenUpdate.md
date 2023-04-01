@@ -2,23 +2,23 @@
 
 ## Task target
 
-How to use the blueGreenUpdate field to configure the blue-green upgrade of EMQX Enterprise Edition.
+How to use the blueGreenUpdate field to configure the blue-green upgrade of EMQX Enterprise.
 
 ## Why Need Blue-Green Upgrade
 
-EMQX provides a long-term connection service. In Kubernetes, the existing upgrade strategy requires restarting the EMQX service except for hot upgrade. This upgrade strategy will cause disconnection of the device. If the device has a reconnection mechanism, a large number of devices will appear Simultaneously requesting connections, which triggers an avalanche, eventually causing a large number of clients to be temporarily unserviced. Therefore, EMQX Operator implements a blue-green upgrade based on the Node Evacuation function of EMQX Enterprise Edition to solve the above problems.
+EMQX provides a long-term connection service. In Kubernetes, the existing upgrade strategy requires restarting the EMQX service except for hot upgrade. This upgrade strategy will cause disconnection of the device. If the device has a reconnection mechanism, a large number of devices will appear Simultaneously requesting connections, which triggers an avalanche, eventually causing a large number of clients to be temporarily unserviced. Therefore, EMQX Operator implements a blue-green upgrade based on the Node Evacuation function of EMQX Enterprise to solve the above problems.
 
 The EMQX node evacuation function is used to evacuate all connections in the node, and manually/automatically move client connections and sessions to other nodes in the cluster or other clusters. For a detailed introduction to EMQX node evacuation, please refer to the document: [Node Evacuation](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#evacuation). 
 
 :::tip 
 
-The node evacuation function is only available in EMQX Enterprise Edition 4.4.12.
+The node evacuation function is only available in EMQX Enterprise 4.4.12.
 
 :::
 
 ## How to Use Blue-Green Upgrade
 
-The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring the blue-green upgrade of EMQX Enterprise Edition through the `.spec.blueGreenUpdate` field. For the specific description of the blueGreenUpdate field, please refer to [blueGreenUpdate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#evacuationstrategy).
+The corresponding CRD of EMQX Enterprise in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring the blue-green upgrade of EMQX Enterprise through the `.spec.blueGreenUpdate` field. For the specific description of the blueGreenUpdate field, please refer to [blueGreenUpdate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#evacuationstrategy).
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
@@ -46,7 +46,7 @@ spec:
 
 > `waitTakeover` indicates the waiting time (unit is second) before the current node starts session evacuation. `connEvictRate` indicates the client disconnection rate of the current node (unit: count/second). `sessEvictRate` indicates the current node client session evacuation rate (unit: count/second). The `.spec.license.stringData` field is filled with the content of the license certificate. In this article, the content of this field is omitted. Please fill it with the content of your own certificate.
 
-Save the above content as `emqx.yaml`, execute the following command to deploy the EMQX Enterprise Edition cluster:
+Save the above content as `emqx.yaml`, execute the following command to deploy the EMQX Enterprise cluster:
 
 ```bash
 kubectl apply -f emqx.yaml
@@ -58,7 +58,7 @@ The output is similar to:
 emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
-- Check whether the EMQX Enterprise Edition cluster is ready
+- Check whether the EMQX Enterprise cluster is ready
 
 ```bash
 kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'

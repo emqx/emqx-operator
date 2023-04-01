@@ -31,7 +31,7 @@
       "path": "tasks/overview",
       "children": [
         {
-          "title": "License Configuration (EMQX Enterprise Edition)",
+          "title": "License Configuration (EMQX Enterprise)",
           "path": "tasks/configure-emqx-license"
         },
         {
@@ -55,7 +55,7 @@
           "path": "tasks/configure-emqx-service"
         },
         {
-          "title": "Configure Blue-Green Upgrade (EMQX Enterprise Edition)",
+          "title": "Configure Blue-Green Upgrade (EMQX Enterprise)",
           "path": "tasks/configure-emqx-blueGreenUpdate"
         },
         {
