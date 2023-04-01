@@ -29,9 +29,9 @@ $ kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" 
 pod/emqx-operator-controller-manager-57bd7b8bd4-h2mcr condition met
 ```
 
-Now that you have successfully installed the operator, you are ready to proceed to the next step. In the [Deploy EMQX](#deploy-emqx) section, you will learn how to use the EMQX Operator to deploy EMQX. 
+Now that you have successfully installed the operator, you are ready to proceed to the next step. In the [Deploy EMQX](#deploy-emqx) section, you will learn how to use the EMQX Operator to deploy EMQX.
 
-Alternatively, if you are interested in learning how to upgrade or uninstall EMQX using the operator, you can continue reading this section. 
+Alternatively, if you are interested in learning how to upgrade or uninstall EMQX using the operator, you can continue reading this section.
 
 ### Upgrade EMQX Operator
 
@@ -41,7 +41,7 @@ Execute the following command to upgrade EMQX Operator. If you want to specify t
 $ helm upgrade emqx-operator emqx/emqx-operator -n emqx-operator-system
 ```
 
-> Upgrade from version 1.x.x to version 2.x.x not supported. 
+> Upgrade from version 1.x.x to version 2.x.x not supported.
 
 ### Uninstall EMQX Operator
 
@@ -53,7 +53,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
 ## Deploy EMQX
 
-### Deploy EMQX 5 
+### Deploy EMQX 5
 
 <!--Distinguish enterprise and opensource after 5.0 stablized-->
 
@@ -76,7 +76,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
    ```bash
    $ kubectl get emqx
-   
+
    NAME   IMAGE      STATUS    AGE
    emqx   emqx:5.0   Running   2m55s
    ```
@@ -109,7 +109,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
    ```bash
    $ kubectl get emqxbrokers
-   
+
    NAME   STATUS   AGE
    emqx   Running  8m33s
    ```
@@ -142,7 +142,7 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
    ```bash
    $ kubectl get emqxenterprises
-   
+
    NAME      STATUS   AGE
    emqx-ee   Running  8m33s
    ```

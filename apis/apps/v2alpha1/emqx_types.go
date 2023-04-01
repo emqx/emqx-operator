@@ -182,10 +182,10 @@ type BootstrapAPIKey struct {
 type EvacuationStrategy struct {
 	//+kubebuilder:validation:Minimum=0
 	WaitTakeover int32 `json:"waitTakeover,omitempty"`
-	// Just work in EMQX Enterprise Edition.
+	// Just work in EMQX Enterprise.
 	//+kubebuilder:validation:Minimum=1
 	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
-	// Just work in EMQX Enterprise Edition.
+	// Just work in EMQX Enterprise.
 	//+kubebuilder:validation:Minimum=1
 	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
 }

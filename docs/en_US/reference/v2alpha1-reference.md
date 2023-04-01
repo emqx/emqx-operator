@@ -264,8 +264,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `waitTakeover` _integer_ |  |
-| `connEvictRate` _integer_ | Just work in EMQX Enterprise Edition. |
-| `sessEvictRate` _integer_ | Just work in EMQX Enterprise Edition. |
+| `connEvictRate` _integer_ | Just work in EMQX Enterprise. |
+| `sessEvictRate` _integer_ | Just work in EMQX Enterprise. |
 
 
 
