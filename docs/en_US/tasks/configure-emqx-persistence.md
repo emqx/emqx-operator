@@ -1,11 +1,11 @@
-# Enable EMQX Cluster Persistence
+# Enable Persistence in EMQX Cluster 
 
 ## Task target
 
-- How to configure EMQX 4.x cluster persistence through the persistent field.
-- How to configure EMQX 5.x cluster Core node persistence through the volumeClaimTemplates field.
+- How to configure EMQX 4.x cluster persistence through the `persistent` field.
+- How to configure EMQX 5.x cluster Core node persistence through the `volumeClaimTemplates` field.
 
-## EMQX cluster persistence configuration
+## EMQX Cluster Persistence Configuration
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
@@ -14,13 +14,13 @@ Here are the relevant configurations for EMQX Custom Resource. You can choose th
 
 In EMQX 5.0, the nodes in the EMQX cluster can be divided into two roles: core (Core) node and replication (Replicant) node. The Core node is responsible for all write operations in the cluster, and serves as the real data source of the EMQX database [Mria](https://github.com/emqx/mria) to store data such as routing tables, sessions, configurations, alarms, and Dashboard user information. The Replicant node is designed to be stateless and does not participate in the writing of data. Adding or deleting Replicant nodes will not change the redundancy of the cluster data. Therefore, in EMQX CRD, we only support the persistence of Core nodes.
 
-EMQX CRD supports configuration of EMQX cluster Core node persistence through `.spec.coreTemplate.spec.volumeClaimTemplates` field. The semantics and configuration of `.spec.coreTemplate.spec.volumeClaimTemplates` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
+EMQX CRD supports configuring of EMQX cluster Core node persistence through `.spec.coreTemplate.spec.volumeClaimTemplates` field. The semantics and configuration of `.spec.coreTemplate.spec.volumeClaimTemplates` field are consistent with those in `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
 
 When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` field, EMQX Operator will create a fixed PVC (PersistentVolumeClaim) for each Core node in the EMQX cluster to represent the user's request for persistence. When a Pod is deleted, its corresponding PVC is not automatically cleared. When a Pod is rebuilt, it will automatically match the existing PVC. If you no longer want to use the data of the old cluster, you need to manually clean up the PVC.
 
-PVC expresses the user's request for persistence, and what is responsible for storage is the persistent volume ([PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), PV), PVC and PV are bound one-to-one through PVC Name. PV is a piece of storage in the cluster, which can be manually prepared according to requirements, or can be dynamically created using storage classes ([StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/)) preparation. When a user is no longer using a PV resource, the PVC object can be manually deleted, allowing the PV resource to be recycled. Currently, there are two recycling strategies for PV: Retained (retained) and Deleted (deleted). For details of the recycling strategy, please refer to the document: [Reclaiming](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
+PVC expresses the user's request for persistence, and what is responsible for storage is the persistent volume ([PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), PV), PVC and PV are bound one-to-one through PVC Name. PV is a piece of storage in the cluster, which can be manually prepared according to requirements or can be dynamically created using storage classes ([StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/)) preparation. When a user is no longer using a PV resource, the PVC object can be manually deleted, allowing the PV resource to be recycled. Currently, there are two recycling strategies for PV: Retained (retained) and Deleted (deleted). For details on the recycling strategy, please refer to the document: [Reclaiming](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
 
-EMQX Operator uses PV to persist the data in the `/opt/emqx/data` directory of the Core node of the EMQX cluster. The data stored in the `/opt/emqx/data` directory of the EMQX Core node mainly includes: routing table, session, configuration, alarm, Dashboard user information and other data.
+EMQX Operator uses PV to persist the data in the `/opt/emqx/data` directory of the Core node of the EMQX cluster. The data stored in the `/opt/emqx/data` directory of the EMQX Core node mainly includes routing table, session, configuration, alarm, Dashboard user information and other data.
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -118,7 +118,7 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## Verify whether the EMQX cluster persistence is in effect
+## Verify Persistence in EMQX Cluster
 
 Verification scheme: 1) Create a test rule through the Dashboard in the old EMQX cluster; 2) Delete the old cluster; 3) Recreate the EMQX cluster, and check whether the previously created rule exists through the Dashboard.
 

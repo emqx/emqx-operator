@@ -1,12 +1,12 @@
-# Access EMQX Cluster through TLS Connection
+# Enable TLS in EMQX
 
-## Task target 
+## Task Target 
 
 Customize TLS certificate through the extraVolumes and extraVolumeMounts fields.
 
-## Create Secret based on TLS certificate
+## Create Secret Based on TLS Certificate
 
-Secret is an object that contains a small amount of sensitive information such as passwords, tokens or keys. For its documentation, please refer to: [Secret](https://kubernetes.io/docs/concepts/configuration/secret/). In this article, we use Secret to save TLS certificate information, so we need to create Secret based on TLS certificate before creating EMQX cluster.
+Secret is an object that contains a small amount of sensitive information such as passwords, tokens or keys. For its documentation, please refer to [Secret](https://kubernetes.io/docs/concepts/configuration/secret/). In this article, we use Secret to save TLS certificate information, so we need to create Secret based on TLS certificate before creating the EMQX cluster.
 
 ```yaml
 apiVersion: v1
@@ -31,7 +31,7 @@ stringData:
 
 > `ca.crt` represents the content of the CA certificate, `tls.crt` represents the content of the server certificate, and `tls.key` represents the content of the server’s private key. In this example, the contents of the above three fields are omitted, please fill them with the contents of your own certificate.
 
-Save the above file as: secret-tls.yaml, and execute the following command to create a secret:
+Save the above file as `secret-tls.yaml`, and execute the following command to create a secret:
 
 ```
 kubectl apply -f secret-tls.yaml
@@ -43,7 +43,7 @@ The output is similar to:
 secret/emqx-tls created
 ```
 
-## Deploy EMQX cluster
+## Deploy EMQX Cluster
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
@@ -52,7 +52,7 @@ Here are the relevant configurations for EMQX Custom Resource. You can choose th
 
 EMQX CRD supports using `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to configure additional volumes and mounts for the EMQX cluster point. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
 
-There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this article we are using the `secret` type.
+There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this page, we are using the `secret` type.
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -193,9 +193,9 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## Use MQTT X Verify that the TLS certificate is valid
+## Use MQTT X to Verify TLS Certificate
 
-MQTT X is a fully open-source MQTT 5.0 cross-platform desktop client. Supports quick creation of multiple simultaneous online MQTT client connections, convenient for testing MQTT/TCP, MQTT/TLS, MQTT/WebSocket connection, publishing, subscribing functions and other MQTT protocol features. For more documentation on using MQTT X, please refer to: [MQTT X](https://mqttx.app/docs). Next, we will use MQTT X to connect to the EMQX cluster to send and subscribe messages to verify whether the TLS certificate is valid.
+MQTT X is a fully open-source MQTT 5.0 cross-platform desktop client. Supports quick creation of multiple simultaneous online MQTT client connections, convenient for testing MQTT/TCP, MQTT/TLS, MQTT/WebSocket connection, publishing, subscribing functions and other MQTT protocol features. For more documentation on using MQTT X, please refer to [MQTT X](https://mqttx.app/docs). Next, we will use MQTT X to connect to the EMQX cluster to send and subscribe messages to verify whether the TLS certificate is valid.
 
 Click the button to create a new connection on the MQTT X page, and configure the EMQX cluster node information and CA certificate path as shown in the figure. After configuring the connection information, click the connect button to connect to the EMQX cluster:
 

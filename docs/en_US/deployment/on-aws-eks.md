@@ -2,14 +2,14 @@
 
 Amazon Elastic Kubernetes Service (Amazon EKS) is a managed service that you can use to run Kubernetes on AWS without needing to install, operate, and maintain your own Kubernetes control plane or nodes. Kubernetes is an open-source system for automating the deployment, scaling, and management of containerized applications.
 
-## Before Begin
+## Before You Begin
 Before you begin, you must have the following:
 
-- An Amazon EKS cluster. For details: [Getting started with Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html)
+- An Amazon EKS cluster, for details: [Getting started with Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html)
 
-- A LoadBalancer. For details: [Load Balancer introduction](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html)
+- A LoadBalancer, for details: [Load Balancer introduction](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html)
 
-- A StorageClass. For details: [Storage classes](https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html)
+- A StorageClass, for details: [Storage classes](https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html)
 
 ## Enable EMQX Cluster Persistence
 
@@ -122,14 +122,14 @@ spec:
 ::: 
 ::::
 
-## TLS termination  
+## TLS Termination  
 In Amazon EKS, you can use the NLB to do TLS termination, which you can do in the following steps:
 
 1. Import relevant certificates in [AWS Console](https://us-east-2.console.aws.amazon.com/acm/home), then enter the details page by clicking the certificate ID,  after that copy ARN, just as shown in the picture below:
 
 ![](./assets/cert.png)
 
-2. Add some annotations in EMQX custom resources' metadata, just as shown in below:
+2. Add some annotations in EMQX custom resources' metadata, just as shown below:
 
 
     ```yaml
@@ -137,5 +137,5 @@ In Amazon EKS, you can use the NLB to do TLS termination, which you can do in th
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls
     ```
-
+    
     > The value of `service.beta.kubernetes.io/aws-load-balancer-ssl-cert` is the ARN information we copied in step 1.

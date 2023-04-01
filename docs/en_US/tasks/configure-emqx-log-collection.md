@@ -1,12 +1,12 @@
-# Collect EMQX Logs In Kubernetes
+# Collect EMQX Logs in Kubernetes
 
 ## Task target
 
-How to collect EMQX cluster logs through Telegraf and export them to the standard output of the container
+How to collect EMQX cluster logs through Telegraf and export them to the standard output of the container.
 
 ## Deploy Telegraf Operator
 
-Telegraf is a server-based agent for collecting and sending all metrics and events from databases, systems, and IoT sensors. It supports four types of plugins, including input, output, aggregator and processor. More articles about Telegraf can be found at [telegraf](https://docs.influxdata.com/telegraf/v1.24/), The documentation for telegraf-operator can be found in [telegraf-operator](https://github.com/influxdata/telegraf-operator)](https://github.com/influxdata/telegraf-operator)
+Telegraf is a server-based agent for collecting and sending all metrics and events from databases, systems, and IoT sensors. It supports four types of plugins, including input, output, aggregator and processor. More articles about Telegraf can be found at [telegraf](https://docs.influxdata.com/telegraf/v1.24/), The documentation for telegraf-operator can be found in [telegraf-operator](https://github.com/influxdata/telegraf-operator).
 
 Execute the following command to deploy telegraf-operator
 
@@ -15,15 +15,13 @@ helm repo add influxdata https://helm.influxdata.com/
 helm upgrade --install telegraf-operator influxdata/telegraf-operator
 ```
 
-## Global Configuration - classes
+## Global Configuration - `classes`
 
-The global configuration is mounted via secret, specifying the class name as logs
+The global configuration is mounted via secret, specifying the class name as logs, where
 
-`agent` Used to configure telegraf agent, refer to the detailed definition: [telegraf agent](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#agent)
-
-`inputs.tail` The tail plug-in used to configure the input is defined in detail in: [tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
-
-`outputs.file` The file plug-in used to configure the output is defined in detail in: [file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
+- `agent` is to configure telegraf agent, refer to the detailed definition: [telegraf agent](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#agent)
+- `inputs.tail` is the tail plug-in used to configure the input and is defined in detail in [tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
+- `outputs.file` is a file plug-in used to configure the output is defined in detail in [file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
 
 ```yaml
 apiVersion: v1
@@ -56,7 +54,7 @@ stringData:
       files = ["stdout"]
 ```
 
-Save the above as: classes.yaml
+Save the above as `classes.yaml`
 
 - Create secret
 
@@ -77,7 +75,7 @@ NAME                        TYPE     DATA   AGE
 telegraf-operator-classes   Opaque   1      11h
 ```
 
-## Deploy EMQX cluster
+## Deploy EMQX Cluster
 
 Telegraf uses annotations to inject sidecar for Pod log collection, for a detailed definition of annotations refer to the documentation: [telegraf annotations](https://github.com/influxdata/telegraf-operator#pod-level-annotations)
 
@@ -90,7 +88,7 @@ Here are the relevant configurations for EMQX Custom Resource. You can choose th
 
 `telegraf.influxdata.com/volume-mounts` Set the mount path of the log
 
-`telegraf.influxdata.com/class` logs references the name of the class specified above
+`telegraf.influxdata.com/class` logs reference the name of the class specified above
 
 `spec.bootstrapConfig` Configure the output log to a file and the log level to debug
 
@@ -216,7 +214,7 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## Check the Telegraf logs
+## Check the Telegraf Logs
 
 ```
 kubectl logs -f $pod_name -c telegraf

@@ -2,14 +2,14 @@
 
 Azure Kubernetes Service (AKS) simplifies deploying a managed Kubernetes cluster in Azure by offloading the operational overhead to Azure. As a hosted Kubernetes service, Azure handles critical tasks, like health monitoring and maintenance. When you create an AKS cluster, a control plane is automatically created and configured. This control plane is provided at no cost as a managed Azure resource abstracted from the user. You only pay for and manage the nodes attached to the AKS cluster.
 
-## Before Begin
+## Before You Begin
 Before you begin, you must have the following:
 
-+ An Azure Kubernetes Service (AKS) cluster. For details: [Create an Azure Kubernetes Service (AKS) cluster](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-portal)
++ An Azure Kubernetes Service (AKS) cluster, for details: [Create an Azure Kubernetes Service (AKS) cluster](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-portal)
 
-+ A StorageClass. For details: [Use Azure Files Container Storage Interface (CSI) driver in Azure Kubernetes Service (AKS)](https://learn.microsoft.com/en-us/azure/aks/azure-files-csie)
++ A StorageClass, for details: [Use Azure Files Container Storage Interface (CSI) driver in Azure Kubernetes Service (AKS)](https://learn.microsoft.com/en-us/azure/aks/azure-files-csie)
 
-+ A LoadBalancer. For details: [Network concepts for applications in Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/concepts-network#load-balancer)
++ A LoadBalancer, for details: [Network concepts for applications in Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/concepts-network#load-balancer)
 
 ## Enable EMQX Cluster Persistence
 
@@ -89,6 +89,6 @@ spec:
 :::
 ::::
 
-## About LoadBalancer offloading TLS
+## About LoadBalancer Offloading TLS
 
 Since Azure LoadBalancer does not support TCP certificates, please refer to this [document](https://github.com/emqx/emqx-operator/discussions/312) to resolve TCP certificate offloading issues.

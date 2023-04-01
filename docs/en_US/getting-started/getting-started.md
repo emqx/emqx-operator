@@ -53,7 +53,9 @@ $ helm uninstall emqx-operator -n emqx-operator-system
 
 ## Deploy EMQX
 
-### Deploy EMQX 5 <!--shall we distinguish enterprise and opensource？-->
+### Deploy EMQX 5 
+
+<!--Distinguish enterprise and opensource after 5.0 stablized-->
 
 1. Deploy EMQX.
 

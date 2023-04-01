@@ -4,14 +4,20 @@
 
 How to configure the log level of EMQX cluster.
 
-## Configure EMQX cluster
+## Configure EMQX Cluster
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
 ::: tab v2alpha1
 
-EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level of the EMQX cluster. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating. **NOTE:** If you need to modify the cluster log level after creating EMQX, please modify it through EMQX Dashboard.
+EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level of the EMQX cluster. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating. 
+
+:::tip
+
+If you need to modify the cluster log level after creating EMQX, please modify it through EMQX Dashboard.
+
+:::
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -90,23 +96,23 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## Verify whether the EMQX cluster log level configuration is effective
+## Verify Log Level Change
 
-- Use MQTT X to connect to the EMQX cluster to send messages
+Use MQTT X to connect to the EMQX cluster to send messages.
 
 Click the button to create a new connection on the MQTT X page, and configure the EMQX cluster node information as shown in the figure. After configuring the connection information, click the connect button to connect to the EMQX cluster:
 
-![](./assets/configure-log-level/mqtt-connected.png)
+<img src="./assets/configure-log-level/mqtt-connected.png" style="zoom:50%;" />
 
 Then click the Subscribe button to create a new subscription, as shown in the figure, MQTT X has successfully connected to the EMQX cluster and successfully created the subscription:
 
-![](./assets/configure-log-level/mqtt-sub.png)
+<img src="./assets/configure-log-level/mqtt-sub.png" style="zoom:33%;" />
 
 After successfully connecting to the EMQX cluster and creating a subscription, we can send messages to the EMQX cluster, as shown in the following figure:
 
-![](./assets/configure-log-level/mqtt-pub.png)
+<img src="./assets/configure-log-level/mqtt-pub.png" style="zoom:50%;" />
 
-- Use the command line to view EMQX cluster log information
+Use the command line to view EMQX cluster log information
 
 ```bash
 kubectl logs emqx-core-0 -c emqx
@@ -114,6 +120,6 @@ kubectl logs emqx-core-0 -c emqx
 
 The output is shown in the figure below:
 
-![](./assets/configure-log-level/emqx-debug-log.png)
+<img src="./assets/configure-log-level/emqx-debug-log.png" style="zoom:33%;" />
 
 From the figure, you can see the debug log information of connecting to the EMQX cluster using MQTT just now and sending messages.

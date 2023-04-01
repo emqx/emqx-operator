@@ -1,6 +1,6 @@
-# Monitor EMQX Cluster By Prometheus
+# Monitor EMQX cluster by Prometheus
 
-## Task target
+## Task Target
 
 How to monitor EMQX cluster through Prometheus.
 
@@ -8,7 +8,7 @@ How to monitor EMQX cluster through Prometheus.
 
 Prometheus deployment documentation can refer to: [Prometheus](https://github.com/prometheus-operator/prometheus-operator)
 
-## Deploy EMQX cluster
+## Deploy EMQX Cluster
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
@@ -208,12 +208,12 @@ Save the above content as `secret.yaml` and create a Secret
 $ kubectl apply -f secret.yaml
 ```
 
-## Visit Prometheus to view the indicators of EMQX cluster
+## View EMQX Indicators on Prometheus
 
-Open the Prometheus interface, switch to the Graph page, and enter emqx to display as shown in the following figure:
+Open the Prometheus interface, switch to the Graph page, and enter `emqx` to display as shown in the following figure:
 
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-metrics.png)
 
-Switch to the Status → Targets page, the following figure is displayed, and you can see all monitored EMQX Pod information in the cluster:
+Switch to the **Status** -> **Targets** page, the following figure is displayed, and you can see all monitored EMQX Pod information in the cluster:
 
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-target.png)
