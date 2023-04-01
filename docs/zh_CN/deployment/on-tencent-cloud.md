@@ -87,7 +87,7 @@ TkeServiceConfig 并不会帮您直接配置并修改协议和端口，您需要
 
 `spec.loadBalancer.l4Listeners.port`：监听端口
 
-创建 Loadbalancer 模式 Service 时，设置注解 `service.cloud.tencent.com/tke-service-config-auto: "true"`，将自动创建 <ServiceName>-auto-service-config。您也可以通过 **service.cloud.tencent.com/tke-service-config:<config-name>** 直接指定您自行创建的 TkeServiceConfig。两个注解不可同时使用。  
+创建 Loadbalancer 模式 Service 时，设置注解 `service.cloud.tencent.com/tke-service-config-auto: "true"`，将自动创建 \<ServiceName>-auto-service-config。您也可以通过 **service.cloud.tencent.com/tke-service-config:\<config-name>** 直接指定您自行创建的 TkeServiceConfig。两个注解不可同时使用。  
 
 除了 TkeServiceConfig，您可以通过其他 Annotation 注解配置 Service，以实现更丰富的负载均衡的能力。详情请查看[Service Annotation 说明](https://cloud.tencent.com/document/product/457/51258)
 
