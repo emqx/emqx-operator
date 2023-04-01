@@ -1,14 +1,22 @@
-# Change EMQX Configuration In EMQX Custom Resource
+# Change EMQX Configurations Via Operator
 
 ## Task target
 
 How to change EMQX configuration by `.spec.bootstrapConfig` in EMQX Custom Resource.
 
-## Configure EMQX cluster
+## Configure EMQX Cluster
 
 The main configuration file of EMQX is `emqx.conf`. Starting from version 5.0, EMQX adopts [HOCON](https://www.emqx.io/docs/en/v5.0/configuration/configuration.html#hocon-configuration-format) as the configuration file format.
 
-EMQX CRD supports using the `.spec.bootstrapConfig` field to configure the EMQX cluster. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster and does not support updating. **Note:** If you need to modify the cluster configuration after creating EMQX, please modify it through EMQX Dashboard.
+EMQX CRD supports using the `.spec.bootstrapConfig` field to configure the EMQX cluster. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster and does not support updating. 
+
+:::tip 
+
+This is only applicable before EMQX is started. If you need to modify the cluster configuration after creating EMQX, please modify it through EMQX Dashboard. 
+
+:::
+
+For example, to add a TCP listener on port `1884`, you can run the commands below:
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -50,9 +58,9 @@ NAME   IMAGE      STATUS    AGE
 emqx   emqx:5.0   Running   10m
 ```
 
-## Verify whether the EMQX cluster configuration is valid
+## Verify the Configuration Change
 
-- View EMQX cluster listener information
+View EMQX cluster listener information
 
 ```bash
 kubectl exec -it emqx-core-0 -c emqx -- emqx_ctl listeners

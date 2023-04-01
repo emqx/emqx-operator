@@ -1,10 +1,10 @@
-# Access EMQX Cluster By Kubernetes Service
+# Access EMQX Cluster by Kubernetes Service
 
-## Task target
+## Task Target
 
-How to access EMQX cluster by Kubernetes Service.
+How to access EMQX cluster by Kubernetes Service. <!--I do not quite understand what is page is about-->
 
-## Configure EMQX cluster
+## Configure EMQX Cluster
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
@@ -88,7 +88,7 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## Access EMQX cluster by MQTT X client
+## Use MQTT X Client to Connect EMQX Cluster
 
 Check EMQX service 
 
@@ -108,15 +108,15 @@ $ mqttx conn -h broker.emqx.io
 [11:16:41] › ✔  Connected
 ```
 
-## Add new listeners through EMQX Dashboard
+## Add New listeners via EMQX Dashboard
 
 Open the browser, enter the host `IP` and port `32012` where the EMQX Pod is located, log in to the EMQX cluster Dashboard (Dashboard default user name: admin, default password: public), enter the Dashboard and click Configuration → Listeners to enter the listener page, We first click the Add Listener button to add a listener named test and port 1884, as shown in the figure below:
 
-![](./assets/configure-service/emqx-add-listener.png)
+<img src="./assets/configure-service/emqx-add-listener.png" style="zoom: 33%;" />
 
 Then click the Add button to create the listener, as shown in the following figure:
 
-![](./assets/configure-service/emqx-listeners.png)
+<img src="./assets/configure-service/emqx-listeners.png" style="zoom:50%;" />
 
 As can be seen from the figure, the test listener we created has taken effect.
 

@@ -9,31 +9,45 @@
       "path": "getting-started/getting-started"
     },
     {
-      "title": "Deployment EMQX on Public Cloud",
+      "title": "Deploy EMQX on Public Cloud",
+      "path": "deployment/overview",
       "children": [
         {
-          "title": "Deploy EMQX On AWS",
+          "title": "Deploy EMQX on AWS",
           "path": "deployment/on-aws-eks"
         },
         {
-          "title": "Deploy EMQX On Azure",
+          "title": "Deploy EMQX on Azure",
           "path": "deployment/on-azure-aks"
         },
         {
-          "title": "Deploy EMQX On Google Cloud",
+          "title": "Deploy EMQX on Google Cloud",
           "path": "deployment/on-gcp-gke"
         }
       ]
     },
     {
       "title": "Manage EMQX Cluster",
+      "path": "tasks/overview",
       "children": [
         {
-          "title": "Configure License for EMQX Enterprise",
+          "title": "License Configuration (EMQX Enterprise Edition)",
           "path": "tasks/configure-emqx-license"
         },
         {
-          "title": "Enable EMQX Cluster Persistence",
+          "title": "Enable TLS in EMQX",
+          "path": "tasks/configure-emqx-tls"
+        },
+        {
+          "title": "Change EMQX Configurations Via Operator",
+          "path": "tasks/configure-emqx-bootstrapConfig"
+        },
+        {
+          "title": "Enable Core + Replicant Mode (EMQX 5.x)",
+          "path": "tasks/configure-emqx-core-replicant"
+        },
+        {
+          "title": "Configure Persistence in EMQX Cluster",
           "path": "tasks/configure-emqx-persistence"
         },
        {
@@ -41,32 +55,20 @@
           "path": "tasks/configure-emqx-service"
         },
         {
-          "title": "Access EMQX Cluster Through TLS Connection",
-          "path": "tasks/configure-emqx-tls"
-        },
-        {
-          "title": "Change EMQX Configurationin EMQX Custom Resource",
-          "path": "tasks/configure-emqx-bootstrapConfig"
-        },
-        {
-          "title": "Change EMQX Log Level",
-          "path": "tasks/configure-emqx-log-level"
+          "title": "Configure Blue-Green Upgrade (EMQX Enterprise Edition",
+          "path": "tasks/configure-emqx-blueGreenUpdate"
         },
         {
           "title": "Collect EMQX Logs in Kubernetes",
           "path": "tasks/configure-emqx-log-collection"
         },
         {
+          "title": "Change EMQX Log Level",
+          "path": "tasks/configure-emqx-log-level"
+        },
+        {
           "title": "Monitor EMQX Cluster by Prometheus",
           "path": "tasks/configure-emqx-prometheus"
-        },
-        {
-          "title": "Brand New EMQX 5.0 Cluster Architecture",
-          "path": "tasks/configure-emqx-core-replicant"
-        },
-        {
-          "title": "Blue Green Upgrade of EMQX Cluster",
-          "path": "tasks/configure-emqx-blueGreenUpdate"
         }
       ]
     },

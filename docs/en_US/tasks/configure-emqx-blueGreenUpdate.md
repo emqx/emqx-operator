@@ -1,16 +1,22 @@
-# Blue Green Upgrade Of EMQX Cluster
+# Configure Blue-Green Upgrade (EMQX Enterprise)
 
 ## Task target
 
 How to use the blueGreenUpdate field to configure the blue-green upgrade of EMQX Enterprise Edition.
 
-## Why need the blue-green upgrade
+## Why Need Blue-Green Upgrade
 
 EMQX provides a long-term connection service. In Kubernetes, the existing upgrade strategy requires restarting the EMQX service except for hot upgrade. This upgrade strategy will cause disconnection of the device. If the device has a reconnection mechanism, a large number of devices will appear Simultaneously requesting connections, which triggers an avalanche, eventually causing a large number of clients to be temporarily unserviced. Therefore, EMQX Operator implements a blue-green upgrade based on the Node Evacuation function of EMQX Enterprise Edition to solve the above problems.
 
-The EMQX node evacuation function is used to evacuate all connections in the node, and manually/automatically move client connections and sessions to other nodes in the cluster or other clusters. For a detailed introduction to EMQX node evacuation, please refer to the document: [Node Evacuation](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#evacuation). **NOTE:** The node evacuation function is only available in EMQX Enterprise Edition 4.4.12.
+The EMQX node evacuation function is used to evacuate all connections in the node, and manually/automatically move client connections and sessions to other nodes in the cluster or other clusters. For a detailed introduction to EMQX node evacuation, please refer to the document: [Node Evacuation](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#evacuation). 
 
-## How to use the blue-green upgrade 
+:::tip 
+
+The node evacuation function is only available in EMQX Enterprise Edition 4.4.12.
+
+:::
+
+## How to Use Blue-Green Upgrade
 
 The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring the blue-green upgrade of EMQX Enterprise Edition through the `.spec.blueGreenUpdate` field. For the specific description of the blueGreenUpdate field, please refer to [blueGreenUpdate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#evacuationstrategy).
 
@@ -71,7 +77,7 @@ The output is similar to:
 }
 ```
 
-## Use MQTT X CLI to connect to the EMQX cluster
+## Use MQTT X CLI to Connect EMQX Cluster
 
 MQTT X CLI is an open-source MQTT 5.0 CLI Client that supports automatic reconnection, and it is also a pure command-line mode MQTT X. Designed to help develop and debug MQTT services and applications faster without using a graphical interface. For documentation about MQTT X CLI, please refer to [MQTTX CLI](https://mqttx.app/docs/cli).
 
@@ -91,7 +97,7 @@ The output is similar to:
 [10:06:13 AM] › ℹ Done, total time: 31.113s
 ```
 
-## Modify the EmqxEnterprise object to trigger EMQX Operator to perform the blue-green upgrade
+## Trigger EMQX Operator to Perform Blue-Green Upgrade
 
 Modifying any content of the `.spec.template` field of the EmqxEnterprise object will trigger EMQX Operator to perform a blue-green upgrade. In this article, we modify the EMQX Container Name to trigger the upgrade, and users can modify it according to actual needs.
 
@@ -139,7 +145,7 @@ The output is similar to:
 
 > `connection_eviction_rate` indicates the rate of node evacuation(unit: count/second). `node` indicates the node currently being evacuated. `session_eviction_rate` indicates the rate of node session evacuation(unit: count/second). `session_recipients` represents the list of recipients for session evacuation. `state` indicates the node evacuation phase. `stats` indicates the statistical indicators of the evacuated node, including the current number of connections (current_connected), the number of current sessions (current_sessions), the number of initial connections (initial_connected), and the number of initial sessions (initial_sessions).
 
-### Use Prometheus to view the client connection status during the blue-green upgrade process
+### Use Prometheus to Monitor Client Connections  During Upgrade
 
 Use a browser to access the Prometheus web service, click Graph, enter `emqx_connections_count` in the search box, and click Execute, as shown in the following figure:
 

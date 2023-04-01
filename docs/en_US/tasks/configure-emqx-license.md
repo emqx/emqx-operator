@@ -1,11 +1,11 @@
-# Configure License For EMQX Enterprise 
+# License Configuration (EMQX Enterprise)
 
-## Task target
- 
+## Task Target
+
 - How to configure EMQX Enterprise Edition License.
 - How to update the EMQX Enterprise Edition License.
 
-## Configure EMQX Enterprise Edition License
+## Configure License
 
 EMQX Enterprise Edition License can be applied for free on EMQ's official website: [Apply for EMQX Enterprise Edition License](https://www.emqx.com/en/apply-licenses/emqx).
 
@@ -14,7 +14,7 @@ Here are the relevant configurations for EMQX Custom Resource. You can choose th
 :::: tabs type:card
 ::: tab v2alpha1
 
-- Configure EMQX cluster
+- Configure EMQX Cluster
 
 The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EMQX. EMQX CRD supports using `.spec.bootstrapConfig` to configure the EMQX cluster license. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster and does not support updating. **Note:** After creating an EMQX cluster, if you need to update the license, please update it through the EMQX Dashboard.
 
@@ -52,7 +52,7 @@ emqx   emqx:5.0   Running   10m
 
 :::
 ::: tab v1beta4
-Create a Secret based on the License file
+Create a License-Based Secret
 
 A Secret is an object that contains a small amount of sensitive information such as a password, token, or key. For more detailed documentation on Secret, please refer to: [Secret](https://kubernetes.io/docs/concepts/configuration/secret/). EMQX Operator supports using Secret to mount License information, so we need to create a Secret based on the License before creating an EMQX cluster.
 
@@ -68,7 +68,7 @@ The output is similar to:
 secret/test created
 ```
 
-- Configure EMQX cluster
+- Configure EMQX Cluster
 
 The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring EMQX Enterprise Edition License through `.spec.license.secretName` field. For the specific description of the secretName field, please refer to [secretName](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#emqxlicense).
 
@@ -110,7 +110,7 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## Check the EMQX Enterprise Edition License information
+## Check the License Information
 
 ```bash
 kubectl exec -it emqx-ee-core-0 -c emqx -- emqx_ctl license info
@@ -133,22 +133,22 @@ expiry          : false
 
 > From the output results, you can see the basic information of the license we applied for, including applicant information, the maximum number of connections supported by the license, and the expiration time of the license.
 
-## Update EMQX Enterprise Edition License
+## Update the License
 
 :::: tabs type:card
 ::: tab v2alpha1
 
-- Update License through EMQX Dashboard
+- Update License via EMQX Dashboard
 
-Open the browser, enter the host `IP` and port `32012` where the EMQX Pod is located, log in to the EMQX cluster Dashboard (Dashboard default user name: admin, default password: public), enter the Dashboard click Overview and pull down the page to the bottom to see The current license information of the cluster, as shown in the following figure:
+Open the browser, enter the host `IP` and port `32012` where the EMQX Pod is located, log in to the EMQX cluster Dashboard (Dashboard default user name: admin, default password: public), enter the Dashboard click **Overview** and pull down the page to the bottom to see the current license information of the cluster, as shown in the following figure:
 
 ![](./assets/configure-emqx-license/emqx-dashboard-license.png)
 
-Then click the Update License button to upload the latest License Key content, as shown in the following figure:
+Then click the **Update License** button to upload the latest License Key content, as shown in the following figure:
 
 ![](./assets/configure-emqx-license/emqx-license-upload.png)
 
-Finally, click the Save button to save the update. The following picture shows the updated License information:
+Finally, click the **Save** button to save the update. The following picture shows the updated License information:
 
 ![](./assets/configure-emqx-license/emqx-license-update.png)
 

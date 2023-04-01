@@ -1,4 +1,4 @@
-# Deploy EMQX cluster on Google Cloud GKE
+# Deploy EMQX Cluster on Google Cloud GKE
 
 Google Kubernetes Engine (GKE) provides a managed environment for deploying, managing, and scaling your containerized applications using Google infrastructure. The GKE environment consists of multiple machines (specifically, Compute Engine instances) grouped together to form a cluster.
 
@@ -6,11 +6,11 @@ Google Kubernetes Engine (GKE) provides a managed environment for deploying, man
 
 Log in Google Cloud GKE console and enter the page for creating GKE Cluster. For details: [Create GKE cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster)
 
-## Access Kubernetes cluster
+## Access Kubernetes Cluster
 
 For details: [kubeconfig](https://cloud.google.com/kubernetes-engine/docs/how-to/cluster-access-for-kubectl)
 
-## Cert manager configurations
+## Configure Cert Manager
 
 To install `cert-manager` read the official docs:
 
@@ -25,7 +25,7 @@ Don't forget to install CRDs when running `helm` using `--set installCRDs=true`.
 
 Deploy it as usual.
 
-## EMQX cluster creation
+## Create EMQX Cluster
 
 [Operator installation reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
 
