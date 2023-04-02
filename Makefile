@@ -146,6 +146,7 @@ define gen-crd-ref-docs
 		--renderer=markdown \
 		--log-level=error; \
 done
+@mkdir -p $(PROJECT_DIR)/docs/zh_CN/reference && cp -r $(PROJECT_DIR)/docs/en_US/reference/* $(PROJECT_DIR)/docs/zh_CN/reference
 endef
 
 .PHONY: local-webhook
