@@ -288,9 +288,9 @@ rules:
   - list
   - update
 - apiGroups:
-  - discovery.k8s.io
+  - ""
   resources:
-  - endpointslices
+  - endpoints
   verbs:
   - create
   - get
