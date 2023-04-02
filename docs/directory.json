@@ -77,7 +77,7 @@
       "path": "https://github.com/emqx/emqx-operator/discussions/categories/q-a"
     },
     {
-      "title": "Reference",
+      "title": "API Reference",
       "children": [
         {
           "title": "v1beta3 Reference",
@@ -96,7 +96,7 @@
   ],
   "cn": [
     {
-      "title": "EMQX Operator是什么",
+      "title": "EMQX Operator 简介",
       "path": "./"
     },
     {
@@ -170,6 +170,23 @@
     {
       "title": "FAQs",
       "path": "https://github.com/emqx/emqx-operator/discussions/categories/q-a"
+    },
+    {
+      "title": "API 参考",
+      "children": [
+        {
+          "title": "v1beta3 参考",
+          "path": "reference/v1beta3-reference"
+        },
+      {
+          "title": "v1beta4 参考",
+          "path": "reference/v1beta4-reference"
+        },
+        {
+          "title": "v2alpha1 参考",
+          "path": "reference/v2alpha1-reference"
+        }
+      ]
     }
   ]
 }
