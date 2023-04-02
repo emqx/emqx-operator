@@ -23,8 +23,24 @@ jobs:
         with:
           version: latest
           args: --timeout=5m
+      - name: Check manifests
+        run: |
+          make manifests
+          if ! git diff --quiet; then
+            echo "Need run make manifests"
+            exit 1
+          fi
+      - name: Check generate
+        run: |
+          make generate
+          if ! git diff --quiet; then
+            echo "Need run make generate"
+            exit 1
+          fi
       - name: Check line-break at EOF
         run: ./scripts/check-nl-at-eof.sh
+      - name: Check space at EOL
+        run: ./scripts/check-space-at-eol.sh
       - name: Run shellcheck
         run: |
           sudo apt-get update
