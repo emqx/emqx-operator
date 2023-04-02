@@ -12,7 +12,7 @@
 :::: tabs type:card
 ::: tab v2alpha1
 
-在 EMQX 5.0 中，EMQX 集群中的节点可以分成两个角色：核心（Core）节点和 复制（Replicant）节点。Core 节点负责集群中所有的写操作，作为 EMQX 数据库 [Mria](https://github.com/emqx/mria) 的真实数据源来存储路由表、会话、配置、报警以及Dashboard 用户信息等数据。而 Replicant 节点被设计成无状态的，不参与数据的写入，添加或者删除 Replicant 节点不会改变集群数据的冗余。因此在 EMQX CRD 里面，我们仅支持 Core 节点的持久化。
+在 EMQX 5.0 中，EMQX 集群中的节点可以分成两个角色：核心（Core）节点和 复制（Replicant）节点。Core 节点负责集群中所有的写操作，作为 EMQX 数据库 [Mria](https://github.com/emqx/mria) 的真实数据源来存储路由表、会话、配置、报警以及 Dashboard 用户信息等数据。而 Replicant 节点被设计成无状态的，不参与数据的写入，添加或者删除 Replicant 节点不会改变集群数据的冗余。因此在 EMQX CRD 里面，我们仅支持 Core 节点的持久化。
 
 EMQX CRD 支持通过 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段配置 EMQX 集群 Core 节点持久化。`.spec.coreTemplate.spec.volumeClaimTemplates` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core) 。
 
@@ -20,7 +20,7 @@ EMQX CRD 支持通过 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段配�
 
 PVC 表达的是用户对持久化的请求，而负责存储的则是持久卷（[PersistentVolume](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/)，PV），PVC 和 PV 通过 PVC Name 一对一绑定。PV 是集群中的一块存储，可以根据需求手动制备，也可以使用存储类（[StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/))来动态制备。当用户不再使用 PV 资源时，可以手动删除 PVC 对象，从而允许该 PV 资源被回收再利用。目前，PV 的回收策略有两种：Retained（保留）和 Deleted（删除），其回收策略细节可以参考文档：[Reclaiming](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#reclaiming)。
 
-EMQX Operator 使用 PV 持久化 EMQX 集群 Core 节点 `/opt/emqx/data` 目录下的数据。EMQX Core 节点 `/opt/emqx/data` 目录存放的数据主要包含：路由表、会话、配置、报警以及Dashboard 用户信息等数据。
+EMQX Operator 使用 PV 持久化 EMQX 集群 Core 节点 `/opt/emqx/data` 目录下的数据。EMQX Core 节点 `/opt/emqx/data` 目录存放的数据主要包含：路由表、会话、配置、报警以及 Dashboard 用户信息等数据。
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1

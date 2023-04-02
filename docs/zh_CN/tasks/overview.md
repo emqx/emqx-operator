@@ -1,4 +1,4 @@
-# 管理EMQX集群
+# 管理 EMQX 集群
 
 本章提供了在 Kubernetes 集群中使用 EMQX 执行常见任务和操作的分步说明。
 

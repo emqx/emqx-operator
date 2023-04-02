@@ -1,24 +1,24 @@
 # 在华为云上部署 EMQX 集群
 
-华为云容器引擎（Cloud Container Engine，简称CCE）提供高度可扩展的、高性能的企业级Kubernetes集群，支持运行Docker容器。借助云容器引擎，您可以在华为云上轻松部署、管理和扩展容器化应用程序。
+华为云容器引擎（Cloud Container Engine，简称 CCE）提供高度可扩展的、高性能的企业级 Kubernetes 集群，支持运行 Docker 容器。借助云容器引擎，您可以在华为云上轻松部署、管理和扩展容器化应用程序。
 
-云容器引擎深度整合高性能的计算（ECS/BMS）、网络（VPC/EIP/ELB）、存储（EVS/OBS/SFS）等服务，并支持GPU、NPU、ARM等异构计算架构，支持多可用区（Available Zone，简称AZ）、多区域（Region）容灾等技术构建高可用Kubernetes集群。
+云容器引擎深度整合高性能的计算（ECS/BMS）、网络（VPC/EIP/ELB）、存储（EVS/OBS/SFS）等服务，并支持 GPU、NPU、ARM 等异构计算架构，支持多可用区（Available Zone，简称 AZ）、多区域（Region）容灾等技术构建高可用 Kubernetes 集群。
 
-华为云是全球首批Kubernetes认证服务提供商（Kubernetes Certified Service Provider，KCSP），是国内最早投入Kubernetes社区的厂商，是容器开源社区主要贡献者和容器生态领导者。华为云也是 CNCF 云原生计算基金会的创始成员及白金会员，云容器引擎是全球首批通过 CNCF 基金会 Kubernetes 一致性认证的容器服务。
+华为云是全球首批 Kubernetes 认证服务提供商（Kubernetes Certified Service Provider，KCSP），是国内最早投入 Kubernetes 社区的厂商，是容器开源社区主要贡献者和容器生态领导者。华为云也是 CNCF 云原生计算基金会的创始成员及白金会员，云容器引擎是全球首批通过 CNCF 基金会 Kubernetes 一致性认证的容器服务。
 
-关于更多云容器引擎 CCE产品介绍，请查看 [什么是云容器引擎](https://support.huaweicloud.com/productdesc-cce/cce_productdesc_0001.html?utm_source=cce_Growth_map&utm_medium=display&utm_campaign=help_center&utm_content=Growth_map)
+关于更多云容器引擎 CCE 产品介绍，请查看 [什么是云容器引擎](https://support.huaweicloud.com/productdesc-cce/cce_productdesc_0001.html?utm_source=cce_Growth_map&utm_medium=display&utm_campaign=help_center&utm_content=Growth_map)
 
 ## 前提条件
 
 本文假设您已开通了 CCE 服务，并成功创建了一个可以访问的 Kubernetes 集群，如果您还没有准备好，请查看[入门指引](https://support.huaweicloud.com/qs-cce/cce_qs_0001.html)
 
-> Kubernetes 集群节点必须可以访问外网（可以通过加NAT网关解决）
+> Kubernetes 集群节点必须可以访问外网（可以通过加 NAT 网关解决）
 
 > Kubernetes 集群节点的操作系统建议是 Ubuntu，否则有可能会缺少必要的库（socat）
 
 ## 为 EMQX 集群配置持久化存储
 
-EMQX Custom Resource 使用 StoreClass 来保存 EMQX 运行时的状态。在开始之前，您需要准备 StoreClass。目前CCE默认提供csi-disk、csi-nas、csi-obs等StorageClass，执行如下命令即可查询CCE提供的默认StorageClass。您可以使用CCE提供的CSI插件自定义创建StorageClass，但从功能角度与CCE提供的默认StorageClass并无区别，这里不做过多描述。更多详情请参考[存储类StorageClass](https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html)
+EMQX Custom Resource 使用 StoreClass 来保存 EMQX 运行时的状态。在开始之前，您需要准备 StoreClass。目前 CCE 默认提供 csi-disk、csi-nas、csi-obs 等 StorageClass，执行如下命令即可查询 CCE 提供的默认 StorageClass。您可以使用 CCE 提供的 CSI 插件自定义创建 StorageClass，但从功能角度与 CCE 提供的默认 StorageClass 并无区别，这里不做过多描述。更多详情请参考[存储类 StorageClass](https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html)
 
 ```
 # kubectl get sc
@@ -84,7 +84,7 @@ spec:
 
 ## 通过 LoadBalancer 访问 EMQX 集群
 
-负载均衡( LoadBalancer )可以通过弹性负载均衡从公网访问到工作负载，与弹性IP方式相比提供了高可靠的保障，一般用于系统中需要暴露到公网的服务。负载均衡访问方式由公网弹性负载均衡服务地址以及设置的访问端口组成，例如“10.117.117.117:80”。关于更多负载均衡的内容，请查看[负载均衡(LoadBalancer)](https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html)
+负载均衡( LoadBalancer )可以通过弹性负载均衡从公网访问到工作负载，与弹性 IP 方式相比提供了高可靠的保障，一般用于系统中需要暴露到公网的服务。负载均衡访问方式由公网弹性负载均衡服务地址以及设置的访问端口组成，例如“10.117.117.117:80”。关于更多负载均衡的内容，请查看[负载均衡(LoadBalancer)](https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html)
 
 在公有云中，一般通过配置资源的 Annotation 来配置负载均衡器的相关属性，
 
