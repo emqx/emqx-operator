@@ -1,4 +1,4 @@
-name: Upgrade emqx operator
+name: Upgrade Test Suite
 
 concurrency:
   group: upgrade-${{ github.event_name }}-${{ github.ref }}

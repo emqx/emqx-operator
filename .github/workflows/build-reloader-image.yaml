@@ -1,4 +1,4 @@
-name: Build reloader image
+name: Build Reloader Image
 
 on:
   push:

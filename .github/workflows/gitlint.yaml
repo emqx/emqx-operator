@@ -1,4 +1,4 @@
-name: Run gitlint
+name: Run Gitlint
 
 on: [pull_request]
 

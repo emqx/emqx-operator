@@ -1,4 +1,4 @@
-name: Check helm version
+name: Check Helm Version
 
 on:
   push:

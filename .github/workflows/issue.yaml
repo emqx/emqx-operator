@@ -1,4 +1,4 @@
-name: Manage stale issues
+name: Manage Stale Issues
 
 on:
   schedule:
