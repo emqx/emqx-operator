@@ -14,6 +14,7 @@
   - [开启 Core + Replicant 集群 (EMQX 5.x)](./configure-emqx-core-replicant.md)
   - [在 EMQX 集群中开启持久化](./configure-emqx-persistence.md)
   - [通过 Kubernetes Service 访问 EMQX 集群](./configure-emqx-service.md)
+  - [重平衡 MQTT 连接（EMQX 企业版）](./configure-emqx-rebalance.md)
 
 **升级和维护**
 

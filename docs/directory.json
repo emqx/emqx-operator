@@ -69,6 +69,10 @@
         {
           "title": "Monitor EMQX Cluster",
           "path": "tasks/configure-emqx-prometheus"
+        },
+        {
+          "title": "Rebalancing MQTT connections (EMQX Enterprise)",
+          "path": "tasks/configure-emqx-rebalance"
         }
       ]
     },
@@ -177,6 +181,10 @@
         {
           "title": "监控 EMQX 集群",
           "path": "tasks/configure-emqx-prometheus"
+        },
+        {
+          "title": "重平衡 MQTT 连接（EMQX 企业版）",
+          "path": "tasks/configure-emqx-rebalance"
         }
       ]
     },
