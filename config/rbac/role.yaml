@@ -19,6 +19,17 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - endpoints
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - events
   verbs:
   - create
@@ -252,14 +263,3 @@ rules:
   - get
   - list
   - update
-- apiGroups:
-  - discovery.k8s.io
-  resources:
-  - endpointslices
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch

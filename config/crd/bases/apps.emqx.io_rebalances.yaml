@@ -94,10 +94,10 @@ spec:
               rebalanceStates:
                 items:
                   properties:
-                    connectionEvictionRate:
+                    connection_eviction_rate:
                       format: int32
                       type: integer
-                    coordinatorNodebalances:
+                    coordinator_node:
                       type: string
                     donors:
                       items:
@@ -109,7 +109,7 @@ spec:
                       items:
                         type: string
                       type: array
-                    sessionEvictionRate:
+                    session_eviction_rate:
                       format: int32
                       type: integer
                     state:
