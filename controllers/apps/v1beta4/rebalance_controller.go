@@ -179,30 +179,7 @@ func startRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *ap
 		nodes = append(nodes, emqxNode.Node)
 	}
 
-	body := map[string]interface{}{
-		"conn_evict_rate":    rebalance.Spec.RebalanceStrategy.ConnEvictRate,
-		"sess_evict_rate":    rebalance.Spec.RebalanceStrategy.SessEvictRate,
-		"wait_takeover":      rebalance.Spec.RebalanceStrategy.WaitTakeover,
-		"wait_health_check":  rebalance.Spec.RebalanceStrategy.WaitHealthCheck,
-		"abs_conn_threshold": rebalance.Spec.RebalanceStrategy.AbsConnThreshold,
-		"abs_sess_threshold": rebalance.Spec.RebalanceStrategy.AbsSessThreshold,
-		"nodes":              nodes,
-	}
-
-	if len(rebalance.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
-		relConnThreshold, _ := strconv.ParseFloat(rebalance.Spec.RebalanceStrategy.RelConnThreshold, 64)
-		body["rel_conn_threshold"] = relConnThreshold
-	}
-
-	if len(rebalance.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
-		relSessThreshold, _ := strconv.ParseFloat(rebalance.Spec.RebalanceStrategy.RelSessThreshold, 64)
-		body["rel_sess_threshold"] = relSessThreshold
-	}
-
-	bytes, err := json.Marshal(body)
-	if err != nil {
-		return emperror.Wrap(err, "marshal body failed")
-	}
+	bytes := getRequestBytes(rebalance, nodes)
 	resp, respBody, err := p.RequestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
 	if err != nil {
 		return err
@@ -240,7 +217,8 @@ func stopRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
 	if rebalance.Status.Phase != "Processing" {
 		return nil
 	}
-	emqxNodeName := rebalance.Status.RebalanceStates[0].Node
+	// stop rebalance should use coordinatorNode as path parameter
+	emqxNodeName := rebalance.Status.RebalanceStates[0].CoordinatorNode
 	resp, respBody, err := p.RequestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
 	if err != nil {
 		return err
@@ -254,6 +232,31 @@ func stopRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
 		return emperror.New(message.String())
 	}
 	return nil
+}
+
+func getRequestBytes(rebalance *appsv1beta4.Rebalance, nodes []string) []byte {
+	body := map[string]interface{}{
+		"conn_evict_rate":    rebalance.Spec.RebalanceStrategy.ConnEvictRate,
+		"sess_evict_rate":    rebalance.Spec.RebalanceStrategy.SessEvictRate,
+		"wait_takeover":      rebalance.Spec.RebalanceStrategy.WaitTakeover,
+		"wait_health_check":  rebalance.Spec.RebalanceStrategy.WaitHealthCheck,
+		"abs_conn_threshold": rebalance.Spec.RebalanceStrategy.AbsConnThreshold,
+		"abs_sess_threshold": rebalance.Spec.RebalanceStrategy.AbsSessThreshold,
+		"nodes":              nodes,
+	}
+
+	if len(rebalance.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
+		relConnThreshold, _ := strconv.ParseFloat(rebalance.Spec.RebalanceStrategy.RelConnThreshold, 64)
+		body["rel_conn_threshold"] = relConnThreshold
+	}
+
+	if len(rebalance.Spec.RebalanceStrategy.RelSessThreshold) > 0 {
+		relSessThreshold, _ := strconv.ParseFloat(rebalance.Spec.RebalanceStrategy.RelSessThreshold, 64)
+		body["rel_sess_threshold"] = relSessThreshold
+	}
+
+	bytes, _ := json.Marshal(body)
+	return bytes
 }
 
 func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Pod {
