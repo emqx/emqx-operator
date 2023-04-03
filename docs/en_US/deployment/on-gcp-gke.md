@@ -166,4 +166,3 @@ Since Google LoadBalancer doesn't support TCP certificates, please refer to this
 ## Conclusion
 
 This tutorial has provided you with the necessary knowledge to successfully deploy an EMQ X instance on Google Kubernetes Engine (GKE).
-
