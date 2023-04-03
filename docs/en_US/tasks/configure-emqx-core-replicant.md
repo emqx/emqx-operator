@@ -53,6 +53,8 @@ emqx   emqx:5.0   Running   10m
 
 ## Verify the EMQX Cluster <!--not sure what this verify is-->
 
+Information about all the nodes in the cluster can be obtained by checking the `.status.emqxNodes` of the EMQX custom resources. The `role` field of the `node` indicates its role in the cluster, in the above case a cluster consisting of two Core nodes and three Replicant nodes is deployed.
+
 ```bash
 $ kubectl get emqx emqx -o json | jq .status.emqxNodes
 [

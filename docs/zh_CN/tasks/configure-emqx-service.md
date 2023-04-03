@@ -19,7 +19,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.14
+  image: emqx:5.0
   listenersServiceTemplate:
     spec:
       type: LoabBalancer
