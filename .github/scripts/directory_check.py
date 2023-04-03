@@ -23,6 +23,11 @@ def check_md_content(md_file):
     else:
         md_content = re.sub(r'{% emqxee %}([\s\S]*?){% endemqxee %}', '', md_content)
 
+    for i in re.findall(r'([\u4e00-\u9fa5]+)([a-zA-Z]+)|([a-zA-Z]+)([\u4e00-\u9fa5]+)', md_content):
+        print(f'In {md_file} ', end='')
+        print(f'No space between Chinese and English: {i[0]}{i[1]}{i[2]}{i[3]}')
+        success = False
+
     image_list = re.findall('(.*?)!\[(.*?)\]\((.*?)\)', md_content)
     url_list = re.findall('(.*?)\[(.*?)\]\((.*?)\)', md_content)
     for url in url_list:
@@ -34,7 +39,7 @@ def check_md_content(md_file):
         ref_md_path = os.path.join(f'{"/".join(md_file.split("/")[:-1])}/', f'{url_path}.md')
 
         if not os.path.exists(ref_md_path):
-            print(f'In {md_file}：', end='')
+            print(f'In {md_file}: ', end='')
             print(f'{url[2]} not found or not in {directory_file}')
             success = False
 
@@ -46,7 +51,7 @@ def check_md_content(md_file):
         image_path = os.path.join(f'{"/".join(md_file.split("/")[:-1])}/', image[2])
 
         if not os.path.exists(image_path):
-            print(f'In {md_file}：', end='')
+            print(f'In {md_file}: ', end='')
             print(image[2], 'does not exist')
             success = False
 
