@@ -1,4 +1,4 @@
-# Change EMQX Configurations Via Operator
+# Change EMQX Configurations
 
 ## Task target
 
@@ -24,7 +24,7 @@ kind: EMQX
 metadata:
    name: emqx
 spec:
-   image: emqx/emqx:5.0.14
+   image: emqx:5.0
    imagePullPolicy: IfNotPresent
    bootstrapConfig: |
     listeners.tcp.test {

@@ -60,7 +60,7 @@ kind: EMQX
 metadata:
    name: emqx
 spec:
-   image: emqx/emqx:5.0.14
+   image: emqx:5.0
    bootstrapConfig: |
      listeners.ssl.default {
        bind = "0.0.0.0:8883"

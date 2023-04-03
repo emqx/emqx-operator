@@ -1,4 +1,4 @@
-# 通过 EMQX Operator 修改 EMQX 配置
+# EMQX 配置
 
 ## 任务目标
 

@@ -1,4 +1,4 @@
-# 开启 Core + Replicant 集群 (EMQX 5.x)
+# 配置 Core + Replicant 集群 (EMQX 5.x)
 
 ## 任务目标
 

@@ -1,4 +1,4 @@
-# 通过 Kubernetes Service 访问 EMQX 集群
+# 通过 LoabBalancer 访问 EMQX 集群
 
 ## 任务目标
 
