@@ -78,6 +78,7 @@
     },
     {
       "title": "API Reference",
+      "path": "reference/overview",
       "children": [
         {
           "title": "v1beta3 Reference",
@@ -173,6 +174,7 @@
     },
     {
       "title": "API 参考",
+      "path": "reference/overview",
       "children": [
         {
           "title": "v1beta3 参考",
