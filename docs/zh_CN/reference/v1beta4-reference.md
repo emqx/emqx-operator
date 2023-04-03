@@ -519,12 +519,12 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `state` _string_ | State represents the state of emqx cluster rebalancing. |
-| `sessionEvictionRate` _integer_ | SessionEvictionRate represents the node session evacuation rate per second. |
+| `session_eviction_rate` _integer_ | SessionEvictionRate represents the node session evacuation rate per second. |
 | `recipients` _string array_ | Recipients represent the target node for rebalancing. |
 | `node` _string_ | Node represents the rebalancing scheduling node. |
 | `donors` _string array_ | Donors represent the source nodes for rebalancing. |
-| `coordinatorNodebalances` _string_ | CoordinatorNode represents the node currently undergoing rebalancing. |
-| `connectionEvictionRate` _integer_ | ConnectionEvictionRate represents the node session evacuation rate per second. |
+| `coordinator_node` _string_ | CoordinatorNode represents the node currently undergoing rebalancing. |
+| `connection_eviction_rate` _integer_ | ConnectionEvictionRate represents the node session evacuation rate per second. |
 
 
 #### RebalanceStatus

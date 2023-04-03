@@ -88,7 +88,7 @@ type RebalanceState struct {
 	// State represents the state of emqx cluster rebalancing.
 	State string `json:"state,omitempty"`
 	// SessionEvictionRate represents the node session evacuation rate per second.
-	SessionEvictionRate int32 `json:"sessionEvictionRate,omitempty"`
+	SessionEvictionRate int32 `json:"session_eviction_rate,omitempty"`
 	// Recipients represent the target node for rebalancing.
 	Recipients []string `json:"recipients,omitempty"`
 	// Node represents the rebalancing scheduling node.
@@ -96,9 +96,9 @@ type RebalanceState struct {
 	// Donors represent the source nodes for rebalancing.
 	Donors []string `json:"donors,omitempty"`
 	// CoordinatorNode represents the node currently undergoing rebalancing.
-	CoordinatorNode string `json:"coordinatorNodebalances,omitempty"`
+	CoordinatorNode string `json:"coordinator_node,omitempty"`
 	// ConnectionEvictionRate represents the node session evacuation rate per second.
-	ConnectionEvictionRate int32 `json:"connectionEvictionRate,omitempty"`
+	ConnectionEvictionRate int32 `json:"connection_eviction_rate,omitempty"`
 }
 
 // +kubebuilder:object:root=true
