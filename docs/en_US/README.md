@@ -4,9 +4,9 @@ The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deploymen
 
 The EMQX Operator includes, but is not limited to, the following features:
 
-* **Kubernetes Custom Resource**: Deploy and manage EMQX Cluster with pre-defined custom resources.
+* **Simplified Deployment EMQX**: Declare EMQX clusters with EMQX custom resources and deploy them quickly. For more details, please check [Quick Start](./getting-started/getting-started.md).
 
-* **Simplified Deployment Configuration**: Configure the fundamentals of EMQX Cluster, including persistence, configuration, license, etc., in a Kubernetes-native way.
+* **Manager EMQX Cluster**: Automate operations and maintenance for EMQX, including cluster upgrades, runtime data persistence, updating Kubernetes resources based on the status of EMQX, etc. For more details, please check [Manager EMQX](./tasks/overview.md).
 
 <img src="./introduction/assets/architecture.png" style="zoom:20%;" />
 
@@ -14,13 +14,13 @@ The EMQX Operator includes, but is not limited to, the following features:
 
 |      EMQX Open Source Version      |      EMQX Enterprise Version      |     EMQX Operator Version                            |     APIVersion    |
 |:----------------------:|:----------------------------------------------------:|:-----------------:|:-----------------:|
-| 4.3.x (included) ～ 4.4 | 4.3.x (included) ～ 4.4 | 1.2.1, 1.2.2, 1.2.3                                 |  v1beta3          |
-| 4.4.6 (included) ～ 4.4.8 | 4.4.6 (included) ～ 4.4.8 | 1.2.5                                                 | v1beta3          |
-| 4.4.8 (included) ～ 4.4.14 | 4.4.8 (included) ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3   |  v1beta3          |
-| 4.4.14 or higher 4.4.x | 4.4.14 or higher 4.4.x | 2.1.0                                                 |  v1beta4          |
-| 5.0.6 (included) ～ 5.0.8 | Coming soon | 2.0.0, 2.0.1, 2.0.3                                |  v2alpha1         |
-| 5.0.8 (included) ～  5.0.14 | Coming soon | 2.0.2                                                 |  v2alpha1         |
-| 5.0.14 or higher | Coming soon | 2.1.0                                                 |  v2alpha1         |
+| 4.3.x (included) ～ 4.4 | 4.3.x (included) ～ 4.4 | 1.2.1, 1.2.2, 1.2.3                                 |  [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md)          |
+| 4.4.6 (included) ～ 4.4.8 | 4.4.6 (included) ～ 4.4.8 | 1.2.5                                                 | [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md)          |
+| 4.4.8 (included) ～ 4.4.14 | 4.4.8 (included) ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3   |  [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md)          |
+| 4.4.14 or higher 4.4.x | 4.4.14 or higher 4.4.x | 2.1.0, 2.1.1                                                 |  [apps.emqx.io/v1beta4](./reference/v1beta4-reference.md)          |
+| 5.0.6 (included) ～ 5.0.8 | Coming soon | 2.0.0, 2.0.1, 2.0.3                                |  [apps.emqx.io/v2alpha1](./reference/v2alpha1-reference.md)         |
+| 5.0.8 (included) ～  5.0.14 | Coming soon | 2.0.2                                            |  [apps.emqx.io/v2alpha1](./reference/v2alpha1-reference.md)         |
+| 5.0.14 or higher | Coming soon | 2.1.0, 2.1.1                                                | [apps.emqx.io/v2alpha1](./reference/v2alpha1-reference.md)         |
 
 ## How to selector Kubernetes version
 
