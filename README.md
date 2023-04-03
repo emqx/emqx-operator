@@ -15,7 +15,7 @@ The EMQX Operator includes, but is not limited to, the following features:
 
 * **Simplified Deployment EMQX**: Declare EMQX clusters with EMQX custom resources and deploy them quickly. For more details, please check [Quick Start](./docs/en_US/getting-started/getting-started.md).
 
-* **Manager EMQX Cluster**: Automate operations and maintenance for EMQX, including cluster upgrades, runtime data persistence, updating Kubernetes resources based on the status of EMQX, etc. For more details, please check [Manager EMQX](./docs/en_US/tasks/overview.md).
+* **Manage EMQX Cluster**: Automate operations and maintenance for EMQX, including cluster upgrades, runtime data persistence, updating Kubernetes resources based on the status of EMQX, etc. For more details, please check [Manage EMQX](./docs/en_US/tasks/overview.md).
 
 ![](.docs/../docs/en_US/introduction/assets/architecture.png)
 
