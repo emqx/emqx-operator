@@ -105,8 +105,8 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	defer close(portForward.Options.StopChannel)
-	if err := portForward.Options.ForwardPorts(); err != nil {
+	defer close(portForward.GetOptions().StopChannel)
+	if err := portForward.GetOptions().ForwardPorts(); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -173,7 +173,7 @@ func (r *RebalanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func startRebalance(p *portForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error {
+func startRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error {
 	nodes := []string{}
 	for _, emqxNode := range emqx.Status.EmqxNodes {
 		nodes = append(nodes, emqxNode.Node)
@@ -203,7 +203,7 @@ func startRebalance(p *portForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *a
 	if err != nil {
 		return emperror.Wrap(err, "marshal body failed")
 	}
-	resp, respBody, err := p.requestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
+	resp, respBody, err := p.RequestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
 	if err != nil {
 		return err
 	}
@@ -220,8 +220,8 @@ func startRebalance(p *portForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *a
 	return nil
 }
 
-func getRebalanceStatus(p *portForwardAPI) ([]appsv1beta4.RebalanceState, error) {
-	resp, body, err := p.requestAPI("GET", "api/v4/load_rebalance/global_status", nil)
+func getRebalanceStatus(p PortForwardAPI) ([]appsv1beta4.RebalanceState, error) {
+	resp, body, err := p.RequestAPI("GET", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -236,12 +236,12 @@ func getRebalanceStatus(p *portForwardAPI) ([]appsv1beta4.RebalanceState, error)
 	return rebalanceStates, nil
 }
 
-func stopRebalance(p *portForwardAPI, rebalance *appsv1beta4.Rebalance) error {
+func stopRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
 	if rebalance.Status.Phase != "Processing" {
 		return nil
 	}
 	emqxNodeName := rebalance.Status.RebalanceStates[0].Node
-	resp, respBody, err := p.requestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
+	resp, respBody, err := p.RequestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterp
 	return nil
 }
 
-func (r *RebalanceReconciler) getPortForwardAPI(instance appsv1beta4.Emqx, pod *corev1.Pod) (*portForwardAPI, error) {
+func (r *RebalanceReconciler) getPortForwardAPI(instance appsv1beta4.Emqx, pod *corev1.Pod) (PortForwardAPI, error) {
 	o, err := innerPortFW.NewPortForwardOptions(r.Clientset, r.Config, pod, "8081")
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to create port forward options")

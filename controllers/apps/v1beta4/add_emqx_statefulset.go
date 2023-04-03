@@ -21,7 +21,7 @@ import (
 
 type addEmqxStatefulSet struct {
 	*EmqxReconciler
-	*portForwardAPI
+	PortForwardAPI
 }
 
 func (a addEmqxStatefulSet) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
@@ -229,7 +229,7 @@ func (a addEmqxStatefulSet) startEvacuateNodeByAPI(instance appsv1beta4.Emqx, mi
 		return emperror.Wrap(err, "marshal body failed")
 	}
 
-	_, _, err = a.portForwardAPI.requestAPI("POST", "api/v4/load_rebalance/"+nodeName+"/evacuation/start", b)
+	_, _, err = a.PortForwardAPI.RequestAPI("POST", "api/v4/load_rebalance/"+nodeName+"/evacuation/start", b)
 	return err
 }
 

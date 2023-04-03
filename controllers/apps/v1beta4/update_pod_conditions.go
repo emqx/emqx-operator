@@ -15,7 +15,7 @@ import (
 
 type updatePodConditions struct {
 	*EmqxReconciler
-	*portForwardAPI
+	PortForwardAPI
 }
 
 func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
@@ -93,10 +93,10 @@ func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnte
 	resp, _, err := (&portForwardAPI{
 		// Doesn't need get username and password from secret
 		// because they are same as the emqx cluster
-		Username: u.portForwardAPI.Username,
-		Password: u.portForwardAPI.Password,
+		Username: u.PortForwardAPI.GetUsername(),
+		Password: u.PortForwardAPI.GetPassword(),
 		Options:  o,
-	}).requestAPI("GET", "api/v4/load_rebalance/availability_check", nil)
+	}).RequestAPI("GET", "api/v4/load_rebalance/availability_check", nil)
 	if err != nil {
 		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to check availability for pod/%s", pod.Name)
 	}
