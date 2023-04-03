@@ -29,7 +29,7 @@ Remember to install CRDs when running `helm` with the `--set installCRDs=true` f
 1. Connect to your GKE cluster using the command-line tool, such as Cloud Shell or a local terminal.
 
 2. Create a YAML file that defines your StorageClass. The following is an example:
-```yaml 
+```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -59,7 +59,7 @@ To install `emqx-operator`, refer to the official [docs](https://github.com/emqx
 
 > **_NOTE_** The cert-manager installation was done in the previous step
 
-### Deploying EMQX Cluster  
+### Deploying EMQX Cluster
 
 Below are the relevant configurations for EMQX Custom Resource. Choose the corresponding APIVersion based on the EMQX version you want to deploy. For specific compatibility relationships, See [EMQX Operator Compatibility](../README.md):
 
