@@ -17,6 +17,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type PortForwardAPI interface {
+	GetUsername() string
+	GetPassword() string
+	GetOptions() *innerPortFW.PortForwardOptions
+	RequestAPI(method, path string, body []byte) (resp *http.Response, respBody []byte, err error)
+}
+
 // portForwardAPI provides a wrapper around the port-forward API.
 type portForwardAPI struct {
 	Username string
@@ -103,7 +110,19 @@ func getBootstrapUser(ctx context.Context, client client.Client, instance appsv1
 	return
 }
 
-func (p *portForwardAPI) requestAPI(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+func (p *portForwardAPI) GetUsername() string {
+	return p.Username
+}
+
+func (p *portForwardAPI) GetPassword() string {
+	return p.Password
+}
+
+func (p *portForwardAPI) GetOptions() *innerPortFW.PortForwardOptions {
+	return p.Options
+}
+
+func (p *portForwardAPI) RequestAPI(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
 	if p == nil {
 		return nil, nil, emperror.Errorf("failed to %s %s, portForward is not ready", method, path)
 	}

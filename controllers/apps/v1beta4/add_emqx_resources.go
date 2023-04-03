@@ -2,6 +2,7 @@ package v1beta4
 
 import (
 	"context"
+
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	corev1 "k8s.io/api/core/v1"
@@ -11,7 +12,7 @@ import (
 
 type addEmqxResources struct {
 	*EmqxReconciler
-	*portForwardAPI
+	PortForwardAPI
 }
 
 func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {

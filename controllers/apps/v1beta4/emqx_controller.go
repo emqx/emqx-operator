@@ -95,14 +95,14 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 
 	var subResult subResult
 	var subReconcilers = []emqxSubReconciler{
-		updateEmqxStatus{EmqxReconciler: r, portForwardAPI: p},
+		updateEmqxStatus{EmqxReconciler: r, PortForwardAPI: p},
 		addEmqxBootstrapUser{EmqxReconciler: r},
 		addEmqxPlugins{EmqxReconciler: r},
-		addEmqxResources{EmqxReconciler: r, portForwardAPI: p},
-		addEmqxStatefulSet{EmqxReconciler: r, portForwardAPI: p},
-		addListener{EmqxReconciler: r, portForwardAPI: p},
-		updateEmqxStatus{EmqxReconciler: r, portForwardAPI: p},
-		updatePodConditions{EmqxReconciler: r, portForwardAPI: p},
+		addEmqxResources{EmqxReconciler: r, PortForwardAPI: p},
+		addEmqxStatefulSet{EmqxReconciler: r, PortForwardAPI: p},
+		addListener{EmqxReconciler: r, PortForwardAPI: p},
+		updateEmqxStatus{EmqxReconciler: r, PortForwardAPI: p},
+		updatePodConditions{EmqxReconciler: r, PortForwardAPI: p},
 	}
 	for i := range subReconcilers {
 		if reflect.ValueOf(subResult).FieldByName("args").IsValid() {

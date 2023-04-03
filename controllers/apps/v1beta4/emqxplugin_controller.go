@@ -195,7 +195,7 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EmqxPluginReconciler) checkPluginStatusByAPI(p *portForwardAPI, pluginName string) error {
+func (r *EmqxPluginReconciler) checkPluginStatusByAPI(p PortForwardAPI, pluginName string) error {
 	list, err := r.getPluginsByAPI(p)
 	if err != nil {
 		return err
@@ -215,7 +215,7 @@ func (r *EmqxPluginReconciler) checkPluginStatusByAPI(p *portForwardAPI, pluginN
 	return nil
 }
 
-func (r *EmqxPluginReconciler) unloadPluginByAPI(p *portForwardAPI, pluginName string) error {
+func (r *EmqxPluginReconciler) unloadPluginByAPI(p PortForwardAPI, pluginName string) error {
 	list, err := r.getPluginsByAPI(p)
 	if err != nil {
 		return err
@@ -233,8 +233,8 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(p *portForwardAPI, pluginName s
 	return nil
 }
 
-func (r *EmqxPluginReconciler) doLoadPluginByAPI(p *portForwardAPI, nodeName, pluginName, reloadOrUnload string) error {
-	resp, _, err := p.requestAPI("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
+func (r *EmqxPluginReconciler) doLoadPluginByAPI(p PortForwardAPI, nodeName, pluginName, reloadOrUnload string) error {
+	resp, _, err := p.RequestAPI("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
 	if err != nil {
 		return err
 	}
@@ -244,9 +244,9 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(p *portForwardAPI, nodeName, pl
 	return nil
 }
 
-func (r *EmqxPluginReconciler) getPluginsByAPI(p *portForwardAPI) ([]pluginListByAPIReturn, error) {
+func (r *EmqxPluginReconciler) getPluginsByAPI(p PortForwardAPI) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
-	resp, body, err := p.requestAPI("GET", "api/v4/plugins", nil)
+	resp, body, err := p.RequestAPI("GET", "api/v4/plugins", nil)
 	if err != nil {
 		return nil, err
 	}
