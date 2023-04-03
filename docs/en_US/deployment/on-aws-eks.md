@@ -86,7 +86,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-attributes: deletion_protection.enabled=true
 #   service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
 spec:
-  image: emqx/emqx:5.0.14
+  image: emqx:5.0
   imagePullPolicy: IfNotPresent
   listenersServiceTemplate:
     spec:

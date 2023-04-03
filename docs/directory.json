@@ -39,7 +39,7 @@
           "path": "tasks/configure-emqx-tls"
         },
         {
-          "title": "Change EMQX Configurations Via Operator",
+          "title": "Change EMQX Configurations",
           "path": "tasks/configure-emqx-bootstrapConfig"
         },
         {
@@ -51,7 +51,7 @@
           "path": "tasks/configure-emqx-persistence"
         },
        {
-          "title": "Access EMQX Cluster by Kubernetes Service",
+          "title": "Access EMQX Cluster by LoadBalancer",
           "path": "tasks/configure-emqx-service"
         },
         {
@@ -131,23 +131,23 @@
           "path": "tasks/configure-emqx-license"
         },
         {
-          "title": "在 EMQX 中开启 TLS",
+          "title": "开启 TLS",
           "path": "tasks/configure-emqx-tls"
         },
         {
-          "title": "通过 EMQX Operator 修改 EMQX 配置",
+          "title": "EMQX 配置",
           "path": "tasks/configure-emqx-bootstrapConfig"
         },
         {
-          "title": "开启 Core + Replicant 集群 (EMQX 5.x)",
+          "title": "配置 Core + Replicant 集群 (EMQX 5.x)",
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
-          "title": "在 EMQX 集群中配置持久化",
+          "title": "配置 EMQX 集群持久化",
           "path": "tasks/configure-emqx-persistence"
         },
         {
-          "title": "通过 Kubernetes Service 访问 EMQX 集群",
+          "title": "通过 LoadBalancer 访问 EMQX 集群",
           "path": "tasks/configure-emqx-service"
         },
         {
@@ -155,7 +155,7 @@
           "path": "tasks/configure-emqx-blueGreenUpdate"
         },
         {
-          "title": "在 Kubernetes 中采集 EMQX 的日志",
+          "title": "采集 EMQX 的日志",
           "path": "tasks/configure-emqx-log-collection"
         },
         {

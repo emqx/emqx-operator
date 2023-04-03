@@ -1,8 +1,8 @@
-# Access EMQX Cluster by Kubernetes Service
+# Access EMQX Cluster by LoadBalancer
 
 ## Task Target
 
-How to access EMQX cluster by Kubernetes Service. <!--I do not quite understand what is page is about-->
+How to access EMQX cluster by LoadBalancer. <!--I do not quite understand what is page is about-->
 
 ## Configure EMQX Cluster
 
@@ -19,10 +19,10 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:5.0.14
+  image: emqx:5.0
   listenersServiceTemplate:
     spec:
-      type: LoabBalancer
+      type: LoadBalancer
 ```
 
 > By default, EMQX will open an MQTT TCP listener `tcp-default` corresponding to port 1883 and Dashboard listener `dashboard-listeners-http-bind` corresponding to port 18083. Users can add new listeners through `.spec.bootstrapConfig` field or EMQX Dashboard. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (name or port fields are repeated), EMQX Operator will use the user's configuration prevail.
@@ -47,7 +47,7 @@ emqx   emqx:5.0   Running   10m
 :::
 ::: tab v1beta4
 
-The corresponding CRD of EMQX Enterprise in EMQX Operator is EmqxEnterprise, and EmqxEnterprise supports configuring EMQX cluster Service through `.spec.serviceTemplate` field. For the specific description of the serviceTemplate field, please refer to: [serviceTemplate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#servicetemplate).
+The corresponding CRD of EMQX Enterprise in EMQX Operator is EmqxEnterprise, and EmqxEnterprise supports configuring EMQX cluster Service through `.spec.serviceTemplate` field. For the specific description of the serviceTemplate field, please refer to [serviceTemplate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#servicetemplate).
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
@@ -110,7 +110,7 @@ $ mqttx conn -h broker.emqx.io
 
 ## Add New listeners via EMQX Dashboard
 
-Open the browser, enter the host `IP` and port `32012` where the EMQX Pod is located, log in to the EMQX cluster Dashboard (Dashboard default user name: admin, default password: public), enter the Dashboard and click Configuration → Listeners to enter the listener page, We first click the Add Listener button to add a listener named test and port 1884, as shown in the figure below:
+Open the browser, enter the host `IP` and port `32012` where the EMQX Pod is located, log in to the EMQX cluster Dashboard (Dashboard default user name: admin, default password: public), enter the Dashboard and click Configuration → Listeners to enter the listener page, We first click the Add Listener button to add a listener named to test and port 1884, as shown in the figure below:
 
 <img src="./assets/configure-service/emqx-add-listener.png" style="zoom: 33%;" />
 

@@ -1,4 +1,4 @@
-# 在 Kubernetes 中采集 EMQX 的日志
+# 采集 EMQX 的日志
 
 ## 任务目标
 
