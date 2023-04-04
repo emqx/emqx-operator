@@ -28,14 +28,14 @@ func TestSetFailed(t *testing.T) {
 	t.Run("condition type must be Failed", func(t *testing.T) {
 		r := &Rebalance{}
 		c := RebalanceCondition{}
-		c.Type = RebalanceCompleted
+		c.Type = RebalanceConditionCompleted
 		assert.ErrorContains(t, r.Status.SetFailed(c), "condition type must be Failed")
 	})
 
 	t.Run("set successfully", func(t *testing.T) {
 		r := &Rebalance{}
 		c := RebalanceCondition{
-			Type: RebalanceFailed,
+			Type: RebalanceConditionFailed,
 		}
 		assert.Nil(t, r.Status.SetFailed(c))
 		assert.Equal(t, RebalancePhaseFailed, r.Status.Phase)
@@ -66,7 +66,7 @@ func TestSetCompleted(t *testing.T) {
 			},
 		}
 		c := RebalanceCondition{
-			Type: RebalanceCompleted,
+			Type: RebalanceConditionCompleted,
 		}
 
 		assert.Nil(t, r.Status.SetCompleted(c))
@@ -113,7 +113,7 @@ func TestSetProcessing(t *testing.T) {
 			},
 		}
 		c := RebalanceCondition{
-			Type: RebalanceProcessing,
+			Type: RebalanceConditionProcessing,
 		}
 
 		assert.Nil(t, r.Status.SetProcessing(c))
@@ -129,7 +129,7 @@ func TestSetRebalanceCondition(t *testing.T) {
 		}
 
 		c0 := RebalanceCondition{
-			Type:   RebalanceCompleted,
+			Type:   RebalanceConditionCompleted,
 			Status: v1.ConditionTrue,
 		}
 
@@ -146,12 +146,12 @@ func TestSetRebalanceCondition(t *testing.T) {
 		}
 
 		c0 := RebalanceCondition{
-			Type:   RebalanceCompleted,
+			Type:   RebalanceConditionCompleted,
 			Status: v1.ConditionTrue,
 		}
 
 		c1 := RebalanceCondition{
-			Type:   RebalanceProcessing,
+			Type:   RebalanceConditionProcessing,
 			Status: v1.ConditionTrue,
 		}
 
@@ -179,12 +179,12 @@ func TestSetRebalanceCondition(t *testing.T) {
 		}
 
 		c1 := RebalanceCondition{
-			Type:   RebalanceProcessing,
+			Type:   RebalanceConditionProcessing,
 			Status: v1.ConditionTrue,
 		}
 
 		c2 := RebalanceCondition{
-			Type:   RebalanceProcessing,
+			Type:   RebalanceConditionProcessing,
 			Status: v1.ConditionFalse,
 		}
 
@@ -209,7 +209,7 @@ func TestSetRebalanceCondition(t *testing.T) {
 		}
 
 		c1 := RebalanceCondition{
-			Type:   RebalanceProcessing,
+			Type:   RebalanceConditionProcessing,
 			Status: v1.ConditionTrue,
 		}
 

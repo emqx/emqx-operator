@@ -64,7 +64,10 @@ spec:
             type: object
           status:
             properties:
-              completionTime:
+              CompletedTime:
+                format: date-time
+                type: string
+              StartedTime:
                 format: date-time
                 type: string
               conditions:
@@ -116,9 +119,6 @@ spec:
                       type: string
                   type: object
                 type: array
-              startTime:
-                format: date-time
-                type: string
             type: object
         type: object
     served: true

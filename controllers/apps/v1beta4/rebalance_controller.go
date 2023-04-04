@@ -101,7 +101,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 		}
 		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.RebalanceFailed,
+			Type:    appsv1beta4.RebalanceConditionFailed,
 			Status:  corev1.ConditionTrue,
 			Message: fmt.Sprintf("EMQX Enterprise %s is not found", rebalance.Spec.InstanceName),
 		})
@@ -218,14 +218,14 @@ func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.
 	if rebalance.Status.Phase == "" {
 		if err := startFun(portForward, rebalance, emqx, getEmqxNodeName(emqx, pod)); err != nil {
 			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
-				Type:    appsv1beta4.RebalanceFailed,
+				Type:    appsv1beta4.RebalanceConditionFailed,
 				Status:  corev1.ConditionTrue,
 				Message: fmt.Sprintf("Failed to start rebalance: %v", err.Error()),
 			})
 			return emperror.Wrap(err, "failed to start rebalance")
 		}
 		_ = rebalance.Status.SetProcessing(appsv1beta4.RebalanceCondition{
-			Type:   appsv1beta4.RebalanceProcessing,
+			Type:   appsv1beta4.RebalanceConditionProcessing,
 			Status: corev1.ConditionTrue,
 		})
 		return nil
@@ -234,7 +234,7 @@ func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.
 	rebalanceStates, err := getRebalanceStatusFun(portForward)
 	if err != nil {
 		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.RebalanceFailed,
+			Type:    appsv1beta4.RebalanceConditionFailed,
 			Status:  corev1.ConditionTrue,
 			Message: fmt.Sprintf("Failed to get rebalance status: %s", err.Error()),
 		})
@@ -245,21 +245,21 @@ func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.
 	if len(rebalanceStates) == 0 {
 		if rebalance.Status.Phase == "Processing" {
 			_ = rebalance.Status.SetCompleted(appsv1beta4.RebalanceCondition{
-				Type:   appsv1beta4.RebalanceCompleted,
+				Type:   appsv1beta4.RebalanceConditionCompleted,
 				Status: corev1.ConditionTrue,
 			})
 			return nil
 		}
 		message := "Can not get rebalance status"
 		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.RebalanceFailed,
+			Type:    appsv1beta4.RebalanceConditionFailed,
 			Status:  corev1.ConditionTrue,
 			Message: message,
 		})
 		return nil
 	}
 	_ = rebalance.Status.SetProcessing(appsv1beta4.RebalanceCondition{
-		Type:   appsv1beta4.RebalanceProcessing,
+		Type:   appsv1beta4.RebalanceConditionProcessing,
 		Status: corev1.ConditionTrue,
 	})
 	return nil

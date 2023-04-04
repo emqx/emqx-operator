@@ -37,6 +37,13 @@ jobs:
             echo "Need run make generate"
             exit 1
           fi
+      - name: Check helm crds
+        run: |
+          make helm-crds
+          if ! git diff --quiet; then
+            echo "Need run make helm-crds"
+            exit 1
+          fi
       - name: Check line-break at EOF
         run: ./scripts/check-nl-at-eof.sh
       - name: Check space at EOL
