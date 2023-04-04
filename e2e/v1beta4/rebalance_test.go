@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -58,28 +59,37 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 		})
 
 		AfterEach(func() {
-			Eventually(func() error {
-				return k8sClient.Delete(context.TODO(), r)
-			}, timeout, interval).Should(Succeed())
 			deleteEmqx(emqx)
 		})
 
 		It("emqx rebalance", func() {
-			Eventually(func() appsv1beta4.RebalanceStatus {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
-				return r.Status
-			}, timeout, interval).Should(And(
-				HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
-				HaveField("Conditions", ContainElements(
-					HaveField("Type", appsv1beta4.RebalanceFailed),
-				)),
-				HaveField("Conditions", ContainElements(
-					HaveField("Status", corev1.ConditionTrue),
-				)),
-				HaveField("Conditions", ContainElements(
-					HaveField("Message", fmt.Sprintf("EMQX Enterprise %s is not found", r.Spec.InstanceName)),
-				)),
-			))
+			By("Rebalance will failed, because the EMQX Enterprise is not found", func() {
+				Eventually(func() appsv1beta4.RebalanceStatus {
+					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					return r.Status
+				}, timeout, interval).Should(And(
+					HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
+					HaveField("Conditions", ContainElements(
+						HaveField("Type", appsv1beta4.RebalanceFailed),
+					)),
+					HaveField("Conditions", ContainElements(
+						HaveField("Status", corev1.ConditionTrue),
+					)),
+					HaveField("Conditions", ContainElements(
+						HaveField("Message", fmt.Sprintf("EMQX Enterprise %s is not found", r.Spec.InstanceName)),
+					)),
+				))
+
+			})
+
+			By("Rebalance can be deleted, even if the EMQX Enterprise is not found", func() {
+				Eventually(func() error {
+					return k8sClient.Delete(context.TODO(), r)
+				}, timeout, interval).Should(Succeed())
+				Eventually(func() bool {
+					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+				}).Should(BeTrue())
+			})
 		})
 	})
 
@@ -99,29 +109,44 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 		})
 
 		AfterEach(func() {
-			Eventually(func() error {
-				return k8sClient.Delete(context.TODO(), r)
-			}, timeout, interval).Should(Succeed())
 			deleteEmqx(emqx)
 		})
 
 		It("emqx rebalance", func() {
-			Eventually(func() appsv1beta4.RebalanceStatus {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
-				return r.Status
-			}, timeout, interval).Should(And(
-				HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
-				HaveField("Conditions", ContainElements(
-					HaveField("Type", appsv1beta4.RebalanceFailed),
-				)),
-				HaveField("Conditions", ContainElements(
-					HaveField("Status", corev1.ConditionTrue),
-				)),
-				// TODO: Don't check message, because EMQX have output error when POST "api/v4/load_rebalance/"+emqxNodeName+"/start",
-				// HaveField("Conditions", ContainElements(
-				// 	HaveField("Message", `Failed to start rebalance: [\"nothing_to_balance\"]`),
-				// )),
-			))
+			By("Rebalance should have finalizer", func() {
+				Eventually(func() []string {
+					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					return r.GetFinalizers()
+				}, timeout, interval).Should(ContainElements("apps.emqx.io/finalizer"))
+			})
+
+			By("Rebalance will failed, because the EMQX Enterprise is nothing to balance", func() {
+				Eventually(func() appsv1beta4.RebalanceStatus {
+					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					return r.Status
+				}, timeout, interval).Should(And(
+					HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
+					HaveField("Conditions", ContainElements(
+						HaveField("Type", appsv1beta4.RebalanceFailed),
+					)),
+					HaveField("Conditions", ContainElements(
+						HaveField("Status", corev1.ConditionTrue),
+					)),
+					// TODO: Don't check message, because EMQX have output error when POST "api/v4/load_rebalance/"+emqxNodeName+"/start",
+					// HaveField("Conditions", ContainElements(
+					// 	HaveField("Message", `Failed to start rebalance: [\"nothing_to_balance\"]`),
+					// )),
+				))
+			})
+
+			By("Rebalance can be deleted", func() {
+				Eventually(func() error {
+					return k8sClient.Delete(context.TODO(), r)
+				}, timeout, interval).Should(Succeed())
+				Eventually(func() bool {
+					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+				}).Should(BeTrue())
+			})
 		})
 	})
 })
