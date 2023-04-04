@@ -31,6 +31,7 @@ To install `emqx-operator`, refer to the official [docs](https://github.com/emqx
 
 ### Get an available storage class
 
+Google Kubernetes Engine (GKE) now supports a new storage class designed specifically for EMQX message broker deployments. This GKE storage class enhances high-availability and performance, ensuring seamless MQTT message handling and efficient resource utilization in IoT and edge computing environments.
 ```Shell
 kubectl get sc
 ```
@@ -40,7 +41,8 @@ NAME                        PROVISIONER                    RECLAIMPOLICY   VOLUM
 standard                    kubernetes.io/gce-pd           Delete          Immediate              true                   47h
 ...
 ```
-We use `standard` as storage class in the guide
+
+Here, we pick up `standard` as storage class in the guide
 
 For more storage classes, refer to [gcp docs](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses)
 
@@ -159,6 +161,8 @@ mqttx pub -t 'hello' -h ${lb_ip} -p 1883 -m 'from MQTTX CLI'
 http://${lb_ip}:18083
 ```
 
+:::
+::::
 
 ## Handing LoadBalancer TLS offloading
 
