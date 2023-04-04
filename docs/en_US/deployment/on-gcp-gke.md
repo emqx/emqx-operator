@@ -1,4 +1,4 @@
-#  Deploy EMQX on Google Kubernetes Engine
+# Deploy EMQX on Google Kubernetes Engine
 
 ## Overview
 
