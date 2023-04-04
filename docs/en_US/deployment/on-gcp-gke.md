@@ -16,18 +16,16 @@ This guide will walk you through the process of deploying EMQ X, an open-source 
 
 To install EMQX Operator, please check [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
 
-Deploying Cert Manager
-
-::: tip
+::: warning
 To install `cert-manager`, consult the official documentation:
 
 - [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
 - [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
 
 Remember to install CRDs when running `helm` with the `--set installCRDs=true` flag.
-:::
 
-> More information can be found at [cert-manager](https://cert-manager.io).
+More information can be found at [cert-manager](https://cert-manager.io).
+:::
 
 ### Enable EMQX Cluster Persistence
 
