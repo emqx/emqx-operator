@@ -14,25 +14,35 @@ This guide will walk you through the process of deploying EMQ X, an open-source 
 
 ### Deploying EMQX Operator
 
-**Deploying Cert Manager**
+Deploying Cert Manager
 
+::: tip
 To install `cert-manager`, consult the official documentation:
 
 - [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
 - [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
 
 Remember to install CRDs when running `helm` with the `--set installCRDs=true` flag.
+:::
 
 > More information can be found at [cert-manager](https://cert-manager.io).
 
 To install `emqx-operator`, refer to the official [docs](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
 
-## Check available storage class
+## Enable EMQX Cluster Persistence
 
 ```Shell
 kubectl get sc
 ```
+Outputs:
+```Shell
+NAME                        PROVISIONER                    RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+standard                    kubernetes.io/gce-pd           Delete          Immediate              true                   47h
+...
+```
 We use `standard` as storage class in the guide
+
+For more storage classes, refer to [gcp docs](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses)
 
 
 ### Deploying EMQX Cluster
@@ -108,12 +118,12 @@ spec:
 
 - Retrieve the listener IP address of the load balancer:
 ```Shell
-kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress'
+kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip'
 ```
 
 - Retrieve the dashboard IP address of the load balancer:
 ```Shell
-kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress'
+kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 ```
 
 - connect, publish, and subscribe using MQTTX CLI
@@ -133,7 +143,7 @@ http://${lb_dashboard_ip}:18083
 
 - Retrieve the load balancer's IP address:
 ```Shell
-kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress'
+kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 ```
 
 
