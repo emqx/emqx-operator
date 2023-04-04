@@ -30,7 +30,7 @@ To install `emqx-operator`, refer to the official [docs](https://github.com/emqx
 ## Check available storage class
 
 ```Shell
-kubectl get sc 
+kubectl get sc
 ```
 We use `standard` as storage class in the guide
 
@@ -118,7 +118,7 @@ kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress'
 
 - connect, publish, and subscribe using MQTTX CLI
 ```Shell
-mqttx conn -h ${lb_listener_ip} -p 1883 
+mqttx conn -h ${lb_listener_ip} -p 1883
 mqttx sub -t 'hello' -h ${lb_listener_ip} -p 1883
 mqttx pub -t 'hello' -h ${lb_listener_ip} -p 1883 -m 'from MQTTX CLI'
 ```
@@ -139,7 +139,7 @@ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress'
 
 - connect, publish, and subscribe using MQTTX CLI
 ```Shell
-mqttx conn -h ${lb_ip} -p 1883 
+mqttx conn -h ${lb_ip} -p 1883
 mqttx sub -t 'hello' -h ${lb_ip} -p 1883
 mqttx pub -t 'hello' -h ${lb_ip} -p 1883 -m 'from MQTTX CLI'
 ```
