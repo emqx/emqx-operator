@@ -29,7 +29,7 @@ Remember to install CRDs when running `helm` with the `--set installCRDs=true` f
 
 To install `emqx-operator`, refer to the official [docs](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
 
-## Enable EMQX Cluster Persistence
+### Get an available storage class
 
 ```Shell
 kubectl get sc
