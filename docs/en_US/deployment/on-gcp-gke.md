@@ -1,4 +1,4 @@
-# Set Up EMQX on Google Kubernetes Engine
+#  Deploy EMQX on Google Kubernetes Engine
 
 ## Overview
 
@@ -7,12 +7,14 @@ This guide will walk you through the process of deploying EMQ X, an open-source 
 ## Prerequisites
 
 + A Google Kubernetes Engine (GKE) cluster, for more information, see [Creating an autopilot cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster)
-
 + MQTTX CLI, A user-friendly MQTT 5.0 command line tool, download it [here](https://mqttx.app/cli)
 
-## DeployEMQX on GKE
 
-### Set Up Cert Manager
+## Deploy EMQX on GKE
+
+### Deploying EMQX Operator
+
+**Deploying Cert Manager**
 
 To install `cert-manager`, consult the official documentation:
 
@@ -23,41 +25,15 @@ Remember to install CRDs when running `helm` with the `--set installCRDs=true` f
 
 > More information can be found at [cert-manager](https://cert-manager.io).
 
-
-### Enable EMQX Cluster Persistence
-
-1. Connect to your GKE cluster using the command-line tool, such as Cloud Shell or a local terminal.
-
-2. Create a YAML file that defines your StorageClass. The following is an example:
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: gce-pd
-provisioner: kubernetes.io/gce-pd
-parameters:
-  type: pd-standard
-```
-In this example, the provisioner is set to "kubernetes.io/gce-pd", which means that the StorageClass will use Google Compute Engine Persistent Disk as the storage backend. The "parameters" section specifies the type of disk to use (pd-standard, which is the default).
-
-3. Apply the YAML file using the kubectl apply command:
-```yaml
-kubectl apply -f my-storage-class.yaml
-```
-
-This will create the StorageClass in your GKE cluster. You can verify that the StorageClass has been created by running the following command:
-```yaml
-kubectl get storageclass
-```
-
-This will list all of the StorageClasses in your cluster, including the one you just created. You can use this StorageClass to provision persistent volumes for your applications in the cluster.
-
-
-### Deploying EMQX Operator
-
 To install `emqx-operator`, refer to the official [docs](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
 
-> **_NOTE_** The cert-manager installation was done in the previous step
+## Check available storage class
+
+```Shell
+kubectl get sc 
+```
+We use `standard` as storage class in the guide
+
 
 ### Deploying EMQX Cluster
 
@@ -75,15 +51,8 @@ spec:
   image: "emqx:5.0"
   coreTemplate:
     spec:
-      podSecurityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        fsGroupChangePolicy: Always
-        supplementalGroups:
-          - 1000
       volumeClaimTemplates:
-        storageClassName: gce-pd
+        storageClassName: standard
         resources:
           requests:
             storage: 20Mi
@@ -96,6 +65,7 @@ spec:
     spec:
       type: LoadBalancer
 ```
+
 
 :::
 ::: tab v1beta4
@@ -110,7 +80,7 @@ spec:
     metadata:
       name: emqx-ee
     spec:
-      storageClassName: gce-pd
+      storageClassName: standard
       resources:
         requests:
           storage: 20Mi
@@ -118,13 +88,6 @@ spec:
         - ReadWriteOnce
   template:
     spec:
-      podSecurityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        fsGroupChangePolicy: Always
-        supplementalGroups:
-          - 1000
       emqxContainer:
         image:
           repository: emqx/emqx-ee
@@ -140,21 +103,50 @@ spec:
 
 ### Veirty the deployment
 
-- Retrieve the LoadBalancer's IP address:
+:::: tabs type:card
+::: tab v2alpha1
+
+- Retrieve the listener IP address of the load balancer:
 ```Shell
-kubectl get svc | grep emqx
+kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress'
+```
+
+- Retrieve the dashboard IP address of the load balancer:
+```Shell
+kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress'
 ```
 
 - connect, publish, and subscribe using MQTTX CLI
 ```Shell
-mqttx conn -h ${load_balancer_ip} -p 1883 -u 'admin' -P 'public'
-mqttx sub -t 'hello' -h ${load_balancer_ip} -p 1883
-mqttx pub -t 'hello' -h ${load_balancer_ip} -p 1883 -m 'from MQTTX CLI'
+mqttx conn -h ${lb_listener_ip} -p 1883 
+mqttx sub -t 'hello' -h ${lb_listener_ip} -p 1883
+mqttx pub -t 'hello' -h ${lb_listener_ip} -p 1883 -m 'from MQTTX CLI'
 ```
 
 - Access the EMQX dashboard
 ```Shell
-http://${load-balancer-ip}:18083
+http://${lb_dashboard_ip}:18083
+```
+
+:::
+::: tab v1beta4
+
+- Retrieve the load balancer's IP address:
+```Shell
+kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress'
+```
+
+
+- connect, publish, and subscribe using MQTTX CLI
+```Shell
+mqttx conn -h ${lb_ip} -p 1883 
+mqttx sub -t 'hello' -h ${lb_ip} -p 1883
+mqttx pub -t 'hello' -h ${lb_ip} -p 1883 -m 'from MQTTX CLI'
+```
+
+- Access the EMQX dashboard
+```Shell
+http://${lb_ip}:18083
 ```
 
 
