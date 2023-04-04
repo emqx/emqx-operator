@@ -1,8 +1,8 @@
-# 通过 LoabBalancer 访问 EMQX 集群
+# 通过 LoadBalancer 访问 EMQX 集群
 
 ## 任务目标
 
- 通过 LoabBalancer 类型的 Service 访问 EMQX 集群
+ 通过 LoadBalancer 类型的 Service 访问 EMQX 集群
 
 ## 配置 EMQX 集群
 
@@ -22,7 +22,7 @@ spec:
   image: emqx:5.0
   listenersServiceTemplate:
     spec:
-      type: LoabBalancer
+      type: LoadBalancer
 ```
 
 > EMQX 默认会开启一个 MQTT TCP 监听器 `tcp-default` 对应的端口为1883 以及 Dashboard 监听器 `dashboard-listeners-http-bind` 对应的端口为18083 。用户可以通过 `.spec.bootstrapConfig` 字段或者 EMQX Dashboard 增加新的监听器。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
@@ -63,7 +63,7 @@ spec:
           version: 4.4.14
   serviceTemplate:
     spec:
-      type: LoabBalancer
+      type: LoadBalancer
 ```
 
 > EMQX 默认会开启6个监听器，分别是：`mqtt-ssl-8883` 对应的端口为8883，`mqtt-tcp-1883` 对应的端口为1883，`http-dashboard-18083` 对应的端口为18083，`http-management-8081` 对应的端口为8081，`mqtt-ws-8083` 对应的端口为8083，`mqtt-wss-8084` 对应的端口为8084。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（ name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
@@ -103,7 +103,7 @@ emqx-listeners   NodePort   10.97.59.150     183.134.197.178        1883:32010/T
 通过 MQTT X Cli 连接 EMQX 集群
 
 ```
-$ mqttx conn -h broker.emqx.io
+$ mqttx conn -h 183.134.197.178
 [11:16:40] › …  Connecting...
 [11:16:41] › ✔  Connected
 ```
