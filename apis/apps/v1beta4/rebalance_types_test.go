@@ -24,6 +24,104 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+func TestSetFailed(t *testing.T) {
+	t.Run("condition type must be Failed", func(t *testing.T) {
+		r := &Rebalance{}
+		c := RebalanceCondition{}
+		c.Type = RebalanceCompleted
+		assert.ErrorContains(t, r.Status.SetFailed(c), "condition type must be Failed")
+	})
+
+	t.Run("set successfully", func(t *testing.T) {
+		r := &Rebalance{}
+		c := RebalanceCondition{
+			Type: RebalanceFailed,
+		}
+		assert.Nil(t, r.Status.SetFailed(c))
+		assert.Equal(t, RebalancePhaseFailed, r.Status.Phase)
+		assert.Equal(t, c.Type, r.Status.Conditions[0].Type)
+	})
+}
+
+func TestSetCompleted(t *testing.T) {
+	t.Run("rebalance job is not in processing", func(t *testing.T) {
+		r := &Rebalance{}
+		c := RebalanceCondition{}
+		assert.ErrorContains(t, r.Status.SetCompleted(c), "rebalance job is not in processing")
+	})
+	t.Run("condition type must be Completed", func(t *testing.T) {
+		r := &Rebalance{
+			Status: RebalanceStatus{
+				Phase: RebalancePhaseProcessing,
+			},
+		}
+		c := RebalanceCondition{}
+		assert.ErrorContains(t, r.Status.SetCompleted(c), "condition type must be Completed")
+	})
+
+	t.Run("set successfully", func(t *testing.T) {
+		r := &Rebalance{
+			Status: RebalanceStatus{
+				Phase: RebalancePhaseProcessing,
+			},
+		}
+		c := RebalanceCondition{
+			Type: RebalanceCompleted,
+		}
+
+		assert.Nil(t, r.Status.SetCompleted(c))
+		assert.Equal(t, RebalancePhaseCompleted, r.Status.Phase)
+		assert.Equal(t, c.Type, r.Status.Conditions[0].Type)
+	})
+}
+
+func TestSetProcessing(t *testing.T) {
+	t.Run("rebalance job has been failed", func(t *testing.T) {
+		r := &Rebalance{
+			Status: RebalanceStatus{
+				Phase: RebalancePhaseFailed,
+			},
+		}
+		c := RebalanceCondition{}
+		assert.ErrorContains(t, r.Status.SetProcessing(c), "rebalance job has been failed")
+	})
+
+	t.Run("rebalance job has been completed", func(t *testing.T) {
+		r := &Rebalance{
+			Status: RebalanceStatus{
+				Phase: RebalancePhaseCompleted,
+			},
+		}
+		c := RebalanceCondition{}
+		assert.ErrorContains(t, r.Status.SetProcessing(c), "rebalance job has been completed")
+	})
+
+	t.Run("condition type must be Processing", func(t *testing.T) {
+		r := &Rebalance{
+			Status: RebalanceStatus{
+				Phase: RebalancePhaseProcessing,
+			},
+		}
+		c := RebalanceCondition{}
+		assert.ErrorContains(t, r.Status.SetProcessing(c), "condition type must be Processing")
+	})
+
+	t.Run("set successfully", func(t *testing.T) {
+		r := &Rebalance{
+			Status: RebalanceStatus{
+				Phase: RebalancePhaseProcessing,
+			},
+		}
+		c := RebalanceCondition{
+			Type: RebalanceProcessing,
+		}
+
+		assert.Nil(t, r.Status.SetProcessing(c))
+		assert.Equal(t, RebalancePhaseProcessing, r.Status.Phase)
+		assert.Equal(t, c.Type, r.Status.Conditions[0].Type)
+	})
+}
+
 func TestSetRebalanceCondition(t *testing.T) {
 	t.Run("add condition", func(t *testing.T) {
 		r := &Rebalance{
@@ -35,12 +133,11 @@ func TestSetRebalanceCondition(t *testing.T) {
 			Status: v1.ConditionTrue,
 		}
 
-		r.Status.SetCondition(c0.Type, c0.Status, "", "")
+		r.Status.SetCondition(c0)
 		assert.Equal(t, 1, len(r.Status.Conditions))
 
 		assert.NotEmpty(t, r.Status.Conditions[0].LastTransitionTime)
 		assert.NotEmpty(t, r.Status.Conditions[0].LastUpdateTime)
-
 	})
 
 	t.Run("add different condition type", func(t *testing.T) {
@@ -58,10 +155,10 @@ func TestSetRebalanceCondition(t *testing.T) {
 			Status: v1.ConditionTrue,
 		}
 
-		r.Status.SetCondition(c0.Type, c0.Status, "", "")
+		r.Status.SetCondition(c0)
 		c0 = r.Status.Conditions[0]
 		time.Sleep(time.Millisecond * time.Duration(1500))
-		r.Status.SetCondition(c1.Type, c1.Status, "", "")
+		r.Status.SetCondition(c1)
 		c1 = r.Status.Conditions[0]
 
 		assert.Equal(t, 2, len(r.Status.Conditions))
@@ -74,7 +171,6 @@ func TestSetRebalanceCondition(t *testing.T) {
 		c0 = r.Status.Conditions[0]
 		c1 = r.Status.Conditions[1]
 		assert.False(t, c0.LastUpdateTime.Before(&c1.LastUpdateTime))
-
 	})
 
 	t.Run("add same condition type, but different condition status", func(t *testing.T) {
@@ -92,10 +188,10 @@ func TestSetRebalanceCondition(t *testing.T) {
 			Status: v1.ConditionFalse,
 		}
 
-		r.Status.SetCondition(c1.Type, c1.Status, "", "")
+		r.Status.SetCondition(c1)
 		c1 = r.Status.Conditions[0]
 		time.Sleep(time.Millisecond * time.Duration(1500))
-		r.Status.SetCondition(c2.Type, c2.Status, "", "")
+		r.Status.SetCondition(c2)
 		c2 = r.Status.Conditions[0]
 
 		assert.Equal(t, 1, len(r.Status.Conditions))
@@ -118,10 +214,10 @@ func TestSetRebalanceCondition(t *testing.T) {
 		}
 
 		c3 := c1
-		r.Status.SetCondition(c1.Type, c1.Status, "", "")
+		r.Status.SetCondition(c1)
 		c1 = r.Status.Conditions[0]
 		time.Sleep(time.Millisecond * time.Duration(1500))
-		r.Status.SetCondition(c3.Type, c3.Status, "", "")
+		r.Status.SetCondition(c3)
 		c3 = r.Status.Conditions[0]
 
 		assert.Equal(t, 1, len(r.Status.Conditions))

@@ -19,7 +19,9 @@ package v1beta4
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
@@ -39,7 +41,6 @@ import (
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	innerPortFW "github.com/emqx/emqx-operator/internal/portforward"
 	"github.com/tidwall/gjson"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // RebalanceReconciler reconciles a Rebalance object
@@ -86,13 +87,18 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	emqx := &appsv1beta4.EmqxEnterprise{}
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: rebalance.Spec.InstanceName,
-		Namespace: rebalance.Namespace}, emqx); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Name:      rebalance.Spec.InstanceName,
+		Namespace: rebalance.Namespace,
+	}, emqx); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
-		rebalance.Status.Phase = "Failed"
-		rebalance.Status.SetCondition(appsv1beta4.RebalanceFailed, corev1.ConditionFalse, "Failed", err.Error())
+		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
+			Type:    appsv1beta4.RebalanceFailed,
+			Status:  corev1.ConditionTrue,
+			Message: fmt.Sprintf("EmqxEnterprise %s not found", rebalance.Spec.InstanceName),
+		})
 		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
 
@@ -110,55 +116,30 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	finalizer := "apps.emqx.io/finalizer"
-	if !rebalance.DeletionTimestamp.IsZero() {
-		if err := stopRebalance(portForward, rebalance); err != nil {
-			return ctrl.Result{}, err
-		}
-		controllerutil.RemoveFinalizer(rebalance, finalizer)
-		return ctrl.Result{}, r.Client.Update(ctx, rebalance)
+	if err := rebalanceHandler(
+		rebalance, emqx, pod, portForward,
+		startRebalance, stopRebalance, getRebalanceStatus,
+	); err != nil {
+		_ = r.Client.Status().Update(ctx, rebalance)
+		return ctrl.Result{}, err
 	}
-
-	if !controllerutil.ContainsFinalizer(rebalance, finalizer) {
-		controllerutil.AddFinalizer(rebalance, finalizer)
-		if err := r.Client.Update(ctx, rebalance); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	if rebalance.Status.Phase == "" {
-		emqxNodeName := getEmqxNodeName(emqx, pod)
-		if err := startRebalance(portForward, rebalance, emqx, emqxNodeName); err != nil {
-			rebalance.Status.Phase = "Failed"
-			rebalance.Status.SetCondition(appsv1beta4.RebalanceFailed, corev1.ConditionFalse, "Failed", err.Error())
-			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
-		}
-		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", " rebalance has started successfully")
-		rebalance.Status.StartTime = metav1.Now()
-		rebalance.Status.Phase = "Processing"
-		rebalance.Status.SetCondition(appsv1beta4.RebalanceProcessing, corev1.ConditionTrue, "Processing", "Rebalance is in Processing")
-	}
-
-	rebalanceStates, err := getRebalanceStatus(portForward)
-	if err != nil {
-		rebalance.Status.Phase = "Failed"
-		rebalance.Status.RebalanceStates = []appsv1beta4.RebalanceState{}
-		rebalance.Status.SetCondition(appsv1beta4.RebalanceFailed, corev1.ConditionFalse, "Failed", err.Error())
-		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
-	}
-	if len(rebalanceStates) == 0 {
-		rebalance.Status.Phase = "Completed"
-		rebalance.Status.CompletionTime = metav1.Now()
-		rebalance.Status.RebalanceStates = []appsv1beta4.RebalanceState{}
-		rebalance.Status.SetCondition(appsv1beta4.RebalanceCompleted, corev1.ConditionTrue, "Completed", "Rebalance has Completed")
-		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", " rebalance has completed successfully")
-		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
-	}
-	rebalance.Status.RebalanceStates = rebalanceStates
 	if err := r.Client.Status().Update(ctx, rebalance); err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+
+	switch rebalance.Status.Phase {
+	case "Failed":
+		r.EventRecorder.Event(rebalance, corev1.EventTypeWarning, "Rebalance", "rebalance failed")
+		return ctrl.Result{}, nil
+	case "Completed":
+		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", "rebalance completed")
+		return ctrl.Result{}, nil
+	case "Processing":
+		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", "rebalance is processing")
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	default:
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -171,6 +152,114 @@ func (r *RebalanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 		}).
 		Complete(r)
+}
+
+func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Pod {
+	podList := &corev1.PodList{}
+	_ = r.Client.List(context.Background(), podList,
+		client.InNamespace(emqxEnterprise.GetNamespace()),
+		client.MatchingLabels(emqxEnterprise.GetSpec().GetTemplate().Labels),
+	)
+	for _, pod := range podList.Items {
+		for _, c := range pod.Status.Conditions {
+			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+				return &pod
+			}
+		}
+	}
+	return nil
+}
+
+func (r *RebalanceReconciler) getPortForwardAPI(instance appsv1beta4.Emqx, pod *corev1.Pod) (PortForwardAPI, error) {
+	o, err := innerPortFW.NewPortForwardOptions(r.Clientset, r.Config, pod, "8081")
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to create port forward options")
+	}
+
+	username, password, err := getBootstrapUser(context.Background(), r.Client, instance)
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to get bootstrap user")
+	}
+	return &portForwardAPI{
+		Username: username,
+		Password: password,
+		Options:  o,
+	}, nil
+}
+
+// Rebalance Handler
+type GetRebalanceStatusFunc func(PortForwardAPI) ([]appsv1beta4.RebalanceState, error)
+type StartRebalanceFunc func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error
+type StopRebalanceFunc func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error
+
+func rebalanceHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, pod *corev1.Pod,
+	portForward PortForwardAPI,
+	startFun StartRebalanceFunc, stopFun StopRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
+) error {
+	finalizer := "apps.emqx.io/finalizer"
+	if !rebalance.DeletionTimestamp.IsZero() {
+		if rebalance.Status.Phase == "Processing" {
+			if err := stopFun(portForward, rebalance); err != nil {
+				return err
+			}
+		}
+		controllerutil.RemoveFinalizer(rebalance, finalizer)
+		return nil
+	}
+
+	if !controllerutil.ContainsFinalizer(rebalance, finalizer) {
+		controllerutil.AddFinalizer(rebalance, finalizer)
+		return nil
+	}
+
+	if rebalance.Status.Phase == "" {
+		if err := startFun(portForward, rebalance, emqx, getEmqxNodeName(emqx, pod)); err != nil {
+			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
+				Type:    appsv1beta4.RebalanceFailed,
+				Status:  corev1.ConditionTrue,
+				Message: fmt.Sprintf("Failed to start rebalance: %s", err.Error()),
+			})
+			return emperror.Wrap(err, "failed to start rebalance")
+		}
+		_ = rebalance.Status.SetProcessing(appsv1beta4.RebalanceCondition{
+			Type:   appsv1beta4.RebalanceProcessing,
+			Status: corev1.ConditionTrue,
+		})
+		return nil
+	}
+
+	rebalanceStates, err := getRebalanceStatusFun(portForward)
+	if err != nil {
+		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
+			Type:    appsv1beta4.RebalanceFailed,
+			Status:  corev1.ConditionTrue,
+			Message: fmt.Sprintf("Failed to get rebalance status: %s", err.Error()),
+		})
+		return emperror.Wrap(err, "failed to get rebalance status")
+	}
+	rebalance.Status.RebalanceStates = rebalanceStates
+
+	if len(rebalanceStates) == 0 {
+		if rebalance.Status.Phase == "Processing" {
+			_ = rebalance.Status.SetCompleted(appsv1beta4.RebalanceCondition{
+				Type:   appsv1beta4.RebalanceCompleted,
+				Status: corev1.ConditionTrue,
+			})
+			return nil
+		}
+		message := "Can not get rebalance status"
+		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
+			Type:    appsv1beta4.RebalanceFailed,
+			Status:  corev1.ConditionTrue,
+			Message: message,
+		})
+		return emperror.New(strings.ToLower(message))
+	}
+	_ = rebalance.Status.SetProcessing(appsv1beta4.RebalanceCondition{
+		Type:   appsv1beta4.RebalanceProcessing,
+		Status: corev1.ConditionTrue,
+	})
+	return nil
 }
 
 func startRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error {
@@ -214,9 +303,6 @@ func getRebalanceStatus(p PortForwardAPI) ([]appsv1beta4.RebalanceState, error) 
 }
 
 func stopRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
-	if rebalance.Status.Phase != "Processing" {
-		return nil
-	}
 	// stop rebalance should use coordinatorNode as path parameter
 	emqxNodeName := rebalance.Status.RebalanceStates[0].CoordinatorNode
 	resp, respBody, err := p.RequestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
@@ -257,37 +343,4 @@ func getRequestBytes(rebalance *appsv1beta4.Rebalance, nodes []string) []byte {
 
 	bytes, _ := json.Marshal(body)
 	return bytes
-}
-
-func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Pod {
-	podList := &corev1.PodList{}
-	_ = r.Client.List(context.Background(), podList,
-		client.InNamespace(emqxEnterprise.GetNamespace()),
-		client.MatchingLabels(emqxEnterprise.GetSpec().GetTemplate().Labels),
-	)
-	for _, pod := range podList.Items {
-		for _, c := range pod.Status.Conditions {
-			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
-				return &pod
-			}
-		}
-	}
-	return nil
-}
-
-func (r *RebalanceReconciler) getPortForwardAPI(instance appsv1beta4.Emqx, pod *corev1.Pod) (PortForwardAPI, error) {
-	o, err := innerPortFW.NewPortForwardOptions(r.Clientset, r.Config, pod, "8081")
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to create port forward options")
-	}
-
-	username, password, err := getBootstrapUser(context.Background(), r.Client, instance)
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to get bootstrap user")
-	}
-	return &portForwardAPI{
-		Username: username,
-		Password: password,
-		Options:  o,
-	}, nil
 }

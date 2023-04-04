@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta4
 
 import (
+	"fmt"
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
@@ -77,7 +78,7 @@ type RebalanceStatus struct {
 	// When Rebalance is completed, the condition will have a type "Complete" and status true.
 	Conditions []RebalanceCondition `json:"conditions,omitempty"`
 	// Phase represents the phase of Rebalance.
-	Phase           string           `json:"phase,omitempty"`
+	Phase           RebalancePhase   `json:"phase,omitempty"`
 	RebalanceStates []RebalanceState `json:"rebalanceStates,omitempty"`
 	// StartTime Represents the time when rebalance job start.
 	StartTime metav1.Time `json:"startTime,omitempty"`
@@ -142,24 +143,57 @@ type RebalanceCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-func (s *RebalanceStatus) SetCondition(condType RebalanceConditionType, status corev1.ConditionStatus, reason, message string) {
-	newCondition := RebalanceCondition{
-		Type:               condType,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		LastUpdateTime:     metav1.Now(),
-		LastTransitionTime: metav1.Now(),
+func (s *RebalanceStatus) SetFailed(condition RebalanceCondition) error {
+	if condition.Type != RebalanceFailed {
+		return fmt.Errorf("condition type must be %s", RebalanceFailed)
 	}
+	s.Phase = RebalancePhaseFailed
+	s.SetCondition(condition)
+	return nil
+}
 
-	pos := getConditionIndex(s, condType)
+func (s *RebalanceStatus) SetCompleted(condition RebalanceCondition) error {
+	if s.Phase != RebalancePhaseProcessing {
+		return fmt.Errorf("rebalance job is not in processing")
+	}
+	if condition.Type != RebalanceCompleted {
+		return fmt.Errorf("condition type must be %s", RebalanceCompleted)
+	}
+	s.Phase = RebalancePhaseCompleted
+	s.CompletionTime = metav1.Now()
+	s.SetCondition(condition)
+	return nil
+}
+
+func (s *RebalanceStatus) SetProcessing(condition RebalanceCondition) error {
+	if s.Phase == RebalancePhaseFailed {
+		return fmt.Errorf("rebalance job has been failed")
+	}
+	if s.Phase == RebalancePhaseCompleted {
+		return fmt.Errorf("rebalance job has been completed")
+	}
+	if condition.Type != RebalanceProcessing {
+		return fmt.Errorf("condition type must be %s", RebalanceProcessing)
+	}
+	s.Phase = RebalancePhaseProcessing
+	if s.StartTime.IsZero() {
+		s.StartTime = metav1.Now()
+	}
+	s.SetCondition(condition)
+	return nil
+}
+
+func (s *RebalanceStatus) SetCondition(condition RebalanceCondition) {
+	condition.LastUpdateTime = metav1.Now()
+	condition.LastTransitionTime = metav1.Now()
+	pos := getConditionIndex(s, condition.Type)
 	if pos >= 0 {
-		if s.Conditions[pos].Status == newCondition.Status {
-			newCondition.LastTransitionTime = s.Conditions[pos].LastTransitionTime
+		if s.Conditions[pos].Status == condition.Status {
+			condition.LastTransitionTime = s.Conditions[pos].LastTransitionTime
 		}
-		s.Conditions[pos] = newCondition
+		s.Conditions[pos] = condition
 	} else {
-		s.Conditions = append(s.Conditions, newCondition)
+		s.Conditions = append(s.Conditions, condition)
 	}
 	sort.Slice(s.Conditions, func(i, j int) bool {
 		return s.Conditions[j].LastUpdateTime.Before(&s.Conditions[i].LastUpdateTime)
@@ -174,6 +208,14 @@ func getConditionIndex(status *RebalanceStatus, condType RebalanceConditionType)
 	}
 	return -1
 }
+
+type RebalancePhase string
+
+const (
+	RebalancePhaseProcessing RebalancePhase = "Processing"
+	RebalancePhaseCompleted  RebalancePhase = "Completed"
+	RebalancePhaseFailed     RebalancePhase = "Failed"
+)
 
 type RebalanceConditionType string
 
