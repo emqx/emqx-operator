@@ -6,13 +6,15 @@ This guide will walk you through the process of deploying EMQ X, an open-source 
 
 ## Prerequisites
 
-+ A Google Kubernetes Engine (GKE) cluster, for more information, see [Creating an autopilot cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster)
++ A Google Kubernetes Engine (GKE) cluster, for more information, please check [Creating an autopilot cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster)
 + MQTTX CLI, A user-friendly MQTT 5.0 command line tool, download it [here](https://mqttx.app/cli)
 
 
 ## Deploy EMQX on GKE
 
 ### Deploying EMQX Operator
+
+To install EMQX Operator, please check [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
 
 Deploying Cert Manager
 
@@ -27,9 +29,7 @@ Remember to install CRDs when running `helm` with the `--set installCRDs=true` f
 
 > More information can be found at [cert-manager](https://cert-manager.io).
 
-To install `emqx-operator`, refer to the official [docs](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
-
-### Get an available storage class
+### Enable EMQX Cluster Persistence
 
 Google Kubernetes Engine (GKE) now supports a new storage class designed specifically for EMQX message broker deployments. This GKE storage class enhances high-availability and performance, ensuring seamless MQTT message handling and efficient resource utilization in IoT and edge computing environments.
 ```Shell
@@ -44,12 +44,12 @@ standard                    kubernetes.io/gce-pd           Delete          Immed
 
 Here, we pick up `standard` as storage class in the guide
 
-For more storage classes, refer to [gcp docs](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses)
+For more storage classes, please check [gcp docs](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses)
 
 
 ### Deploying EMQX Cluster
 
-Below are the relevant configurations for EMQX Custom Resource. Choose the corresponding APIVersion based on the EMQX version you want to deploy. For specific compatibility relationships, See [EMQX Operator Compatibility](../README.md):
+Below are the relevant configurations for EMQX Custom Resource. Choose the corresponding APIVersion based on the EMQX version you want to deploy. For specific compatibility relationships, please check [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -120,12 +120,12 @@ spec:
 
 - Retrieve the listener IP address of the load balancer:
 ```Shell
-kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip'
+lb_listener_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
 ```
 
 - Retrieve the dashboard IP address of the load balancer:
 ```Shell
-kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+lb_dashboard_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
 ```
 
 - connect, publish, and subscribe using MQTTX CLI
@@ -145,7 +145,7 @@ http://${lb_dashboard_ip}:18083
 
 - Retrieve the load balancer's IP address:
 ```Shell
-kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+lb_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
 ```
 
 
@@ -166,7 +166,7 @@ http://${lb_ip}:18083
 
 ## Handing LoadBalancer TLS offloading
 
-Since Google LoadBalancer doesn't support TCP certificates, please refer to this [discussion](https://github.com/emqx/emqx-operator/discussions/312) to address TCP certificate offloading issues.
+Since Google LoadBalancer doesn't support TCP certificates, please check [discussion](https://github.com/emqx/emqx-operator/discussions/312) to address TCP certificate offloading issues.
 
 
 ## Conclusion
