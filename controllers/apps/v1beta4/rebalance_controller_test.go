@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
-	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	innerPortFW "github.com/emqx/emqx-operator/internal/portforward"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type fakePW struct {
@@ -126,12 +128,12 @@ func TestStartRebalance(t *testing.T) {
 	t.Run("check requestAPI start rebalance err", func(t *testing.T) {
 		f.requestAPI = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
 			resp = &http.Response{StatusCode: http.StatusOK}
-			respBody = []byte(`{"message":[\"nothing_to_balance\"],"code":400}`)
-			err = emperror.New("[\"nothing_to_balance\"]")
+			respBody = []byte(`{"message":"fake error","code":400}`)
+			err = nil
 			return
 		}
 		err := startRebalance(f, rebalance, emqx, emqxNodeName)
-		assert.ErrorContains(t, err, "nothing_to_balance")
+		assert.ErrorContains(t, err, "fake error")
 	})
 
 	t.Run("check requestAPI return error", func(t *testing.T) {
@@ -284,5 +286,105 @@ func TestGetRequestBytes(t *testing.T) {
 		expectedBytes, _ := json.Marshal(body)
 		assert.Equal(t, expectedBytes, bytes)
 	})
+}
 
+func TestRebalanceHandler(t *testing.T) {
+	finalizer := "apps.emqx.io/finalizer"
+	rebalance := &appsv1beta4.Rebalance{
+		ObjectMeta: metav1.ObjectMeta{
+			Finalizers: []string{finalizer},
+		},
+	}
+	emqxEnterprise := &appsv1beta4.EmqxEnterprise{}
+	pod := &corev1.Pod{}
+	pw := &fakePW{}
+	defStartFun := func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error {
+		return nil
+	}
+	defStopFun := func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
+		return nil
+	}
+	defGetFun := func(PortForwardAPI) ([]appsv1beta4.RebalanceState, error) {
+		return []appsv1beta4.RebalanceState{}, nil
+	}
+	t.Run("check add finalizer", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		r.ObjectMeta.Finalizers = []string{}
+
+		assert.Nil(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, defGetFun))
+		assert.Equal(t, finalizer, r.Finalizers[0])
+	})
+
+	t.Run("check stop rebalance", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		r.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+		r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
+
+		stopFun := func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
+			return errors.New("fake error")
+		}
+		assert.ErrorContains(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, stopFun, defGetFun), "fake error")
+		assert.Nil(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, defGetFun))
+	})
+
+	t.Run("check start rebalance failed", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+
+		startFun := func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error {
+			return errors.New("fake error")
+		}
+		assert.ErrorContains(t, rebalanceHandler(r, emqxEnterprise, pod, pw, startFun, defStopFun, defGetFun), "fake error")
+		assert.Equal(t, appsv1beta4.RebalancePhaseFailed, r.Status.Phase)
+
+	})
+	t.Run("check start rebalance success", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		assert.Nil(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, defGetFun))
+		assert.Equal(t, appsv1beta4.RebalancePhaseProcessing, r.Status.Phase)
+	})
+
+	t.Run("check get rebalance status failed", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
+
+		getFun := func(PortForwardAPI) ([]appsv1beta4.RebalanceState, error) {
+			return nil, errors.New("fake error")
+		}
+
+		assert.ErrorContains(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, getFun), "fake error")
+		assert.Equal(t, appsv1beta4.RebalancePhaseFailed, r.Status.Phase)
+	})
+
+	t.Run("check get rebalance status return empty list", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		r.Status.Phase = appsv1beta4.RebalancePhaseCompleted
+
+		getFun := func(PortForwardAPI) ([]appsv1beta4.RebalanceState, error) {
+			return []appsv1beta4.RebalanceState{}, nil
+		}
+
+		assert.ErrorContains(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, getFun), "can not get rebalance status")
+		assert.Equal(t, appsv1beta4.RebalancePhaseFailed, r.Status.Phase)
+
+		r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
+		assert.Nil(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, getFun))
+		assert.Equal(t, appsv1beta4.RebalancePhaseCompleted, r.Status.Phase)
+	})
+
+	t.Run("check get rebalance status success", func(t *testing.T) {
+		r := rebalance.DeepCopy()
+		r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
+
+		getFun := func(PortForwardAPI) ([]appsv1beta4.RebalanceState, error) {
+			return []appsv1beta4.RebalanceState{
+				{
+					State: "processing",
+				},
+			}, nil
+		}
+
+		assert.Nil(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, getFun))
+		assert.Equal(t, appsv1beta4.RebalancePhaseProcessing, r.Status.Phase)
+		assert.Equal(t, "processing", r.Status.RebalanceStates[0].State)
+	})
 }
