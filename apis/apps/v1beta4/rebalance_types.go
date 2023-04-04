@@ -80,10 +80,10 @@ type RebalanceStatus struct {
 	// Phase represents the phase of Rebalance.
 	Phase           RebalancePhase   `json:"phase,omitempty"`
 	RebalanceStates []RebalanceState `json:"rebalanceStates,omitempty"`
-	// StartTime Represents the time when rebalance job start.
-	StartTime metav1.Time `json:"startTime,omitempty"`
-	// CompletionTime Represents the time when the rebalance job was completed.
-	CompletionTime metav1.Time `json:"completionTime,omitempty"`
+	// StartedTime Represents the time when rebalance job start.
+	StartedTime metav1.Time `json:"StartedTime,omitempty"`
+	// CompletedTime Represents the time when the rebalance job was completed.
+	CompletedTime metav1.Time `json:"CompletedTime,omitempty"`
 }
 
 // Rebalance defines the observed Rebalancing state of EMQX
@@ -144,8 +144,8 @@ type RebalanceCondition struct {
 }
 
 func (s *RebalanceStatus) SetFailed(condition RebalanceCondition) error {
-	if condition.Type != RebalanceFailed {
-		return fmt.Errorf("condition type must be %s", RebalanceFailed)
+	if condition.Type != RebalanceConditionFailed {
+		return fmt.Errorf("condition type must be %s", RebalanceConditionFailed)
 	}
 	s.Phase = RebalancePhaseFailed
 	s.SetCondition(condition)
@@ -156,11 +156,11 @@ func (s *RebalanceStatus) SetCompleted(condition RebalanceCondition) error {
 	if s.Phase != RebalancePhaseProcessing {
 		return fmt.Errorf("rebalance job is not in processing")
 	}
-	if condition.Type != RebalanceCompleted {
-		return fmt.Errorf("condition type must be %s", RebalanceCompleted)
+	if condition.Type != RebalanceConditionCompleted {
+		return fmt.Errorf("condition type must be %s", RebalanceConditionCompleted)
 	}
 	s.Phase = RebalancePhaseCompleted
-	s.CompletionTime = metav1.Now()
+	s.CompletedTime = metav1.Now()
 	s.SetCondition(condition)
 	return nil
 }
@@ -172,12 +172,12 @@ func (s *RebalanceStatus) SetProcessing(condition RebalanceCondition) error {
 	if s.Phase == RebalancePhaseCompleted {
 		return fmt.Errorf("rebalance job has been completed")
 	}
-	if condition.Type != RebalanceProcessing {
-		return fmt.Errorf("condition type must be %s", RebalanceProcessing)
+	if condition.Type != RebalanceConditionProcessing {
+		return fmt.Errorf("condition type must be %s", RebalanceConditionProcessing)
 	}
 	s.Phase = RebalancePhaseProcessing
-	if s.StartTime.IsZero() {
-		s.StartTime = metav1.Now()
+	if s.StartedTime.IsZero() {
+		s.StartedTime = metav1.Now()
 	}
 	s.SetCondition(condition)
 	return nil
@@ -221,9 +221,9 @@ type RebalanceConditionType string
 
 // These are built-in conditions of a EMQX rebalancing job.
 const (
-	RebalanceProcessing RebalanceConditionType = "Processing"
-	RebalanceCompleted  RebalanceConditionType = "Completed"
-	RebalanceFailed     RebalanceConditionType = "Failed"
+	RebalanceConditionProcessing RebalanceConditionType = "Processing"
+	RebalanceConditionCompleted  RebalanceConditionType = "Completed"
+	RebalanceConditionFailed     RebalanceConditionType = "Failed"
 )
 
 func init() {

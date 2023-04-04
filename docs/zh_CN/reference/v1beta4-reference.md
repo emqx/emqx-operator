@@ -552,8 +552,8 @@ _Appears in:_
 | `conditions` _[RebalanceCondition](#rebalancecondition) array_ | The latest available observations of an object's current state. When Rebalance fails, the condition will have type "Failed" and status false. When Rebalance is in processing, the condition will have a type "Processing" and status true. When Rebalance is completed, the condition will have a type "Complete" and status true. |
 | `phase` _[RebalancePhase](#rebalancephase)_ | Phase represents the phase of Rebalance. |
 | `rebalanceStates` _[RebalanceState](#rebalancestate) array_ |  |
-| `startTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | StartTime Represents the time when rebalance job start. |
-| `completionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | CompletionTime Represents the time when the rebalance job was completed. |
+| `StartedTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | StartedTime Represents the time when rebalance job start. |
+| `CompletedTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | CompletedTime Represents the time when the rebalance job was completed. |
 
 
 #### RebalanceStrategy
