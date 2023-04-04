@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
@@ -97,7 +96,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 			Type:    appsv1beta4.RebalanceFailed,
 			Status:  corev1.ConditionTrue,
-			Message: fmt.Sprintf("EmqxEnterprise %s not found", rebalance.Spec.InstanceName),
+			Message: fmt.Sprintf("EMQX Enterprise %s is not found", rebalance.Spec.InstanceName),
 		})
 		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
@@ -116,14 +115,12 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	if err := rebalanceHandler(
-		rebalance, emqx, pod, portForward,
-		startRebalance, stopRebalance, getRebalanceStatus,
-	); err != nil {
+	if err := rebalanceHandler(rebalance, emqx, pod, portForward,
+		startRebalance, stopRebalance, getRebalanceStatus); err != nil {
 		_ = r.Client.Status().Update(ctx, rebalance)
 		return ctrl.Result{}, err
 	}
-	if err := r.Client.Status().Update(ctx, rebalance); err != nil {
+	if err := r.Client.Update(ctx, rebalance); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -138,6 +135,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", "rebalance is processing")
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	default:
+		// panic("unknown rebalance phase")
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 }
@@ -199,9 +197,7 @@ func rebalanceHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEn
 	finalizer := "apps.emqx.io/finalizer"
 	if !rebalance.DeletionTimestamp.IsZero() {
 		if rebalance.Status.Phase == "Processing" {
-			if err := stopFun(portForward, rebalance); err != nil {
-				return err
-			}
+			_ = stopFun(portForward, rebalance)
 		}
 		controllerutil.RemoveFinalizer(rebalance, finalizer)
 		return nil
@@ -217,7 +213,7 @@ func rebalanceHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEn
 			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 				Type:    appsv1beta4.RebalanceFailed,
 				Status:  corev1.ConditionTrue,
-				Message: fmt.Sprintf("Failed to start rebalance: %s", err.Error()),
+				Message: fmt.Sprintf("Failed to start rebalance: %v", err.Error()),
 			})
 			return emperror.Wrap(err, "failed to start rebalance")
 		}
@@ -253,7 +249,7 @@ func rebalanceHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEn
 			Status:  corev1.ConditionTrue,
 			Message: message,
 		})
-		return emperror.New(strings.ToLower(message))
+		return nil
 	}
 	_ = rebalance.Status.SetProcessing(appsv1beta4.RebalanceCondition{
 		Type:   appsv1beta4.RebalanceProcessing,

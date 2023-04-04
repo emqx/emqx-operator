@@ -68,7 +68,6 @@ func TestGetRebalanceStatus(t *testing.T) {
 		_, err := getRebalanceStatus(f)
 		assert.ErrorContains(t, err, "failed to unmarshal rebalances")
 	})
-
 }
 
 func TestStartRebalance(t *testing.T) {
@@ -320,11 +319,8 @@ func TestRebalanceHandler(t *testing.T) {
 		r.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 		r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
 
-		stopFun := func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
-			return errors.New("fake error")
-		}
-		assert.ErrorContains(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, stopFun, defGetFun), "fake error")
 		assert.Nil(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, defGetFun))
+		assert.Len(t, r.Finalizers, 0)
 	})
 
 	t.Run("check start rebalance failed", func(t *testing.T) {
@@ -363,7 +359,7 @@ func TestRebalanceHandler(t *testing.T) {
 			return []appsv1beta4.RebalanceState{}, nil
 		}
 
-		assert.ErrorContains(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, getFun), "can not get rebalance status")
+		assert.Nil(t, rebalanceHandler(r, emqxEnterprise, pod, pw, defStartFun, defStopFun, getFun))
 		assert.Equal(t, appsv1beta4.RebalancePhaseFailed, r.Status.Phase)
 
 		r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
