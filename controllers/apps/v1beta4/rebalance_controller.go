@@ -74,6 +74,7 @@ func NewRebalanceReconciler(mgr manager.Manager) *RebalanceReconciler {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
 
 func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	finalizer := "apps.emqx.io/finalizer"
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("Reconcile rebalance")
 
@@ -92,6 +93,12 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}, emqx); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, err
+		}
+		if !rebalance.DeletionTimestamp.IsZero() {
+			if rebalance.Status.Phase == appsv1beta4.RebalancePhaseProcessing {
+				controllerutil.RemoveFinalizer(rebalance, finalizer)
+				return ctrl.Result{}, r.Client.Update(ctx, rebalance)
+			}
 		}
 		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 			Type:    appsv1beta4.RebalanceFailed,
@@ -115,8 +122,23 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	if err := rebalanceHandler(rebalance, emqx, pod, portForward,
-		startRebalance, stopRebalance, getRebalanceStatus); err != nil {
+	if !rebalance.DeletionTimestamp.IsZero() {
+		if rebalance.Status.Phase == appsv1beta4.RebalancePhaseProcessing {
+			_ = stopRebalance(portForward, rebalance)
+		}
+		controllerutil.RemoveFinalizer(rebalance, finalizer)
+		return ctrl.Result{}, r.Client.Update(ctx, rebalance)
+	}
+
+	if !controllerutil.ContainsFinalizer(rebalance, finalizer) {
+		controllerutil.AddFinalizer(rebalance, finalizer)
+		if err := r.Client.Update(ctx, rebalance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if err := rebalanceStatusHandler(rebalance, emqx, pod, portForward,
+		startRebalance, getRebalanceStatus); err != nil {
 		_ = r.Client.Status().Update(ctx, rebalance)
 		return ctrl.Result{}, err
 	}
@@ -190,24 +212,9 @@ type GetRebalanceStatusFunc func(PortForwardAPI) ([]appsv1beta4.RebalanceState, 
 type StartRebalanceFunc func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error
 type StopRebalanceFunc func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error
 
-func rebalanceHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, pod *corev1.Pod,
-	portForward PortForwardAPI,
-	startFun StartRebalanceFunc, stopFun StopRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
+func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, pod *corev1.Pod,
+	portForward PortForwardAPI, startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
 ) error {
-	finalizer := "apps.emqx.io/finalizer"
-	if !rebalance.DeletionTimestamp.IsZero() {
-		if rebalance.Status.Phase == "Processing" {
-			_ = stopFun(portForward, rebalance)
-		}
-		controllerutil.RemoveFinalizer(rebalance, finalizer)
-		return nil
-	}
-
-	if !controllerutil.ContainsFinalizer(rebalance, finalizer) {
-		controllerutil.AddFinalizer(rebalance, finalizer)
-		return nil
-	}
-
 	if rebalance.Status.Phase == "" {
 		if err := startFun(portForward, rebalance, emqx, getEmqxNodeName(emqx, pod)); err != nil {
 			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
