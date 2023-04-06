@@ -14,9 +14,7 @@ This guide will walk you through the process of deploying EMQX, an open-source M
 
 ### Deploy EMQX Operator
 
-To install EMQX Operator, please check [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
-
-You can follow this guide for a step-by-step installation, but be mindful of the `cert-manager` installation process.
+To install EMQX Operator, you can follow this guide [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md) for a step-by-step installation, but be mindful of the `cert-manager` installation process.
 
 ::: warning
 For the detailed steps on installing `cert-manager`, see the official documentation:
