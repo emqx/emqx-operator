@@ -137,11 +137,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	if err := rebalanceStatusHandler(rebalance, emqx, pod, portForward,
-		startRebalance, getRebalanceStatus); err != nil {
-		_ = r.Client.Status().Update(ctx, rebalance)
-		return ctrl.Result{}, err
-	}
+	rebalanceStatusHandler(rebalance, emqx, pod, portForward, startRebalance, getRebalanceStatus)
 	if err := r.Client.Status().Update(ctx, rebalance); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -157,8 +153,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", "rebalance is processing")
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	default:
-		// panic("unknown rebalance phase")
-		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+		panic("unknown rebalance phase")
 	}
 }
 
@@ -214,55 +209,49 @@ type StopRebalanceFunc func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) 
 
 func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, pod *corev1.Pod,
 	portForward PortForwardAPI, startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
-) error {
-	if rebalance.Status.Phase == "" {
+) {
+	switch rebalance.Status.Phase {
+	case "":
 		if err := startFun(portForward, rebalance, emqx, getEmqxNodeName(emqx, pod)); err != nil {
 			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 				Type:    appsv1beta4.RebalanceConditionFailed,
 				Status:  corev1.ConditionTrue,
 				Message: fmt.Sprintf("Failed to start rebalance: %v", err.Error()),
 			})
-			return emperror.Wrap(err, "failed to start rebalance")
+			rebalance.Status.RebalanceStates = nil
 		}
 		_ = rebalance.Status.SetProcessing(appsv1beta4.RebalanceCondition{
 			Type:   appsv1beta4.RebalanceConditionProcessing,
 			Status: corev1.ConditionTrue,
 		})
-		return nil
-	}
+	case appsv1beta4.RebalancePhaseProcessing:
+		rebalanceStates, err := getRebalanceStatusFun(portForward)
+		if err != nil {
+			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
+				Type:    appsv1beta4.RebalanceConditionFailed,
+				Status:  corev1.ConditionTrue,
+				Message: fmt.Sprintf("Failed to get rebalance status: %s", err.Error()),
+			})
+		}
 
-	rebalanceStates, err := getRebalanceStatusFun(portForward)
-	if err != nil {
-		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.RebalanceConditionFailed,
-			Status:  corev1.ConditionTrue,
-			Message: fmt.Sprintf("Failed to get rebalance status: %s", err.Error()),
-		})
-		return emperror.Wrap(err, "failed to get rebalance status")
-	}
-	rebalance.Status.RebalanceStates = rebalanceStates
-
-	if len(rebalanceStates) == 0 {
-		if rebalance.Status.Phase == "Processing" {
+		if len(rebalanceStates) == 0 {
 			_ = rebalance.Status.SetCompleted(appsv1beta4.RebalanceCondition{
 				Type:   appsv1beta4.RebalanceConditionCompleted,
 				Status: corev1.ConditionTrue,
 			})
-			return nil
+			rebalance.Status.RebalanceStates = nil
 		}
-		message := "Can not get rebalance status"
-		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
-			Type:    appsv1beta4.RebalanceConditionFailed,
-			Status:  corev1.ConditionTrue,
-			Message: message,
+
+		_ = rebalance.Status.SetProcessing(appsv1beta4.RebalanceCondition{
+			Type:   appsv1beta4.RebalanceConditionProcessing,
+			Status: corev1.ConditionTrue,
 		})
-		return nil
+		rebalance.Status.RebalanceStates = rebalanceStates
+	case appsv1beta4.RebalancePhaseFailed, appsv1beta4.RebalancePhaseCompleted:
+		rebalance.Status.RebalanceStates = nil
+	default:
+		panic("unknown rebalance phase")
 	}
-	_ = rebalance.Status.SetProcessing(appsv1beta4.RebalanceCondition{
-		Type:   appsv1beta4.RebalanceConditionProcessing,
-		Status: corev1.ConditionTrue,
-	})
-	return nil
 }
 
 func startRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error {

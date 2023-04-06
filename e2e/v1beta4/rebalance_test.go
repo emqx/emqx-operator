@@ -87,6 +87,7 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 					return r.Status
 				}, timeout, interval).Should(And(
 					HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
+					HaveField("RebalanceStates", BeNil()),
 					HaveField("Conditions", ContainElements(
 						HaveField("Type", appsv1beta4.RebalanceConditionFailed),
 					)),
@@ -121,6 +122,7 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 					return r.Status
 				}, timeout, interval).Should(And(
 					HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
+					HaveField("RebalanceStates", BeNil()),
 					HaveField("Conditions", ContainElements(
 						HaveField("Type", appsv1beta4.RebalanceConditionFailed),
 					)),
@@ -157,6 +159,7 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 					return r.Status
 				}, timeout, interval).Should(And(
 					HaveField("Phase", appsv1beta4.RebalancePhaseCompleted),
+					HaveField("RebalanceStates", BeNil()),
 					HaveField("Conditions", ContainElements(
 						HaveField("Type", appsv1beta4.RebalanceConditionCompleted),
 					)),
