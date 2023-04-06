@@ -14,12 +14,12 @@ This guide will walk you through the process of deploying EMQX, an open-source M
 
 ### Deploy EMQX Operator
 
-For the detailed steps on installing `cert-manager`, see the official documentation [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
+To install EMQX Operator, please check [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
 
 You can follow this guide for a step-by-step installation, but be mindful of the `cert-manager` installation process.
 
 ::: warning
-To install `cert-manager`, consult the official documentation:
+For the detailed steps on installing `cert-manager`, see the official documentation:
 
 - [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
 - [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
