@@ -14,6 +14,9 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    outputs:
+      e2e: ${{ steps.e2e.outputs.e2e }}
+
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
@@ -53,44 +56,51 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends shellcheck
           ./scripts/shellcheck.sh
+      - name: Output e2e test cases
+        id: e2e
+        run: |
+          e2e=$(find e2e -type f ! -name "suite_test.go" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "e2e test cases: $e2e"
+          echo "e2e=$e2e" >> $GITHUB_OUTPUT
 
-  test:
+  e2e-test:
     runs-on: ubuntu-latest
+    needs: lint
+
     strategy:
       fail-fast: false
       matrix:
-        dir:
-        - apis
-        - controllers
-        - internal
-        - e2e/v1beta4
-        - e2e/v2alpha1
+        file: ${{fromJSON(needs.lint.outputs.e2e)}}
 
     steps:
       - run: minikube start
+      - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
           go-version: '1.19'
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: install kubebuilder
-        run: |
-          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-          ARCH=$(uname -m | sed 's/x86_64/amd64/')
-          curl -fsL "https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-1.16.4-${OS}-${ARCH}.tar.gz" -o kubebuilder-tools
-          tar -zxvf kubebuilder-tools
-          sudo mv kubebuilder/ /usr/local/kubebuilder
-      - name: Run unit tests
+      - run: go install github.com/onsi/ginkgo/v2/ginkgo@latest
+      - name: Run e2e test cases
         env:
-          DIR: ${{ matrix.dir }}
-        run: go test -race -covermode=atomic -coverpkg=./... -coverprofile=${DIR/\//_}.out --timeout=20m ./${DIR}/...
+          FILE: ${{ matrix.file }}
+        run: |
+          echo "Run e2e test cases: $FILE"
+          filename="$(basename $FILE)"
+          filename="${filename%.*}"
+          $(go env GOPATH)/bin/ginkgo -v --cover -covermode=atomic -coverpkg=./... -coverprofile=${filename}.out --focus-file=${filename} $(dirname $FILE)
+      - uses: actions/upload-artifact@v3
+        with:
+          name: coverprofile
+          path: |
+            *.out
+
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+      - run: go test -race --cover -covermode=atomic -coverpkg=./... -coverprofile=cover.out $(go list ./...|grep -v e2e)
       - uses: actions/upload-artifact@v3
         with:
           name: coverprofile
@@ -99,7 +109,9 @@ jobs:
 
   codecov:
     runs-on: ubuntu-latest
-    needs: test
+    needs:
+      - e2e-test
+      - unit-test
     steps:
       - uses: actions/download-artifact@v3
         with:
@@ -118,82 +130,3 @@ jobs:
       - uses: geekyeggo/delete-artifact@v2
         with:
           name: coverprofile
-
-  deployment:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        install:
-          - static
-          - helm
-        emqx:
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-slim.yaml"]
-          # - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-full.yaml"]
-          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-slim.yaml"]
-          # - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-full.yaml"]
-
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-slim.yaml"]
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
-          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-slim.yaml"]
-          - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-full.yaml"]
-
-          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
-          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
-
-    steps:
-      - run: minikube start
-      - name: install cert-manager
-        run: |
-          helm repo add jetstack https://charts.jetstack.io
-          helm repo update
-          helm install \
-            cert-manager jetstack/cert-manager \
-            --namespace cert-manager \
-            --create-namespace \
-            --set installCRDs=true
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
-      - uses: actions/checkout@v3
-      - name: Build image
-        env:
-          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
-        run: eval $(minikube docker-env) && docker build -t $IMG .
-      - name: Deploy controller
-        if: matrix.install == 'static'
-        env:
-          IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
-        run: make deploy
-      - name: Deploy controller
-        if: matrix.install == 'helm'
-        run: |
-          helm install emqx-operator deploy/charts/emqx-operator \
-            --set image.tag=${{ github.sha }} \
-            --namespace emqx-operator-system \
-            --create-namespace
-      - name: Check operator
-        timeout-minutes: 5
-        run: |
-          set -euo pipefail
-          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
-            echo "waiting operator controller pod running"
-            sleep 1
-          done
-      - name: Deployment emqx
-        timeout-minutes: 5
-        uses: ./.github/actions/deploy-emqx
-        with:
-          kind: ${{ matrix.emqx[0] }}
-          name: ${{ matrix.emqx[1] }}
-          file: ${{ matrix.emqx[2] }}
-      - if: failure()
-        run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
-      - if: failure()
-        run: kubectl describe ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }}
-      - if: failure()
-        run: kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json
-      - if: failure()
-        run: kubectl logs -l "apps.emqx.io/managed-by=emqx-operator" -c emqx
-      - if: failure()
-        run: kubectl get event
