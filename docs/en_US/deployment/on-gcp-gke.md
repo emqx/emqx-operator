@@ -42,7 +42,7 @@ standard                    kubernetes.io/gce-pd           Delete          Immed
 ...
 ```
 
-Here, we pick up `standard` as storage class in the guide
+This guide uses the `standard` storage class.
 
 For more storage classes, please check [gcp docs](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses)
 
@@ -113,7 +113,7 @@ spec:
 ::::
 
 
-### Veirty the deployment
+### Verify the deployment
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -128,7 +128,7 @@ lb_listener_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalanc
 lb_dashboard_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
 ```
 
-- connect, publish, and subscribe using MQTTX CLI
+- Connect, publish, and subscribe using MQTTX CLI
 ```Shell
 mqttx conn -h ${lb_listener_ip} -p 1883
 mqttx sub -t 'hello' -h ${lb_listener_ip} -p 1883
