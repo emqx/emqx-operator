@@ -8,7 +8,6 @@ import (
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
-	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -129,15 +128,9 @@ func (handler *Handler) CreateOrUpdate(obj client.Object) error {
 }
 
 func (handler *Handler) Create(obj client.Object) error {
-	switch obj.(type) {
-	case *appsv1beta3.EmqxBroker:
-	case *appsv1beta3.EmqxEnterprise:
-	default:
-		if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
-			return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
-		}
+	if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
+		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
-
 	if err := handler.Client.Create(context.TODO(), obj); err != nil {
 		return emperror.Wrapf(err, "failed to create %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
