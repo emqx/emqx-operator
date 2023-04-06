@@ -142,7 +142,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		_ = r.Client.Status().Update(ctx, rebalance)
 		return ctrl.Result{}, err
 	}
-	if err := r.Client.Update(ctx, rebalance); err != nil {
+	if err := r.Client.Status().Update(ctx, rebalance); err != nil {
 		return ctrl.Result{}, err
 	}
 
