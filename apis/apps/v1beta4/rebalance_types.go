@@ -81,9 +81,9 @@ type RebalanceStatus struct {
 	Phase           RebalancePhase   `json:"phase,omitempty"`
 	RebalanceStates []RebalanceState `json:"rebalanceStates,omitempty"`
 	// StartedTime Represents the time when rebalance job start.
-	StartedTime metav1.Time `json:"StartedTime,omitempty"`
+	StartedTime metav1.Time `json:"startedTime,omitempty"`
 	// CompletedTime Represents the time when the rebalance job was completed.
-	CompletedTime metav1.Time `json:"CompletedTime,omitempty"`
+	CompletedTime metav1.Time `json:"completedTime,omitempty"`
 }
 
 // Rebalance defines the observed Rebalancing state of EMQX
