@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide will walk you through the process of deploying EMQ X, an open-source MQTT broker, on Google Kubernetes Engine (GKE). By following these steps, you'll learn how to create and configure an EMQ X deployment on GKE.
+This guide will walk you through the process of deploying EMQX, an open-source MQTT broker, on Google Kubernetes Engine (GKE). By following these steps, you'll learn how to create and configure an EMQX deployment on GKE.
 
 ## Prerequisites
 
@@ -12,9 +12,11 @@ This guide will walk you through the process of deploying EMQ X, an open-source 
 
 ## Deploy EMQX on GKE
 
-### Deploying EMQX Operator
+### Deploy EMQX Operator
 
-To install EMQX Operator, please check [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
+For the detailed steps on installing `cert-manager`, see the official documentation [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md)
+
+You can follow this guide for a step-by-step installation, but be mindful of the `cert-manager` installation process.
 
 ::: warning
 To install `cert-manager`, consult the official documentation:
@@ -45,7 +47,7 @@ Here, we pick up `standard` as storage class in the guide
 For more storage classes, please check [gcp docs](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses)
 
 
-### Deploying EMQX Cluster
+### Deploy EMQX Cluster
 
 Below are the relevant configurations for EMQX Custom Resource. Choose the corresponding APIVersion based on the EMQX version you want to deploy. For specific compatibility relationships, please check [EMQX Operator Compatibility](../README.md):
 
@@ -147,7 +149,7 @@ lb_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip
 ```
 
 
-- connect, publish, and subscribe using MQTTX CLI
+- Connect, publish, and subscribe using MQTTX CLI
 ```Shell
 mqttx conn -h ${lb_ip} -p 1883
 mqttx sub -t 'hello' -h ${lb_ip} -p 1883
@@ -162,11 +164,7 @@ http://${lb_ip}:18083
 :::
 ::::
 
-## Handing LoadBalancer TLS offloading
+## Use LoadBalancer for TLS offloading
 
 Since Google LoadBalancer doesn't support TCP certificates, please check [discussion](https://github.com/emqx/emqx-operator/discussions/312) to address TCP certificate offloading issues.
 
-
-## Conclusion
-
-This tutorial has provided you with the necessary knowledge to successfully deploy an EMQ X instance on Google Kubernetes Engine (GKE).
