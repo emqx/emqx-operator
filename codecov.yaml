@@ -6,3 +6,4 @@ fixes:
 
 ignore:
 - "**/zz_generated.deepcopy.go"
+- "main.go"
