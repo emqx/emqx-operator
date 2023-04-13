@@ -68,7 +68,12 @@ spec:
                     default: 60
                     format: int32
                     type: integer
+                required:
+                - connEvictRate
                 type: object
+            required:
+            - instanceName
+            - rebalanceStrategy
             type: object
           status:
             properties:

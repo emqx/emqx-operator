@@ -26,13 +26,13 @@ import (
 
 // RebalanceSpec represents the desired spec of Rebalance
 type RebalanceSpec struct {
-	// +kubebuilder:validation:required
 	// InstanceName represents the name of EmqxEnterprise CR
-	InstanceName string `json:"instanceName,omitempty"`
-	// +kubebuilder:validation:required
+	// +kubebuilder:validation:Required
+	InstanceName string `json:"instanceName"`
 	// RebalanceStrategy represents the strategy of EMQX rebalancing
 	// More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing
-	RebalanceStrategy RebalanceStrategy `json:"rebalanceStrategy,omitempty"`
+	// +kubebuilder:validation:Required
+	RebalanceStrategy RebalanceStrategy `json:"rebalanceStrategy"`
 }
 
 // RebalanceStrategy represents the strategy of EMQX rebalancing
@@ -40,9 +40,9 @@ type RebalanceStrategy struct {
 	// ConnEvictRate represents the source node client disconnect rate per second.
 	// same to conn-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
 	// The value must be greater than 0
-	// +kubebuilder:validation:required
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Minimum=1
-	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
+	ConnEvictRate int32 `json:"connEvictRate"`
 	// SessEvictRate represents the source node session evacuation rate per second.
 	// same to sess-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
 	// The value must be greater than 0
