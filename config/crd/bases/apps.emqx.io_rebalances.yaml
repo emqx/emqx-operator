@@ -39,28 +39,41 @@ spec:
               rebalanceStrategy:
                 properties:
                   absConnThreshold:
+                    default: 1000
                     format: int32
                     type: integer
                   absSessThreshold:
+                    default: 1000
                     format: int32
                     type: integer
                   connEvictRate:
                     format: int32
+                    minimum: 1
                     type: integer
                   relConnThreshold:
+                    default: "1.1"
                     type: string
                   relSessThreshold:
+                    default: "1.1"
                     type: string
                   sessEvictRate:
+                    default: 500
                     format: int32
                     type: integer
                   waitHealthCheck:
+                    default: 60
                     format: int32
                     type: integer
                   waitTakeover:
+                    default: 60
                     format: int32
                     type: integer
+                required:
+                - connEvictRate
                 type: object
+            required:
+            - instanceName
+            - rebalanceStrategy
             type: object
           status:
             properties:
