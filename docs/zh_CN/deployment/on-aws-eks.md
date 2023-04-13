@@ -12,7 +12,6 @@ Amazon EKS（Elastic Kubernetes Service）是一种托管的 Kubernetes 服务�
 
 - 存储类，详情请参见：[存储类](https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/storage-classes.html)
 
-
 ## 配置持久化存储
 
 EMQX 自定义资源使用 StoreClass 来保存 EMQX 运行时的状态。在开始之前，需要准备好 StoreClass。以下是使用 `ebs-sc` 配置 EMQX 自定义资源的示例。

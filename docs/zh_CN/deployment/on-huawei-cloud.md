@@ -1,204 +1,220 @@
 # 在华为云上部署 EMQX 集群
 
-华为云容器引擎（Cloud Container Engine，简称 CCE）提供高度可扩展的、高性能的企业级 Kubernetes 集群，支持运行 Docker 容器。借助云容器引擎，您可以在华为云上轻松部署、管理和扩展容器化应用程序。
+EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 CCE）部署 EMQX。云容器引擎提供高度可扩展的、高性能的企业级 Kubernetes 集群，支持运行 Docker 容器。借助云容器引擎，您可以在华为云上轻松部署、管理和扩展容器化应用程序。
 
-云容器引擎深度整合高性能的计算（ECS/BMS）、网络（VPC/EIP/ELB）、存储（EVS/OBS/SFS）等服务，并支持 GPU、NPU、ARM 等异构计算架构，支持多可用区（Available Zone，简称 AZ）、多区域（Region）容灾等技术构建高可用 Kubernetes 集群。
-
-华为云是全球首批 Kubernetes 认证服务提供商（Kubernetes Certified Service Provider，KCSP），是国内最早投入 Kubernetes 社区的厂商，是容器开源社区主要贡献者和容器生态领导者。华为云也是 CNCF 云原生计算基金会的创始成员及白金会员，云容器引擎是全球首批通过 CNCF 基金会 Kubernetes 一致性认证的容器服务。
-
-关于更多云容器引擎 CCE 产品介绍，请查看 [什么是云容器引擎](https://support.huaweicloud.com/productdesc-cce/cce_productdesc_0001.html?utm_source=cce_Growth_map&utm_medium=display&utm_campaign=help_center&utm_content=Growth_map)。
+云容器引擎深度整合高性能的计算（ECS/BMS）、网络（VPC/EIP/ELB）、存储（EVS/OBS/SFS）等服务，并支持 GPU、NPU、ARM 等异构计算架构，支持多可用区（Available Zone，简称 AZ）、多区域（Region）容灾等技术构建高可用 Kubernetes 集群。关于更多云容器引擎 CCE 产品介绍，请查看 [什么是云容器引擎](https://support.huaweicloud.com/productdesc-cce/cce_productdesc_0001.html?utm_source=cce_Growth_map&utm_medium=display&utm_campaign=help_center&utm_content=Growth_map)。
 
 ## 前提条件
 
-本文假设您已开通了 CCE 服务，并成功创建了一个可以访问的 Kubernetes 集群，如果您还没有准备好，请查看[入门指引](https://support.huaweicloud.com/qs-cce/cce_qs_0001.html)。
+在开始之前，你需要准备以下内容：
 
-> Kubernetes 集群节点必须可以访问外网（可以通过加 NAT 网关解决）
+- 开通华为云容器服务，并创建一个 CCE 集群。具体请参考：[创建 CCE 集群](https://support.huaweicloud.com/usermanual-cce/cce_01_0028.html)
 
-> Kubernetes 集群节点的操作系统建议是 Ubuntu，否则有可能会缺少必要的库（socat）
+    ::: tip
+    Kubernetes 集群节点必须可以访问外网（可以通过加 NAT 网关解决），否则无法拉取除容器镜像服务（SoftWare Repository）外的第三方镜像
+    :::
 
-## 为 EMQX 集群配置持久化存储
+    :::tip
+    Kubernetes 集群节点的操作系统建议选择 Ubuntu，否则有可能会缺少必要的库（socat）
+    :::
 
-EMQX Custom Resource 使用 StoreClass 来保存 EMQX 运行时的状态。在开始之前，您需要准备 StoreClass。目前 CCE 默认提供 csi-disk、csi-nas、csi-obs 等 StorageClass，执行如下命令即可查询 CCE 提供的默认 StorageClass。您可以使用 CCE 提供的 CSI 插件自定义创建 StorageClass，但从功能角度与 CCE 提供的默认 StorageClass 并无区别，这里不做过多描述。更多详情请参考[存储类 StorageClass](https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html)。
+- 通过 kubectl 命令连接 CCE 集群，你可以在本地安装 kubectl 工具，并获取集群的 KubeConfig 来连接集群，或是在容器服务 CCE 控制台上利用 CloudShell 通过 kubectl 管理集群。
 
-```bash
-# kubectl get sc
-NAME                PROVISIONER                     AGE
-csi-disk            everest-csi-provisioner         17d          # 云硬盘 StorageClass
-csi-nas             everest-csi-provisioner         17d          # 文件存储 1.0 StorageClass
-csi-sfs             everest-csi-provisioner         17d          # 文件存储 3.0 StorageClass
-csi-obs             everest-csi-provisioner         17d          # 对象存储 StorageClass
-csi-sfsturbo        everest-csi-provisioner         17d          # 极速文件存储 StorageClass
-csi-local-topology  everest-csi-provisioner         17d          # 本地持久卷
-```
+  - 通过本地安装 kubectl 工具连接 CCE 集群：具体请参考：[使用 kubectl 连接集群](https://support.huaweicloud.com/usermanual-cce/cce_10_0107.html#section3)
+  - 通过 CloudShell 连接 CCE 集群：具体请参考：[使用 CloudShell 连接集群](https://support.huaweicloud.com/usermanual-cce/cce_10_0107.html#section2)
 
-下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
+- 安装 EMQX Operator：具体请参考：[安装 EMQX Operator](../getting-started/getting-started.md)
+
+## 快速部署一个 EMQX 集群
+
+下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考[ EMQX 与 EMQX Operator 的兼容性列表](../README.md)：
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx:5.0
-  coreTemplate:
-    spec:
-      volumeClaimTemplates:
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    ## EMQX 自定义资源不支持在运行时更新这个字段
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
+        ## 更多内容：https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html#section1
         storageClassName: csi-disk
         resources:
           requests:
             storage: 20Mi
         accessModes:
-        - ReadWriteOnce
-```
+          - ReadWriteOnce
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      metadata:
+        annotations:
+          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html#cce_10_0014__table939522754617
+          kubernetes.io/elb.autocreate: |
+            {
+              "type": "public",
+              "bandwidth_name": "cce-emqx",
+              "bandwidth_size": 5,
+              "bandwidth_sharetype": "PER",
+              "eip_type": "5_bgp"
+            }
+      spec:
+        type: LoadBalancer
+    ```
+
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
+
+  ```bash
+  $ external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  $ echo $external_ip
+
+  198.18.3.10
+  ```
+
+  通过浏览器访问 `http://${external_ip}:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+
 :::
-::: tab v1beta4
+::: tab apps.emqx.io/v2alpha1
 
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  persistent:
-    metadata:
-      name: emqx-ee
-    spec:
-      storageClassName: csi-disk
-      resources:
-        requests:
-          storage: 20Mi
-      accessModes:
-        - ReadWriteOnce
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-```
-:::
-::::
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
-## 通过 LoadBalancer 访问 EMQX 集群
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.0
+    coreTemplate:
+      spec:
+        ## EMQX 自定义资源不支持在运行时更新这个字段
+        volumeClaimTemplates:
+          ## 更多内容：https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html#section1
+          storageClassName: csi-disk
+          resources:
+            requests:
+              storage: 20Mi
+          accessModes:
+            - ReadWriteOnce
+    dashboardServiceTemplate:
+      metadata:
+        annotations:
+          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html#cce_10_0014__table939522754617
+          kubernetes.io/elb.autocreate: |
+            {
+              "type": "public",
+              "bandwidth_name": "cce-emqx",
+              "bandwidth_size": 5,
+              "bandwidth_sharetype": "PER",
+              "eip_type": "5_bgp"
+            }
+      spec:
+        type: LoadBalancer
+    listenersServiceTemplate:
+      metadata:
+        annotations:
+          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html#cce_10_0014__table939522754617
+          kubernetes.io/elb.autocreate: |
+            {
+              "type": "public",
+              "bandwidth_name": "cce-emqx",
+              "bandwidth_size": 5,
+              "bandwidth_sharetype": "PER",
+              "eip_type": "5_bgp"
+            }
+      spec:
+        type: LoadBalancer
+  ```
 
-负载均衡( LoadBalancer )可以通过弹性负载均衡从公网访问到工作负载，与弹性 IP 方式相比提供了高可靠的保障，一般用于系统中需要暴露到公网的服务。负载均衡访问方式由公网弹性负载均衡服务地址以及设置的访问端口组成，例如“10.117.117.117:80”。关于更多负载均衡的内容，请查看[负载均衡(LoadBalancer)](https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html)。
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
-在公有云中，一般通过配置资源的 Annotation 来配置负载均衡器的相关属性，
+  ```bash
+  $ kubectl get emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   2m55s
+  ```
 
-修改 EMQX Custom Resource 的配置，添加相应的 Annotation，并将 Service Type 设置为 `LoadBalancer`，如下所示:
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
 
-:::: tabs type:card
-::: tab v2alpha1
+  EMQX Operator 会创建两个 EMQX Service 资源，一个是 `emqx-dashboard`，一个是 `emqx-listeners`，分别对应 EMQX 控制台和 EMQX 监听端口。
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx:5.0
-  listenersServiceTemplate:
-    metadata:
-      annotations:
-        kubernetes.io/elb.class: union
-        kubernetes.io/elb.autocreate: |
-          {
-            "type": "public",
-            "name": "emqx",
-            "bandwidth_name": "cce-emqx",
-            "bandwidth_chargemode": "bandwidth",
-            "bandwidth_size": 5,
-            "bandwidth_sharetype": "PER",
-            "eip_type": "5_bgp"
-          }
-    spec:
-      type: LoadBalancer
-```
-:::
-::: tab v1beta4
+  ```bash
+  $ external_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
+  $ echo $external_ip
 
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-  serviceTemplate:
-    metadata:
-      annotations:
-        kubernetes.io/elb.class: union
-        kubernetes.io/elb.autocreate: |
-          {
-            "type": "public",
-            "name": "emqx-ee",
-            "bandwidth_name": "cce-emqx",
-            "bandwidth_chargemode": "bandwidth",
-            "bandwidth_size": 5,
-            "bandwidth_sharetype": "PER",
-            "eip_type": "5_bgp"
-          }
-    spec:
-      type: LoadBalancer
-```
-:::
-::::
-
-将上述文件保存为：emqx.yaml，并执行如下命令部署 EMQX 集群：
-
-```bash
-$ kubectl apply -f emqx.yaml
-emqx.apps.emqx.io/emqx created
-```
-
-等待 EMQX 集群就绪：
-
-:::: tabs type:card
-::: tab v2alpha1
-
-```bash
-$ kubectl get emqx
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.0   Running   2m55s
-```
-:::
-::: tab v1beta4
-
-```bash
-$ kubectl get emqxenterprises
-NAME      STATUS   AGE
-emqx-ee   Running  8m33s
-```
-:::
-::::
-
-> 确保 `STATUS` 为 `Running`，可能需要一些时间等待 EMQX 集群准备就绪
+  198.18.3.10
+  ```
+  :::
+  ::::
 
 ## 使用 MQTT X CLI 连接 EMQX 集群发布/订阅消息
 
 [MQTT X CLI](https://mqttx.app/zh/cli) 是一款开源的 MQTT 5.0 命令行客户端工具，旨在帮助开发者在不需要使用图形化界面的基础上，也能更快的开发和调试 MQTT 服务与应用。
 
-- 使用 MQTT X CLI 订阅消息
++ 获取 EMQX 集群的 External IP
 
-```bash
-mqttx sub -h ${loadBalancer_ip} -p 1883 -t "test/topic"
-```
+  :::: tabs type:card
+  ::: tab apps.emqx.io/v1beta4
 
-- 创建一个新的终端窗口并使用 MQTT X CLI 发布消息
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v2alpha1
 
-```bash
-mqttx pub -h ${loadBalancer_ip} -p 1883 -t "test/topic" -m "hello world"
-```
+  ```bash
+  external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::::
 
-> `${loadBalancer}` 为 EMQX Service 对应的 LoadBalancer IP
++ 订阅消息
+
+  ```bash
+  $ mqttx sub -t 'hello' -h ${external_ip} -p 1883
+
+  [10:00:25] › …  Connecting...
+  [10:00:25] › ✔  Connected
+  [10:00:25] › …  Subscribing to hello...
+  [10:00:25] › ✔  Subscribed to hello
+  ```
+
++ 创建一个新的终端窗口并发布消息
+
+  ```bash
+  $ mqttx pub -t 'hello' -h ${external_ip} -p 1883 -m 'hello world'
+
+  [10:00:58] › …  Connecting...
+  [10:00:58] › ✔  Connected
+  [10:00:58] › …  Message Publishing...
+  [10:00:58] › ✔  Message published
+  ```
+
++ 查看订阅终端窗口收到的消息
+
+  ```bash
+  [10:00:58] › payload: hello world
+  ```
 
 ## 关于 LoadBalancer 终结 TLS
 
