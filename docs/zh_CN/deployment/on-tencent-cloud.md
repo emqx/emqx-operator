@@ -4,17 +4,17 @@
 
 ## 前提条件
 
-在开始之前，我们需要开通腾讯云 TKE 及相关的服务，具体请参考[创建集群](https://cloud.tencent.com/document/product/457/32189)https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/quick-start-for-first-time-users)，本文假设您已经成功部署了一个可以访问的 Kubernetes 集群。
+在开始之前，我们需要开通腾讯云 TKE 及相关的服务，具体请参考[创建集群](https://cloud.tencent.com/document/product/457/32189)，本文假设您已经成功部署了一个可以访问的 Kubernetes 集群。
 
 ## 部署 EMQX Operator
 
-EMQX Operator 安装参考：[部署 EMQX Operator](../getting-started/getting-started.md)
+EMQX Operator 安装参考：[部署 EMQX Operator](../getting-started/getting-started.md)。
 
 ## 为 EMQX 集群配置持久化存储
 
-EMQX Custom Resource 使用 StoreClass 来保存 EMQX 运行时的状态。在开始之前，您需要准备 StoreClass。集群管理员可使用 StorageClass 为容器服务集群定义不同的存储类型。您可通过 StorageClass 配合 PersistentVolumeClaim 动态创建需要的存储资源。使用 `kubectl get storeClass` 可以查看当前 Kubernetes 集群中的 StoreClass。关于更多存储的相关信息，请查看[存储管理](https://cloud.tencent.com/document/product/457/46962)
+EMQX Custom Resource 使用 StoreClass 来保存 EMQX 运行时的状态。在开始之前，您需要准备 StoreClass。集群管理员可使用 StorageClass 为容器服务集群定义不同的存储类型。您可通过 StorageClass 配合 PersistentVolumeClaim 动态创建需要的存储资源。使用 `kubectl get storeClass` 可以查看当前 Kubernetes 集群中的 StoreClass。关于更多存储的相关信息，请查看[存储管理](https://cloud.tencent.com/document/product/457/46962)。
 
-腾讯云容器服务已默认提供了多种类型的 StorageClass，本文以 `cbs` 为例，如果你想创建自己的 storeClass，请参考[StorageClass 管理云硬盘模板](https://cloud.tencent.com/document/product/457/44239)
+腾讯云容器服务已默认提供了多种类型的 StorageClass，本文以 `cbs` 为例，如果你想创建自己的 storeClass，请参考[StorageClass 管理云硬盘模板](https://cloud.tencent.com/document/product/457/44239)。
 
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
@@ -38,7 +38,6 @@ spec:
         accessModes:
         - ReadWriteOnce
 ```
-
 :::
 ::: tab v1beta4
 
@@ -67,7 +66,6 @@ spec:
           repository: emqx/emqx-ee
           version: 4.4.14
 ```
-
 :::
 ::::
 
@@ -85,7 +83,7 @@ TkeServiceConfig 并不会帮您直接配置并修改协议和端口，您需要
 
 创建 Loadbalancer 模式 Service 时，设置注解 `service.cloud.tencent.com/tke-service-config-auto: "true"`，将自动创建 \<ServiceName>-auto-service-config。您也可以通过 **service.cloud.tencent.com/tke-service-config:\<config-name>** 直接指定您自行创建的 TkeServiceConfig。两个注解不可同时使用。
 
-除了 TkeServiceConfig，您可以通过其他 Annotation 注解配置 Service，以实现更丰富的负载均衡的能力。详情请查看[Service Annotation 说明](https://cloud.tencent.com/document/product/457/51258)
+除了 TkeServiceConfig，您可以通过其他 Annotation 注解配置 Service，以实现更丰富的负载均衡的能力。详情请查看[Service Annotation](https://cloud.tencent.com/document/product/457/51258)。
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -106,7 +104,6 @@ spec:
     spec:
       type: LoadBalancer
 ```
-
 :::
 ::: tab v1beta4
 
@@ -131,13 +128,12 @@ spec:
     spec:
       type: LoadBalancer
 ```
-
 :::
 ::::
 
 ## 使用 LoadBalancer 直连 Pod 模式 Service
 
-原生 LoadBalancer 模式 Service 可自动创建负载均衡 CLB，并通过集群的 Nodeport 转发至集群内，再通过 iptable 或 ipvs 进行二次转发。该模式下的 Service 能满足大部分使用场景 ，但在以下场景中更推荐使用**直连 Pod 模式 Service**：
+原生 LoadBalancer 模式 Service 可自动创建负载均衡 CLB，并通过集群的 Nodeport 转发至集群内，再通过 iptable 或 ipvs 进行二次转发。该模式下的 Service 能满足大部分使用场景 ，但在以下场景中更推荐使用 [直连 Pod 模式 Service](https://cloud.tencent.com/document/product/457/41897)：
 
 + 有获取来源 IP 需求时（非直连模式必须另外开启 Local 转发）。
 
@@ -168,7 +164,6 @@ spec:
     spec:
       type: LoadBalancer
 ```
-
 :::
 ::: tab v1beta4
 
@@ -191,15 +186,57 @@ spec:
     spec:
       type: LoadBalancer
 ```
-
 :::
 ::::
 
-## 使用 LB 终结 TCP TLS 方案
+将上述文件保存为：emqx.yaml，并执行如下命令部署 EMQX 集群：
 
-目前腾讯云 CLB 不支持终结 TCP TLS ，如需要使用 LB 终结 TCP TLS 请参考[LB 终结 TCP TLS 方案](https://github.com/emqx/emqx-operator/discussions/312)
+```bash
+$ kubectl apply -f emqx.yaml
+emqx.apps.emqx.io/emqx created
+```
 
+等待 EMQX 集群就绪：
 
+:::: tabs type:card
+::: tab v2alpha1
 
+```bash
+$ kubectl get emqx
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   13m
+```
+:::
+::: tab v1beta4
 
+```bash
+$ kubectl get emqxenterprises
+NAME      STATUS   AGE
+emqx-ee   Running  16m
+```
+:::
+::::
 
+> 确保 `STATUS` 为 `Running`，可能需要一些时间等待 EMQX 集群准备就绪
+
+## 使用 MQTT X CLI 连接 EMQX 集群发布/订阅消息
+
+[MQTT X CLI](https://mqttx.app/zh/cli) 是一款开源的 MQTT 5.0 命令行客户端工具，旨在帮助开发者在不需要使用图形化界面的基础上，也能更快的开发和调试 MQTT 服务与应用。
+
+- 创建一个新的终端窗口并使用 MQTT X CLI 订阅消息
+
+```bash
+mqttx sub -h ${loadBalancer_ip} -p 1883 -t "test/topic"
+```
+
+- 创建一个新的终端窗口并使用 MQTT X CLI 发布消息
+
+```bash
+mqttx pub -h ${loadBalancer_ip} -p 1883 -t "test/topic" -m "hello world"
+```
+
+> `${loadBalancer}` 为 EMQX Service 对应的 LoadBalancer IP。
+
+## 使用 LoadBalancer 终结 TLS 方案
+
+目前腾讯云 CLB 不支持终结 TLS ，如需要使用 LoadBalancer 终结 TLS 请参考[终结 TLS](https://github.com/emqx/emqx-operator/discussions/312)。
