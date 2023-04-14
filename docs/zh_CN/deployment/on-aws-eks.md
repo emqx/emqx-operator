@@ -126,7 +126,6 @@ spec:
 :::
 ::::
 
-
 ## TLS 终结
 
 在 Amazon EKS 中，您可以使用 NLB 进行 TLS 终结，可以按照以下步骤进行操作：
@@ -148,4 +147,4 @@ spec:
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls
     ```
     
-    > `service.beta.kubernetes.io/aws-load-balancer-ssl-cert` 的值是我们在第一步复制的 ARN 信息。
+    > `service.beta.kubernetes.io/aws-load-balancer-ssl-cert` 的值是我们在第一步复制的 ARN 信息
