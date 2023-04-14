@@ -123,10 +123,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, emperror.Wrap(err, "failed to create port forwarding options")
 	}
 	if o != nil {
-		defer close(o.StopChannel)
-		if err := o.ForwardPorts(); err != nil {
-			return ctrl.Result{}, emperror.Wrap(err, "failed to forward ports")
-		}
+		defer o.Close()
 	}
 
 	p := &portForwardAPI{
