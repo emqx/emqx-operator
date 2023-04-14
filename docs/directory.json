@@ -119,6 +119,10 @@
         {
           "title": "在腾讯云中部署 EMQX",
           "path": "deployment/on-tencent-cloud"
+        },
+        {
+          "title": "在 Amazon EKS 上部署 EMQX",
+          "path": "deployment/on-aws-eks"
         }
       ]
     },
