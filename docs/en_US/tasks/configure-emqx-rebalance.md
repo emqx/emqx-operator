@@ -1,28 +1,27 @@
-# Rebalancing MQTT connections (EMQX Enterprise)
+# Cluster Load Rebalancing (EMQX Enterprise)
 
-## Task target
+## Task Target
 
 How to rebalance MQTT connections.
 
-## Why Need Rebalancing
+## Why Need Load Rebalancing
 
 Cluster load rebalancing is the act of forcibly migrating client connections and sessions from one set of nodes to another. It will automatically calculate the number of connections that need to be migrated to achieve node balance, and then migrate the corresponding number of connections and sessions from high-load nodes to low-load nodes, thereby achieving load balancing between nodes. This operation is usually required to achieve balance after a new join or restart of a node.
 
 The value of rebalancing mainly has the following two points:
 
-- Improve system scalability: Since the MQTT connection is a long connection based on the TCP/IP protocol, when the cluster expands, the connection on the old node will not be automatically migrated to the new node. If you want the new node to carry part of the load on the old node, you can smoothly migrate the load on the old node to the new node through rebalancing, so that the load of the entire cluster is more balanced, and the throughput, response speed and resources of the system are improved. Utilization, making the system scale better.
-
-- Reduce operation and maintenance costs: If the load of some nodes in the system is too high or too low, these nodes need to be adjusted manually, and through rebalancing, the load of nodes can be automatically adjusted to reduce operation and maintenance costs.
+- **Improve system scalability**: Due to the persistent nature of MQTT connections, connections to the original nodes will not automatically migrate to the new nodes when the cluster scales. To address this, you can use the load rebalancing feature to smoothly transfer connections from overloaded nodes to newly-added ones. This process ensures a more balanced distribution of load across the entire cluster and enhances throughput, response speed, and resource utilization rate.
+- **Reduce O&M costs**: For clusters with unevenly distributed loads, where some nodes are overloaded while others remain idle, you can use the load rebalancing feature to automatically adjust the load within the cluster. This helps achieve a more balanced distribution of work and reduces operation and maintenance costs.
 
 For EMQX cluster load rebalancing, please refer to the document: [Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing).
 
 :::tip
 
-The cluster load rebalancing function is only available in EMQX Enterprise  4.4.12.
+The cluster load rebalancing function is only available since EMQX Enterprise  4.4.12.
 
 :::
 
-- How to use rebalancing
+## How to Use Load Rebalancing
 
 The corresponding CRD of the cluster rebalancing in EMQX Operator is `Rebalance`, and its example is as follows:
 
@@ -46,9 +45,9 @@ spec:
 
 > For Rebalance configuration, please refer to the document: [Rebalance reference](../reference/v1beta4-reference.md#rebalancestrategy).
 
-## Test rebalancing of EMQX Enterprise
+## Test Load Rebalancing 
 
-- Before Rebalancing, the cluster load
+### Cluster Load Distribution Before Rebalancing
 
 Before Rebalancing, we built a cluster with unbalanced load. And use Grafana + Prometheus to monitor the load of EMQX cluster:
 
@@ -113,9 +112,9 @@ NAME               STATUS      AGE
 rebalance-sample   Completed   62s
 ```
 
-> There are three states of Rebalance: Processing, Completed and Failed. Processing indicates that the rebalancing task is in progress, Completed indicates that the rebalancing task has been completed, and Failed indicates that the rebalancing task failed.
+> There are three states of Rebalance: Processing, Completed, and Failed. Processing indicates that the rebalancing task is in progress, Completed indicates that the rebalancing task has been completed, and Failed indicates that the rebalancing task failed.
 
-- Cluster load after Rebalance is completed
+### Cluster Load Distribution After Rebalancing
 
 ![](./assets/configure-emqx-rebalance/after-rebalance.png)
 

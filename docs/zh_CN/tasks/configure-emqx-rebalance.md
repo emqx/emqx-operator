@@ -1,4 +1,4 @@
-# 重平衡 MQTT 连接（EMQX 企业版）
+# 集群负载重平衡（EMQX 企业版）
 
 ## 任务目标
 
@@ -6,7 +6,7 @@
 
 ## 为什么需重平衡
 
-集群负载重平衡是将客户端连接与会话从一组节点强行迁移到其他节点的行为。它将自动计算得到到达成节点平衡所需迁移的连接数量，然后将对应数量的连接和会话数从高负载节点迁移到低负载节点，从而在节点之间实现负载均衡。通常在新加入或重启一个节点后需要此操作来达成平衡。
+集群负载重平衡是将客户端连接与会话从一组节点强行迁移到其他节点的行为。它将自动计算得到到达成节点平衡所需迁移的连接数量，然后将对应数量的连接和会话数从高负载节点迁移到低负载节点，从而在节点之间实现负载均衡。通常在新加入节点或节点重启后，需要此操作来达成平衡。
 
 重平衡的价值主要有以下两点：
 
@@ -46,9 +46,9 @@ spec:
 
 > 关于 Rebalance 配置可以参考文档：[Rebalance reference](../reference/v1beta4-reference.md#rebalancestrategy)。
 
-## 测试 EMQX 企业版重平衡
+## 测试集群负载重平衡
 
-- 执行 Rebalance 前，集群负载情况
+### 集群负载情况（重平衡前）
 
 在之前执行 Rebalance 前，我们构建了一个负载不均衡的集群。并使用 Grafana + Prometheus 监控 EMQX 集群负载的情况：
 
@@ -116,7 +116,7 @@ rebalance-sample   Completed   62s
 
 > Rebalance 的状态有三种，分别是：Processing，Completed 以及 Failed。Processing 表示重平衡任务正在进行， Completed 表示重平衡任务已经完成，Failed 表示重平衡任务失败。
 
-- Rebalance 完成后集群负载情况
+### 集群负载情况（重平衡后）
 
 ![](./assets/configure-emqx-rebalance/after-rebalance.png)
 
