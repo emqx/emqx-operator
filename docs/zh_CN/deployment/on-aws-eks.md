@@ -130,7 +130,6 @@ spec:
 
 在 Amazon EKS 中，您可以使用 NLB 进行 TLS 终结，可以按照以下步骤进行操作：
 
-
 1. 在 [AWS Certificate Manager](https://aws.amazon.com/cn/certificate-manager/?nc1=h_ls) 控制台中导入相关证书，然后通过单击证书 ID 进入详细信息页面，然后复制 ARN，如下图所示：
 
 :::tip
@@ -142,9 +141,9 @@ spec:
 2. 在 EMQX 自定义资源的元数据中添加如下注释：
 
     ```yaml
-    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-east-2:609217282285:certificate/2519bd2b-f523-43de-9593-ec92132791e7 
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-east-2:609217282285:certificate/2519bd2b-f523-43de-9593-ec92132791e7
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: 1883,mqtt-tls
     ```
-    
+
     > `service.beta.kubernetes.io/aws-load-balancer-ssl-cert` 的值是我们在第一步复制的 ARN 信息
