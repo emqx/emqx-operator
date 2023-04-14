@@ -76,10 +76,8 @@ func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2alpha1.EMQX, 
 	if o == nil {
 		return corev1.ConditionUnknown
 	}
-	defer close(o.StopChannel)
-	if err := o.ForwardPorts(); err != nil {
-		return corev1.ConditionUnknown
-	}
+	defer o.Close()
+
 	resp, _, err := (&portForwardAPI{
 		// Doesn't need get username and password from secret
 		// because they are same as the emqx cluster

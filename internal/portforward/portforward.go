@@ -2,23 +2,21 @@ package portforward
 
 import (
 	"bytes"
+	emperror "emperror.dev/errors"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
-
-	emperror "emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"net/http"
+	"net/url"
 )
 
 type PortForwardOptions struct {
-	StopChannel  chan struct{}
-	ReadyChannel chan struct{}
-
+	stopChan  chan struct{}
+	readyChan chan struct{}
 	*portforward.PortForwarder
 }
 
@@ -46,24 +44,42 @@ func NewPortForwardOptions(clientset *kubernetes.Clientset, config *rest.Config,
 		return nil, emperror.Wrap(err, "error creating a new PortForwarder with localhost listen addresses")
 	}
 
-	return &PortForwardOptions{
-		ReadyChannel:  readyChan,
-		StopChannel:   stopChan,
+	o := &PortForwardOptions{
+		readyChan:     readyChan,
+		stopChan:      stopChan,
 		PortForwarder: fw,
-	}, nil
+	}
+
+	err = o.forwardPorts()
+	if err != nil {
+		o.Close()
+		return nil, err
+	}
+	return o, nil
 }
 
-func (o *PortForwardOptions) ForwardPorts() error {
-	errChan := make(chan error)
+func (o *PortForwardOptions) forwardPorts() error {
+	// the select will return after the listener be ready
+	// set length to 1 to avoid backup when writing err to the chan
+	errChan := make(chan error, 1)
 	go func() {
 		errChan <- o.PortForwarder.ForwardPorts()
 	}()
 
 	select {
 	case err := <-errChan:
-		return emperror.Wrap(err, "error forwarding ports")
-	case <-o.ReadyChannel:
+		close(errChan)
+		return err
+	case <-o.readyChan:
+		// wait for listener ready
 		return nil
+	}
+}
+
+func (o *PortForwardOptions) Close() {
+	if o.PortForwarder != nil {
+		o.PortForwarder.Close()
+		close(o.stopChan)
 	}
 }
 

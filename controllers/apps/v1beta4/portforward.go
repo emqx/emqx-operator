@@ -33,12 +33,10 @@ type portForwardAPI struct {
 
 func newPortForwardAPI(ctx context.Context, client client.Client, clientset *kubernetes.Clientset, config *rest.Config, instance appsv1beta4.Emqx) (*portForwardAPI, error) {
 	options, err := newPortForwardOptions(client, clientset, config, instance)
-	if err != nil {
+	if options == nil || err != nil {
 		return nil, err
 	}
-	if options == nil {
-		return nil, nil
-	}
+
 	username, password, err := getBootstrapUser(context.Background(), client, instance)
 	if err != nil {
 		return nil, err

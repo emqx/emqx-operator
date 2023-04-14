@@ -86,10 +86,8 @@ func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnte
 	if err != nil {
 		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to create port forward options for pod/%s", pod.Name)
 	}
-	defer close(o.StopChannel)
-	if err := o.ForwardPorts(); err != nil {
-		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to forward ports for pod/%s", pod.Name)
-	}
+	defer o.Close()
+
 	resp, _, err := (&portForwardAPI{
 		// Doesn't need get username and password from secret
 		// because they are same as the emqx cluster
