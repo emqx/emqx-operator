@@ -18,7 +18,9 @@ Run the command below to install the Operator:
 ```bash
 $ helm repo add emqx https://repos.emqx.io/charts
 $ helm repo update
-$ helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
+$ helm upgrade --install emqx-operator emqx/emqx-operator \
+  --namespace emqx-operator-system \
+  --create-namespace
 ```
 
 Wait till EMQX Operator is ready:
@@ -32,24 +34,6 @@ pod/emqx-operator-controller-manager-57bd7b8bd4-h2mcr condition met
 Now that you have successfully installed the operator, you are ready to proceed to the next step. In the [Deploy EMQX](#deploy-emqx) section, you will learn how to use the EMQX Operator to deploy EMQX.
 
 Alternatively, if you are interested in learning how to upgrade or uninstall EMQX using the operator, you can continue reading this section.
-
-### Upgrade EMQX Operator
-
-Execute the following command to upgrade EMQX Operator. If you want to specify the upgraded version, you only need to add the parameter `--version=x.x.x`.
-
-```bash
-$ helm upgrade emqx-operator emqx/emqx-operator -n emqx-operator-system
-```
-
-> Upgrade from version 1.x.x to version 2.x.x not supported.
-
-### Uninstall EMQX Operator
-
-Execute the following command to uninstall EMQX Operator.
-
-```bash
-$ helm uninstall emqx-operator -n emqx-operator-system
-```
 
 ## Deploy EMQX
 
