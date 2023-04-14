@@ -111,11 +111,10 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 					// The EMQX is not ready, requeue
 					return ctrl.Result{RequeueAfter: time.Second}, nil
 				}
-				defer close(p.Options.StopChannel)
-				if err := p.Options.ForwardPorts(); err != nil {
-					return ctrl.Result{}, emperror.Wrap(err, "failed to forward ports")
-				}
-				if err := r.unloadPluginByAPI(p, instance.Spec.PluginName); err != nil {
+
+				err = r.unloadPluginByAPI(p, instance.Spec.PluginName)
+				p.Options.Close()
+				if err != nil {
 					if innerErr.IsCommonError(err) {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
 					}
@@ -167,11 +166,12 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if p == nil {
 			continue
 		}
-		defer close(p.Options.StopChannel)
 		if err := p.Options.ForwardPorts(); err != nil {
 			return ctrl.Result{}, emperror.Wrap(err, "failed to forward ports")
 		}
-		if err := r.checkPluginStatusByAPI(p, instance.Spec.PluginName); err != nil {
+		err = r.checkPluginStatusByAPI(p, instance.Spec.PluginName)
+		p.Options.Close()
+		if err != nil {
 			if innerErr.IsCommonError(err) {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}

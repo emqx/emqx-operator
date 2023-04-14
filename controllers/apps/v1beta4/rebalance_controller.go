@@ -117,10 +117,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	defer close(portForward.GetOptions().StopChannel)
-	if err := portForward.GetOptions().ForwardPorts(); err != nil {
-		return ctrl.Result{}, err
-	}
+	defer portForward.GetOptions().Close()
 
 	if !rebalance.DeletionTimestamp.IsZero() {
 		if rebalance.Status.Phase == appsv1beta4.RebalancePhaseProcessing {

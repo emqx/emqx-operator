@@ -87,10 +87,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		}
 	}
 	if p != nil {
-		defer close(p.Options.StopChannel)
-		if err := p.Options.ForwardPorts(); err != nil {
-			return ctrl.Result{}, emperror.Wrap(err, "failed to forward ports")
-		}
+		defer p.Options.Close()
 	}
 
 	var subResult subResult
