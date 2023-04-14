@@ -26,6 +26,8 @@ jobs:
         with:
           version: latest
           args: --timeout=5m
+      - run: go install github.com/google/go-licenses@latest
+      - run: $(go env GOPATH)/bin/go-licenses check . --disallowed_types forbidden,restricted,unknown
       - name: Check manifests
         run: |
           make manifests
