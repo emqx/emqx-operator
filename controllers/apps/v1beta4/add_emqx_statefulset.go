@@ -180,6 +180,12 @@ func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterpri
 
 func (a addEmqxStatefulSet) canBeScaledDown(enterprise *appsv1beta4.EmqxEnterprise, originSts *appsv1.StatefulSet, podMap map[types.UID][]*corev1.Pod) bool {
 	// Check if there are any nodes that are prohibiting and has 0 current connected and current sessions
+	if enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt != nil &&
+		enterprise.Status.EmqxBlueGreenUpdateStatus.OriginStatefulSet != "" &&
+		enterprise.Status.EmqxBlueGreenUpdateStatus.CurrentStatefulSet != "" &&
+		enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus == nil {
+		return true
+	}
 	for _, e := range enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus {
 		if *e.Stats.CurrentConnected == 0 && *e.Stats.CurrentSessions == 0 && e.State == "prohibiting" {
 			// Extract the pod name from the node string
