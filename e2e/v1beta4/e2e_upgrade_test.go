@@ -79,34 +79,27 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return sts.Status.CurrentRevision
 			}, timeout, interval).ShouldNot(BeEmpty())
 
-			By("check currentStatefulSetVersion in CR status")
-			Eventually(func() string {
+			By("check CR status before update")
+			Eventually(func() appsv1beta4.EmqxEnterpriseStatus {
 				ee := &appsv1beta4.EmqxEnterprise{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				return ee.Status.CurrentStatefulSetVersion
-			}, timeout, interval).Should(Equal(sts.Status.CurrentRevision))
+				return ee.Status
+			}, timeout, interval).Should(And(
+				HaveField("Conditions", HaveExactElements(
+					And(
+						HaveField("Type", Equal(appsv1beta4.ConditionRunning)),
+						HaveField("Status", Equal(corev1.ConditionTrue)),
+					),
+				)),
+				HaveField("EmqxBlueGreenUpdateStatus", BeNil()),
+				HaveField("ReadyReplicas", Equal(int32(1))),
+				HaveField("EmqxNodes", ConsistOf(
+					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace()))),
+				)),
+				HaveField("CurrentStatefulSetVersion", Equal(sts.Status.CurrentRevision)),
+			))
 
-			By("check emqx nodes in CR status")
-			Eventually(func() string {
-				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				if len(ee.GetStatus().GetEmqxNodes()) > 0 {
-					return ee.GetStatus().GetEmqxNodes()[0].Node
-				}
-				return ""
-			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace())))
-
-			By("check running condition in CR status")
-			Eventually(func() corev1.ConditionStatus {
-				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionRunning {
-					return ee.GetStatus().GetConditions()[0].Status
-				}
-				return corev1.ConditionUnknown
-			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
-
-			By("checking the EMQX Custom Resource's EndpointSlice", func() {
+			By("checking the EMQX Custom Resource's EndpointSlice before update", func() {
 				checkPodAndEndpointsAndEndpointSlices(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
 			})
 
@@ -153,50 +146,60 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return newSts.Status.CurrentRevision
 			}, timeout, interval).ShouldNot(BeEmpty())
 
-			By("check emqx nodes in CR status")
-			Eventually(func() []appsv1beta4.EmqxNode {
+			By("check CR status in blue-green updating")
+			Eventually(func() appsv1beta4.EmqxEnterpriseStatus {
 				ee := &appsv1beta4.EmqxEnterprise{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				return ee.GetStatus().GetEmqxNodes()
-			}, timeout, interval).Should(HaveLen(2))
+				return ee.Status
+			}, timeout, interval).Should(And(
+				HaveField("Conditions", HaveExactElements(
+					And(
+						HaveField("Type", Equal(appsv1beta4.ConditionBlueGreenUpdating)),
+						HaveField("Status", Equal(corev1.ConditionTrue)),
+					),
+					And(
+						HaveField("Type", Equal(appsv1beta4.ConditionRunning)),
+						HaveField("Status", Equal(corev1.ConditionTrue)),
+					),
+				)),
+				HaveField("EmqxBlueGreenUpdateStatus",
+					And(
+						HaveField("StartedAt", Not(BeNil())),
+						HaveField("OriginStatefulSet", Equal(sts.Name)),
+						HaveField("CurrentStatefulSet", Equal(newSts.Name)),
+					)),
+				HaveField("ReadyReplicas", Equal(int32(2))),
+				HaveField("EmqxNodes", ConsistOf(
+					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace()))),
+					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", newSts.Name, emqx.GetNamespace()))),
+				)),
+			))
 
-			By("check readyReplicas in CR status")
-			Eventually(func() int {
+			By("check CR status after update")
+			Eventually(func() appsv1beta4.EmqxEnterpriseStatus {
 				ee := &appsv1beta4.EmqxEnterprise{}
 				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				return int(ee.Status.ReadyReplicas)
-			}, timeout, interval).Should(Equal(2))
+				return ee.Status
+			}, timeout, interval).Should(And(
+				HaveField("Conditions", HaveExactElements(
+					And(
+						HaveField("Type", Equal(appsv1beta4.ConditionRunning)),
+						HaveField("Status", Equal(corev1.ConditionTrue)),
+					),
+					And(
+						HaveField("Type", Equal(appsv1beta4.ConditionBlueGreenUpdating)),
+						HaveField("Status", Equal(corev1.ConditionTrue)),
+					),
+				)),
+				HaveField("EmqxBlueGreenUpdateStatus", BeNil()),
+				HaveField("ReadyReplicas", Equal(int32(1))),
+				HaveField("EmqxNodes", ConsistOf(
+					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", newSts.Name, emqx.GetNamespace()))),
+				)),
+				HaveField("CurrentStatefulSetVersion", Equal(newSts.Status.CurrentRevision)),
+			))
 
-			By("check blue-green status in CR status")
-			blueGreenStatus := &appsv1beta4.EmqxBlueGreenUpdateStatus{}
-			Eventually(func() bool {
-				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				if ee.Status.EmqxBlueGreenUpdateStatus != nil &&
-					ee.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus != nil &&
-					ee.Status.EmqxBlueGreenUpdateStatus.StartedAt != nil {
-					blueGreenStatus = ee.Status.EmqxBlueGreenUpdateStatus.DeepCopy()
-					return true
-				}
-				return false
-			}, timeout, interval).Should(BeTrue())
-			Expect(blueGreenStatus.OriginStatefulSet).Should(Equal(sts.Name))
-			Expect(blueGreenStatus.CurrentStatefulSet).Should(Equal(newSts.Name))
-
-			By("check blue-green condition in CR status")
-			Eventually(func() corev1.ConditionStatus {
-				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionBlueGreenUpdating {
-					return ee.GetStatus().GetConditions()[0].Status
-				}
-				return corev1.ConditionUnknown
-			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
-
-			By("checking the EMQX Custom Resource's EndpointSlice when blue-green", func() {
-				checkPodAndEndpointsAndEndpointSlices(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
-			})
-
+			By("check old sts's pod is deleted after update")
 			Eventually(func() []corev1.Pod {
 				podList := &corev1.PodList{}
 				_ = k8sClient.List(
@@ -210,32 +213,9 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				return podList.Items
 			}, timeout, interval).Should(HaveLen(0))
 
-			By("check currentStatefulSetVersion in CR status")
-			Eventually(func() string {
-				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				return ee.Status.CurrentStatefulSetVersion
-			}, timeout, interval).Should(Equal(newSts.Status.CurrentRevision))
-
-			By("check emqx nodes in CR status")
-			Eventually(func() string {
-				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				if len(ee.GetStatus().GetEmqxNodes()) > 0 {
-					return ee.GetStatus().GetEmqxNodes()[0].Node
-				}
-				return ""
-			}, timeout, interval).Should(Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", newSts.Name, emqx.GetNamespace())))
-
-			By("check running condition in CR status")
-			Eventually(func() corev1.ConditionStatus {
-				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
-				if ee.GetStatus().GetConditions()[0].Type == appsv1beta4.ConditionRunning {
-					return ee.GetStatus().GetConditions()[0].Status
-				}
-				return corev1.ConditionUnknown
-			}, timeout, interval).Should(Equal(corev1.ConditionTrue))
+			By("checking the EMQX Custom Resource's EndpointSlice after update", func() {
+				checkPodAndEndpointsAndEndpointSlices(emqx, ports, []corev1.ServicePort{}, headlessPort, 1)
+			})
 		})
 	})
 })
