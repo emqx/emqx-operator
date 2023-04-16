@@ -130,7 +130,10 @@ func genEMQX() *appsv2alpha1.EMQX {
 					Replicas: pointer.Int32(2),
 				},
 			},
-			Image: "emqx:5.0",
+			// TODO: emqx 5.0.22 have bug, can not use and gateway config in emqx.conf
+			// Wait emqx fix it, and restore this change
+			// Image: "emqx:5.0",
+			Image: "emqx:5.0.21",
 			BootstrapConfig: `
 			gateway.lwm2m {
 			  auto_observe = true
