@@ -197,7 +197,7 @@ spec:
 
 ## 使用 LB 终结 TCP TLS 方案
 
-目前腾讯云 CLB 不支持终结 TCP TLS ，如需要使用 LB 终结 TCP TLS 请参考[LB 终结 TCP TLS 方案](https://github.com/emqx/emqx-operator/discussions/312)
+目前腾讯云 CLB 不支持终结 TCP TLS ，如需要使用 LB 终结 TCP TLS 请参考[LB 终结 TCP TLS 方案](https://github.com/emqx/emqx-operator/discussions/312)。
 
 
 

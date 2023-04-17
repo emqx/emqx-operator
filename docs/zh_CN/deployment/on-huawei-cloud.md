@@ -186,7 +186,7 @@ emqx-ee   Running  8m33s
 
 [MQTT X CLI](https://mqttx.app/zh/cli) 是一款开源的 MQTT 5.0 命令行客户端工具，旨在帮助开发者在不需要使用图形化界面的基础上，也能更快的开发和调试 MQTT 服务与应用。
 
-- 创建一个新的终端窗口并使用 MQTT X CLI 订阅消息
+- 使用 MQTT X CLI 订阅消息
 
 ```bash
 mqttx sub -h ${loadBalancer_ip} -p 1883 -t "test/topic"
