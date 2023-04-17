@@ -1,125 +1,150 @@
 # Change EMQX Log Level
 
-## Task target
+## Task Target
 
-How to configure the log level of EMQX cluster.
+How to modify the log level of EMQX cluster.
 
 ## Configure EMQX Cluster
 
-Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level of the EMQX cluster. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating.
+The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise, and EmqxEnterprise supports configuring the log level of EMQX cluster through `.spec.template.spec.emqxContainer.emqxConfig` field. For the specific description of the emqxConfig field, please refer to: [emqxConfig](../reference/v1beta4-reference.md#emqxtemplatespec).
 
-:::tip
++ Save the following content as a YAML file and deploy it with the `kubectl apply` command
 
-If you need to modify the cluster log level after creating EMQX, please modify it through EMQX Dashboard.
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+          emqxConfig:
+            log.level: debug
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
+
+  > The `.spec.template.spec.emqxContainer.emqxConfig` field configures the EMQX cluster log level to `debug`.
+
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through the `kubectl get` command, please make sure that `STATUS` is `Running`, this may take some time
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ Obtain the External IP of EMQX cluster and access EMQX console
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  198.18.3.10
+  ```
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
+::: tab apps.emqx.io/v2alpha1
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx5.0
-  bootstrapConfig: |
-    log {
-       console_handler {
-          level  =  debug
-        }
-    }
-```
+EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level of the EMQX cluster. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html).
 
-> The `.spec.bootstrapConfig` field configures the EMQX cluster log level to `debug`.
+> This field is only allowed to be configured when creating an EMQX cluster, and does not support updating. If you need to modify the cluster log level after creating EMQX, please modify it through EMQX Dashboard.
 
-Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
++ Save the following content as a YAML file and deploy it with the kubectl apply command
 
-```bash
-$ kubectl apply -f emqx.yaml
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx5.0
+    bootstrapConfig: |
+      log {
+        console_handler {
+            level = debug
+          }
+      }
+    dashboardServiceTemplate:
+      spec:
+        type: LoadBalancer
+    listenersServiceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-emqx.apps.emqx.io/emqx created
-```
+  > The `.spec.bootstrapConfig` field configures the EMQX cluster log level to `debug`.
 
-Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through the kubectl get command, please make sure that `STATUS` is Running, this may take some time
 
-```bash
-$ kubectl get emqx emqx
+  ```bash
+  $ kubectl get emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   10m
+  ```
 
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.0   Running   10m
-```
++ EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
 
-:::
-::: tab v1beta4
+  ```bash
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-The corresponding CRD of EMQX Enterprise in EMQX Operator is EmqxEnterprise, and EmqxEnterprise supports configuring the log level of EMQX cluster through `.spec.template.spec.emqxContainer.emqxConfig` field. For the specific description of the emqxConfig field, please refer to: [emqxConfig](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#emqxtemplatespec).
+  192.168.1.200
+  ```
 
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-        emqxConfig:
-          log.level: debug
-```
-
-> The `.spec.template.spec.emqxContainer.emqxConfig` field configures the EMQX cluster log level to `debug`.
-
-Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
-
-```bash
-$ kubectl apply -f emqx.yaml
-
-emqxenterprise.apps.emqx.io/emqx-ee created
-```
-
-Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
-
-```bash
-$ kubectl get emqxenterprises
-
-NAME      STATUS   AGE
-emqx-ee   Running  8m33s
-```
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
 ::::
 
-## Verify Log Level Change
+## Verify log level modification
 
-Use MQTT X to connect to the EMQX cluster to send messages.
+[MQTT X CLI](https://mqttx.app/cli) is an open source MQTT 5.0 command line client tool, designed to help developers to more Quickly develop and debug MQTT services and applications.
 
-Click the button to create a new connection on the MQTT X page, and configure the EMQX cluster node information as shown in the figure. After configuring the connection information, click the connect button to connect to the EMQX cluster:
++ Obtain the External IP of EMQX cluster
 
-<img src="./assets/configure-log-level/mqtt-connected.png" style="zoom:50%;" />
+  :::: tabs type:card
+  ::: tab apps.emqx.io/v1beta4
 
-Then click the Subscribe button to create a new subscription, as shown in the figure, MQTT X has successfully connected to the EMQX cluster and successfully created the subscription:
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v2alpha1
 
-<img src="./assets/configure-log-level/mqtt-sub.png" style="zoom:33%;" />
+  ```bash
+  external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::::
 
-After successfully connecting to the EMQX cluster and creating a subscription, we can send messages to the EMQX cluster, as shown in the following figure:
++ Use MQTT X CLI to connect to EMQX cluster
 
-<img src="./assets/configure-log-level/mqtt-pub.png" style="zoom:50%;" />
+  ```bash
+  $ mqttx conn -h ${external_ip} -p 1883
 
-Use the command line to view EMQX cluster log information
+  [4/17/2023] [5:17:31 PM] › … Connecting...
+  [4/17/2023] [5:17:31 PM] › ✔ Connected
+  ```
 
-```bash
-kubectl logs emqx-core-0 -c emqx
-```
++ Use the command line to view EMQX cluster log information
 
-The output is shown in the figure below:
+  ```bash
+  $ kubectl logs emqx-core-0 -c emqx
+  ```
 
-<img src="./assets/configure-log-level/emqx-debug-log.png" style="zoom:33%;" />
+  You can get a print similar to the following, which means that EMQX has received a CONNECT message from the client and replied a CONNACK message to the client:
 
-From the figure, you can see the debug log information of connecting to the EMQX cluster using MQTT just now and sending messages.
+  ```bash
+  2023-04-17T09:11:35.993031+00:00 [debug] msg: mqtt_packet_received, mfa: emqx_channel:handle_in/2, line: 360, peername: 218.190.230.144:59457, clientid: mqttx_322680d9, packet: CONNECT(Q0, R0, D0, ClientId=mqttx_322680d9, ProtoName=MQTT, ProtoVsn=5, CleanStart=true, KeepAlive=30, Username=undefined, Password=), tag: MQTT
+  2023-04-17T09:11:35.997066+00:00 [debug] msg: mqtt_packet_sent, mfa: emqx_connection:serialize_and_inc_stats_fun/1, line: 872, peername: 218.190.230.144:59457, clientid: mqttx_322680d9, packet: CONNACK(Q0, R0, D0, AckFlags=0, ReasonCode=0), tag: MQTT
+  ```
