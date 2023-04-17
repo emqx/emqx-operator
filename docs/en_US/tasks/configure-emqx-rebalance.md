@@ -17,7 +17,7 @@ For EMQX cluster load rebalancing, please refer to the document: [Rebalancing](h
 
 :::tip
 
-The cluster load rebalancing function is only available since EMQX Enterprise  4.4.12.
+The cluster load rebalancing function is only available since EMQX Enterprise 4.4.12.
 
 :::
 
@@ -45,7 +45,7 @@ spec:
 
 > For Rebalance configuration, please refer to the document: [Rebalance reference](../reference/v1beta4-reference.md#rebalancestrategy).
 
-## Test Load Rebalancing 
+## Test Load Rebalancing
 
 ### Cluster Load Distribution Before Rebalancing
 

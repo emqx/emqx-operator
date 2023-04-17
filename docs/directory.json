@@ -71,7 +71,7 @@
           "path": "tasks/configure-emqx-prometheus"
         },
         {
-          "title": "Rebalancing MQTT connections (EMQX Enterprise)",
+          "title": "Cluster Load Rebalancing (EMQX Enterprise)",
           "path": "tasks/configure-emqx-rebalance"
         }
       ]
@@ -183,7 +183,7 @@
           "path": "tasks/configure-emqx-prometheus"
         },
         {
-          "title": "重平衡 MQTT 连接（EMQX 企业版）",
+          "title": "集群负载重平衡（EMQX 企业版）",
           "path": "tasks/configure-emqx-rebalance"
         }
       ]
