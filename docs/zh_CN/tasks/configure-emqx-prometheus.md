@@ -1,12 +1,12 @@
-# 设置 Prometheus 监控 EMQX 集群
+# 使用 Prometheus+Grafana 监控 EMQX 集群
 
 ## 任务目标
+部署`emqx-exporter`并通过 Prometheus 和 Grafana 监控 EMQX 集群。
 
-如何通过 Prometheus 监控 EMQX 集群。
+## 部署 Prometheus 和 Grafana
 
-## 部署 Prometheus
-
-Prometheus 部署文档可以参考：[Prometheus](https://github.com/prometheus-operator/prometheus-operator)
+Prometheus 部署文档可以参考：[Prometheus](https://github.com/prometheus-operator/prometheus-operator)  
+Grafana 部署文档可以参考：[Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/kubernetes/)
 
 ## 部署 EMQX 集群
 
@@ -24,16 +24,16 @@ metadata:
   name: emqx
 spec:
   image: emqx:5.0
-
   coreTemplate:
     spec:
       ports:
-        - name: http-dashboard
+        # prometheus monitor requires the pod must name the target port 
+        - name: dashboard
           containerPort: 18083
   replicantTemplate:
     spec:
       ports:
-        - name: http-dashboard
+        - name: dashboard
           containerPort: 18083
 ```
 
@@ -61,6 +61,18 @@ EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
+kind: EmqxPlugin
+metadata:
+  name: emqx-prometheus
+spec:
+  selector:
+    # EMQX pod labels
+    apps.emqx.io/instance: emqx-ee
+    apps.emqx.io/managed-by: emqx-operator
+  # enable plugin emqx_prometheus
+  pluginName: emqx_prometheus
+---
+apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
@@ -70,10 +82,11 @@ spec:
       emqxContainer:
         image:
           repository: emqx/emqx-ee
-          version: 4.4.14
+          version: 4.4.16
         ports:
-          - name: http-management
-            containerPort: 8081
+          # prometheus monitor requires the pod must name the target port 
+          - name: dashboard
+            containerPort: 18083
 ```
 
 将上述内容保存为：emqx.yaml，执行如下命令部署 EMQX 集群：
@@ -96,9 +109,91 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-## 配置 Prometheus Monitor
+## 创建 API Secret
+emqx-exporter 和 Prometheus 通过访问 EMQX dashboard API 拉取监控指标，因此需要提前登录 dashboard 创建 API 密钥。
 
-PodMonitor 自定义资源定义 (CRD) 允许以声明方式定义应如何监视一组动态服务。使用标签选择来定义选择哪些服务以使用所需配置进行监视，其文档可以参考：[PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
+注意，EMQX 5 和 EMQX 4.4 创建 API 密钥的方式有所不同。
+* **EMQX 5** 创建一个新的 [API 密钥](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys)
+* **EMQX 4.4** 创建一个新的用户
+
+## 部署 emqx-exporter
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: emqx-exporter
+  name: emqx-exporter-service
+spec:
+  ports:
+    - name: metrics
+      port: 8085
+      targetPort: metrics
+  selector:
+    app: emqx-exporter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
+spec:
+  selector:
+    matchLabels:
+      app: emqx-exporter
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: emqx-exporter
+    spec:
+      securityContext:
+        runAsUser: 1000
+      containers:
+        - name: exporter
+          image: emqx-exporter:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port 
+            - --emqx.nodes=emqx-dashboard:18083
+            - --emqx.auth-username=${paste_your_new_api_key_here}
+            - --emqx.auth-password=${paste_your_new_secret_here}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8085
+              name: metrics
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
+```
+
+> 参数"--emqx.nodes" 为暴露18083端口的 service name。不同的 EMQX 版本的 service name 不一样，可以通过命令 `kubectl get svc` 查看。
+
+将上述内容保存为`emqx-exporter.yaml`，同时使用你新创建的 API 密钥（EMQX 4.4 则为用户名密码）替换其中的`--emqx.auth-username`以及`--emqx.auth-password`，并执行如下命令：
+
+```bash
+kubectl apply -f emqx-exporter.yaml
+```
+
+检查 emqx-exporter 状态，请确保 `STATUS` 为 `Running`。
+
+```bash
+$ kubectl get po -l="app=emqx-exporter"
+
+NAME      STATUS   AGE
+emqx-exporter-856564c95-j4q5v   Running  8m33s
+```
+
+## 配置 Prometheus Monitor
+Prometheus-operator 使用 [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor) 和 [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) CRD 定义如何动态的监视一组 pod 或者 service。
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -108,35 +203,78 @@ apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
   name: emqx
-  namespace: default
   labels:
     app.kubernetes.io/name: emqx
 spec:
-  jobLabel: emqx-scraping
-  namespaceSelector:
-    matchNames:
-    - default
   podMetricsEndpoints:
-  - basicAuth:
-      password:
-        key: password
-        name: emqx-basic-auth
-      username:
-        key: username
-        name: emqx-basic-auth
-    interval: 10s
-    params:
-      type:
-      - prometheus
+  - interval: 5s
     path: /api/v5/prometheus/stats
-    port: http-dashboard
-    scheme: http
+    # the name of emqx dashboard containerPort
+    port: dashboard
+    relabelings:
+      - action: replace
+        # user-defined cluster name, requires unique
+        replacement: emqx5
+        targetLabel: cluster
+      - action: replace
+        # fix value, don't modify
+        replacement: emqx
+        targetLabel: from
+      - action: replace
+        # fix value, don't modify
+        sourceLabels: ['pod']
+        targetLabel: "instance"
   selector:
     matchLabels:
+      # the label in emqx pod
       apps.emqx.io/instance: emqx
+      apps.emqx.io/managed-by: emqx-operator
+  namespaceSelector:
+    matchNames:
+     # modify the namespace if your EMQX cluster deployed in other namespace
+      #- default
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
+spec:
+  selector:
+    matchLabels:
+      # the label in emqx exporter svc
+      app: emqx-exporter
+  endpoints:
+  - port: metrics
+    interval: 5s
+    path: /metrics
+    relabelings:
+      - action: replace
+        # user-defined cluster name, requires unique
+        replacement: emqx5
+        targetLabel: cluster
+      - action: replace
+        # fix value, don't modify
+        replacement: exporter
+        targetLabel: from
+      - action: replace
+        # fix value, don't modify
+        sourceLabels: ['pod']
+        regex: '(.*)-.*-.*'
+        replacement: $1
+        targetLabel: "instance"
+      - action: labeldrop
+        # fix value, don't modify
+        regex: 'pod'
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your exporter deployed in other namespace
+      #- default
 ```
 
-> `path` 表示指标采集接口路径，在 EMQX 5 里面路径为：`/api/v5/prometheus/stats`。`selector.matchLabels` 表示匹配 Pod 的 label： `apps.emqx.io/instance: emqx`。
+<p> `path` 表示指标采集接口路径，在 EMQX 5 里面路径为：`/api/v5/prometheus/stats`。`selector.matchLabels` 表示匹配 Pod 的 label。</p>
+<p> 每个集群的 Monitor 配置中都需要为当前集群打上特定的标签，其中`targetLabel`为`cluster`的值表示当前集群的名字，需确保每个集群的名字唯一。</p>
 
 :::
 ::: tab v1beta4
@@ -146,63 +284,96 @@ apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
   name: emqx
-  namespace: default
   labels:
     app.kubernetes.io/name: emqx
 spec:
-  jobLabel: emqx-scraping
-  namespaceSelector:
-    matchNames:
-    - default
   podMetricsEndpoints:
   - basicAuth:
-      password:
-        key: password
-        name: emqx-basic-auth
       username:
         key: username
-        name: emqx-basic-auth
-    interval: 10s
+        name: ${paste_your_new_username_here}
+      password:
+        key: password
+        name: ${paste_your_new_password_here}
+    interval: 5s
     params:
       type:
       - prometheus
     path: /api/v4/emqx_prometheus
-    port: http-management
-    scheme: http
+    # the name of emqx dashboard containerPort
+    port: dashboard
+    relabelings:
+      - action: replace
+        # user-defined cluster name, requires unique
+        replacement: emqx4
+        targetLabel: cluster
+      - action: replace
+        # fix value, don't modify
+        replacement: emqx
+        targetLabel: from
+      - action: replace
+        # fix value, don't modify
+        sourceLabels: ['pod']
+        targetLabel: "instance"
   selector:
     matchLabels:
-      apps.emqx.io/instance: emqx-ee
+      # the label is the same as the label of emqx pod
+      apps.emqx.io/instance: emqx
+      apps.emqx.io/managed-by: emqx-operator
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your EMQX cluster deployed in other namespace
+      #- default
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
+spec:
+  selector:
+    matchLabels:
+      # the label is the same as the label of emqx-exporter svc
+      app: emqx-exporter
+  endpoints:
+    - port: metrics
+      interval: 5s
+      path: /metrics
+      relabelings:
+        - action: replace
+          # user-defined cluster name, requires unique
+          replacement: emqx4
+          targetLabel: cluster
+        - action: replace
+          # fix value, don't modify
+          replacement: exporter
+          targetLabel: from
+        - action: replace
+          # fix value, don't modify
+          sourceLabels: ['pod']
+          regex: '(.*)-.*-.*'
+          replacement: $1
+          targetLabel: "instance"
+        - action: labeldrop
+          # fix value, don't modify
+          regex: 'pod'
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your exporter deployed in other namespace
+      #- default
 ```
 
-> `path` 表示指标采集接口路径，在 EMQX 4 里面路径为：`/api/v4/emqx_prometheus`。`selector.matchLabels` 表示匹配 Pod 的 label： `apps.emqx.io/instance: emqx-ee`。
+> `path` 表示指标采集接口路径，在 EMQX 4.4 里面路径为：`/api/v4/emqx_prometheus`。`selector.matchLabels` 表示匹配 Pod 的 label： `apps.emqx.io/instance: emqx-ee`。
+> 每个集群的 Monitor 配置中都需要为当前集群打上特定的标签，其中`targetLabel`为`cluster`的值表示当前集群的名字，需确保每个集群的名字唯一。
 
 :::
 ::::
 
-将上述内容保存为：monitor.yaml 并执行如下命令：
+将上述内容保存为`monitor.yaml`，如果是 EMQX 4.4，则还需修改其中的`username`和`password`，并执行如下命令：
 
 ```bash
 kubectl apply -f monitor.yaml
-```
-
-使用 basicAuth 为 Monitor 提供访问 EMQX 接口需要密码账号信息
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: emqx-basic-auth
-  namespace: default
-type: kubernetes.io/basic-auth
-stringData:
-  username: admin
-  password: public
-```
-
-将上述内容保存为：secret.yaml 并创建 Secret
-
-```bash
-kubectl apply -f secret.yaml
 ```
 
 ## 访问 Prometheus 查看 EMQX 集群的指标
@@ -214,3 +385,10 @@ kubectl apply -f secret.yaml
 切换到 **Status** → **Targets** 页面，显示如下图，可以看到集群中所有被监控的 EMQX Pod 信息：
 
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-target.png)
+
+## 导入 Grafana 模板
+导入所有 dashboard [模板](https://github.com/emqx/emqx-exporter/tree/main/config/grafana-template)。  
+
+集群的整体监控状态位于 **EMQX** 看板中。 
+
+![](./assets/configure-emqx-prometheus/emqx-grafana-dashboard.png)
