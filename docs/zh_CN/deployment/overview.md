@@ -5,7 +5,7 @@
 - [在阿里云中部署 EMQX (AKS)](./on-alibaba-cloud.md)
 - [在华为云中部署 EMQX (CCE)](./on-huawei-cloud.md)
 - [在腾讯云中部署 EMQX (TKE)](./on-tencent-cloud.md)
-- [在 Amazon EKS 中部署 EMQX](./on-aws-eks.md)
+- [在 Amazon 云中部署 EMQX](./on-aws-eks.md)
 
 本章将涵盖以下主题：
 
