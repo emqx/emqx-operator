@@ -2,16 +2,17 @@ package portforward
 
 import (
 	"bytes"
-	emperror "emperror.dev/errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
+
+	emperror "emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	"net/http"
-	"net/url"
 )
 
 type PortForwardOptions struct {
@@ -78,7 +79,6 @@ func (o *PortForwardOptions) forwardPorts() error {
 
 func (o *PortForwardOptions) Close() {
 	if o.PortForwarder != nil {
-		o.PortForwarder.Close()
 		close(o.stopChan)
 	}
 }
