@@ -162,15 +162,14 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		// The EMQX is not ready, requeue
-		p, _ := newPortForwardAPI(ctx, r.Client, r.Clientset, r.Config, emqx)
-		if p == nil {
-			continue
+		p, err := newPortForwardAPI(ctx, r.Client, r.Clientset, r.Config, emqx)
+		if err != nil && !innerErr.IsCommonError(err) {
+			return ctrl.Result{}, emperror.Wrapf(err, "failed to create port forward for EMQX %s", emqx.GetName())
 		}
-		if err := p.Options.ForwardPorts(); err != nil {
-			return ctrl.Result{}, emperror.Wrap(err, "failed to forward ports")
+		if p != nil {
+			defer p.Options.Close()
 		}
 		err = r.checkPluginStatusByAPI(p, instance.Spec.PluginName)
-		p.Options.Close()
 		if err != nil {
 			if innerErr.IsCommonError(err) {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
