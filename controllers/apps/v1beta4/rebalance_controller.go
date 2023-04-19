@@ -95,10 +95,8 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 		if !rebalance.DeletionTimestamp.IsZero() {
-			if rebalance.Status.Phase == appsv1beta4.RebalancePhaseProcessing {
-				controllerutil.RemoveFinalizer(rebalance, finalizer)
-				return ctrl.Result{}, r.Client.Update(ctx, rebalance)
-			}
+			controllerutil.RemoveFinalizer(rebalance, finalizer)
+			return ctrl.Result{}, r.Client.Update(ctx, rebalance)
 		}
 		_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 			Type:    appsv1beta4.RebalanceConditionFailed,
