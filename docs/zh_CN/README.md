@@ -16,23 +16,23 @@ EMQX Operator 包括但不限于以下功能：
 
 |  EMQX 企业版 |              EMQX Operator Version              |                          APIVersion                          |      Kind      |
 | :------------------------: | :---------------------------------------------: | :----------------------------------------------------------: | :------------: |
-|  4.3.x （包含） ～ 4.4   |               1.2.1, 1.2.2, 1.2.3               | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
-| 4.4.6 （包含） ～ 4.4.8  |                      1.2.5                      | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
-| 4.4.8 （包含） ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3 | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
-|   4.4.14 或更高 4.4.x   |                  2.1.0, 2.1.1                   | [apps.emqx.io/v1beta4](./docs/en_US/reference/v1beta4-reference.md) | EmqxEnterprise |
-|      5.0.0 或更高       |    2.0.0, 2.0.1, 2.0.2, 2.0.3, 2.1.0, 2.1.1     | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md) |      EMQX      |
+|  4.3.x （包含） ～ 4.4   |               1.2.1, 1.2.2, 1.2.3               | [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md) | EmqxEnterprise |
+| 4.4.6 （包含） ～ 4.4.8  |                      1.2.5                      | [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md) | EmqxEnterprise |
+| 4.4.8 （包含） ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3 | [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md) | EmqxEnterprise |
+|   4.4.14 或更高 4.4.x   |                  2.1.0, 2.1.1                   | [apps.emqx.io/v1beta4](./reference/v1beta4-reference.md) | EmqxEnterprise |
+|      5.0.0 或更高       |    2.0.0, 2.0.1, 2.0.2, 2.0.3, 2.1.0, 2.1.1     | [apps.emqx.io/v2alpha1](./reference/v2alpha1-reference.md) |      EMQX      |
 
 ### EMQX 开源版
 
 |      EMQX 开源版 |     EMQX Operator Version                            |     APIVersion    |    Kind    |
 |------------------------|-------------------|-------------------|-------------------|
-| 4.3.x （包含） ～ 4.4 | 1.2.1, 1.2.2, 1.2.3                                 |  [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md)          |  EmqxBroker  |
-| 4.4.6 （包含） ～ 4.4.8 | 1.2.5                                                 | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md)          | EmqxBroker |
-| 4.4.8 （包含） ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3   |  [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md)          | EmqxBroker |
-| 4.4.14 或更高 4.4.x | 2.1.0, 2.1.1                                                 |  [apps.emqx.io/v1beta4](./docs/en_US/reference/v1beta4-reference.md)          | EmqxBroker |
-| 5.0.6 （包含） ～ 5.0.8 | 2.0.0, 2.0.1, 2.0.3                                |  [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         |  EMQX     |
-| 5.0.8 （包含） ～  5.0.14 | 2.0.2                                            |  [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         |  EMQX     |
-| 5.0.14 或更高 | 2.1.0, 2.1.1                                                | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         | EMQX     |
+| 4.3.x （包含） ～ 4.4 | 1.2.1, 1.2.2, 1.2.3                                 |  [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md)          |  EmqxBroker  |
+| 4.4.6 （包含） ～ 4.4.8 | 1.2.5                                                 | [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md)          | EmqxBroker |
+| 4.4.8 （包含） ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3   |  [apps.emqx.io/v1beta3](./reference/v1beta3-reference.md)          | EmqxBroker |
+| 4.4.14 或更高 4.4.x | 2.1.0, 2.1.1                                                 |  [apps.emqx.io/v1beta4](./reference/v1beta4-reference.md)          | EmqxBroker |
+| 5.0.6 （包含） ～ 5.0.8 | 2.0.0, 2.0.1, 2.0.3                                |  [apps.emqx.io/v2alpha1](./reference/v2alpha1-reference.md)         |  EMQX     |
+| 5.0.8 （包含） ～  5.0.14 | 2.0.2                                            |  [apps.emqx.io/v2alpha1](./reference/v2alpha1-reference.md)         |  EMQX     |
+| 5.0.14 或更高 | 2.1.0, 2.1.1                                                | [apps.emqx.io/v2alpha1](./reference/v2alpha1-reference.md)         | EMQX     |
 
 ## 如何选择 Kubernetes 版本
 
