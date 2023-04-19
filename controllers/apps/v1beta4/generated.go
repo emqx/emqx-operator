@@ -167,6 +167,28 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 		pluginList = append(pluginList, emqxModules)
 	}
 
+	if ok && !isExistPlugin("emqx_schema_registry", matchedPluginList) {
+		emqxSchemaRegistry := &appsv1beta4.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta4",
+				Kind:       "EmqxPlugin",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        fmt.Sprintf("%s-schema-registry", instance.GetName()),
+				Namespace:   instance.GetNamespace(),
+				Labels:      instance.GetLabels(),
+				Annotations: instance.GetAnnotations(),
+			},
+			Spec: appsv1beta4.EmqxPluginSpec{
+				PluginName: "emqx_schema_registry",
+				Selector:   instance.GetLabels(),
+				Config:     map[string]string{},
+			},
+		}
+
+		pluginList = append(pluginList, emqxSchemaRegistry)
+	}
+
 	return pluginList
 }
 

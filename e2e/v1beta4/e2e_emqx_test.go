@@ -171,7 +171,7 @@ var headlessPort = corev1.ServicePort{
 	TargetPort: intstr.FromInt(8081),
 }
 
-var _ = Describe("Base E2E Test", func() {
+var _ = Describe("Base E2E Test", Label("base"), func() {
 	DescribeTable("",
 		func(emqx appsv1beta4.Emqx, plugin *appsv1beta4.EmqxPlugin) {
 			var pluginList []string
@@ -179,7 +179,7 @@ var _ = Describe("Base E2E Test", func() {
 
 			pluginList = []string{"emqx_eviction_agent", "emqx_node_rebalance", "emqx_rule_engine", "emqx_retainer", "emqx_lwm2m"}
 			if _, ok := emqx.(*appsv1beta4.EmqxEnterprise); ok {
-				pluginList = append(pluginList, "emqx_modules")
+				pluginList = append(pluginList, "emqx_modules", "emqx_schema_registry")
 			}
 
 			pluginPorts = []corev1.ServicePort{
