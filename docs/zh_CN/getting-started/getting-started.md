@@ -14,9 +14,11 @@
 
 ## 安装 EMQX Operator
 
-1. 安装 EMQX Operator 之前，必须确保 `cert-manager` 已经安装并运行。
+1. 安装 `cert-manger`。
 
-   EMQX Operator 要求 `cert-manager` 的版本大于等于 `1.1.6`。
+   ::: tip
+   需要 `cert-manager` 版本 `1.1.6` 或更高。如果 `cert-manager` 已经安装并启动，请跳过此步骤。
+   :::
 
    你可以使用 Helm 来安装 `cert-manager`。
 
@@ -30,10 +32,6 @@
    ```
 
    或者按照 [cert-manager 安装指南](https://cert-manager.io/docs/installation/)来安装它。
-
-   ::: tip
-   如果你已经安装了`cert-manager`，你可以跳过这一步。
-   :::
 
 2. 运行以下命令来安装 EMQX Operator。
 

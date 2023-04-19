@@ -14,9 +14,11 @@ Before deploying EMQX Operator, please confirm that the following components hav
 
 ## Install EMQX Operator
 
-1. Before installing EMQX Operator, must make sure the `cert-manager` is installed and running.
+1. Install and start `cert-manager`.
 
-   EMQX Operator requires `cert-manager` version is `1.1.6` or higher.
+   ::: tip
+   `cert-manager` version `1.1.6` or higher is required. Skip this step if the `cert-manager` is already installed and started.
+   :::
 
    You can use Helm to install `cert-manager`.
 
@@ -31,11 +33,7 @@ Before deploying EMQX Operator, please confirm that the following components hav
 
    Or you can follow the [cert-manager installation guide](https://cert-manager.io/docs/installation/) to install it.
 
-   ::: tip
-   If you already have `cert-manager` installed, you can skip this step.
-   :::
-
-2. Run the command below to install the Operator:
+2. Install the EMQX Operator with the command below:
 
    ```bash
    $ helm repo add emqx https://repos.emqx.io/charts

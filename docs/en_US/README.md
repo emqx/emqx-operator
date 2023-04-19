@@ -12,6 +12,8 @@ The EMQX Operator includes, but is not limited to, the following features:
 
 ## EMQX and EMQX Operator compatibility
 
+### EMQX Enterprise
+
 |  EMQX Enterprise Version   |              EMQX Operator Version              |                          APIVersion                          |      Kind      |
 | :------------------------: | :---------------------------------------------: | :----------------------------------------------------------: | :------------: |
 |  4.3.x (included) ～ 4.4   |               1.2.1, 1.2.2, 1.2.3               | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
@@ -19,6 +21,8 @@ The EMQX Operator includes, but is not limited to, the following features:
 | 4.4.8 (included) ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3 | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
 |   4.4.14 or higher 4.4.x   |                  2.1.0, 2.1.1                   | [apps.emqx.io/v1beta4](./docs/en_US/reference/v1beta4-reference.md) | EmqxEnterprise |
 |      5.0.0 or higher       |    2.0.0, 2.0.1, 2.0.2, 2.0.3, 2.1.0, 2.1.1     | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md) |      EMQX      |
+
+### EMQX Open Source
 
 |      EMQX Open Source Version      |     EMQX Operator Version                            |     APIVersion    |    Kind    |
 |------------------------|-------------------|-------------------|-------------------|
