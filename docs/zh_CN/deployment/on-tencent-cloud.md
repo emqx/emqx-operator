@@ -1,242 +1,198 @@
 # 在腾讯云上部署 EMQX 集群
 
-腾讯云容器服务（Tencent Kubernetes Engine，TKE）基于原生 kubernetes 提供以容器为核心的、高度可扩展的高性能容器管理服务。腾讯云容器服务完全兼容原生 kubernetes API，为容器化的应用提供高效部署、资源调度、服务发现和动态伸缩等一系列完整功能，解决用户开发、测试及运维过程的环境一致性问题，提高了大规模容器集群管理的便捷性，帮助用户降低成本，提高效率。容器服务会对不同规格的托管集群收取相应的集群管理费用。在使用中创建的其他的云产品资源（CVM、CBS、CLB 等），将按照各自云产品的计费方式进行收费。
+EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE）部署 EMQX。腾讯云容器服务基于原生 kubernetes 提供以容器为核心的、高度可扩展的高性能容器管理服务。腾讯云容器服务完全兼容原生 kubernetes API，为容器化的应用提供高效部署、资源调度、服务发现和动态伸缩等一系列完整功能，解决用户开发、测试及运维过程的环境一致性问题，提高了大规模容器集群管理的便捷性，帮助用户降低成本，提高效率。容器服务会对不同规格的托管集群收取相应的集群管理费用。在使用中创建的其他的云产品资源（CVM、CBS、CLB 等），将按照各自云产品的计费方式进行收费
 
 ## 前提条件
 
-在开始之前，我们需要开通腾讯云 TKE 及相关的服务，具体请参考[创建集群](https://cloud.tencent.com/document/product/457/32189)，本文假设您已经成功部署了一个可以访问的 Kubernetes 集群。
+在开始之前，你需要准备以下内容：
 
-## 部署 EMQX Operator
+- 开通腾讯云容器服务，并创建一个 TKE 集群。具体请参考：[创建 TKE 集群](https://cloud.tencent.com/document/product/457/32189)
 
-EMQX Operator 安装参考：[部署 EMQX Operator](../getting-started/getting-started.md)。
+- 通过 kubectl 命令连接 TKE 集群，你可以在本地安装 kubectl 工具，并获取集群的 KubeConfig 来连接集群，或是在容器服务 TKE 控制台上利用 CloudShell 通过 kubectl 管理集群。
 
-## 为 EMQX 集群配置持久化存储
+  - 通过本地安装 kubectl 工具连接 TKE 集群：具体请参考：[使用 kubectl 连接集群](https://cloud.tencent.com/document/product/457/32191#a334f679-7491-4e40-9981-00ae111a9094)
+  - 通过 CloudShell 连接 TKE 集群：具体请参考：[使用 CloudShell 连接集群](https://cloud.tencent.com/document/product/457/32191#f97c271a-1204-44d5-967c-2856c83cc5e3)
 
-EMQX Custom Resource 使用 StoreClass 来保存 EMQX 运行时的状态。在开始之前，您需要准备 StoreClass。集群管理员可使用 StorageClass 为容器服务集群定义不同的存储类型。您可通过 StorageClass 配合 PersistentVolumeClaim 动态创建需要的存储资源。使用 `kubectl get storeClass` 可以查看当前 Kubernetes 集群中的 StoreClass。关于更多存储的相关信息，请查看[存储管理](https://cloud.tencent.com/document/product/457/46962)。
+- 安装 EMQX Operator：具体请参考：[安装 EMQX Operator](../getting-started/getting-started.md)
 
-腾讯云容器服务已默认提供了多种类型的 StorageClass，本文以 `cbs` 为例，如果你想创建自己的 storeClass，请参考[StorageClass 管理云硬盘模板](https://cloud.tencent.com/document/product/457/44239)。
+## 快速部署一个 EMQX 集群
 
-下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
+下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考[ EMQX 与 EMQX Operator 的兼容性列表](../README.md)：
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx:5.0
-  coreTemplate:
-    spec:
-      volumeClaimTemplates:
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+     ## EMQX 自定义资源不支持在运行时更新这个字段
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
+        ## 更多内容：https://cloud.tencent.com/document/product/457/44238
         storageClassName: cbs
         resources:
           requests:
-            storage: 20Mi
+            ## 云硬盘大小必须为10的倍数。高性能云硬盘最小为10GB，更多内容请参考：https://cloud.tencent.com/document/product/457/44239
+            storage: 10Gi
         accessModes:
-        - ReadWriteOnce
-```
+          - ReadWriteOnce
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      metadata:
+        annotations:
+          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490#tkeserviceconfig
+          service.cloud.tencent.com/tke-service-config-auto: "true"
+          # 自动创建 tke-service-config
+          # service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
+      spec:
+        type: LoadBalancer
+    ```
+
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
+
+  ```bash
+  $ external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  $ echo $external_ip
+
+  198.18.3.10
+  ```
+
+  通过浏览器访问 `http://${external_ip}:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+
 :::
-::: tab v1beta4
+::: tab apps.emqx.io/v2alpha1
 
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  persistent:
-    metadata:
-      name: emqx-ee
-      labels:
-        "apps.emqx.io/instance": "emqx-ee"
-    spec:
-      storageClassName: cbs
-      resources:
-        requests:
-          storage: 20Mi
-      accessModes:
-        - ReadWriteOnce
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-```
-:::
-::::
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
-## 使用 LoadBalancer 访问 EMQX 集群
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.0
+    coreTemplate:
+      spec:
+        ## EMQX 自定义资源不支持在运行时更新这个字段
+        volumeClaimTemplates:
+          ## 更多内容：https://cloud.tencent.com/document/product/457/44238
+          storageClassName: cbs
+          resources:
+            requests:
+              ## 云硬盘大小必须为10的倍数。高性能云硬盘最小为10GB，更多内容请参考：https://cloud.tencent.com/document/product/457/44239
+              storage: 10Gi
+          accessModes:
+            - ReadWriteOnce
+    dashboardServiceTemplate:
+      metadata:
+        annotations:
+          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490#tkeserviceconfig
+          service.cloud.tencent.com/tke-service-config-auto: "true"
+          # 自动创建 tke-service-config
+          # service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
+      spec:
+        type: LoadBalancer
+    listenersServiceTemplate:
+      metadata:
+        annotations:
+          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490#tkeserviceconfig
+          service.cloud.tencent.com/tke-service-config-auto: "true"
+          # 自动创建 tke-service-config
+          # service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
+      spec:
+        type: LoadBalancer
+  ```
 
-TkeServiceConfig 是腾讯云容器服务提供的自定义资源 CRD， 通过 TkeServiceConfig 能够帮助您更灵活的配置 LoadBalancer 类型的 Service ，及管理其中负载均衡的各种配置。负载均衡 CLB 的相关配置可参见 [TkeServiceConfig 介绍](https://cloud.tencent.com/document/product/457/41895)。
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
-使用 TkeServiceConfig 能够帮您快速进行负载均衡器的配置。通过 Service 注解 `service.cloud.tencent.com/tke-service-config:<config-name>`，您可以指定目标配置并应用到 Service 中。
+  ```bash
+  $ kubectl get emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   2m55s
+  ```
 
-TkeServiceConfig 并不会帮您直接配置并修改协议和端口，您需要在配置中描述协议和端口以便指定配置下发的监听器。在一个 TkeServiceConfig 中可以声明多组监听器配置，目前主要针对负载均衡的健康检查以及对后端访问提供配置。 通过指定协议和端口，配置能够被准确的下发到对应监听器：
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
 
-`spec.loadBalancer.l4Listeners.protocol`：四层协议
+  EMQX Operator 会创建两个 EMQX Service 资源，一个是 `emqx-dashboard`，一个是 `emqx-listeners`，分别对应 EMQX 控制台和 EMQX 监听端口。
 
-`spec.loadBalancer.l4Listeners.port`：监听端口
+  ```bash
+  $ external_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
+  $ echo $external_ip
 
-创建 Loadbalancer 模式 Service 时，设置注解 `service.cloud.tencent.com/tke-service-config-auto: "true"`，将自动创建 \<ServiceName>-auto-service-config。您也可以通过 **service.cloud.tencent.com/tke-service-config:\<config-name>** 直接指定您自行创建的 TkeServiceConfig。两个注解不可同时使用。
-
-除了 TkeServiceConfig，您可以通过其他 Annotation 注解配置 Service，以实现更丰富的负载均衡的能力。详情请查看[Service Annotation](https://cloud.tencent.com/document/product/457/51258)。
-
-:::: tabs type:card
-::: tab v2alpha1
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-  annotations:
-    service.cloud.tencent.com/tke-service-config-auto: "true"
-    # 自动创建 tke-service-config
-    # service.cloud.tencent.com/tke-service-config: emqx-service-config
-    # 指定已有的 tke-service-config
-spec:
-  image: emqx:5.0
-  listenersServiceTemplate:
-    spec:
-      type: LoadBalancer
-```
-:::
-::: tab v1beta4
-
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-  annotations:
-    service.cloud.tencent.com/tke-service-config-auto: "true"
-    # 自动创建 tke-service-config
-    # service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
-    # 指定已有的 tke-service-config
-spec:
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-  serviceTemplate:
-    spec:
-      type: LoadBalancer
-```
-:::
-::::
-
-## 使用 LoadBalancer 直连 Pod 模式 Service
-
-原生 LoadBalancer 模式 Service 可自动创建负载均衡 CLB，并通过集群的 Nodeport 转发至集群内，再通过 iptable 或 ipvs 进行二次转发。该模式下的 Service 能满足大部分使用场景 ，但在以下场景中更推荐使用 [直连 Pod 模式 Service](https://cloud.tencent.com/document/product/457/41897)：
-
-+ 有获取来源 IP 需求时（非直连模式必须另外开启 Local 转发）。
-
-+ 要求具备更高转发性能时（非直连模式下 CLB 和 Service 本身存在两层 CLB，性能有一定损失）。
-
-+ 需使用完整的健康检查和会话保持到 Pod 层级时（非直连模式下 CLB 和 Service 本身存在两层 CLB，健康检查及会话保持功能较难配置）。
-
-直连 Pod 模式 Service 的 YAML 配置与普通 Service YAML 配置相同，示例中的 annotation 即代表是否开启直连 Pod 模式。
-
-::: tip
-需要在 `kube-system/tke-service-controller-config` ConfigMap 中新增 `GlobalRouteDirectAccess: "true"` 以开启 GlobalRoute 直连能力。
-:::
-
-:::: tabs type:card
-::: tab v2alpha1
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-  annotations:
-    service.cloud.tencent.com/tke-service-config-auto: "true"
-   	service.cloud.tencent.com/tke-service-config: emqx-service-config
-spec:
-  image: emqx:5.0
-  listenersServiceTemplate:
-    spec:
-      type: LoadBalancer
-```
-:::
-::: tab v1beta4
-
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-  annotations:
-    service.cloud.tencent.com/direct-access: "true" ##开启直连 Pod 模式
-   	service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
-spec:
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-  serviceTemplate:
-    spec:
-      type: LoadBalancer
-```
-:::
-::::
-
-将上述文件保存为：emqx.yaml，并执行如下命令部署 EMQX 集群：
-
-```bash
-$ kubectl apply -f emqx.yaml
-emqx.apps.emqx.io/emqx created
-```
-
-等待 EMQX 集群就绪：
-
-:::: tabs type:card
-::: tab v2alpha1
-
-```bash
-$ kubectl get emqx
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.0   Running   13m
-```
-:::
-::: tab v1beta4
-
-```bash
-$ kubectl get emqxenterprises
-NAME      STATUS   AGE
-emqx-ee   Running  16m
-```
-:::
-::::
-
-> 确保 `STATUS` 为 `Running`，可能需要一些时间等待 EMQX 集群准备就绪
+  198.18.3.10
+  ```
+  :::
+  ::::
 
 ## 使用 MQTT X CLI 连接 EMQX 集群发布/订阅消息
 
 [MQTT X CLI](https://mqttx.app/zh/cli) 是一款开源的 MQTT 5.0 命令行客户端工具，旨在帮助开发者在不需要使用图形化界面的基础上，也能更快的开发和调试 MQTT 服务与应用。
 
-- 使用 MQTT X CLI 订阅消息
++ 获取 EMQX 集群的 External IP
 
-```bash
-mqttx sub -h ${loadBalancer_ip} -p 1883 -t "test/topic"
-```
+  :::: tabs type:card
+  ::: tab apps.emqx.io/v1beta4
 
-- 创建一个新的终端窗口并使用 MQTT X CLI 发布消息
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v2alpha1
 
-```bash
-mqttx pub -h ${loadBalancer_ip} -p 1883 -t "test/topic" -m "hello world"
-```
+  ```bash
+  external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::::
 
-> `${loadBalancer}` 为 EMQX Service 对应的 LoadBalancer IP。
++ 订阅消息
 
-## 使用 LoadBalancer 终结 TLS 方案
+  ```bash
+  $ mqttx sub -t 'hello' -h ${external_ip} -p 1883
+
+  [10:00:25] › …  Connecting...
+  [10:00:25] › ✔  Connected
+  [10:00:25] › …  Subscribing to hello...
+  [10:00:25] › ✔  Subscribed to hello
+  ```
+
++ 创建一个新的终端窗口并发布消息
+
+  ```bash
+  $ mqttx pub -t 'hello' -h ${external_ip} -p 1883 -m 'hello world'
+
+  [10:00:58] › …  Connecting...
+  [10:00:58] › ✔  Connected
+  [10:00:58] › …  Message Publishing...
+  [10:00:58] › ✔  Message published
+  ```
+
++ 查看订阅终端窗口收到的消息
+
+  ```bash
+  [10:00:58] › payload: hello world
+  ```
+
+## 关于 LoadBalancer 终结 TLS
 
 目前腾讯云 CLB 不支持终结 TLS ，如需要使用 LoadBalancer 终结 TLS 请参考[终结 TLS](https://github.com/emqx/emqx-operator/discussions/312)。
