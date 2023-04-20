@@ -39,6 +39,10 @@ import (
 )
 
 var emqxBroker = &appsv1beta4.EmqxBroker{
+	TypeMeta: metav1.TypeMeta{
+		Kind:       "EmqxBroker",
+		APIVersion: "apps.emqx.io/v1beta4",
+	},
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "emqx",
 		Namespace: "e2e-test-v1beta4",
@@ -71,6 +75,10 @@ var emqxBroker = &appsv1beta4.EmqxBroker{
 }
 
 var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
+	TypeMeta: metav1.TypeMeta{
+		Kind:       "EmqxEnterprise",
+		APIVersion: "apps.emqx.io/v1beta4",
+	},
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "emqx-ee",
 		Namespace: "e2e-test-v1beta4",

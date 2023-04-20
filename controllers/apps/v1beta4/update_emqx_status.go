@@ -7,11 +7,8 @@ import (
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/tidwall/gjson"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type updateEmqxStatus struct {
@@ -94,11 +91,8 @@ func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
 			"",
 		)
 
-		ok, err := s.checkEndpointSliceIsReady(enterprise, currentSts)
-		if err != nil {
-			return emperror.Wrap(err, "failed to check endpoint slice is ready")
-		}
-		if !ok {
+		// Wait for current sts ready
+		if currentSts.Status.ReadyReplicas != *currentSts.Spec.Replicas {
 			return nil
 		}
 
@@ -120,43 +114,6 @@ func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
 		enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus = evacuationsStatus
 	}
 	return nil
-}
-
-func (s updateEmqxStatus) checkEndpointSliceIsReady(instance appsv1beta4.Emqx, currentSts *appsv1.StatefulSet) (bool, error) {
-	// make sure that only latest ready sts is in endpoints
-	endpointSlice := &discoveryv1.EndpointSliceList{}
-	if err := s.Client.List(context.Background(), endpointSlice,
-		client.InNamespace(instance.GetNamespace()),
-		client.MatchingLabels(instance.GetSpec().GetServiceTemplate().Labels),
-	); err != nil {
-		return false, err
-	}
-
-	podMap, _ := getPodMap(s.Client, instance, []*appsv1.StatefulSet{currentSts})
-
-	hitEndpoints := 0
-	for _, endpointSlice := range endpointSlice.Items {
-		if len(endpointSlice.Endpoints) != int(*instance.GetSpec().GetReplicas()) {
-			continue
-		}
-		for _, endpoint := range endpointSlice.Endpoints {
-			if endpoint.Conditions.Ready == nil || !*endpoint.Conditions.Ready {
-				continue
-			}
-
-			for _, pod := range podMap[currentSts.UID] {
-				if endpoint.TargetRef.UID != pod.UID {
-					continue
-				}
-				hitEndpoints++
-			}
-		}
-	}
-	if hitEndpoints != len(podMap[currentSts.UID]) {
-		// Wait for endpoints to be ready
-		return false, nil
-	}
-	return true, nil
 }
 
 // Request API
