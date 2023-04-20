@@ -32,6 +32,7 @@ func TestCheckNodeCount(t *testing.T) {
 	t.Run("no replicant nodes", func(t *testing.T) {
 		emqx := &appsv2alpha1.EMQX{}
 		emqx.Spec.CoreTemplate.Spec.Replicas = &replicas
+		emqx.Spec.ReplicantTemplate.Spec.Replicas = &replicas
 
 		emqxNodes := []appsv2alpha1.EMQXNode{
 			{
@@ -48,7 +49,7 @@ func TestCheckNodeCount(t *testing.T) {
 		emqxStatusMachine.CheckNodeCount(emqxNodes)
 		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeReplicas, int32(1))
 		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeReadyReplicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeReplicas, int32(0))
+		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeReplicas, int32(1))
 		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeReadyReplicas, int32(0))
 	})
 

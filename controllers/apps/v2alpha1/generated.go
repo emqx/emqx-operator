@@ -157,12 +157,7 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 	if len(instance.Spec.ListenersServiceTemplate.Spec.Ports) == 0 {
 		return nil
 	}
-
-	if isExistReplicant(instance) {
-		instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
-	} else {
-		instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.CoreTemplate.Labels
-	}
+	instance.Spec.ListenersServiceTemplate.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
 
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -537,10 +532,6 @@ func generateAnnotationByContainers(containers []corev1.Container) string {
 		containerNames = append(containerNames, c.Name)
 	}
 	return strings.Join(containerNames, ",")
-}
-
-func isExistReplicant(instance *appsv2alpha1.EMQX) bool {
-	return instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
 }
 
 func isNotExistEnv(envs []corev1.EnvVar, env corev1.EnvVar) bool {

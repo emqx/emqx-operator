@@ -238,9 +238,9 @@ func TestGenerateListenerService(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha1.EMQXSpec{
-			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
+			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: coreLabels,
+					Labels: replicantLabels,
 				},
 			},
 			ListenersServiceTemplate: corev1.Service{
@@ -276,7 +276,7 @@ func TestGenerateListenerService(t *testing.T) {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: coreLabels,
+			Selector: replicantLabels,
 			Ports:    listenerPorts,
 		},
 	}
@@ -1171,12 +1171,6 @@ func TestUpdateDeploymentForBootstrapConfig(t *testing.T) {
 		SubPath:   "emqx.conf",
 		ReadOnly:  true,
 	}}, got.Spec.Template.Spec.Containers[0].VolumeMounts)
-}
-
-func TestIsExistReplicant(t *testing.T) {
-	instance := &appsv2alpha1.EMQX{}
-
-	assert.False(t, isExistReplicant(instance))
 }
 
 func TestIsNotExistVolumeMount(t *testing.T) {
