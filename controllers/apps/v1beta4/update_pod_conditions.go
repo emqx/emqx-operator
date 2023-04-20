@@ -56,15 +56,13 @@ func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4
 			onServerCondition.LastTransitionTime = c.LastTransitionTime
 		}
 
-		if h, ok := pod.Labels["controller-revision-hash"]; ok && h == instance.GetStatus().GetCurrentStatefulSetVersion() {
-			onServerCondition.Status = corev1.ConditionTrue
-			if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
-				s, err := u.checkRebalanceStatus(enterprise, pod.DeepCopy())
-				if err != nil {
-					return subResult{err: err}
-				}
-				onServerCondition.Status = s
+		onServerCondition.Status = corev1.ConditionTrue
+		if enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise); ok {
+			s, err := u.checkRebalanceStatus(enterprise, pod.DeepCopy())
+			if err != nil {
+				return subResult{err: err}
 			}
+			onServerCondition.Status = s
 		}
 
 		patchBytes, _ := json.Marshal(corev1.Pod{

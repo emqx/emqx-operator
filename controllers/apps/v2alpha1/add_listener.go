@@ -44,7 +44,7 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX
 	)
 
 	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to create or update listener service and endpointSlice")}
+		return subResult{err: emperror.Wrap(err, "failed to create or update listener service and endpoints")}
 	}
 
 	return subResult{}
@@ -79,7 +79,7 @@ func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, p *portForwar
 func generateListenerService(instance *appsv2alpha1.EMQX, ports []corev1.ServicePort) *corev1.Service {
 	listener := instance.Spec.ListenersServiceTemplate.DeepCopy()
 	// We don't need to set the selector for the service
-	// because the Operator will manager the endpointSlice
+	// because the Operator will manager the endpoints
 	// please check https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 	listener.Spec.Selector = map[string]string{}
 	listener.Spec.Ports = appsv2alpha1.MergeServicePorts(
