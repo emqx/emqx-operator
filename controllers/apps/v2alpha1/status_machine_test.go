@@ -299,6 +299,7 @@ func TestNextStatusForCoreReady(t *testing.T) {
 		assert.Equal(t, appsv2alpha1.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// statefulSet is ready, but deployment not ready
+		existedSts.UID = "fake"
 		existedSts.Status.ReadyReplicas = 1
 		existedSts.Status.UpdatedReplicas = 1
 		existedSts.Status.UpdateRevision = "fake"
@@ -307,6 +308,7 @@ func TestNextStatusForCoreReady(t *testing.T) {
 		assert.Equal(t, appsv2alpha1.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// statefulSet and deployment is ready, but emqx nodes not ready
+		existedDeploy.UID = "fake"
 		existedDeploy.Status.UpdatedReplicas = 1
 		existedDeploy.Status.ReadyReplicas = 1
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
