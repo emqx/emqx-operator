@@ -84,6 +84,20 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	// Update EMQX Custom Resource's status
+	instance, err := r.updateStatus(instance)
+	if err != nil {
+		if innerErr.IsCommonError(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
+	}
+	if err := r.Client.Status().Update(ctx, instance); err != nil {
+		if k8sErrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
 	// Create Resources
 	resources, err := r.createResources(instance)
 	if err != nil {
@@ -131,11 +145,18 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *EMQXReconciler) createResources(instance *appsv2alpha1.EMQX) ([]client.Object, error) {
 	var resources []client.Object
+
 	nodeCookie := generateNodeCookieSecret(instance)
+	if err := r.Client.Get(context.TODO(), client.ObjectKeyFromObject(nodeCookie), nodeCookie.DeepCopy()); k8sErrors.IsNotFound(err) {
+		resources = append(resources, nodeCookie)
+	}
 	bootstrapUser := generateBootstrapUserSecret(instance)
+	if err := r.Client.Get(context.TODO(), client.ObjectKeyFromObject(bootstrapUser), bootstrapUser.DeepCopy()); k8sErrors.IsNotFound(err) {
+		resources = append(resources, bootstrapUser)
+	}
 	bootstrapConfig := generateBootstrapConfigMap(instance)
-	if instance.Status.IsCreating() {
-		resources = append(resources, nodeCookie, bootstrapUser, bootstrapConfig)
+	if err := r.Client.Get(context.TODO(), client.ObjectKeyFromObject(bootstrapConfig), bootstrapConfig.DeepCopy()); k8sErrors.IsNotFound(err) {
+		resources = append(resources, bootstrapConfig)
 	}
 
 	dashboardSvc := generateDashboardService(instance)
