@@ -49,7 +49,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 		})
 
 		AfterEach(func() {
-			// deleteEmqx(emqx)
+			deleteEmqx(emqx)
 		})
 
 		It("blue green update", func() {
