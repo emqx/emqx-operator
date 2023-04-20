@@ -39,7 +39,7 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
         storageClassName: cbs
         resources:
           requests:
-            ## 云硬盘大小必须为10的倍数。高性能云硬盘最小为10GB，更多内容请参考：https://cloud.tencent.com/document/product/457/44239
+            ## 腾讯云 TKE 要求云硬盘大小必须为 10 的倍数，默认提供的 cbs（高性能云盘） 要求硬盘最小为 10GB，更多内容请参考：https://cloud.tencent.com/document/product/457/44239
             storage: 10Gi
         accessModes:
           - ReadWriteOnce
