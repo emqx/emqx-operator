@@ -182,7 +182,7 @@ _Appears in:_
 | `tty` _boolean_ | Whether this container should allocate a TTY for itself, also requires 'stdin' to be true. Default is false. |
 | `emqxConfig` _object (keys:string, values:string)_ |  |
 | `emqxACL` _string array_ |  |
-| `bootstrapAPIKeys` _[BootstrapAPIKey](#BootstrapAPIKey) array_ | EMQX bootstrap user Cannot be updated. |
+| `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
 
 
 #### EmqxEnterprise

@@ -30,15 +30,8 @@ func TestCheckNodeCount(t *testing.T) {
 	replicas := int32(1)
 
 	t.Run("no replicant nodes", func(t *testing.T) {
-		emqx := &appsv2alpha1.EMQX{
-			Spec: appsv2alpha1.EMQXSpec{
-				CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-					Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-						Replicas: &replicas,
-					},
-				},
-			},
-		}
+		emqx := &appsv2alpha1.EMQX{}
+		emqx.Spec.CoreTemplate.Spec.Replicas = &replicas
 
 		emqxNodes := []appsv2alpha1.EMQXNode{
 			{
@@ -60,20 +53,9 @@ func TestCheckNodeCount(t *testing.T) {
 	})
 
 	t.Run("have replicant nodes", func(t *testing.T) {
-		emqx := &appsv2alpha1.EMQX{
-			Spec: appsv2alpha1.EMQXSpec{
-				CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
-					Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-						Replicas: &replicas,
-					},
-				},
-				ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
-					Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
-						Replicas: &replicas,
-					},
-				},
-			},
-		}
+		emqx := &appsv2alpha1.EMQX{}
+		emqx.Spec.CoreTemplate.Spec.Replicas = &replicas
+		emqx.Spec.ReplicantTemplate.Spec.Replicas = &replicas
 
 		emqxNodes := []appsv2alpha1.EMQXNode{
 			{
