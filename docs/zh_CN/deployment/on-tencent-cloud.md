@@ -35,7 +35,7 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
       metadata:
         name: emqx-ee
       spec:
-        ## 更多内容：https://cloud.tencent.com/document/product/457/44238
+        ## 更多内容：https://cloud.tencent.com/document/product/457/44239
         storageClassName: cbs
         resources:
           requests:
@@ -52,10 +52,8 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
     serviceTemplate:
       metadata:
         annotations:
-          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490#tkeserviceconfig
+          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490
           service.cloud.tencent.com/tke-service-config-auto: "true"
-          # 自动创建 tke-service-config
-          # service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
       spec:
         type: LoadBalancer
     ```
@@ -106,19 +104,15 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
     dashboardServiceTemplate:
       metadata:
         annotations:
-          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490#tkeserviceconfig
+          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490
           service.cloud.tencent.com/tke-service-config-auto: "true"
-          # 自动创建 tke-service-config
-          # service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
       spec:
         type: LoadBalancer
     listenersServiceTemplate:
       metadata:
         annotations:
-          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490#tkeserviceconfig
+          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490
           service.cloud.tencent.com/tke-service-config-auto: "true"
-          # 自动创建 tke-service-config
-          # service.cloud.tencent.com/tke-service-config: emqx-ee-service-config
       spec:
         type: LoadBalancer
   ```
