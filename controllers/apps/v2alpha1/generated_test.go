@@ -328,104 +328,106 @@ func TestGenerateStatefulSet(t *testing.T) {
 					},
 				},
 				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-					Command: []string{"/bin/sh", "-c"},
-					Args:    []string{"hello world"},
-					Ports: []corev1.ContainerPort{
-						{
-							ContainerPort: int32(1883),
+					EMQXReplicantTemplateSpec: appsv2alpha1.EMQXReplicantTemplateSpec{
+						Command: []string{"/bin/sh", "-c"},
+						Args:    []string{"hello world"},
+						Ports: []corev1.ContainerPort{
+							{
+								ContainerPort: int32(1883),
+							},
 						},
-					},
-					Env: []corev1.EnvVar{
-						{
-							Name:  "FOO",
-							Value: "BAR",
+						Env: []corev1.EnvVar{
+							{
+								Name:  "FOO",
+								Value: "BAR",
+							},
 						},
-					},
-					EnvFrom: []corev1.EnvFromSource{
-						{
-							ConfigMapRef: &corev1.ConfigMapEnvSource{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: "fake-config",
+						EnvFrom: []corev1.EnvFromSource{
+							{
+								ConfigMapRef: &corev1.ConfigMapEnvSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "fake-config",
+									},
 								},
 							},
 						},
-					},
-					PodSecurityContext: &corev1.PodSecurityContext{
-						RunAsUser:  &user,
-						RunAsGroup: &group,
-						FSGroup:    &group,
-					},
-					ContainerSecurityContext: &corev1.SecurityContext{
-						RunAsUser:  &user,
-						RunAsGroup: &group,
-					},
-					Replicas:    &replicas,
-					Affinity:    &corev1.Affinity{},
-					ToleRations: []corev1.Toleration{},
-					NodeName:    "emqx-node",
-					NodeSelector: map[string]string{
-						"kubernetes.io/hostname": "emqx-node",
-					},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("100m"),
-							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						PodSecurityContext: &corev1.PodSecurityContext{
+							RunAsUser:  &user,
+							RunAsGroup: &group,
+							FSGroup:    &group,
 						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("100m"),
-							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						ContainerSecurityContext: &corev1.SecurityContext{
+							RunAsUser:  &user,
+							RunAsGroup: &group,
 						},
-					},
-					LivenessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/status",
-								Port: intstr.FromInt(18083),
+						Replicas:    &replicas,
+						Affinity:    &corev1.Affinity{},
+						ToleRations: []corev1.Toleration{},
+						NodeName:    "emqx-node",
+						NodeSelector: map[string]string{
+							"kubernetes.io/hostname": "emqx-node",
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
 						},
-						InitialDelaySeconds: int32(10),
-						PeriodSeconds:       int32(5),
-						FailureThreshold:    int32(30),
-					},
-					ReadinessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/status",
-								Port: intstr.FromInt(18083),
+						LivenessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/status",
+									Port: intstr.FromInt(18083),
+								},
+							},
+							InitialDelaySeconds: int32(10),
+							PeriodSeconds:       int32(5),
+							FailureThreshold:    int32(30),
+						},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/status",
+									Port: intstr.FromInt(18083),
+								},
+							},
+							InitialDelaySeconds: int32(10),
+							PeriodSeconds:       int32(5),
+							FailureThreshold:    int32(30),
+						},
+						StartupProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/status",
+									Port: intstr.FromInt(18083),
+								},
+							},
+							InitialDelaySeconds: int32(10),
+							PeriodSeconds:       int32(5),
+							FailureThreshold:    int32(30),
+						},
+						Lifecycle: &corev1.Lifecycle{
+							PreStop: &corev1.LifecycleHandler{
+								Exec: &corev1.ExecAction{
+									Command: []string{"emqx", "ctl", "cluster", "leave"},
+								},
 							},
 						},
-						InitialDelaySeconds: int32(10),
-						PeriodSeconds:       int32(5),
-						FailureThreshold:    int32(30),
-					},
-					StartupProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/status",
-								Port: intstr.FromInt(18083),
+						InitContainers: []corev1.Container{
+							{
+								Name:  "init",
+								Image: "hello-world",
 							},
 						},
-						InitialDelaySeconds: int32(10),
-						PeriodSeconds:       int32(5),
-						FailureThreshold:    int32(30),
-					},
-					Lifecycle: &corev1.Lifecycle{
-						PreStop: &corev1.LifecycleHandler{
-							Exec: &corev1.ExecAction{
-								Command: []string{"emqx", "ctl", "cluster", "leave"},
+						ExtraContainers: []corev1.Container{
+							{
+								Name:  "extra",
+								Image: "busybox",
 							},
-						},
-					},
-					InitContainers: []corev1.Container{
-						{
-							Name:  "init",
-							Image: "hello-world",
-						},
-					},
-					ExtraContainers: []corev1.Container{
-						{
-							Name:  "extra",
-							Image: "busybox",
 						},
 					},
 				},
@@ -685,7 +687,9 @@ func TestGenerateDeployment(t *testing.T) {
 					Name: "emqx-core",
 				},
 				Spec: appsv2alpha1.EMQXCoreTemplateSpec{
-					Replicas: &replicas,
+					EMQXReplicantTemplateSpec: appsv2alpha1.EMQXReplicantTemplateSpec{
+						Replicas: &replicas,
+					},
 				},
 			},
 			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
