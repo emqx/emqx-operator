@@ -14,7 +14,7 @@ Package v2alpha1 contains API Schema definitions for the apps v2alpha1 API group
 
 
 
-#### BootsrapAPIKey
+#### BootstrapAPIKey
 
 
 
@@ -224,7 +224,7 @@ _Appears in:_
 | `image` _string_ | EMQX image name. More info: https://kubernetes.io/docs/concepts/containers/images |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
-| `bootstrapAPIKeys` _[BootsrapAPIKey](#bootsrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
+| `bootstrapAPIKeys` _[BootstrapAPIKey](#BootstrapAPIKey) array_ | EMQX bootstrap user Cannot be updated. |
 | `bootstrapConfig` _string_ | EMQX bootstrap config, hocon style, like emqx.conf Cannot be updated. |
 | `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | CoreTemplate is the object that describes the EMQX core node that will be created |
 | `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | ReplicantTemplate is the object that describes the EMQX replicant node that will be created |
