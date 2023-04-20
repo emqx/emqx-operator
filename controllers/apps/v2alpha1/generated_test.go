@@ -74,7 +74,7 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha1.EMQXSpec{
-			BootstrapAPIKeys: []appsv2alpha1.BootsrapAPIKey{
+			BootstrapAPIKeys: []appsv2alpha1.BootstrapAPIKey{
 				{
 					Key:    "test_key",
 					Secret: "secret",

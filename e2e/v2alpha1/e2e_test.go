@@ -63,7 +63,7 @@ var _ = Describe("E2E Test", func() {
 			},
 			Spec: appsv2alpha1.EMQXSpec{
 				Image: "emqx/emqx:5.0.9",
-				BootstrapAPIKeys: []appsv2alpha1.BootsrapAPIKey{
+				BootstrapAPIKeys: []appsv2alpha1.BootstrapAPIKey{
 					{
 						Key:    "test_key",
 						Secret: "secret",

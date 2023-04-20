@@ -276,7 +276,7 @@ type EMQXCoreTemplate struct {
 	Spec EMQXCoreTemplateSpec `json:"spec,omitempty"`
 }
 
-type BootsrapAPIKey struct {
+type BootstrapAPIKey struct {
 	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d_]+$`
 	Key string `json:"key"`
 	// +kubebuilder:validation:MinLength:=3
@@ -301,7 +301,7 @@ type EMQXSpec struct {
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	// EMQX bootstrap user
 	// Cannot be updated.
-	BootstrapAPIKeys []BootsrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
+	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
 	// EMQX bootstrap config, hocon style, like emqx.conf
 	// Cannot be updated.
 	BootstrapConfig string `json:"bootstrapConfig,omitempty"`
