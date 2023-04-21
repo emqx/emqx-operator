@@ -1,360 +1,187 @@
-# Configure EMQX persistence
+# Enable Persistence In EMQX Cluster
 
-## Task target
+## Task Target
 
-- How to configure EMQX 4.x cluster persistence through the persistent field.
-- How to configure EMQX 5.x cluster Core node persistence through the volumeClaimTemplates field.
+- Configure EMQX 4.x cluster persistence through `persistent` field.
+- Configure EMQX 5.x cluster Core node persistence through `volumeClaimTemplates` field.
 
-## EMQX cluster persistence configuration
+## Configure EMQX Cluster Persistence
 
-- Configure EMQX cluster
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-In EMQX 5.0, the nodes in the EMQX cluster can be divided into two roles: core (Core) node and replication (Replicant) node. The Core node is responsible for all write operations in the cluster, and serves as the real data source of the EMQX database [Mria](https://github.com/emqx/mria) to store data such as routing tables, sessions, configurations, alarms, and Dashboard user information. The Replicant node is designed to be stateless and does not participate in the writing of data. Adding or deleting Replicant nodes will not change the redundancy of the cluster data. Therefore, in EMQX CRD, we only support the persistence of Core nodes.
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX cluster persistence through the `.spec.persistent` field. The semantics and configuration of the `.spec.persistent` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
 
-EMQX CRD supports configuration of EMQX cluster Core node persistence through `.spec.coreTemplate.spec.volumeClaimTemplates` field. The semantics and configuration of `.spec.coreTemplate.spec.volumeClaimTemplates` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
+When the user configures the `.spec.persistent` field, EMQX Operator will mount the `/opt/emqx/data` directory in the EMQX container to [StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/) in the PV and PVC created, when the EMQX Pod is deleted, the PV and PVC will not be deleted, so as to achieve the purpose of saving EMQX runtime data. For more information about PV and PVC, refer to the document [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
-When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` field, EMQX Operator will create a fixed PVC (PersistentVolumeClaim) for each Core node in the EMQX cluster to represent the user's request for persistence. When a Pod is deleted, its corresponding PVC is not automatically cleared. When a Pod is rebuilt, it will automatically match the existing PVC. If you no longer want to use the data of the old cluster, you need to manually clean up the PVC.
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
-PVC expresses the user's request for persistence, and what is responsible for storage is the persistent volume ([PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), PV), PVC and PV are bound one-to-one through PVC Name. PV is a piece of storage in the cluster, which can be manually prepared according to requirements, or can be dynamically created using storage classes ([StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/)) preparation. When a user is no longer using a PV resource, the PVC object can be manually deleted, allowing the PV resource to be recycled. Currently, there are two recycling strategies for PV: Retained (retained) and Deleted (deleted). For details of the recycling strategy, please refer to the document: [Reclaiming](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+          - ReadWriteOnce
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-EMQX Operator uses PV to persist the data in the `/opt/emqx/data` directory of the Core node of the EMQX cluster. The data stored in the `/opt/emqx/data` directory of the EMQX Core node mainly includes: routing table, session, configuration, alarm, Dashboard user information and other data.
+  > The `storageClassName` field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs.
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-   name: emqx
-spec:
-   image: emqx/emqx:5.0.9
-   imagePullPolicy: IfNotPresent
-   coreTemplate:
-     spec:
-       volumeClaimTemplates:
-         storageClassName: standard
-         resources:
-           requests:
-             storage: 20Mi
-         accessModes:
-         - ReadWriteOnce
-       replicas: 3
-   replicantTemplate:
-     spec:
-       replicas: 0
-   dashboardServiceTemplate:
-     spec:
-       type: NodePort
-       ports:
-         - name: "dashboard-listeners-http-bind"
-           protocol: TCP
-           port: 18083
-           targetPort: 18083
-           nodePort: 32016
-```
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
-**NOTE**: The storageClassName field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs. The accessModes field indicates the access mode of the PV. Currently, By default the `ReadWriteOnce` mode is used. For more access modes, please refer to the document: [AccessModes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes). The `.spec.dashboardServiceTemplate` field configures the way the EMQX cluster exposes services to the outside world: NodePort, and specifies that the nodePort corresponding to port 18083 of the EMQX Dashboard service is 32016 (the value range of nodePort is: 30000-32767).
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
 
-:::
-::: tab v1beta4
++ Obtain the External IP of EMQX cluster and access EMQX console
 
-EMQX CRD supports configuring EMQX cluster persistence through the `.spec.persistent` field. The semantics and configuration of the `.spec.persistent` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-When the user configures the `.spec.persistent` field, EMQX Operator will create a fixed PVC (PersistentVolumeClaim) for each Pod in the EMQX cluster to represent the user's request for persistence. When a Pod is deleted, its corresponding PVC is not automatically cleared. When a Pod is rebuilt, it will automatically match the existing PVC. If you no longer want to use the data of the old cluster, you need to manually clean up the PVC.
-
-PVC expresses the user's request for persistence, and what is responsible for storage is the persistent volume ([PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), PV), PVC and PV are bound one-to-one through PVC Name. PV is a piece of storage in the cluster, which can be manually prepared according to requirements, or can be dynamically created using storage classes ([StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/)) preparation. When a user is no longer using a PV resource, the PVC object can be manually deleted, allowing the PV resource to be recycled. Currently, there are two recycling strategies for PV: Retained (retained) and Deleted (deleted). For details of the recycling strategy, please refer to the document: [Reclaiming](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
-
-EMQX Operator uses PV to persist the data in the `/opt/emqx/data` directory of the EMQX node. The data stored in the `/opt/emqx/data` directory of the EMQX node mainly includes: loaded_plugins (loaded plug-in information), loaded_modules (loaded module information), mnesia database data (storing EMQX’s own operating data, such as alarm records, rules resources and rules created by the engine, Dashboard user information and other data).
-
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  persistent:
-    storageClassName: standard
-    resources:
-      requests:
-        storage: 20Mi
-    accessModes:
-    - ReadWriteOnce
-  template:
-    spec:
-      emqxContainer:
-        image: 
-          repository: emqx/emqx-ee
-          version: 4.4.8
-  serviceTemplate:
-    spec:
-      type: NodePort
-      ports:
-        - name: "http-dashboard-18083"
-          protocol: "TCP"
-          port: 18083
-          targetPort: 18083
-          nodePort: 32016
-```
-
-**NOTE**: The storageClassName field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs. The accessModes field indicates the access mode of the PV. Currently, By default the `ReadWriteOnce` mode is used. For more access modes, please refer to the document: [AccessModes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes). The `.spec.serviceTemplate` field configures the way the EMQX cluster exposes services to the outside world: NodePort, and specifies that the nodePort corresponding to port 18083 of the EMQX Dashboard service is 32016 (the value range of nodePort is: 30000-32767).
+  192.168.1.200
+  ```
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab v1beta3
+::: tab apps.emqx.io/v2alpha1
 
-EMQX CRD supports configuring EMQX cluster persistence through the `.spec.persistent` field. The semantics and configuration of the `.spec.persistent` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
+`apps.emqx.io/v2alpha1 EMQX` supports configuration of EMQX cluster Core node persistence through `.spec.coreTemplate.spec.volumeClaimTemplates` field. The semantics and configuration of `.spec.coreTemplate.spec.volumeClaimTemplates` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
 
-When the user configures the `.spec.persistent` field, EMQX Operator will create a fixed PVC (PersistentVolumeClaim) for each Pod in the EMQX cluster to represent the user's request for persistence. When a Pod is deleted, its corresponding PVC is not automatically cleared. When a Pod is rebuilt, it will automatically match the existing PVC. If you no longer want to use the data of the old cluster, you need to manually clean up the PVC.
+When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` field, EMQX Operator will mount the `/opt/emqx/data` directory in the EMQX container to [StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/) in the PV and PVC created, when the EMQX Pod is deleted, the PV and PVC will not be deleted, so as to achieve the purpose of saving EMQX runtime data. For more information about PV and PVC, refer to the document [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
-PVC expresses the user's request for persistence, and what is responsible for storage is the persistent volume ([PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/), PV), PVC and PV are bound one-to-one through PVC Name. PV is a piece of storage in the cluster, which can be manually prepared according to requirements, or can be dynamically created using storage classes ([StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/)) preparation. When a user is no longer using a PV resource, the PVC object can be manually deleted, allowing the PV resource to be recycled. Currently, there are two recycling strategies for PV: Retained (retained) and Deleted (deleted). For details of the recycling strategy, please refer to the document: [Reclaiming](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
-EMQX Operator uses PV to persist the data in the `/opt/emqx/data` directory of the EMQX node. The data stored in the `/opt/emqx/data` directory of the EMQX node mainly includes: loaded_plugins (loaded plug-in information), loaded_modules (loaded module information), mnesia database data (storing EMQX’s own operating data, such as alarm records, rules resources and rules created by the engine, Dashboard user information and other data).
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.0
+    coreTemplate:
+      spec:
+        volumeClaimTemplates:
+          storageClassName: standard
+          resources:
+            requests:
+              storage: 20Mi
+          accessModes:
+            - ReadWriteOnce
+        replicas: 3
+    listenersServiceTemplate:
+      spec:
+        type: LoadBalancer
+    dashboardServiceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-   name: emqx-ee
-spec:
-   persistent:
-     storageClassName: standard
-     resources:
-       requests:
-         storage: 20Mi
-     accessModes:
-     - ReadWriteOnce
-   emqxTemplate:
-     image: emqx/emqx-ee:4.4.8
-     serviceTemplate:
-       spec:
-         type: NodePort
-         ports:
-           - name: "http-dashboard-18083"
-             protocol: "TCP"
-             port: 18083
-             targetPort: 18083
-             nodePort: 32016
-```
+  > `storageClassName` field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs.
 
-**NOTE**: The storageClassName field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs. The accessModes field indicates the access mode of the PV. Currently, By default the `ReadWriteOnce` mode is used. For more access modes, please refer to the document: [AccessModes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes). The `.spec.emqxTemplate.serviceTemplate` field configures the way the EMQX cluster exposes services to the outside world: NodePort, and specifies that the nodePort corresponding to port 18083 of the EMQX Dashboard service is 32016 (the value range of nodePort is: 30000-32767).
++ Wait for EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
+
+  ```bash
+  $ kubectl get emqx emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   10m
+  ```
+
++ Obtain the Dashboard External IP of the EMQX cluster and access the EMQX console
+
+  EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
+
+  ```bash
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
 ::::
 
-Save the above content as: emqx-persistent.yaml, execute the following command to deploy the EMQX cluster:
+## Verify EMQX Cluster Persistence
 
-```
-kubectl apply -f emqx-persistent.yaml
-```
-
-The output is similar to:
-
-```
-emqx.apps.emqx.io/emqx created
-```
-
-- Check whether the EMQX cluster is ready
-
-:::: tabs type:card
-::: tab v2alpha1
-
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-```
-
-The output is similar to:
-
-```
-[
-   {
-     "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   },
-   {
-     "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   },
-   {
-     "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   }
-]
-```
-
-**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `role` represents the EMQX node role type. `version` indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
-
+:::tip
+The screenshots of the Dashboard below are from EMQX 5, [EMQX 4 Dashboard](https://docs.emqx.com/en/enterprise/v4.4/getting-started/dashboard-ee.html#dashboard) also supports the corresponding function, please operate by yourself.
 :::
-::: tab v1beta4
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
-```
+Verification scheme: 1) Passed in the old EMQX Dashboard creates a test rule; 2) Deletes the old cluster; 3) Recreates the EMQX cluster,and checks whether the previously created rule exists through the Dashboard.
 
-The output is similar to:
++ Access EMQX Dashboard through browser to create test rules
 
-```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
+  :::: tabs type:card
+  ::: tab apps.emqx.io/v1beta4
 
-**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `version` indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v2alpha1x
 
-:::
-::: tab v1beta3
+  ```bash
+  external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::::
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
-```
+  Login EMQX Dashboard by accessing `http://${external_ip}:18083`, and click Data Integration → Rules to enter the page for creating rules. Let’s first click the button to add an action Add a response action for this rule, and then click Create to generate a rule, as shown in the following figure:
 
-The output is similar to:
+  ![](./assets/configure-emqx-persistent/emqx-core-action.png)
 
-```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
+  When our rule is successfully created, a rule record will appear on the page with the rule ID: emqx-persistent-test, as shown in the figure below:
 
-**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `version` indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
+  ![](./assets/configure-emqx-persistent/emqx-core-rule-old.png)
 
-:::
-::::
++ delete old EMQX cluster
 
-## Verify whether the EMQX cluster persistence is in effect
+  Execute the following command to delete the EMQX cluster:
 
-Verification scheme: 1) Create a test rule through the Dashboard in the old EMQX cluster; 2) Delete the old cluster; 3) Recreate the EMQX cluster, and check whether the previously created rule exists through the Dashboard.
+  ```bash
+  $ kubectl delete -f emqx.yaml
 
-- Create test rules through Dashboard
+  emqx.apps.emqx.io "emqx" deleted
+  # emqxenterprise.apps.emqx.io "emqx" deleted
+  ```
 
-Open the browser, enter the `IP` of the host where the EMQX Pod is located and the port `32016` to log in to the EMQX cluster Dashboard (Dashboard default username: admin, default password: public), enter the Dashboard and click Data Integration → Rules to enter the creation rule page, we first click the Add Action button to add a response action for this rule, and then click Create to generate a rule, as shown in the following figure:
+  > emqx-persistent.yaml is the YAML file used to deploy the EMQX cluster for the first time in this article, and this file does not need to be changed.
 
-![](./assets/configure-emqx-persistent/emqx-core-action.png)
++ Recreate the EMQX cluster
 
-When our rule is successfully created, a rule record will appear on the page with the rule ID: emqx-persistent-test, as shown in the figure below:
+  Execute the following command to recreate the EMQX cluster:
 
-![](./assets/configure-emqx-persistent/emqx-core-rule-old.png)
+  ```bash
+  $ kubectl apply -f emqx.yaml
 
-- Delete the old EMQX cluster
+  emqx.apps.emqx.io/emqx created
+  # emqxenterprise.apps.emqx.io/emqx created
+  ```
 
-Execute the following command to delete the EMQX cluster:
+  Wait for the EMQX cluster to be ready, and then access the EMQX Dashboard through the browser to check whether the previously created rules exist, as shown in the following figure:
 
-```
-kubectl delete -f emqx-persistent.yaml
-```
+  ![](./assets/configure-emqx-persistent/emqx-core-rule-new.png)
 
-**NOTE**: emqx-persistent.yaml is the YAML file used for the first deployment of the EMQX cluster in this article. This file does not need to be changed.
-
-The output is similar to:
-
-```
-emqx.apps.emqx.io "emqx" deleted
-```
-
-Execute the following command to check whether the EMQX cluster is deleted:
-
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-```
-
-The output is similar to:
-
-```
-Error from server (NotFound): emqxes.apps.emqx.io "emqx" not found
-```
-
-- Recreate the EMQX cluster
-
-Execute the following command to recreate the EMQX cluster:
-
-```
-kubectl apply -f emqx-persistent.yaml
-```
-
-The output is similar to:
-
-```
-emqx.apps.emqx.io/emqx created
-```
-
-Next, execute the following command to check whether the EMQX cluster is ready:
-
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-```
-
-The output is similar to:
-
-```
-[
-   {
-     "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   },
-   {
-     "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   },
-   {
-     "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-     "version": "5.0.9"
-   }
-]
-```
-
-Finally, visit the EMQX Dashboard through the browser to check whether the previously created rules exist, as shown in the following figure:
-
-![](./assets/configure-emqx-persistent/emqx-core-rule-new.png)
-
-It can be seen from the figure that the rule emqx-persistent-test created in the old cluster still exists in the new cluster, which means that the persistence we configured is in effect.
+  It can be seen from the figure that the rule emqx-persistent-test created in the old cluster still exists in the new cluster, which means that the persistence we configured is in effect.

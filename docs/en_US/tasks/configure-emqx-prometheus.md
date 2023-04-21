@@ -1,14 +1,16 @@
-# Configure Prometheus to monitor EMQX cluster
+# Monitor EMQX cluster by Prometheus and Grafana
 
-## Task target
+## Task Target
+Deploy `emqx-exporter` and monitor EMQX cluster by Prometheus and Grafana.
 
-- How to monitor EMQX cluster through Prometheus.
+## Deploy Prometheus and Grafana
 
-## Deploy Prometheus
+Prometheus' deployment documentation can refer to [Prometheus](https://github.com/prometheus-operator/prometheus-operator)
+Grafana' deployment documentation can refer to [Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/kubernetes/)
 
-Prometheus deployment documentation can refer to: [Prometheus](https://github.com/prometheus-operator/prometheus-operator)
+## Deploy EMQX Cluster
 
-## Deploy EMQX cluster
+Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -19,22 +21,37 @@ EMQX supports exposing indicators through the http interface. For all statistica
 apiVersion: apps.emqx.io/v2alpha1
 kind: EMQX
 metadata:
-   name: emqx
+  name: emqx
 spec:
-   image: emqx/emqx:5.0.14
-   imagePullPolicy: IfNotPresent
-   coreTemplate:
-     spec:
-       replicas: 3
-       ports:
-         - name: http-dashboard
-           containerPort: 18083
-   replicantTemplate:
-     spec:
-       replicas: 1
-       ports:
-         - name: http-dashboard
-           containerPort: 18083
+  image: emqx:5.0
+  coreTemplate:
+    spec:
+      ports:
+        # prometheus monitor requires the pod must name the target port
+        - name: dashboard
+          containerPort: 18083
+  replicantTemplate:
+    spec:
+      ports:
+        - name: dashboard
+          containerPort: 18083
+```
+
+Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqx.apps.emqx.io/emqx created
+```
+
+Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
+
+```bash
+$ kubectl get emqx emqx
+
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   10m
 ```
 
 :::
@@ -46,322 +63,325 @@ EMQX supports exposing indicators through the http interface. For all statistica
 apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
-   name: emqx-ee
+  name: emqx-ee
 spec:
-   replicas: 3
-   template:
-     spec:
-       emqxContainer:
-         image:
-           repository: emqx/emqx-ee
-           version: 4.4.14
-         ports:
-           - name: http-management
-             containerPort: 8081
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.16
+        ports:
+          # prometheus monitor requires the pod must name the target port
+          - name: dashboard
+            containerPort: 18083
 ```
 
-:::
-::: tab v1beta3
+Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
 
-EMQX supports exposing indicators through the http interface. For all statistical indicators under the cluster, you can refer to the document: [HTTP API](https://www.emqx.io/docs/en/v4.4/advanced/http-api.html#%E7%BB%9F%E8%AE%A1%E6%8C%87%E6%A0%87)
+```bash
+$ kubectl apply -f emqx.yaml
 
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
+emqxenterprise.apps.emqx.io/emqx-ee created
+```
+
+Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
+
+```bash
+$ kubectl get emqxenterprises
+
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+```
+
+If you are deploying EMQX 4.4 open-source, you need to enable plugin `emqx_prometheus` by `EmqxPlugin` CRD:
+
+```shell
+cat << "EOF" | kubectl apply -f -
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxPlugin
 metadata:
-   name: emqx-ee
+  name: emqx-prometheus
 spec:
-   replicas: 3
-   emqxTemplate:
-       image: emqx/emqx-ee:4.4.14
+  selector:
+    # EMQX pod labels
+    ${replace_with_your_emqx_pod_label} : label_value
+  pluginName: emqx_prometheus
 ```
 
 :::
 ::::
 
-Save the above content as: emqx.yaml and deploy the EMQX cluster
+## Create API secret
+emqx-exporter and Prometheus will pull metrics from EMQX dashboard API, so you need to sign in to dashboard to create an API secret.
 
-The output is similar to:
+Note that it is different to create a secret between EMQX 5 and EMQX 4.4 on the dashboard.
+* **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys).
+* **EMQX 4.4** create a new `User` instead of `Application`
 
+## Deploy emqx-exporter
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: emqx-exporter
+  name: emqx-exporter-service
+spec:
+  ports:
+    - name: metrics
+      port: 8085
+      targetPort: metrics
+  selector:
+    app: emqx-exporter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
+spec:
+  selector:
+    matchLabels:
+      app: emqx-exporter
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: emqx-exporter
+    spec:
+      securityContext:
+        runAsUser: 1000
+      containers:
+        - name: exporter
+          image: emqx-exporter:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            # "emqx-dashboard-service-name" is the service name that creating by operator for exposing 18083 port
+            - --emqx.nodes=${emqx-dashboard-service-name}:18083
+            - --emqx.auth-username=${paste_your_new_api_key_here}
+            - --emqx.auth-password=${paste_your_new_secret_here}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8085
+              name: metrics
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
 ```
-emqx.apps.emqx.io/emqx created
-```
 
-- Check whether the EMQX cluster is ready
+> Set the arg "--emqx.nodes" to the service name that creating by operator for exposing 18083 port. Check out the service name by call `kubectl get svc`.
 
-
-:::: tabs type:card
-::: tab v2alpha1
+Save the above content as `emqx-exporter.yaml`, replace `--emqx.auth-username` and `--emqx.auth-password` with your new creating API secret, then execute the following command to deploy the emqx-exporter:
 
 ```bash
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
+kubectl apply -f emqx-exporter.yaml
 ```
 
-The output is similar to:
-
-```
-[
-   {
-     "node": "emqx@10.244.2.13",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "replicant",
-     "version": "5.0.12"
-   },
-   {
-     "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.12"
-   },
-   {
-     "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.12"
-   },
-   {
-     "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.3.4.2-1/12.3.2.2",
-     "role": "core",
-     "version": "5.0.12"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. role represents the EMQX node role type. version indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
-
-:::
-::: tab v1beta4
-
+Check the status of emqx-exporter pod。
 ```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
+$ kubectl get po -l="app=emqx-exporter"
+
+NAME      STATUS   AGE
+emqx-exporter-856564c95-j4q5v   Running  8m33s
 ```
-
-The output is similar to:
-
-```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
-
-:::
-::: tab v1beta3
-
-```bash
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
-```
-
-The output is similar to:
-
-```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.3.4.2/12.3.2.2",
-     "version": "4.4.14"
-   }
-]
-```
-
-**NOTE:** node represents the unique identifier of the EMQX node in the cluster. node_status indicates the status of EMQX nodes. otp_release indicates the version of Erlang used by EMQX. version indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
-
-:::
-::::
 
 ## Configure Prometheus Monitor
+Prometheus-operator uses [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor) and [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) CRD to define how to monitor a set of pods or services dynamically.
 
 :::: tabs type:card
 ::: tab v2alpha1
 
-A PodMonitor Custom Resource Definition (CRD) allows to declaratively define how a dynamic set of services should be monitored. Use label selection to define which services are selected to monitor with the desired configuration, and its documentation can be referred to: [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
-
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-   name: emqx
-   namespace: default
-   labels:
-     app.kubernetes.io/name: emqx
+  name: emqx
+  labels:
+    app.kubernetes.io/name: emqx
 spec:
-   jobLabel: emqx-scraping
-   namespaceSelector:
-     matchNames:
-     - default
-   podMetricsEndpoints:
-   - basicAuth:
-       password:
-         key: password
-         name: emqx-basic-auth
-       username:
-         key: username
-         name: emqx-basic-auth
-     interval: 10s
-     params:
-       type:
-       -prometheus
-     path: /api/v5/prometheus/stats
-     port: http-dashboard
-     scheme: http
-   selector:
-     matchLabels:
-       apps.emqx.io/instance: emqx
-```
-
-**NOTE:** `path` indicates the path of the indicator collection interface. In EMQX 5, the path is: `/api/v5/prometheus/stats`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx`.
-
-:::
-::: tab v1beta4
-
-A PodMonitor Custom Resource Definition (CRD) allows to declaratively define how a dynamic set of services should be monitored. Use label selection to define which services are selected to monitor with the desired configuration, and its documentation can refer to: [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
-
-```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: PodMonitor
-metadata:
-   name: emqx
-   namespace: default
-   labels:
-     app.kubernetes.io/name: emqx
-spec:
-   jobLabel: emqx-scraping
-   namespaceSelector:
-     matchNames:
-     - default
-   podMetricsEndpoints:
-   - basicAuth:
-       password:
-         key: password
-         name: emqx-basic-auth
-       username:
-         key: username
-         name: emqx-basic-auth
-     interval: 10s
-     params:
-       type:
-       -prometheus
-     path: /api/v4/emqx_prometheus
-     port: http-management
-     scheme: http
-   selector:
-     matchLabels:
-       apps.emqx.io/instance: emqx-ee
-```
-
-**NOTE:** `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx-ee`.
-
-:::
-::: tab v1beta3
-
-A ServiceMonitor Custom Resource Definition (CRD) allows to declaratively define how a dynamic set of services should be monitored. Use label selection to define which services are selected to monitor with the desired configuration, and its documentation can be referred to: [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor)
-
-```yaml
+  podMetricsEndpoints:
+    - interval: 5s
+      path: /api/v5/prometheus/stats
+      # the name of emqx dashboard containerPort
+      port: dashboard
+      relabelings:
+        - action: replace
+          # user-defined cluster name, requires unique
+          replacement: emqx5
+          targetLabel: cluster
+        - action: replace
+          # fix value, don't modify
+          replacement: emqx
+          targetLabel: from
+        - action: replace
+          # fix value, don't modify
+          sourceLabels: ['pod']
+          targetLabel: "instance"
+  selector:
+    matchLabels:
+      # the label is the same as the label of emqx pod
+      apps.emqx.io/instance: emqx
+      apps.emqx.io/managed-by: emqx-operator
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your EMQX cluster deployed in other namespace
+      #- default
+---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-   name: emqx
-   namespace: default
-   labels:
-     app.kubernetes.io/name: emqx
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
 spec:
-   jobLabel: emqx-scraping
-   namespaceSelector:
-     matchNames:
-     - default
-   ServiceMetricsEndpoints:
-   - basicAuth:
-       password:
-         key: password
-         name: emqx-basic-auth
-       username:
-         key: username
-         name: emqx-basic-auth
-     interval: 10s
-     params:
-       type:
-       -prometheus
-     path: /api/v4/emqx_prometheus
-     port: http-management-8081
-     scheme: http
-   selector:
-     matchLabels:
-       apps.emqx.io/instance: emqx-ee
+  selector:
+    matchLabels:
+      # the label is the same as the label of emqx exporter svc
+      app: emqx-exporter
+  endpoints:
+    - port: metrics
+      interval: 5s
+      path: /metrics
+      relabelings:
+        - action: replace
+          # user-defined cluster name, requires unique
+          replacement: emqx5
+          targetLabel: cluster
+        - action: replace
+          # fix value, don't modify
+          replacement: exporter
+          targetLabel: from
+        - action: replace
+          # fix value, don't modify
+          sourceLabels: ['pod']
+          regex: '(.*)-.*-.*'
+          replacement: $1
+          targetLabel: "instance"
+        - action: labeldrop
+          # fix value, don't modify
+          regex: 'pod'
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your exporter deployed in other namespace
+      #- default
 ```
 
-**NOTE:** `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` means matching the label of Service: `apps.emqx.io/instance: emqx-ee`.
+<p> `path` indicates the path of the indicator collection interface. In EMQX 5, the path is: `/api/v5/prometheus/stats`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx`.</p>
+<p> The value of targetLabel `cluster` represents the name of current cluster, make sure its uniqueness. </p>
+
+:::
+::: tab v1beta4
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: emqx
+  labels:
+    app.kubernetes.io/name: emqx
+spec:
+  podMetricsEndpoints:
+  - interval: 5s
+    params:
+      type:
+        - prometheus
+    path: /api/v4/emqx_prometheus
+    # the name of emqx dashboard containerPort
+    port: dashboard
+    relabelings:
+      - action: replace
+        # user-defined cluster name, requires unique
+        replacement: emqx4
+        targetLabel: cluster
+      - action: replace
+        # fix value, don't modify
+        replacement: emqx
+        targetLabel: from
+      - action: replace
+        # fix value, don't modify
+        sourceLabels: ['pod']
+        targetLabel: "instance"
+  selector:
+    matchLabels:
+      # the label is the same as the label of emqx pod
+      apps.emqx.io/instance: emqx
+      apps.emqx.io/managed-by: emqx-operator
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your EMQX cluster deployed in other namespace
+      #- default
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
+spec:
+  selector:
+    matchLabels:
+      # the label in emqx exporter svc
+      app: emqx-exporter
+  endpoints:
+    - port: metrics
+      interval: 5s
+      path: /metrics
+      relabelings:
+        - action: replace
+          # user-defined cluster name, requires unique
+          replacement: emqx4
+          targetLabel: cluster
+        - action: replace
+          # fix value, don't modify
+          replacement: exporter
+          targetLabel: from
+        - action: replace
+          # fix value, don't modify
+          sourceLabels: ['pod']
+          regex: '(.*)-.*-.*'
+          replacement: $1
+          targetLabel: "instance"
+        - action: labeldrop
+          # fix value, don't modify
+          regex: 'pod'
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your exporter deployed in other namespace
+      #- default
+```
+
+> `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx-ee`.
+> The value of targetLabel `cluster` represents the name of current cluster, make sure its uniqueness.
 
 :::
 ::::
 
-Save the above content as: monitor.yaml and execute the following command:
+Save the above content as `monitor.yaml` and execute the following command:
 
-```
-kubectl apply -f monitor.yaml
-```
-
-Use basicAuth to provide Monitor with password and account information for accessing EMQX interface
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-   name: emqx-basic-auth
-   namespace: default
-type: kubernetes.io/basic-auth
-stringData:
-   username: admin
-   password: public
+```bash
+$ kubectl apply -f monitor.yaml
 ```
 
-Save the above content as: secret.yaml and create Secret
+## View EMQX Indicators on Prometheus
 
-```
-kubectl apply -f secret.yaml
-```
-
-## Visit Prometheus to view the indicators of EMQX cluster
-
-Open the Prometheus interface, switch to the Graph page, and enter emqx to display as shown in the following figure:
+Open the Prometheus interface, switch to the Graph page, and enter `emqx` to display as shown in the following figure:
 
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-metrics.png)
 
-Switch to the Status → Targets page, the following figure is displayed, and you can see all monitored EMQX Pod information in the cluster:
+Switch to the **Status** -> **Targets** page, the following figure is displayed, and you can see all monitored EMQX Pod information in the cluster:
 
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-target.png)
+
+## Import Grafana Templates
+Import all dashboard [templates](https://github.com/emqx/emqx-exporter/tree/main/config/grafana-template). Open the main dashboard **EMQX** and enjoy yourself!
+
+![](./assets/configure-emqx-prometheus/emqx-grafana-dashboard.png)

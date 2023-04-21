@@ -1,188 +1,178 @@
-# Product Overview
+# Deploy EMQX Operator
 
-This project provides an Operator for managing EMQX clusters on Kubernetes.
+In this section, we will walk you through the steps required to efficiently set up the environment for the EMQX Operator, install the Operator, and then use it to deploy EMQX. By following the guidelines outlined in this section, you will be able to effectively install and manage EMQX using the EMQX Operator.
 
-## Deploy EMQX Operator
+## Prepare the Environment
 
-### Prepare the environment
+Before deploying EMQX Operator, please confirm that the following components have been ready:
 
-Before deploying EMQX Operator, please confirm that the following components have been installed:
+- A running [Kubernetes cluster](https://kubernetes.io/docs/concepts/overview/), for a version of Kubernetes, please check [How to selector Kubernetes version](../README.md#how-to-selector-kubernetes-version)
 
-| Software                | Version Requirements |
-|:-----------------------:|:--------------------:|
-|  [Kubernetes](https://kubernetes.io/)    |  >= 1.24        |
-|  [Helm](https://helm.sh)                 |  >= 3           |
-|  [cert-manager](https://cert-manager.io) |  >= 1.1.6       |
+- A [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) tool that can access the Kubernetes cluster. You can check the status of the Kubernetes cluster using `kubectl cluster-info` command.
 
-> ### Why we need kubernetes 1.24:
->
-> The `MixedProtocolLBService` feature is enabled by default in Kubernetes 1.24 and above. For its documentation, please refer to: [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/). The `MixedProtocolLBService` attribute allows different protocols to be used within the same Service instance of type `LoadBalancer`. Therefore, if the user deploys the EMQX cluster on Kubernetes and uses the `LoadBalancer` type of Service, there are both TCP and UDP protocols in the Service, please pay attention to upgrading the Kubernetes version to 1.24 or above, otherwise the Service creation will fail.
->
-> **If user doesn't need `MixedProtocolLBService` feature, the EMQX Operator requires a Kubernetes cluster of version `>=1.21`.**
+- [Helm](https://helm.sh) 3 or higher
 
-### Install EMQX Operator
+## Install EMQX Operator
 
-> Make sure the [cert-manager](https://cert-manager.io) is ready
+1. Install and start `cert-manager`.
 
-```bash
-helm repo add emqx https://repos.emqx.io/charts
-helm repo update
-helm install emqx-operator emqx/emqx-operator --namespace emqx-operator-system --create-namespace
-```
+   ::: tip
+   `cert-manager` version `1.1.6` or higher is required. Skip this step if the `cert-manager` is already installed and started.
+   :::
 
-Check whether the cert-manager service is ready with the following command:
+   You can use Helm to install `cert-manager`.
 
-```bash
-kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system
-```
+   ```bash
+   $ helm repo add jetstack https://charts.jetstack.io
+   $ helm repo update
+   $ helm upgrade --install cert-manager jetstack/cert-manager \
+     --namespace cert-manager \
+     --create-namespace \
+     --set installCRDs=true
+   ```
 
-The output is similar to:
+   Or you can follow the [cert-manager installation guide](https://cert-manager.io/docs/installation/) to install it.
 
-```bash
-NAME                                                READY   STATUS    RESTARTS   AGE
-emqx-operator-controller-manager-68b866c8bf-kd4g6   1/1     Running   0          15s
-```
+2. Install the EMQX Operator with the command below:
 
-### Upgrade EMQX Operator
+   ```bash
+   $ helm repo add emqx https://repos.emqx.io/charts
+   $ helm repo update
+   $ helm upgrade --install emqx-operator emqx/emqx-operator \
+     --namespace emqx-operator-system \
+     --create-namespace
+   ```
 
-Execute the following command to upgrade EMQX Operator. If you want to specify the upgraded version, you only need to add parameter --version=x.x.x
+3. Wait till EMQX Operator is ready:
 
-```bash
-helm upgrade emqx-operator emqx/emqx-operator -n emqx-operator-system
-```
+   ```bash
+   $ kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 
-> Does not support version 1.x.x EMQX Operator upgrade to version 2.x.x .
+   pod/emqx-operator-controller-manager-57bd7b8bd4-h2mcr condition met
+   ```
 
-### Uninstall EMQX Operator
+Now that you have successfully installed the operator, you are ready to proceed to the next step. In the [Deploy EMQX](#deploy-emqx) section, you will learn how to use the EMQX Operator to deploy EMQX.
 
-Execute the following command to uninstall EMQX Operator
-
-```bash
-helm uninstall emqx-operator -n emqx-operator-system
-```
+Alternatively, if you are interested in learning how to upgrade or uninstall EMQX using the operator, you can continue reading this section.
 
 ## Deploy EMQX
 
-### Deploy EMQX 5
+:::: tabs type:card
 
-1. Deploy EMQX
+::: tab EMQX Enterprise 4
+1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
 
-```bash
-cat << "EOF" | kubectl apply -f -
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-   name: emqx
-spec:
-   image: emqx/emqx:5.0.14
-EOF
-```
+    ```yaml
+    apiVersion: apps.emqx.io/v1beta4
+    kind: EmqxEnterprise
+    metadata:
+       name: emqx-ee
+    spec:
+       template:
+         spec:
+           emqxContainer:
+             image:
+               repository: emqx/emqx-ee
+               version: 4.4.17
+    ```
 
-For a complete example, please see [emqx-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v2alpha1/emqx-full.yaml), For detailed explanation of each field please refer to [v2alpha1-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v2alpha1-reference.md).
+    For more details please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
 
-2. Check whether the EMQX cluster is ready
+2. Wait the EMQX cluster is running
 
-```bash
-kubectl get emqx emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
+   ```bash
+   $ kubectl get emqxenterprises
 
-This may take a while for the command to execute successfully, as it needs to wait for all EMQX nodes to start and join the cluster.
+   NAME      STATUS   AGE
+   emqx-ee   Running  8m33s
+   ```
 
-The output is similar to:
+   Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
+:::
 
-```bash
-{
-   "lastTransitionTime": "2023-02-10T02:46:36Z",
-   "lastUpdateTime": "2023-02-07T06:46:36Z",
-   "message": "Cluster is running",
-   "reason": "ClusterRunning",
-   "status": "True",
-   "type": "Running"
-}
-```
+::: tab EMQX Open Source 4
+1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
 
-### Deploy EMQX 4
+   ```yaml
+   apiVersion: apps.emqx.io/v1beta4
+   kind: EmqxBroker
+   metadata:
+      name: emqx
+   spec:
+      template:
+        spec:
+          emqxContainer:
+            image:
+              repository: emqx
+              version: 4.4
+   ```
 
-1. Deploy EMQX
+   For more details please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
 
-```bash
-cat << "EOF" | kubectl apply -f -
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxBroker
-metadata:
-   name: emqx
-spec:
-   template:
-     spec:
-       emqxContainer:
-         image:
-           repository: emqx/emqx-ee
-           version: 4.4.14
-EOF
-```
+2. Wait the EMQX cluster is running.
 
-For a complete example, please see [emqxbroker-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta4/emqxenterprise-full.yaml), For a detailed explanation of each field please refer to [v1beta4-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
+   ```bash
+   $ kubectl get emqxbrokers
 
-2. Check whether the EMQX cluster is ready
+   NAME   STATUS   AGE
+   emqx   Running  8m33s
+   ```
 
-```bash
-kubectl get emqxBroker emqx -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
+   Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
+:::
 
-This may take a while for the command to execute successfully, as it needs to wait for all EMQX nodes to start and join the cluster.
+::: tab EMQX Enterprise 5
 
-The output is similar to:
+1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
 
-```bash
-{
-  "lastTransitionTime": "2023-02-13T02:38:25Z",
-  "lastUpdateTime": "2023-02-13T02:44:19Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
+   ```yaml
+   apiVersion: apps.emqx.io/v2alpha1
+   kind: EMQX
+   metadata:
+      name: emqx-ee
+   spec:
+      image: emqx/emqx-enterprise:5.0.1
+   ```
 
-### Deploy EMQX Enterprise 4
+   For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha1-reference.md).
 
-1. Deploy EMQX
+2. Wait the EMQX cluster is running.
 
-```bash
-cat << "EOF" | kubectl apply -f -
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-   name: emqx-ee
-spec:
-   template:
-     spec:
-       emqxContainer:
-         image:
-           repository: emqx/emqx-ee
-           version: 4.4.14
-EOF
-```
+   ```bash
+   $ kubectl get emqx
 
-For a complete example, please see [emqxenterprise-full.yaml](https://github.com/emqx/emqx-operator/blob/main/config/samples/emqx/v1beta4/emqxenterprise-full.yaml), For a detailed explanation of each field please refer to [v1beta4-reference](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
+   NAME      IMAGE                        STATUS    AGE
+   emqx-ee   emqx/emqx-enterprise:5.0.1   Running   2m55s
+   ```
 
-2. Check whether the EMQX cluster is ready
+   Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
+:::
 
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
+::: tab EMQX Open Source 5
 
-This may take a while for the command to execute successfully, as it needs to wait for all EMQX nodes to start and join the cluster.
+1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
 
-The output is similar to:
+   ```yaml
+   apiVersion: apps.emqx.io/v2alpha1
+   kind: EMQX
+   metadata:
+      name: emqx
+   spec:
+      image: emqx:5.0
+   ```
 
-```bash
-{
-  "lastTransitionTime": "2023-02-13T02:38:25Z",
-  "lastUpdateTime": "2023-02-13T02:44:19Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
-```
+   For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha1-reference.md).
+
+2. Wait the EMQX cluster is running.
+
+   ```bash
+   $ kubectl get emqx
+
+   NAME   IMAGE      STATUS    AGE
+   emqx   emqx:5.0   Running   2m55s
+   ```
+
+   Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
+:::
+
+::::

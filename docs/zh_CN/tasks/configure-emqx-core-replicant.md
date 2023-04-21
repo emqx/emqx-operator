@@ -1,253 +1,127 @@
-# 配置 EMQX Core 和 Replicant 节点
+# 配置 Core + Replicant 集群 (EMQX 5.x)
 
 ## 任务目标
 
-- 如何通过 coreTemplate 字段配置 EMQX 集群 Core 节点。
-- 如何通过 replicantTemplate 字段配置 EMQX 集群 Replicant 节点。
+- 通过 `coreTemplate` 字段配置 EMQX 集群 Core 节点。
+- 通过 `replicantTemplate` 字段配置 EMQX 集群 Replicant 节点。
 
-## 配置 EMQX 集群 Core 节点
+## Core 节点与 Replicant 节点
 
-在 EMQX 5.0 中，为了实现集群横向扩展能力，可以将集群中的 EMQX 节点分成两个角色：核心（Core）节点和 复制（Replicant）节点。其拓扑结构如下图所示：
+在 EMQX 5.0 中，EMQX 集群中的节点可以分成两个角色：核心（Core）节点和 复制（Replicant）节点。Core 节点负责集群中所有的写操作，与 EMQX 4.x 集群中的节点行为一致，作为 EMQX 数据库 [Mria](https://github.com/emqx/mria) 的真实数据源来存储路由表、会话、配置、报警以及 Dashboard 用户信息等数据。而 Replicant 节点被设计成无状态的，不参与数据的写入，添加或者删除 Replicant 节点不会改变集群数据的冗余。更多关于 EMQX 5.0 架构的信息请参考文档：[EMQX 5.0 架构](https://docs.emqx.com/zh/enterprise/v5.0/deploy/cluster/mria-introduction.html#mria-%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D)，Core 节点与 Replicant 节点的拓扑结构如下图所示：
 
-![](./assets/configure-core-replicant/mria-core-repliant.png)
+  <div style="text-align:center">
+  <img src="./assets/configure-core-replicant/mria-core-repliant.png" style="zoom:30%;" />
+  </div>
 
-Core 节点的行为与 EMQX 4.x 中节点一致：Core 节点使用全连接的方式组成集群，每个节点都可以发起事务、持有锁等。因此，EMQX 5.0 仍然要求 Core 节点在部署上要尽量的可靠。**请注意：EMQX 集群中至少要有一个 Core 节点**。
+::: tip
+EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX Operator 建议 EMQX 集群至少有三个 Core 节点。
+:::
 
-Replicant 节点不再直接参与事务的处理。但它们会连接到 Core 节点，并被动地复制来自 Core 节点的数据更新。Replicant 节点不允许执行任何的写操作。而是将其转交给 Core 节点代为执行。另外，由于 Replicant 会复制来自 Core 节点的数据，所以它们有一份完整的本地数据副本，以达到最高的读操作的效率，这样有助于降低 EMQX 路由的时延。另外，Replicant 节点被设计成是无状态的，添加或删除它们不会导致集群数据的丢失、也不会影响其他节点的服务状态，所以 Replicant 节点可以被放在一个自动扩展组中。
+## 部署 EMQX 集群
 
-- 部署 EMQX 集群
+`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.coreTemplate` 字段来配置 EMQX 集群 Core 节点，使用 `.spec.replicantTemplate` 字段来配置 EMQX 集群 Replicant 节点，更多信息请查看：[API 参考](../reference/v2alpha1-reference.md#emqxspec)。
 
-EMQX CRD 支持使用 `.spec.coreTemplate` 字段来配置 EMQX 集群 Core 节点，coreTemplate 字段的具体描述可以参考：[coreTemplate](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v2alpha1-reference.md#emqxcoretemplate)。使用 `.spec.replicantTemplate` 字段来配置 EMQX 集群 Replicant 节点，replicantTemplate 字段的具体描述可以参考：[emqxreplicanttemplate](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v2alpha1-reference.md#emqxreplicanttemplate)。
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: "emqx/emqx:5.0.9"
-  coreTemplate:
-    spec:
-      replicas: 3
-  replicantTemplate:
-    spec:
-      replicas: 0
-  dashboardServiceTemplate:
-    spec:
-      type: NodePort
-      ports:
-        - name: "dashboard-listeners-http-bind"
-          protocol: TCP
-          port: 18083
-          targetPort: 18083
-          nodePort: 32015
-  listenersServiceTemplate:
-    spec:
-      type: NodePort
-      ports:
-        - name: "tcp-default"
-          protocol: TCP
-          port: 1883
-          targetPort: 1883 
-          nodePort: 32016
-```
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.0
+    coreTemplate:
+      spec:
+        replicas: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+    replicantTemplate:
+      spec:
+        replicas: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+    dashboardServiceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-**说明**：如果 EMQX 集群配置了 Replicant 节点，MQTT 客户端的请求会连接 Rplicant 节点，否则会连接到 Core 节点。访问 EMQX Dashboard 的请求只会连接到 Core 节点。在 `.spec.dashboardServiceTemplate` 里面我们配置了 EMQX 集群对外暴露 Dashboard 服务的方式为 NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32015（nodePort 取值范围为：30000-32767）。在 `.spec.listenersServiceTemplate` 里面我们配置了 EMQX 集群监听器对外暴露服务的方式为 NodePort，并指定了 EMQX 监听器 1883 端口对应的 nodePort 为 32016。**请注意：EMQX 集群中至少要配置一个 Core 节点**。
+  > 上文的 YAML 中，我们声明了这是一个由三个 Core 节点和三个 Replicant 节点组成的 EMQX 集群。Core 节点最低需要 256Mi 内存 ，Replicant 节点最低需要512Mi 内存。在实际业务中，Replicant 节点会接受全部的客户端请求，所以 Replicant 节点需要的资源会更高一些。
 
-将上述内容保存为：emqx-core.yaml，并执行如下命令部署 EMQX 集群：
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
-```
-kubectl apply -f emqx-core.yaml
-```
+  ```
+  $ kubectl get emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   2m55s
+  ```
 
-输出类似于：
++ 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台
 
-```
-emqx.apps.emqx.io/emqx created
-```
+  EMQX Operator 会创建两个 EMQX Service 资源，一个是 emqx-dashboard，一个是 emqx-listeners，分别对应 EMQX 控制台和 EMQX 监听端口。
 
-- 检查 EMQX 集群是否就绪
+  ```bash
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-```
+  192.168.1.200
+  ```
 
-输出类似于：
+  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
-```
-[
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
-```
+## 检查 EMQX 集群
 
-**说明**：`node` 表示 EMQX 节点在集群的唯一标识。`node_status` 表示 EMQX 节点的状态。`otp_release` 表示 EMQX 使用的 Erlang 的版本。`role` 表示 EMQX 节点角色类型。`version` 表示 EMQX 版本。EMQX Operator 默认创建包含三个 core 节点和三个 replicant 节点的 EMQX 集群，所以当集群运行正常时，可以看到三个运行的 core 节点和三个 replicant 节点信息。如果你配置了 `.spec.coreTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 core 节点数量应和这个 replicas 的值相等。如果你配置了 `.spec.replicantTemplate.spec.replicas` 字段，当集群运行正常时，输出结果中显示的运行 relicant 节点数量应和这个 replicas 的值相等。
+  ```bash
+  $ kubectl get emqx emqx -o json | jq .status.emqxNodes
+  ```
 
-- 使用 MQTT X 连接 EMQX 集群发送消息
+  可以通过检查 EMQX 自定义资源的状态来获取所有集群中节点的信息，节点的 `role` 字段表示它们在集群中的角色，在上文中部署了一个由两个 Core 节点与三个 Replicant 节点组成的集群。
 
-MQTT X 是一款完全开源的 MQTT 5.0 跨平台桌面客户端。支持快速创建多个同时在线的 MQTT 客户端连接，方便测试 MQTT/TCP、MQTT/TLS、MQTT/WebSocket 的连接、发布、订阅功能及其他 MQTT 协议特性。更多 MQTT X 的使用文档可以参考：[MQTT X](https://mqttx.app/zh/docs)。
-
-在 MQTT X 页面点击创建新连接的按钮，按照如图所示配置 EMQX 集群节点信息，在配置好连接信息之后，点击 connect 按钮连接 EMQX 集群：
-
-![](./assets/configure-core-replicant/emqx-mqtt.png)
-
-然后点击订阅按钮新建订阅，如图所示 MQTT X 已成功连接 EMQX 集群并且已经成功创建订阅：
-
-![](./assets/configure-core-replicant/emqx-sub.png)
-
-在成功连接 EMQX 集群并创建订阅之后，我们就可以向 EMQX 集群发送消息，如下图所示：
-
-![](./assets/configure-core-replicant/emqx-pub.png)
-
-- 通过 Dashboard 访问 EMQX 集群 
-
-打开浏览器，输入 EMQX Pod 所在宿主机 `IP` 和 端口 `32015` 登录 EMQX 集群 Dashboard（Dashboard 默认用户名为：admin ，默认密码为：public），进入 Dashboard 点击仪表盘可以看到集群中所有节点信息，如下图所示：
-
-![](./assets/configure-core-replicant/emqx-core-dashboard.png)
-
-从图中可以看到当前 EMQX 集群中有3个 Core 节点，连接数和订阅数均为1。
-
-## 配置EMQX 集群 Replicant 节点
-
-- 部署 EMQX 集群 
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: "emqx/emqx:5.0.9"
-  coreTemplate:
-    spec:
-      replicas: 3
-  replicantTemplate:
-    spec:
-      replicas: 3
-  dashboardServiceTemplate:
-    spec:
-      type: NodePort
-      ports:
-        - name: "dashboard-listeners-http-bind"
-          protocol: TCP
-          port: 18083
-          targetPort: 18083
-          nodePort: 32015
-  listenersServiceTemplate:
-    spec:
-      type: NodePort
-      ports:
-        - name: "tcp-default"
-          protocol: TCP
-          port: 1883
-          targetPort: 1883 
-          nodePort: 32016
-```
-
-将上述内容保存为：emqx-replicant.yaml，并执行如下命令部署 EMQX 集群：
-
-```
-kubectl apply -f emqx-replicant.yaml 
-```
-
-输出类似于：
-
-```
-emqx.apps.emqx.io/emqx created
-```
-
-- 检查 EMQX 集群是否就绪
-
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-```
-
-输出类似于：
-
-```
-[
-  {
-    "node": "emqx@10.244.0.213",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@10.244.1.130",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@10.244.2.252",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "replicant",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
-```
-
-- 使用 MQTT X 连接 EMQX 集群发送消息
-
-在 MQTT X 页面点击创建新连接的按钮，按照如图所示配置 EMQX 集群节点信息，在配置好连接信息之后，点击 connect 按钮连接 EMQX 集群：
-
-![](./assets/configure-core-replicant/emqx-mqtt.png)
-
-然后点击订阅按钮新建订阅，如图所示 MQTT X 已成功连接 EMQX 集群并且已经成功创建订阅：
-
-![](./assets/configure-core-replicant/emqx-sub.png)
-
-在成功连接 EMQX 集群并创建订阅之后，我们就可以向 EMQX 集群发送消息，如下图所示：
-
-![](./assets/configure-core-replicant/emqx-pub.png)
-
-- 通过 Dashboard 访问 EMQX 集群 
-
-最后打开浏览器，输入 EMQX Pod 所在宿主机 `IP` 和 端口 `32015` 登录 EMQX 集群 Dashboard，点击仪表盘查看 EMQX 集群节点信息：
-
-![](./assets/configure-core-replicant/emqx-replicant-dashboard.png)
-
-从图中可以看出，当前集群中有3个 Core 节点和3个 Replicant 节点，连接数和订阅数均为1。
+  ```bash
+  [
+    {
+      "node": "emqx@10.244.4.56",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "replicant",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@10.244.4.57",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "replicant",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@10.244.4.58",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "replicant",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    },
+     {
+      "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    }
+  ]
+  ```

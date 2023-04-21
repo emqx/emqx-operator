@@ -16,24 +16,30 @@ def check_md_content(md_file):
         success = False
         return
 
-    md_content = open(md_file, 'r').read()
+    md_content = re.sub(r'<!--([\s\S]*?)-->', '', open(md_file, 'r').read())
+
     if 'ee' in directory_file:
         md_content = re.sub(r'{% emqxce %}([\s\S]*?){% endemqxce %}', '', md_content)
     else:
         md_content = re.sub(r'{% emqxee %}([\s\S]*?){% endemqxee %}', '', md_content)
+
+    for i in re.findall(r'([\u4e00-\u9fa5]+)([a-zA-Z]+)|([a-zA-Z]+)([\u4e00-\u9fa5]+)', md_content):
+        print(f'In {md_file} ', end='')
+        print(f'No space between Chinese and English: {i[0]}{i[1]}{i[2]}{i[3]}')
+        success = False
 
     image_list = re.findall('(.*?)!\[(.*?)\]\((.*?)\)', md_content)
     url_list = re.findall('(.*?)\[(.*?)\]\((.*?)\)', md_content)
     for url in url_list:
         if url[0].endswith('!'):
             continue
-        if url[2].startswith(('http://', 'https://', '<', '#')):
+        if url[2].startswith(('http://', 'https://', '<', '#', 'mailto:', 'tel:')):
             continue
         url_path = url[2].split('.md')[0]
         ref_md_path = os.path.join(f'{"/".join(md_file.split("/")[:-1])}/', f'{url_path}.md')
 
         if not os.path.exists(ref_md_path):
-            print(f'In {md_file}：', end='')
+            print(f'In {md_file}: ', end='')
             print(f'{url[2]} not found or not in {directory_file}')
             success = False
 
@@ -45,7 +51,7 @@ def check_md_content(md_file):
         image_path = os.path.join(f'{"/".join(md_file.split("/")[:-1])}/', image[2])
 
         if not os.path.exists(image_path):
-            print(f'In {md_file}：', end='')
+            print(f'In {md_file}: ', end='')
             print(image[2], 'does not exist')
             success = False
 
@@ -56,19 +62,17 @@ def get_md_files(dir_config, path):
     for i in dir_config:
         md_name = i.get('path')
         md_children = i.get('children')
-        if md_name and md_children:
-            print(f'{i.get("title")} has path and children')
-            success = False
 
-        if md_children:
-            md_list += get_md_files(md_children, path)
-        else:
+        if md_name:
             if md_name.startswith(('http://', 'https://')):
                 continue
             elif md_name == './':
                 md_list.append(f'{docs_path}/{path}/README.md')
             else:
                 md_list.append(f'{docs_path}/{path}/{md_name}.md')
+
+        if md_children:
+            md_list += get_md_files(md_children, path)
 
     return list(set(md_list))
 
