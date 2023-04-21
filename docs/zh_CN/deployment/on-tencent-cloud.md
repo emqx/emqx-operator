@@ -69,13 +69,12 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
 + 获取 EMQX 集群的 External IP，访问 EMQX 控制台
 
   ```bash
-  $ external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-  $ echo $external_ip
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
   198.18.3.10
   ```
 
-  通过浏览器访问 `http://${external_ip}:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+  通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
 ::: tab apps.emqx.io/v2alpha1
@@ -130,11 +129,13 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
   EMQX Operator 会创建两个 EMQX Service 资源，一个是 `emqx-dashboard`，一个是 `emqx-listeners`，分别对应 EMQX 控制台和 EMQX 监听端口。
 
   ```bash
-  $ external_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
-  $ echo $external_ip
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
   198.18.3.10
   ```
+
+  通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+
   :::
   ::::
 
