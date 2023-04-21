@@ -39,7 +39,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
         storageClassName: alibabacloud-cnfs-nas
         resources:
           requests:
-            storage: 20Mi
+            storage: 10Gi
         accessModes:
           - ReadWriteOnce
     template:
@@ -70,13 +70,12 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
 + 获取 EMQX 集群的 External IP, 访问 EMQX 控制台
 
   ```bash
-  $ external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-  $ echo $external_ip
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
   198.18.3.10
   ```
 
-  通过浏览器访问 `http://${external_ip}:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+  通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
 
@@ -99,7 +98,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
           storageClassName: alibabacloud-cnfs-nas
           resources:
             requests:
-              storage: 20Mi
+              storage: 10Gi
           accessModes:
             - ReadWriteOnce
     dashboardServiceTemplate:
@@ -141,7 +140,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
   198.18.3.10
   ```
 
-  通过浏览器访问 `http://${external_ip}:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+  通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
 ::::
