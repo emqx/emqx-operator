@@ -5,42 +5,25 @@ Azure Kubernetes Service (AKS) simplifies deploying a managed Kubernetes cluster
 ## Before You Begin
 Before you begin, you must have the following:
 
-+ An Azure Kubernetes Service (AKS) cluster, for details: [Create an Azure Kubernetes Service (AKS) cluster](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-portal)
+- To create an AKS cluster on Azure, you first need to activate the AKS service in your Azure subscription. Refer to the [Azure Kubernetes Service](https://learn.microsoft.com/en-us/azure/aks/) documentation for more information.
 
-+ A StorageClass, for details: [Use Azure Files Container Storage Interface (CSI) driver in Azure Kubernetes Service (AKS)](https://learn.microsoft.com/en-us/azure/aks/azure-files-csie)
+- To connect to an AKS cluster using kubectl commands, you can install the kubectl tool locally and obtain the cluster's KubeConfig to connect to the cluster. Alternatively, you can use Cloud Shell through the Azure portal to manage the cluster with kubectl.
+  - To connect to an AKS cluster using kubectl, you need to install and configure the kubectl tool on your local machine. Refer to the [Connect to an AKS cluster](https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-cli) documentation for detailed instructions on how to do this.
+  - To connect to an AKS cluster using CloudShell, use Azure CloudShell to connect to the AKS cluster and manage the cluster using kubectl. Refer to the [Manage an AKS cluster in Azure CloudShell](https://learn.microsoft.com/en-us/azure/aks/learn/quick-kubernetes-deploy-portal?tabs=azure-cli) documentation for detailed instructions on how to connect to Azure CloudShell and use kubectl.
 
-+ A LoadBalancer, for details: [Network concepts for applications in Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/concepts-network#load-balancer)
 
-## Enable EMQX Cluster Persistence
+- To install EMQX Operator, please refer to [Install EMQX Operator](../getting-started/getting-started.md)
 
-NSF file storage is used here. Other StorageClass, please refer to [storage class](https://docs.microsoft.com/en-us/azure/aks/azure-files-csi)
 
-Create StorageClass like this file:
-
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: azurefile-csi-nfs
-provisioner: file.csi.azure.com
-allowVolumeExpansion: true
-parameters:
-  protocol: nfs
-mountOptions:
-  - nconnect=8
-```
-
-Check if the StorageClass was created successfully
-
-```shell
-kubectl get sc
-```
-You can see that `azurefile-csi-nfs` has been successfully created
+## Quickly deploying an EMQX cluster
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v2alpha1
+
+Save the following content as a YAML file and deploy it using the `kubectl apply` command.
+
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha1
@@ -52,16 +35,45 @@ spec:
   coreTemplate:
     spec:
       volumeClaimTemplates:
-        storageClassName: azurefile-csi-nfs
+        ## more information about storage classes: https://learn.microsoft.com/en-us/azure/aks/concepts-storage#storage-classes
+        storageClassName: default
         resources:
           requests:
             storage: 20Mi
         accessModes:
         - ReadWriteOnce
+  dashboardServiceTemplate:
+    spec:
+      ## more information about load balancer: https://learn.microsoft.com/en-us/azure/aks/load-balancer-standard
+      type: LoadBalancer
+  listenersServiceTemplate:
+    spec:
+      type: LoadBalancer
 ```
 
+Wait for the EMQX cluster to be ready. You can check the status of the EMQX cluster using the `kubectl get` command. Please ensure that the STATUS is `Running` which may take some time.
+
+```shell
+$ kubectl get emqx
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   118s
+```
+
+Get the External IP of the EMQX cluster and access the EMQX console.
+
+The EMQX Operator will create two EMQX Service resources, one is `emqx-dashboard`, and the other is `emqx-listeners`, corresponding to the EMQX console and EMQX listening port, respectively.
+
+```shell
+$ external_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
+$ echo $external_ip
+
+20.245.230.91
+```
+
+Access the EMQX console by opening a web browser and visiting `http://${external_ip}:18083`. Login using the default username and password `admin/public`.
 :::
-::: tab v1beta4
+
+::: tab apps.emqx.io/v1beta4
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
@@ -73,7 +85,8 @@ spec:
     metadata:
       name: emqx-ee
     spec:
-      storageClassName: azurefile-csi-nfs
+      ## more information about storage classes: https://learn.microsoft.com/en-us/azure/aks/concepts-storage#storage-classes
+      storageClassName: default
       resources:
         requests:
           storage: 20Mi
@@ -84,10 +97,87 @@ spec:
       emqxContainer:
         image:
           repository: emqx/emqx-ee
-          version: 4.4.14
+          version: 4.4.15
+  serviceTemplate:
+    spec:
+      ## more information about load balancer: https://learn.microsoft.com/en-us/azure/aks/load-balancer-standard
+      type: LoadBalancer
+
 ```
+
+Wait for the EMQX cluster to be ready. You can check the status of the EMQX cluster using the `kubectl get` command. Please ensure that the STATUS is `Running` which may take some time.
+
+```shell
+$ kubectl get emqxenterprises
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+```
+
+Get the External IP of the EMQX cluster and access the EMQX console.
+
+```shell
+$ external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+$ echo $external_ip
+
+20.245.123.100
+```
+
+Access the EMQX console by opening a web browser and visiting `http://${external_ip}:18083`. Login using the default username and password `admin/public`.
+
+
 :::
 ::::
+
+## Connecting to EMQX cluster to publish/subscribe messages using MQTT X CLI
+
+[MQTT X CLI](https://mqttx.app/cli) is an open-source MQTT 5.0 command-line client tool designed to help developers develop and debug MQTT services and applications faster without the need for a GUI.
+
+- Retrieve External IP of the EMQX cluster
+
+:::: tabs type:card
+
+::: tab apps.emqx.io/v2alpha1
+
+```shell
+external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+```
+
+:::
+::: tab apps.emqx.io/v1beta4
+```shell
+external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+```
+
+:::
+::::
+
+- Subscribe to messages
+
+```shell
+$ mqttx sub -t 'hello' -h ${external_ip} -p 1883
+
+[10:00:25] › …  Connecting...
+[10:00:25] › ✔  Connected
+[10:00:25] › …  Subscribing to hello...
+[10:00:25] › ✔  Subscribed to hello
+```
+
+- Create a new terminal window and send a message
+
+```shell
+$ mqttx pub -t 'hello' -h ${external_ip} -p 1883 -m 'hello world'
+
+[10:00:58] › …  Connecting...
+[10:00:58] › ✔  Connected
+[10:00:58] › …  Message Publishing...
+[10:00:58] › ✔  Message published
+```
+
+- View messages received in the subscription terminal window
+
+```shell
+[10:00:58] › payload: hello world
+```
 
 ## About LoadBalancer Offloading TLS
 
