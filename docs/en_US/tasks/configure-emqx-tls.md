@@ -165,7 +165,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
   emqx   emqx:5.0   Running   10m
   ```
 
-- Obtain the External IP of EMQX cluster and access EMQX console
++ Obtain the External IP of EMQX cluster and access EMQX console
 
   EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
 

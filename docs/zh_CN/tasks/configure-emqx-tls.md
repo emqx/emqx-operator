@@ -89,7 +89,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
   emqx-ee   Running  8m33s
   ```
 
-+ 获取 EMQX 集群的 External IP, 访问 EMQX 控制台
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
@@ -164,7 +164,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
   emqx   emqx:5.0   Running   10m
   ```
 
- + 获取 EMQX 集群的 Dashboard External IP, 访问 EMQX 控制台
++ 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台
 
   EMQX Operator 会创建两个 EMQX Service 资源，一个是 emqx-dashboard，一个是 emqx-listeners，分别对应 EMQX 控制台和 EMQX 监听端口。
 
@@ -174,7 +174,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
   192.168.1.200
   ```
 
-  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+  通过浏览器访问 `http://192.168.1.200:18083`，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 :::
 ::::
 
