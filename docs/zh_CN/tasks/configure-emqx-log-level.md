@@ -1,4 +1,4 @@
-# 修改 EMQX 日志等级·
+# 修改 EMQX 日志等级
 
 ## 任务目标
 
@@ -52,7 +52,7 @@ EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnt
   192.168.1.200
   ```
 
-  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+  通过浏览器访问 `http://192.168.1.200:18083`，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
 ::: tab apps.emqx.io/v2alpha1
@@ -107,7 +107,7 @@ EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnt
 :::
 ::::
 
-## 验证日志等级修改
+## 验证日志等级
 
 [MQTT X CLI](https://mqttx.app/zh/cli) 是一款开源的 MQTT 5.0 命令行客户端工具，旨在帮助开发者在不需要使用图形化界面的基础上，也能更快的开发和调试 MQTT 服务与应用。
 
