@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 var instance = appsv1beta4.EmqxEnterprise{
@@ -527,6 +528,7 @@ func TestUpdateStatefulSetForPluginsConfig(t *testing.T) {
 			Name: pluginsConfig.Name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: pointer.Int32Ptr(420),
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: pluginsConfig.Name,
 					},
@@ -597,7 +599,8 @@ func TestUpdateStatefulSetForLicense(t *testing.T) {
 			Name: license.Name,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: license.Name,
+					DefaultMode: pointer.Int32Ptr(420),
+					SecretName:  license.Name,
 				},
 			},
 		},
@@ -665,6 +668,7 @@ func TestUpdateStatefulSetForACL(t *testing.T) {
 			Name: acl.Name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
+					DefaultMode: pointer.Int32Ptr(420),
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: acl.Name,
 					},
@@ -763,7 +767,8 @@ func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
 		Name: "bootstrap-user",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: "emqx-bootstrap-user",
+				DefaultMode: pointer.Int32Ptr(420),
+				SecretName:  "emqx-bootstrap-user",
 			},
 		},
 	}}, got.Spec.Template.Spec.Volumes)

@@ -156,6 +156,11 @@ func TestBrokerDefault(t *testing.T) {
 			},
 		}, instance.Spec.Persistent.ObjectMeta)
 	})
+
+	t.Run("default termination policy", func(t *testing.T) {
+		assert.Equal(t, "/dev/termination-log", instance.GetSpec().GetTemplate().Spec.EmqxContainer.TerminationMessagePath)
+		assert.Equal(t, corev1.TerminationMessageReadFile, instance.GetSpec().GetTemplate().Spec.EmqxContainer.TerminationMessagePolicy)
+	})
 }
 
 func TestBrokerValidateCreate(t *testing.T) {

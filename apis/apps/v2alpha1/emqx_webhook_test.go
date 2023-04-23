@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 func TestDefault(t *testing.T) {
@@ -284,10 +285,9 @@ func TestDefaultDashboardServiceTemplate(t *testing.T) {
 			"foo": "bar",
 		}, instance.Spec.DashboardServiceTemplate.Spec.Selector)
 	})
-
 }
 
-func TestDefaultProbeForCoreNode(t *testing.T) {
+func TestDefaultProbe(t *testing.T) {
 	t.Run("failed to get dashboard listeners", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.defaultProbe()
@@ -298,10 +298,13 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 			FailureThreshold:    12,
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(18083),
+					Path:   "/status",
+					Port:   intstr.FromInt(18083),
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
+			SuccessThreshold: 1,
+			TimeoutSeconds:   1,
 		}
 
 		expectLivenessProbe := &corev1.Probe{
@@ -310,14 +313,19 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 			FailureThreshold:    3,
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(18083),
+					Path:   "/status",
+					Port:   intstr.FromInt(18083),
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
+			SuccessThreshold: 1,
+			TimeoutSeconds:   1,
 		}
 
 		assert.Equal(t, expectReadinessProbe, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
 		assert.Equal(t, expectLivenessProbe, instance.Spec.CoreTemplate.Spec.LivenessProbe)
+		assert.Equal(t, expectReadinessProbe, instance.Spec.ReplicantTemplate.Spec.ReadinessProbe)
+		assert.Equal(t, expectLivenessProbe, instance.Spec.ReplicantTemplate.Spec.LivenessProbe)
 	})
 
 	t.Run("set dashboard listeners", func(t *testing.T) {
@@ -334,10 +342,13 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 			FailureThreshold:    12,
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(18084),
+					Path:   "/status",
+					Port:   intstr.FromInt(18084),
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
+			SuccessThreshold: 1,
+			TimeoutSeconds:   1,
 		}
 
 		expectLivenessProbe := &corev1.Probe{
@@ -346,14 +357,19 @@ func TestDefaultProbeForCoreNode(t *testing.T) {
 			FailureThreshold:    3,
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(18084),
+					Path:   "/status",
+					Port:   intstr.FromInt(18084),
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
+			SuccessThreshold: 1,
+			TimeoutSeconds:   1,
 		}
 
 		assert.Equal(t, expectReadinessProbe, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
 		assert.Equal(t, expectLivenessProbe, instance.Spec.CoreTemplate.Spec.LivenessProbe)
+		assert.Equal(t, expectReadinessProbe, instance.Spec.ReplicantTemplate.Spec.ReadinessProbe)
+		assert.Equal(t, expectLivenessProbe, instance.Spec.ReplicantTemplate.Spec.LivenessProbe)
 	})
 }
 
@@ -452,4 +468,31 @@ func TestDefaultAnnotationsForService(t *testing.T) {
 		assert.Equal(t, expectDashboardServiceAnnotations, instance.Spec.DashboardServiceTemplate.Annotations)
 		assert.Equal(t, expectListenersServiceAnnotations, instance.Spec.ListenersServiceTemplate.Annotations)
 	})
+}
+
+func TestDefaultVolumeClaimTemplates(t *testing.T) {
+	instance := &EMQX{}
+	instance.Default()
+	assert.Equal(t, corev1.PersistentVolumeClaimSpec{
+		AccessModes: []corev1.PersistentVolumeAccessMode(nil),
+		Selector:    (*metav1.LabelSelector)(nil),
+		Resources: corev1.ResourceRequirements{
+			Limits:   corev1.ResourceList(nil),
+			Requests: corev1.ResourceList(nil),
+		},
+		VolumeName: "", StorageClassName: (*string)(nil),
+		VolumeMode:    (*corev1.PersistentVolumeMode)(nil),
+		DataSource:    (*corev1.TypedLocalObjectReference)(nil),
+		DataSourceRef: (*corev1.TypedLocalObjectReference)(nil),
+	}, instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates)
+
+	instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates = corev1.PersistentVolumeClaimSpec{
+		StorageClassName: pointer.StringPtr("fake"),
+	}
+	instance.Default()
+
+	assert.Equal(t, []corev1.PersistentVolumeAccessMode{
+		corev1.ReadWriteOnce,
+	}, instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates.AccessModes)
+	assert.Equal(t, corev1.PersistentVolumeFilesystem, *instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates.VolumeMode)
 }

@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 var (
@@ -434,6 +435,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 		},
 	}
+	instance.Default()
 
 	expect := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -456,6 +458,13 @@ func TestGenerateStatefulSet(t *testing.T) {
 				MatchLabels: coreLabels,
 			},
 			PodManagementPolicy: appsv1.ParallelPodManagement,
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateStatefulSetStrategy{
+					Partition: pointer.Int32(0),
+				},
+			},
+			RevisionHistoryLimit: pointer.Int32(10),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: coreLabels,
@@ -466,6 +475,10 @@ func TestGenerateStatefulSet(t *testing.T) {
 					},
 				},
 				Spec: corev1.PodSpec{
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					TerminationGracePeriodSeconds: pointer.Int64(30),
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					SchedulerName:                 "default-scheduler",
 					ImagePullSecrets: []corev1.LocalObjectReference{
 						{Name: "fake-secret"},
 					},
@@ -503,7 +516,8 @@ func TestGenerateStatefulSet(t *testing.T) {
 									Name: "POD_NAME",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.name",
+											APIVersion: "v1",
+											FieldPath:  "metadata.name",
 										},
 									},
 								},
@@ -511,7 +525,8 @@ func TestGenerateStatefulSet(t *testing.T) {
 									Name: "POD_NAMESPACE",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.namespace",
+											APIVersion: "v1",
+											FieldPath:  "metadata.namespace",
 										},
 									},
 								},
@@ -519,7 +534,8 @@ func TestGenerateStatefulSet(t *testing.T) {
 									Name: "STS_HEADLESS_SERVICE_NAME",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.annotations['apps.emqx.io/headless-service-name']",
+											APIVersion: "v1",
+											FieldPath:  "metadata.annotations['apps.emqx.io/headless-service-name']",
 										},
 									},
 								},
@@ -605,6 +621,8 @@ func TestGenerateStatefulSet(t *testing.T) {
 									MountPath: "/opt/emqx/data",
 								},
 							},
+							TerminationMessagePath:   "/dev/termination-log",
+							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						},
 						{
 							Name:  "extra",
@@ -797,7 +815,12 @@ func TestGenerateDeployment(t *testing.T) {
 						{Name: "extra", MountPath: "/extra"},
 					},
 					ExtraVolumes: []corev1.Volume{
-						{Name: "extra", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "extra"}}}},
+						{Name: "extra", VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								DefaultMode:          pointer.Int32Ptr(420),
+								LocalObjectReference: corev1.LocalObjectReference{Name: "extra"},
+							},
+						}},
 					},
 				},
 			},
@@ -823,6 +846,15 @@ func TestGenerateDeployment(t *testing.T) {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: replicantLabels,
 			},
+			RevisionHistoryLimit: pointer.Int32Ptr(10),
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: &intstr.IntOrString{Type: intstr.String, StrVal: "25%"},
+					MaxSurge:       &intstr.IntOrString{Type: intstr.String, StrVal: "25%"},
+				},
+			},
+			ProgressDeadlineSeconds: pointer.Int32Ptr(600),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: replicantLabels,
@@ -831,6 +863,10 @@ func TestGenerateDeployment(t *testing.T) {
 					},
 				},
 				Spec: corev1.PodSpec{
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(30),
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					SchedulerName:                 "default-scheduler",
 					ImagePullSecrets: []corev1.LocalObjectReference{
 						{Name: "fake-secret"},
 					},
@@ -867,7 +903,8 @@ func TestGenerateDeployment(t *testing.T) {
 									Name: "EMQX_HOST",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "status.podIP",
+											APIVersion: "v1",
+											FieldPath:  "status.podIP",
 										},
 									},
 								},
@@ -949,6 +986,8 @@ func TestGenerateDeployment(t *testing.T) {
 									MountPath: "/opt/emqx/data",
 								},
 							},
+							TerminationMessagePath:   "/dev/termination-log",
+							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						},
 						{Name: "extra", Image: "busybox"},
 					},
@@ -957,6 +996,7 @@ func TestGenerateDeployment(t *testing.T) {
 							Name: "extra",
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
+									DefaultMode:          pointer.Int32Ptr(420),
 									LocalObjectReference: corev1.LocalObjectReference{Name: "extra"},
 								},
 							},
@@ -1045,7 +1085,8 @@ func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
 		Name: "bootstrap-user",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: "emqx-bootstrap-user",
+				DefaultMode: pointer.Int32Ptr(420),
+				SecretName:  "emqx-bootstrap-user",
 			},
 		},
 	}}, got.Spec.Template.Spec.Volumes)
@@ -1081,6 +1122,7 @@ func TestUpdateStatefulSetForBootstrapConfig(t *testing.T) {
 		Name: "bootstrap-config",
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
+				DefaultMode: pointer.Int32Ptr(420),
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "emqx-bootstrap-config",
 				},
@@ -1158,6 +1200,7 @@ func TestUpdateDeploymentForBootstrapConfig(t *testing.T) {
 		Name: "bootstrap-config",
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
+				DefaultMode: pointer.Int32Ptr(420),
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: "emqx-bootstrap-config",
 				},

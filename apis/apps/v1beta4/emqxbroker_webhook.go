@@ -17,11 +17,12 @@ limitations under the License.
 package v1beta4
 
 import (
-	emperror "emperror.dev/errors"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
+
+	emperror "emperror.dev/errors"
 
 	semver "github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +56,7 @@ func (r *EmqxBroker) Default() {
 	defaultEmqxConfig(r)
 	defaultServiceTemplate(r)
 	defaultPersistent(r)
+	defaultTerminationMessage(r)
 }
 
 //+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-emqxbroker,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxbrokers,verbs=create;update,versions=v1beta4,name=validator.broker.emqx.io,admissionReviewVersions={v1,v1beta1}
@@ -238,6 +240,17 @@ func defaultPersistent(r Emqx) {
 			p.ObjectMeta.Annotations[key] = value
 		}
 	}
+}
+
+func defaultTerminationMessage(r Emqx) {
+	template := r.GetSpec().GetTemplate()
+	if template.Spec.EmqxContainer.TerminationMessagePath == "" {
+		template.Spec.EmqxContainer.TerminationMessagePath = "/dev/termination-log"
+	}
+	if template.Spec.EmqxContainer.TerminationMessagePolicy == "" {
+		template.Spec.EmqxContainer.TerminationMessagePolicy = corev1.TerminationMessageReadFile
+	}
+	r.GetSpec().SetTemplate(template)
 }
 
 func validateImageVersion(new, _ Emqx) error {
