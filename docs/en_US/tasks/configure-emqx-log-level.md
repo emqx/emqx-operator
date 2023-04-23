@@ -106,7 +106,7 @@ EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level 
 :::
 ::::
 
-## Verify log level modification
+## Verify Log Level
 
 [MQTT X CLI](https://mqttx.app/cli) is an open source MQTT 5.0 command line client tool, designed to help developers to more Quickly develop and debug MQTT services and applications.
 
