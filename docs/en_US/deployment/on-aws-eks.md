@@ -237,11 +237,11 @@ In Amazon EKS, you can use the NLB to do TLS termination, which you can do in th
 2. Add some annotations in EMQX custom resources' metadata, just as shown below:
 
     ```yaml
-      ## specifies the ARN of one or more certificates managed by the AWS Certificate Manager.
+      ## Specifies the ARN of one or more certificates managed by the AWS Certificate Manager.
     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:xxxxx:certificate/xxxxxxx
-      ## specifies whether to use TLS for the backend traffic between the load balancer and the kubernetes pods.
+      ## Specifies whether to use TLS for the backend traffic between the load balancer and the kubernetes pods.
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
-      ## specifies the frontend ports with TLS listeners.
+      ## Specifies a frontend port with a TLS listener. This means that if you access port 1883 through LoadBalancer, you need to enable TLS authentication
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "1883"
     ```
 
