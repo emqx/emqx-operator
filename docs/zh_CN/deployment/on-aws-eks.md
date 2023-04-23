@@ -240,7 +240,7 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:xxxxx:certificate/xxxxxxx
       ## 指定是否对负载均衡器和 kubernetes pod 之间的后端流量使用 TLS。
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
-      ## 指定带有 TLS 侦听器的前端端口。
+      ## 指定带有 TLS 侦听器的前端端口。这意味着通过 LoadBalancer 访问 1883 端口的话需要开启 TLS 认证
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "1883"
     ```
 
