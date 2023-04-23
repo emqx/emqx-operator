@@ -227,21 +227,21 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
 
 1. 在 [AWS Certificate Manager](https://aws.amazon.com/cn/certificate-manager/?nc1=h_ls) 控制台中导入相关证书，然后通过单击证书 ID 进入详细信息页面，然后记录 ARN 信息
 
-  :::tip
+    :::tip
 
-  证书和密钥的导入格式，请参考 [import certificate](https://docs.aws.amazon.com/zh_cn/acm/latest/userguide/import-certificate-format.html)
+    证书和密钥的导入格式，请参考 [import certificate](https://docs.aws.amazon.com/zh_cn/acm/latest/userguide/import-certificate-format.html)
 
-  :::
+    :::
 
 2. 在 EMQX 自定义资源的 Annotations 中添加如下注释：
 
-  ```yaml
-     ## 指定由 AWS Certificate Manager 管理的一个或多个证书的 ARN。
-  service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:xxxxx:certificate/xxxxxxx
-     ## 指定是否对负载均衡器和 kubernetes pod 之间的后端流量使用 TLS。
-  service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
-     ## 指定带有 TLS 侦听器的前端端口。
-  service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "1883"
-  ```
+    ```yaml
+      ## 指定由 AWS Certificate Manager 管理的一个或多个证书的 ARN。
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:xxxxx:certificate/xxxxxxx
+      ## 指定是否对负载均衡器和 kubernetes pod 之间的后端流量使用 TLS。
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+      ## 指定带有 TLS 侦听器的前端端口。
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "1883"
+    ```
 
-  > `service.beta.kubernetes.io/aws-load-balancer-ssl-cert` 的值是我们在第一步记录的 ARN 信息
+    > `service.beta.kubernetes.io/aws-load-balancer-ssl-cert` 的值是我们在第一步记录的 ARN 信息
