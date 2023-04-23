@@ -202,7 +202,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
 + 使用 MQTT X CLI 订阅消息
 
   ```bash
-  mqttx sub -h ${external_ip} -p 8883 -t "hello"  --ca ${/path/to/ca.crt}
+  mqttx sub -h ${external_ip} -p 8883 -t "hello"  -l mqtts --insecure
 
   [10:00:25] › …  Connecting...
   [10:00:25] › ✔  Connected
@@ -213,7 +213,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
 + 创建一个新的终端窗口并使用 MQTT X CLI 发布消息
 
   ```bash
-  mqttx pub -h ${external_ip} -p 8883 -t "hello" -m "hello world"  --ca ${/path/to/ca.crt} --key ${/path/to/tls.key} --cert ${/path/to/tls.crt}
+  mqttx pub -h ${external_ip} -p 8883 -t "hello" -m "hello world" -l mqtts --insecure
 
   [10:00:58] › …  Connecting...
   [10:00:58] › ✔  Connected

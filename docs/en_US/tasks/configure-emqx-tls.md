@@ -204,7 +204,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
 + Subscribe to messages using MQTT X CLI
 
   ```bash
-  mqttx sub -h ${external_ip} -p 8883 -t "hello" --ca ${/path/to/ca.crt}
+  mqttx sub -h ${external_ip} -p 8883 -t "hello" -l mqtts --insecure
 
   [10:00:25] › … Connecting...
   [10:00:25] › ✔ Connected
@@ -215,7 +215,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
 + Create a new terminal window and publish a message using the MQTT X CLI
 
   ```bash
-  mqttx pub -h ${external_ip} -p 8883 -t "hello" -m "hello world" --ca ${/path/to/ca.crt} --key ${/path/to/tls.key} --cert ${/ path/to/tls.crt}
+  mqttx pub -h ${external_ip} -p 8883 -t "hello" -m "hello world" -l mqtts --insecure
 
   [10:00:58] › … Connecting...
   [10:00:58] › ✔ Connected
