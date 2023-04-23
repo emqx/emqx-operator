@@ -82,7 +82,6 @@ EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnt
     listenersServiceTemplate:
       spec:
         type: LoadBalancer
-    
   ```
 
   > `.spec.bootstrapConfig` 字段配置 EMQX 集群日志等级为 `debug`。
