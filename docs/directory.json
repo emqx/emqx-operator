@@ -67,7 +67,7 @@
           "path": "tasks/configure-emqx-log-level"
         },
         {
-          "title": "Monitor EMQX Cluster by Prometheus",
+          "title": "Monitor EMQX Cluster",
           "path": "tasks/configure-emqx-prometheus"
         }
       ]
@@ -167,7 +167,7 @@
           "path": "tasks/configure-emqx-log-level"
         },
         {
-          "title": "通过 Prometheus 监控 EMQX 集群",
+          "title": "监控 EMQX 集群",
           "path": "tasks/configure-emqx-prometheus"
         }
       ]

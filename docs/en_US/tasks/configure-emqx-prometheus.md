@@ -1,12 +1,12 @@
-# Monitor EMQX cluster by Prometheus
+# Monitor EMQX cluster by Prometheus and Grafana
 
 ## Task Target
+Deploy `emqx-exporter` and monitor EMQX cluster by Prometheus and Grafana.
 
-How to monitor EMQX cluster through Prometheus.
+## Deploy Prometheus and Grafana
 
-## Deploy Prometheus
-
-Prometheus deployment documentation can refer to: [Prometheus](https://github.com/prometheus-operator/prometheus-operator)
+Prometheus' deployment documentation can refer to [Prometheus](https://github.com/prometheus-operator/prometheus-operator)
+Grafana' deployment documentation can refer to [Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/kubernetes/)
 
 ## Deploy EMQX Cluster
 
@@ -27,12 +27,13 @@ spec:
   coreTemplate:
     spec:
       ports:
-        - name: http-dashboard
+        # prometheus monitor requires the pod must name the target port
+        - name: dashboard
           containerPort: 18083
   replicantTemplate:
     spec:
       ports:
-        - name: http-dashboard
+        - name: dashboard
           containerPort: 18083
 ```
 
@@ -53,14 +54,24 @@ NAME   IMAGE      STATUS    AGE
 emqx   emqx:5.0   Running   10m
 ```
 
-
-
 :::
 ::: tab v1beta4
 
 EMQX supports exposing indicators through the http interface. For all statistical indicators under the cluster, you can refer to the document: [HTTP API](https://www.emqx.io/docs/en/v4.4/advanced/http-api.html#%E7%BB%9F%E8%AE%A1%E6%8C%87%E6%A0%87)
 
 ```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxPlugin
+metadata:
+  name: emqx-prometheus
+spec:
+  selector:
+    # EMQX pod labels
+    apps.emqx.io/instance: emqx-ee
+    apps.emqx.io/managed-by: emqx-operator
+  # enable plugin emqx_prometheus
+  pluginName: emqx_prometheus
+---
 apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
@@ -71,10 +82,11 @@ spec:
       emqxContainer:
         image:
           repository: emqx/emqx-ee
-          version: 4.4.14
+          version: 4.4.16
         ports:
-          - name: http-management
-            containerPort: 8081
+          # prometheus monitor requires the pod must name the target port
+          - name: dashboard
+            containerPort: 18083
 ```
 
 Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
@@ -94,13 +106,93 @@ NAME      STATUS   AGE
 emqx-ee   Running  8m33s
 ```
 
-
 :::
 ::::
 
-## Configure Prometheus Monitor
+## Create API secret
+emqx-exporter and Prometheus will pull metrics from EMQX dashboard API, so you need to sign in to dashboard to create an API secret.
 
-A PodMonitor Custom Resource Definition (CRD) allows to declaratively define how a dynamic set of services should be monitored. Use label selection to define which services are selected to monitor with the desired configuration, and its documentation can be referred to: [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor)
+Note that it is different to create a secret between EMQX 5 and EMQX 4.4.
+* **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys) in the dashboard.
+* **EMQX 4.4** create a new `User` instead of `Application`
+
+## Deploy emqx-exporter
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: emqx-exporter
+  name: emqx-exporter-service
+spec:
+  ports:
+    - name: metrics
+      port: 8085
+      targetPort: metrics
+  selector:
+    app: emqx-exporter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
+spec:
+  selector:
+    matchLabels:
+      app: emqx-exporter
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: emqx-exporter
+    spec:
+      securityContext:
+        runAsUser: 1000
+      containers:
+        - name: exporter
+          image: emqx-exporter:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port
+            - --emqx.nodes=emqx-dashboard:18083
+            - --emqx.auth-username=${paste_your_new_api_key_here}
+            - --emqx.auth-password=${paste_your_new_secret_here}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8085
+              name: metrics
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
+```
+
+> Set the arg "--emqx.nodes" to the service name that creating by operator for exposing 18083 port. Check out the service name by call `kubectl get svc`.
+
+Save the above content as `emqx-exporter.yaml`, replace `--emqx.auth-username` and `--emqx.auth-password` with your new creating API secret, then execute the following command to deploy the emqx-exporter:
+
+```bash
+kubectl apply -f emqx-exporter.yaml
+```
+
+Check the status of emqx-exporter pod。
+```bash
+$ kubectl get po -l="app=emqx-exporter"
+
+NAME      STATUS   AGE
+emqx-exporter-856564c95-j4q5v   Running  8m33s
+```
+
+## Configure Prometheus Monitor
+Prometheus-operator uses [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor) and [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) CRD to define how to monitor a set of pods or services dynamically.
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -109,74 +201,183 @@ A PodMonitor Custom Resource Definition (CRD) allows to declaratively define how
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-   name: emqx
-   namespace: default
-   labels:
-     app.kubernetes.io/name: emqx
+  name: emqx
+  labels:
+    app.kubernetes.io/name: emqx
 spec:
-   jobLabel: emqx-scraping
-   namespaceSelector:
-     matchNames:
-     - default
-   podMetricsEndpoints:
-   - basicAuth:
-       password:
-         key: password
-         name: emqx-basic-auth
-       username:
-         key: username
-         name: emqx-basic-auth
-     interval: 10s
-     params:
-       type:
-       -prometheus
-     path: /api/v5/prometheus/stats
-     port: http-dashboard
-     scheme: http
-   selector:
-     matchLabels:
-       apps.emqx.io/instance: emqx
+  podMetricsEndpoints:
+    - interval: 5s
+      path: /api/v5/prometheus/stats
+      # the name of emqx dashboard containerPort
+      port: dashboard
+      relabelings:
+        - action: replace
+          # user-defined cluster name, requires unique
+          replacement: emqx5
+          targetLabel: cluster
+        - action: replace
+          # fix value, don't modify
+          replacement: emqx
+          targetLabel: from
+        - action: replace
+          # fix value, don't modify
+          sourceLabels: ['pod']
+          targetLabel: "instance"
+  selector:
+    matchLabels:
+      # the label is the same as the label of emqx pod
+      apps.emqx.io/instance: emqx
+      apps.emqx.io/managed-by: emqx-operator
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your EMQX cluster deployed in other namespace
+      #- default
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
+spec:
+  selector:
+    matchLabels:
+      # the label is the same as the label of emqx exporter svc
+      app: emqx-exporter
+  endpoints:
+    - port: metrics
+      interval: 5s
+      path: /metrics
+      relabelings:
+        - action: replace
+          # user-defined cluster name, requires unique
+          replacement: emqx5
+          targetLabel: cluster
+        - action: replace
+          # fix value, don't modify
+          replacement: exporter
+          targetLabel: from
+        - action: replace
+          # fix value, don't modify
+          sourceLabels: ['pod']
+          regex: '(.*)-.*-.*'
+          replacement: $1
+          targetLabel: "instance"
+        - action: labeldrop
+          # fix value, don't modify
+          regex: 'pod'
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your exporter deployed in other namespace
+      #- default
 ```
 
-> `path` indicates the path of the indicator collection interface. In EMQX 5, the path is: `/api/v5/prometheus/stats`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx`.
+<p> `path` indicates the path of the indicator collection interface. In EMQX 5, the path is: `/api/v5/prometheus/stats`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx`.</p>
+<p> The value of targetLabel `cluster` represents the name of current cluster, make sure its uniqueness. </p>
 
 :::
 ::: tab v1beta4
 
 ```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: emqx-basic-auth
+type: kubernetes.io/basic-auth
+stringData:
+  username: ${paste_your_new_username_here}
+  password: ${paste_your_new_password_here}
+---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-   name: emqx
-   namespace: default
-   labels:
-     app.kubernetes.io/name: emqx
+  name: emqx
+  labels:
+    app.kubernetes.io/name: emqx
 spec:
-   jobLabel: emqx-scraping
-   namespaceSelector:
-     matchNames:
-     - default
-   podMetricsEndpoints:
-   - basicAuth:
-       password:
-         key: password
-         name: emqx-basic-auth
-       username:
-         key: username
-         name: emqx-basic-auth
-     interval: 10s
-     params:
-       type:
-       -prometheus
-     path: /api/v4/emqx_prometheus
-     port: http-management
-     scheme: http
-   selector:
-     matchLabels:
-       apps.emqx.io/instance: emqx-ee
+  podMetricsEndpoints:
+  - basicAuth:
+      username:
+        # the secret's name defined above
+        name: emqx-basic-auth
+        # refer to the value of the secret's key "username"
+        key: username
+      password:
+        # the secret's name defined above
+        name: emqx-basic-auth
+        # refer to the value of the secret's key "password"
+        key: password
+    interval: 5s
+    params:
+      type:
+        - prometheus
+    path: /api/v4/emqx_prometheus
+    # the name of emqx dashboard containerPort
+    port: dashboard
+    relabelings:
+      - action: replace
+        # user-defined cluster name, requires unique
+        replacement: emqx4
+        targetLabel: cluster
+      - action: replace
+        # fix value, don't modify
+        replacement: emqx
+        targetLabel: from
+      - action: replace
+        # fix value, don't modify
+        sourceLabels: ['pod']
+        targetLabel: "instance"
+  selector:
+    matchLabels:
+      # the label is the same as the label of emqx pod
+      apps.emqx.io/instance: emqx
+      apps.emqx.io/managed-by: emqx-operator
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your EMQX cluster deployed in other namespace
+      #- default
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: emqx-exporter
+  labels:
+    app: emqx-exporter
+spec:
+  selector:
+    matchLabels:
+      # the label in emqx exporter svc
+      app: emqx-exporter
+  endpoints:
+    - port: metrics
+      interval: 5s
+      path: /metrics
+      relabelings:
+        - action: replace
+          # user-defined cluster name, requires unique
+          replacement: emqx4
+          targetLabel: cluster
+        - action: replace
+          # fix value, don't modify
+          replacement: exporter
+          targetLabel: from
+        - action: replace
+          # fix value, don't modify
+          sourceLabels: ['pod']
+          regex: '(.*)-.*-.*'
+          replacement: $1
+          targetLabel: "instance"
+        - action: labeldrop
+          # fix value, don't modify
+          regex: 'pod'
+  namespaceSelector:
+    matchNames:
+      # modify the namespace if your exporter deployed in other namespace
+      #- default
 ```
 
 > `path` indicates the path of the indicator collection interface. In EMQX 4, the path is: `/api/v4/emqx_prometheus`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx-ee`.
+> The value of targetLabel `cluster` represents the name of current cluster, make sure its uniqueness.
 
 :::
 ::::
@@ -185,26 +386,6 @@ Save the above content as `monitor.yaml` and execute the following command:
 
 ```bash
 $ kubectl apply -f monitor.yaml
-```
-
-Use basicAuth to provide Monitor with password and account information for accessing EMQX interface
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-   name: emqx-basic-auth
-   namespace: default
-type: kubernetes.io/basic-auth
-stringData:
-   username: admin
-   password: public
-```
-
-Save the above content as `secret.yaml` and create a Secret
-
-```bash
-$ kubectl apply -f secret.yaml
 ```
 
 ## View EMQX Indicators on Prometheus
@@ -216,3 +397,8 @@ Open the Prometheus interface, switch to the Graph page, and enter `emqx` to dis
 Switch to the **Status** -> **Targets** page, the following figure is displayed, and you can see all monitored EMQX Pod information in the cluster:
 
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-target.png)
+
+## Import Grafana Templates
+Import all dashboard [templates](https://github.com/emqx/emqx-exporter/tree/main/config/grafana-template). Open the main dashboard **EMQX** and enjoy yourself!
+
+![](./assets/configure-emqx-prometheus/emqx-grafana-dashboard.png)
