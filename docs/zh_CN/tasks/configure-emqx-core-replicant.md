@@ -2,101 +2,126 @@
 
 ## 任务目标
 
-- 如何通过 coreTemplate 字段配置 EMQX 集群 Core 节点。
-- 如何通过 replicantTemplate 字段配置 EMQX 集群 Replicant 节点。
+- 通过 `coreTemplate` 字段配置 EMQX 集群 Core 节点。
+- 通过 `replicantTemplate` 字段配置 EMQX 集群 Replicant 节点。
 
 ## Core 节点与 Replicant 节点
 
-在 EMQX 5.0 中，为了实现集群横向扩展能力，可以将集群中的 EMQX 节点分成两个角色：核心（Core）节点和 复制（Replicant）节点。其拓扑结构如下图所示：
+在 EMQX 5.0 中，EMQX 集群中的节点可以分成两个角色：核心（Core）节点和 复制（Replicant）节点。Core 节点负责集群中所有的写操作，与 EMQX 4.x 集群中的节点行为一致，作为 EMQX 数据库 [Mria](https://github.com/emqx/mria) 的真实数据源来存储路由表、会话、配置、报警以及 Dashboard 用户信息等数据。而 Replicant 节点被设计成无状态的，不参与数据的写入，添加或者删除 Replicant 节点不会改变集群数据的冗余。更多关于 EMQX 5.0 架构的信息请参考文档：[EMQX 5.0 架构](https://docs.emqx.com/zh/enterprise/v5.0/deploy/cluster/mria-introduction.html#mria-%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D)，Core 节点与 Replicant 节点的拓扑结构如下图所示：
 
- <img src="./assets/configure-core-replicant/mria-core-repliant.png" style="zoom:50%;" />
-
-Core 节点的行为与 EMQX 4.x 中节点一致：Core 节点使用全连接的方式组成集群，每个节点都可以发起事务、持有锁等。因此，EMQX 5.0 仍然要求 Core 节点在部署上要尽量的可靠。
-
-Replicant 节点不再直接参与事务的处理。但它们会连接到 Core 节点，并被动地复制来自 Core 节点的数据更新。Replicant 节点不允许执行任何的写操作。而是将其转交给 Core 节点代为执行。另外，由于 Replicant 会复制来自 Core 节点的数据，所以它们有一份完整的本地数据副本，以达到最高的读操作的效率，这样有助于降低 EMQX 路由的时延。另外，Replicant 节点被设计成是无状态的，添加或删除它们不会导致集群数据的丢失、也不会影响其他节点的服务状态，所以 Replicant 节点可以被放在一个自动扩展组中。
-
+  <div style="text-align:center">
+  <img src="./assets/configure-core-replicant/mria-core-repliant.png" style="zoom:30%;" />
+  </div>
 
 ::: tip
-EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX Operator 要求 EMQX 集群至少有两个 Core 节点和两个 Replicant 节点。
+EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX Operator 建议 EMQX 集群至少有三个 Core 节点。
 :::
 
 ## 部署 EMQX 集群
 
-EMQX CRD 支持使用 `.spec.coreTemplate` 字段来配置 EMQX 集群 Core 节点，coreTemplate 字段的具体描述可以参考：[coreTemplate](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v2alpha1-reference.md#emqxcoretemplate)。使用 `.spec.replicantTemplate` 字段来配置 EMQX 集群 Replicant 节点，replicantTemplate 字段的具体描述可以参考：[emqxreplicanttemplate](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v2alpha1-reference.md#emqxreplicanttemplate)。
+`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.coreTemplate` 字段来配置 EMQX 集群 Core 节点，使用 `.spec.replicantTemplate` 字段来配置 EMQX 集群 Replicant 节点，更多信息请查看：[API 参考](../reference/v2alpha1-reference.md#emqxspec)。
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx:5.0
-  coreTemplate:
-    spec:
-      replicas: 2
-  replicantTemplate:
-    spec:
-      replicas: 3
-```
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
-将上述内容保存为：emqx-core.yaml，并执行如下命令部署 EMQX 集群：
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.0
+    coreTemplate:
+      spec:
+        replicas: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+    replicantTemplate:
+      spec:
+        replicas: 3
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+    dashboardServiceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-```bash
-$ kubectl apply -f emqx.yaml
+  > 上文的 YAML 中，我们声明了这是一个由三个 Core 节点和三个 Replicant 节点组成的 EMQX 集群。Core 节点最低需要 256Mi 内存 ，Replicant 节点最低需要512Mi 内存。在实际业务中，Replicant 节点会接受全部的客户端请求，所以 Replicant 节点需要的资源会更高一些。
 
-emqx.apps.emqx.io/emqx created
-```
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
-检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+  ```
+  $ kubectl get emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   2m55s
+  ```
 
-```bash
-$ kubectl get emqx emqx
++ 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台
 
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.0   Running   10m
-```
+  EMQX Operator 会创建两个 EMQX Service 资源，一个是 emqx-dashboard，一个是 emqx-listeners，分别对应 EMQX 控制台和 EMQX 监听端口。
+
+  ```bash
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 ## 检查 EMQX 集群
 
-可以通过检查 EMQX 自定义资源的状态来获取所有集群中节点的信息，节点的 `role` 字段表示它们在集群中的角色，在上文中部署了一个由两个 Core 节点与三个 Replicant 节点组成的集群。
+  ```bash
+  $ kubectl get emqx emqx -o json | jq .status.emqxNodes
+  ```
 
-```bash
-$ kubectl get emqx emqx -o json | jq .status.emqxNodes
-[
-  {
-    "node": "emqx@10.244.4.56",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-2/12.3.2.2",
-    "role": "replicant",
-    "version": "5.0.20"
-  },
-  {
-    "node": "emqx@10.244.4.57",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-2/12.3.2.2",
-    "role": "replicant",
-    "version": "5.0.20"
-  },
-  {
-    "node": "emqx@10.244.4.58",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-2/12.3.2.2",
-    "role": "replicant",
-    "version": "5.0.20"
-  },
-  {
-    "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-2/12.3.2.2",
-    "role": "core",
-    "version": "5.0.20"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.3.4.2-2/12.3.2.2",
-    "role": "core",
-    "version": "5.0.20"
-  }
-]
-```
+  可以通过检查 EMQX 自定义资源的状态来获取所有集群中节点的信息，节点的 `role` 字段表示它们在集群中的角色，在上文中部署了一个由两个 Core 节点与三个 Replicant 节点组成的集群。
+
+  ```bash
+  [
+    {
+      "node": "emqx@10.244.4.56",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "replicant",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@10.244.4.57",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "replicant",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@10.244.4.58",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "replicant",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    },
+     {
+      "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    }
+  ]
+  ```

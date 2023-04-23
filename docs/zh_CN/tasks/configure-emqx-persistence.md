@@ -2,161 +2,187 @@
 
 ## 任务目标
 
-- 如何通过 `persistent` 字段 配置 EMQX 4.x 集群持久化。
-- 如何通过 `volumeClaimTemplates` 字段配置 EMQX 5.x 集群 Core 节点持久化。
+- 通过 `persistent` 字段 配置 EMQX 4.x 集群持久化。
+- 通过 `volumeClaimTemplates` 字段配置 EMQX 5.x 集群 Core 节点持久化。
 
 ## EMQX 集群持久化配置
 
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-在 EMQX 5.0 中，EMQX 集群中的节点可以分成两个角色：核心（Core）节点和 复制（Replicant）节点。Core 节点负责集群中所有的写操作，作为 EMQX 数据库 [Mria](https://github.com/emqx/mria) 的真实数据源来存储路由表、会话、配置、报警以及 Dashboard 用户信息等数据。而 Replicant 节点被设计成无状态的，不参与数据的写入，添加或者删除 Replicant 节点不会改变集群数据的冗余。因此在 EMQX CRD 里面，我们仅支持 Core 节点的持久化。
+`apps.emqx.io/v1beta4 EmqxEnterprise` 支持通过 `.spec.persistent` 字段配置 EMQX 集群持久化。`.spec.persistent` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core)。
 
-EMQX CRD 支持通过 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段配置 EMQX 集群 Core 节点持久化。`.spec.coreTemplate.spec.volumeClaimTemplates` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core) 。
+当用户配置了 `.spec.persistent` 字段时，EMQX Operator 会将 EMQX 容器中 `/opt/emqx/data` 目录挂载到通过 [StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/) 创建的 PV 和 PVC 中，当 EMQX Pod 被删除时，PV 和 PVC 不会被删除，从而达到保存 EMQX 运行时数据的目的。关于 PV 和 PVC 的更多信息，请参考文档 [Persistent Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/)。
 
-当用户配置了 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段时，EMQX Operator 会为 EMQX 集群中的 每一个 Core 节点创建一个固定的 PVC（PersistentVolumeClaim）来表示用户对持久化的请求。当 Pod 被删除时，其对应的 PVC 不会自动清除。当 Pod 被重建时，会自动和已存在的 PVC 进行匹配。如果不想再使用旧集群的数据，需要手动清理 PVC。
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
-PVC 表达的是用户对持久化的请求，而负责存储的则是持久卷（[PersistentVolume](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/)，PV），PVC 和 PV 通过 PVC Name 一对一绑定。PV 是集群中的一块存储，可以根据需求手动制备，也可以使用存储类（[StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/))来动态制备。当用户不再使用 PV 资源时，可以手动删除 PVC 对象，从而允许该 PV 资源被回收再利用。目前，PV 的回收策略有两种：Retained（保留）和 Deleted（删除），其回收策略细节可以参考文档：[Reclaiming](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#reclaiming)。
-
-EMQX Operator 使用 PV 持久化 EMQX 集群 Core 节点 `/opt/emqx/data` 目录下的数据。EMQX Core 节点 `/opt/emqx/data` 目录存放的数据主要包含：路由表、会话、配置、报警以及 Dashboard 用户信息等数据。
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx:5.0
-  coreTemplate:
-    spec:
-      volumeClaimTemplates:
+  ``` yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
         storageClassName: standard
         resources:
           requests:
             storage: 20Mi
         accessModes:
-        - ReadWriteOnce
-      replicas: 3
-```
+          - ReadWriteOnce
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-> `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.dashboardServiceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
+  > `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。
 
-将上述内容保存为：`emqx.yaml`，并执行如下命令部署 EMQX 集群：
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
-```bash
-$ kubectl apply -f emqx.yaml
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
 
-emqx.apps.emqx.io/emqx created
-```
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
 
-检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-```bash
-$ kubectl get emqx emqx
+  192.168.1.200
+  ```
 
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.0   Running   10m
-```
+  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
-::: tab v1beta4
+::: tab apps.emqx.io/v2alpha1
 
-EMQX CRD 支持通过 `.spec.persistent` 字段配置 EMQX 集群持久化。`.spec.persistent` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core)。
+`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段配置 EMQX 集群 Core 节点持久化。`.spec.coreTemplate.spec.volumeClaimTemplates` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core) 。
 
-当用户配置了 `.spec.persistent` 字段时，EMQX Operator 会为 EMQX 集群中的 每一个 Pod 创建一个固定的 PVC（PersistentVolumeClaim）来表示用户对持久化的请求。当 Pod 被删除时，其对应的 PVC 不会自动清除。当 Pod 被重建时，会自动和已存在的 PVC 进行匹配。如果不想再使用旧集群的数据，需要手动清理 PVC。
+当用户配置了 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段时，EMQX Operator 会将 PVC（PersistentVolumeClaim） 作为 Volume 挂载到 EMQX Pod 中，PVC 表示用户持久化请求，最终负责存储的是持久化卷（PersistentVolume，PV），PV 和 PVC 是一一对应的。EMQX Operator 使用 [StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/) 动态创建 PV，PV 存储了 EMQX 容器中 `/opt/emqx/data` 目录下的数据，当用户不再使用 PV 资源时，可以手动删除 PVC 对象，从而允许该 PV 资源被回收再利用。
 
-PVC 表达的是用户对持久化的请求，而负责存储的则是持久卷（[PersistentVolume](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/)，PV），PVC 和 PV 通过 PVC Name 一对一绑定。PV 是集群中的一块存储，可以根据需求手动制备，也可以使用存储类（[StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/))来动态制备。当用户不再使用 PV 资源时，可以手动删除 PVC 对象，从而允许该 PV 资源被回收再利用。目前，PV 的回收策略有两种：Retained（保留）和 Deleted（删除），其回收策略细节可以参考文档：[Reclaiming](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#reclaiming)。
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
-EMQX Operator 使用 PV 持久化 EMQX 节点 `/opt/emqx/data` 目录下的数据。EMQX 节点 `/opt/emqx/data` 目录存放的数据主要包含：loaded_plugins（已加载的插件信息），loaded_modules（已加载的模块信息），mnesia 数据库数据（存储 EMQX 自身运行数据，例如告警记录、规则引擎已创建的资源和规则、Dashboard 用户信息等数据）。
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.0
+    coreTemplate:
+      spec:
+        volumeClaimTemplates:
+          storageClassName: standard
+          resources:
+            requests:
+              storage: 20Mi
+          accessModes:
+            - ReadWriteOnce
+        replicas: 3
+    listenersServiceTemplate:
+      spec:
+        type: LoadBalancer
+    dashboardServiceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-``` yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  persistent:
-    metadata:
-      name: emqx-ee
-    spec:
-      storageClassName: standard
-      resources:
-        requests:
-          storage: 20Mi
-      accessModes:
-        - ReadWriteOnce
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-```
+  > `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。
 
-> `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。accessModes 字段表示 PV 的访问模式，默认使用 `ReadWriteOnce` 模式，更多访问模式可以参考文档：[AccessModes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/#access-modes)。`.spec.serviceTemplate` 字段配置了 EMQX 集群对外暴露服务的方式为：NodePort，并指定了 EMQX Dashboard 服务 18083 端口对应的 nodePort 为 32016（nodePort 取值范围为：30000-32767)。
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
-将上述内容保存为：emqx.yaml，执行如下命令部署 EMQX 集群：
+  ```bash
+  $ kubectl get emqx emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   10m
+  ```
 
-```bash
-$ kubectl apply -f emqx.yaml
++ 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台
 
-emqxenterprise.apps.emqx.io/emqx-ee created
-```
+  EMQX Operator 会创建两个 EMQX Service 资源，一个是 emqx-dashboard，一个是 emqx-listeners，分别对应 EMQX 控制台和 EMQX 监听端口。
 
-检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+  ```bash
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-```bash
-$ kubectl get emqxenterprises
+  192.168.1.200
+  ```
 
-NAME      STATUS   AGE
-emqx-ee   Running  8m33s
-```
+  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
 ::::
 
 ## 验证 EMQX 集群持久化
 
-验证方案： 1）在旧 EMQX 集群中通过 Dashboard 创建一条测试规则；2）删除旧集群；3） 重新创建 EMQX 集群，通过 Dashboard 查看之前创建的规则是否存在。
+:::tip
+下文中 Dashboard 的截图来自是 EMQX 5，[EMQX 4 Dashboard](https://docs.emqx.com/zh/enterprise/v4.4/getting-started/dashboard-ee.html#dashboard) 也支持相应的功能，请自行操作。
+:::
 
-- 通过 Dashboard 创建测试规则
+验证方案： 1）在旧 EMQX 集群中通过 Dashboard 创建一条测试规则；2）删除旧集群；3）重新创建 EMQX 集群，通过 Dashboard 查看之前创建的规则是否存在。
 
-打开浏览器，输入 EMQX Pod 所在宿主机 `IP` 和 端口 `32016` 来登录 EMQX 集群 Dashboard（Dashboard 默认用户名为：admin ，默认密码为：public），进入 Dashboard 点击 数据集成 → 规则 进入创建规则的页面，我们先点击添加动作的按钮为这条规则添加响应动作，然后点击创建生成规则，如下图所示：
++ 通过浏览器访问 EMQX Dashboard 创建测试规则
 
-![](./assets/configure-emqx-persistent/emqx-core-action.png)
+  :::: tabs type:card
+  ::: tab apps.emqx.io/v1beta4
 
-当我们的规则创建成功之后，在页面会出现一条规则记录，规则 ID 为：emqx-persistent-test，如下图所示：
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v2alpha1
 
-![](./assets/configure-emqx-persistent/emqx-core-rule-old.png)
+  ```bash
+  external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::::
 
-- 删除旧 EMQX 集群
+  通过访问 `http://${external_ip}:18083` 进入 Dashboard 点击 数据集成 → 规则 进入创建规则的页面，我们先点击添加动作的按钮为这条规则添加响应动作，然后点击创建生成规则，如下图所示：
 
-执行如下命令删除 EMQX 集群：
+  ![](./assets/configure-emqx-persistent/emqx-core-action.png)
 
-```bash
-$ kubectl delete -f  emqx.yaml
+  当我们的规则创建成功之后，在页面会出现一条规则记录，规则 ID 为：emqx-persistent-test，如下图所示：
 
-emqx.apps.emqx.io "emqx" deleted
-# emqxenterprise.apps.emqx.io "emqx" deleted
-```
+  ![](./assets/configure-emqx-persistent/emqx-core-rule-old.png)
 
-> emqx-persistent.yaml 是本文中第一次部署 EMQX 集群所使用的 YAML 文件，这个文件不需要做任何的改动。
++ 删除旧 EMQX 集群
 
-- 重新创建 EMQX 集群
+  执行如下命令删除 EMQX 集群：
 
-执行如下命令重新创建 EMQX 集群：
+  ```bash
+  $ kubectl delete -f  emqx.yaml
 
-```bash
-$ kubectl apply -f  emqx.yaml
+  emqx.apps.emqx.io "emqx" deleted
+  # emqxenterprise.apps.emqx.io "emqx" deleted
+  ```
 
-emqx.apps.emqx.io/emqx created
-# emqxenterprise.apps.emqx.io/emqx created
-```
+  > emqx-persistent.yaml 是本文中第一次部署 EMQX 集群所使用的 YAML 文件，这个文件不需要做任何的改动。
 
-等待 EMQX 集群就绪，然后通过浏览器访问 EMQX Dashboard 查看之前创建的规则是否存在，如下如图所示：
++ 重新创建 EMQX 集群
 
-![](./assets/configure-emqx-persistent/emqx-core-rule-new.png)
+  执行如下命令重新创建 EMQX 集群：
 
-从图中可以看出：在旧集群中创建的规则 emqx-persistent-test 在新的集群中依旧存在，则说明我们配置的持久化是生效的。
+  ```bash
+  $ kubectl apply -f  emqx.yaml
+
+  emqx.apps.emqx.io/emqx created
+  # emqxenterprise.apps.emqx.io/emqx created
+  ```
+
+  等待 EMQX 集群就绪，然后通过浏览器访问 EMQX Dashboard 查看之前创建的规则是否存在，如下如图所示：
+
+  ![](./assets/configure-emqx-persistent/emqx-core-rule-new.png)
+
+  从图中可以看出：在旧集群中创建的规则 emqx-persistent-test 在新的集群中依旧存在，则说明我们配置的持久化是生效的。
