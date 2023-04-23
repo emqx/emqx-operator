@@ -46,6 +46,7 @@ func (r *EmqxEnterprise) Default() {
 	defaultEmqxConfig(r)
 	defaultServiceTemplate(r)
 	defaultPersistent(r)
+	defaultTerminationMessage(r)
 }
 
 //+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta4,name=validator.enterprise.emqx.io,admissionReviewVersions={v1,v1beta1}

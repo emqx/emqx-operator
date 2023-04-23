@@ -17,14 +17,17 @@ limitations under the License.
 package v2alpha1
 
 import (
-	emperror "emperror.dev/errors"
 	"fmt"
 	"reflect"
+
+	emperror "emperror.dev/errors"
+
 	// "github.com/gurkankaymak/hocon"
 	hocon "github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -53,6 +56,7 @@ func (r *EMQX) Default() {
 	r.defaultAnnotationsForService()
 	r.defaultDashboardServiceTemplate()
 	r.defaultProbe()
+	r.defaultVolumeClaimTemplates()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -248,10 +252,13 @@ func (r *EMQX) defaultProbe() {
 		FailureThreshold:    12,
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
-				Path: "/status",
-				Port: dashboardPort.TargetPort,
+				Path:   "/status",
+				Port:   dashboardPort.TargetPort,
+				Scheme: corev1.URISchemeHTTP,
 			},
 		},
+		SuccessThreshold: 1,
+		TimeoutSeconds:   1,
 	}
 
 	defaultLivenessProbe := &corev1.Probe{
@@ -260,10 +267,13 @@ func (r *EMQX) defaultProbe() {
 		FailureThreshold:    3,
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
-				Path: "/status",
-				Port: dashboardPort.TargetPort,
+				Path:   "/status",
+				Port:   dashboardPort.TargetPort,
+				Scheme: corev1.URISchemeHTTP,
 			},
 		},
+		SuccessThreshold: 1,
+		TimeoutSeconds:   1,
 	}
 
 	if r.Spec.CoreTemplate.Spec.ReadinessProbe == nil {
@@ -278,6 +288,21 @@ func (r *EMQX) defaultProbe() {
 	}
 	if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
 		r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
+	}
+}
+
+func (r *EMQX) defaultVolumeClaimTemplates() {
+	if reflect.ValueOf(r.Spec.CoreTemplate.Spec.VolumeClaimTemplates).IsZero() {
+		return
+	}
+
+	if r.Spec.CoreTemplate.Spec.VolumeClaimTemplates.AccessModes == nil {
+		r.Spec.CoreTemplate.Spec.VolumeClaimTemplates.AccessModes = []corev1.PersistentVolumeAccessMode{
+			corev1.ReadWriteOnce,
+		}
+	}
+	if r.Spec.CoreTemplate.Spec.VolumeClaimTemplates.VolumeMode == nil {
+		r.Spec.CoreTemplate.Spec.VolumeClaimTemplates.VolumeMode = (*corev1.PersistentVolumeMode)(pointer.String(string(corev1.PersistentVolumeFilesystem)))
 	}
 }
 

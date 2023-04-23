@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/internal/handler"
@@ -187,7 +188,8 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 				Name: "POD_NAME",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.name",
+						APIVersion: "v1",
+						FieldPath:  "metadata.name",
 					},
 				},
 			},
@@ -195,7 +197,8 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 				Name: "POD_NAMESPACE",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
+						APIVersion: "v1",
+						FieldPath:  "metadata.namespace",
 					},
 				},
 			},
@@ -203,7 +206,8 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 				Name: "STS_HEADLESS_SERVICE_NAME",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.annotations['apps.emqx.io/headless-service-name']",
+						APIVersion: "v1",
+						FieldPath:  "metadata.annotations['apps.emqx.io/headless-service-name']",
 					},
 				},
 			},
@@ -227,6 +231,8 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Name:      instance.NameOfCoreNodeData(),
 			MountPath: "/opt/emqx/data",
 		}),
+		TerminationMessagePath:   "/dev/termination-log",
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 	}
 
 	containers := append(
@@ -247,15 +253,19 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Annotations: podAnnotation,
 		},
 		Spec: corev1.PodSpec{
-			ImagePullSecrets: instance.Spec.ImagePullSecrets,
-			SecurityContext:  instance.Spec.CoreTemplate.Spec.PodSecurityContext,
-			Affinity:         instance.Spec.CoreTemplate.Spec.Affinity,
-			Tolerations:      instance.Spec.CoreTemplate.Spec.ToleRations,
-			NodeName:         instance.Spec.CoreTemplate.Spec.NodeName,
-			NodeSelector:     instance.Spec.CoreTemplate.Spec.NodeSelector,
-			InitContainers:   instance.Spec.CoreTemplate.Spec.InitContainers,
-			Volumes:          instance.Spec.CoreTemplate.Spec.ExtraVolumes,
-			Containers:       containers,
+			ImagePullSecrets:              instance.Spec.ImagePullSecrets,
+			SecurityContext:               instance.Spec.CoreTemplate.Spec.PodSecurityContext,
+			Affinity:                      instance.Spec.CoreTemplate.Spec.Affinity,
+			Tolerations:                   instance.Spec.CoreTemplate.Spec.ToleRations,
+			NodeName:                      instance.Spec.CoreTemplate.Spec.NodeName,
+			NodeSelector:                  instance.Spec.CoreTemplate.Spec.NodeSelector,
+			InitContainers:                instance.Spec.CoreTemplate.Spec.InitContainers,
+			Volumes:                       instance.Spec.CoreTemplate.Spec.ExtraVolumes,
+			Containers:                    containers,
+			DNSPolicy:                     corev1.DNSClusterFirst,
+			RestartPolicy:                 corev1.RestartPolicyAlways,
+			SchedulerName:                 "default-scheduler",
+			TerminationGracePeriodSeconds: pointer.Int64Ptr(30),
 		},
 	}
 
@@ -277,13 +287,20 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Annotations: annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: instance.NameOfHeadlessService(),
-			Replicas:    instance.Spec.CoreTemplate.Spec.Replicas,
+			RevisionHistoryLimit: pointer.Int32Ptr(10),
+			ServiceName:          instance.NameOfHeadlessService(),
+			Replicas:             instance.Spec.CoreTemplate.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: instance.Spec.CoreTemplate.Labels,
 			},
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template:            podTemplate,
+			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateStatefulSetStrategy{
+					Partition: pointer.Int32Ptr(0),
+				},
+			},
 		},
 	}
 	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates).IsZero() {
@@ -328,6 +345,15 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 			Annotations: annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
+			ProgressDeadlineSeconds: pointer.Int32Ptr(600),
+			RevisionHistoryLimit:    pointer.Int32Ptr(10),
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: &intstr.IntOrString{Type: intstr.String, StrVal: "25%"},
+					MaxSurge:       &intstr.IntOrString{Type: intstr.String, StrVal: "25%"},
+				},
+			},
 			Replicas: instance.Spec.ReplicantTemplate.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: instance.Spec.ReplicantTemplate.Labels,
@@ -362,7 +388,8 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 									Name: "EMQX_HOST",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "status.podIP",
+											APIVersion: "v1",
+											FieldPath:  "status.podIP",
 										},
 									},
 								},
@@ -378,6 +405,8 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 								Name:      instance.NameOfReplicantNodeData(),
 								MountPath: "/opt/emqx/data",
 							}),
+							TerminationMessagePath:   "/dev/termination-log",
+							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						},
 					}, instance.Spec.ReplicantTemplate.Spec.ExtraContainers...),
 					Volumes: append(instance.Spec.ReplicantTemplate.Spec.ExtraVolumes, corev1.Volume{
@@ -386,6 +415,10 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
 					}),
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					SchedulerName:                 "default-scheduler",
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(30),
 				},
 			},
 		},
@@ -418,7 +451,8 @@ func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *c
 		Name: "bootstrap-user",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName: bootstrapUser.Name,
+				DefaultMode: pointer.Int32(420),
+				SecretName:  bootstrapUser.Name,
 			},
 		},
 	}
@@ -454,6 +488,7 @@ func updateStatefulSetForBootstrapConfig(sts *appsv1.StatefulSet, bootstrapConfi
 		Name: "bootstrap-config",
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
+				DefaultMode: pointer.Int32(420),
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: bootstrapConfig.Name,
 				},
@@ -502,6 +537,7 @@ func updateDeploymentForBootstrapConfig(deploy *appsv1.Deployment, bootstrapConf
 		Name: "bootstrap-config",
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
+				DefaultMode: pointer.Int32(420),
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: bootstrapConfig.Name,
 				},
