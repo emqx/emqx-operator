@@ -236,11 +236,12 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
 2. 在 EMQX 自定义资源的 Annotations 中添加如下注释：
 
     ```yaml
-      ## 指定由 AWS Certificate Manager 管理的一个或多个证书的 ARN。
+    ## 指定由 AWS Certificate Manager 管理的一个或多个证书的 ARN。
     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-west-2:xxxxx:certificate/xxxxxxx
-      ## 指定是否对负载均衡器和 kubernetes pod 之间的后端流量使用 TLS。
+    ## 指定是否对负载均衡器和 kubernetes pod 之间的后端流量使用 TLS。
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
-      ## 指定带有 TLS 侦听器的前端端口。这意味着通过 LoadBalancer 访问 1883 端口的话需要开启 TLS 认证
+    ## 指定带有 TLS 侦听器的前端端口。这意味着通过 AWS NLB 服务访问 1883 端口需要通过 TLS 认证，
+    ## 但是直接访问 K8S service port 不需要 TLS 认证
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "1883"
     ```
 
