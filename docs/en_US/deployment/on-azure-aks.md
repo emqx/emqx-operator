@@ -1,6 +1,6 @@
 # Deploy EMQX on Azure Kubernetes Service
 
-Azure Kubernetes Service (AKS) simplifies deploying a managed Kubernetes cluster in Azure by offloading the operational overhead to Azure. As a hosted Kubernetes service, Azure handles critical tasks, like health monitoring and maintenance. When you create an AKS cluster, a control plane is automatically created and configured. This control plane is provided at no cost as a managed Azure resource abstracted from the user. You only pay for and manage the nodes attached to the AKS cluster.
+EMQX Operator supports deploying EMQX on Azure Kubernetes Service(AKS). AKS simplifies deploying a managed Kubernetes cluster in Azure by offloading the operational overhead to Azure. As a hosted Kubernetes service, Azure handles critical tasks, like health monitoring and maintenance. When you create an AKS cluster, a control plane is automatically created and configured. This control plane is provided at no cost as a managed Azure resource abstracted from the user. You only pay for and manage the nodes attached to the AKS cluster.
 
 ## Before You Begin
 Before you begin, you must have the following:
@@ -48,6 +48,7 @@ spec:
       type: LoadBalancer
   listenersServiceTemplate:
     spec:
+      ## more information about load balancer: https://learn.microsoft.com/en-us/azure/aks/load-balancer-standard
       type: LoadBalancer
 ```
 
@@ -64,13 +65,13 @@ Get the External IP of the EMQX cluster and access the EMQX console.
 The EMQX Operator will create two EMQX Service resources, one is `emqx-dashboard`, and the other is `emqx-listeners`, corresponding to the EMQX console and EMQX listening port, respectively.
 
 ```shell
-$ external_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
-$ echo $external_ip
+$ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
 20.245.230.91
 ```
 
-Access the EMQX console by opening a web browser and visiting `http://${external_ip}:18083`. Login using the default username and password `admin/public`.
+Access the EMQX console by opening a web browser and visiting http://20.245.230.91:18083. Login using the default username and password admin/public.
+
 :::
 
 ::: tab apps.emqx.io/v1beta4
@@ -116,14 +117,12 @@ emqx-ee   Running  8m33s
 Get the External IP of the EMQX cluster and access the EMQX console.
 
 ```shell
-$ external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-$ echo $external_ip
+$ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
 20.245.123.100
 ```
 
-Access the EMQX console by opening a web browser and visiting `http://${external_ip}:18083`. Login using the default username and password `admin/public`.
-
+Access the EMQX console by opening a web browser and visiting http://20.245.123.100:18083. Login using the default username and password admin/public.
 
 :::
 ::::
