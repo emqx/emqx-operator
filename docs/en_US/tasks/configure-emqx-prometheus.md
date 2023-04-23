@@ -5,7 +5,7 @@ Deploy `emqx-exporter` and monitor EMQX cluster by Prometheus and Grafana.
 
 ## Deploy Prometheus and Grafana
 
-Prometheus' deployment documentation can refer to [Prometheus](https://github.com/prometheus-operator/prometheus-operator)  
+Prometheus' deployment documentation can refer to [Prometheus](https://github.com/prometheus-operator/prometheus-operator)
 Grafana' deployment documentation can refer to [Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/kubernetes/)
 
 ## Deploy EMQX Cluster
@@ -27,7 +27,7 @@ spec:
   coreTemplate:
     spec:
       ports:
-        # prometheus monitor requires the pod must name the target port 
+        # prometheus monitor requires the pod must name the target port
         - name: dashboard
           containerPort: 18083
   replicantTemplate:
@@ -84,7 +84,7 @@ spec:
           repository: emqx/emqx-ee
           version: 4.4.16
         ports:
-          # prometheus monitor requires the pod must name the target port 
+          # prometheus monitor requires the pod must name the target port
           - name: dashboard
             containerPort: 18083
 ```
@@ -155,7 +155,7 @@ spec:
           image: emqx-exporter:latest
           imagePullPolicy: IfNotPresent
           args:
-            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port 
+            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port
             - --emqx.nodes=emqx-dashboard:18083
             - --emqx.auth-username=${paste_your_new_api_key_here}
             - --emqx.auth-password=${paste_your_new_secret_here}
@@ -272,7 +272,7 @@ spec:
       #- default
 ```
 
-<p> `path` indicates the path of the indicator collection interface. In EMQX 5, the path is: `/api/v5/prometheus/stats`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx`.</p>  
+<p> `path` indicates the path of the indicator collection interface. In EMQX 5, the path is: `/api/v5/prometheus/stats`. `selector.matchLabels` indicates the label of the matching Pod: `apps.emqx.io/instance: emqx`.</p>
 <p> The value of targetLabel `cluster` represents the name of current cluster, make sure its uniqueness. </p>
 
 :::

@@ -5,7 +5,7 @@
 
 ## 部署 Prometheus 和 Grafana
 
-Prometheus 部署文档可以参考：[Prometheus](https://github.com/prometheus-operator/prometheus-operator)  
+Prometheus 部署文档可以参考：[Prometheus](https://github.com/prometheus-operator/prometheus-operator)
 Grafana 部署文档可以参考：[Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/kubernetes/)
 
 ## 部署 EMQX 集群
@@ -27,7 +27,7 @@ spec:
   coreTemplate:
     spec:
       ports:
-        # prometheus monitor requires the pod must name the target port 
+        # prometheus monitor requires the pod must name the target port
         - name: dashboard
           containerPort: 18083
   replicantTemplate:
@@ -84,7 +84,7 @@ spec:
           repository: emqx/emqx-ee
           version: 4.4.16
         ports:
-          # prometheus monitor requires the pod must name the target port 
+          # prometheus monitor requires the pod must name the target port
           - name: dashboard
             containerPort: 18083
 ```
@@ -155,7 +155,7 @@ spec:
           image: emqx-exporter:latest
           imagePullPolicy: IfNotPresent
           args:
-            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port 
+            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port
             - --emqx.nodes=emqx-dashboard:18083
             - --emqx.auth-username=${paste_your_new_api_key_here}
             - --emqx.auth-password=${paste_your_new_secret_here}
@@ -387,8 +387,8 @@ kubectl apply -f monitor.yaml
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-target.png)
 
 ## 导入 Grafana 模板
-导入所有 dashboard [模板](https://github.com/emqx/emqx-exporter/tree/main/config/grafana-template)。  
+导入所有 dashboard [模板](https://github.com/emqx/emqx-exporter/tree/main/config/grafana-template)。
 
-集群的整体监控状态位于 **EMQX** 看板中。 
+集群的整体监控状态位于 **EMQX** 看板中。
 
 ![](./assets/configure-emqx-prometheus/emqx-grafana-dashboard.png)
