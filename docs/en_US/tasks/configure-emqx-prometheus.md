@@ -115,8 +115,8 @@ spec:
 ## Create API secret
 emqx-exporter and Prometheus will pull metrics from EMQX dashboard API, so you need to sign in to dashboard to create an API secret.
 
-Note that it is different to create a secret between EMQX 5 and EMQX 4.4.
-* **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys) in the dashboard.
+Note that it is different to create a secret between EMQX 5 and EMQX 4.4 on the dashboard.
+* **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys).
 * **EMQX 4.4** create a new `User` instead of `Application`
 
 ## Deploy emqx-exporter
@@ -282,15 +282,6 @@ spec:
 ::: tab v1beta4
 
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: emqx-basic-auth
-type: kubernetes.io/basic-auth
-stringData:
-  username: ${paste_your_new_username_here}
-  password: ${paste_your_new_password_here}
----
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -299,18 +290,7 @@ metadata:
     app.kubernetes.io/name: emqx
 spec:
   podMetricsEndpoints:
-  - basicAuth:
-      username:
-        # the secret's name defined above
-        name: emqx-basic-auth
-        # refer to the value of the secret's key "username"
-        key: username
-      password:
-        # the secret's name defined above
-        name: emqx-basic-auth
-        # refer to the value of the secret's key "password"
-        key: password
-    interval: 5s
+  - interval: 5s
     params:
       type:
         - prometheus

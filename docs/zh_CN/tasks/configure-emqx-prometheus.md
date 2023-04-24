@@ -290,14 +290,7 @@ metadata:
     app.kubernetes.io/name: emqx
 spec:
   podMetricsEndpoints:
-  - basicAuth:
-      username:
-        key: username
-        name: ${paste_your_new_username_here}
-      password:
-        key: password
-        name: ${paste_your_new_password_here}
-    interval: 5s
+  - interval: 5s
     params:
       type:
       - prometheus
@@ -372,7 +365,7 @@ spec:
 :::
 ::::
 
-将上述内容保存为`monitor.yaml`，如果是 EMQX 4.4，则还需修改其中的`username`和`password`，并执行如下命令：
+将上述内容保存为`monitor.yaml`，并执行如下命令：
 
 ```bash
 kubectl apply -f monitor.yaml
