@@ -61,18 +61,6 @@ EMQX supports exposing indicators through the http interface. For all statistica
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
-kind: EmqxPlugin
-metadata:
-  name: emqx-prometheus
-spec:
-  selector:
-    # EMQX pod labels
-    apps.emqx.io/instance: emqx-ee
-    apps.emqx.io/managed-by: emqx-operator
-  # enable plugin emqx_prometheus
-  pluginName: emqx_prometheus
----
-apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
@@ -104,6 +92,21 @@ $ kubectl get emqxenterprises
 
 NAME      STATUS   AGE
 emqx-ee   Running  8m33s
+```
+
+If you are deploying EMQX 4.4 open-source, you need to enable plugin `emqx_prometheus` by `EmqxPlugin` CRD:
+
+```shell
+cat << "EOF" | kubectl apply -f -
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxPlugin
+metadata:
+  name: emqx-prometheus
+spec:
+  selector:
+    # EMQX pod labels
+    ${replace_with_your_emqx_pod_label} : label_value
+  pluginName: emqx_prometheus
 ```
 
 :::
@@ -155,8 +158,8 @@ spec:
           image: emqx-exporter:latest
           imagePullPolicy: IfNotPresent
           args:
-            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port
-            - --emqx.nodes=emqx-dashboard:18083
+            # "emqx-dashboard-service-name" is the service name that creating by operator for exposing 18083 port
+            - --emqx.nodes=${emqx-dashboard-service-name}:18083
             - --emqx.auth-username=${paste_your_new_api_key_here}
             - --emqx.auth-password=${paste_your_new_secret_here}
           securityContext:

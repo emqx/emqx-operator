@@ -58,20 +58,7 @@ emqx   emqx:5.0   Running   10m
 ::: tab v1beta4
 
 EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[HTTP API](https://www.emqx.io/docs/zh/v4.4/advanced/http-api.html#%E7%BB%9F%E8%AE%A1%E6%8C%87%E6%A0%87)
-
 ```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxPlugin
-metadata:
-  name: emqx-prometheus
-spec:
-  selector:
-    # EMQX pod labels
-    apps.emqx.io/instance: emqx-ee
-    apps.emqx.io/managed-by: emqx-operator
-  # enable plugin emqx_prometheus
-  pluginName: emqx_prometheus
----
 apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
@@ -104,6 +91,21 @@ $ kubectl get emqxenterprises
 
 NAME      STATUS   AGE
 emqx-ee   Running  8m33s
+```
+
+如果你部署的是 EMQX 4.4 开源版, 则需要通过 `EmqxPlugin` CRD 开启`emqx_prometheus` 插件:
+
+```shell
+cat << "EOF" | kubectl apply -f -
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxPlugin
+metadata:
+  name: emqx-prometheus
+spec:
+  selector:
+    # EMQX pod labels
+    ${replace_with_your_emqx_pod_label} : label_value
+  pluginName: emqx_prometheus
 ```
 
 :::
@@ -155,8 +157,8 @@ spec:
           image: emqx-exporter:latest
           imagePullPolicy: IfNotPresent
           args:
-            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port
-            - --emqx.nodes=emqx-dashboard:18083
+            # "emqx-dashboard-service-name" is the service name that creating by operator for exposing 18083 port
+            - --emqx.nodes=${emqx-dashboard-service-name}:18083
             - --emqx.auth-username=${paste_your_new_api_key_here}
             - --emqx.auth-password=${paste_your_new_secret_here}
           securityContext:
