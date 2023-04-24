@@ -2871,7 +2871,7 @@ spec:
                             type: integer
                         type: object
                       replicas:
-                        default: 2
+                        default: 3
                         format: int32
                         type: integer
                       resources:
@@ -6275,7 +6275,7 @@ spec:
                             type: integer
                         type: object
                       replicas:
-                        default: 2
+                        default: 3
                         format: int32
                         type: integer
                       resources:
