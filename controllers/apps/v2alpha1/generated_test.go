@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	"github.com/emqx/emqx-operator/internal/handler"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -239,9 +240,9 @@ func TestGenerateListenerService(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha1.EMQXSpec{
-			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
+			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: replicantLabels,
+					Labels: coreLabels,
 				},
 			},
 			ListenersServiceTemplate: corev1.Service{
@@ -277,7 +278,7 @@ func TestGenerateListenerService(t *testing.T) {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: replicantLabels,
+			Selector: coreLabels,
 			Ports:    listenerPorts,
 		},
 	}
@@ -859,7 +860,8 @@ func TestGenerateDeployment(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: replicantLabels,
 					Annotations: map[string]string{
-						"foo": "bar",
+						handler.ManageContainersAnnotation: "emqx,extra",
+						"foo":                              "bar",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -1214,6 +1216,12 @@ func TestUpdateDeploymentForBootstrapConfig(t *testing.T) {
 		SubPath:   "emqx.conf",
 		ReadOnly:  true,
 	}}, got.Spec.Template.Spec.Containers[0].VolumeMounts)
+}
+
+func TestIsExistReplicant(t *testing.T) {
+	instance := &appsv2alpha1.EMQX{}
+
+	assert.False(t, isExistReplicant(instance))
 }
 
 func TestIsNotExistVolumeMount(t *testing.T) {

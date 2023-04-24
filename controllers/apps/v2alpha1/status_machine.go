@@ -83,7 +83,11 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha1.EMQX) {
 
 func (s *emqxStatusMachine) CheckNodeCount(emqxNodes []appsv2alpha1.EMQXNode) {
 	s.emqx.Status.CoreNodeReplicas = *s.emqx.Spec.CoreTemplate.Spec.Replicas
-	s.emqx.Status.ReplicantNodeReplicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
+	if isExistReplicant(s.emqx) {
+		s.emqx.Status.ReplicantNodeReplicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
+	} else {
+		s.emqx.Status.ReplicantNodeReplicas = int32(0)
+	}
 	s.emqx.Status.CoreNodeReadyReplicas = int32(0)
 	s.emqx.Status.ReplicantNodeReadyReplicas = int32(0)
 
@@ -203,7 +207,7 @@ func (s *coreReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDepl
 		return
 	}
 	// deployment is ready
-	if existedDeploy.UID == "" ||
+	if (isExistReplicant(s.emqxStatusMachine.emqx) && existedDeploy.UID == "") ||
 		existedDeploy.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
 		existedDeploy.Status.UpdatedReplicas != existedDeploy.Status.Replicas ||
 		existedDeploy.Status.ReadyReplicas != existedDeploy.Status.Replicas {
