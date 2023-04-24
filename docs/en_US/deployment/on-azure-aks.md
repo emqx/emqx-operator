@@ -39,7 +39,7 @@ spec:
         storageClassName: default
         resources:
           requests:
-            storage: 20Mi
+            storage: 10Gi
         accessModes:
         - ReadWriteOnce
   dashboardServiceTemplate:
@@ -90,7 +90,7 @@ spec:
       storageClassName: default
       resources:
         requests:
-          storage: 20Mi
+          storage: 10Gi
       accessModes:
         - ReadWriteOnce
   template:
