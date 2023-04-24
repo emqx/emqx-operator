@@ -61,18 +61,6 @@ EMQX supports exposing indicators through the http interface. For all statistica
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
-kind: EmqxPlugin
-metadata:
-  name: emqx-prometheus
-spec:
-  selector:
-    # EMQX pod labels
-    apps.emqx.io/instance: emqx-ee
-    apps.emqx.io/managed-by: emqx-operator
-  # enable plugin emqx_prometheus
-  pluginName: emqx_prometheus
----
-apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
   name: emqx-ee
@@ -106,14 +94,29 @@ NAME      STATUS   AGE
 emqx-ee   Running  8m33s
 ```
 
+If you are deploying EMQX 4.4 open-source, you need to enable plugin `emqx_prometheus` by `EmqxPlugin` CRD:
+
+```shell
+cat << "EOF" | kubectl apply -f -
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxPlugin
+metadata:
+  name: emqx-prometheus
+spec:
+  selector:
+    # EMQX pod labels
+    ${replace_with_your_emqx_pod_label} : label_value
+  pluginName: emqx_prometheus
+```
+
 :::
 ::::
 
 ## Create API secret
 emqx-exporter and Prometheus will pull metrics from EMQX dashboard API, so you need to sign in to dashboard to create an API secret.
 
-Note that it is different to create a secret between EMQX 5 and EMQX 4.4.
-* **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys) in the dashboard.
+Note that it is different to create a secret between EMQX 5 and EMQX 4.4 on the dashboard.
+* **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys).
 * **EMQX 4.4** create a new `User` instead of `Application`
 
 ## Deploy emqx-exporter
@@ -155,8 +158,8 @@ spec:
           image: emqx-exporter:latest
           imagePullPolicy: IfNotPresent
           args:
-            # "emqx-dashboard" is the default service name that creating by operator for exposing 18083 port
-            - --emqx.nodes=emqx-dashboard:18083
+            # "emqx-dashboard-service-name" is the service name that creating by operator for exposing 18083 port
+            - --emqx.nodes=${emqx-dashboard-service-name}:18083
             - --emqx.auth-username=${paste_your_new_api_key_here}
             - --emqx.auth-password=${paste_your_new_secret_here}
           securityContext:
@@ -279,15 +282,6 @@ spec:
 ::: tab v1beta4
 
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: emqx-basic-auth
-type: kubernetes.io/basic-auth
-stringData:
-  username: ${paste_your_new_username_here}
-  password: ${paste_your_new_password_here}
----
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -296,18 +290,7 @@ metadata:
     app.kubernetes.io/name: emqx
 spec:
   podMetricsEndpoints:
-  - basicAuth:
-      username:
-        # the secret's name defined above
-        name: emqx-basic-auth
-        # refer to the value of the secret's key "username"
-        key: username
-      password:
-        # the secret's name defined above
-        name: emqx-basic-auth
-        # refer to the value of the secret's key "password"
-        key: password
-    interval: 5s
+  - interval: 5s
     params:
       type:
         - prometheus
