@@ -1,0 +1,13 @@
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
+metadata:
+  name: emqx
+  namespace: test-2
+spec:
+  image: emqx:5
+  coreTemplate:
+    spec:
+      replicas: 3
+  replicantTemplate:
+    spec:
+      replicas: 20
