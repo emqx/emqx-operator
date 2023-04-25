@@ -373,10 +373,24 @@ func TestDefaultProbe(t *testing.T) {
 	})
 }
 
-func TestDefaultAnnotationsForService(t *testing.T) {
-	t.Run("inject empty annotations for servcie", func(t *testing.T) {
+func TestDefaultAnnotations(t *testing.T) {
+	t.Run("empty annotations for instance", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
+				CoreTemplate: EMQXCoreTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"core": "test",
+						},
+					},
+				},
+				ReplicantTemplate: EMQXReplicantTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"replicant": "test",
+						},
+					},
+				},
 				DashboardServiceTemplate: corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
@@ -393,50 +407,70 @@ func TestDefaultAnnotationsForService(t *testing.T) {
 				},
 			},
 		}
-		instance.defaultAnnotationsForService()
+		instance.defaultAnnotations()
 
-		expectDashboardServiceAnnotations := map[string]string{
+		assert.Equal(t, map[string]string{
+			"core": "test",
+		}, instance.Spec.CoreTemplate.Annotations)
+		assert.Equal(t, map[string]string{
+			"replicant": "test",
+		}, instance.Spec.ReplicantTemplate.Annotations)
+		assert.Equal(t, map[string]string{
 			"dashboard": "test",
-		}
-
-		expectListenersServiceAnnotations := map[string]string{
+		}, instance.Spec.DashboardServiceTemplate.Annotations)
+		assert.Equal(t, map[string]string{
 			"listeners": "test",
-		}
-
-		assert.Equal(t, expectDashboardServiceAnnotations, instance.Spec.DashboardServiceTemplate.Annotations)
-		assert.Equal(t, expectListenersServiceAnnotations, instance.Spec.ListenersServiceTemplate.Annotations)
+		}, instance.Spec.ListenersServiceTemplate.Annotations)
 	})
 
-	t.Run("inject annotations for empty servcie", func(t *testing.T) {
+	t.Run("empty annotation for template", func(t *testing.T) {
 		instance := &EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					"foo": "bar",
+					"kubectl.kubernetes.io/last-applied-configuration": "fake",
 				},
 			},
 		}
-		instance.defaultAnnotationsForService()
+		instance.defaultAnnotations()
 
-		expectDashboardServiceAnnotations := map[string]string{
+		assert.Equal(t, map[string]string{
 			"foo": "bar",
-		}
-
-		expectListenersServiceAnnotations := map[string]string{
+		}, instance.Spec.CoreTemplate.Annotations)
+		assert.Equal(t, map[string]string{
 			"foo": "bar",
-		}
-
-		assert.Equal(t, expectDashboardServiceAnnotations, instance.Spec.DashboardServiceTemplate.Annotations)
-		assert.Equal(t, expectListenersServiceAnnotations, instance.Spec.ListenersServiceTemplate.Annotations)
+		}, instance.Spec.ReplicantTemplate.Annotations)
+		assert.Equal(t, map[string]string{
+			"foo": "bar",
+		}, instance.Spec.DashboardServiceTemplate.Annotations)
+		assert.Equal(t, map[string]string{
+			"foo": "bar",
+		}, instance.Spec.ListenersServiceTemplate.Annotations)
 	})
 
-	t.Run("inject annotations for servcie", func(t *testing.T) {
+	t.Run("merge annotations", func(t *testing.T) {
 		instance := &EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					"foo": "bar",
+					"kubectl.kubernetes.io/last-applied-configuration": "fake",
 				},
 			},
 			Spec: EMQXSpec{
+				CoreTemplate: EMQXCoreTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"core": "test",
+						},
+					},
+				},
+				ReplicantTemplate: EMQXReplicantTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"replicant": "test",
+						},
+					},
+				},
 				DashboardServiceTemplate: corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
@@ -453,20 +487,24 @@ func TestDefaultAnnotationsForService(t *testing.T) {
 				},
 			},
 		}
-		instance.defaultAnnotationsForService()
+		instance.defaultAnnotations()
 
-		expectDashboardServiceAnnotations := map[string]string{
+		assert.Equal(t, map[string]string{
+			"foo":  "bar",
+			"core": "test",
+		}, instance.Spec.CoreTemplate.Annotations)
+		assert.Equal(t, map[string]string{
+			"foo":       "bar",
+			"replicant": "test",
+		}, instance.Spec.ReplicantTemplate.Annotations)
+		assert.Equal(t, map[string]string{
 			"foo":       "bar",
 			"dashboard": "test",
-		}
-
-		expectListenersServiceAnnotations := map[string]string{
+		}, instance.Spec.DashboardServiceTemplate.Annotations)
+		assert.Equal(t, map[string]string{
 			"foo":       "bar",
 			"listeners": "test",
-		}
-
-		assert.Equal(t, expectDashboardServiceAnnotations, instance.Spec.DashboardServiceTemplate.Annotations)
-		assert.Equal(t, expectListenersServiceAnnotations, instance.Spec.ListenersServiceTemplate.Annotations)
+		}, instance.Spec.ListenersServiceTemplate.Annotations)
 	})
 }
 

@@ -111,8 +111,10 @@ func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.NameOfHeadlessService(),
-			Namespace: instance.Namespace,
+			Name:        instance.NameOfHeadlessService(),
+			Namespace:   instance.Namespace,
+			Labels:      instance.Labels,
+			Annotations: instance.Annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:                     corev1.ServiceTypeClusterIP,
@@ -181,105 +183,6 @@ func generateListenerService(instance *appsv2alpha1.EMQX, listenerPorts []corev1
 }
 
 func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
-	emqxContainer := corev1.Container{
-		Name:            EMQXContainerName,
-		Image:           instance.Spec.Image,
-		ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
-		Command:         instance.Spec.CoreTemplate.Spec.Command,
-		Args:            instance.Spec.CoreTemplate.Spec.Args,
-		Ports:           instance.Spec.CoreTemplate.Spec.Ports,
-		Env: append([]corev1.EnvVar{
-			{
-				Name: "POD_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						APIVersion: "v1",
-						FieldPath:  "metadata.name",
-					},
-				},
-			},
-			{
-				Name: "POD_NAMESPACE",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						APIVersion: "v1",
-						FieldPath:  "metadata.namespace",
-					},
-				},
-			},
-			{
-				Name: "STS_HEADLESS_SERVICE_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						APIVersion: "v1",
-						FieldPath:  "metadata.annotations['apps.emqx.io/headless-service-name']",
-					},
-				},
-			},
-			{
-				Name:  "EMQX_HOST",
-				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
-			},
-			{
-				Name:  "EMQX_NODE__DB_ROLE",
-				Value: "core",
-			},
-		}, instance.Spec.CoreTemplate.Spec.Env...),
-		EnvFrom:         instance.Spec.CoreTemplate.Spec.EnvFrom,
-		Resources:       instance.Spec.CoreTemplate.Spec.Resources,
-		SecurityContext: instance.Spec.CoreTemplate.Spec.ContainerSecurityContext,
-		LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
-		ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
-		StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
-		Lifecycle:       instance.Spec.CoreTemplate.Spec.Lifecycle,
-		VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
-			Name:      instance.NameOfCoreNodeData(),
-			MountPath: "/opt/emqx/data",
-		}),
-		TerminationMessagePath:   "/dev/termination-log",
-		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-	}
-
-	containers := append(
-		[]corev1.Container{emqxContainer},
-		instance.Spec.CoreTemplate.Spec.ExtraContainers...,
-	)
-
-	podAnnotation := instance.Spec.CoreTemplate.Annotations
-	if podAnnotation == nil {
-		podAnnotation = make(map[string]string)
-	}
-	podAnnotation["apps.emqx.io/headless-service-name"] = instance.NameOfHeadlessService()
-	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(containers)
-
-	podTemplate := corev1.PodTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:      instance.Spec.CoreTemplate.Labels,
-			Annotations: podAnnotation,
-		},
-		Spec: corev1.PodSpec{
-			ImagePullSecrets:              instance.Spec.ImagePullSecrets,
-			SecurityContext:               instance.Spec.CoreTemplate.Spec.PodSecurityContext,
-			Affinity:                      instance.Spec.CoreTemplate.Spec.Affinity,
-			Tolerations:                   instance.Spec.CoreTemplate.Spec.ToleRations,
-			NodeName:                      instance.Spec.CoreTemplate.Spec.NodeName,
-			NodeSelector:                  instance.Spec.CoreTemplate.Spec.NodeSelector,
-			InitContainers:                instance.Spec.CoreTemplate.Spec.InitContainers,
-			Volumes:                       instance.Spec.CoreTemplate.Spec.ExtraVolumes,
-			Containers:                    containers,
-			DNSPolicy:                     corev1.DNSClusterFirst,
-			RestartPolicy:                 corev1.RestartPolicyAlways,
-			SchedulerName:                 "default-scheduler",
-			TerminationGracePeriodSeconds: pointer.Int64Ptr(30),
-		},
-	}
-
-	annotations := instance.Annotations
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
-
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -289,7 +192,7 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 			Namespace:   instance.Namespace,
 			Name:        instance.Spec.CoreTemplate.Name,
 			Labels:      instance.Spec.CoreTemplate.Labels,
-			Annotations: annotations,
+			Annotations: instance.Spec.CoreTemplate.Annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			RevisionHistoryLimit: pointer.Int32Ptr(10),
@@ -299,15 +202,106 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 				MatchLabels: instance.Spec.CoreTemplate.Labels,
 			},
 			PodManagementPolicy: appsv1.ParallelPodManagement,
-			Template:            podTemplate,
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateStatefulSetStrategy{
 					Partition: pointer.Int32Ptr(0),
 				},
 			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      instance.Spec.CoreTemplate.Labels,
+					Annotations: instance.Spec.CoreTemplate.Annotations,
+				},
+				Spec: corev1.PodSpec{
+					ImagePullSecrets: instance.Spec.ImagePullSecrets,
+					SecurityContext:  instance.Spec.CoreTemplate.Spec.PodSecurityContext,
+					Affinity:         instance.Spec.CoreTemplate.Spec.Affinity,
+					Tolerations:      instance.Spec.CoreTemplate.Spec.ToleRations,
+					NodeName:         instance.Spec.CoreTemplate.Spec.NodeName,
+					NodeSelector:     instance.Spec.CoreTemplate.Spec.NodeSelector,
+					InitContainers:   instance.Spec.CoreTemplate.Spec.InitContainers,
+					Volumes:          instance.Spec.CoreTemplate.Spec.ExtraVolumes,
+					Containers: append(
+						[]corev1.Container{
+							{
+								Name:            EMQXContainerName,
+								Image:           instance.Spec.Image,
+								ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
+								Command:         instance.Spec.CoreTemplate.Spec.Command,
+								Args:            instance.Spec.CoreTemplate.Spec.Args,
+								Ports:           instance.Spec.CoreTemplate.Spec.Ports,
+								Env: append([]corev1.EnvVar{
+									{
+										Name: "POD_NAME",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.name",
+											},
+										},
+									},
+									{
+										Name: "POD_NAMESPACE",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.namespace",
+											},
+										},
+									},
+									{
+										Name: "STS_HEADLESS_SERVICE_NAME",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.annotations['apps.emqx.io/headless-service-name']",
+											},
+										},
+									},
+									{
+										Name:  "EMQX_HOST",
+										Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
+									},
+									{
+										Name:  "EMQX_NODE__DB_ROLE",
+										Value: "core",
+									},
+								}, instance.Spec.CoreTemplate.Spec.Env...),
+								EnvFrom:         instance.Spec.CoreTemplate.Spec.EnvFrom,
+								Resources:       instance.Spec.CoreTemplate.Spec.Resources,
+								SecurityContext: instance.Spec.CoreTemplate.Spec.ContainerSecurityContext,
+								LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
+								ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
+								StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
+								Lifecycle:       instance.Spec.CoreTemplate.Spec.Lifecycle,
+								VolumeMounts: append(instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts, corev1.VolumeMount{
+									Name:      instance.NameOfCoreNodeData(),
+									MountPath: "/opt/emqx/data",
+								}),
+								TerminationMessagePath:   "/dev/termination-log",
+								TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+							},
+						},
+						instance.Spec.CoreTemplate.Spec.ExtraContainers...,
+					),
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					SchedulerName:                 "default-scheduler",
+					TerminationGracePeriodSeconds: pointer.Int64Ptr(30),
+				},
+			},
 		},
 	}
+
+	podAnnotation := sts.Spec.Template.DeepCopy().Annotations
+	if podAnnotation == nil {
+		podAnnotation = make(map[string]string)
+	}
+	podAnnotation["apps.emqx.io/headless-service-name"] = instance.NameOfHeadlessService()
+	podAnnotation[handler.ManageContainersAnnotation] = generateAnnotationByContainers(sts.Spec.Template.Spec.Containers)
+	sts.Spec.Template.Annotations = podAnnotation
+
 	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates).IsZero() {
 		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 			{
@@ -332,12 +326,6 @@ func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
 }
 
 func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
-	annotations := instance.Annotations
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
-
 	deploy := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -347,7 +335,7 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 			Namespace:   instance.Namespace,
 			Name:        instance.Spec.ReplicantTemplate.Name,
 			Labels:      instance.Spec.ReplicantTemplate.Labels,
-			Annotations: annotations,
+			Annotations: instance.Spec.ReplicantTemplate.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			ProgressDeadlineSeconds: pointer.Int32Ptr(600),
@@ -428,7 +416,7 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 			},
 		},
 	}
-	podAnnotation := instance.Spec.ReplicantTemplate.Annotations
+	podAnnotation := deploy.Spec.Template.DeepCopy().Annotations
 	if podAnnotation == nil {
 		podAnnotation = make(map[string]string)
 	}

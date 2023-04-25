@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	"github.com/emqx/emqx-operator/internal/handler"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -436,7 +435,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 		},
 	}
-	instance.Default()
 
 	expect := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -450,6 +448,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Annotations: map[string]string{
 				"apps.emqx.io/managed-by": "emqx-operator",
 				"apps.emqx.io/instance":   "emqx",
+				"foo":                     "bar",
 			},
 		},
 		Spec: appsv1.StatefulSetSpec{
@@ -470,9 +469,11 @@ func TestGenerateStatefulSet(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: coreLabels,
 					Annotations: map[string]string{
-						"foo":                                "bar",
+						"apps.emqx.io/managed-by":            "emqx-operator",
+						"apps.emqx.io/instance":              "emqx",
 						"apps.emqx.io/headless-service-name": "emqx-headless",
 						"apps.emqx.io/manage-containers":     "emqx,extra",
+						"foo":                                "bar",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -642,6 +643,8 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 		},
 	}
+
+	instance.Default()
 	assert.Equal(t, expect, generateStatefulSet(instance))
 
 	instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates = corev1.PersistentVolumeClaimSpec{
@@ -674,10 +677,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 						corev1.ResourceStorage: resource.MustParse("20Mi"),
 					},
 				},
+				VolumeMode: (*corev1.PersistentVolumeMode)(pointer.String(string(corev1.PersistentVolumeFilesystem))),
 			},
 		},
 	}
 
+	instance.Default()
 	assert.Equal(t, expect, generateStatefulSet(instance))
 }
 
@@ -840,6 +845,7 @@ func TestGenerateDeployment(t *testing.T) {
 			Annotations: map[string]string{
 				"apps.emqx.io/managed-by": "emqx-operator",
 				"apps.emqx.io/instance":   "emqx",
+				"foo":                     "bar",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -860,8 +866,10 @@ func TestGenerateDeployment(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: replicantLabels,
 					Annotations: map[string]string{
-						handler.ManageContainersAnnotation: "emqx,extra",
-						"foo":                              "bar",
+						"apps.emqx.io/managed-by":        "emqx-operator",
+						"apps.emqx.io/instance":          "emqx",
+						"apps.emqx.io/manage-containers": "emqx,extra",
+						"foo":                            "bar",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -1015,6 +1023,7 @@ func TestGenerateDeployment(t *testing.T) {
 		},
 	}
 
+	instance.Default()
 	assert.Equal(t, expect, generateDeployment(instance))
 }
 
