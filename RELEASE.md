@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.1.1 is released.
+EMQX Operator 2.1.2 is released.
 
 ## Supported version
 
@@ -14,32 +14,26 @@ EMQX Operator 2.1.1 is released.
   - `EMQX` at [4.4.14](https://www.emqx.com/en/changelogs/broker/4.4.8) and later
   - `EMQX Enterprise` at [4.4.14](https://www.emqx.com/en/changelogs/enterprise/4.4.8) and later
 
-## Features 🌈
-
-+ Support EMQX Enterprise 5.0
-
-  Users can deploy EMQX Enterprise 5.0 by creating an EMQX custom resource with the `spec.image` field set to `emqx/emqx-enterprise:5.0.0`.
-
-  And users can update to EMQX Enterprise 5.0 from EMQX 5.0, by just changing the `spec.image` field to `emqx/emqx-enterprise:5.0.0` in the EMQX custom resource when the EMQX cluster is running.
-
-  > Note: Just can updating to EMQX Enterprise 5.0 from EMQX 5.0, not support updating EMQX Enterprise 5.0 from EMQX 5.0.
-
-+ Add new field bootstrap API keys in `apps.emqx.io/v1beta4` and `apps.emqx.io/v2alpha1`
-
-  Users can customize the keys and secrets required to request EMQX's API before EMQX is started, which helps with some of the operations tasks, until then, users must wait for EMQX to be ready and add them manually via the EMQX Dashboard.
-
 ## Fixes 🛠
+
+- Both `apps.emqx.io/v1beta4` and `apps.emqx.io/v2alpha1`
+
+  - Fixed an issue where EMQX Operator would frequently try to update statefulSet and deployment resources, even if there were no changes to the resources
 
 - `apps.emqx.io/v2alpha1`
 
-  - Fix an issue with EMQX pods not inheriting EMQX Custom Resource annotations
+  - Fixed an issue where the EMQX replicant node would update before the EMQX Core node in some cases
 
-- `apps.emqx.io/v1beta4`
+## Enhancements 🚀
 
-  - Fixed an issue where EMQX blue-green updating would not start in some cases
-  - Fixed an issue where `.spec.persistence` did not work in some cases
+- More and better documents, please check [here](https://docs.emqx.com/en/emqx-operator)
 
-## How to install/upgrade EMQX Operator 2.1.1 💡
+- Add `additionalPrinterColumns` for `kind: EMQX` and `kind: EmqxEnterprise` and `kind: EmqxBroker`, now can get more friendly information when using `kubectl get emqx` or `kubectl get emqxenterprise` or `kubectl get emqxbroker`
+
+- Add event filter for EMQX operator controller, reduced runtime memory consumption
+
+
+## How to install/upgrade EMQX Operator 2.1.2 💡
 
 > Need make sure the [cert-manager](https://cert-manager.io) is ready
 
