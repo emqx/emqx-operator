@@ -29,7 +29,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
   metadata:
     name: emqx-ee
   spec:
-      ## EMQX custom resources do not support updating this field at runtime
+    ## EMQX custom resources do not support updating this field at runtime
     persistent:
       metadata:
         name: emqx-ee
@@ -103,27 +103,27 @@ The following is the relevant configuration of EMQX custom resources. You can se
   spec:
     image: emqx:5.0
     coreTemplate:
-    spec:
-      ## If persistence is enabled, you need to configure podSecurityContext.
-      ## For details, please refer to the discussion: https://github.com/emqx/emqx-operator/discussions/716
-      podSecurityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        fsGroupChangePolicy: Always
-        supplementalGroups:
-          - 1000
-      ## EMQX custom resources do not support updating this field at runtime
-      volumeClaimTemplates:
-        ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
-        ## Please manage the Amazon EBS CSI driver as an Amazon EKS add-on.
-        ## For more documentation please refer to: https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-        storageClassName: gp2
-        resources:
-          requests:
-            storage: 10Gi
-        accessModes:
-          - ReadWriteOnce
+      spec:
+        ## If persistence is enabled, you need to configure podSecurityContext.
+        ## For details, please refer to the discussion: https://github.com/emqx/emqx-operator/discussions/716
+        podSecurityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+          fsGroupChangePolicy: Always
+          supplementalGroups:
+            - 1000
+        ## EMQX custom resources do not support updating this field at runtime
+        volumeClaimTemplates:
+          ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
+          ## Please manage the Amazon EBS CSI driver as an Amazon EKS add-on.
+          ## For more documentation please refer to: https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
+          storageClassName: gp2
+          resources:
+            requests:
+              storage: 10Gi
+          accessModes:
+            - ReadWriteOnce
     dashboardServiceTemplate:
       metadata:
         ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
@@ -224,7 +224,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
 
 ## Terminate TLS Encryption With LoadBalancer
 
-In Amazon EKS, you can use the NLB to do TLS termination, which you can do in the following steps:
+On Amazon EKS, you can use the NLB to do TLS termination, which you can do in the following steps:
 
 1. Import relevant certificates in [AWS Console](https://us-east-2.console.aws.amazon.com/acm/home), then enter the details page by clicking the certificate ID, Then record the ARN information
 
