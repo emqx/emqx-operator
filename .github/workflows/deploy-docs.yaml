@@ -10,12 +10,6 @@ on:
       tag:
         required: true
         type: string
-  workflow_run:
-    ##  Release by github-actions will not trigger "release" event, so need this
-    workflows:
-      - "Release emqx operator"
-    types:
-      - completed
   release:
     types:
       - published

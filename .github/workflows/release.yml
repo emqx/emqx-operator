@@ -64,16 +64,13 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       with:
         prerelease: ${{ steps.prerelease.outputs.prerelease }}
-        token: ${{ github.token }}
+        ## When you use the repository's GITHUB_TOKEN to perform tasks,
+        ## events triggered by the GITHUB_TOKEN, with the exception of workflow_dispatch and repository_dispatch,
+        ## will not create a new workflow run.
+        ## This prevents you from accidentally creating recursive workflow runs.
+        ## More info: https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+        # token: ${{ github.token }}
+        token: ${{ secrets.CI_GIT_TOKEN }}
         name: EMQX Operator ${{ github.ref_name }} Released
         body_path: RELEASE.md
         generate_release_notes: true
-    - name: Update helm repo
-      uses: emqx/push-helm-action@v1.1
-      with:
-        charts_dir: "${{ github.workspace }}/deploy/charts/emqx-operator"
-        version: ${{ github.ref_name }}
-        aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws_region: "us-west-2"
-        aws_bucket_name: "repos-emqx-io"
