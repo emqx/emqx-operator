@@ -1,0 +1,36 @@
+name: Push Helm Chart
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        type: string
+  release:
+    types:
+      - published
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Get tag
+      id: get_tag
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          tag="${{ inputs.tag }}"
+        fi
+        if [ "${{ github.event_name }}" = "release" ]; then
+          tag="${{ github.event.release.tag_name }}"
+        fi
+        echo "tag=$tag" >> GITHUB_OUTPUT
+    - name: Update helm repo
+      uses: emqx/push-helm-action@v1.1
+      with:
+        charts_dir: "${{ github.workspace }}/deploy/charts/emqx-operator"
+        version: ${{ steps.get_tag.outputs.tag }}
+        aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws_region: "us-west-2"
+        aws_bucket_name: "repos-emqx-io"
