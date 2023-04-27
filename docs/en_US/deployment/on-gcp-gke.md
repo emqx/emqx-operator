@@ -1,84 +1,33 @@
 # Deploy EMQX on Google Kubernetes Engine
 
-## Overview
-
-This guide will walk you through the process of deploying EMQX, an open-source MQTT broker, on Google Kubernetes Engine (GKE). By following these steps, you'll learn how to create and configure an EMQX deployment on GKE.
-
-## Prerequisites
-
-+ A Google Kubernetes Engine (GKE) cluster, for more information, please check [Creating an autopilot cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/creating-an-autopilot-cluster)
-+ MQTTX CLI, A user-friendly MQTT 5.0 command line tool, download it [here](https://mqttx.app/cli)
+The EMQX Operator allows for the deployment of EMQX on Google Kubernetes Engine (GKE), which simplifies the process of deploying a managed Kubernetes cluster in GCP. With GKE, you can offload the operational overhead to GCP, enabling you to focus on your application deployment and management. By deploying EMQX on GKE, you can take advantage of the scalability and flexibility of Kubernetes, while benefiting from the simplicity and convenience of a managed service. With EMQX Operator and GKE, you can easily deploy and manage your MQTT broker on the cloud, allowing you to focus on your business goals and objectives.
 
 
-## Deploy EMQX on GKE
+## Before You Begin
+Before you begin, you must have the following:
 
-### Deploy EMQX Operator
-
-To install EMQX Operator, you can follow this guide [Quick Start](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/getting-started/getting-started.md) for a step-by-step installation, but be mindful of the `cert-manager` installation process.
-
-::: warning
-For the detailed steps on installing `cert-manager`, see the official documentation:
-
-- [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
-- [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
-
-Remember to install CRDs when running `helm` with the `--set installCRDs=true` flag.
-
-More information can be found at [cert-manager](https://cert-manager.io).
-:::
-
-### Enable EMQX Cluster Persistence
-
-Google Kubernetes Engine (GKE) now supports a new storage class designed specifically for EMQX message broker deployments. This GKE storage class enhances high-availability and performance, ensuring seamless MQTT message handling and efficient resource utilization in IoT and edge computing environments.
-```Shell
-kubectl get sc
-```
-Outputs:
-```Shell
-NAME                        PROVISIONER                    RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-standard                    kubernetes.io/gce-pd           Delete          Immediate              true                   47h
-...
-```
-
-This guide uses the `standard` storage class.
-
-For more storage classes, please check [gcp docs](https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses)
+- To create a GKE cluster on Google Cloud Platform, you will need to enable the GKE service in your GCP subscription. You can find more information on how to do this in the Google Kubernetes Engine documentation.
 
 
-### Deploy EMQX Cluster
+- To connect to a GKE cluster using kubectl commands, you can install the kubectl tool on your local machine and obtain the cluster's KubeConfig to connect to the cluster. Alternatively, you can use Cloud Shell through the GCP Console to manage the cluster with kubectl.
 
-Below are the relevant configurations for EMQX Custom Resource. Choose the corresponding APIVersion based on the EMQX version you want to deploy. For specific compatibility relationships, please check [EMQX Operator Compatibility](../README.md):
+  - To connect to a GKE cluster using kubectl, you will need to install and configure the kubectl tool on your local machine. Refer to the [Connect to a GKE cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/cluster-access-for-kubectl) documentation for detailed instructions on how to do this.
+
+  - To connect to a GKE cluster using Cloud Shell, you can use the Cloud Shell directly from the GCP Console to connect to the GKE cluster and manage the cluster using kubectl. Refer to the [Manage a GKE cluster with Cloud Shell](https://cloud.google.com/code/docs/shell/create-configure-gke-cluster) documentation for detailed instructions on how to connect to Cloud Shell and use kubectl.
+
+- To install EMQX Operator, please refer to [Install EMQX Operator](../getting-started/getting-started.md)
+
+
+## Quickly deploying an EMQX cluster
+
+Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: "emqx:5.0"
-  coreTemplate:
-    spec:
-      volumeClaimTemplates:
-        storageClassName: standard
-        resources:
-          requests:
-            storage: 20Mi
-        accessModes:
-        - ReadWriteOnce
-  dashboardServiceTemplate:
-    spec:
-      type: LoadBalancer
-  listenersServiceTemplate:
-    spec:
-      type: LoadBalancer
-```
+Save the following content as a YAML file and deploy it using the `kubectl apply` command.
 
 
-:::
-::: tab v1beta4
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
@@ -90,10 +39,11 @@ spec:
     metadata:
       name: emqx-ee
     spec:
+      ## more information about storage classes: https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses
       storageClassName: standard
       resources:
         requests:
-          storage: 20Mi
+          storage: 10Gi
       accessModes:
         - ReadWriteOnce
   template:
@@ -104,63 +54,134 @@ spec:
           version: 4.4.15
   serviceTemplate:
     spec:
+      ## more information about load balancer: https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
       type: LoadBalancer
 ```
 
+Wait for the EMQX cluster to be ready. You can check the status of the EMQX cluster using the `kubectl get` command. Please ensure that the STATUS is `Running` which may take some time.
+
+```shell
+$ kubectl get emqxenterprises
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+```
+
+Get the External IP of the EMQX cluster and access the EMQX console.
+
+```shell
+$ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+20.245.123.100
+```
+
+Access the EMQX console by opening a web browser and visiting http://20.245.123.100:18083. Login using the default username and password `admin/public`.
+
+:::
+::: tab apps.emqx.io/v2alpha1
+
+Save the following content as a YAML file and deploy it using the `kubectl apply` command.
+
+
+```yaml
+apiVersion: apps.emqx.io/v2alpha1
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: "emqx:5.0"
+  coreTemplate:
+    spec:
+      volumeClaimTemplates:
+      ## more information about storage classes: https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi
+        accessModes:
+        - ReadWriteOnce
+  dashboardServiceTemplate:
+    spec:
+      ## more information about load balancer: https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
+      type: LoadBalancer
+  listenersServiceTemplate:
+    spec:
+      ## more information about load balancer: https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
+      type: LoadBalancer
+```
+
+Wait for the EMQX cluster to be ready. You can check the status of the EMQX cluster using the `kubectl get` command. Please ensure that the STATUS is `Running` which may take some time.
+
+```shell
+$ kubectl get emqx
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   118s
+```
+
+Get the External IP of the EMQX cluster and access the EMQX console.
+
+The EMQX Operator will create two EMQX Service resources, one is `emqx-dashboard`, and the other is `emqx-listeners`, corresponding to the EMQX console and EMQX listening port, respectively.
+
+```shell
+$ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+20.245.230.91
+```
+
+Access the EMQX console by opening a web browser and visiting http://20.245.230.91:18083. Login using the default username and password `admin/public`.
+
 :::
 ::::
 
+## Connecting to EMQX cluster to publish/subscribe messages using MQTT X CLI
 
-### Verify the deployment
+[MQTT X CLI](https://mqttx.app/cli) is an open-source MQTT 5.0 command-line client tool designed to help developers develop and debug MQTT services and applications faster without the need for a GUI.
+
+- Retrieve External IP of the EMQX cluster
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-- Retrieve the listener IP address of the load balancer:
-```Shell
-lb_listener_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
-```
-
-- Retrieve the dashboard IP address of the load balancer:
-```Shell
-lb_dashboard_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
-```
-
-- Connect, publish, and subscribe using MQTTX CLI
-```Shell
-mqttx conn -h ${lb_listener_ip} -p 1883
-mqttx sub -t 'hello' -h ${lb_listener_ip} -p 1883
-mqttx pub -t 'hello' -h ${lb_listener_ip} -p 1883 -m 'from MQTTX CLI'
-```
-
-- Access the EMQX dashboard
-```Shell
-http://${lb_dashboard_ip}:18083
+```shell
+external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
 ```
 
 :::
-::: tab v1beta4
+::: tab apps.emqx.io/v2alpha1
 
-- Retrieve the load balancer's IP address:
-```Shell
-lb_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-```
-
-
-- Connect, publish, and subscribe using MQTTX CLI
-```Shell
-mqttx conn -h ${lb_ip} -p 1883
-mqttx sub -t 'hello' -h ${lb_ip} -p 1883
-mqttx pub -t 'hello' -h ${lb_ip} -p 1883 -m 'from MQTTX CLI'
-```
-
-- Access the EMQX dashboard
-```Shell
-http://${lb_ip}:18083
+```shell
+external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
 ```
 
 :::
 ::::
+
+- Subscribe to messages
+
+```shell
+$ mqttx sub -t 'hello' -h ${external_ip} -p 1883
+
+[10:00:25] › …  Connecting...
+[10:00:25] › ✔  Connected
+[10:00:25] › …  Subscribing to hello...
+[10:00:25] › ✔  Subscribed to hello
+```
+
+- Create a new terminal window and send a message
+
+```shell
+$ mqttx pub -t 'hello' -h ${external_ip} -p 1883 -m 'hello world'
+
+[10:00:58] › …  Connecting...
+[10:00:58] › ✔  Connected
+[10:00:58] › …  Message Publishing...
+[10:00:58] › ✔  Message published
+```
+
+- View messages received in the subscription terminal window
+
+```shell
+[10:00:58] › payload: hello world
+```
 
 ## Use LoadBalancer for TLS offloading
 
