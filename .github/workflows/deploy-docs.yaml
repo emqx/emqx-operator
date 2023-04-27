@@ -16,7 +16,7 @@ jobs:
       tags: ${{ steps.tags.outputs.tags}}
 
     runs-on: ubuntu-20.04
-    if: github.repository_owner == 'emqx'
+    if: ${{ !github.event.release.prerelease }}
 
     steps:
     - uses: actions/checkout@v3
