@@ -1,9 +1,5 @@
 name: Deploy Docs
 
-concurrency:
-  group: ${{ github.ref }}
-  cancel-in-progress: true
-
 on:
   workflow_dispatch:
     inputs:
