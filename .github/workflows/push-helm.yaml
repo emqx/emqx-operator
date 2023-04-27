@@ -24,7 +24,7 @@ jobs:
         if [ "${{ github.event_name }}" = "release" ]; then
           tag="${{ github.event.release.tag_name }}"
         fi
-        echo "tag=$tag" >> GITHUB_OUTPUT
+        echo "tag=$tag" >> $GITHUB_OUTPUT
     - name: Update helm repo
       uses: emqx/push-helm-action@v1.1
       with:
