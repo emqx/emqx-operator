@@ -17,6 +17,19 @@ Before you begin, you must have the following:
 
 - To install EMQX Operator, please refer to [Install EMQX Operator](../getting-started/getting-started.md)
 
+ Be mindful of the cert-manager installation process
+
+::: warning
+For the detailed steps on installing `cert-manager`, see the official documentation:
+
+- [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
+- [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
+
+Remember to install CRDs when running `helm` with the `--set installCRDs=true` flag.
+
+More information can be found at [cert-manager](https://cert-manager.io).
+:::
+
 
 ## Quickly deploying an EMQX cluster
 
@@ -71,10 +84,10 @@ Get the External IP of the EMQX cluster and access the EMQX console.
 ```shell
 $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-20.245.123.100
+34.68.80.122
 ```
 
-Access the EMQX console by opening a web browser and visiting http://20.245.123.100:18083. Login using the default username and password `admin/public`.
+Access the EMQX console by opening a web browser and visiting http://34.68.80.122:18083. Login using the default username and password `admin/public`.
 
 :::
 ::: tab apps.emqx.io/v2alpha1
@@ -124,10 +137,10 @@ The EMQX Operator will create two EMQX Service resources, one is `emqx-dashboard
 ```shell
 $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-20.245.230.91
+34.122.174.166
 ```
 
-Access the EMQX console by opening a web browser and visiting http://20.245.230.91:18083. Login using the default username and password `admin/public`.
+Access the EMQX console by opening a web browser and visiting http://34.122.174.166:18083. Login using the default username and password `admin/public`.
 
 :::
 ::::
