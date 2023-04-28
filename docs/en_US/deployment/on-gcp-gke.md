@@ -17,18 +17,16 @@ Before you begin, you must have the following:
 
 - To install EMQX Operator, please refer to [Install EMQX Operator](../getting-started/getting-started.md)
 
- Be mindful of the cert-manager installation process
+  ::: warning
+  For installing `cert-manager` on Google Kubernetes Engine, see the official documentation:
 
-::: warning
-For the detailed steps on installing `cert-manager`, see the official documentation:
+  - [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
+  - [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
 
-- [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
-- [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
+  Remember to install CRDs when running `helm` with the `--set installCRDs=true` flag.
 
-Remember to install CRDs when running `helm` with the `--set installCRDs=true` flag.
-
-More information can be found at [cert-manager](https://cert-manager.io).
-:::
+  More information can be found at [cert-manager](https://cert-manager.io).
+  :::
 
 
 ## Quickly deploying an EMQX cluster
@@ -199,4 +197,3 @@ $ mqttx pub -t 'hello' -h ${external_ip} -p 1883 -m 'hello world'
 ## Use LoadBalancer for TLS offloading
 
 Since Google LoadBalancer doesn't support TCP certificates, please check [discussion](https://github.com/emqx/emqx-operator/discussions/312) to address TCP certificate offloading issues.
-
