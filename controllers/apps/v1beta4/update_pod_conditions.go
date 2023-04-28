@@ -6,7 +6,6 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	innerPortFW "github.com/emqx/emqx-operator/internal/portforward"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,7 +14,7 @@ import (
 
 type updatePodConditions struct {
 	*EmqxReconciler
-	PortForwardAPI
+	EmqxHttpAPI
 }
 
 func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
@@ -79,20 +78,12 @@ func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4
 }
 
 func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnterprise, pod *corev1.Pod) (corev1.ConditionStatus, error) {
-	// Need check every pods, so must create new port forward options
-	o, err := innerPortFW.NewPortForwardOptions(u.Clientset, u.Config, pod, "8081")
-	if err != nil {
-		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to create port forward options for pod/%s", pod.Name)
+	emqxHttpAPI := &emqxHttpAPI{
+		Username: u.EmqxHttpAPI.GetUsername(),
+		Password: u.EmqxHttpAPI.GetPassword(),
+		Pod:      pod,
 	}
-	defer o.Close()
-
-	resp, _, err := (&portForwardAPI{
-		// Doesn't need get username and password from secret
-		// because they are same as the emqx cluster
-		Username: u.PortForwardAPI.GetUsername(),
-		Password: u.PortForwardAPI.GetPassword(),
-		Options:  o,
-	}).RequestAPI("GET", "api/v4/load_rebalance/availability_check", nil)
+	resp, _, err := emqxHttpAPI.Request("GET", "api/v4/load_rebalance/availability_check", nil)
 	if err != nil {
 		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to check availability for pod/%s", pod.Name)
 	}

@@ -1,54 +1,55 @@
 package v1beta4
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
-	innerPortFW "github.com/emqx/emqx-operator/internal/portforward"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type PortForwardAPI interface {
+type EmqxHttpAPI interface {
 	GetUsername() string
 	GetPassword() string
-	GetOptions() *innerPortFW.PortForwardOptions
-	RequestAPI(method, path string, body []byte) (resp *http.Response, respBody []byte, err error)
+	Request(method, path string, body []byte) (resp *http.Response, respBody []byte, err error)
+	GetPod() *corev1.Pod
 }
 
-// portForwardAPI provides a wrapper around the port-forward API.
-type portForwardAPI struct {
+type emqxHttpAPI struct {
 	Username string
 	Password string
-	Options  *innerPortFW.PortForwardOptions
+	Pod      *corev1.Pod
 }
 
-func newPortForwardAPI(ctx context.Context, client client.Client, clientset *kubernetes.Clientset, config *rest.Config, instance appsv1beta4.Emqx) (*portForwardAPI, error) {
-	options, err := newPortForwardOptions(client, clientset, config, instance)
-	if options == nil || err != nil {
-		return nil, err
-	}
-
+func newEmqxHttpAPI(client client.Client, instance appsv1beta4.Emqx, pod *corev1.Pod) (*emqxHttpAPI, error) {
 	username, password, err := getBootstrapUser(context.Background(), client, instance)
 	if err != nil {
 		return nil, err
 	}
-	return &portForwardAPI{
+	if pod == nil {
+		pod, err = getReadyPod(client, instance)
+		if pod == nil || err != nil {
+			return nil, err
+		}
+	}
+	return &emqxHttpAPI{
 		Username: username,
 		Password: password,
-		Options:  options,
+		Pod:      pod,
 	}, nil
 }
 
-func newPortForwardOptions(client client.Client, clientset *kubernetes.Clientset, config *rest.Config, instance appsv1beta4.Emqx) (*innerPortFW.PortForwardOptions, error) {
+func getReadyPod(client client.Client, instance appsv1beta4.Emqx) (*corev1.Pod, error) {
 	list, err := getInClusterStatefulSets(client, instance)
 	if err != nil {
 		if !emperror.Is(err, innerErr.ErrStsNotReady) {
@@ -71,11 +72,7 @@ func newPortForwardOptions(client client.Client, clientset *kubernetes.Clientset
 	for _, pod := range podMap[sts.UID] {
 		for _, c := range pod.Status.Conditions {
 			if c.Type == corev1.ContainersReady && c.Status == corev1.ConditionTrue {
-				o, err := innerPortFW.NewPortForwardOptions(clientset, config, pod, "8081")
-				if err != nil {
-					return nil, emperror.Wrap(err, "failed to create port forward")
-				}
-				return o, err
+				return pod, nil
 			}
 		}
 	}
@@ -108,21 +105,44 @@ func getBootstrapUser(ctx context.Context, client client.Client, instance appsv1
 	return
 }
 
-func (p *portForwardAPI) GetUsername() string {
-	return p.Username
+func (e *emqxHttpAPI) GetUsername() string {
+	return e.Username
 }
 
-func (p *portForwardAPI) GetPassword() string {
-	return p.Password
+func (e *emqxHttpAPI) GetPassword() string {
+	return e.Password
 }
 
-func (p *portForwardAPI) GetOptions() *innerPortFW.PortForwardOptions {
-	return p.Options
+func (e *emqxHttpAPI) GetPod() *corev1.Pod {
+	return e.Pod
 }
 
-func (p *portForwardAPI) RequestAPI(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
-	if p == nil {
-		return nil, nil, emperror.Errorf("failed to %s %s, portForward is not ready", method, path)
+func (e *emqxHttpAPI) Request(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+	if e == nil || e.GetPod() == nil {
+		return nil, nil, emperror.Errorf("failed to request %s %s, emqxHttpAPI is not ready", method, path)
 	}
-	return p.Options.RequestAPI(p.Username, p.Password, method, path, body)
+	url := url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s:%d", e.GetPod().Status.PodIP, 8081),
+		Path:   path,
+	}
+
+	httpClient := http.Client{}
+	req, err := http.NewRequest(method, url.String(), bytes.NewReader(body))
+	if err != nil {
+		return nil, nil, emperror.Wrap(err, "failed to create request")
+	}
+	req.SetBasicAuth(e.GetUsername(), e.GetPassword())
+	req.Close = true
+	resp, err = httpClient.Do(req)
+	if err != nil {
+		return nil, nil, emperror.NewWithDetails("failed to request API", "method", method, "path", url.Path)
+	}
+
+	defer resp.Body.Close()
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return resp, nil, emperror.Wrap(err, "failed to read response body")
+	}
+	return resp, body, nil
 }

@@ -13,7 +13,7 @@ import (
 
 type updateEmqxStatus struct {
 	*EmqxReconciler
-	PortForwardAPI
+	EmqxHttpAPI
 }
 
 func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
@@ -118,7 +118,7 @@ func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
 
 // Request API
 func (s updateEmqxStatus) getNodeStatusesByAPI() ([]appsv1beta4.EmqxNode, error) {
-	_, body, err := s.PortForwardAPI.RequestAPI("GET", "api/v4/nodes", nil)
+	_, body, err := s.EmqxHttpAPI.Request("GET", "api/v4/nodes", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (s updateEmqxStatus) getNodeStatusesByAPI() ([]appsv1beta4.EmqxNode, error)
 }
 
 func (s updateEmqxStatus) getEvacuationStatusByAPI() ([]appsv1beta4.EmqxEvacuationStatus, error) {
-	_, body, err := s.PortForwardAPI.RequestAPI("GET", "api/v4/load_rebalance/global_status", nil)
+	_, body, err := s.EmqxHttpAPI.Request("GET", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
 		return nil, err
 	}

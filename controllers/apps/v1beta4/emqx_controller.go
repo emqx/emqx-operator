@@ -76,30 +76,27 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	p, err := newPortForwardAPI(ctx, r.Client, r.Clientset, r.Config, instance)
+	e, err := newEmqxHttpAPI(r.Client, instance, nil)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
 			_ = addEmqxBootstrapUser{EmqxReconciler: r}.reconcile(ctx, instance)
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 		if !innerErr.IsCommonError(err) {
-			return ctrl.Result{}, emperror.Wrap(err, "failed to create port forwarding options")
+			return ctrl.Result{}, emperror.Wrap(err, "failed to create request Pod API")
 		}
-	}
-	if p != nil {
-		defer p.Options.Close()
 	}
 
 	var subResult subResult
 	var subReconcilers = []emqxSubReconciler{
-		updateEmqxStatus{EmqxReconciler: r, PortForwardAPI: p},
+		updateEmqxStatus{EmqxReconciler: r, EmqxHttpAPI: e},
 		addEmqxBootstrapUser{EmqxReconciler: r},
 		addEmqxPlugins{EmqxReconciler: r},
-		addEmqxResources{EmqxReconciler: r, PortForwardAPI: p},
-		addEmqxStatefulSet{EmqxReconciler: r, PortForwardAPI: p},
-		addListener{EmqxReconciler: r, PortForwardAPI: p},
-		updateEmqxStatus{EmqxReconciler: r, PortForwardAPI: p},
-		updatePodConditions{EmqxReconciler: r, PortForwardAPI: p},
+		addEmqxResources{EmqxReconciler: r, EmqxHttpAPI: e},
+		addEmqxStatefulSet{EmqxReconciler: r, EmqxHttpAPI: e},
+		addListener{EmqxReconciler: r, EmqxHttpAPI: e},
+		updateEmqxStatus{EmqxReconciler: r, EmqxHttpAPI: e},
+		updatePodConditions{EmqxReconciler: r, EmqxHttpAPI: e},
 	}
 	for i := range subReconcilers {
 		if reflect.ValueOf(subResult).FieldByName("args").IsValid() {
