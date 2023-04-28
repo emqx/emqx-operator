@@ -76,7 +76,7 @@ func TestNextStatusForCreate(t *testing.T) {
 	existedDeploy := &appsv1.Deployment{}
 	emqx := &appsv2alpha1.EMQX{
 		Spec: appsv2alpha1.EMQXSpec{
-			Image: "emqx/emqx:latest",
+			Image: "emqx:latest",
 		},
 		Status: appsv2alpha1.EMQXStatus{
 			Conditions: []appsv2alpha1.Condition{
@@ -103,10 +103,10 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0",
+				Image: "emqx:5.0",
 			},
 			Status: appsv2alpha1.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
+				CurrentImage: "emqx:latest",
 				Conditions: []appsv2alpha1.Condition{
 					{
 						Type:   appsv2alpha1.ClusterCoreUpdating,
@@ -133,7 +133,7 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
-							{Image: "emqx/emqx:latest"},
+							{Image: "emqx:latest"},
 						},
 					},
 				},
@@ -147,10 +147,10 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:latest",
+				Image: "emqx:latest",
 			},
 			Status: appsv2alpha1.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
+				CurrentImage: "emqx:latest",
 				Conditions: []appsv2alpha1.Condition{
 					{
 						Type:   appsv2alpha1.ClusterCoreUpdating,
@@ -198,10 +198,10 @@ func TestNextStatusForCoreReady(t *testing.T) {
 
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0",
+				Image: "emqx:5.0",
 			},
 			Status: appsv2alpha1.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
+				CurrentImage: "emqx:latest",
 				Conditions: []appsv2alpha1.Condition{
 					{
 						Type:   appsv2alpha1.ClusterCoreReady,
@@ -228,7 +228,7 @@ func TestNextStatusForCoreReady(t *testing.T) {
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
-							{Image: "emqx/emqx:latest"},
+							{Image: "emqx:latest"},
 						},
 					},
 				},
@@ -246,7 +246,7 @@ func TestNextStatusForCoreReady(t *testing.T) {
 				Template: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
-							{Image: "emqx/emqx:latest"},
+							{Image: "emqx:latest"},
 						},
 					},
 				},
@@ -258,10 +258,10 @@ func TestNextStatusForCoreReady(t *testing.T) {
 
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:latest",
+				Image: "emqx:latest",
 			},
 			Status: appsv2alpha1.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
+				CurrentImage: "emqx:latest",
 				Conditions: []appsv2alpha1.Condition{
 					{
 						Type:   appsv2alpha1.ClusterCoreReady,
@@ -313,10 +313,10 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:5.0",
+				Image: "emqx:5.0",
 			},
 			Status: appsv2alpha1.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
+				CurrentImage: "emqx:latest",
 				Conditions: []appsv2alpha1.Condition{
 					{
 						Type:   appsv2alpha1.ClusterRunning,
@@ -339,10 +339,10 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 		existedDeploy := &appsv1.Deployment{}
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:latest",
+				Image: "emqx:latest",
 			},
 			Status: appsv2alpha1.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
+				CurrentImage: "emqx:latest",
 				Conditions: []appsv2alpha1.Condition{
 					{
 						Type:   appsv2alpha1.ClusterRunning,
@@ -370,10 +370,10 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 		existedDeploy := &appsv1.Deployment{}
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:latest",
+				Image: "emqx:latest",
 			},
 			Status: appsv2alpha1.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
+				CurrentImage: "emqx:latest",
 				Conditions: []appsv2alpha1.Condition{
 					{
 						Type:   appsv2alpha1.ClusterRunning,
@@ -407,10 +407,10 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 		existedDeploy := &appsv1.Deployment{}
 		emqx := &appsv2alpha1.EMQX{
 			Spec: appsv2alpha1.EMQXSpec{
-				Image: "emqx/emqx:latest",
+				Image: "emqx:latest",
 			},
 			Status: appsv2alpha1.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
+				CurrentImage: "emqx:latest",
 				Conditions: []appsv2alpha1.Condition{
 					{
 						Type:   appsv2alpha1.ClusterRunning,

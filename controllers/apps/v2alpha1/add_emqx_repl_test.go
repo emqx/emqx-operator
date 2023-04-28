@@ -153,7 +153,7 @@ func TestGenerateDeployment(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha1.EMQXSpec{
-			Image: "emqx/emqx:5.0",
+			Image: "emqx:5.0",
 			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
 				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
 					Replicas: pointer.Int32(3),
@@ -236,7 +236,7 @@ func TestGenerateDeployment(t *testing.T) {
 		got := generateDeployment(emqx)
 		assert.Len(t, got.Spec.Template.Spec.Containers, 2)
 
-		emqx.Spec.Image = "emqx/emqx:5.0"
+		emqx.Spec.Image = "emqx:5.0"
 		emqx.Spec.ImagePullPolicy = corev1.PullIfNotPresent
 		emqx.Spec.ReplicantTemplate.Spec.Command = []string{"fake"}
 		emqx.Spec.ReplicantTemplate.Spec.Args = []string{"fake"}

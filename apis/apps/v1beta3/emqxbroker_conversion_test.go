@@ -90,7 +90,7 @@ var v1bete3EmqxBroker = &EmqxBroker{
 			},
 		},
 		EmqxTemplate: EmqxBrokerTemplate{
-			Image: "emqx/emqx:4.4.8",
+			Image: "emqx:4.4",
 			EmqxConfig: map[string]string{
 				"foo": "bar",
 			},
@@ -415,7 +415,7 @@ func TestBrokerConversionFrom(t *testing.T) {
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Persistent.Spec, emqx.Spec.Persistent)
 	assert.ObjectsAreEqualValues(v1beta4EmqxBroker.Spec.ServiceTemplate, emqx.Spec.EmqxTemplate.ServiceTemplate)
 
-	assert.Equal(t, "emqx/emqx:4.4.8", emqx.Spec.EmqxTemplate.Image)
+	assert.Equal(t, "emqx:4.4", emqx.Spec.EmqxTemplate.Image)
 	assert.Equal(t, v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.Image.PullPolicy, emqx.Spec.EmqxTemplate.ImagePullPolicy)
 
 	assert.ObjectsAreEqualValues(v1beta4EmqxBroker.Spec.Template.Spec.EmqxContainer.EmqxConfig, emqx.Spec.EmqxTemplate.EmqxConfig)

@@ -72,7 +72,7 @@ spec:
     # username: "admin"
     # password: "public"
     registry: docker.io
-    image: emqx:4.4.15
+    image: emqx:4.4
     imagePullPolicy: IfNotPresent
     securityContext:
       runAsUser: 1000
