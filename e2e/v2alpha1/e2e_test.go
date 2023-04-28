@@ -105,10 +105,7 @@ var _ = Describe("Base Test", func() {
 
 	Context("Blue Green Update", Label("blue"), func() {
 		instance := &appsv2alpha1.EMQX{}
-		// TODO: emqx 5.0.22 have bug, can not use and gateway config in emqx.conf
-		// Wait emqx fix it, and restore this change
-		// currentImage := "emqx:5"
-		currentImage := "emqx/emqx:5.0.21"
+		currentImage := "emqx:5"
 		JustBeforeEach(func() {
 			By("Wait EMQX cluster ready")
 			checkRunning(emqx.DeepCopy())
@@ -175,7 +172,7 @@ var _ = Describe("Base Test", func() {
 				Eventually(func() string {
 					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
 					return instance.Status.CurrentImage
-				}).Should(Equal(currentImage))
+				}).Should(Equal("emqx:5"))
 				checkRunning(instance.DeepCopy())
 			})
 		})
