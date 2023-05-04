@@ -137,9 +137,9 @@ $ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus
 
 [
   {
-    "connection_eviction_rate": 10,
+    "connection_eviction_rate": 200,
     "node": "emqx-ee@emqx-ee-54fc496fb4-2.emqx-ee-headless.default.svc.cluster.local",
-    "session_eviction_rate": 10,
+    "session_eviction_rate": 200,
     "session_goal": 0,
     "connection_goal": 22,
     "session_recipients": [

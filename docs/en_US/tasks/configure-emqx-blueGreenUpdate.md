@@ -2,49 +2,77 @@
 
 ## Task target
 
-How to use the blueGreenUpdate field to configure the blue-green upgrade of EMQX Enterprise.
+How to gracefully upgrade an EMQX cluster using blue-green deployment.
 
 ## Why Need Blue-Green Upgrade
 
-EMQX provides a long-term connection service. In Kubernetes, the existing upgrade strategy requires restarting the EMQX service except for hot upgrade. This upgrade strategy will cause disconnection of the device. If the device has a reconnection mechanism, a large number of devices will appear Simultaneously requesting connections, which triggers an avalanche, eventually causing a large number of clients to be temporarily unserviced. Therefore, EMQX Operator implements a blue-green upgrade based on the Node Evacuation function of EMQX Enterprise to solve the above problems.
+Traditional rolling upgrades may face the following issues in a production environment:
 
-The EMQX node evacuation function is used to evacuate all connections in the node, and manually/automatically move client connections and sessions to other nodes in the cluster or other clusters. For a detailed introduction to EMQX node evacuation, please refer to the document: [Node Evacuation](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#evacuation).
+1. During the upgrade process, old nodes are destroyed one by one and new ones are created, which may result in repeated interruptions for clients (in the worst case, the number of interruptions is equal to the number of nodes).
+
+2. When the cluster is heavily connected and a node is destroyed, the connections on that node will be immediately disconnected, with clients retrying to reconnect. When the number of connections on a single node is large, a large number of client retries may put pressure on the server and cause overload.
+
+3. After the upgrade is complete, the load may be uneven between nodes.
+
+4. Due to using StatefulSets for deployment, there will be one node less providing services during the upgrade process than the actual number of nodes.
+
+Therefore, EMQX Operator implements blue-green deployment based on the Node Evacuation feature of EMQX Enterprise to solve the above issues.
+
+The EMQX node evacuation function is used to evacuate all connections in a node, manually or automatically moving client connections and sessions to other nodes or clusters in the cluster. For more details on EMQX node evacuation, refer to the documentation: [Node Evacuation](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#evacuation).
 
 :::tip
 
-The node evacuation function is only available in EMQX Enterprise 4.4.12.
+The node evacuation function is only available after version 4.4.12 of EMQX Enterprise.
 
 :::
 
+## Blue-Green Deployment Process
+
+![](./assets/configure-emqx-blueGreenUpdate/blue-green.png)
+
+The upgrade process can be roughly divided into the following steps:
+
+1. We will first create a node with the same specifications and add it to the existing cluster during the upgrade.
+
+2. When all the new nodes are ready, we will redirect the service to the newly created nodes, and the new ones will start receiving new connection requests.
+
+3. Remove the old nodes from the service. The old ones will no longer receive new connection requests.
+
+4. Use the EMQX node evacuation function to gradually migrate the connections on each node in a controllable manner until all connections are successfully migrated. Then the old ones can be destroyed.
+
 ## How to Use Blue-Green Upgrade
 
-The corresponding CRD of EMQX Enterprise in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring the blue-green upgrade of EMQX Enterprise through the `.spec.blueGreenUpdate` field. For the specific description of the blueGreenUpdate field, please refer to [blueGreenUpdate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#evacuationstrategy).
+### Configure blue-green deployment parameters
+
+The CRD for EMQ X Enterprise in EMQ X Operator is EmqxEnterprise. EmqxEnterprise supports configuring the blue-green upgrade of EMQX Enterprise through the `.spec.blueGreenUpdate` field. For the specific description of the blueGreenUpdate fields, please refer to [blueGreenUpdate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#evacuationstrategy).
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
 kind: EmqxEnterprise
 metadata:
-   name: emqx-ee
+  name: emqx-ee
 spec:
-   replicas: 3
-   blueGreenUpdate:
-    initialDelaySeconds: 5
+  blueGreenUpdate:
+    initialDelaySeconds: 60
     evacuationStrategy:
       waitTakeover: 5
-      connEvictRate: 10
-      sessEvictRate: 10
-   template:
-     spec:
-       emqxContainer:
-         image:
-           repository: emqx/emqx-ee
-           version: 4.4.14
-         ports:
-           - name: "http-dashboard"
-             containerPort: 18083
+      connEvictRate: 200
+      sessEvictRate: 200
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.14
 ```
 
-> `waitTakeover` indicates the waiting time (unit is second) before the current node starts session evacuation. `connEvictRate` indicates the client disconnection rate of the current node (unit: count/second). `sessEvictRate` indicates the current node client session evacuation rate (unit: count/second). The `.spec.license.stringData` field is filled with the content of the license certificate. In this article, the content of this field is omitted. Please fill it with the content of your own certificate.
+`initialDelaySeconds`: The waiting time (second) before starting the node evacuation process after all nodes are ready.
+
+`waitTakeover`: Amount of time in seconds (count/second) to wait before starting session evacuation
+
+`connEvictRate`: Client disconnection rate (count/second)
+
+`sessEvictRate`: Client evacuation rate (count/second)
 
 Save the above content as `emqx.yaml`, execute the following command to deploy the EMQX Enterprise cluster:
 
@@ -61,20 +89,10 @@ emqxenterprise.apps.emqx.io/emqx-ee created
 - Check whether the EMQX Enterprise cluster is ready
 
 ```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq '.status.conditions[] | select( .type == "Running" and .status == "True")'
-```
+$ kubectl get emqxenterprises
 
-The output is similar to:
-
-```bash
-{
-  "lastTransitionTime": "2023-03-01T02:49:22Z",
-  "lastUpdateTime": "2023-03-01T02:49:23Z",
-  "message": "All resources are ready",
-  "reason": "ClusterReady",
-  "status": "True",
-  "type": "Running"
-}
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
 ```
 
 ## Use MQTT X CLI to Connect EMQX Cluster
@@ -84,10 +102,16 @@ MQTT X CLI is an open-source MQTT 5.0 CLI Client that supports automatic reconne
 Execute the following command to connect to the EMQX cluster:
 
 ```bash
-mqttx bench conn -h $host -p $port -c 3000
+mqttx bench conn -h ${IP} -p ${PORT} -c 3000
 ```
 
-> `-h` indicates the IP of the host where the EMQX Pod is located. `-p` means nodePort port. `-c` indicates the number of connections to create. When deploying the EMQX cluster, this article usesThe NodePort pattern exposes services. If the service is exposed by LoadBalancer, `-h` should be the IP of LoadBalancer, and `-p` should be the EMQX MQTT service port.
+This article uses the NodePort mode to expose services when deploying the EMQX cluster.
+
+`-h`: The IP address of the host where the EMQX Pod is located.
+
+`-p`: The NodePort port.
+
+`-c`: The number of connections created.
 
 The output is similar to:
 
@@ -97,9 +121,9 @@ The output is similar to:
 [10:06:13 AM] › ℹ Done, total time: 31.113s
 ```
 
-## Trigger EMQX Operator to Perform Blue-Green Upgrade
+### Trigger EMQX Operator to Perform Blue-Green Upgrade
 
-Modifying any content of the `.spec.template` field of the EmqxEnterprise object will trigger EMQX Operator to perform a blue-green upgrade. In this article, we modify the EMQX Container Name to trigger the upgrade, and users can modify it according to actual needs.
+Modifying any content of the `.spec.template` field of the EmqxEnterprise object will trigger EMQX Operator to perform a blue-green upgrade. In this article, we trigger the upgrade by modifying the EMQX Container Name, and users can modify it according to their actual needs.
 
 ```bash
 kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": {"spec": {"emqxContainer": {"name": "emqx-ee-a"}} }}}'
@@ -122,9 +146,9 @@ The output is similar to:
 ```bash
 [
   {
-    "connection_eviction_rate": 10,
+    "connection_eviction_rate": 200,
     "node": "emqx-ee@emqx-ee-54fc496fb4-2.emqx-ee-headless.default.svc.cluster.local",
-    "session_eviction_rate": 10,
+    "session_eviction_rate": 200,
     "session_goal": 0,
     "connection_goal": 22,
     "session_recipients": [
@@ -143,12 +167,28 @@ The output is similar to:
 ]
 ```
 
-> `connection_eviction_rate` indicates the rate of node evacuation(unit: count/second). `node` indicates the node currently being evacuated. `session_eviction_rate` indicates the rate of node session evacuation(unit: count/second). `session_recipients` represents the list of recipients for session evacuation. `state` indicates the node evacuation phase. `stats` indicates the statistical indicators of the evacuated node, including the current number of connections (current_connected), the number of current sessions (current_sessions), the number of initial connections (initial_connected), and the number of initial sessions (initial_sessions).
+`connection_eviction_rate`: Node eviction rate (count/second).
 
-### Use Prometheus to Monitor Client Connections During Upgrade
+`node`: The node that is currently being evacuated.
 
-Use a browser to access the Prometheus web service, click Graph, enter `emqx_connections_count` in the search box, and click Execute, as shown in the following figure:
+`session_eviction_rate`: Session eviction rate for the node (count/second).
 
-![](./assets/configure-emqx-blueGreenUpdate/prometheus.png)
+`session_recipients`: List of recipients for the session evacuation.
 
-It can be seen from the figure that there are two EMQX clusters, old and new, and each cluster has three EMQX nodes. After starting the blue-green upgrade, the connection of each node of the old cluster is disconnected at the configured rate and migrated to the nodes of the new cluster. Finally, all connections in the old cluster are completely migrated to the new cluster, which means the blue-green upgrade is complete.
+`state`: State of the node evacuation.
+
+`stats`: Evacuation node statistics, including current number of connections (current_connected), current number of sessions (current_sessions), initial number of connections (initial_connected), and initial number of sessions (initial_sessions).
+
+## Grafana Monitoring
+
+The monitoring graph of the number of connections during the upgrade process is shown below (using 100,000 connections as an example).
+
+![](./assets/configure-emqx-blueGreenUpdate/grafana.png)
+
+sum: Total number of connections, represented by the top line in the graph.
+
+emqx-ee-86d7758868: Three EMQX nodes before the upgrade.
+
+emqx-ee-745858464d: Three EMQX nodes after the upgrade.
+
+As shown in the figure above, we have implemented graceful upgrade in Kubernetes through EMQX Kubernetes Operator's blue-green deployment. Through this solution, the total number of connections did not have a significant shake (depending on migration rate, server reception rate, client reconnection policy, etc.) during the upgrade process, which can greatly ensure the smoothness of the upgrade process, effectively prevent server overload, reduce business perception, and improve the stability of the service.
