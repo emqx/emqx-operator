@@ -179,9 +179,9 @@ $ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus
 
 sum：总的连接数，图中最上面的一条线
 
-emqx-ee-86d7758868：前缀表示的是升级前的3个 EMQX 节点
+emqx-ee-86d7758868：升级前的 3 个 EMQX 节点
 
-emqx-ee-745858464d：前缀表示升级后的3个 EMQX 节点
+emqx-ee-745858464d：升级后的 3 个 EMQX 节点
 
 如上图，我们通过 EMQX Kubernetes Operator 的蓝绿发布在 Kubernetes 中实现了优雅升级，通过该方案升级，总连接数未出现较大抖动（取决于迁移速率、服务端能够接收的速率、客户端重连策略等），能够极大程度保障升级过程的平滑，有效防止服务端过载，减少业务感知，从而提升服务的稳定性。
 
