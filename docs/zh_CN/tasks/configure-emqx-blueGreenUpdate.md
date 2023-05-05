@@ -124,13 +124,13 @@ mqttx bench conn -h ${IP} -p ${PORT}  -c 3000
 
 - 修改 EmqxEnterprise 对象 `.spec.template` 字段的任意内容都会触发 EMQX Operator 进行蓝绿升级
 
-> 在本文中通过我们修改 EMQX Container Image 来触发升级，用户可根据实际需求自行修改。
+  > 在本文中通过我们修改 EMQX Container Image 来触发升级，用户可根据实际需求自行修改。
 
-```bash
-$ kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": {"spec": {"emqxContainer": {"emqxConfig": {"image": {"version": "4.4.15"}}}}}}}'
+  ```bash
+  $ kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": {"spec": {"emqxContainer": {"emqxConfig": {"image": {"version": "4.4.15"}}}}}}}'
 
-emqxenterprise.apps.emqx.io/emqx-ee patched
-```
+  emqxenterprise.apps.emqx.io/emqx-ee patched
+  ```
 
 - 检查蓝绿升级的状态
 
@@ -182,7 +182,7 @@ emqxenterprise.apps.emqx.io/emqx-ee patched
   ```
 
   请确保 `STATUS` 为 `Running`， 这需要一些时间等待 EMQX 集群完成升级。
-  
+
   升级完成后， 通过 `$ kubectl get pods` 命令可以观察到旧的 EMQX 节点已经被删除。
 
 ## Grafana 监控
