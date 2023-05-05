@@ -40,7 +40,7 @@ Secret 是一种包含少量敏感信息例如密码、令牌或密钥的对象�
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
 
-EMQX CRD 支持通过 `.spec.template.spec.volumes` 和 `.spec.template.spec.emqxContainer.volumeMounts` 字段给 EMQX 集群配置卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
+`apps.emqx.io/v1beta4 EmqxEnterprise` 支持通过 `.spec.template.spec.volumes` 和 `.spec.template.spec.emqxContainer.volumeMounts` 字段给 EMQX 集群配置卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
 
 Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/)。在本文中我们使用的是 `secret` 类型。
 
@@ -102,7 +102,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
 :::
 ::: tab apps.emqx.io/v2alpha1
 
-EMQX CRD 支持使用 `.spec.coreTemplate.extraVolumes` 和 `.spec.coreTemplate.extraVolumeMounts` 以及 `.spec.replicantTemplate.extraVolumes` 和 `.spec.replicantTemplate.extraVolumeMounts` 字段给 EMQX 集群配置额外的卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
+`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.coreTemplate.extraVolumes` 和 `.spec.coreTemplate.extraVolumeMounts` 以及 `.spec.replicantTemplate.extraVolumes` 和 `.spec.replicantTemplate.extraVolumeMounts` 字段给 EMQX 集群配置额外的卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
 
 Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/#secret)。在本文中我们使用的是 `secret` 类型。
 

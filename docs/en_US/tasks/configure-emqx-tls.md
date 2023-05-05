@@ -1,4 +1,4 @@
-# Enable TLS
+# Enable TLS In EMQX
 
 ## Task Target
 
@@ -40,7 +40,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
 
-EMQX CRD supports configuring volumes and mount points for EMQX clusters through `.spec.template.spec.volumes` and `.spec.template.spec.emqxContainer.volumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring volumes and mount points for EMQX clusters through `.spec.template.spec.volumes` and `.spec.template.spec.emqxContainer.volumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
 
 There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this article we are using the `secret` type.
 
@@ -102,7 +102,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
 :::
 ::: tab apps.emqx.io/v2alpha1
 
-EMQX CRD supports using `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to configure additional volumes and mounts for the EMQX cluster point. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
+`apps.emqx.io/v2alpha1 EMQX` supports `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to EMQX The cluster configures additional volumes and mount points. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
 
 There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/#secret). In this article we are using the `secret` type.
 

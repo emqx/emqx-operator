@@ -2,7 +2,7 @@
 
 ## Task Target
 
-How to modify the log level of EMQX cluster.
+Modify the log level of EMQX cluster.
 
 ## Configure EMQX Cluster
 
@@ -11,7 +11,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
 
-The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise, and EmqxEnterprise supports configuring the log level of EMQX cluster through `.spec.template.spec.emqxContainer.emqxConfig` field. For the specific description of the emqxConfig field, please refer to: [emqxConfig](../reference/v1beta4-reference.md#emqxtemplatespec).
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring the log level of EMQX cluster through `.spec.template.spec.emqxContainer.emqxConfig` field. For the specific description of the emqxConfig field, please refer to: [emqxConfig](../reference/v1beta4-reference.md#emqxtemplatespec).
 
 + Save the following content as a YAML file and deploy it with the `kubectl apply` command
 
@@ -56,7 +56,7 @@ The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterpr
 :::
 ::: tab apps.emqx.io/v2alpha1
 
-EMQX CRD supports the use of `.spec.bootstrapConfig` to configure the log level of the EMQX cluster. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html).
+`apps.emqx.io/v2alpha1 EMQX` supports configuration of EMQX cluster log level through `.spec.bootstrapConfig`. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html).
 
 > This field is only allowed to be configured when creating an EMQX cluster, and does not support updating. If you need to modify the cluster log level after creating EMQX, please modify it through EMQX Dashboard.
 
