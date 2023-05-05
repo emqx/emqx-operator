@@ -1,4 +1,4 @@
-# Collect EMQX Logs in Kubernetes
+# Collect EMQX Logs In Kubernetes
 
 ## Task target
 

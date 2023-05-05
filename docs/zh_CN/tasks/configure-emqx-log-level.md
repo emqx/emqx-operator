@@ -11,7 +11,7 @@
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
 
-EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnterprise 支持通过 `.spec.template.spec.emqxContainer.emqxConfig` 字段配置 EMQX 集群日志等级。emqxConfig 字段的具体描述可以参考：[emqxConfig](../reference/v1beta4-reference.md#emqxtemplatespec)。
+`apps.emqx.io/v1beta4 EmqxEnterprise` 支持通过 `.spec.template.spec.emqxContainer.emqxConfig` 字段配置 EMQX 集群日志等级。emqxConfig 字段的具体描述可以参考：[emqxConfig](../reference/v1beta4-reference.md#emqxtemplatespec)。
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
@@ -57,9 +57,9 @@ EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnt
 :::
 ::: tab apps.emqx.io/v2alpha1
 
-  EMQX CRD 支持使用 `.spec.bootstrapConfig` 来配置 EMQX 集群日志等级，bootstrapConfig 的配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。
+`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.bootstrapConfig` 来配置 EMQX 集群日志等级，bootstrapConfig 的配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。
 
-  > 这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。如果在创建 EMQX 之后需要修改集群日志等级，请通过 EMQX Dashboard 进行修改。
+> 这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。如果在创建 EMQX 之后需要修改集群日志等级，请通过 EMQX Dashboard 进行修改。
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 

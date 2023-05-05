@@ -8,12 +8,12 @@ The chapter is divided into sections covering
 
 - License and Security
   - [License Configuration (EMQX Enterprise)](./configure-emqx-license.md)
-  - [Enable TLS in EMQX](./configure-emqx-tls.md)
+  - [Enable TLS In EMQX](./configure-emqx-tls.md)
 - Cluster Configuration
   - [Change EMQX Configurations Via Operator](./configure-emqx-bootstrapConfig.md)
   - [Enable Core + Replicant Cluster (EMQX 5.x)](./configure-emqx-core-replicant.md)
-  - [Enable Persistence in EMQX Cluster](./configure-emqx-persistence.md)
-  - [Access EMQX Cluster by Kubernetes Service](./configure-emqx-service.md)
+  - [Enable Persistence In EMQX Cluster](./configure-emqx-persistence.md)
+  - [Access EMQX Cluster By Kubernetes Service](./configure-emqx-service.md)
 
 **Upgrades and Maintenance**
 
@@ -21,7 +21,7 @@ The chapter is divided into sections covering
   - [Configure Blue-Green Upgrade (EMQX Enterprise](./configure-emqx-blueGreenUpdate.md)
 - Log Management
   - [Collect EMQX Logs in Kubernetes](./configure-emqx-log-collection.md)
-  - [Change EMQX Log Levels](./configure-emqx-log-level.md)
+  - [Change EMQX Log Level](./configure-emqx-log-level.md)
 
 **Monitoring and Performance**
 
