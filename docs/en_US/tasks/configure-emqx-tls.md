@@ -1,342 +1,230 @@
-# Configure EMQX TLS certificate
+# Enable TLS In EMQX
 
-## Task target 
+## Task Target
 
-- How to configure EMQX TLS certificate through extraVolumes and extraVolumeMounts fields.
+Customize TLS certificates via the `extraVolumes` and `extraVolumeMounts` fields.
 
-## EMQX cluster TLS certificate configuration
+## Create Secret Based On TLS Certificate
 
-- Create Secret based on TLS certificate
+Secret is an object that contains a small amount of sensitive information such as passwords, tokens, or keys. For its documentation, please refer to: [Secret](https://kubernetes.io/docs/concepts/configuration/secret/#working-with-secrets). In this article, we use Secret to save TLS certificate information, so we need to create Secret based on TLS certificate before creating EMQX cluster.
 
-Secret is an object that contains a small amount of sensitive information such as passwords, tokens or keys. For its documentation, please refer to: [Secret](https://kubernetes.io/docs/concepts/configuration/secret/). In this article, we use Secret to save TLS certificate information, so we need to create Secret based on TLS certificate before creating EMQX cluster.
++ Save the following as a YAML file and deploy it with the `kubectl apply` command
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-   name: emqx-tls
-type: kubernetes.io/tls
-stringData:
-   ca.crt: |
-     -----BEGIN CERTIFICATE-----
-     ...
-     -----END CERTIFICATE-----
-   tls.crt: |
-     -----BEGIN CERTIFICATE-----
-     ...
-     -----END CERTIFICATE-----
-   tls.key: |
-     -----BEGIN RSA PRIVATE KEY-----
-     ...
-     -----END RSA PRIVATE KEY-----
-```
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: emqx-tls
+  type: kubernetes.io/tls
+  stringData:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
+    tls.crt: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
+    tls.key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      ...
+      -----END RSA PRIVATE KEY-----
+  ```
 
-**NOTE**: `ca.crt` represents the content of the CA certificate, `tls.crt` represents the content of the server certificate, and `tls.key` represents the content of the server’s private key. In this example, the contents of the above three fields are omitted, please fill them with the contents of your own certificate.
+  > `ca.crt` indicates the content of the CA certificate, `tls.crt` indicates the content of the server certificate, and `tls.key` indicates the content of the server private key. In this example, the contents of the above three fields are omitted, please fill them with the contents of your own certificate.
 
-Save the above file as: secret-tls.yaml, and execute the following command to create a secret:
+## Configure EMQX Cluster
 
-```
-kubectl apply -f secret-tls.yaml
-```
-
-The output is similar to:
-
-```
-secret/emqx-tls created
-```
-
-- Configure EMQX cluster
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-EMQX CRD supports using `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to configure additional volumes and mounts for the EMQX cluster point. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
-
-There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this article we are using the `secret` type.
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-   name: emqx
-spec:
-   image: "emqx/emqx:5.0.9"
-   bootstrapConfig: |
-     listeners.ssl.default {
-       bind = "0.0.0.0:8883"
-       ssl_options {
-         cacertfile = "/mounted/cert/ca.crt"
-         certfile = "/mounted/cert/tls.crt"
-         keyfile = "/mounted/cert/tls.key"
-       }
-     }
-   coreTemplate:
-     spec:
-       replicas: 3
-       extraVolumes:
-         - name: emqx-tls
-           secret:
-             secretName: emqx-tls
-       extraVolumeMounts:
-         - name: emqx-tls
-           mountPath: /mounted/cert
-   replicantTemplate:
-     spec:
-       replicas: 0
-       extraVolumes:
-         - name: emqx-tls
-           secret:
-             secretName: emqx-tls
-       extraVolumeMounts:
-         - name: emqx-tls
-           mountPath: /mounted/cert
-   dashboardServiceTemplate:
-     spec:
-       type: NodePort
-       ports:
-         - name: "dashboard-listeners-http-bind"
-           protocol: TCP
-           port: 18083
-           targetPort: 18083
-           nodePort: 32015
-   listenersServiceTemplate:
-     spec:
-       type: NodePort
-       ports:
-         - name: "ssl-default"
-           protocol: TCP
-           port: 8883
-           targetPort: 8883
-           nodePort: 32016
-```
-
-**NOTE**: `.spec.coreTemplate.extraVolumes` field configures the volume type as: secret, and the name as: emqx-tls. `.spec.coreTemplate.extraVolumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`. The `.spec.bootstrapConfig` field configures the certificate path of the TLS listener. For more configurations of the TLS listener, please refer to the document: [ssllistener](https://www.emqx.io/docs/en/v5.0/admin/cfg.html#broker-mqtt-ssl-listener). The `.spec.listenersServiceTemplate` field configures the way the EMQX cluster exposes services to the outside world: NodePort, and specifies the nodePort corresponding to port 8883 of the EMQX ssl-default listener as 32016 (the value range of nodePort is: 30000-32767).
-
-:::
-::: tab v1beta4
-
-EMQX CRD supports configuring volumes and mount points for EMQX clusters through `.spec.template.spec.volumes` and `.spec.template.spec.emqxContainer.volumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring volumes and mount points for EMQX clusters through `.spec.template.spec.volumes` and `.spec.template.spec.emqxContainer.volumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
 
 There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this article we are using the `secret` type.
 
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.8
-        emqxConfig:
-          listener.ssl.external.cacertfile: /mounted/cert/ca.crt
-          listener.ssl.external.certfile: /mounted/cert/tls.crt
-          listener.ssl.external.keyfile: /mounted/cert/tls.key
-          listener.ssl.external: "0.0.0.0:8883"
-        volumeMounts:
-          - name: emqx-tls 
-            mountPath: /mounted/cert
-      volumes:
-        - name: emqx-tls
-          secret:
-            secretName: emqx-tls
++ Save the following as a YAML file and deploy it with the `kubectl apply` command
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+          emqxConfig:
+            listener.ssl.external.cacertfile: /mounted/cert/ca.crt
+            listener.ssl.external.certfile: /mounted/cert/tls.crt
+            listener.ssl.external.keyfile: /mounted/cert/tls.key
+            listener.ssl.external: "0.0.0.0:8883"
+          volumeMounts:
+            - name: emqx-tls
+              mountPath: /mounted/cert
+        volumes:
+          - name: emqx-tls
+            secret:
+              secretName: emqx-tls
   serviceTemplate:
     spec:
-      type: NodePort
-      ports:
-        - name: "mqtt-ssl-8883"
-          protocol: "TCP"
-          port: 8883
-          targetPort: 8883
-          nodePort: 32016
-```
+      type: LoadBalancer
+  ```
 
-**NOTE**: The `.spec.template.spec.volumes` field configures the volume type as: secret, and the name as: emqx-tls. The `.spec.template.spec.emqxContainer.volumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`. The `.spec.template.spec.emqxContainer.emqxConfig` field configures the TLS listener certificate path. For more TLS listener configurations, please refer to the document: [tlsexternal](https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html#tlsexternal). The `.spec.serviceTemplate` configuration field defines the way the EMQX cluster exposes services to the outside world: NodePort, and specifies the nodePort corresponding to port 8883 of the EMQX mqtt-ssl-8883 listener as 32016 (the value range of nodePort is: 30000-32767).
+  > The `.spec.template.spec.volumes` field configures the volume type as: secret, and the name as: emqx-tls.
 
-:::
-::: tab v1beta3
+  > The `.spec.template.spec.emqxContainer.volumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`.
 
-EMQX CRD supports configuring additional volumes and mount points for the EMQX cluster through `.spec.emqxTemplate.extraVolumes` and `.spec.emqxTemplate.extraVolumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
+  > The `.spec.template.spec.emqxContainer.emqxConfig` field configures the TLS listener certificate path. For more TLS listener configurations, please refer to the document: [tlsexternal](https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html#tlsexternal).
 
-There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this article we are using the `secret` type.
++ Wait for EMQX cluster to be ready, you can check the status of EMQX cluster through the `kubectl get` command, please make sure that `STATUS` is `Running`, this may take some time
 
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-   name: emqx-ee
-spec:
-   emqxTemplate:
-     image: emqx/emqx-ee:4.4.8
-     extraVolumes:
-       - name: emqx-tls
-         secret:
-           secretName: emqx-tls
-     extraVolumeMounts:
-       - name: emqx-tls
-         mountPath: /mounted/cert
-     config:
-       listener.ssl.external.cacertfile: /mounted/cert/ca.crt
-       listener.ssl.external.certfile: /mounted/cert/tls.crt
-       listener.ssl.external.keyfile: /mounted/cert/tls.key
-       listener.ssl.external: "0.0.0.0:8883"
-     serviceTemplate:
-       spec:
-         type: NodePort
-         ports:
-           - name: "mqtt-ssl-8883"
-             protocol: "TCP"
-             port: 8883
-             targetPort: 8883
-             nodePort: 32016
-```
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
 
-**NOTE**: `.spec.emqxTemplate.extraVolumes` field configures the volume type as: secret, and the name as: emqx-tls. The `.spec.emqxTemplate.extraVolumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`. The `.spec.emqxTemplate.config` field configures the certificate path of the TLS listener. For more configurations of the TLS listener, please refer to the document: [tlsexternal](https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html#tlsexternal). The `.spec.emqxTemplate.serviceTemplate` configuration field defines the way the EMQX cluster exposes services to the outside world: NodePort, and specifies that the nodePort corresponding to port 8883 of the EMQX mqtt-ssl-8883 listener is 32016 (the value range of nodePort is: 30000-32767).
++ Obtain the External IP of EMQX cluster and access EMQX console
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::::
+::: tab apps.emqx.io/v2alpha1
 
-Save the above file as: emqx-tls.yaml, and execute the following command to deploy the EMQX cluster:
+`apps.emqx.io/v2alpha1 EMQX` supports `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to EMQX The cluster configures additional volumes and mount points. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
 
-```
-kubectl apply -f emqx-tls.yaml
-```
+There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/#secret). In this article we are using the `secret` type.
 
-The output is similar to:
++ Save the following as a YAML file and deploy it with the `kubectl apply` command
 
-```
-emqx.apps.emqx.io/emqx created
-```
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.0
+    bootstrapConfig: |
+      listeners.ssl.default {
+        bind = "0.0.0.0:8883"
+        ssl_options {
+          cacertfile = "/mounted/cert/ca.crt"
+          certfile = "/mounted/cert/tls.crt"
+          keyfile = "/mounted/cert/tls.key"
+        }
+      }
+    coreTemplate:
+      spec:
+        extraVolumes:
+          - name: emqx-tls
+            secret:
+              secretName: emqx-tls
+        extraVolumeMounts:
+          - name: emqx-tls
+            mountPath: /mounted/cert
+    replicantTemplate:
+      spec:
+        extraVolumes:
+          - name: emqx-tls
+            secret:
+              secretName: emqx-tls
+        extraVolumeMounts:
+          - name: emqx-tls
+            mountPath: /mounted/cert
+    dashboardServiceTemplate:
+      spec:
+        type: LoadBalancer
+    listenersServiceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-- Check whether the EMQX cluster is ready
+  > The `.spec.coreTemplate.extraVolumes` field configures the volume type as: secret, and the name as: emqx-tls.
 
-:::: tabs type:card
-::: tab v2alpha1
+  > The `.spec.coreTemplate.extraVolumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`.
 
-```
-kubectl get emqx emqx -o json | jq ".status.emqxNodes"
-```
+  > The `.spec.bootstrapConfig` field configures the TLS listener certificate path. For more TLS listener configurations, please refer to the document: [ssllistener](https://www.emqx.io/docs/en/v5.0/admin/cfg.html#broker-mqtt-ssl-listener).
 
-The output is similar to:
++ Wait for EMQX cluster to be ready, you can check the status of EMQX cluster through the `kubectl get` command, please make sure that `STATUS` is `Running`, this may take some time
 
-```
-[
-   {
-     "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-     "node_status": "running",
-     "otp_release": "24.2.1-1/12.2.1",
-     "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  },
-  {
-    "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-    "node_status": "running",
-    "otp_release": "24.2.1-1/12.2.1",
-    "role": "core",
-    "version": "5.0.9"
-  }
-]
-```
+  ```bash
+  $ kubectl get emqx
 
-**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `role` represents the EMQX node role type. `version` indicates the EMQX version. EMQX Operator creates an EMQX cluster with three core nodes and three replicant nodes by default, so when the cluster is running normally, you can see information about three running core nodes and three replicant nodes. If you configure the `.spec.coreTemplate.spec.replicas` field, when the cluster is running normally, the number of running core nodes displayed in the output should be equal to the value of this replicas. If you configure the `.spec.replicantTemplate.spec.replicas` field, when the cluster is running normally, the number of running replicant nodes displayed in the output should be equal to the replicas value.
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   10m
+  ```
 
-:::
-::: tab v1beta4
++ Obtain the External IP of EMQX cluster and access EMQX console
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
-```
+  EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
 
-The output is similar to:
+   ```bash
+   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
+   192.168.1.200
+   ```
 
-**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `version` indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
-
-:::
-::: tab v1beta3
-
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
-```
-
-The output is similar to:
-
-```
-[
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
-
-**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `version` indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
+   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
 ::::
 
-## Verify that the TLS certificate is valid
+## Verify TLS Connection Using MQTT X CLI
 
-- Use MQTT X to connect to the EMQX cluster to send messages
+[MQTT X CLI](https://mqttx.app/cli) is an open source MQTT 5.0 command line client tool, designed to help developers to more Quickly develop and debug MQTT services and applications.
 
-MQTT X is a fully open source MQTT 5.0 cross-platform desktop client. Supports quick creation of multiple simultaneous online MQTT client connections, convenient for testing MQTT/TCP, MQTT/TLS, MQTT/WebSocket connection, publishing, subscribing functions and other MQTT protocol features. For more documentation on using MQTT X, please refer to: [MQTT X](https://mqttx.app/docs). Next, we will use MQTT X to connect to the EMQX cluster to send and subscribe messages to verify whether the TLS certificate is valid.
++ Obtain the External IP of EMQX cluster
 
-Click the button to create a new connection on the MQTT X page, and configure the EMQX cluster node information and CA certificate path as shown in the figure. After configuring the connection information, click the connect button to connect to the EMQX cluster:
+  :::: tabs type:card
+  ::: tab apps.emqx.io/v1beta4
 
-![](./assets/configure-tls/tls-connect.png)
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v2alpha1
 
-Then click the Subscribe button to create a new subscription, as shown in the figure, MQTT X has successfully connected to the EMQX cluster and successfully created the subscription:
+  ```bash
+  external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::::
 
-![](./assets/configure-tls/sub.png)
++ Subscribe to messages using MQTT X CLI
 
-After successfully connecting to the EMQX cluster and creating a subscription, we can send messages to the EMQX cluster, as shown in the following figure:
+  ```bash
+  mqttx sub -h ${external_ip} -p 8883 -t "hello" -l mqtts --insecure
 
-![](./assets/configure-tls/tls-test.png)
+  [10:00:25] › … Connecting...
+  [10:00:25] › ✔ Connected
+  [10:00:25] › … Subscribing to hello...
+  [10:00:25] › ✔ Subscribed to hello
+  ```
 
-As can be seen from the above figure, if the subscriber can normally receive the MQTT message sent by the client, it means that the TLS we configured is valid.
++ Create a new terminal window and publish a message using the MQTT X CLI
+
+  ```bash
+  mqttx pub -h ${external_ip} -p 8883 -t "hello" -m "hello world" -l mqtts --insecure
+
+  [10:00:58] › … Connecting...
+  [10:00:58] › ✔ Connected
+  [10:00:58] › … Message Publishing...
+  [10:00:58] › ✔ Message published
+  ```
+
++ View messages received in the subscribed terminal window
+
+  ```bash
+  [10:00:58] › payload: hello world
+  ```

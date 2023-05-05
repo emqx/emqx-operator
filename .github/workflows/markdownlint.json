@@ -12,9 +12,6 @@
 		"level": 1,
 		"front_matter_title": ""
 	},
-    "MD033": {
-        "allowed_elements": ["table", "tr", "td", "th"]
-    },
 	"MD042": true,
 	"MD046": {
 		"style": "fenced"

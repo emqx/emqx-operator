@@ -2,102 +2,94 @@
   "en": [
     {
       "title": "Introduction",
-      "children": [
-        {
-          "title": "Introduction",
-          "path": "./"
-        },
-        {
-          "title": "Features",
-          "path": "introduction/features"
-        },
-        {
-          "title": "Prepare",
-          "path": "introduction/deployment"
-        }
-      ]
+      "path": "./"
     },
     {
       "title": "Getting Started",
-      "children": [
-        {
-          "title": "Running the Operator",
-          "path": "getting-started/getting-started"
-        }
-      ]
+      "path": "getting-started/getting-started"
     },
     {
-      "title": "Deployment on Public Cloud",
+      "title": "Deploy EMQX on Public Cloud",
+      "path": "deployment/overview",
       "children": [
         {
-          "title": "AWS EKS",
-          "path": "deployment/aws-eks-deployment"
+          "title": "Deploy EMQX on AWS",
+          "path": "deployment/on-aws-eks"
         },
         {
-          "title": "Azure AKS",
-          "path": "deployment/azure-deployment"
+          "title": "Deploy EMQX on Azure",
+          "path": "deployment/on-azure-aks"
+        },
+        {
+          "title": "Deploy EMQX on Google Cloud",
+          "path": "deployment/on-gcp-gke"
         }
       ]
     },
     {
-      "title": "Tasks",
+      "title": "Manage EMQX Cluster",
+      "path": "tasks/overview",
       "children": [
         {
-          "title": "Configure EMQX License",
+          "title": "License Configuration (EMQX Enterprise)",
           "path": "tasks/configure-emqx-license"
         },
         {
-          "title": "Configure EMQX TLS certificate",
+          "title": "Enable TLS In EMQX",
           "path": "tasks/configure-emqx-tls"
         },
         {
-          "title": "Configure EMQX persistence",
-          "path": "tasks/configure-emqx-persistence"
+          "title": "Change EMQX Configurations",
+          "path": "tasks/configure-emqx-bootstrapConfig"
         },
         {
-          "title": "Configure EMQX Core and Replicant nodes",
+          "title": "Enable Core + Replicant Cluster (EMQX 5.x)",
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
-          "title": "Configure EMQX log collection",
-          "path": "tasks/configure-emqx-log-collection"
+          "title": "Enable Persistence In EMQX Cluster",
+          "path": "tasks/configure-emqx-persistence"
         },
-        {
-          "title": "Configure EMQX Enterprise blue-green",
-          "path": "tasks/configure-emqx-blueGreenUpdate"
-        },
-        {
-          "title": "Configure EMQX log level",
-          "path": "tasks/configure-emqx-log-level"
-        },
-        {
-          "title": "Configure EMQX Service",
+       {
+          "title": "Access EMQX Cluster By LoadBalancer",
           "path": "tasks/configure-emqx-service"
         },
         {
-          "title": "Configure EMQX Prometheus",
+          "title": "Configure Blue-Green Upgrade (EMQX 4 Enterprise)",
+          "path": "tasks/configure-emqx-blueGreenUpdate"
+        },
+        {
+          "title": "Collect EMQX Logs In Kubernetes",
+          "path": "tasks/configure-emqx-log-collection"
+        },
+        {
+          "title": "Change EMQX Log Level",
+          "path": "tasks/configure-emqx-log-level"
+        },
+        {
+          "title": "Monitor EMQX Cluster",
           "path": "tasks/configure-emqx-prometheus"
         }
       ]
     },
     {
-      "title": "FAQ",
-      "children": [
-        {
-          "title": "FAQ",
-          "path": "faq/faq"
-        }
-      ]
+      "title": "FAQs",
+      "path": "https://github.com/emqx/emqx-operator/discussions/categories/q-a"
     },
     {
-      "title": "reference",
+      "title": "API Reference",
+      "path": "reference/overview",
       "children": [
         {
-          "title": "V1Beta3 Reference",
+          "title": "v1beta3 Reference",
           "path": "reference/v1beta3-reference"
         },
+      {
+          "title": "v1beta4 Reference",
+          "path": "reference/v1beta4-reference"
+        },
         {
-          "title": "V2Alpha1 Reference",
+          "title": "v2alpha1 Reference",
           "path": "reference/v2alpha1-reference"
         }
       ]
@@ -105,103 +97,100 @@
   ],
   "cn": [
     {
-      "title": "产品介绍",
-      "children": [
-        {
-          "title": "EMQX Operator是什么",
-          "path": "./"
-        },
-        {
-          "title": "核心功能",
-          "path": "introduction/features"
-        },
-        {
-          "title": "部署要求",
-          "path": "introduction/deployment"
-        }
-      ]
+      "title": "EMQX Operator 简介",
+      "path": "./"
     },
     {
       "title": "快速开始",
+      "path": "getting-started/getting-started"
+    },
+    {
+      "title": "在公有云中部署 EMQX",
+      "path": "deployment/overview",
       "children": [
         {
-          "title": "部署 EMQX 集群",
-          "path": "getting-started/getting-started"
+          "title": "在阿里云中部署 EMQX",
+          "path": "deployment/on-alibaba-cloud"
+        },
+        {
+          "title": "在华为云中部署 EMQX ",
+          "path": "deployment/on-huawei-cloud"
+        },
+        {
+          "title": "在腾讯云中部署 EMQX",
+          "path": "deployment/on-tencent-cloud"
+        },
+        {
+          "title": "在 AWS 中部署 EMQX",
+          "path": "deployment/on-aws-eks"
         }
       ]
     },
     {
-      "title": "公有云平台部署指南",
+      "title": "管理 EMQX 集群",
+      "path": "tasks/overview",
       "children": [
         {
-          "title": "阿里 ACK 上部署 EMQX 集群",
-          "path": "deployment/aliyun-ack-deployment"
-        },
-        {
-          "title": "华为 CCE 上部署 EMQX 集群",
-          "path": "deployment/cce-deployment"
-        },
-        {
-          "title": "AWS EKS 上部署 EMQX 集群",
-          "path": "deployment/aws-eks-deployment"
-        },
-        {
-          "title": "腾讯云 TKE 上部署 EMQX 集群",
-          "path": "deployment/tencent-tke-deployment"
-        },
-        {
-          "title": "Azure AKS 上部署 EMQX 集群",
-          "path": "deployment/azure-deployment"
-        }
-      ]
-    },
-    {
-      "title": "任务",
-      "children": [
-        {
-          "title": "配置 EMQX License",
+          "title": "License 配置 (EMQX 企业版)",
           "path": "tasks/configure-emqx-license"
         },
         {
-          "title": "配置 EMQX TLS 证书 ",
+          "title": "在 EMQX 中开启 TLS",
           "path": "tasks/configure-emqx-tls"
         },
         {
-          "title": "配置 EMQX 持久化",
-          "path": "tasks/configure-emqx-persistence"
+          "title": "EMQX 配置",
+          "path": "tasks/configure-emqx-bootstrapConfig"
         },
         {
-          "title": "配置 EMQX Core 和 Replicant 节点",
+          "title": "配置 Core + Replicant 集群 (EMQX 5.x)",
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
-          "title": "配置 EMQX 日志采集",
-          "path": "tasks/configure-emqx-log-collection"
+          "title": "在 EMQX 集群中开启持久化",
+          "path": "tasks/configure-emqx-persistence"
         },
         {
-          "title": "配置 EMQX 企业版蓝绿升级",
-          "path": "tasks/configure-emqx-blueGreenUpdate"
-        },
-        {
-          "title": "配置 EMQX 日志等级",
-          "path": "tasks/configure-emqx-log-level"
-        },
-        {
-          "title": "配置 EMQX Service",
+          "title": "通过 LoadBalancer 访问 EMQX 集群",
           "path": "tasks/configure-emqx-service"
         },
         {
-          "title": "配置 Prometheus 监控 EMQX",
+          "title": "配置蓝绿发布 (EMQX 4 企业版)",
+          "path": "tasks/configure-emqx-blueGreenUpdate"
+        },
+        {
+          "title": "采集 EMQX 的日志",
+          "path": "tasks/configure-emqx-log-collection"
+        },
+        {
+          "title": "修改 EMQX 日志等级",
+          "path": "tasks/configure-emqx-log-level"
+        },
+        {
+          "title": "监控 EMQX 集群",
           "path": "tasks/configure-emqx-prometheus"
         }
       ]
     },
     {
-      "title": "FAQ 常见问题解答",
+      "title": "FAQs",
+      "path": "https://github.com/emqx/emqx-operator/discussions/categories/q-a"
+    },
+    {
+      "title": "API 参考",
+      "path": "reference/overview",
       "children": [
         {
-          "title": "常见问题",
-          "path": "faq/faq"
+          "title": "v1beta3 参考",
+          "path": "reference/v1beta3-reference"
+        },
+      {
+          "title": "v1beta4 参考",
+          "path": "reference/v1beta4-reference"
+        },
+        {
+          "title": "v2alpha1 参考",
+          "path": "reference/v2alpha1-reference"
         }
       ]
     }

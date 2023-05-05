@@ -1,12 +1,12 @@
-# Configure EMQX Log Collection
+# Collect EMQX Logs In Kubernetes
 
 ## Task target
 
-- How to collect EMQX cluster logs through Telegraf and export them to the standard output of the container
+How to collect EMQX cluster logs through Telegraf and export them to the standard output of the container.
 
-## Deploy telegraf-operator
+## Deploy Telegraf Operator
 
-Telegraf is a server-based agent for collecting and sending all metrics and events from databases, systems, and IoT sensors. It supports four types of plugins, including input, output, aggregator and processor. More articles about Telegraf can be found at: [telegraf](https://docs.influxdata.com/telegraf/v1.24/), The documentation for telegraf-operator can be found in: [telegraf-operator](https://github.com/influxdata/telegraf-operator)
+Telegraf is a server-based agent for collecting and sending all metrics and events from databases, systems, and IoT sensors. It supports four types of plugins, including input, output, aggregator and processor. More articles about Telegraf can be found at [telegraf](https://docs.influxdata.com/telegraf/v1.24/), The documentation for telegraf-operator can be found in [telegraf-operator](https://github.com/influxdata/telegraf-operator).
 
 Execute the following command to deploy telegraf-operator
 
@@ -15,15 +15,13 @@ helm repo add influxdata https://helm.influxdata.com/
 helm upgrade --install telegraf-operator influxdata/telegraf-operator
 ```
 
-## Global Configuration - classes
+## Global Configuration - `classes`
 
-The global configuration is mounted via secret, specifying the class name as logs
+The global configuration is mounted via secret, specifying the class name as logs, where
 
-`agent` Used to configure telegraf agent, refer to the detailed definition: [telegraf agent](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#agent)
-
-`inputs.tail` The tail plug-in used to configure the input is defined in detail in: [tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
-
-`outputs.file` The file plug-in used to configure the output is defined in detail in: [file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
+- `agent` is to configure telegraf agent, refer to the detailed definition: [telegraf agent](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#agent)
+- `inputs.tail` is the tail plug-in used to configure the input and is defined in detail in [tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
+- `outputs.file` is a file plug-in used to configure the output is defined in detail in [file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
 
 ```yaml
 apiVersion: v1
@@ -56,7 +54,7 @@ stringData:
       files = ["stdout"]
 ```
 
-Save the above as: classes.yaml
+Save the above as `classes.yaml`
 
 - Create secret
 
@@ -77,9 +75,11 @@ NAME                        TYPE     DATA   AGE
 telegraf-operator-classes   Opaque   1      11h
 ```
 
-## Deploy EMQX cluster
+## Deploy EMQX Cluster
 
 Telegraf uses annotations to inject sidecar for Pod log collection, for a detailed definition of annotations refer to the documentation: [telegraf annotations](https://github.com/influxdata/telegraf-operator#pod-level-annotations)
+
+Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
 ::: tab v2alpha1
@@ -88,7 +88,7 @@ Telegraf uses annotations to inject sidecar for Pod log collection, for a detail
 
 `telegraf.influxdata.com/volume-mounts` Set the mount path of the log
 
-`telegraf.influxdata.com/class` logs references the name of the class specified above
+`telegraf.influxdata.com/class` logs reference the name of the class specified above
 
 `spec.bootstrapConfig` Configure the output log to a file and the log level to debug
 
@@ -99,6 +99,10 @@ apiVersion: apps.emqx.io/v2alpha1
 kind: EMQX
 metadata:
   name: emqx
+  annotations:
+    telegraf.influxdata.com/class: "logs"
+    telegraf.influxdata.com/internal: "false"
+    telegraf.influxdata.com/volume-mounts: "{\"log-volume\":\"/opt/emqx/log\"}"
 spec:
   image: "emqx/emqx-enterprise:5.0.0"
   bootstrapConfig: |
@@ -116,23 +120,38 @@ spec:
       }
     }
   coreTemplate:
-    metadata:
-      name: emqx-core
-      labels:
-        apps.emqx.io/instance: emqx
-        apps.emqx.io/db-role: core
-      annotations:
-        telegraf.influxdata.com/class: "logs"
-        telegraf.influxdata.com/internal: "false"
-        telegraf.influxdata.com/volume-mounts: "{\"log-volume\":\"/opt/emqx/log\"}"
     spec:
-      replicas: 1
       extraVolumes:
         - name: log-volume
           emptyDir: {}
       extraVolumeMounts:
         - name: log-volume
           mountPath: /opt/emqx/log
+  replicantTemplate:
+    spec:
+      extraVolumes:
+        - name: log-volume
+          emptyDir: {}
+      extraVolumeMounts:
+        - name: log-volume
+          mountPath: /opt/emqx/log
+```
+
+Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
+
+```bash
+$ kubectl apply -f emqx.yaml
+
+emqx.apps.emqx.io/emqx created
+```
+
+Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
+
+```bash
+$ kubectl get emqx emqx
+
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.0   Running   10m
 ```
 
 :::
@@ -175,77 +194,29 @@ spec:
           emptyDir: {}
 ```
 
-:::
-::::
+Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
 
-Save the above as: emqx-telegraf.yaml
+```bash
+$ kubectl apply -f emqx.yaml
 
-- Deploy EMQX cluster
-
-```shell
-kubectl apply -f emqx-telegraf.yaml
+emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
-- Checking EMQX Cluster Status
+Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
 
-:::: tabs type:card
-::: tab v2alpha1
+```bash
+$ kubectl get emqxenterprises
 
-```shell
-kubectl get pods  -l  apps.emqx.io/instance=emqx
-```
-
-The output is similar to:
-
-```shell
-NAME                             READY   STATUS    RESTARTS   AGE
-emqx-core-0                      2/2     Running   0          54s
-emqx-replicant-c868c79cd-9m5rw   1/1     Running   0          41s
-emqx-replicant-c868c79cd-qv8mk   1/1     Running   0          41s
-emqx-replicant-c868c79cd-z8bvj   1/1     Running   0          41s
-```
-
-**Note:** When the telegraf sidecar is injected into the EMQX core pod, the number of containers in the EQMX core pod will reach 2
-
-
-:::
-::: tab v1beta4
-
-```shell
-kubectl get pods  -l  apps.emqx.io/instance=emqx-ee
-```
-
-The output is similar to:
-
-```shell
-NAME        READY   STATUS    RESTARTS   AGE
-emqx-ee-0   3/3     Running   0          8m37s
-emqx-ee-1   3/3     Running   0          8m37s
-emqx-ee-2   3/3     Running   0          8m37s
-```
-
-**Note:** When the telegraf sidecar is injected into the EMQX pod, the number of containers in the EQMX pod will reach 3
-
-:::
-::::
-
-- Check the collected logs
-
-:::: tabs type:card
-::: tab v2alpha1
-
-```shell
-kubectl logs -f emqx-core-0 -c telegraf
-```
-
-:::
-::: tab v1beta4
-
-```shell
-kubectl logs -f emqx-ee-0 -c telegraf
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
 ```
 
 :::
 ::::
 
-The collected EMQX logs are output to the standard output.
+## Check the Telegraf Logs
+
+```
+kubectl logs -f $pod_name -c telegraf
+```
+

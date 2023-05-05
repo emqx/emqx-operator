@@ -43,7 +43,7 @@ jobs:
           tag=("$ref")
         fi
         tags=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${tag[@]}")
-        echo "::set-output name=tags::$tags"
+        echo "tags=$tags" >> $GITHUB_OUTPUT
 
   deploy:
     needs: prepare

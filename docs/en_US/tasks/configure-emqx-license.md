@@ -1,178 +1,196 @@
-# Configure EMQX Enterprise Edition License
+# License Configuration (EMQX Enterprise)
 
-## Task target
- 
-- How to use the secretName field to configure the EMQX Enterprise Edition License.
-- How to update the EMQX Enterprise Edition License.
+## Task Target
 
-## Use the secretName field to configure the License
+- Configure EMQX Enterprise License.
+- Update EMQX Enterprise License.
 
-- Create Secret based on License file
+## Configure License
 
-A Secret is an object that contains a small amount of sensitive information such as a password, token, or key. For more detailed documentation on Secret, please refer to: [Secret](https://kubernetes.io/docs/concepts/configuration/secret/). EMQX Operator supports using Secret to mount License information, so we need to create a Secret based on the License before creating an EMQX cluster.
+EMQX Enterprise License can be applied for free on EMQ official website: [Apply for EMQX Enterprise License](https://www.emqx.com/en/apply-licenses/emqx).
 
-EMQX Enterprise Edition License can be applied for free on EMQ official website: [Apply for EMQX Enterprise Edition License](https://www.emqx.com/en/apply-licenses/emqx).
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
 
-```
-kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file
-```
-
-**NOTE**: `/path/to/license/file` indicates the path of the EMQX Enterprise Edition License file, which can be an absolute path or a relative path. For more details on using kubectl to create a Secret, please refer to the document: [Using kubectl to create a secret](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/).
-
-The output is similar to:
-
-```
-secret/test created
-```
-
-- Configure EMQX cluster
+## Configure EMQX Cluster
 
 :::: tabs type:card
-::: tab v1beta4
+::: tab apps.emqx.io/v1beta4
 
-The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring EMQX Enterprise Edition License through `.spec.license.secretName` field. For the specific description of the secretName field, please refer to: [secretName](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#emqxlicense).
++ Create Secret based on License file
 
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  license:
-    secretName: test
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.8
-```
+  A Secret is an object that contains a small amount of sensitive information such as a password, token, or key. For more detailed documentation on Secret, please refer to: [Secret](https://kubernetes.io/docs/concepts/configuration/secret/). EMQX Operator supports using Secret to mount License information, so we need to create a Secret based on the License before creating an EMQX cluster.
+
+  ```bash
+  $ kubectl create secret generic ${your_license_name} --from-file=emqx.lic=${/path/to/license/file}
+  ```
+
+  > `${your_license_name}` represents the name of the created Secret.
+
+  > `${/path/to/license/file}` represents the path of the EMQX Enterprise Edition License file, which can be an absolute path or a relative path. For more details on using kubectl to create a Secret, please refer to the document: [Using kubectl to create a secret](https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/).
+
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
+
+  `apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX Enterprise License through `.spec.license` field. For more information, please refer to: [license](../reference/v1beta4-reference.md#emqxlicense).
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    license:
+      secretName: ${your_license_name}
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
+
+  > `secretName` represents the name of the Secret created in the previous step.
+
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ Obtain the External IP of EMQX cluster and access EMQX console
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab v1beta3
+::: tab apps.emqx.io/v2alpha1
 
-The corresponding CRD of EMQX Enterprise Edition in EMQX Operator is EmqxEnterprise. EmqxEnterprise supports configuring the EMQX Enterprise Edition License through `.spec.emqxTemplate.license.secretName` field. For the specific description of the secretName field, please refer to: [secretName](https://github.com/emqx/emqx-operator/blob/2.0.2/docs/en_US/reference/v1beta3-reference.md#license).
+  `apps.emqx.io/v2alpha1 EMQX` supports configuring EMQX cluster license through `.spec.bootstrapConfig`. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating.
 
-```yaml
-apiVersion: apps.emqx.io/v1beta3
-kind: EmqxEnterprise
-metadata:
-   name: emqx-ee
-spec:
-   emqxTemplate:
-     image: emqx/emqx-ee:4.4.8
-     license:
-       secretName: test
-```
+  > After the EMQX cluster is created, if the license needs to be updated, please update it through the EMQX Dashboard.
+
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
+
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx-ee
+  spec:
+    bootstrapConfig: |
+      license {
+        key = "..."
+      }
+    image: emqx/emqx-enterprise:5.0.0
+    dashboardServiceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
+
+  > The `license.key` in the `bootstrapConfig` field represents the Licesne content. In this example, the License content is omitted, please fill it in by the user.
+
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
+
+  ```bash
+  $ kubectl get emqx emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   10m
+  ```
+
++ Obtain the Dashboard External IP of EMQX cluster and access EMQX console
+
+  EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
+
+  ```bash
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
 ::::
 
-**NOTE**: `secretName` indicates the name of the Secret created in the previous step.
+## Update License
 
-Save the above content as: emqx-license.yaml, and execute the following command to deploy the EMQX Enterprise Edition cluster.
++ View License Information
 
-```
-kubectl apply -f emqx-license.yaml
-```
+  ```bash
+  $ kubectl exec -it emqx-ee-core-0 -c emqx -- emqx_ctl license info
+  ```
 
-The output is similar to:
+  The following output can be obtained. From the output results, we can see the basic information of the license we applied for, including the applicant's information, the maximum number of connections supported by the license, and the expiration time of the license.
 
-```
-emqxenterprise.apps.emqx.io/emqx-ee created
-```
+  ```bash
+  customer        : EMQ
+  email           : cloudnative@emqx.io
+  deployment      : deployment-6159820
+  max_connections : 10000
+  start_at        : 2023-02-16
+  expiry_at       : 2023-05-17
+  type            : trial
+  customer_type   : 0
+  expiry          : false
+  ```
 
-- Check whether the EMQX Enterprise Edition cluster is ready
++ Update License
+  :::: tabs type:card
+  ::: tab apps.emqx.io/v1beta4
 
-```
-kubectl get emqxenterprise emqx-ee -o json | jq ".status.emqxNodes"
-```
+  + Update EMQX Enterprise License Secret
 
-The output is similar to:
+    ```bash
+    $ kubectl create secret generic ${your_license_name} --from-file=emqx.lic=${/path/to/license/file} --dry-run -o yaml | kubectl apply -f -
+    ```
 
-```
-[
-   {
-     "node": "emqx-ee@emqx-ee-1.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   },
-   {
-     "node": "emqx-ee@emqx-ee-2.emqx-ee-headless.default.svc.cluster.local",
-     "node_status": "Running",
-     "otp_release": "24.1.5/12.1.5",
-     "version": "4.4.8"
-   }
-]
-```
+  + Check whether the EMQX cluster license has been updated
 
-**NOTE**: `node` represents the unique identifier of the EMQX node in the cluster. `node_status` indicates the status of the EMQX node. `otp_release` indicates the version of Erlang used by EMQX. `version` indicates the EMQX version. EMQX Operator will pull up the EMQX cluster with three nodes by default, so when the cluster is running normally, you can see the information of the three running nodes. If you configure the `.spec.replicas` field, when the cluster is running normally, the number of running nodes displayed in the output should be equal to the value of replicas.
+    ```bash
+    $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
+    ```
 
-- Check the EMQX Enterprise Edition License information
+    You can get information similar to the following. From the `max_connections` field, you can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully. If the certificate information is not updated, you can wait for a while, the update of the license will be delayed.
 
-```
-kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
-```
+    ```bash
+    customer                 : cloudnative
+    email                    : cloudnative@emqx.io
+    max_connections          : 100000
+    original_max_connections : 100000
+    issued_at                : 2022-11-21 02:49:35
+    expiry_at                : 2022-12-01 02:49:35
+    vendor                   : EMQ Technologies Co., Ltd.
+    version                  : 4.4.14
+    type                     : official
+    customer_type            : 2
+    expiry                   : false
+    ```
+  :::
+  ::: tab apps.emqx.io/v2alpha1
 
-The output is similar to:
+  + Update License through EMQX Dashboard
 
-```
-customer                 : EMQ X Evaluation
-email                    : contact@emqx.io
-max_connections          : 10
-original_max_connections : 10
-issued_at                : 2020-06-20 03:02:52
-expiry_at                : 2049-01-01 03:02:52
-vendor                   : EMQ Technologies Co., Ltd.
-version                  : 4.4.8
-type                     : official
-customer_type            : 10
-expiry                   : false
-```
+    Open the browser, enter Dashboard, click Overview and pull down the page to the bottom to see the current license information of the cluster, as shown in the following figure:
 
-**NOTE**: From the output results, you can see the basic information of the license we applied for, including applicant information, the maximum number of connections supported by the license, and the expiration time of the license.
+    ![](./assets/configure-emqx-license/emqx-dashboard-license.png)
 
-## Update EMQX Enterprise Edition License
+    Then click the **Update License** button to upload the latest License Key content, as shown in the following figure:
 
-- Update EMQX Enterprise Edition License Secret
+    ![](./assets/configure-emqx-license/emqx-license-upload.png)
 
-```
-kubectl create secret generic test --from-file=emqx.lic=/path/to/license/file --dry-run -o yaml | kubectl apply -f -
-```
+    Finally, click the **Save** button to save the update. The following picture shows the updated License information:
 
-The output is similar to:
+    ![](./assets/configure-emqx-license/emqx-license-update.png)
 
-```
-secret/test configured
-```
+    As can be seen from the above figure, the content of the license has been updated, which means that the license has been updated successfully.
 
-- Check whether the EMQX cluster license has been updated
-
-```
-kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
-```
-
-The output is similar to:
-
-```
-customer                 : cloudnative
-email                    : cloudnative@emqx.io
-max_connections          : 100000
-original_max_connections : 100000
-issued_at                : 2022-11-21 02:49:35
-expiry_at                : 2022-12-01 02:49:35
-vendor                   : EMQ Technologies Co., Ltd.
-version                  : 4.4.8
-type                     : official
-customer_type            : 2
-expiry                   : false
-```
-
-**NOTE**: If the certificate information is not updated, you can wait for a while, the update of the license will be delayed. From the above output results, we can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully.
+  :::
+  ::::
