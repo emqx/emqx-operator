@@ -1,137 +1,158 @@
-# Access EMQX Cluster by LoadBalancer
+# Access EMQX Cluster Through LoadBalancer
 
 ## Task Target
 
-How to access EMQX cluster by LoadBalancer. <!--I do not quite understand what is page is about-->
+Access the EMQX cluster through the Service of LoadBalancer type.
 
 ## Configure EMQX Cluster
 
-Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab apps.emqx.io/v1beta4
 
-EMQX CRD supports using `.spec.dashboardServiceTemplate` to configure EMQX cluster Dashboard Service, using `.spec.listenersServiceTemplate` to configure EMQX cluster listener Service, its documentation can refer to [Service](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v2alpha1-reference.md).
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX cluster Service through `.spec.serviceTemplate` field. For the specific description of the serviceTemplate field, please refer to: [serviceTemplate](../reference/v1beta4-reference.md#servicetemplate).
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx:5.0
-  listenersServiceTemplate:
-    spec:
-      type: LoadBalancer
-```
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
-> By default, EMQX will open an MQTT TCP listener `tcp-default` corresponding to port 1883 and Dashboard listener `dashboard-listeners-http-bind` corresponding to port 18083. Users can add new listeners through `.spec.bootstrapConfig` field or EMQX Dashboard. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (name or port fields are repeated), EMQX Operator will use the user's configuration prevail.
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
 
-Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
+  > EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's The configuration prevails.
 
-```bash
-$ kubectl apply -f emqx.yaml
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
-emqx.apps.emqx.io/emqx created
-```
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
 
-Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
++ Obtain the External IP of EMQX cluster and access EMQX console
 
-```bash
-$ kubectl get emqx emqx
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.0   Running   10m
-```
+  192.168.1.200
+  ```
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab v1beta4
+::: tab apps.emqx.io/v2alpha1
 
-The corresponding CRD of EMQX Enterprise in EMQX Operator is EmqxEnterprise, and EmqxEnterprise supports configuring EMQX cluster Service through `.spec.serviceTemplate` field. For the specific description of the serviceTemplate field, please refer to [serviceTemplate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#servicetemplate).
+`apps.emqx.io/v2alpha1 EMQX` supports configuring EMQX cluster Dashboard Service through `.spec.dashboardServiceTemplate`, and configuring EMQX cluster listener Service through `.spec.listenersServiceTemplate`, its documentation can refer to: [Service](../reference/v2alpha1-reference.md#emqxspec).
 
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-  serviceTemplate:
-    spec:
-      type: LoadBalancer
-```
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
-> EMQX will open 6 listeners by default, namely: `mqtt-ssl-8883` corresponds to port 8883, `mqtt-tcp-1883` corresponds to port 1883, `http-dashboard-18083` corresponds to port 18083, `http-management-8081` corresponds to port 8081,`mqtt-ws-8083` corresponds to port 8083 and `mqtt-wss-8084` corresponds to port 8084. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's configuration prevail.
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha1
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.0
+    listenersServiceTemplate:
+      spec:
+        type: LoadBalancer
+    dashboardServiceTemplate:
+      spec:
+        type: LoadBalancer
+   ```
 
-Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
+  > By default, EMQX will open an MQTT TCP listener `tcp-default` corresponding to port 1883 and Dashboard listener `dashboard-listeners-http-bind` corresponding to port 18083.
 
-```bash
-$ kubectl apply -f emqx.yaml
+  > Users can add new listeners through `.spec.bootstrapConfig` field or EMQX Dashboard. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (name or port fields are repeated), EMQX Operator will use the user's configuration prevail.
 
-emqxenterprise.apps.emqx.io/emqx-ee created
-```
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
-Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
+  ```bash
+  $ kubectl get emqx emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.0   Running   10m
+  ```
++ Obtain the Dashboard External IP of EMQX cluster and access EMQX console
 
-```bash
-$ kubectl get emqxenterprises
+  EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
 
-NAME      STATUS   AGE
-emqx-ee   Running  8m33s
-```
+  ```bash
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
 ::::
 
-## Use MQTT X Client to Connect EMQX Cluster
+## Connect To EMQX Cluster By MQTT X CLI
 
-Check EMQX service
++ Obtain the External IP of the EMQX cluster
 
-```bash
-$ kubectl get svc -l apps.emqx.io/instance=emqx
+  :::: tabs type:card
+  ::: tab apps.emqx.io/v1beta4
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v2alpha1
 
-NAME             TYPE       CLUSTER-IP       EXTERNAL-IP            PORT(S)                          AGE
-emqx-dashboard   NodePort   10.101.225.238   183.134.197.178        18083:32012/TCP                  32s
-emqx-listeners   NodePort   10.97.59.150     183.134.197.178        1883:32010/TCP                   10s
-```
+  ```bash
+  external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::::
 
-use MQTT X Cli to connect EMQX
++ Use MQTT X CLI to connect to EMQX cluster
 
-```
-$ mqttx conn -h 183.134.197.178
-[11:16:40] › …  Connecting...
-[11:16:41] › ✔  Connected
-```
+  ```bash
+  $ mqttx conn -h ${external_ip} -p 1883
 
-## Add New listeners via EMQX Dashboard
+  [4/17/2023] [5:17:31 PM] › … Connecting...
+  [4/17/2023] [5:17:31 PM] › ✔ Connected
+  ```
 
-Open the browser, enter the host `IP` and port `32012` where the EMQX Pod is located, log in to the EMQX cluster Dashboard (Dashboard default user name: admin, default password: public), enter the Dashboard and click Configuration → Listeners to enter the listener page, We first click the Add Listener button to add a listener named to test and port 1884, as shown in the figure below:
+## Add New Listener Through EMQX Dashboard
 
-<img src="./assets/configure-service/emqx-add-listener.png" style="zoom: 33%;" />
+:::tip
+The screenshots of the Dashboard below are from EMQX 5, [EMQX 4 Dashboard](https://docs.emqx.com/en/enterprise/v4.4/getting-started/dashboard-ee.html#dashboard) also supports the corresponding function, please operate by yourself.
+:::
 
-Then click the Add button to create the listener, as shown in the following figure:
++ Add new Listener
 
-<img src="./assets/configure-service/emqx-listeners.png" style="zoom:50%;" />
+  Open the browser to login the EMQX Dashboard and click Configuration → Listeners to enter the listener page, we first click the Add Listener button to add a name called test, port 1884 The listener, as shown in the following figure:
 
-As can be seen from the figure, the test listener we created has taken effect.
+  <div style="text-align:center">
+  <img src="./assets/configure-service/emqx-add-listener.png" style="zoom: 50%;" />
+  </div>
+  Then click the Add button to create the listener, as shown in the following figure:
 
-- Check whether the newly added listener is injected into the Service
+  <img src="./assets/configure-service/emqx-listeners.png" style="zoom:50%;" />
 
-```bash
-kubectl get svc -l apps.emqx.io/instance=emqx
-```
+  As can be seen from the figure, the test listener we created has taken effect.
 
-The output is similar to:
++ Check whether the newly added listener is injected into the Service
 
-```bash
-NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                                         AGE
-emqx-dashboard   NodePort   10.105.110.235   <none>        18083:32012/TCP                                 13m
-emqx-listeners   NodePort   10.106.1.58      <none>        1883:32010/TCP,14567:32011/UDP,1884:30763/TCP   12m
-```
+  ```bash
+  kubectl get svc
 
-From the output results, we can see that the newly added listener 1884 has been injected into the `emqx-listeners` Service.
+  NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                                         AGE
+  emqx-dashboard   NodePort   10.105.110.235   <none>        18083:32012/TCP                                 13m
+  emqx-listeners   NodePort   10.106.1.58      <none>        1883:32010/TCP,1884:30763/TCP                   12m
+  ```
+
+  From the output results, we can see that the newly added listener 1884 has been injected into the `emqx-listeners` Service.

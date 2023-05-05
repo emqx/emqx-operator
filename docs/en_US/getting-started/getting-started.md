@@ -8,7 +8,7 @@ Before deploying EMQX Operator, please confirm that the following components hav
 
 - A running [Kubernetes cluster](https://kubernetes.io/docs/concepts/overview/), for a version of Kubernetes, please check [How to selector Kubernetes version](../README.md#how-to-selector-kubernetes-version)
 
-- A [Kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) tool that can access the Kubernetes cluster. You can check the status of the Kubernetes cluster using `kubectl cluster-info` command.
+- A [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) tool that can access the Kubernetes cluster. You can check the status of the Kubernetes cluster using `kubectl cluster-info` command.
 
 - [Helm](https://helm.sh) 3 or higher
 

@@ -12,7 +12,7 @@ The chapter is divided into sections covering
 - Cluster Configuration
   - [Change EMQX Configurations Via Operator](./configure-emqx-bootstrapConfig.md)
   - [Enable Core + Replicant Cluster (EMQX 5.x)](./configure-emqx-core-replicant.md)
-  - [Configure Persistence in EMQX Cluster](./configure-emqx-persistence.md)
+  - [Enable Persistence in EMQX Cluster](./configure-emqx-persistence.md)
   - [Access EMQX Cluster by Kubernetes Service](./configure-emqx-service.md)
 
 **Upgrades and Maintenance**
