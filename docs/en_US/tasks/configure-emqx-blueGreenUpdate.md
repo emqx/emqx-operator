@@ -14,7 +14,7 @@ Traditional rolling upgrades may face the following issues in a production envir
 
 3. After the upgrade is complete, the load may be uneven between nodes.
 
-4. Due to using StatefulSets for deployment, there will be one node less providing services during the upgrade process than the actual number of nodes.
+4. Due to the rolling update strategy of StatefulSets, the nodes serving during the upgrade process will be one less than the actual nodes.
 
 Therefore, EMQX Operator implements blue-green deployment based on the Node Evacuation feature of EMQX Enterprise to solve the above issues.
 
