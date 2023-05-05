@@ -123,7 +123,9 @@ The output is similar to:
 
 ### Trigger EMQX Operator to Perform Blue-Green Upgrade
 
-Modifying any content of the `.spec.template` field of the EmqxEnterprise object will trigger EMQX Operator to perform a blue-green upgrade. In this article, we trigger the upgrade by modifying the EMQX Container Name, and users can modify it according to their actual needs.
+- Modifying any content of the `.spec.template` field of the EmqxEnterprise object will trigger EMQX Operator to perform a blue-green upgrade
+
+> In this article, we trigger the upgrade by modifying the EMQX Container Image, and users can modify it according to their actual needs.
 
 ```bash
 kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": {"spec": {"emqxContainer": {"name": "emqx-ee-a"}} }}}'

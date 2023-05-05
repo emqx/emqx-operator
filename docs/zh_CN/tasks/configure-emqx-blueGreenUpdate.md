@@ -122,7 +122,9 @@ mqttx bench conn -h ${IP} -p ${PORT}  -c 3000
 
 ### 触发 EMQX Operator 进行蓝绿升级
 
-修改 EmqxEnterprise 对象 `.spec.template` 字段的任意内容都会触发 EMQX Operator 进行蓝绿升级。在本文中通过我们修改 EMQX Container Name 来触发升级，用户可根据实际需求自行修改。
+- 修改 EmqxEnterprise 对象 `.spec.template` 字段的任意内容都会触发 EMQX Operator 进行蓝绿升级
+
+> 在本文中通过我们修改 EMQX Container Image 来触发升级，用户可根据实际需求自行修改。
 
 ```bash
 $ kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": {"spec": {"emqxContainer": {"emqxConfig": {"image": {"version": "4.4.15"}}}}}}}'
@@ -179,9 +181,9 @@ emqxenterprise.apps.emqx.io/emqx-ee patched
   emqx-ee   Running  8m33s
   ```
 
-  请确保 `STATUS` 为 `Running`，这需要一些时间等待 EMQX 集群完成升级。
+  请确保 `STATUS` 为 `Running`， 这需要一些时间等待 EMQX 集群完成升级。
   
-  升级完成后，通过 `$ kubectl get pods` 命令可以观察到旧的 EMQX 节点已经被删除。
+  升级完成后， 通过 `$ kubectl get pods` 命令可以观察到旧的 EMQX 节点已经被删除。
 
 ## Grafana 监控
 
@@ -197,4 +199,3 @@ emqx-ee-86d7758868：升级前的 3 个 EMQX 节点
 emqx-ee-745858464d：升级后的 3 个 EMQX 节点
 
 如上图，我们通过 EMQX Kubernetes Operator 的蓝绿发布在 Kubernetes 中实现了优雅升级，通过该方案升级，总连接数未出现较大抖动（取决于迁移速率、服务端能够接收的速率、客户端重连策略等），能够极大程度保障升级过程的平滑，有效防止服务端过载，减少业务感知，从而提升服务的稳定性。
-
