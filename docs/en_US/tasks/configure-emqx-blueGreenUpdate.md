@@ -1,4 +1,4 @@
-# Configure Blue-Green Upgrade (EMQX Enterprise)
+# Configure Blue-Green Upgrade (EMQX 4 Enterprise)
 
 ## Task target
 
@@ -86,7 +86,7 @@ The output is similar to:
 emqxenterprise.apps.emqx.io/emqx-ee created
 ```
 
-- Check whether the EMQX Enterprise cluster is ready
+Check whether the EMQX Enterprise cluster is ready
 
 ```bash
 $ kubectl get emqxenterprises
@@ -178,6 +178,24 @@ The output is similar to:
 `state`: State of the node evacuation.
 
 `stats`: Evacuation node statistics, including current number of connections (current_connected), current number of sessions (current_sessions), initial number of connections (initial_connected), and initial number of sessions (initial_sessions).
+
+- Check if the upgrade was successful
+
+```bash
+$ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.conditions"
+
+[
+  {
+    "lastTransitionTime": "2023-04-21T07:42:00Z",
+    "lastUpdateTime": "2023-04-24T02:15:31Z",
+    "message": "All resources are ready",
+    "reason": "ClusterReady",
+    "status": "True",
+    "type": "Running"
+  }
+]
+```
+When the `type` is Running, it means that the upgrade has been successful.
 
 ## Grafana Monitoring
 

@@ -1,4 +1,4 @@
-# 配置蓝绿发布（EMQX 企业版）
+# 配置蓝绿发布（EMQX 4 企业版）
 
 ## 任务目标
 
@@ -24,7 +24,7 @@ EMQX 节点疏散功能用于疏散节点中的所有连接，手动/自动的�
 
 :::tip
 
-节点疏散功能仅在 EMQX 企业版 4.4.12 版本才开放。
+节点疏散功能仅在 EMQX 企业版 4.4.12 版本后才开放。
 
 :::
 
@@ -130,7 +130,7 @@ $ kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": 
 emqxenterprise.apps.emqx.io/emqx-ee patched
 ```
 
-检查蓝绿升级的状态
+- 检查蓝绿升级的状态
 
 ```bash
 $ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
@@ -169,6 +169,25 @@ $ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus
 `state`: 节点疏散阶段。
 
 `stats`: 疏散节点的统计指标，包括当前连接数（current_connected），当前 session 数（current_sessions），初始连接数（initial_connected），初始 session 数（initial_sessions）。
+
+- 检查是否成功升级
+
+```bash
+$ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.conditions"
+
+[
+  {
+    "lastTransitionTime": "2023-04-21T07:42:00Z",
+    "lastUpdateTime": "2023-04-24T02:15:31Z",
+    "message": "All resources are ready",
+    "reason": "ClusterReady",
+    "status": "True",
+    "type": "Running"
+  }
+]
+```
+
+当 `type` 为 Running，表示升级成功
 
 ## Grafana 监控
 
