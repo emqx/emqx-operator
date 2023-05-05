@@ -14,7 +14,7 @@
 
 3. 升级完成后，各节点间的负载不均衡
 
-4. 由于使用 StatefulSets 进行部署，在升级过程中提供服务的节点会比实际节点要少一个
+4. 由于 StatefulSets 进行部署，在升级过程中提供服务的节点会比实际节点要少一个
 
 
 因此 EMQX Operator 基于 EMQX 企业版的节点疏散（Node Evacuation）功能实现了蓝绿发布来解决上述问题。
@@ -132,62 +132,56 @@ emqxenterprise.apps.emqx.io/emqx-ee patched
 
 - 检查蓝绿升级的状态
 
-```bash
-$ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
+  ```bash
+  $ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
 
-[
-  {
-    "connection_eviction_rate": 200,
-    "node": "emqx-ee@emqx-ee-54fc496fb4-2.emqx-ee-headless.default.svc.cluster.local",
-    "session_eviction_rate": 200,
-    "session_goal": 0,
-    "connection_goal": 22,
-    "session_recipients": [
-      "emqx-ee@emqx-ee-5d87d4c6bd-2.emqx-ee-headless.default.svc.cluster.local",
-      "emqx-ee@emqx-ee-5d87d4c6bd-1.emqx-ee-headless.default.svc.cluster.local",
-      "emqx-ee@emqx-ee-5d87d4c6bd-0.emqx-ee-headless.default.svc.cluster.local"
-    ],
-    "state": "waiting_takeover",
-    "stats": {
-      "current_connected": 0,
-      "current_sessions": 0,
-      "initial_connected": 33,
-      "initial_sessions": 0
+  [
+    {
+      "connection_eviction_rate": 200,
+      "node": "emqx-ee@emqx-ee-54fc496fb4-2.emqx-ee-headless.default.svc.cluster.local",
+      "session_eviction_rate": 200,
+      "session_goal": 0,
+      "connection_goal": 22,
+      "session_recipients": [
+        "emqx-ee@emqx-ee-5d87d4c6bd-2.emqx-ee-headless.default.svc.cluster.local",
+        "emqx-ee@emqx-ee-5d87d4c6bd-1.emqx-ee-headless.default.svc.cluster.local",
+        "emqx-ee@emqx-ee-5d87d4c6bd-0.emqx-ee-headless.default.svc.cluster.local"
+      ],
+      "state": "waiting_takeover",
+      "stats": {
+        "current_connected": 0,
+        "current_sessions": 0,
+        "initial_connected": 33,
+        "initial_sessions": 0
+      }
     }
-  }
-]
-```
+  ]
+  ```
 
-`connection_eviction_rate`: 节点疏散速率（单位：count/second）。
+  `connection_eviction_rate`: 节点疏散速率（单位：count/second）。
 
-`node`: 当前正在进行疏散的节点。
+  `node`: 当前正在进行疏散的节点。
 
-`session_eviction_rate`: 节点 session 疏散速率(单位：count/second)。
+  `session_eviction_rate`: 节点 session 疏散速率(单位：count/second)。
 
-`session_recipients`: session 疏散的接受者列表。
+  `session_recipients`: session 疏散的接受者列表。
 
-`state`: 节点疏散阶段。
+  `state`: 节点疏散阶段。
 
-`stats`: 疏散节点的统计指标，包括当前连接数（current_connected），当前 session 数（current_sessions），初始连接数（initial_connected），初始 session 数（initial_sessions）。
+  `stats`: 疏散节点的统计指标，包括当前连接数（current_connected），当前 session 数（current_sessions），初始连接数（initial_connected），初始 session 数（initial_sessions）。
 
-- 检查是否成功升级
+- 等待完成升级
 
-```bash
-$ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.conditions"
+  ```bash
+  $ kubectl get emqxenterprises
 
-[
-  {
-    "lastTransitionTime": "2023-04-21T07:42:00Z",
-    "lastUpdateTime": "2023-04-24T02:15:31Z",
-    "message": "All resources are ready",
-    "reason": "ClusterReady",
-    "status": "True",
-    "type": "Running"
-  }
-]
-```
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
 
-当 `type` 为 Running，表示升级成功
+  请确保 `STATUS` 为 `Running`，这需要一些时间等待 EMQX 集群完成升级。
+  
+  升级完成后，通过 `$ kubectl get pods` 命令可以观察到旧的 EMQX 节点已经被删除。
 
 ## Grafana 监控
 

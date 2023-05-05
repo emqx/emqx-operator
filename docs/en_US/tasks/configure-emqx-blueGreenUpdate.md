@@ -137,65 +137,61 @@ emqxenterprise.apps.emqx.io/emqx-ee patched
 
 - Check the status of the blue-green upgrade
 
-```bash
-kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
-```
+    ```bash
+    kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
+    ```
 
-The output is similar to:
+    The output is similar to:
 
-```bash
-[
-  {
-    "connection_eviction_rate": 200,
-    "node": "emqx-ee@emqx-ee-54fc496fb4-2.emqx-ee-headless.default.svc.cluster.local",
-    "session_eviction_rate": 200,
-    "session_goal": 0,
-    "connection_goal": 22,
-    "session_recipients": [
-      "emqx-ee@emqx-ee-5d87d4c6bd-2.emqx-ee-headless.default.svc.cluster.local",
-      "emqx-ee@emqx-ee-5d87d4c6bd-1.emqx-ee-headless.default.svc.cluster.local",
-      "emqx-ee@emqx-ee-5d87d4c6bd-0.emqx-ee-headless.default.svc.cluster.local"
-    ],
-    "state": "waiting_takeover",
-    "stats": {
-      "current_connected": 0,
-      "current_sessions": 0,
-      "initial_connected": 33,
-      "initial_sessions": 0
+    ```bash
+    [
+    {
+        "connection_eviction_rate": 200,
+        "node": "emqx-ee@emqx-ee-54fc496fb4-2.emqx-ee-headless.default.svc.cluster.local",
+        "session_eviction_rate": 200,
+        "session_goal": 0,
+        "connection_goal": 22,
+        "session_recipients": [
+        "emqx-ee@emqx-ee-5d87d4c6bd-2.emqx-ee-headless.default.svc.cluster.local",
+        "emqx-ee@emqx-ee-5d87d4c6bd-1.emqx-ee-headless.default.svc.cluster.local",
+        "emqx-ee@emqx-ee-5d87d4c6bd-0.emqx-ee-headless.default.svc.cluster.local"
+        ],
+        "state": "waiting_takeover",
+        "stats": {
+        "current_connected": 0,
+        "current_sessions": 0,
+        "initial_connected": 33,
+        "initial_sessions": 0
+        }
     }
-  }
-]
-```
+    ]
+    ```
 
-`connection_eviction_rate`: Node eviction rate (count/second).
+    `connection_eviction_rate`: Node eviction rate (count/second).
 
-`node`: The node that is currently being evacuated.
+    `node`: The node that is currently being evacuated.
 
-`session_eviction_rate`: Session eviction rate for the node (count/second).
+    `session_eviction_rate`: Session eviction rate for the node (count/second).
 
-`session_recipients`: List of recipients for the session evacuation.
+    `session_recipients`: List of recipients for the session evacuation.
 
-`state`: State of the node evacuation.
+    `state`: State of the node evacuation.
 
-`stats`: Evacuation node statistics, including current number of connections (current_connected), current number of sessions (current_sessions), initial number of connections (initial_connected), and initial number of sessions (initial_sessions).
+    `stats`: Evacuation node statistics, including current number of connections (current_connected), current number of sessions (current_sessions), initial number of connections (initial_connected), and initial number of sessions (initial_sessions).
 
-- Check if the upgrade was successful
+- Waiting for upgrade to complete
 
-```bash
-$ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.conditions"
+    ```bash
+    $ kubectl get emqxenterprises
 
-[
-  {
-    "lastTransitionTime": "2023-04-21T07:42:00Z",
-    "lastUpdateTime": "2023-04-24T02:15:31Z",
-    "message": "All resources are ready",
-    "reason": "ClusterReady",
-    "status": "True",
-    "type": "Running"
-  }
-]
-```
-When the `type` is Running, it means that the upgrade has been successful.
+    NAME      STATUS   AGE
+    emqx-ee   Running  8m33s
+    ```
+
+    Please ensure that the `STATUS` is Running, this may take some time as we wait for the EMQX cluster to complete its upgrade.
+
+    After the upgrade is completed, the old EMQX nodes can be observed to have been removed by the `$ kubectl get pods command`.
+
 
 ## Grafana Monitoring
 
