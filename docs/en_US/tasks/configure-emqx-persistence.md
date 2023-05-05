@@ -1,4 +1,4 @@
-# Configure EMQX Cluster Persistence
+# Enable Persistence in EMQX Cluster
 
 ## Task Target
 

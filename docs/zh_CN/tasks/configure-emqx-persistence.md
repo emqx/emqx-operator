@@ -1,8 +1,8 @@
-# 配置 EMQX 集群持久化
+# 在 EMQX 集群中开启持久化
 
 ## 任务目标
 
-- 通过 `persistent` 字段 配置 EMQX 4.x 集群持久化。
+- 通过 `persistent` 字段配置 EMQX 4.x 集群持久化。
 - 通过 `volumeClaimTemplates` 字段配置 EMQX 5.x 集群 Core 节点持久化。
 
 ## EMQX 集群持久化配置

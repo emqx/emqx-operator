@@ -47,7 +47,7 @@
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
-          "title": "Configure Persistence in EMQX Cluster",
+          "title": "Enable Persistence in EMQX Cluster",
           "path": "tasks/configure-emqx-persistence"
         },
        {
@@ -147,7 +147,7 @@
           "path": "tasks/configure-emqx-core-replicant"
         },
         {
-          "title": "配置 EMQX 集群持久化",
+          "title": "在 EMQX 集群中开启持久化",
           "path": "tasks/configure-emqx-persistence"
         },
         {

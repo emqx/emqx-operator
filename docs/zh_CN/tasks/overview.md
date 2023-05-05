@@ -12,7 +12,7 @@
 - 集群配置
   - [通过 EMQX Operator 修改 EMQX 配置](./configure-emqx-bootstrapConfig.md)
   - [开启 Core + Replicant 集群 (EMQX 5.x)](./configure-emqx-core-replicant.md)
-  - [在 EMQX 集群中配置持久化](./configure-emqx-persistence.md)
+  - [在 EMQX 集群中开启持久化](./configure-emqx-persistence.md)
   - [通过 Kubernetes Service 访问 EMQX 集群](./configure-emqx-service.md)
 
 **升级和维护**
