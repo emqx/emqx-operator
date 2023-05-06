@@ -106,13 +106,12 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
-				e, _ := newEmqxHttpAPI(r.Client, emqx, nil)
-				if e == nil {
-					// The EMQX is not ready, requeue
-					return ctrl.Result{RequeueAfter: time.Second}, nil
+				requester, err := newRequesterBySvc(r.Client, emqx)
+				if err != nil {
+					return ctrl.Result{}, err
 				}
 
-				err = r.unloadPluginByAPI(e, instance.Spec.PluginName)
+				err = r.unloadPluginByAPI(requester, instance.Spec.PluginName)
 				if err != nil {
 					if innerErr.IsCommonError(err) {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
@@ -160,12 +159,12 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
-		e, _ := newEmqxHttpAPI(r.Client, emqx, nil)
-		if e == nil {
-			// The EMQX is not ready, requeue
-			return ctrl.Result{RequeueAfter: time.Second}, nil
+		requester, err := newRequesterBySvc(r.Client, emqx)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
-		err = r.checkPluginStatusByAPI(e, instance.Spec.PluginName)
+
+		err = r.checkPluginStatusByAPI(requester, instance.Spec.PluginName)
 		if err != nil {
 			if innerErr.IsCommonError(err) {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
@@ -190,8 +189,8 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EmqxPluginReconciler) checkPluginStatusByAPI(e EmqxHttpAPI, pluginName string) error {
-	list, err := r.getPluginsByAPI(e)
+func (r *EmqxPluginReconciler) checkPluginStatusByAPI(requester *requester, pluginName string) error {
+	list, err := r.getPluginsByAPI(requester)
 	if err != nil {
 		return err
 	}
@@ -199,7 +198,7 @@ func (r *EmqxPluginReconciler) checkPluginStatusByAPI(e EmqxHttpAPI, pluginName 
 		for _, plugin := range node.Plugins {
 			if plugin.Name == pluginName {
 				if !plugin.Active {
-					err := r.doLoadPluginByAPI(e, node.Node, plugin.Name, "reload")
+					err := r.doLoadPluginByAPI(requester, node.Node, plugin.Name, "reload")
 					if err != nil {
 						return err
 					}
@@ -210,15 +209,15 @@ func (r *EmqxPluginReconciler) checkPluginStatusByAPI(e EmqxHttpAPI, pluginName 
 	return nil
 }
 
-func (r *EmqxPluginReconciler) unloadPluginByAPI(e EmqxHttpAPI, pluginName string) error {
-	list, err := r.getPluginsByAPI(e)
+func (r *EmqxPluginReconciler) unloadPluginByAPI(requester *requester, pluginName string) error {
+	list, err := r.getPluginsByAPI(requester)
 	if err != nil {
 		return err
 	}
 	for _, node := range list {
 		for _, plugin := range node.Plugins {
 			if plugin.Name == pluginName {
-				err := r.doLoadPluginByAPI(e, node.Node, plugin.Name, "unload")
+				err := r.doLoadPluginByAPI(requester, node.Node, plugin.Name, "unload")
 				if err != nil {
 					return err
 				}
@@ -228,8 +227,8 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(e EmqxHttpAPI, pluginName strin
 	return nil
 }
 
-func (r *EmqxPluginReconciler) doLoadPluginByAPI(e EmqxHttpAPI, nodeName, pluginName, reloadOrUnload string) error {
-	resp, _, err := e.Request("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
+func (r *EmqxPluginReconciler) doLoadPluginByAPI(requester Requester, nodeName, pluginName, reloadOrUnload string) error {
+	resp, _, err := requester.Request("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
 	if err != nil {
 		return err
 	}
@@ -239,9 +238,9 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(e EmqxHttpAPI, nodeName, plugin
 	return nil
 }
 
-func (r *EmqxPluginReconciler) getPluginsByAPI(e EmqxHttpAPI) ([]pluginListByAPIReturn, error) {
+func (r *EmqxPluginReconciler) getPluginsByAPI(requester Requester) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
-	resp, body, err := e.Request("GET", "api/v4/plugins", nil)
+	resp, body, err := requester.Request("GET", "api/v4/plugins", nil)
 	if err != nil {
 		return nil, err
 	}

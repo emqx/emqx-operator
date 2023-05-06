@@ -105,13 +105,15 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
 
-	emqxHttpAPI, err := newEmqxHttpAPI(r.Client, emqx, r.getReadyPod(emqx))
-	if emqxHttpAPI == nil || err != nil {
+	readyPod := r.getReadyPod(emqx)
+	requester, err := newRequesterByPod(r.Client, emqx, readyPod)
+
+	if err != nil {
 		return ctrl.Result{}, emperror.New("failed to get create emqx http API")
 	}
 	if !rebalance.DeletionTimestamp.IsZero() {
 		if rebalance.Status.Phase == appsv1beta4.RebalancePhaseProcessing {
-			_ = stopRebalance(emqxHttpAPI, rebalance)
+			_ = stopRebalance(requester, rebalance)
 		}
 		controllerutil.RemoveFinalizer(rebalance, finalizer)
 		return ctrl.Result{}, r.Client.Update(ctx, rebalance)
@@ -124,7 +126,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	rebalanceStatusHandler(rebalance, emqx, emqxHttpAPI, startRebalance, getRebalanceStatus)
+	rebalanceStatusHandler(rebalance, emqx, requester, startRebalance, getRebalanceStatus)
 	if err := r.Client.Status().Update(ctx, rebalance); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -173,16 +175,16 @@ func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterp
 }
 
 // Rebalance Handler
-type GetRebalanceStatusFunc func(EmqxHttpAPI) ([]appsv1beta4.RebalanceState, error)
-type StartRebalanceFunc func(e EmqxHttpAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error
-type StopRebalanceFunc func(e EmqxHttpAPI, rebalance *appsv1beta4.Rebalance) error
+type GetRebalanceStatusFunc func(requester Requester) ([]appsv1beta4.RebalanceState, error)
+type StartRebalanceFunc func(requester Requester, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error
+type StopRebalanceFunc func(requester Requester, rebalance *appsv1beta4.Rebalance) error
 
 func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise,
-	e EmqxHttpAPI, startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
+	requester Requester, startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
 ) {
 	switch rebalance.Status.Phase {
 	case "":
-		if err := startFun(e, rebalance, emqx); err != nil {
+		if err := startFun(requester, rebalance, emqx); err != nil {
 			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 				Type:    appsv1beta4.RebalanceConditionFailed,
 				Status:  corev1.ConditionTrue,
@@ -195,7 +197,7 @@ func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.
 			Status: corev1.ConditionTrue,
 		})
 	case appsv1beta4.RebalancePhaseProcessing:
-		rebalanceStates, err := getRebalanceStatusFun(e)
+		rebalanceStates, err := getRebalanceStatusFun(requester)
 		if err != nil {
 			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 				Type:    appsv1beta4.RebalanceConditionFailed,
@@ -224,15 +226,11 @@ func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.
 	}
 }
 
-func startRebalance(e EmqxHttpAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
-	nodes := []string{}
-	for _, emqxNode := range emqx.Status.EmqxNodes {
-		nodes = append(nodes, emqxNode.Node)
-	}
-	emqxNodeName := getEmqxNodeName(emqx, e.GetPod())
+func startRebalance(requester Requester, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
+	emqxNodeName := emqx.Status.EmqxNodes[0].Node
 
-	bytes := getRequestBytes(rebalance, nodes)
-	resp, respBody, err := e.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
+	bytes := getRequestBytes(rebalance, emqx)
+	resp, respBody, err := requester.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
 	if err != nil {
 		return err
 	}
@@ -249,8 +247,8 @@ func startRebalance(e EmqxHttpAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv
 	return nil
 }
 
-func getRebalanceStatus(e EmqxHttpAPI) ([]appsv1beta4.RebalanceState, error) {
-	resp, body, err := e.Request("GET", "api/v4/load_rebalance/global_status", nil)
+func getRebalanceStatus(requester Requester) ([]appsv1beta4.RebalanceState, error) {
+	resp, body, err := requester.Request("GET", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -265,10 +263,10 @@ func getRebalanceStatus(e EmqxHttpAPI) ([]appsv1beta4.RebalanceState, error) {
 	return rebalanceStates, nil
 }
 
-func stopRebalance(e EmqxHttpAPI, rebalance *appsv1beta4.Rebalance) error {
+func stopRebalance(requester Requester, rebalance *appsv1beta4.Rebalance) error {
 	// stop rebalance should use coordinatorNode as path parameter
 	emqxNodeName := rebalance.Status.RebalanceStates[0].CoordinatorNode
-	resp, respBody, err := e.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
+	resp, respBody, err := requester.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
 	if err != nil {
 		return err
 	}
@@ -283,7 +281,12 @@ func stopRebalance(e EmqxHttpAPI, rebalance *appsv1beta4.Rebalance) error {
 	return nil
 }
 
-func getRequestBytes(rebalance *appsv1beta4.Rebalance, nodes []string) []byte {
+func getRequestBytes(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) []byte {
+	nodes := []string{}
+	for _, emqxNode := range emqx.Status.EmqxNodes {
+		nodes = append(nodes, emqxNode.Node)
+	}
+
 	body := map[string]interface{}{
 		"conn_evict_rate":    rebalance.Spec.RebalanceStrategy.ConnEvictRate,
 		"sess_evict_rate":    rebalance.Spec.RebalanceStrategy.SessEvictRate,

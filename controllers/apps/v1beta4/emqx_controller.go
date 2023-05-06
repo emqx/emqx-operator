@@ -76,7 +76,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	e, err := newEmqxHttpAPI(r.Client, instance, nil)
+	requester, err := newRequesterBySvc(r.Client, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
 			_ = addEmqxBootstrapUser{EmqxReconciler: r}.reconcile(ctx, instance)
@@ -89,14 +89,14 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 
 	var subResult subResult
 	var subReconcilers = []emqxSubReconciler{
-		updateEmqxStatus{EmqxReconciler: r, EmqxHttpAPI: e},
+		updateEmqxStatus{EmqxReconciler: r, Requester: requester},
 		addEmqxBootstrapUser{EmqxReconciler: r},
 		addEmqxPlugins{EmqxReconciler: r},
-		addEmqxResources{EmqxReconciler: r, EmqxHttpAPI: e},
-		addEmqxStatefulSet{EmqxReconciler: r, EmqxHttpAPI: e},
-		addListener{EmqxReconciler: r, EmqxHttpAPI: e},
-		updateEmqxStatus{EmqxReconciler: r, EmqxHttpAPI: e},
-		updatePodConditions{EmqxReconciler: r, EmqxHttpAPI: e},
+		addEmqxResources{EmqxReconciler: r, Requester: requester},
+		addEmqxStatefulSet{EmqxReconciler: r, Requester: requester},
+		addListener{EmqxReconciler: r, Requester: requester},
+		updateEmqxStatus{EmqxReconciler: r, Requester: requester},
+		updatePodConditions{EmqxReconciler: r, Requester: requester},
 	}
 	for i := range subReconcilers {
 		if reflect.ValueOf(subResult).FieldByName("args").IsValid() {

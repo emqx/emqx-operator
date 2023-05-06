@@ -12,7 +12,7 @@ import (
 
 type addEmqxResources struct {
 	*EmqxReconciler
-	EmqxHttpAPI
+	Requester
 }
 
 func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
