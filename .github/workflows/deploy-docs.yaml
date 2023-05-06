@@ -101,7 +101,7 @@ jobs:
         cp -r docs-files/docs/en_US/* frontend/docs/en/${DOCS_TYPE}/${VERSION}/
         cp -r docs-files/docs/zh_CN/* frontend/docs/zh/${DOCS_TYPE}/${VERSION}/
         cp docs-files/docs/directory.json frontend/docs/.vuepress/config/directory.json
-        cd docs-files && git tag -l | egrep "^[1-9]\.[0-9]\.[0-9]?" | jq -R -s -c 'split("\n")[:-1] | . += ["latest"] | reverse' > ../frontend/docs/.vuepress/public/api/${DOCS_TYPE}_versions.json
+        cd docs-files && git tag -l | egrep "^[1-9]+\.[0-9]+\.[0-9]+$" | jq -R -s -c 'split("\n")[:-1] | . += ["latest"] | reverse' > ../frontend/docs/.vuepress/public/api/${DOCS_TYPE}_versions.json
 
     - name: build docs
       run: |
