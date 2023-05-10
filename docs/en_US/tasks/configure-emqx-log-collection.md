@@ -1,222 +1,583 @@
 # Collect EMQX Logs In Kubernetes
 
-## Task target
+## Task Target
 
-How to collect EMQX cluster logs through Telegraf and export them to the standard output of the container.
+Use ELK to collect EMQX cluster logs.
 
-## Deploy Telegraf Operator
+## Deploy ELK
 
-Telegraf is a server-based agent for collecting and sending all metrics and events from databases, systems, and IoT sensors. It supports four types of plugins, including input, output, aggregator and processor. More articles about Telegraf can be found at [telegraf](https://docs.influxdata.com/telegraf/v1.24/), The documentation for telegraf-operator can be found in [telegraf-operator](https://github.com/influxdata/telegraf-operator).
+ELK is the capitalized abbreviation of the three open source frameworks of Elasticsearch, Logstash, and Kibana, and is also known as the Elastic Stack. [Elasticsearch](https://www.elastic.co/elasticsearch/) is a near-real-time search platform framework based on Lucene, distributed, and interactive through Restful, also referred to as: es. [Logstash](https://www.elastic.co/logstash/) is the central data flow engine of ELK, which is used to collect data in different formats from different targets (files/data storage/MQ), and supports after filtering Output to different destinations (file/MQ/redis/elasticsearch/kafka, etc.). [Kibana](https://www.elastic.co/kibana/) can display es data on a page and provide real-time analysis functions.
 
-Execute the following command to deploy telegraf-operator
+### Deploy Single Node Elasticsearch
 
-```shell
-helm repo add influxdata https://helm.influxdata.com/
-helm upgrade --install telegraf-operator influxdata/telegraf-operator
-```
+The method of deploying single-node Elasticsearch is relatively simple. You can refer to the following YAML orchestration file to quickly deploy an Elasticsearch cluster.
 
-## Global Configuration - `classes`
+- Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
-The global configuration is mounted via secret, specifying the class name as logs, where
+  ```yaml
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: elasticsearch-logging
+    namespace: kube-logging
+    labels:
+      k8s-app: elasticsearch
+      kubernetes.io/cluster-service: "true"
+      addonmanager.kubernetes.io/mode: Reconcile
+  spec:
+    ports:
+    - port: 9200
+      protocol: TCP
+      targetPort: db
+    selector:
+      k8s-app: elasticsearch
+  ---
+  apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: elasticsearch-logging
+    namespace: kube-logging
+    labels:
+      k8s-app: elasticsearch
+      kubernetes.io/cluster-service: "true"
+      addonmanager.kubernetes.io/mode: Reconcile
+  ---
+  kind: ClusterRole
+  apiVersion: rbac.authorization.k8s.io/v1
+  metadata:
+    name: elasticsearch-logging
+    labels:
+      k8s-app: elasticsearch
+      kubernetes.io/cluster-service: "true"
+      addonmanager.kubernetes.io/mode: Reconcile
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - "services"
+    - "namespaces"
+    - "endpoints"
+    verbs:
+    - "get"
+  ---
+  kind: ClusterRoleBinding
+  apiVersion: rbac.authorization.k8s.io/v1
+  metadata:
+    namespace: kube-logging
+    name: elasticsearch-logging
+    labels:
+      k8s-app: elasticsearch
+      kubernetes.io/cluster-service: "true"
+      addonmanager.kubernetes.io/mode: Reconcile
+  subjects:
+  - kind: ServiceAccount
+    name: elasticsearch-logging
+    namespace: kube-logging
+    apiGroup: ""
+  roleRef:
+    kind: ClusterRole
+    name: elasticsearch
+    apiGroup: ""
+  ---
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: elasticsearch-logging
+    namespace: kube-logging
+    labels:
+      k8s-app: elasticsearch
+      kubernetes.io/cluster-service: "true"
+      addonmanager.kubernetes.io/mode: Reconcile
+  spec:
+    serviceName: elasticsearch-logging
+    replicas: 1
+    selector:
+      matchLabels:
+        k8s-app: elasticsearch
+    template:
+      metadata:
+        labels:
+          k8s-app: elasticsearch
+      spec:
+        serviceAccountName: elasticsearch-logging
+        containers:
+        - image: docker.io/library/elasticsearch:7.9.3
+          name: elasticsearch-logging
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 500Mi
+          ports:
+          - containerPort: 9200
+            name: db
+            protocol: TCP
+          - containerPort: 9300
+            name: transport
+            protocol: TCP
+          volumeMounts:
+          - name: elasticsearch-logging
+            mountPath: /usr/share/elasticsearch/data/
+          env:
+          - name: "NAMESPACE"
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: "discovery.type"
+            value: "single-node"
+          - name: ES_JAVA_OPTS
+            value: "-Xms512m -Xmx2g"
+        # Elasticsearch requires vm.max_map_count to be at least 262144.
+        # If your OS already sets up this number to a higher value, feel free
+        # to remove this init container.
+        initContainers:
+        - name: elasticsearch-logging-init
+          image: alpine:3.6
+          command: ["/sbin/sysctl", "-w", "vm.max_map_count=262144"]
+          securityContext:
+            privileged: true
+        - name: increase-fd-ulimit
+          image: busybox
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "ulimit -n 65536"]
+          securityContext:
+            privileged: true
+        - name: elasticsearch-volume-init
+          image: alpine:3.6
+          command:
+            -chmod
+            - -R
+            - "777"
+            - /usr/share/elasticsearch/data/
+          volumeMounts:
+          - name: elasticsearch-logging
+            mountPath: /usr/share/elasticsearch/data/
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-logging
+      spec:
+        storageClassName: ${storageClassName}
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi
+  ```
+  > The `storageClassName` field indicates the name of `StorageClass`, you can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs.
 
-- `agent` is to configure telegraf agent, refer to the detailed definition: [telegraf agent](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#agent)
-- `inputs.tail` is the tail plug-in used to configure the input and is defined in detail in [tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
-- `outputs.file` is a file plug-in used to configure the output is defined in detail in [file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
+- Wait for the es to be ready, you can check the status of the es pod through the `kubectl get` command, make sure `STATUS` is `Running`
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: telegraf-operator-classes
-  namespace: default
-stringData:
-  logs: |+
-    [agent]
-      interval = "60s"
-      flush_jitter = "5s"
-      flush_interval = "15s"
-      debug = true
-      quiet = false
-      metric_batch_size = 128
-      metric_buffer_limit = 256
+  ```bash
+  $ kubectl get pod -n kube-logging -l "k8s-app=elasticsearch"
+  NAME                        READY   STATUS             RESTARTS   AGE
+  elasticsearch-0             1/1     Running            0          16m
+  ```
 
-    [[inputs.tail]]
-      files = ["/opt/emqx/log/emqx.log.[1-9]"]
-      from_beginning = false
-      max_undelivered_lines = 64
-      character_encoding = "utf-8"
-      data_format = "grok"
-      grok_patterns = ['^%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.999999999-07:00"} \[%{LOGLEVEL:level}\] (?m)%{GREEDYDATA:messages}$']
-      [inputs.tail.tags]
-        collection = "log"
+### Deploy Kibana
 
-    [[outputs.file]]
-      files = ["stdout"]
-```
+This article uses `Deployment` to deploy Kibana to visualize the collected logs. `Service` uses `NodePort`.
 
-Save the above as `classes.yaml`
+- Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
-- Create secret
+  ```yaml
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: kibana
+    namespace: kube-logging
+    labels:
+      k8s-app: kibana
+  spec:
+    type: NodePort
+    - port: 5601
+      nodePort: 35601
+      protocol: TCP
+      targetPort: ui
+    selector:
+      k8s-app: kibana
+  ---
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: kibana
+    namespace: kube-logging
+    labels:
+      k8s-app: kibana
+      kubernetes.io/cluster-service: "true"
+      addonmanager.kubernetes.io/mode: Reconcile
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        k8s-app: kibana
+    template:
+      metadata:
+        labels:
+          k8s-app: kibana
+        annotations:
+          seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
+      spec:
+        containers:
+        -name: kibana
+          image: docker.io/kubeimages/kibana:7.9.3
+          resources:
+            limits:
+              cpu: 1000m
+            requests:
+              cpu: 100m
+          env:
+            # The access address of ES
+            - name: ELASTICSEARCH_HOSTS
+              value: http://elasticsearch-logging:9200
+          ports:
+          - containerPort: 5601
+            name: ui
+            protocol: TCP
+  ```
 
-```shell
-kubectl apply -f classes.yaml
-```
+- Wait for Kibana to be ready, you can check the status of the Kibana pod through the `kubectl get` command, make sure `STATUS` is `Running`
 
-- Check the created secret
+  ```bash
+  $ kubectl get pod -n kube-logging -l "k8s-app=kibana"
+  NAME                        READY   STATUS             RESTARTS   AGE
+  kibana-b7d98644-48gtm       1/1     Running            0          17m
+  ```
 
-```shell
-kubectl get secret telegraf-operator-classes
-```
+  Finally, in the browser, enter `http://{node_ip}:35601`, and you will enter the kibana web interface
 
-The output is similar to:
+### Deploy Filebeat
 
-```shell
-NAME                        TYPE     DATA   AGE
-telegraf-operator-classes   Opaque   1      11h
-```
+[Filebeat](https://www.elastic.co/beats/filebeat) is a lightweight eating log collection component, which is part of the Elastic Stack and can work seamlessly with Logstash, Elasticsearch and Kibana. Whether you're transforming or enriching logs and files with Logstash, throwing around some data analysis in Elasticsearch, or building and sharing dashboards in Kibana, Filebeat makes it easy to get your data where it matters most.
+
+- Save the following content as a YAML file and deploy it via the `kubectl apply` command
+
+  ```yaml
+  ---
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: filebeat-config
+    namespace: kube-system
+    labels:
+      k8s-app: filebeat
+  data:
+    filebeat.yml: |-
+      filebeat.inputs:
+      - type: container
+        paths:
+          # The log path of the EMQX container on the host
+          - /var/log/containers/^emqx.*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+              - logs_path:
+                  logs_path: "/var/log/containers/"
+      output.logstash:
+        hosts: ["logstash:5044"]
+        enabled: true
+  ---
+  apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: filebeat
+    namespace: kube-logging
+    labels:
+      k8s-app: filebeat
+  ---
+  apiVersion: rbac.authorization.k8s.io/v1beta1
+  kind: ClusterRole
+  metadata:
+    name: filebeat
+    labels:
+      k8s-app: filebeat
+  rules:
+  - apiGroups: [""]
+    resources:
+    - namespaces
+    - pods
+    verbs:
+    - get
+    - watch
+    - list
+  ---
+  apiVersion: rbac.authorization.k8s.io/v1beta1
+  kind: ClusterRoleBinding
+  metadata:
+    name: filebeat
+  subjects:
+  - kind: ServiceAccount
+    name: filebeat
+    namespace: kube-logging
+  roleRef:
+    kind: ClusterRole
+    name: filebeat
+    apiGroup: rbac.authorization.k8s.io
+  ---
+  apiVersion: apps/v1
+  kind: DaemonSet
+  metadata:
+    name: filebeat
+    namespace: kube-logging
+    labels:
+      k8s-app: filebeat
+  spec:
+    selector:
+      matchLabels:
+        k8s-app: filebeat
+    template:
+      metadata:
+        labels:
+          k8s-app: filebeat
+      spec:
+        serviceAccountName: filebeat
+        terminationGracePeriodSeconds: 30
+        containers:
+        - name: filebeat
+          image: docker.io/kubeimages/filebeat:7.9.3
+          args: [
+            "-c", "/etc/filebeat.yml",
+            "-e","-httpprof","0.0.0.0:6060"
+          ]
+          env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: ELASTICSEARCH_HOST
+            value: elasticsearch
+          - name: ELASTICSEARCH_PORT
+            value: "9200"
+          securityContext:
+            runAsUser: 0
+          resources:
+            limits:
+              memory: 1000Mi
+              cpu: 1000m
+            requests:
+              memory: 100Mi
+              cpu: 100m
+          volumeMounts:
+          - name: config
+            mountPath: /etc/filebeat.yml
+            readOnly: true
+            subPath: filebeat.yml
+          - name: data
+            mountPath: /usr/share/filebeat/data
+          - name: varlibdockercontainers
+            mountPath: /data/var/
+            readOnly: true
+          -name: varlog
+            mountPath: /var/log/
+            readOnly: true
+          -name: timezone
+            mountPath: /etc/localtime
+        volumes:
+        - name: config
+          configMap:
+            defaultMode: 0600
+            name: filebeat-config
+        - name: varlibdockercontainers
+          hostPath:
+            path: /data/var/
+        -name: varlog
+          hostPath:
+            path: /var/log/
+        - name: inputs
+          configMap:
+            defaultMode: 0600
+            name: filebeat-inputs
+        - name: data
+          hostPath:
+            path: /data/filebeat-data
+            type: DirectoryOrCreate
+        -name: timezone
+          hostPath:
+            path: /etc/localtime
+  ```
+
+- Wait for Filebeat to be ready, you can check the status of the Filebeat pod through the `kubectl get` command, make sure `STATUS` is `Running`
+
+  ```bash
+  $ kubectl get pod -n kube-logging -l "k8s-app=filebeat"
+  NAME             READY   STATUS    RESTARTS   AGE
+  filebeat-82d2b   1/1     Running   0          45m
+  filebeat-vwrjn   1/1     Running   0          45m
+  ```
+
+### Deploy Logstash
+
+This is mainly to combine the business needs and the secondary utilization of logs, and Logstash is added for log cleaning. This article uses the [Beats Input plugin](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-beats.html) of Logstash to collect logs, and uses the [Ruby filter plugin](https://www.elastic.co/guide/en/logstash/current/plugins-filters-ruby.html) to filter logs. Logstash also provides many other input and filtering plug-ins for users to use, and you can configure appropriate plug-ins according to your business needs.
+
+- Save the following content as a YAML file and deploy it via the `kubectl apply` command
+
+  ```yaml
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: logstash
+    namespace: kube-system
+  spec:
+    ports:
+    - port: 5044
+      targetPort: beats
+    selector:
+      k8s-app: logstash
+    clusterIP: None
+  ---
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: logstash
+    namespace: kube-system
+  spec:
+    selector:
+      matchLabels:
+        k8s-app: logstash
+    template:
+      metadata:
+        labels:
+          k8s-app: logstash
+      spec:
+        containers:
+        - image: docker.io/kubeimages/logstash:7.9.3
+          name: logstash
+          ports:
+          - containerPort: 5044
+            name: beats
+          command:
+          - logstash
+          - '-f'
+          - '/etc/logstash_c/logstash.conf'
+          env:
+          - name: "XPACK_MONITORING_ELASTICSEARCH_HOSTS"
+            value: "http://elasticsearch-logging:9200"
+          volumeMounts:
+          - name: config-volume
+            mountPath: /etc/logstash_c/
+          - name: config-yml-volume
+            mountPath: /usr/share/logstash/config/
+          -name: timezone
+            mountPath: /etc/localtime
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2048Mi
+            requests:
+              cpu: 512m
+              memory: 512Mi
+        volumes:
+        - name: config-volume
+          configMap:
+            name: logstash-conf
+            items:
+            - key: logstash.conf
+              path: logstash.conf
+        -name: timezone
+          hostPath:
+            path: /etc/localtime
+        - name: config-yml-volume
+          configMap:
+            name: logstash-yml
+            items:
+            - key: logstash.yml
+              path: logstash.yml
+  ---
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: logstash-conf
+    namespace: kube-logging
+    labels:
+      k8s-app: logstash
+  data:
+    logstash.conf: |-
+      input {
+        beats {
+          port => 5044
+        }
+      }
+      filter {
+        ruby {
+          code => "
+            ss = event.get('message').split(' ')
+            len = ss. length()
+            level = ''
+            index = ''
+            msg = ''
+            if len == 0 || len < 2
+              event.set('level','invalid')
+              return
+            end
+            if ss[1][0] == '['
+              l = ss[1].length()
+              level = ss[1][1..l-2]
+              index = 2
+            else
+              level = 'info'
+              index = 0
+            end
+            event.set('level',level)
+            for i in ss[index..len]
+              msg = msg + i
+              msg = msg + ' '
+            end
+            event.set('message',msg)
+          "
+        }
+        if [level] == "invalid" {
+          drop {}
+        }
+      }
+      output {
+        elasticsearch {
+          hosts => ["http://elasticsearch-logging:9200"]
+          codec => json
+          index => "logstash-%{+YYYY.MM.dd}"
+        }
+      }
+  ---
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: logstash
+    namespace: kube-logging
+    labels:
+      k8s-app: logstash
+  data:
+    logstash.yml: |-
+      http.host: "0.0.0.0"
+      xpack.monitoring.elasticsearch.hosts: http://elasticsearch-logging:9200
+  ```
+
+- Wait for Logstash to be ready, you can view the status of the Logstash pod through the `kubectl get` command, make sure `STATUS` is `Running`
+
+  ```bash
+  $ kubectl get pod -n kube-logging -l "k8s-app=logstash"
+  NAME             READY   STATUS    RESTARTS   AGE
+  filebeat-82d2b   1/1     Running   0          45m
+  filebeat-vwrjn   1/1     Running   0          45m
+  ```
 
 ## Deploy EMQX Cluster
 
-Telegraf uses annotations to inject sidecar for Pod log collection, for a detailed definition of annotations refer to the documentation: [telegraf annotations](https://github.com/influxdata/telegraf-operator#pod-level-annotations)
+To deploy EMQX cluster, please refer to the document [Deploy EMQX](../getting-started/getting-started.md)
 
-Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
+## Verify Log Collection
 
-:::: tabs type:card
-::: tab v2alpha1
+- First log in to the Kibana interface, open the stack management module in the menu, click on the index management, you can find that there are already collected log indexes
 
-`telegraf.influxdata.com/internal` Set to false to not collect the telegraf agent's own metrics
+  ![](./assets/configure-log-collection/index-manage.png)
 
-`telegraf.influxdata.com/volume-mounts` Set the mount path of the log
+- In order to be able to discover and view logs in Kibana, you need to set an index match, select index patterns, and click Create
 
-`telegraf.influxdata.com/class` logs reference the name of the class specified above
+  ![](./assets/configure-log-collection/create-index-0.png)
 
-`spec.bootstrapConfig` Configure the output log to a file and the log level to debug
+  ![](./assets/configure-log-collection/create-index-1.png)
 
-`spec.coreTemplate.spec.extraVolumes` and `spec.coreTemplate.spec.extraVolumeMounts` Configuring Log Mounts
+- Finally verify whether the EMQX cluster logs are collected
 
-```yaml
-apiVersion: apps.emqx.io/v2alpha1
-kind: EMQX
-metadata:
-  name: emqx
-  annotations:
-    telegraf.influxdata.com/class: "logs"
-    telegraf.influxdata.com/internal: "false"
-    telegraf.influxdata.com/volume-mounts: "{\"log-volume\":\"/opt/emqx/log\"}"
-spec:
-  image: "emqx/emqx-enterprise:5.0.0"
-  bootstrapConfig: |
-    log {
-      file_handlers {
-        my_debug_log {
-          enable = true
-          level = debug
-          file = "log/emqx.log"
-          rotation {
-            enable = true
-            count = 10
-          }
-        }
-      }
-    }
-  coreTemplate:
-    spec:
-      extraVolumes:
-        - name: log-volume
-          emptyDir: {}
-      extraVolumeMounts:
-        - name: log-volume
-          mountPath: /opt/emqx/log
-  replicantTemplate:
-    spec:
-      extraVolumes:
-        - name: log-volume
-          emptyDir: {}
-      extraVolumeMounts:
-        - name: log-volume
-          mountPath: /opt/emqx/log
-```
-
-Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
-
-```bash
-$ kubectl apply -f emqx.yaml
-
-emqx.apps.emqx.io/emqx created
-```
-
-Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
-
-```bash
-$ kubectl get emqx emqx
-
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.0   Running   10m
-```
-
-:::
-::: tab v1beta4
-
-`telegraf.influxdata.com/internal` Set to false to not collect the telegraf agent's own metrics
-
-`telegraf.influxdata.com/volume-mounts` Set the mount path of the log
-
-`telegraf.influxdata.com/class` logs references the name of the class specified above
-
-`spec.template.spec.emqxContainer.emqxConfig` Configure the output log to a file and the log level to debug
-
-`spec.template.spec.volumes` and `spec.template.spec.emqxContainer.volumeMounts` Configure Log volume
-
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-  annotations:
-    telegraf.influxdata.com/internal: "false"
-    telegraf.influxdata.com/volume-mounts: "{\"log-volume\":\"/opt/emqx/log\"}"
-    telegraf.influxdata.com/class: "logs"
-spec:
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-        emqxConfig:
-          log.level: debug
-          log.to: file
-        volumeMounts:
-        - name: log-volume
-          mountPath: /opt/emqx/log
-      volumes:
-        - name: log-volume
-          emptyDir: {}
-```
-
-Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
-
-```bash
-$ kubectl apply -f emqx.yaml
-
-emqxenterprise.apps.emqx.io/emqx-ee created
-```
-
-Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, which may take some time to wait for the EMQX cluster to be ready.
-
-```bash
-$ kubectl get emqxenterprises
-
-NAME      STATUS   AGE
-emqx-ee   Running  8m33s
-```
-
-:::
-::::
-
-## Check the Telegraf Logs
-
-```
-kubectl logs -f $pod_name -c telegraf
-```
-
+  ![](./assets/configure-log-collection/log-collection.png)
