@@ -10,11 +10,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
 
 ### 单节点方式部署 Elasticsearch
 
-单节点部署 Elasticsearch 的方法较简单，可以参考下面的 YAML 编排文件，整体就是创建一个 es。
-
-:::tip
-这里部署的是单机版，采用有状态的方式部署，支持使用 `hostpath` 持久化。
-:::
+单节点部署 Elasticsearch 的方法较简单，可以参考下面的 YAML 编排文件，快速部署一个 Elasticsearch 集群。
 
 - 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
@@ -23,7 +19,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
   apiVersion: v1
   kind: Service
   metadata:
-    name: elasticsearch
+    name: elasticsearch-logging
     namespace: kube-logging
     labels:
       k8s-app: elasticsearch
@@ -40,7 +36,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
   apiVersion: v1
   kind: ServiceAccount
   metadata:
-    name: elasticsearch
+    name: elasticsearch-logging
     namespace: kube-logging
     labels:
       k8s-app: elasticsearch
@@ -50,7 +46,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
   kind: ClusterRole
   apiVersion: rbac.authorization.k8s.io/v1
   metadata:
-    name: elasticsearch
+    name: elasticsearch-logging
     labels:
       k8s-app: elasticsearch
       kubernetes.io/cluster-service: "true"
@@ -69,14 +65,14 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
   apiVersion: rbac.authorization.k8s.io/v1
   metadata:
     namespace: kube-logging
-    name: elasticsearch
+    name: elasticsearch-logging
     labels:
       k8s-app: elasticsearch
       kubernetes.io/cluster-service: "true"
       addonmanager.kubernetes.io/mode: Reconcile
   subjects:
   - kind: ServiceAccount
-    name: elasticsearch
+    name: elasticsearch-logging
     namespace: kube-logging
     apiGroup: ""
   roleRef:
@@ -87,7 +83,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
   apiVersion: apps/v1
   kind: StatefulSet
   metadata:
-    name: elasticsearch
+    name: elasticsearch-logging
     namespace: kube-logging
     labels:
       k8s-app: elasticsearch
@@ -133,10 +129,6 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
             value: "single-node"
           - name: ES_JAVA_OPTS
             value: "-Xms512m -Xmx2g"
-        volumes:
-        - name: elasticsearch-logging
-          hostPath:
-            path: /data/es/
         # Elasticsearch requires vm.max_map_count to be at least 262144.
         # If your OS already sets up this number to a higher value, feel free
         # to remove this init container.
@@ -162,7 +154,17 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
           volumeMounts:
           - name: elasticsearch-logging
             mountPath: /usr/share/elasticsearch/data/
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-logging
+      spec:
+        storageClassName: ${storageClassName}
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi
   ```
+  > `storageClassName` 字段表示 `StorageClass` 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。
 
 - 等待 es 就绪，可以通过 `kubectl get` 命令查看 es pod 的状态，请确保 `STATUS` 为 `Running`
 
@@ -228,7 +230,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
           env:
             # The access address of ES
             - name: ELASTICSEARCH_HOSTS
-              value: http://elasticsearch:9200
+              value: http://elasticsearch-logging:9200
           ports:
           - containerPort: 5601
             name: ui
@@ -405,7 +407,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
   filebeat-vwrjn   1/1     Running   0          45m
   ```
 
-### 部署 Logstash 对日志进行清洗
+## 部署 Logstash 对日志进行清洗
 
 这里主要是结合业务需要和对日志的二次利用，所以加入了 Logstash 进行日志的清洗，大家可以根据自己的业务需求进行调整。
 
@@ -548,7 +550,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
   data:
     logstash.yml: |-
       http.host: "0.0.0.0"
-      xpack.monitoring.elasticsearch.hosts: http://elasticsearch:9200
+      xpack.monitoring.elasticsearch.hosts: http://elasticsearch-logging:9200
   ```
 - 等待 Logstash 就绪，可以通过 `kubectl get` 命令查看 Filogstash pod 的状态，请确保 `STATUS` 为 `Running`
 
