@@ -1,7 +1,7 @@
 # 使用 Prometheus+Grafana 监控 EMQX 集群
 
 ## 任务目标
-部署`emqx-exporter`并通过 Prometheus 和 Grafana 监控 EMQX 集群。
+部署 [EMQX Exporter](https://github.com/emqx/emqx-exporter) 并通过 Prometheus 和 Grafana 监控 EMQX 集群。
 
 ## 部署 Prometheus 和 Grafana
 
@@ -118,7 +118,10 @@ emqx-exporter 和 Prometheus 通过访问 EMQX dashboard API 拉取监控指标�
 * **EMQX 5** 创建一个新的 [API 密钥](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys)
 * **EMQX 4.4** 创建一个新的用户
 
-## 部署 emqx-exporter
+## 部署 [EMQX Exporter](https://github.com/emqx/emqx-exporter)
+
+The `emqx-exporter` is designed to expose partial metrics that are not included in the EMQX Prometheus API. It is compatible with EMQX 4.4 and EMQX 5, both open-source and enterprise.
+
 ```yaml
 apiVersion: v1
 kind: Service
