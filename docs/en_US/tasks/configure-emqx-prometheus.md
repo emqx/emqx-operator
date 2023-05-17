@@ -1,7 +1,7 @@
 # Monitor EMQX cluster by Prometheus and Grafana
 
 ## Task Target
-Deploy `emqx-exporter` and monitor EMQX cluster by Prometheus and Grafana.
+Deploy [EMQX Exporter](https://github.com/emqx/emqx-exporter) and monitor EMQX cluster by Prometheus and Grafana.
 
 ## Deploy Prometheus and Grafana
 
@@ -119,7 +119,10 @@ Note that it is different to create a secret between EMQX 5 and EMQX 4.4 on the 
 * **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys).
 * **EMQX 4.4** create a new `User` instead of `Application`
 
-## Deploy emqx-exporter
+## Deploy [EMQX Exporter](https://github.com/emqx/emqx-exporter)
+
+The `emqx-exporter` is designed to expose partial metrics that are not included in the EMQX Prometheus API. It is compatible with EMQX 4.4 and EMQX 5, both open-source and enterprise.
+
 ```yaml
 apiVersion: v1
 kind: Service
