@@ -8,9 +8,9 @@ Use ELK to collect EMQX cluster logs.
 
 ELK is the capitalized abbreviation of the three open source frameworks of Elasticsearch, Logstash, and Kibana, and is also known as the Elastic Stack. [Elasticsearch](https://www.elastic.co/elasticsearch/) is a near-real-time search platform framework based on Lucene, distributed, and interactive through Restful, also referred to as: es. [Logstash](https://www.elastic.co/logstash/) is the central data flow engine of ELK, which is used to collect data in different formats from different targets (files/data storage/MQ), and supports after filtering Output to different destinations (file/MQ/redis/elasticsearch/kafka, etc.). [Kibana](https://www.elastic.co/kibana/) can display es data on a page and provide real-time analysis functions.
 
-### Deploy Elasticsearch On A Single Node
+### Deploy Single Node Elasticsearch
 
-The method of deploying Elasticsearch on a single node is relatively simple. You can refer to the following YAML orchestration file to quickly deploy an Elasticsearch cluster.
+The method of deploying single-node Elasticsearch is relatively simple. You can refer to the following YAML orchestration file to quickly deploy an Elasticsearch cluster.
 
 - Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
