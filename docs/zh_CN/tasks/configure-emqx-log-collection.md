@@ -267,7 +267,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
       filebeat.inputs:
       - type: container
         paths:
-          # EMQX pod log file path
+          # The log path of the EMQX container on the host
           - /var/log/containers/^emqx.*.log
         processors:
           - add_kubernetes_metadata:
@@ -409,7 +409,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
 
 ## 部署 Logstash 对日志进行清洗
 
-这里主要是结合业务需要和对日志的二次利用，所以加入了 Logstash 进行日志的清洗，大家可以根据自己的业务需求进行调整。
+这里主要是结合业务需要和对日志的二次利用，加入了 Logstash 进行日志清洗。本文使用 Logstash 的 [Beats Input plugin](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-beats.html) 插件来采集日志，使用 [Ruby filter plugin](https://www.elastic.co/guide/en/logstash/current/plugins-filters-ruby.html) 插件来过滤日志。Logstash 还提供很多其他输入和过滤插件供用户使用，大家可以根据自己的业务需求配置合适的插件。
 
 - 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
@@ -509,7 +509,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
             index = ''
             msg = ''
             if len == 0 || len < 2
-              event.set('level','invaild')
+              event.set('level','invalid')
               return
             end
             if ss[1][0] == '['
@@ -528,7 +528,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
             event.set('message',msg)
           "
         }
-        if [level] == "invaild" {
+        if [level] == "invalid" {
           drop {}
         }
       }
@@ -552,6 +552,7 @@ ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简�
       http.host: "0.0.0.0"
       xpack.monitoring.elasticsearch.hosts: http://elasticsearch-logging:9200
   ```
+
 - 等待 Logstash 就绪，可以通过 `kubectl get` 命令查看 Filogstash pod 的状态，请确保 `STATUS` 为 `Running`
 
   ```bash
