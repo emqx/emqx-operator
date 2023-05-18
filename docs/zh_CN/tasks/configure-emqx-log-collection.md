@@ -6,7 +6,7 @@
 
 ## 部署 ELK
 
-ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简称，也被称为 Elastic Stack。[Elasticsearch](https://www.elastic.co/cn/elasticsearch/) 是一个基于Lucene、分布式、通过 Restful 方式进行交互的近实时搜索平台框架，也被简称为：es。[Logstash](https://www.elastic.co/cn/logstash/) 是 ELK 的中央数据流引擎，用于从不同目标（文件/数据存储/MQ）收集的不同格式数据，经过过滤后支持输出到不同目的地（文件/MQ/redis/elasticsearch/kafka等）。[Kibana](https://www.elastic.co/cn/kibana/) 可以将 es 的数据通过页面展示出来，提供实时分析的功能。
+ELK 是 Elasticsearch、Logstash、Kibana 三大开源框架首字母大写简称，也被称为 Elastic Stack。[Elasticsearch](https://www.elastic.co/cn/elasticsearch/) 是一个基于Lucene、分布式、通过Restful方式进行交互的近实时搜索平台框架，也被简称为：es。[Logstash](https://www.elastic.co/cn/logstash/) 是 ELK的中央数据流引擎，用于从不同目标（文件/数据存储/MQ）收集的不同格式数据，经过过滤后支持输出到不同目的地（文件/MQ/redis/elasticsearch/kafka等）。[Kibana](https://www.elastic.co/cn/kibana/) 可以将 es 的数据通过页面展示出来，提供实时分析的功能。
 
 ### 单节点方式部署 Elasticsearch
 
