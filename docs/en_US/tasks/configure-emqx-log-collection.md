@@ -10,161 +10,159 @@ ELK is the capitalized abbreviation of the three open source frameworks of Elast
 
 ### Deploy Elasticsearch On A Single Node
 
-The method of deploying Elasticsearch on a single node is relatively simple. You can refer to the following YAML orchestration file to quickly deploy an Elasticsearch cluster.
+The method of deploying Elasticsearch on a single node is relatively simple. You can refer to the YAML orchestration file below. The whole is to create an es.
+
+:::tip
+The stand-alone version is deployed here, which is deployed in a stateful manner and supports the use of `hostpath` for persistence.
+:::
 
 - Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
-  ```yaml
-  ---
-  apiVersion: v1
-  kind: Service
-  metadata:
-    name: elasticsearch-logging
-    namespace: kube-logging
-    labels:
-      k8s-app: elasticsearch
-      kubernetes.io/cluster-service: "true"
-      addonmanager.kubernetes.io/mode: Reconcile
-  spec:
-    ports:
-    - port: 9200
-      protocol: TCP
-      targetPort: db
-    selector:
-      k8s-app: elasticsearch
-  ---
-  apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-    name: elasticsearch-logging
-    namespace: kube-logging
-    labels:
-      k8s-app: elasticsearch
-      kubernetes.io/cluster-service: "true"
-      addonmanager.kubernetes.io/mode: Reconcile
-  ---
-  kind: ClusterRole
-  apiVersion: rbac.authorization.k8s.io/v1
-  metadata:
-    name: elasticsearch-logging
-    labels:
-      k8s-app: elasticsearch
-      kubernetes.io/cluster-service: "true"
-      addonmanager.kubernetes.io/mode: Reconcile
-  rules:
-  - apiGroups:
-    - ""
-    resources:
-    - "services"
-    - "namespaces"
-    - "endpoints"
-    verbs:
-    - "get"
-  ---
-  kind: ClusterRoleBinding
-  apiVersion: rbac.authorization.k8s.io/v1
-  metadata:
-    namespace: kube-logging
-    name: elasticsearch-logging
-    labels:
-      k8s-app: elasticsearch
-      kubernetes.io/cluster-service: "true"
-      addonmanager.kubernetes.io/mode: Reconcile
-  subjects:
-  - kind: ServiceAccount
-    name: elasticsearch-logging
-    namespace: kube-logging
-    apiGroup: ""
-  roleRef:
-    kind: ClusterRole
-    name: elasticsearch
-    apiGroup: ""
-  ---
-  apiVersion: apps/v1
-  kind: StatefulSet
-  metadata:
-    name: elasticsearch-logging
-    namespace: kube-logging
-    labels:
-      k8s-app: elasticsearch
-      kubernetes.io/cluster-service: "true"
-      addonmanager.kubernetes.io/mode: Reconcile
-  spec:
-    serviceName: elasticsearch-logging
-    replicas: 1
-    selector:
-      matchLabels:
-        k8s-app: elasticsearch
-    template:
-      metadata:
-        labels:
-          k8s-app: elasticsearch
-      spec:
-        serviceAccountName: elasticsearch-logging
-        containers:
-        - image: docker.io/library/elasticsearch:7.9.3
-          name: elasticsearch-logging
-            limits:
-              cpu: 1000m
-              memory: 1Gi
-            requests:
-              cpu: 100m
-              memory: 500Mi
-          ports:
-          - containerPort: 9200
-            name: db
-            protocol: TCP
-          - containerPort: 9300
-            name: transport
-            protocol: TCP
-          volumeMounts:
-          - name: elasticsearch-logging
-            mountPath: /usr/share/elasticsearch/data/
-          env:
-          - name: "NAMESPACE"
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-          - name: "discovery.type"
-            value: "single-node"
-          - name: ES_JAVA_OPTS
-            value: "-Xms512m -Xmx2g"
-        # Elasticsearch requires vm.max_map_count to be at least 262144.
-        # If your OS already sets up this number to a higher value, feel free
-        # to remove this init container.
-        initContainers:
-        - name: elasticsearch-logging-init
-          image: alpine:3.6
-          command: ["/sbin/sysctl", "-w", "vm.max_map_count=262144"]
-          securityContext:
-            privileged: true
-        - name: increase-fd-ulimit
-          image: busybox
-          imagePullPolicy: IfNotPresent
-          command: ["sh", "-c", "ulimit -n 65536"]
-          securityContext:
-            privileged: true
-        - name: elasticsearch-volume-init
-          image: alpine:3.6
-          command:
-            -chmod
-            - -R
-            - "777"
-            - /usr/share/elasticsearch/data/
-          volumeMounts:
-          - name: elasticsearch-logging
-            mountPath: /usr/share/elasticsearch/data/
-    volumeClaimTemplates:
-    - metadata:
-        name: elasticsearch-logging
-      spec:
-        storageClassName: ${storageClassName}
-        accessModes: [ "ReadWriteOnce" ]
-        resources:
-          requests:
-            storage: 10Gi
-  ```
-  > The `storageClassName` field indicates the name of `StorageClass`, you can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs.
+   ```yaml
+   ---
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: elasticsearch
+     namespace: kube-logging
+     labels:
+       k8s-app: elasticsearch
+       kubernetes.io/cluster-service: "true"
+       addonmanager.kubernetes.io/mode: Reconcile
+   spec:
+     ports:
+     - port: 9200
+       protocol: TCP
+       targetPort: db
+     selector:
+       k8s-app: elasticsearch
+   ---
+   apiVersion: v1
+   kind: ServiceAccount
+   metadata:
+     name: elasticsearch
+     namespace: kube-logging
+     labels:
+       k8s-app: elasticsearch
+       kubernetes.io/cluster-service: "true"
+       addonmanager.kubernetes.io/mode: Reconcile
+   ---
+   kind: ClusterRole
+   apiVersion: rbac.authorization.k8s.io/v1
+   metadata:
+     name: elasticsearch
+     labels:
+       k8s-app: elasticsearch
+       kubernetes.io/cluster-service: "true"
+       addonmanager.kubernetes.io/mode: Reconcile
+   rules:
+   - apiGroups:
+     - ""
+     resources:
+     - "services"
+     - "namespaces"
+     - "endpoints"
+     verbs:
+     - "get"
+   ---
+   kind: ClusterRoleBinding
+   apiVersion: rbac.authorization.k8s.io/v1
+   metadata:
+     namespace: kube-logging
+     name: elasticsearch
+     labels:
+       k8s-app: elasticsearch
+       kubernetes.io/cluster-service: "true"
+       addonmanager.kubernetes.io/mode: Reconcile
+   subjects:
+   - kind: ServiceAccount
+     name: elasticsearch
+     namespace: kube-logging
+     apiGroup: ""
+   roleRef:
+     kind: ClusterRole
+     name: elasticsearch
+     apiGroup: ""
+   ---
+   apiVersion: apps/v1
+   kind: StatefulSet
+   metadata:
+     name: elasticsearch
+     namespace: kube-logging
+     labels:
+       k8s-app: elasticsearch
+       kubernetes.io/cluster-service: "true"
+       addonmanager.kubernetes.io/mode: Reconcile
+   spec:
+     serviceName: elasticsearch-svc
+     replicas: 1
+     selector:
+       matchLabels:
+         k8s-app: elasticsearch
+     template:
+       metadata:
+         labels:
+           k8s-app: elasticsearch
+       spec:
+         serviceAccountName: elasticsearch-logging
+         containers:
+         - image: docker.io/library/elasticsearch:7.9.3
+           name: elasticsearch-logging
+             limits:
+               cpu: 1000m
+               memory: 1Gi
+             requests:
+               cpu: 100m
+               memory: 500Mi
+           ports:
+           - containerPort: 9200
+             name: db
+             protocol: TCP
+           - containerPort: 9300
+             name: transport
+             protocol: TCP
+           volumeMounts:
+           - name: elasticsearch-logging
+             mountPath: /usr/share/elasticsearch/data/
+           env:
+           - name: "NAMESPACE"
+             valueFrom:
+               fieldRef:
+                 fieldPath: metadata.namespace
+           - name: "discovery.type"
+             value: "single-node"
+           - name: ES_JAVA_OPTS
+             value: "-Xms512m -Xmx2g"
+         volumes:
+         - name: elasticsearch-logging
+           hostPath:
+             path: /data/es/
+         # Elasticsearch requires vm.max_map_count to be at least 262144.
+         # If your OS already sets up this number to a higher value, feel free
+         # to remove this init container.
+         initContainers:
+         - name: elasticsearch-logging-init
+           image: alpine:3.6
+           command: ["/sbin/sysctl", "-w", "vm.max_map_count=262144"]
+           securityContext:
+             privileged: true
+         - name: increase-fd-ulimit
+           image: busybox
+           imagePullPolicy: IfNotPresent
+           command: ["sh", "-c", "ulimit -n 65536"]
+           securityContext:
+             privileged: true
+         - name: elasticsearch-volume-init
+           image: alpine:3.6
+           command:
+             -chmod
+             - -R
+             - "777"
+             - /usr/share/elasticsearch/data/
+           volumeMounts:
+           - name: elasticsearch-logging
+             mountPath: /usr/share/elasticsearch/data/
+   ```
 
 - Wait for the es to be ready, you can check the status of the es pod through the `kubectl get` command, make sure `STATUS` is `Running`
 
@@ -230,7 +228,7 @@ This article uses `Deployment` to deploy Kibana to visualize the collected logs.
           env:
             # The access address of ES
             - name: ELASTICSEARCH_HOSTS
-              value: http://elasticsearch-logging:9200
+              value: http://elasticsearch:9200
           ports:
           - containerPort: 5601
             name: ui
@@ -550,7 +548,7 @@ This is mainly to combine business needs and secondary use of logs, so Logstash 
   data:
     logstash.yml: |-
       http.host: "0.0.0.0"
-      xpack.monitoring.elasticsearch.hosts: http://elasticsearch-logging:9200
+      xpack.monitoring.elasticsearch.hosts: http://elasticsearch:9200
   ```
 
 - Wait for Logstash to be ready, you can view the status of the Logstash pod through the `kubectl get` command, make sure `STATUS` is `Running`
