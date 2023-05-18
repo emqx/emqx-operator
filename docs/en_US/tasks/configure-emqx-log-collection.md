@@ -267,7 +267,7 @@ This article uses `Deployment` to deploy Kibana to visualize the collected logs.
       filebeat.inputs:
       - type: container
         paths:
-          # EMQX pod log file path
+          # The log path of the EMQX container on the host
           - /var/log/containers/^emqx.*.log
         processors:
           - add_kubernetes_metadata:
@@ -409,7 +409,7 @@ This article uses `Deployment` to deploy Kibana to visualize the collected logs.
 
 ### Deploy Logstash
 
-This is mainly to combine business needs and secondary use of logs, so Logstash is added to clean logs, and you can adjust it according to your business needs.
+This is mainly to combine the business needs and the secondary utilization of logs, and Logstash is added for log cleaning. This article uses the [Beats Input plugin](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-beats.html) of Logstash to collect logs, and uses the [Ruby filter plugin](https://www.elastic.co/guide/en/logstash/current/plugins-filters-ruby.html) to filter logs. Logstash also provides many other input and filtering plug-ins for users to use, and you can configure appropriate plug-ins according to your business needs.
 
 - Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
@@ -509,7 +509,7 @@ This is mainly to combine business needs and secondary use of logs, so Logstash 
             index = ''
             msg = ''
             if len == 0 || len < 2
-              event.set('level','invaild')
+              event.set('level','invalid')
               return
             end
             if ss[1][0] == '['
@@ -528,7 +528,7 @@ This is mainly to combine business needs and secondary use of logs, so Logstash 
             event.set('message',msg)
           "
         }
-        if [level] == "invail" {
+        if [level] == "invalid" {
           drop {}
         }
       }
