@@ -58,7 +58,7 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	timeout = time.Minute * 3
-	interval = time.Millisecond * 500
+	interval = time.Millisecond * 250
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
@@ -102,6 +102,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = appscontrollersv1beta4.NewEmqxPluginReconciler(k8sManager).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = appscontrollersv1beta4.NewRebalanceReconciler(k8sManager).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 	go func() {
 		defer GinkgoRecover()

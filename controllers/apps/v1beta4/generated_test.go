@@ -182,77 +182,11 @@ func TestGenerateEmqxACL(t *testing.T) {
 	assert.Equal(t, generateEmqxACL(emqx), expect)
 }
 
-func TestGenerateService(t *testing.T) {
-	emqx := instance.DeepCopy()
-	emqx.Spec.ServiceTemplate = appsv1beta4.ServiceTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx",
-			Namespace: "default",
-			Labels: map[string]string{
-				"foo": "bar",
-			},
-			Annotations: map[string]string{
-				"foo": "bar",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"foo": "bar",
-			},
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http-management-8081",
-					Port:       8081,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8081),
-				},
-			},
-		},
-	}
-
-	t.Run("nil service", func(t *testing.T) {
-		assert.Nil(t, generateService(emqx))
-	})
-
-	t.Run("service", func(t *testing.T) {
-		emqx.Status.CurrentStatefulSetVersion = "fake"
-
-		got := generateService(emqx)
-		assert.Equal(t, emqx.Spec.ServiceTemplate.ObjectMeta, got.ObjectMeta)
-		assert.Equal(t, emqx.Spec.ServiceTemplate.Spec.Ports, got.Spec.Ports)
-		assert.Equal(t, map[string]string{
-			"foo":                      "bar",
-			"controller-revision-hash": "fake",
-		}, got.Spec.Selector)
-	})
-
-	t.Run("headless service", func(t *testing.T) {
-		got := generateHeadlessService(emqx)
-		assert.Equal(t, "emqx-headless", got.Name)
-		assert.Equal(t, emqx.Spec.GetServiceTemplate().Namespace, got.Namespace)
-		assert.Equal(t, emqx.Spec.GetServiceTemplate().Labels, got.Labels)
-		assert.Equal(t, emqx.Spec.GetServiceTemplate().Annotations, got.Annotations)
-
-		assert.Equal(t, emqx.Spec.GetServiceTemplate().Labels, got.Spec.Selector)
-		assert.Equal(t, corev1.ServiceTypeClusterIP, got.Spec.Type)
-		assert.Equal(t, corev1.ClusterIPNone, got.Spec.ClusterIP)
-		assert.Equal(t, true, got.Spec.PublishNotReadyAddresses)
-		assert.Equal(t, []corev1.ServicePort{
-			{
-				Name:       "http-management-8081",
-				Port:       8081,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(8081),
-			},
-		}, got.Spec.Ports)
-	})
-}
-
 func TestGenerateStatefulSet(t *testing.T) {
 	emqx := instance.DeepCopy()
 	emqx.Default()
 
-	emqx.Spec.Replicas = &[]int32{3}[0]
+	emqx.Spec.Replicas = pointer.Int32(3)
 	emqx.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
 		{
 			Name: "fake",
@@ -310,6 +244,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 		},
 		{
+			Name: "emqx-log",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
+		{
 			Name: "emqx-data",
 			VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
@@ -319,7 +259,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 
 	emqx.Spec.Persistent = &corev1.PersistentVolumeClaimTemplate{
 		Spec: corev1.PersistentVolumeClaimSpec{
-			StorageClassName: &[]string{"fake"}[0],
+			StorageClassName: pointer.String("fake"),
 		},
 	}
 	emqx.Default()
@@ -418,6 +358,10 @@ func TestGenerateStatefulSet(t *testing.T) {
 			MountPath: "/fake",
 		},
 		{
+			Name:      "emqx-log",
+			MountPath: "/opt/emqx/log",
+		},
+		{
 			Name:      "emqx-data",
 			MountPath: "/opt/emqx/data",
 		},
@@ -495,6 +439,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 		"-p", "public",
 		"-P", "8081",
 	}, got.Spec.Template.Spec.Containers[1].Args)
+
+	assert.Equal(t, []corev1.PodReadinessGate{
+		{
+			ConditionType: appsv1beta4.PodOnServing,
+		},
+	}, got.Spec.Template.Spec.ReadinessGates)
 }
 
 func TestUpdateStatefulSetForPluginsConfig(t *testing.T) {
@@ -528,7 +478,6 @@ func TestUpdateStatefulSetForPluginsConfig(t *testing.T) {
 			Name: pluginsConfig.Name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: pointer.Int32Ptr(420),
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: pluginsConfig.Name,
 					},
@@ -599,8 +548,7 @@ func TestUpdateStatefulSetForLicense(t *testing.T) {
 			Name: license.Name,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: pointer.Int32Ptr(420),
-					SecretName:  license.Name,
+					SecretName: license.Name,
 				},
 			},
 		},
@@ -668,7 +616,6 @@ func TestUpdateStatefulSetForACL(t *testing.T) {
 			Name: acl.Name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: pointer.Int32Ptr(420),
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: acl.Name,
 					},
@@ -767,8 +714,7 @@ func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
 		Name: "bootstrap-user",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				DefaultMode: pointer.Int32Ptr(420),
-				SecretName:  "emqx-bootstrap-user",
+				SecretName: "emqx-bootstrap-user",
 			},
 		},
 	}}, got.Spec.Template.Spec.Volumes)
@@ -797,4 +743,29 @@ func TestUpdateStatefulSetForBootstrapUser(t *testing.T) {
 		Value: "/opt/emqx/data/bootstrap_user",
 	}}, got.Spec.Template.Spec.Containers[1].Env)
 
+}
+
+func TestGenerateHeadlessService(t *testing.T) {
+	emqx := instance.DeepCopy()
+
+	t.Run("headless service", func(t *testing.T) {
+		got := generateHeadlessService(emqx)
+		assert.Equal(t, "emqx-headless", got.Name)
+		assert.Equal(t, emqx.GetNamespace(), got.Namespace)
+		assert.Equal(t, emqx.GetLabels(), got.Labels)
+		assert.Equal(t, emqx.GetAnnotations(), got.Annotations)
+
+		assert.Equal(t, emqx.GetLabels(), got.Spec.Selector)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, got.Spec.Type)
+		assert.Equal(t, corev1.ClusterIPNone, got.Spec.ClusterIP)
+		assert.Equal(t, true, got.Spec.PublishNotReadyAddresses)
+		assert.Equal(t, []corev1.ServicePort{
+			{
+				Name:       "http-management-8081",
+				Port:       8081,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(8081),
+			},
+		}, got.Spec.Ports)
+	})
 }

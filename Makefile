@@ -67,14 +67,7 @@ docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
 helm-crds: manifests kustomize ## build CRDs to helm template
-	$(KUSTOMIZE) build config/crd > deploy/charts/emqx-operator/templates/crds.yaml
-	
-	yq -i '.metadata.annotations."cert-manager.io/inject-ca-from" = "{{ .Release.Namespace }}/{{ include \"emqx-operator.fullname\" . }}-serving-cert"' deploy/charts/emqx-operator/templates/crds.yaml
-	yq -i '.spec.conversion.webhook.clientConfig.service.name= "{{ include \"emqx-operator.fullname\" . }}-webhook-service"' deploy/charts/emqx-operator/templates/crds.yaml
-	yq -i '.spec.conversion.webhook.clientConfig.service.namespace = "{{ .Release.Namespace }}"' deploy/charts/emqx-operator/templates/crds.yaml
-
-	sed -i '1i {{- if not .Values.skipCRDs }}\n' deploy/charts/emqx-operator/templates/crds.yaml
-	echo -e '\n{{- end }}' >> deploy/charts/emqx-operator/templates/crds.yaml
+	$(PROJECT_DIR)/scripts/gen-helm-crds.sh
 
 ##@ Deployment
 
@@ -113,21 +106,21 @@ $(LOCALBIN):
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
-CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
+CRD_REF_DOCS = $(LOCALBIN)/crd-ref-docs
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v4.5.7
+KUSTOMIZE_VERSION ?= v4
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
+ENVTEST_VERSION ?= latest
+CRD_REF_DOCS_VERSION ?= latest
 
 ## Certs for webhook testing locally
 CERT_PATH=/tmp/k8s-webhook-server/serving-certs
 
-
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)
-	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
+	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) go install sigs.k8s.io/kustomize/kustomize/$(KUSTOMIZE_VERSION)@latest
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -137,12 +130,12 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 
 .PHONY: crd-ref-docs
 crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
 $(CRD_REF_DOCS): $(LOCALBIN)
-	test -s $(LOCALBIN)/crd-ref-docs || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@latest
+	test -s $(LOCALBIN)/crd-ref-docs || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
 
 define gen-crd-ref-docs
 @for API_DIR in $$(find '$(PROJECT_DIR)/apis/apps' -maxdepth 1 -mindepth 1 -type d); do \
@@ -153,6 +146,7 @@ define gen-crd-ref-docs
 		--renderer=markdown \
 		--log-level=error; \
 done
+@mkdir -p $(PROJECT_DIR)/docs/zh_CN/reference && cp -r $(PROJECT_DIR)/docs/en_US/reference/* $(PROJECT_DIR)/docs/zh_CN/reference
 endef
 
 .PHONY: local-webhook

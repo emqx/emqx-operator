@@ -64,7 +64,7 @@ func getPodMap(k8sClient client.Client, instance appsv1beta4.Emqx, allSts []*app
 		}
 	}
 	for i, pods := range podMap {
-		sort.Sort(PodsByNameNewer(pods))
+		sort.Sort(PodsByNameOlder(pods))
 		podMap[i] = pods
 	}
 

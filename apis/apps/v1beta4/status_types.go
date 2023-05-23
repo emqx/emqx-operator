@@ -7,6 +7,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
+)
+
 // Phase of the RF status
 type Phase string
 
@@ -57,6 +61,8 @@ type EmqxNode struct {
 	OTPRelease string `json:"otp_release,omitempty"`
 	// EMQX version
 	Version string `json:"version,omitempty"`
+	// MQTT connection count
+	Connections int64 `json:"connections,omitempty"`
 }
 
 type EmqxEvacuationStats struct {

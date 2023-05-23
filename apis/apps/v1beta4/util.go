@@ -25,7 +25,6 @@ func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort
 			result = append(result, item)
 		}
 	}
-
 	return result
 }
 

@@ -2,19 +2,18 @@ package v1beta4
 
 import (
 	"context"
+	"encoding/json"
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/tidwall/gjson"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type updateEmqxStatus struct {
 	*EmqxReconciler
-	*requestAPI
+	PortForwardAPI
 }
 
 func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
@@ -32,7 +31,7 @@ func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Em
 }
 
 func (s updateEmqxStatus) updateReadyReplicas(instance appsv1beta4.Emqx) error {
-	emqxNodes, err := s.getNodeStatusesByAPI(instance)
+	emqxNodes, err := s.getNodeStatusesByAPI()
 	if err != nil {
 		return emperror.Wrap(err, "failed to get node statuses")
 	}
@@ -92,11 +91,8 @@ func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
 			"",
 		)
 
-		ok, err := s.checkEndpointSliceIsReady(enterprise, currentSts)
-		if err != nil {
-			return emperror.Wrap(err, "failed to check endpoint slice is ready")
-		}
-		if !ok {
+		// Wait for current sts ready
+		if currentSts.Status.ReadyReplicas != *currentSts.Spec.Replicas {
 			return nil
 		}
 
@@ -111,7 +107,7 @@ func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
 			enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt = &now
 		}
 
-		evacuationsStatus, err := s.getEvacuationStatusByAPI(enterprise)
+		evacuationsStatus, err := s.getEvacuationStatusByAPI()
 		if err != nil {
 			return emperror.Wrap(err, "failed to get evacuation status")
 		}
@@ -120,39 +116,30 @@ func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
 	return nil
 }
 
-func (s updateEmqxStatus) checkEndpointSliceIsReady(instance appsv1beta4.Emqx, currentSts *appsv1.StatefulSet) (bool, error) {
-	// make sure that only latest ready sts is in endpoints
-	endpointSlice := &discoveryv1.EndpointSliceList{}
-	if err := s.Client.List(context.Background(), endpointSlice,
-		client.InNamespace(instance.GetNamespace()),
-		client.MatchingLabels(instance.GetSpec().GetServiceTemplate().Labels),
-	); err != nil {
-		return false, err
+// Request API
+func (s updateEmqxStatus) getNodeStatusesByAPI() ([]appsv1beta4.EmqxNode, error) {
+	_, body, err := s.PortForwardAPI.RequestAPI("GET", "api/v4/nodes", nil)
+	if err != nil {
+		return nil, err
+	}
+	emqxNodes := []appsv1beta4.EmqxNode{}
+	data := gjson.GetBytes(body, "data")
+	if err := json.Unmarshal([]byte(data.Raw), &emqxNodes); err != nil {
+		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
+	}
+	return emqxNodes, nil
+}
+
+func (s updateEmqxStatus) getEvacuationStatusByAPI() ([]appsv1beta4.EmqxEvacuationStatus, error) {
+	_, body, err := s.PortForwardAPI.RequestAPI("GET", "api/v4/load_rebalance/global_status", nil)
+	if err != nil {
+		return nil, err
 	}
 
-	podMap, _ := getPodMap(s.Client, instance, []*appsv1.StatefulSet{currentSts})
-
-	hitEndpoints := 0
-	for _, endpointSlice := range endpointSlice.Items {
-		if len(endpointSlice.Endpoints) != int(*instance.GetSpec().GetReplicas()) {
-			continue
-		}
-		for _, endpoint := range endpointSlice.Endpoints {
-			if endpoint.Conditions.Ready == nil || !*endpoint.Conditions.Ready {
-				continue
-			}
-
-			for _, pod := range podMap[currentSts.UID] {
-				if endpoint.TargetRef.UID != pod.UID {
-					continue
-				}
-				hitEndpoints++
-			}
-		}
+	evacuationStatuses := []appsv1beta4.EmqxEvacuationStatus{}
+	data := gjson.GetBytes(body, "evacuations")
+	if err := json.Unmarshal([]byte(data.Raw), &evacuationStatuses); err != nil {
+		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
 	}
-	if hitEndpoints != len(podMap[currentSts.UID]) {
-		// Wait for endpoints to be ready
-		return false, nil
-	}
-	return true, nil
+	return evacuationStatuses, nil
 }

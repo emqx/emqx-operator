@@ -2,6 +2,7 @@ package v1beta4
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -20,7 +21,7 @@ import (
 
 type addEmqxStatefulSet struct {
 	*EmqxReconciler
-	*requestAPI
+	PortForwardAPI
 }
 
 func (a addEmqxStatefulSet) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
@@ -69,7 +70,6 @@ func (a *addEmqxStatefulSet) handleBlueGreenUpdate(enterprise *appsv1beta4.EmqxE
 }
 
 func (a addEmqxStatefulSet) getNewStatefulSet(instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
-
 	if isEnterprise, enterprise := a.isEmqxEnterprise(instance); !isEnterprise || enterprise.Spec.EmqxBlueGreenUpdate == nil {
 		return sts, nil
 	}
@@ -180,6 +180,12 @@ func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterpri
 
 func (a addEmqxStatefulSet) canBeScaledDown(enterprise *appsv1beta4.EmqxEnterprise, originSts *appsv1.StatefulSet, podMap map[types.UID][]*corev1.Pod) bool {
 	// Check if there are any nodes that are prohibiting and has 0 current connected and current sessions
+	if enterprise.Status.EmqxBlueGreenUpdateStatus.StartedAt != nil &&
+		enterprise.Status.EmqxBlueGreenUpdateStatus.OriginStatefulSet != "" &&
+		enterprise.Status.EmqxBlueGreenUpdateStatus.CurrentStatefulSet != "" &&
+		enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus == nil {
+		return true
+	}
 	for _, e := range enterprise.Status.EmqxBlueGreenUpdateStatus.EvacuationsStatus {
 		if *e.Stats.CurrentConnected == 0 && *e.Stats.CurrentSessions == 0 && e.State == "prohibiting" {
 			// Extract the pod name from the node string
@@ -200,6 +206,37 @@ func (a addEmqxStatefulSet) canBeScaledDown(enterprise *appsv1beta4.EmqxEnterpri
 		}
 	}
 	return false
+}
+
+// Request API
+func (a addEmqxStatefulSet) startEvacuateNodeByAPI(instance appsv1beta4.Emqx, migrateToPods []*corev1.Pod, nodeName string) error {
+	enterprise, ok := instance.(*appsv1beta4.EmqxEnterprise)
+	if !ok {
+		return emperror.New("failed to evacuate node, only support emqx enterprise")
+	}
+
+	migrateTo := []string{}
+	for _, pod := range migrateToPods {
+		emqxNodeName := getEmqxNodeName(instance, pod)
+		migrateTo = append(migrateTo, emqxNodeName)
+	}
+
+	body := map[string]interface{}{
+		"conn_evict_rate": enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.ConnEvictRate,
+		"sess_evict_rate": enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.SessEvictRate,
+		"migrate_to":      migrateTo,
+	}
+	if enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.WaitTakeover > 0 {
+		body["wait_takeover"] = enterprise.Spec.EmqxBlueGreenUpdate.EvacuationStrategy.WaitTakeover
+	}
+
+	b, err := json.Marshal(body)
+	if err != nil {
+		return emperror.Wrap(err, "marshal body failed")
+	}
+
+	_, _, err = a.PortForwardAPI.RequestAPI("POST", "api/v4/load_rebalance/"+nodeName+"/evacuation/start", b)
+	return err
 }
 
 // Extract the pod name from the node string

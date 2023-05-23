@@ -12,7 +12,7 @@ import (
 
 type addEmqxResources struct {
 	*EmqxReconciler
-	*requestAPI
+	PortForwardAPI
 }
 
 func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
@@ -20,9 +20,6 @@ func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Em
 	if !ok {
 		panic("args[0] is not []client.Object")
 	}
-
-	// ignore error, because if statefulSet is not created, the listener port will be not found
-	listenerPorts, _ := a.getListenerPortsByAPI(instance)
 
 	var resources []client.Object
 
@@ -37,13 +34,8 @@ func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Em
 	acl := generateEmqxACL(instance)
 	resources = append(resources, acl)
 
-	headlessSvc := generateHeadlessService(instance, listenerPorts...)
+	headlessSvc := generateHeadlessService(instance)
 	resources = append(resources, headlessSvc)
-
-	svc := generateService(instance, listenerPorts...)
-	if svc != nil {
-		resources = append(resources, svc)
-	}
 
 	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update resource")}

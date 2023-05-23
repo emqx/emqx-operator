@@ -29,6 +29,7 @@ type EmqxConfig map[string]string
 
 type EmqxImage struct {
 	// Container image registry
+	//+kubectl:default="docker.io"
 	Registry string `json:"registry,omitempty"`
 	// Container image repository
 	// Defaults to "emqx/emqx" if kind is EmqxBroker, or "emqx/emqx-ee" if kind is EmqxEnterprise
