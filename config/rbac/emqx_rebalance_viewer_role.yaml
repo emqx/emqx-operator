@@ -1,0 +1,20 @@
+# permissions for end users to view rebalances.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rebalance-viewer-role
+rules:
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - rebalances
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - rebalances/status
+  verbs:
+  - get
