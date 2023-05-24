@@ -7,10 +7,10 @@ skipCRDs: false
 replicaCount: 1
 
 image:
-  repository: rxhuster/emqx-operator-controller
+  repository: emqx/emqx-operator-controller
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: ""
 
 imagePullSecrets: []
 nameOverride: ""
