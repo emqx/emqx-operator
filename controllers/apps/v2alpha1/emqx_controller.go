@@ -18,12 +18,10 @@ package v2alpha1
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -143,31 +141,4 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 		}).
 		Complete(r)
-}
-
-func (r *EMQXReconciler) getBootstrapUser(ctx context.Context, instance *appsv2alpha1.EMQX) (username, password string, err error) {
-	secret := &corev1.Secret{}
-	if err = r.Client.Get(
-		ctx,
-		instance.BootstrapUserNamespacedName(),
-		secret,
-	); err != nil {
-		err = emperror.Wrap(err, "get secret failed")
-		return
-	}
-
-	if data, ok := secret.Data["bootstrap_user"]; ok {
-		users := strings.Split(string(data), "\n")
-		for _, user := range users {
-			index := strings.Index(user, ":")
-			if index > 0 && user[:index] == defUsername {
-				username = user[:index]
-				password = user[index+1:]
-				return
-			}
-		}
-	}
-
-	err = emperror.Errorf("the secret does not contain the bootstrap_user")
-	return
 }
