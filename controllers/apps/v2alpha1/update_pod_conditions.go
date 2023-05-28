@@ -3,10 +3,10 @@ package v2alpha1
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	semver "github.com/Masterminds/semver/v3"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	innerPortFW "github.com/emqx/emqx-operator/internal/portforward"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,7 +17,7 @@ type updatePodConditions struct {
 	*EMQXReconciler
 }
 
-func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
+func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r Requester) subResult {
 	pods := &corev1.PodList{}
 	_ = u.Client.List(ctx, pods,
 		client.InNamespace(instance.Namespace),
@@ -37,7 +37,7 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 
 		onServingCondition := corev1.PodCondition{
 			Type:               appsv2alpha1.PodOnServing,
-			Status:             u.checkInCluster(instance, p, pod.DeepCopy()),
+			Status:             u.checkInCluster(instance, r, pod.DeepCopy()),
 			LastProbeTime:      metav1.Now(),
 			LastTransitionTime: metav1.Now(),
 		}
@@ -55,13 +55,13 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 	return subResult{}
 }
 
-func (u *updatePodConditions) checkInCluster(instance *appsv2alpha1.EMQX, p *portForwardAPI, pod *corev1.Pod) corev1.ConditionStatus {
+func (u *updatePodConditions) checkInCluster(instance *appsv2alpha1.EMQX, r Requester, pod *corev1.Pod) corev1.ConditionStatus {
 	for _, node := range instance.Status.EMQXNodes {
 		if node.Node == "emqx@"+pod.Status.PodIP {
 			if node.Edition == "enterprise" {
 				v, _ := semver.NewVersion(node.Version)
 				if v.Compare(semver.MustParse("5.0.3")) >= 0 {
-					return u.checkRebalanceStatus(instance, p, pod)
+					return u.checkRebalanceStatus(instance, r, pod)
 				}
 			}
 			return corev1.ConditionTrue
@@ -70,21 +70,14 @@ func (u *updatePodConditions) checkInCluster(instance *appsv2alpha1.EMQX, p *por
 	return corev1.ConditionFalse
 }
 
-func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2alpha1.EMQX, p *portForwardAPI, pod *corev1.Pod) corev1.ConditionStatus {
-	// Need check every pods, so must create new port forward options
-	o, _ := innerPortFW.NewPortForwardOptions(u.Clientset, u.Config, pod, "8081")
-	if o == nil {
-		return corev1.ConditionUnknown
+func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2alpha1.EMQX, r Requester, pod *corev1.Pod) corev1.ConditionStatus {
+	requester := &requester{
+		Username: r.GetUsername(),
+		Password: r.GetPassword(),
+		Host:     fmt.Sprintf("%s:18083", pod.Status.PodIP),
 	}
-	defer o.Close()
 
-	resp, _, err := (&portForwardAPI{
-		// Doesn't need get username and password from secret
-		// because they are same as the emqx cluster
-		Username: p.Username,
-		Password: p.Password,
-		Options:  o,
-	}).requestAPI("GET", "api/v5/load_rebalance/availability_check", nil)
+	resp, _, err := requester.Request("GET", "api/v5/load_rebalance/availability_check", nil)
 	if err != nil {
 		return corev1.ConditionUnknown
 	}
