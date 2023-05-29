@@ -22,6 +22,8 @@ import (
 )
 
 type EmqxBrokerTemplate struct {
+	//+kubebuilder:default:="emqx/emqx-operator-reloader:0.0.2"
+	ReloaderImage string `json:"reloaderImage,omitempty"`
 	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
 	// Image pull policy.
@@ -217,6 +219,9 @@ func (emqx *EmqxBroker) GetInitContainers() []corev1.Container {
 func (emqx *EmqxBroker) SetInitContainers(containers []corev1.Container) {
 	emqx.Spec.InitContainers = containers
 }
+
+func (emqx *EmqxBroker) GetReloaderImage() string      { return emqx.Spec.EmqxTemplate.ReloaderImage }
+func (emqx *EmqxBroker) SetReloaderImage(image string) { emqx.Spec.EmqxTemplate.ReloaderImage = image }
 
 func (emqx *EmqxBroker) GetImage() string      { return emqx.Spec.EmqxTemplate.Image }
 func (emqx *EmqxBroker) SetImage(image string) { emqx.Spec.EmqxTemplate.Image = image }

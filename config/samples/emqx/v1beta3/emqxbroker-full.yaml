@@ -68,6 +68,7 @@ spec:
   #       - |
   #         tail -f /dev/null
   emqxTemplate:
+    reloaderImage: emqx/emqx-operator-reloader:0.0.2
     # username: "admin"
     # password: "public"
     image: emqx/emqx:4.4.8

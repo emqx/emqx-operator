@@ -2844,6 +2844,9 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  reloaderImage:
+                    default: emqx/emqx-operator-reloader:0.0.2
+                    type: string
                   resources:
                     description: 'Compute Resources required by EMQX container. More
                       info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'

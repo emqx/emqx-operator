@@ -52,8 +52,7 @@ import (
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
 
 const (
-	ReloaderContainerName  = "reloader"
-	ReloaderContainerImage = "emqx/emqx-operator-reloader:0.0.2"
+	ReloaderContainerName = "reloader"
 )
 
 type EmqxReconciler struct {
@@ -682,7 +681,7 @@ func generateVolumeClaimTemplate(instance appsv1beta3.Emqx, Name string) corev1.
 func generateReloaderContainer(instance appsv1beta3.Emqx) *corev1.Container {
 	return &corev1.Container{
 		Name:            ReloaderContainerName,
-		Image:           ReloaderContainerImage,
+		Image:           instance.GetReloaderImage(),
 		ImagePullPolicy: instance.GetImagePullPolicy(),
 		Args: []string{
 			"-u", instance.GetUsername(),

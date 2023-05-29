@@ -39,6 +39,8 @@ type License struct {
 }
 
 type EmqxEnterpriseTemplate struct {
+	//+kubebuilder:default:="emqx/emqx-operator-reloader:0.0.2"
+	ReloaderImage string `json:"reloaderImage,omitempty"`
 	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
 	// Image pull policy.
@@ -229,6 +231,11 @@ func (emqx *EmqxEnterprise) GetExtraContainers() []corev1.Container {
 }
 func (emqx *EmqxEnterprise) SetExtraContainers(containers []corev1.Container) {
 	emqx.Spec.ExtraContainers = containers
+}
+
+func (emqx *EmqxEnterprise) GetReloaderImage() string { return emqx.Spec.EmqxTemplate.ReloaderImage }
+func (emqx *EmqxEnterprise) SetReloaderImage(image string) {
+	emqx.Spec.EmqxTemplate.ReloaderImage = image
 }
 
 func (emqx *EmqxEnterprise) GetImage() string      { return emqx.Spec.EmqxTemplate.Image }

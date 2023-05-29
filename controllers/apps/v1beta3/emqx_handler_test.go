@@ -71,6 +71,7 @@ func TestGenerateStatefulSetDef(t *testing.T) {
 				{Name: "EMQX_LOG__TO", Value: "file"},
 			},
 			EmqxTemplate: appsv1beta3.EmqxBrokerTemplate{
+				ReloaderImage:   "emqx/emqx-operator-reloader:0.0.2",
 				Image:           "emqx/emqx:4.4.8",
 				ImagePullPolicy: corev1.PullAlways,
 				EmqxConfig: appsv1beta3.EmqxConfig{
