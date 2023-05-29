@@ -117,6 +117,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
+| `reloaderImage` _string_ |  |
 | `image` _string_ |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `username` _string_ | Username for EMQX Dashboard and API |
@@ -208,6 +209,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
+| `reloaderImage` _string_ |  |
 | `image` _string_ |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `username` _string_ | Username for EMQX Dashboard and API |

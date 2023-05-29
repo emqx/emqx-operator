@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.7 is released.
+EMQX Operator 1.2.7-ecp.1 is released.
 
 ### Supported EMQX version
 
@@ -8,6 +8,6 @@ EMQX Operator 1.2.7 is released.
 
 - EMQX Enterprise 4.4.8 and later
 
-### Fixes 🛠
+### Features 🌈
 
-- Fix that adds nodePort to the ports of the headless service when `.spec.emqxTemplate.serviceTemplate.spec.type` is set to nodePort
+- Add a new field `.spec`.emqxTemplate.reloaderImage` to specify the reloader image
