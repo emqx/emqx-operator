@@ -70,6 +70,7 @@ spec:
   emqxTemplate:
     # username: "admin"
     # password: "public"
+    reloaderImage: emqx/emqx-operator-reloader:0.0.2
     image: emqx/emqx-ee:4.4.8
     imagePullPolicy: IfNotPresent
     securityContext:
