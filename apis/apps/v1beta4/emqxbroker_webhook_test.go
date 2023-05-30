@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 func TestBrokerDefault(t *testing.T) {
@@ -157,9 +158,14 @@ func TestBrokerDefault(t *testing.T) {
 		}, instance.Spec.Persistent.ObjectMeta)
 	})
 
-	t.Run("default termination policy", func(t *testing.T) {
-		assert.Equal(t, "/dev/termination-log", instance.GetSpec().GetTemplate().Spec.EmqxContainer.TerminationMessagePath)
-		assert.Equal(t, corev1.TerminationMessageReadFile, instance.GetSpec().GetTemplate().Spec.EmqxContainer.TerminationMessagePolicy)
+	t.Run("default Security Contexts", func(t *testing.T) {
+		assert.Equal(t, corev1.PodSecurityContext{
+			RunAsUser:           pointer.Int64(1000),
+			RunAsGroup:          pointer.Int64(1000),
+			FSGroup:             pointer.Int64(1000),
+			FSGroupChangePolicy: (*corev1.PodFSGroupChangePolicy)(pointer.String("Always")),
+			SupplementalGroups:  []int64{1000},
+		}, *instance.Spec.Template.Spec.PodSecurityContext)
 	})
 }
 
@@ -281,7 +287,7 @@ func TestBrokerValidateUpdate(t *testing.T) {
 
 		old.Spec.Persistent = &corev1.PersistentVolumeClaimTemplate{
 			Spec: corev1.PersistentVolumeClaimSpec{
-				StorageClassName: &[]string{"fake"}[0],
+				StorageClassName: pointer.String("fake"),
 			},
 		}
 		assert.Error(t, new.ValidateUpdate(old))

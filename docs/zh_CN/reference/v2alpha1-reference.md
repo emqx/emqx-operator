@@ -14,21 +14,6 @@ Package v2alpha1 contains API Schema definitions for the apps v2alpha1 API group
 
 
 
-#### BlueGreenUpdate
-
-
-
-
-
-_Appears in:_
-- [EMQXSpec](#emqxspec)
-
-| Field | Description |
-| --- | --- |
-| `initialDelaySeconds` _integer_ | Number of seconds before evacuation connection start. |
-| `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ | Number of seconds before evacuation connection timeout. |
-
-
 #### BootstrapAPIKey
 
 
@@ -122,7 +107,7 @@ _Appears in:_
 | `nodeName` _string_ | NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements. |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#affinity-v1-core)_ | Affinity for pod assignment ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity |
 | `toleRations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#toleration-v1-core) array_ | If specified, the pod's tolerations. The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator . |
-| `replicas` _integer_ | Replicas is the desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. Defaults to 2 if EMQX core node, or 3 if EMQX replicant node. |
+| `replicas` _integer_ | Replicas is the desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. If unspecified, defaults to 3. |
 | `command` _string array_ | Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |
 | `args` _string array_ | Arguments to the entrypoint. The container image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |
 | `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#containerport-v1-core) array_ | List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. |
@@ -173,10 +158,7 @@ _Appears in:_
 | `node_status` _string_ | EMQX node status, example: Running |
 | `otp_release` _string_ | Erlang/OTP version used by EMQX, example: 24.2/12.2 |
 | `version` _string_ | EMQX version |
-| `role` _string_ | EMQX cluster node role, enum: "core" "replicant" |
-| `edition` _string_ | EMQX cluster node edition, enum: "Opensource" "Enterprise" |
-| `uptime` _integer_ | EMQX node uptime, milliseconds |
-| `connections` _integer_ | MQTT connection count |
+| `role` _string_ | EMQX cluster node role |
 
 
 #### EMQXReplicantTemplate
@@ -210,7 +192,7 @@ _Appears in:_
 | `nodeName` _string_ | NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements. |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#affinity-v1-core)_ | Affinity for pod assignment ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity |
 | `toleRations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#toleration-v1-core) array_ | If specified, the pod's tolerations. The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator . |
-| `replicas` _integer_ | Replicas is the desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. Defaults to 2 if EMQX core node, or 3 if EMQX replicant node. |
+| `replicas` _integer_ | Replicas is the desired number of replicas of the given Template. These are replicas in the sense that they are instantiations of the same Template, but individual replicas also have a consistent identity. If unspecified, defaults to 3. |
 | `command` _string array_ | Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |
 | `args` _string array_ | Arguments to the entrypoint. The container image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |
 | `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#containerport-v1-core) array_ | List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. |
@@ -241,11 +223,10 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `image` _string_ | EMQX image name. More info: https://kubernetes.io/docs/concepts/containers/images |
-| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
+| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
-| `blueGreenUpdate` _[BlueGreenUpdate](#bluegreenupdate)_ | BlueGreenUpdate is the object that describes the EMQX blue-green update strategy |
 | `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
-| `bootstrapConfig` _string_ | EMQX bootstrap config, HOCON style, like emqx.conf Cannot be updated. |
+| `bootstrapConfig` _string_ | EMQX bootstrap config, hocon style, like emqx.conf Cannot be updated. |
 | `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | CoreTemplate is the object that describes the EMQX core node that will be created |
 | `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | ReplicantTemplate is the object that describes the EMQX replicant node that will be created |
 | `dashboardServiceTemplate` _[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#service-v1-core)_ | DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created This service always selector the EMQX core node |
@@ -270,22 +251,6 @@ _Appears in:_
 | `replicantNodeReadyReplicas` _integer_ | ReplicantNodeReadyReplicas is the number of EMQX replicant node Pods created for this EMQX Custom Resource with a Ready Condition. |
 | `emqxNodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
 | `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
-
-
-#### EvacuationStrategy
-
-
-
-
-
-_Appears in:_
-- [BlueGreenUpdate](#bluegreenupdate)
-
-| Field | Description |
-| --- | --- |
-| `waitTakeover` _integer_ |  |
-| `connEvictRate` _integer_ | Just work in EMQX Enterprise. |
-| `sessEvictRate` _integer_ | Just work in EMQX Enterprise. |
 
 
 

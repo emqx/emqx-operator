@@ -19,7 +19,6 @@ package v1beta4
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -30,7 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -71,7 +70,7 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 				Name:        fmt.Sprintf("%s-eviction-agent", instance.GetName()),
 				Namespace:   instance.GetNamespace(),
 				Labels:      instance.GetLabels(),
-				Annotations: getAnnotations(instance),
+				Annotations: instance.GetAnnotations(),
 			},
 			Spec: appsv1beta4.EmqxPluginSpec{
 				PluginName: "emqx_eviction_agent",
@@ -92,7 +91,7 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 				Name:        fmt.Sprintf("%s-node-rebalance", instance.GetName()),
 				Namespace:   instance.GetNamespace(),
 				Labels:      instance.GetLabels(),
-				Annotations: getAnnotations(instance),
+				Annotations: instance.GetAnnotations(),
 			},
 			Spec: appsv1beta4.EmqxPluginSpec{
 				PluginName: "emqx_node_rebalance",
@@ -113,7 +112,7 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 				Name:        fmt.Sprintf("%s-rule-engine", instance.GetName()),
 				Namespace:   instance.GetNamespace(),
 				Labels:      instance.GetLabels(),
-				Annotations: getAnnotations(instance),
+				Annotations: instance.GetAnnotations(),
 			},
 			Spec: appsv1beta4.EmqxPluginSpec{
 				PluginName: "emqx_rule_engine",
@@ -134,7 +133,7 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 				Name:        fmt.Sprintf("%s-retainer", instance.GetName()),
 				Namespace:   instance.GetNamespace(),
 				Labels:      instance.GetLabels(),
-				Annotations: getAnnotations(instance),
+				Annotations: instance.GetAnnotations(),
 			},
 			Spec: appsv1beta4.EmqxPluginSpec{
 				PluginName: "emqx_retainer",
@@ -156,7 +155,7 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 				Name:        fmt.Sprintf("%s-modules", instance.GetName()),
 				Namespace:   instance.GetNamespace(),
 				Labels:      instance.GetLabels(),
-				Annotations: getAnnotations(instance),
+				Annotations: instance.GetAnnotations(),
 			},
 			Spec: appsv1beta4.EmqxPluginSpec{
 				PluginName: "emqx_modules",
@@ -166,6 +165,28 @@ func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1be
 		}
 
 		pluginList = append(pluginList, emqxModules)
+	}
+
+	if ok && !isExistPlugin("emqx_schema_registry", matchedPluginList) {
+		emqxSchemaRegistry := &appsv1beta4.EmqxPlugin{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps.emqx.io/v1beta4",
+				Kind:       "EmqxPlugin",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        fmt.Sprintf("%s-schema-registry", instance.GetName()),
+				Namespace:   instance.GetNamespace(),
+				Labels:      instance.GetLabels(),
+				Annotations: instance.GetAnnotations(),
+			},
+			Spec: appsv1beta4.EmqxPluginSpec{
+				PluginName: "emqx_schema_registry",
+				Selector:   instance.GetLabels(),
+				Config:     map[string]string{},
+			},
+		}
+
+		pluginList = append(pluginList, emqxSchemaRegistry)
 	}
 
 	return pluginList
@@ -183,7 +204,7 @@ func generateDefaultPluginsConfig(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 			Name:        names.PluginsConfig(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: getAnnotations(instance),
+			Annotations: instance.GetAnnotations(),
 		},
 		Data: map[string]string{
 			"emqx_node_rebalance.conf":    "",
@@ -259,7 +280,7 @@ func generateLicense(instance appsv1beta4.Emqx) *corev1.Secret {
 			Name:        names.License(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: getAnnotations(instance),
+			Annotations: instance.GetAnnotations(),
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{"emqx.lic": license.Data},
@@ -287,13 +308,13 @@ func generateEmqxACL(instance appsv1beta4.Emqx) *corev1.ConfigMap {
 			Name:        names.ACL(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: getAnnotations(instance),
+			Annotations: instance.GetAnnotations(),
 		},
 		Data: map[string]string{"acl.conf": aclString},
 	}
 }
 
-func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
+func generateHeadlessService(instance appsv1beta4.Emqx) *corev1.Service {
 	names := appsv1beta4.Names{Object: instance}
 
 	headlessSvc := &corev1.Service{
@@ -305,58 +326,24 @@ func generateHeadlessService(instance appsv1beta4.Emqx, port ...corev1.ServicePo
 			Name:        names.HeadlessSvc(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: getAnnotations(instance),
+			Annotations: instance.GetAnnotations(),
 		},
 		Spec: corev1.ServiceSpec{
-			PublishNotReadyAddresses: true,
 			Selector:                 instance.GetLabels(),
 			Type:                     corev1.ServiceTypeClusterIP,
 			ClusterIP:                corev1.ClusterIPNone,
-			ClusterIPs:               []string{"None"},
-			// https://github.com/emqx/emqx-operator/issues/327
-			IPFamilies:            []corev1.IPFamily{corev1.IPv4Protocol},
-			IPFamilyPolicy:        (*corev1.IPFamilyPolicyType)(pointer.String(string(corev1.IPFamilyPolicySingleStack))),
-			InternalTrafficPolicy: (*corev1.ServiceInternalTrafficPolicyType)(pointer.String(string(corev1.ServiceInternalTrafficPolicyCluster))),
-			SessionAffinity:       corev1.ServiceAffinityNone,
+			PublishNotReadyAddresses: true,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http-management-8081",
+					Port:       8081,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8081),
+				},
+			},
 		},
-	}
-
-	compile := regexp.MustCompile(".*management.*")
-
-	for _, port := range appsv1beta4.MergeServicePorts(
-		instance.GetSpec().GetServiceTemplate().Spec.Ports,
-		port,
-	) {
-		if compile.MatchString(port.Name) {
-			// Headless services must not set nodePort
-			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, corev1.ServicePort{
-				Name:        port.Name,
-				Protocol:    port.Protocol,
-				AppProtocol: port.AppProtocol,
-				TargetPort:  port.TargetPort,
-				Port:        port.Port,
-			})
-		}
 	}
 	return headlessSvc
-}
-
-func generateService(instance appsv1beta4.Emqx, port ...corev1.ServicePort) *corev1.Service {
-	if instance.GetStatus().GetCurrentStatefulSetVersion() == "" {
-		return nil
-	}
-	serviceTemplate := instance.GetSpec().GetServiceTemplate()
-	serviceTemplate.Spec.Ports = appsv1beta4.MergeServicePorts(serviceTemplate.Spec.Ports, port)
-	serviceTemplate.Spec.Selector["controller-revision-hash"] = instance.GetStatus().GetCurrentStatefulSetVersion()
-
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: serviceTemplate.ObjectMeta,
-		Spec:       serviceTemplate.Spec,
-	}
 }
 
 func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
@@ -373,25 +360,26 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			"-p", "public",
 			"-P", "8081",
 		},
-		EnvFrom:                  emqxTemplate.Spec.EmqxContainer.EnvFrom,
-		Env:                      mergeEnvAndConfig(instance),
-		VolumeMounts:             emqxTemplate.Spec.EmqxContainer.VolumeMounts,
-		TerminationMessagePath:   emqxTemplate.Spec.EmqxContainer.TerminationMessagePath,
-		TerminationMessagePolicy: emqxTemplate.Spec.EmqxContainer.TerminationMessagePolicy,
+		EnvFrom:      emqxTemplate.Spec.EmqxContainer.EnvFrom,
+		Env:          mergeEnvAndConfig(instance),
+		VolumeMounts: emqxTemplate.Spec.EmqxContainer.VolumeMounts,
 	}
 
 	emqxContainer := corev1.Container{
-		Name:                     EmqxContainerName,
-		Image:                    appsv1beta4.GetEmqxImage(instance),
-		ImagePullPolicy:          emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
-		Command:                  emqxTemplate.Spec.EmqxContainer.Command,
-		Args:                     emqxTemplate.Spec.EmqxContainer.Args,
-		WorkingDir:               emqxTemplate.Spec.EmqxContainer.WorkingDir,
-		Ports:                    emqxTemplate.Spec.EmqxContainer.Ports,
-		EnvFrom:                  emqxTemplate.Spec.EmqxContainer.EnvFrom,
-		Env:                      mergeEnvAndConfig(instance),
-		Resources:                emqxTemplate.Spec.EmqxContainer.Resources,
-		VolumeMounts:             emqxTemplate.Spec.EmqxContainer.VolumeMounts,
+		Name:            EmqxContainerName,
+		Image:           appsv1beta4.GetEmqxImage(instance),
+		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
+		Command:         emqxTemplate.Spec.EmqxContainer.Command,
+		Args:            emqxTemplate.Spec.EmqxContainer.Args,
+		WorkingDir:      emqxTemplate.Spec.EmqxContainer.WorkingDir,
+		Ports:           emqxTemplate.Spec.EmqxContainer.Ports,
+		EnvFrom:         emqxTemplate.Spec.EmqxContainer.EnvFrom,
+		Env:             mergeEnvAndConfig(instance),
+		Resources:       emqxTemplate.Spec.EmqxContainer.Resources,
+		VolumeMounts: append(emqxTemplate.Spec.EmqxContainer.VolumeMounts, corev1.VolumeMount{
+			Name:      "emqx-log",
+			MountPath: "/opt/emqx/log",
+		}),
 		VolumeDevices:            emqxTemplate.Spec.EmqxContainer.VolumeDevices,
 		LivenessProbe:            emqxTemplate.Spec.EmqxContainer.LivenessProbe,
 		ReadinessProbe:           emqxTemplate.Spec.EmqxContainer.ReadinessProbe,
@@ -411,6 +399,11 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Annotations: emqxTemplate.Annotations,
 		},
 		Spec: corev1.PodSpec{
+			ReadinessGates: []corev1.PodReadinessGate{
+				{
+					ConditionType: appsv1beta4.PodOnServing,
+				},
+			},
 			Affinity:            emqxTemplate.Spec.Affinity,
 			Tolerations:         emqxTemplate.Spec.Tolerations,
 			NodeName:            emqxTemplate.Spec.NodeName,
@@ -421,23 +414,17 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Containers: append([]corev1.Container{
 				emqxContainer, reloaderContainer,
 			}, emqxTemplate.Spec.ExtraContainers...),
-			SecurityContext:               emqxTemplate.Spec.PodSecurityContext,
-			Volumes:                       emqxTemplate.Spec.Volumes,
-			DNSPolicy:                     corev1.DNSClusterFirst,
-			RestartPolicy:                 corev1.RestartPolicyAlways,
-			SchedulerName:                 "default-scheduler",
-			TerminationGracePeriodSeconds: pointer.Int64(30),
+
+			SecurityContext: emqxTemplate.Spec.PodSecurityContext,
+			Volumes: append(emqxTemplate.Spec.Volumes, corev1.Volume{
+				Name: "emqx-log",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			}),
 		},
 	}
-	containerNames := make([]string, len(podTemplate.Spec.Containers))
-	for i := range podTemplate.Spec.Containers {
-		containerNames[i] = podTemplate.Spec.Containers[i].Name
-	}
-
-	if podTemplate.Annotations == nil {
-		podTemplate.Annotations = make(map[string]string)
-	}
-	podTemplate.Annotations[handler.ManageContainersAnnotation] = strings.Join(containerNames, ",")
+	podTemplate.Annotations = handler.SetManagerContainerAnnotation(podTemplate.Annotations, podTemplate.Spec.Containers)
 
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -448,7 +435,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Name:        instance.GetName(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: getAnnotations(instance),
+			Annotations: instance.GetAnnotations(),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: names.HeadlessSvc(),
@@ -456,16 +443,14 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podTemplate.Labels,
 			},
-			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			Template:             podTemplate,
-			RevisionHistoryLimit: pointer.Int32(10),
-			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
-				Type: appsv1.RollingUpdateStatefulSetStrategyType,
-				RollingUpdate: &appsv1.RollingUpdateStatefulSetStrategy{
-					Partition: pointer.Int32(0),
-				},
-			},
+			PodManagementPolicy: appsv1.ParallelPodManagement,
+			Template:            podTemplate,
 		},
+	}
+
+	if sts.Annotations != nil {
+		// Delete needless annotations from EMQX Custom Resource
+		delete(sts.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 	}
 
 	if instance.GetSpec().GetPersistent() == nil {
@@ -519,7 +504,6 @@ func updateStatefulSetForPluginsConfig(sts *appsv1.StatefulSet, pluginsConfig *c
 			Name: pluginsConfig.Name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: pointer.Int32(420),
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: pluginsConfig.Name,
 					},
@@ -553,8 +537,7 @@ func updateStatefulSetForLicense(sts *appsv1.StatefulSet, license *corev1.Secret
 			Name: license.Name,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: pointer.Int32(420),
-					SecretName:  license.Name,
+					SecretName: license.Name,
 				},
 			},
 		},
@@ -575,7 +558,6 @@ func updateStatefulSetForACL(sts *appsv1.StatefulSet, acl *corev1.ConfigMap) *ap
 			Name: acl.Name,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					DefaultMode: pointer.Int32(420),
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: acl.Name,
 					},
@@ -694,7 +676,7 @@ func generateBootstrapUserSecret(instance appsv1beta4.Emqx) *corev1.Secret {
 			Name:        names.BootstrapUser(),
 			Namespace:   instance.GetNamespace(),
 			Labels:      instance.GetLabels(),
-			Annotations: getAnnotations(instance),
+			Annotations: instance.GetAnnotations(),
 		},
 		StringData: map[string]string{
 			"bootstrap_user": bootstrapUsers,
@@ -718,23 +700,9 @@ func updateStatefulSetForBootstrapUser(sts *appsv1.StatefulSet, bootstrapUser *c
 			Name: "bootstrap-user",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: pointer.Int32(420),
-					SecretName:  bootstrapUser.Name,
+					SecretName: bootstrapUser.Name,
 				},
 			},
 		},
 	)
-}
-
-func getAnnotations(instance appsv1beta4.Emqx) map[string]string {
-	annotations := instance.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	for key := range annotations {
-		if strings.HasPrefix(key, "kubectl.kubernetes.io/") {
-			delete(annotations, key)
-		}
-	}
-	return annotations
 }

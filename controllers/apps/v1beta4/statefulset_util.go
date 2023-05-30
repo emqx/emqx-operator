@@ -33,6 +33,74 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 )
 
+// Helper functions
+func getEmqxNodeName(instance appsv1beta4.Emqx, pod *corev1.Pod) string {
+	return fmt.Sprintf(
+		"%s@%s.%s",
+		instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig["name"],
+		pod.Name,
+		instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig["cluster.dns.name"],
+	)
+}
+
+// JustCheckPodTemplate will check only the differences between the podTemplate of the two statefulSets
+func justCheckPodTemplate() patch.CalculateOption {
+	getPodTemplate := func(obj []byte) ([]byte, error) {
+		podTemplateJson := gjson.GetBytes(obj, "spec.template")
+		podTemplate := &corev1.PodTemplateSpec{}
+		_ = json.Unmarshal([]byte(podTemplateJson.String()), podTemplate)
+
+		emptySts := &appsv1.StatefulSet{}
+		emptySts.Spec.Template = *podTemplate
+		return json.Marshal(emptySts)
+	}
+
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := getPodTemplate(current)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
+		}
+
+		modified, err = getPodTemplate(modified)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+// ComputeHash returns a hash value calculated from pod template and
+// a collisionCount to avoid hash collision. The hash will be safe encoded to
+// avoid bad words.
+func computeHash(template *corev1.PodTemplateSpec, collisionCount *int32) string {
+	templateSpecHasher := fnv.New32a()
+	deepHashObject(templateSpecHasher, *template)
+
+	// Add collisionCount in the hash if it exists.
+	if collisionCount != nil {
+		collisionCountBytes := make([]byte, 8)
+		binary.LittleEndian.PutUint32(collisionCountBytes, uint32(*collisionCount))
+		templateSpecHasher.Write(collisionCountBytes)
+	}
+
+	return rand.SafeEncodeString(fmt.Sprint(templateSpecHasher.Sum32()))
+}
+
+// DeepHashObject writes specified object to hash using the spew library
+// which follows pointers and prints actual values of the nested objects
+// ensuring the hash does not change when a pointer changes.
+func deepHashObject(hasher hash.Hash, objectToWrite interface{}) {
+	hasher.Reset()
+	printer := spew.ConfigState{
+		Indent:         " ",
+		SortKeys:       true,
+		DisableMethods: true,
+		SpewKeys:       true,
+	}
+	printer.Fprintf(hasher, "%#v", objectToWrite)
+}
+
 // StatefulSetsByCreationTimestamp sorts a list of StatefulSet by creation timestamp, using their names as a tie breaker.
 type StatefulSetsByCreationTimestamp []*appsv1.StatefulSet
 
@@ -107,72 +175,4 @@ func (o PodsByNameNewer) Less(i, j int) bool {
 		return PodsByCreationTimestamp(o).Less(j, i)
 	}
 	return o[i].Name > o[j].Name
-}
-
-// Helper functions
-func getEmqxNodeName(instance appsv1beta4.Emqx, pod *corev1.Pod) string {
-	return fmt.Sprintf(
-		"%s@%s.%s",
-		instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig["name"],
-		pod.Name,
-		instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig["cluster.dns.name"],
-	)
-}
-
-// JustCheckPodTemplate will check only the differences between the podTemplate of the two statefulSets
-func justCheckPodTemplate() patch.CalculateOption {
-	getPodTemplate := func(obj []byte) ([]byte, error) {
-		podTemplateJson := gjson.GetBytes(obj, "spec.template")
-		podTemplate := &corev1.PodTemplateSpec{}
-		_ = json.Unmarshal([]byte(podTemplateJson.String()), podTemplate)
-
-		emptySts := &appsv1.StatefulSet{}
-		emptySts.Spec.Template = *podTemplate
-		return json.Marshal(emptySts)
-	}
-
-	return func(current, modified []byte) ([]byte, []byte, error) {
-		current, err := getPodTemplate(current)
-		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
-		}
-
-		modified, err = getPodTemplate(modified)
-		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
-		}
-
-		return current, modified, nil
-	}
-}
-
-// ComputeHash returns a hash value calculated from pod template and
-// a collisionCount to avoid hash collision. The hash will be safe encoded to
-// avoid bad words.
-func computeHash(template *corev1.PodTemplateSpec, collisionCount *int32) string {
-	templateSpecHasher := fnv.New32a()
-	deepHashObject(templateSpecHasher, *template)
-
-	// Add collisionCount in the hash if it exists.
-	if collisionCount != nil {
-		collisionCountBytes := make([]byte, 8)
-		binary.LittleEndian.PutUint32(collisionCountBytes, uint32(*collisionCount))
-		templateSpecHasher.Write(collisionCountBytes)
-	}
-
-	return rand.SafeEncodeString(fmt.Sprint(templateSpecHasher.Sum32()))
-}
-
-// DeepHashObject writes specified object to hash using the spew library
-// which follows pointers and prints actual values of the nested objects
-// ensuring the hash does not change when a pointer changes.
-func deepHashObject(hasher hash.Hash, objectToWrite interface{}) {
-	hasher.Reset()
-	printer := spew.ConfigState{
-		Indent:         " ",
-		SortKeys:       true,
-		DisableMethods: true,
-		SpewKeys:       true,
-	}
-	printer.Fprintf(hasher, "%#v", objectToWrite)
 }

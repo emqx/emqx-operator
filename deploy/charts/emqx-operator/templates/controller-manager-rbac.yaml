@@ -114,6 +114,12 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods/status
+  verbs:
+  - patch
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   - create
@@ -143,6 +149,14 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - apps
@@ -266,6 +280,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - apps.emqx.io
+  resources:
+  - rebalances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - rebalances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - rebalances/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - coordination.k8s.io
   resources:
   - leases
@@ -275,9 +315,9 @@ rules:
   - list
   - update
 - apiGroups:
-  - discovery.k8s.io
+  - ""
   resources:
-  - endpointslices
+  - endpoints
   verbs:
   - create
   - get

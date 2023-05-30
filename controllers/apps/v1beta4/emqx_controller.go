@@ -25,10 +25,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	"github.com/emqx/emqx-operator/internal/apiclient"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	"github.com/emqx/emqx-operator/internal/handler"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,15 +38,6 @@ import (
 )
 
 const EmqxContainerName string = "emqx"
-
-var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
-
-type EmqxReconciler struct {
-	*handler.Handler
-	APIClient     *apiclient.APIClient
-	Scheme        *runtime.Scheme
-	EventRecorder record.EventRecorder
-}
 
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
@@ -59,10 +51,21 @@ type emqxSubReconciler interface {
 	reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult
 }
 
+var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
+
+type EmqxReconciler struct {
+	*handler.Handler
+	Clientset     *kubernetes.Clientset
+	Config        *rest.Config
+	Scheme        *runtime.Scheme
+	EventRecorder record.EventRecorder
+}
+
 func NewEmqxReconciler(mgr manager.Manager) *EmqxReconciler {
 	return &EmqxReconciler{
 		Handler:       handler.NewHandler(mgr),
-		APIClient:     apiclient.NewAPIClient(mgr),
+		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		Config:        mgr.GetConfig(),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}
@@ -73,23 +76,30 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	requestAPI, err := newRequestAPI(r.Client, r.APIClient, instance)
+	p, err := newPortForwardAPI(ctx, r.Client, r.Clientset, r.Config, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
 			_ = addEmqxBootstrapUser{EmqxReconciler: r}.reconcile(ctx, instance)
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
-		return ctrl.Result{}, err
+		if !innerErr.IsCommonError(err) {
+			return ctrl.Result{}, emperror.Wrap(err, "failed to create port forwarding options")
+		}
+	}
+	if p != nil {
+		defer p.Options.Close()
 	}
 
 	var subResult subResult
 	var subReconcilers = []emqxSubReconciler{
-		updateEmqxStatus{EmqxReconciler: r, requestAPI: requestAPI},
+		updateEmqxStatus{EmqxReconciler: r, PortForwardAPI: p},
 		addEmqxBootstrapUser{EmqxReconciler: r},
 		addEmqxPlugins{EmqxReconciler: r},
-		addEmqxResources{EmqxReconciler: r, requestAPI: requestAPI},
-		addEmqxStatefulSet{EmqxReconciler: r, requestAPI: requestAPI},
-		updateEmqxStatus{EmqxReconciler: r, requestAPI: requestAPI},
+		addEmqxResources{EmqxReconciler: r, PortForwardAPI: p},
+		addEmqxStatefulSet{EmqxReconciler: r, PortForwardAPI: p},
+		addListener{EmqxReconciler: r, PortForwardAPI: p},
+		updateEmqxStatus{EmqxReconciler: r, PortForwardAPI: p},
+		updatePodConditions{EmqxReconciler: r, PortForwardAPI: p},
 	}
 	for i := range subReconcilers {
 		if reflect.ValueOf(subResult).FieldByName("args").IsValid() {

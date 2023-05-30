@@ -84,13 +84,9 @@ func (handler *Handler) CreateOrUpdate(obj client.Object) error {
 		annotations = make(map[string]string)
 	}
 	for key, value := range u.GetAnnotations() {
-		if key == LastAppliedAnnotation {
-			continue
+		if _, present := annotations[key]; !present {
+			annotations[key] = value
 		}
-		if _, ok := annotations[key]; ok {
-			continue
-		}
-		annotations[key] = value
 	}
 	obj.SetAnnotations(annotations)
 
@@ -145,6 +141,7 @@ func (handler *Handler) Update(obj client.Object) error {
 	if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
 		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
+
 	if err := handler.Client.Update(context.TODO(), obj); err != nil {
 		return emperror.Wrapf(err, "failed to update %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
@@ -205,4 +202,17 @@ func selectManagerContainer(obj []byte) ([]byte, error) {
 	podTemplate.Spec.Containers = containers
 	objMap["spec"].(map[string]interface{})["template"] = podTemplate
 	return json.ConfigCompatibleWithStandardLibrary.Marshal(objMap)
+}
+
+func SetManagerContainerAnnotation(annotations map[string]string, containers []corev1.Container) map[string]string {
+	containersName := []string{}
+	for _, container := range containers {
+		containersName = append(containersName, container.Name)
+	}
+
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations[ManageContainersAnnotation] = strings.Join(containersName, ",")
+	return annotations
 }

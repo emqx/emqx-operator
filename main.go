@@ -64,11 +64,13 @@ func init() {
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups="",resources=pods/portforward,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=pods/status,verbs=patch
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func main() {
@@ -127,6 +129,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = appscontrollersv1beta4.NewRebalanceReconciler(mgr).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Rebalance")
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
@@ -145,6 +151,11 @@ func main() {
 
 		if err = (&appsv2alpha1.EMQX{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EMQX")
+			os.Exit(1)
+		}
+
+		if err = (&appsv1beta4.Rebalance{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Rebalance")
 			os.Exit(1)
 		}
 	}
