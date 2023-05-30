@@ -17,7 +17,7 @@ For EMQX cluster load rebalancing, please refer to the document: [Rebalancing](h
 
 :::tip
 
-The cluster load rebalancing function is only available since EMQX Enterprise 4.4.12.
+The cluster load rebalancing requirements EMQX Enterprise must be greater than or equal to 4.4.12
 
 :::
 
