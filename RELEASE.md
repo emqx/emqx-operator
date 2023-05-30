@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.1.2 is released.
+EMQX Operator 2.1.3 is released.
 
 ## Supported version
 
@@ -11,29 +11,20 @@ EMQX Operator 2.1.2 is released.
 
 - `apps.emqx.io/v1beta4`
 
-  - `EMQX` at [4.4.14](https://www.emqx.com/en/changelogs/broker/4.4.8) and later
-  - `EMQX Enterprise` at [4.4.14](https://www.emqx.com/en/changelogs/enterprise/4.4.8) and later
+  - `EMQX` at [4.4.14](https://www.emqx.com/en/changelogs/broker/4.4.14) and later
+  - `EMQX Enterprise` at [4.4.14](https://www.emqx.com/en/changelogs/enterprise/4.4.14) and later
+
+## Features  🌈
+
+- Add new CRD `apps.emqx.io/v1beta4 rebalance` to support the cluster load rebalancing, for more details, please refer to [Cluster Load Rebalancing](https://docs.emqx.com/en/emqx-operator/latest/tasks/configure-emqx-rebalance.html).
 
 ## Fixes 🛠
 
-- Both `apps.emqx.io/v1beta4` and `apps.emqx.io/v2alpha1`
-
-  - Fixed an issue where EMQX Operator would frequently try to update statefulSet and deployment resources, even if there were no changes to the resources
-
 - `apps.emqx.io/v2alpha1`
 
-  - Fixed an issue where the EMQX replicant node would update before the EMQX Core node in some cases
+  - Fixed an issue of the extra containers not working.
 
-## Enhancements 🚀
-
-- More and better documents, please check [here](https://docs.emqx.com/en/emqx-operator)
-
-- Add `additionalPrinterColumns` for `kind: EMQX` and `kind: EmqxEnterprise` and `kind: EmqxBroker`, now can get more friendly information when using `kubectl get emqx` or `kubectl get emqxenterprise` or `kubectl get emqxbroker`
-
-- Add event filter for EMQX operator controller, reduced runtime memory consumption
-
-
-## How to install/upgrade EMQX Operator 2.1.2 💡
+## How to install/upgrade EMQX Operator 2.1.3 💡
 
 > Need make sure the [cert-manager](https://cert-manager.io) is ready
 
