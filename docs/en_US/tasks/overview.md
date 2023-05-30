@@ -14,6 +14,7 @@ The chapter is divided into sections covering
   - [Enable Core + Replicant Cluster (EMQX 5.x)](./configure-emqx-core-replicant.md)
   - [Enable Persistence In EMQX Cluster](./configure-emqx-persistence.md)
   - [Access EMQX Cluster By Kubernetes Service](./configure-emqx-service.md)
+  - [Cluster Load Rebalancing (EMQX Enterprise)](./configure-emqx-rebalance.md)
 
 **Upgrades and Maintenance**
 
