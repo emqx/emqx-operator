@@ -50,7 +50,7 @@ func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (*reques
 
 	names := appsv1beta4.Names{Object: instance}
 	return &requester{
-		Host:     fmt.Sprintf("%s.%s:8081", names.HeadlessSvc(), instance.GetNamespace()),
+		Host:     fmt.Sprintf("%s.%s.svc:8081", names.HeadlessSvc(), instance.GetNamespace()),
 		Username: username,
 		Password: password,
 	}, nil
@@ -84,7 +84,7 @@ func (requester *requester) Request(method, path string, body []byte) (resp *htt
 	req.Close = true
 	resp, err = httpClient.Do(req)
 	if err != nil {
-		return nil, nil, emperror.NewWithDetails("failed to request API", "method", method, "path", url.Path)
+		return nil, nil, emperror.Wrap(err, "failed to request API")
 	}
 
 	defer resp.Body.Close()

@@ -93,7 +93,7 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 				EmqxContainer: appsv1beta4.EmqxContainer{
 					Image: appsv1beta4.EmqxImage{
 						Repository: "emqx/emqx-ee",
-						Version:    "4.4.15",
+						Version:    "4.4.18",
 					},
 					EmqxConfig: appsv1beta4.EmqxConfig{
 						"sysmon.long_schedule": "240h",

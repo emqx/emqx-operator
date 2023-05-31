@@ -32,10 +32,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/tidwall/gjson"
@@ -106,11 +104,15 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	readyPod := r.getReadyPod(emqx)
-	requester, err := newRequesterByPod(r.Client, emqx, readyPod)
+	if readyPod == nil {
+		return ctrl.Result{}, emperror.New("failed to get ready pod")
+	}
 
+	requester, err := newRequesterByPod(r.Client, emqx, readyPod)
 	if err != nil {
 		return ctrl.Result{}, emperror.New("failed to get create emqx http API")
 	}
+
 	if !rebalance.DeletionTimestamp.IsZero() {
 		if rebalance.Status.Phase == appsv1beta4.RebalancePhaseProcessing {
 			_ = stopRebalance(requester, rebalance)
@@ -150,11 +152,6 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *RebalanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv1beta4.Rebalance{}).
-		WithEventFilter(predicate.Funcs{
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration()
-			},
-		}).
 		Complete(r)
 }
 
@@ -167,7 +164,7 @@ func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterp
 	for _, pod := range podList.Items {
 		for _, c := range pod.Status.Conditions {
 			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
-				return &pod
+				return pod.DeepCopy()
 			}
 		}
 	}

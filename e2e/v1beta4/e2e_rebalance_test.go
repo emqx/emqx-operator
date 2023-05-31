@@ -47,7 +47,7 @@ var rebalance = appsv1beta4.Rebalance{
 	},
 }
 
-var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
+var _ = Describe("Emqx Rebalance Test", func() {
 	Describe("Enterprise is nothing to balance", func() {
 		var emqx *appsv1beta4.EmqxEnterprise
 		var r *appsv1beta4.Rebalance
@@ -124,15 +124,12 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 					HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
 					HaveField("RebalanceStates", BeNil()),
 					HaveField("Conditions", ContainElements(
-						HaveField("Type", appsv1beta4.RebalanceConditionFailed),
+						And(
+							HaveField("Type", appsv1beta4.RebalanceConditionFailed),
+							HaveField("Status", corev1.ConditionTrue),
+							HaveField("Message", "Failed to start rebalance: nothing_to_balance"),
+						),
 					)),
-					HaveField("Conditions", ContainElements(
-						HaveField("Status", corev1.ConditionTrue),
-					)),
-					// TODO: Don't check message, because EMQX have output error when POST "api/v4/load_rebalance/"+emqxNodeName+"/start",
-					// HaveField("Conditions", ContainElements(
-					// 	HaveField("Message", `Failed to start rebalance: [\"nothing_to_balance\"]`),
-					// )),
 				))
 			})
 
@@ -143,14 +140,22 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 				r.Namespace = emqx.GetNamespace()
 				r.Spec.InstanceName = emqx.GetName()
 				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)).Should(Succeed())
+
+				// wait for rebalance failed
+				Eventually(func() appsv1beta4.RebalancePhase {
+					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					return r.Status.Phase
+				}, timeout, interval).Should(Equal(appsv1beta4.RebalancePhaseFailed))
 
 				// mock rebalance processing
-				// update annotations for target reconciler
-				r.Annotations = map[string]string{"test": "e2e"}
 				r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
 				r.Status.Conditions = []appsv1beta4.RebalanceCondition{}
 				Expect(k8sClient.Status().Update(context.TODO(), r)).Should(Succeed())
+
+				// update annotations for target reconciler
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)).Should(Succeed())
+				r.Annotations = map[string]string{"test": "e2e"}
+				Expect(k8sClient.Update(context.TODO(), r)).Should(Succeed())
 			})
 
 			By("Rebalance should completed", func() {
