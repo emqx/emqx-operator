@@ -82,9 +82,9 @@ jobs:
           go-version: '1.20'
       - run: go install github.com/onsi/ginkgo/v2/ginkgo@latest
       - name: Install Telepresence
-        uses: datawire/telepresence-actions/install@v1.0.0
-        with:
-          version: 2.13.3
+        run: |
+          sudo curl -fL https://app.getambassador.io/download/tel2/linux/amd64/2.13.3/telepresence -o /usr/local/bin/telepresence
+          sudo chmod a+x /usr/local/bin/telepresence
       - name: Install Traffic Manager
         run : |
          telepresence helm install
