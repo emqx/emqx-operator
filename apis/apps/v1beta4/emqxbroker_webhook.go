@@ -158,7 +158,7 @@ func defaultEmqxConfig(r Emqx) {
 	clusterConfig["cluster.discovery"] = "dns"
 	clusterConfig["cluster.dns.type"] = "srv"
 	clusterConfig["cluster.dns.app"] = r.GetName()
-	clusterConfig["cluster.dns.name"] = fmt.Sprintf("%s.%s.svc.cluster.local", names.HeadlessSvc(), r.GetNamespace())
+	clusterConfig["cluster.dns.name"] = fmt.Sprintf("%s.%s.svc", names.HeadlessSvc(), r.GetNamespace())
 	clusterConfig["listener.tcp.internal"] = ""
 	for k, v := range clusterConfig {
 		if _, ok := template.Spec.EmqxContainer.EmqxConfig[k]; !ok {

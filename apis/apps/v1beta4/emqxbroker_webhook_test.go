@@ -96,7 +96,7 @@ func TestBrokerDefault(t *testing.T) {
 			"cluster.discovery":     "dns",
 			"cluster.dns.type":      "srv",
 			"cluster.dns.app":       "webhook-test",
-			"cluster.dns.name":      "webhook-test-headless.default.svc.cluster.local",
+			"cluster.dns.name":      "webhook-test-headless.default.svc",
 			"listener.tcp.internal": "",
 		}, instance.Spec.Template.Spec.EmqxContainer.EmqxConfig)
 	})

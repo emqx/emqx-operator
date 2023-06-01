@@ -328,7 +328,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 		},
 		{
 			Name:  "EMQX_CLUSTER__DNS__NAME",
-			Value: "emqx-headless.default.svc.cluster.local",
+			Value: "emqx-headless.default.svc",
 		},
 		{
 			Name:  "EMQX_CLUSTER__DNS__TYPE",
@@ -396,7 +396,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 		},
 		{
 			Name:  "EMQX_CLUSTER__DNS__NAME",
-			Value: "emqx-headless.default.svc.cluster.local",
+			Value: "emqx-headless.default.svc",
 		},
 		{
 			Name:  "EMQX_CLUSTER__DNS__TYPE",
