@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/tidwall/gjson"
 )
 
@@ -172,12 +173,12 @@ func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterp
 }
 
 // Rebalance Handler
-type GetRebalanceStatusFunc func(requester Requester) ([]appsv1beta4.RebalanceState, error)
-type StartRebalanceFunc func(requester Requester, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error
-type StopRebalanceFunc func(requester Requester, rebalance *appsv1beta4.Rebalance) error
+type GetRebalanceStatusFunc func(requester innerReq.RequesterInterface) ([]appsv1beta4.RebalanceState, error)
+type StartRebalanceFunc func(requester innerReq.RequesterInterface, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error
+type StopRebalanceFunc func(requester innerReq.RequesterInterface, rebalance *appsv1beta4.Rebalance) error
 
 func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise,
-	requester Requester, startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
+	requester innerReq.RequesterInterface, startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
 ) {
 	switch rebalance.Status.Phase {
 	case "":
@@ -223,7 +224,7 @@ func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.
 	}
 }
 
-func startRebalance(requester Requester, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
+func startRebalance(requester innerReq.RequesterInterface, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
 	emqxNodeName := emqx.Status.EmqxNodes[0].Node
 
 	bytes := getRequestBytes(rebalance, emqx)
@@ -244,7 +245,7 @@ func startRebalance(requester Requester, rebalance *appsv1beta4.Rebalance, emqx 
 	return nil
 }
 
-func getRebalanceStatus(requester Requester) ([]appsv1beta4.RebalanceState, error) {
+func getRebalanceStatus(requester innerReq.RequesterInterface) ([]appsv1beta4.RebalanceState, error) {
 	resp, body, err := requester.Request("GET", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
 		return nil, err
@@ -260,7 +261,7 @@ func getRebalanceStatus(requester Requester) ([]appsv1beta4.RebalanceState, erro
 	return rebalanceStates, nil
 }
 
-func stopRebalance(requester Requester, rebalance *appsv1beta4.Rebalance) error {
+func stopRebalance(requester innerReq.RequesterInterface, rebalance *appsv1beta4.Rebalance) error {
 	// stop rebalance should use coordinatorNode as path parameter
 	emqxNodeName := rebalance.Status.RebalanceStates[0].CoordinatorNode
 	resp, respBody, err := requester.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)

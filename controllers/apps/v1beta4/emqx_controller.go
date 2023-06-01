@@ -18,13 +18,16 @@ package v1beta4
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -32,7 +35,9 @@ import (
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	"github.com/emqx/emqx-operator/internal/handler"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -126,4 +131,59 @@ func (r *EmqxReconciler) processResult(subResult subResult, instance appsv1beta4
 	}
 
 	return subResult.result, subResult.err
+}
+
+func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapUser(context.Background(), client, instance)
+	if err != nil {
+		return nil, err
+	}
+
+	names := appsv1beta4.Names{Object: instance}
+	return &innerReq.Requester{
+		// TODO: the telepersence is not support `$service.$namespace.svc` format in Linux
+		// Host:     fmt.Sprintf("%s.%s.svc:8081", names.HeadlessSvc(), instance.GetNamespace()),
+		Host:     fmt.Sprintf("%s.%s.svc.cluster.local:8081", names.HeadlessSvc(), instance.GetNamespace()),
+		Username: username,
+		Password: password,
+	}, nil
+}
+
+func newRequesterByPod(client client.Client, instance appsv1beta4.Emqx, pod *corev1.Pod) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapUser(context.Background(), client, instance)
+	if err != nil {
+		return nil, err
+	}
+
+	return &innerReq.Requester{
+		Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),
+		Username: username,
+		Password: password,
+	}, nil
+}
+
+func getBootstrapUser(ctx context.Context, client client.Client, instance appsv1beta4.Emqx) (username, password string, err error) {
+	bootstrapUser := &corev1.Secret{}
+	if err = client.Get(ctx, types.NamespacedName{
+		Namespace: instance.GetNamespace(),
+		Name:      instance.GetName() + "-bootstrap-user",
+	}, bootstrapUser); err != nil {
+		err = emperror.Wrap(err, "get secret failed")
+		return
+	}
+
+	if data, ok := bootstrapUser.Data["bootstrap_user"]; ok {
+		users := strings.Split(string(data), "\n")
+		for _, user := range users {
+			index := strings.Index(user, ":")
+			if index > 0 && user[:index] == defUsername {
+				username = user[:index]
+				password = user[index+1:]
+				return
+			}
+		}
+	}
+
+	err = emperror.Errorf("the secret does not contain the bootstrap_user")
+	return
 }

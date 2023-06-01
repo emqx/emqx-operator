@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -304,16 +305,16 @@ func TestRebalanceStatusHandler(t *testing.T) {
 	}
 	emqxEnterprise := &appsv1beta4.EmqxEnterprise{}
 	f := &fakeRequester{}
-	defStartFun := func(requester Requester, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
+	defStartFun := func(requester innerReq.RequesterInterface, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
 		return nil
 	}
-	defGetFun := func(Requester) ([]appsv1beta4.RebalanceState, error) {
+	defGetFun := func(innerReq.RequesterInterface) ([]appsv1beta4.RebalanceState, error) {
 		return []appsv1beta4.RebalanceState{}, nil
 	}
 	t.Run("check start rebalance failed", func(t *testing.T) {
 		r := rebalance.DeepCopy()
 
-		startFun := func(requester Requester, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
+		startFun := func(requester innerReq.RequesterInterface, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
 			return errors.New("fake error")
 		}
 		rebalanceStatusHandler(r, emqxEnterprise, f, startFun, defGetFun)
@@ -329,7 +330,7 @@ func TestRebalanceStatusHandler(t *testing.T) {
 		r := rebalance.DeepCopy()
 		r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
 
-		getFun := func(Requester) ([]appsv1beta4.RebalanceState, error) {
+		getFun := func(innerReq.RequesterInterface) ([]appsv1beta4.RebalanceState, error) {
 			return nil, errors.New("fake error")
 		}
 
@@ -349,7 +350,7 @@ func TestRebalanceStatusHandler(t *testing.T) {
 		r := rebalance.DeepCopy()
 		r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
 
-		getFun := func(Requester) ([]appsv1beta4.RebalanceState, error) {
+		getFun := func(innerReq.RequesterInterface) ([]appsv1beta4.RebalanceState, error) {
 			return []appsv1beta4.RebalanceState{
 				{
 					State: "processing",
