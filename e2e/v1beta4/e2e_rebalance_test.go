@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,8 +48,54 @@ var rebalance = appsv1beta4.Rebalance{
 	},
 }
 
-var _ = Describe("Emqx Rebalance Test", func() {
-	Describe("Enterprise is nothing to balance", func() {
+var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
+	Describe("Enterprise is not found", func() {
+		var r *appsv1beta4.Rebalance
+		BeforeEach(func() {
+			r = rebalance.DeepCopy()
+			r.Namespace = emqxEnterprise.GetNamespace() + "-" + rand.String(5)
+			r.Spec.InstanceName = "fake"
+			Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: r.Namespace,
+					Labels: map[string]string{
+						"test": "e2e",
+					},
+				},
+			})).Should(Succeed())
+			Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
+		})
+
+		AfterEach(func() {
+			Eventually(func() error {
+				return k8sClient.Delete(context.TODO(), r)
+			}, timeout, interval).Should(Succeed())
+			Eventually(func() bool {
+				return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+			}).Should(BeTrue())
+		})
+
+		It("Rebalance will failed, because the EMQX Enterprise is not found", func() {
+			Eventually(func() appsv1beta4.RebalanceStatus {
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+				return r.Status
+			}, timeout, interval).Should(And(
+				HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
+				HaveField("RebalanceStates", BeNil()),
+				HaveField("Conditions", ContainElements(
+					HaveField("Type", appsv1beta4.RebalanceConditionFailed),
+				)),
+				HaveField("Conditions", ContainElements(
+					HaveField("Status", corev1.ConditionTrue),
+				)),
+				HaveField("Conditions", ContainElements(
+					HaveField("Message", fmt.Sprintf("EMQX Enterprise %s is not found", r.Spec.InstanceName)),
+				)),
+			))
+		})
+	})
+
+	Describe("Enterprise is exist", func() {
 		var emqx *appsv1beta4.EmqxEnterprise
 		var r *appsv1beta4.Rebalance
 		BeforeEach(func() {
@@ -74,35 +121,7 @@ var _ = Describe("Emqx Rebalance Test", func() {
 			deleteEmqx(emqx)
 		})
 
-		It("EMQX Enterprise is not found", func() {
-			By("Create rebalance, and use fake EMQX name", func() {
-				r.Namespace = emqx.GetNamespace()
-				r.Spec.InstanceName = "fake"
-				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
-			})
-
-			By("Rebalance will failed, because the EMQX Enterprise is not found", func() {
-				Eventually(func() appsv1beta4.RebalanceStatus {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
-					return r.Status
-				}, timeout, interval).Should(And(
-					HaveField("Phase", appsv1beta4.RebalancePhaseFailed),
-					HaveField("RebalanceStates", BeNil()),
-					HaveField("Conditions", ContainElements(
-						HaveField("Type", appsv1beta4.RebalanceConditionFailed),
-					)),
-					HaveField("Conditions", ContainElements(
-						HaveField("Status", corev1.ConditionTrue),
-					)),
-					HaveField("Conditions", ContainElements(
-						HaveField("Message", fmt.Sprintf("EMQX Enterprise %s is not found", r.Spec.InstanceName)),
-					)),
-				))
-
-			})
-		})
-
-		It("nothing to rebalance", func() {
+		It("Check rebalance status", func() {
 			By("Create rebalance", func() {
 				r.Namespace = emqx.GetNamespace()
 				r.Spec.InstanceName = emqx.GetName()
@@ -133,20 +152,7 @@ var _ = Describe("Emqx Rebalance Test", func() {
 				))
 			})
 
-		})
-
-		It("Rebalance completed", func() {
-			By("create Rebalance and mock status", func() {
-				r.Namespace = emqx.GetNamespace()
-				r.Spec.InstanceName = emqx.GetName()
-				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
-
-				// wait for rebalance failed
-				Eventually(func() appsv1beta4.RebalancePhase {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
-					return r.Status.Phase
-				}, timeout, interval).Should(Equal(appsv1beta4.RebalancePhaseFailed))
-
+			By("Mock rebalance is inProgress", func() {
 				// mock rebalance processing
 				r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
 				r.Status.Conditions = []appsv1beta4.RebalanceCondition{}
