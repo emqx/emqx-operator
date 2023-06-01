@@ -88,11 +88,9 @@ jobs:
           sudo curl -fL https://app.getambassador.io/download/tel2/linux/amd64/${TELEPRESENCE_VERSION}/telepresence -o /usr/local/bin/telepresence
           sudo chmod a+x /usr/local/bin/telepresence
       - name: Install Traffic Manager
-        run : |
-         telepresence helm install
+        run: telepresence helm install
       - name: Telepresence connect
-        run: |
-         sudo telepresence connect
+        run: telepresence connect
       - name: Run e2e test cases
         env:
           FILE: ${{ matrix.file }}
