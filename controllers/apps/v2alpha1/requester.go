@@ -11,6 +11,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	"github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +30,7 @@ type requester struct {
 	Password string
 }
 
-func newRequesterBySvc(client client.Client, instance *v2alpha1.EMQX) (*requester, error) {
+func newRequesterBySvc(client client.Client, instance *appsv2alpha1.EMQX) (*requester, error) {
 	username, password, err := getBootstrapUser(context.Background(), client, instance)
 	if err != nil {
 		return nil, err
@@ -38,7 +39,7 @@ func newRequesterBySvc(client client.Client, instance *v2alpha1.EMQX) (*requeste
 	headlessService := instance.HeadlessServiceNamespacedName()
 
 	var port string
-	dashboardPort, err := v2alpha1.GetDashboardServicePort(instance)
+	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
 	if err != nil || dashboardPort == nil {
 		port = "18083"
 	}
@@ -48,7 +49,9 @@ func newRequesterBySvc(client client.Client, instance *v2alpha1.EMQX) (*requeste
 	}
 
 	return &requester{
-		Host:     fmt.Sprintf("%s.%s:%s", headlessService.Name, headlessService.Namespace, port),
+		// TODO: the telepersence is not support `$service.$namespace.svc` format in Linux
+		// Host:     fmt.Sprintf("%s.%s.svc:%s", headlessService.Name, headlessService.Namespace, port),
+		Host:     fmt.Sprintf("%s.%s.svc.cluster.local:%s", headlessService.Name, headlessService.Namespace, port),
 		Username: username,
 		Password: password,
 	}, nil

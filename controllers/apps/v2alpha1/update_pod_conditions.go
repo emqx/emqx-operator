@@ -71,10 +71,20 @@ func (u *updatePodConditions) checkInCluster(instance *appsv2alpha1.EMQX, r Requ
 }
 
 func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2alpha1.EMQX, r Requester, pod *corev1.Pod) corev1.ConditionStatus {
+	var port string
+	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
+	if err != nil || dashboardPort == nil {
+		port = "18083"
+	}
+
+	if dashboardPort != nil {
+		port = dashboardPort.TargetPort.String()
+	}
+
 	requester := &requester{
 		Username: r.GetUsername(),
 		Password: r.GetPassword(),
-		Host:     fmt.Sprintf("%s:18083", pod.Status.PodIP),
+		Host:     fmt.Sprintf("%s:%s", pod.Status.PodIP, port),
 	}
 
 	resp, _, err := requester.Request("GET", "api/v5/load_rebalance/availability_check", nil)
