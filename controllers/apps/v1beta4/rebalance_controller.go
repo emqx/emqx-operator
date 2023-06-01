@@ -32,13 +32,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
-	innerPortFW "github.com/emqx/emqx-operator/internal/portforward"
 	"github.com/tidwall/gjson"
 )
 
@@ -106,20 +103,19 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
 
-	pod := r.getReadyPod(emqx)
-	if pod == nil {
-		return ctrl.Result{}, emperror.New("failed to get in-cluster pod")
+	readyPod := r.getReadyPod(emqx)
+	if readyPod == nil {
+		return ctrl.Result{}, emperror.New("failed to get ready pod")
 	}
 
-	portForward, err := r.getPortForwardAPI(emqx, pod)
+	requester, err := newRequesterByPod(r.Client, emqx, readyPod)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, emperror.New("failed to get create emqx http API")
 	}
-	defer portForward.GetOptions().Close()
 
 	if !rebalance.DeletionTimestamp.IsZero() {
 		if rebalance.Status.Phase == appsv1beta4.RebalancePhaseProcessing {
-			_ = stopRebalance(portForward, rebalance)
+			_ = stopRebalance(requester, rebalance)
 		}
 		controllerutil.RemoveFinalizer(rebalance, finalizer)
 		return ctrl.Result{}, r.Client.Update(ctx, rebalance)
@@ -132,7 +128,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	rebalanceStatusHandler(rebalance, emqx, pod, portForward, startRebalance, getRebalanceStatus)
+	rebalanceStatusHandler(rebalance, emqx, requester, startRebalance, getRebalanceStatus)
 	if err := r.Client.Status().Update(ctx, rebalance); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -156,11 +152,6 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *RebalanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv1beta4.Rebalance{}).
-		WithEventFilter(predicate.Funcs{
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration()
-			},
-		}).
 		Complete(r)
 }
 
@@ -173,41 +164,24 @@ func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterp
 	for _, pod := range podList.Items {
 		for _, c := range pod.Status.Conditions {
 			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
-				return &pod
+				return pod.DeepCopy()
 			}
 		}
 	}
 	return nil
 }
 
-func (r *RebalanceReconciler) getPortForwardAPI(instance appsv1beta4.Emqx, pod *corev1.Pod) (PortForwardAPI, error) {
-	o, err := innerPortFW.NewPortForwardOptions(r.Clientset, r.Config, pod, "8081")
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to create port forward options")
-	}
-
-	username, password, err := getBootstrapUser(context.Background(), r.Client, instance)
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to get bootstrap user")
-	}
-	return &portForwardAPI{
-		Username: username,
-		Password: password,
-		Options:  o,
-	}, nil
-}
-
 // Rebalance Handler
-type GetRebalanceStatusFunc func(PortForwardAPI) ([]appsv1beta4.RebalanceState, error)
-type StartRebalanceFunc func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error
-type StopRebalanceFunc func(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error
+type GetRebalanceStatusFunc func(requester Requester) ([]appsv1beta4.RebalanceState, error)
+type StartRebalanceFunc func(requester Requester, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error
+type StopRebalanceFunc func(requester Requester, rebalance *appsv1beta4.Rebalance) error
 
-func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, pod *corev1.Pod,
-	portForward PortForwardAPI, startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
+func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise,
+	requester Requester, startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
 ) {
 	switch rebalance.Status.Phase {
 	case "":
-		if err := startFun(portForward, rebalance, emqx, getEmqxNodeName(emqx, pod)); err != nil {
+		if err := startFun(requester, rebalance, emqx); err != nil {
 			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 				Type:    appsv1beta4.RebalanceConditionFailed,
 				Status:  corev1.ConditionTrue,
@@ -220,7 +194,7 @@ func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.
 			Status: corev1.ConditionTrue,
 		})
 	case appsv1beta4.RebalancePhaseProcessing:
-		rebalanceStates, err := getRebalanceStatusFun(portForward)
+		rebalanceStates, err := getRebalanceStatusFun(requester)
 		if err != nil {
 			_ = rebalance.Status.SetFailed(appsv1beta4.RebalanceCondition{
 				Type:    appsv1beta4.RebalanceConditionFailed,
@@ -249,14 +223,11 @@ func rebalanceStatusHandler(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.
 	}
 }
 
-func startRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise, emqxNodeName string) error {
-	nodes := []string{}
-	for _, emqxNode := range emqx.Status.EmqxNodes {
-		nodes = append(nodes, emqxNode.Node)
-	}
+func startRebalance(requester Requester, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
+	emqxNodeName := emqx.Status.EmqxNodes[0].Node
 
-	bytes := getRequestBytes(rebalance, nodes)
-	resp, respBody, err := p.RequestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
+	bytes := getRequestBytes(rebalance, emqx)
+	resp, respBody, err := requester.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
 	if err != nil {
 		return err
 	}
@@ -273,8 +244,8 @@ func startRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance, emqx *ap
 	return nil
 }
 
-func getRebalanceStatus(p PortForwardAPI) ([]appsv1beta4.RebalanceState, error) {
-	resp, body, err := p.RequestAPI("GET", "api/v4/load_rebalance/global_status", nil)
+func getRebalanceStatus(requester Requester) ([]appsv1beta4.RebalanceState, error) {
+	resp, body, err := requester.Request("GET", "api/v4/load_rebalance/global_status", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -289,10 +260,10 @@ func getRebalanceStatus(p PortForwardAPI) ([]appsv1beta4.RebalanceState, error) 
 	return rebalanceStates, nil
 }
 
-func stopRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
+func stopRebalance(requester Requester, rebalance *appsv1beta4.Rebalance) error {
 	// stop rebalance should use coordinatorNode as path parameter
 	emqxNodeName := rebalance.Status.RebalanceStates[0].CoordinatorNode
-	resp, respBody, err := p.RequestAPI("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
+	resp, respBody, err := requester.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
 	if err != nil {
 		return err
 	}
@@ -307,7 +278,12 @@ func stopRebalance(p PortForwardAPI, rebalance *appsv1beta4.Rebalance) error {
 	return nil
 }
 
-func getRequestBytes(rebalance *appsv1beta4.Rebalance, nodes []string) []byte {
+func getRequestBytes(rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) []byte {
+	nodes := []string{}
+	for _, emqxNode := range emqx.Status.EmqxNodes {
+		nodes = append(nodes, emqxNode.Node)
+	}
+
 	body := map[string]interface{}{
 		"conn_evict_rate":    rebalance.Spec.RebalanceStrategy.ConnEvictRate,
 		"sess_evict_rate":    rebalance.Spec.RebalanceStrategy.SessEvictRate,

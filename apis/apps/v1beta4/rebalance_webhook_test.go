@@ -85,11 +85,6 @@ func TestRebalanceValidateUpdate(t *testing.T) {
 		old = rebalance.DeepCopy()
 		old.Spec.InstanceName = "test-0"
 		assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance spec don't allow update")
-
-		old.Spec.InstanceName = "test"
-		old.Spec.RebalanceStrategy = RebalanceStrategy{
-			ConnEvictRate: 11,
-		}
 	})
 
 	t.Run("valid other field instead of spec ", func(t *testing.T) {

@@ -21,7 +21,7 @@ import (
 
 type addListener struct {
 	*EmqxReconciler
-	PortForwardAPI
+	Requester
 }
 
 func (a addListener) reconcile(ctx context.Context, instance v1beta4.Emqx, _ ...any) subResult {
@@ -157,7 +157,7 @@ func (a addListener) getListenerPortsByAPI() ([]corev1.ServicePort, error) {
 		return ans
 	}
 
-	_, body, err := a.PortForwardAPI.RequestAPI("GET", "api/v4/listeners", nil)
+	_, body, err := a.Requester.Request("GET", "api/v4/listeners", nil)
 	if err != nil {
 		return nil, err
 	}

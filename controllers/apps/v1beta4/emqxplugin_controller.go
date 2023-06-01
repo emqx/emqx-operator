@@ -106,14 +106,12 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
-				p, _ := newPortForwardAPI(ctx, r.Client, r.Clientset, r.Config, emqx)
-				if p == nil {
-					// The EMQX is not ready, requeue
-					return ctrl.Result{RequeueAfter: time.Second}, nil
+				requester, err := newRequesterBySvc(r.Client, emqx)
+				if err != nil {
+					return ctrl.Result{}, err
 				}
 
-				err = r.unloadPluginByAPI(p, instance.Spec.PluginName)
-				p.Options.Close()
+				err = r.unloadPluginByAPI(requester, instance.Spec.PluginName)
 				if err != nil {
 					if innerErr.IsCommonError(err) {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
@@ -161,15 +159,12 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
-		// The EMQX is not ready, requeue
-		p, err := newPortForwardAPI(ctx, r.Client, r.Clientset, r.Config, emqx)
-		if err != nil && !innerErr.IsCommonError(err) {
-			return ctrl.Result{}, emperror.Wrapf(err, "failed to create port forward for EMQX %s", emqx.GetName())
+		requester, err := newRequesterBySvc(r.Client, emqx)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
-		if p != nil {
-			defer p.Options.Close()
-		}
-		err = r.checkPluginStatusByAPI(p, instance.Spec.PluginName)
+
+		err = r.checkPluginStatusByAPI(requester, instance.Spec.PluginName)
 		if err != nil {
 			if innerErr.IsCommonError(err) {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
@@ -194,8 +189,8 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EmqxPluginReconciler) checkPluginStatusByAPI(p PortForwardAPI, pluginName string) error {
-	list, err := r.getPluginsByAPI(p)
+func (r *EmqxPluginReconciler) checkPluginStatusByAPI(requester *requester, pluginName string) error {
+	list, err := r.getPluginsByAPI(requester)
 	if err != nil {
 		return err
 	}
@@ -203,7 +198,7 @@ func (r *EmqxPluginReconciler) checkPluginStatusByAPI(p PortForwardAPI, pluginNa
 		for _, plugin := range node.Plugins {
 			if plugin.Name == pluginName {
 				if !plugin.Active {
-					err := r.doLoadPluginByAPI(p, node.Node, plugin.Name, "reload")
+					err := r.doLoadPluginByAPI(requester, node.Node, plugin.Name, "reload")
 					if err != nil {
 						return err
 					}
@@ -214,15 +209,15 @@ func (r *EmqxPluginReconciler) checkPluginStatusByAPI(p PortForwardAPI, pluginNa
 	return nil
 }
 
-func (r *EmqxPluginReconciler) unloadPluginByAPI(p PortForwardAPI, pluginName string) error {
-	list, err := r.getPluginsByAPI(p)
+func (r *EmqxPluginReconciler) unloadPluginByAPI(requester *requester, pluginName string) error {
+	list, err := r.getPluginsByAPI(requester)
 	if err != nil {
 		return err
 	}
 	for _, node := range list {
 		for _, plugin := range node.Plugins {
 			if plugin.Name == pluginName {
-				err := r.doLoadPluginByAPI(p, node.Node, plugin.Name, "unload")
+				err := r.doLoadPluginByAPI(requester, node.Node, plugin.Name, "unload")
 				if err != nil {
 					return err
 				}
@@ -232,8 +227,8 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(p PortForwardAPI, pluginName st
 	return nil
 }
 
-func (r *EmqxPluginReconciler) doLoadPluginByAPI(p PortForwardAPI, nodeName, pluginName, reloadOrUnload string) error {
-	resp, _, err := p.RequestAPI("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
+func (r *EmqxPluginReconciler) doLoadPluginByAPI(requester Requester, nodeName, pluginName, reloadOrUnload string) error {
+	resp, _, err := requester.Request("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
 	if err != nil {
 		return err
 	}
@@ -243,9 +238,9 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(p PortForwardAPI, nodeName, plu
 	return nil
 }
 
-func (r *EmqxPluginReconciler) getPluginsByAPI(p PortForwardAPI) ([]pluginListByAPIReturn, error) {
+func (r *EmqxPluginReconciler) getPluginsByAPI(requester Requester) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
-	resp, body, err := p.RequestAPI("GET", "api/v4/plugins", nil)
+	resp, body, err := requester.Request("GET", "api/v4/plugins", nil)
 	if err != nil {
 		return nil, err
 	}
