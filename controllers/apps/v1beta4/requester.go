@@ -50,7 +50,8 @@ func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (*reques
 
 	names := appsv1beta4.Names{Object: instance}
 	return &requester{
-		Host:     fmt.Sprintf("%s.%s.svc:8081", names.HeadlessSvc(), instance.GetNamespace()),
+		// Host:     fmt.Sprintf("%s.%s.svc:8081", names.HeadlessSvc(), instance.GetNamespace()),
+		Host:     fmt.Sprintf("%s.%s:8081", names.HeadlessSvc(), instance.GetNamespace()),
 		Username: username,
 		Password: password,
 	}, nil
