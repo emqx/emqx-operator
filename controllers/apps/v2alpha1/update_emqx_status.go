@@ -17,14 +17,14 @@ type updateStatus struct {
 	*EMQXReconciler
 }
 
-func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
+func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r Requester) subResult {
 	var err error
 	var emqxNodes []appsv2alpha1.EMQXNode
 	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
 	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
 
-	if p.Options != nil {
-		if emqxNodes, err = getNodeStatuesByAPI(p); err != nil {
+	if r != nil {
+		if emqxNodes, err = getNodeStatuesByAPI(r); err != nil {
 			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 		}
 	}
@@ -54,8 +54,8 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQ
 	return subResult{}
 }
 
-func getNodeStatuesByAPI(p *portForwardAPI) ([]appsv2alpha1.EMQXNode, error) {
-	resp, body, err := p.requestAPI("GET", "api/v5/nodes", nil)
+func getNodeStatuesByAPI(r Requester) ([]appsv2alpha1.EMQXNode, error) {
+	resp, body, err := r.Request("GET", "api/v5/nodes", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
 	}

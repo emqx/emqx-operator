@@ -1,4 +1,4 @@
-package v1beta4
+package v2alpha1
 
 import (
 	"bytes"
@@ -10,7 +10,8 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	"github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,30 +30,28 @@ type requester struct {
 	Password string
 }
 
-func newRequesterByPod(client client.Client, instance appsv1beta4.Emqx, pod *corev1.Pod) (*requester, error) {
+func newRequesterBySvc(client client.Client, instance *appsv2alpha1.EMQX) (*requester, error) {
 	username, password, err := getBootstrapUser(context.Background(), client, instance)
 	if err != nil {
 		return nil, err
 	}
 
-	return &requester{
-		Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),
-		Username: username,
-		Password: password,
-	}, nil
-}
+	headlessService := instance.HeadlessServiceNamespacedName()
 
-func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (*requester, error) {
-	username, password, err := getBootstrapUser(context.Background(), client, instance)
-	if err != nil {
-		return nil, err
+	var port string
+	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
+	if err != nil || dashboardPort == nil {
+		port = "18083"
 	}
 
-	names := appsv1beta4.Names{Object: instance}
+	if dashboardPort != nil {
+		port = dashboardPort.TargetPort.String()
+	}
+
 	return &requester{
 		// TODO: the telepersence is not support `$service.$namespace.svc` format in Linux
-		// Host:     fmt.Sprintf("%s.%s.svc:8081", names.HeadlessSvc(), instance.GetNamespace()),
-		Host:     fmt.Sprintf("%s.%s.svc.cluster.local:8081", names.HeadlessSvc(), instance.GetNamespace()),
+		// Host:     fmt.Sprintf("%s.%s.svc:%s", headlessService.Name, headlessService.Namespace, port),
+		Host:     fmt.Sprintf("%s.%s.svc.cluster.local:%s", headlessService.Name, headlessService.Namespace, port),
 		Username: username,
 		Password: password,
 	}, nil
@@ -86,7 +85,7 @@ func (requester *requester) Request(method, path string, body []byte) (resp *htt
 	req.Close = true
 	resp, err = httpClient.Do(req)
 	if err != nil {
-		return nil, nil, emperror.Wrap(err, "failed to request API")
+		return nil, nil, emperror.NewWithDetails("failed to request API", "method", method, "path", url.Path)
 	}
 
 	defer resp.Body.Close()
@@ -97,7 +96,7 @@ func (requester *requester) Request(method, path string, body []byte) (resp *htt
 	return resp, body, nil
 }
 
-func getBootstrapUser(ctx context.Context, client client.Client, instance appsv1beta4.Emqx) (username, password string, err error) {
+func getBootstrapUser(ctx context.Context, client client.Client, instance *v2alpha1.EMQX) (username, password string, err error) {
 	bootstrapUser := &corev1.Secret{}
 	if err = client.Get(ctx, types.NamespacedName{
 		Namespace: instance.GetNamespace(),

@@ -22,7 +22,7 @@ type addListener struct {
 	*EMQXReconciler
 }
 
-func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p *portForwardAPI) subResult {
+func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p Requester) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
 		return subResult{}
 	}
@@ -67,8 +67,8 @@ func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha1.EMQ
 	return podMap[currentDeployment.UID]
 }
 
-func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, p *portForwardAPI) []corev1.ServicePort {
-	listenerPorts, err := getAllListenersByAPI(p)
+func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, r Requester) []corev1.ServicePort {
+	listenerPorts, err := getAllListenersByAPI(r)
 	if err != nil {
 		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
 	}
@@ -156,13 +156,13 @@ type emqxListener struct {
 	Type   string `json:"type"`
 }
 
-func getAllListenersByAPI(p *portForwardAPI) ([]corev1.ServicePort, error) {
-	ports, err := getListenerPortsByAPI(p, "api/v5/listeners")
+func getAllListenersByAPI(r Requester) ([]corev1.ServicePort, error) {
+	ports, err := getListenerPortsByAPI(r, "api/v5/listeners")
 	if err != nil {
 		return nil, err
 	}
 
-	gateways, err := getGatewaysByAPI(p)
+	gateways, err := getGatewaysByAPI(r)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func getAllListenersByAPI(p *portForwardAPI) ([]corev1.ServicePort, error) {
 	for _, gateway := range gateways {
 		if strings.ToLower(gateway.Status) == "running" {
 			apiPath := fmt.Sprintf("api/v5/gateway/%s/listeners", gateway.Name)
-			gatewayPorts, err := getListenerPortsByAPI(p, apiPath)
+			gatewayPorts, err := getListenerPortsByAPI(r, apiPath)
 			if err != nil {
 				return nil, err
 			}
@@ -181,8 +181,8 @@ func getAllListenersByAPI(p *portForwardAPI) ([]corev1.ServicePort, error) {
 	return ports, nil
 }
 
-func getGatewaysByAPI(p *portForwardAPI) ([]emqxGateway, error) {
-	resp, body, err := p.requestAPI("GET", "api/v5/gateway", nil)
+func getGatewaysByAPI(r Requester) ([]emqxGateway, error) {
+	resp, body, err := r.Request("GET", "api/v5/gateway", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/gateway")
 	}
@@ -196,8 +196,8 @@ func getGatewaysByAPI(p *portForwardAPI) ([]emqxGateway, error) {
 	return gateway, nil
 }
 
-func getListenerPortsByAPI(p *portForwardAPI, apiPath string) ([]corev1.ServicePort, error) {
-	resp, body, err := p.requestAPI("GET", apiPath, nil)
+func getListenerPortsByAPI(r Requester, apiPath string) ([]corev1.ServicePort, error) {
+	resp, body, err := r.Request("GET", apiPath, nil)
 	if err != nil {
 		return nil, emperror.Wrapf(err, "failed to get API %s", apiPath)
 	}
