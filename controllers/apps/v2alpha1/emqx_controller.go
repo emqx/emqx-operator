@@ -18,20 +18,27 @@ package v2alpha1
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/internal/handler"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,7 +53,7 @@ type subResult struct {
 }
 
 type subReconciler interface {
-	reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r Requester) subResult
+	reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) subResult
 }
 
 // EMQXReconciler reconciles a EMQX object
@@ -141,4 +148,57 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 		}).
 		Complete(r)
+}
+
+func newRequesterBySvc(client client.Client, instance *appsv2alpha1.EMQX) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapUser(context.Background(), client, instance)
+	if err != nil {
+		return nil, err
+	}
+
+	headlessService := instance.HeadlessServiceNamespacedName()
+
+	var port string
+	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
+	if err != nil || dashboardPort == nil {
+		port = "18083"
+	}
+
+	if dashboardPort != nil {
+		port = dashboardPort.TargetPort.String()
+	}
+
+	return &innerReq.Requester{
+		// TODO: the telepersence is not support `$service.$namespace.svc` format in Linux
+		// Host:     fmt.Sprintf("%s.%s.svc:%s", headlessService.Name, headlessService.Namespace, port),
+		Host:     fmt.Sprintf("%s.%s.svc.cluster.local:%s", headlessService.Name, headlessService.Namespace, port),
+		Username: username,
+		Password: password,
+	}, nil
+}
+
+func getBootstrapUser(ctx context.Context, client client.Client, instance *v2alpha1.EMQX) (username, password string, err error) {
+	bootstrapUser := &corev1.Secret{}
+	if err = client.Get(ctx, types.NamespacedName{
+		Namespace: instance.GetNamespace(),
+		Name:      instance.GetName() + "-bootstrap-user",
+	}, bootstrapUser); err != nil {
+		err = emperror.Wrap(err, "get secret failed")
+		return
+	}
+
+	if data, ok := bootstrapUser.Data["bootstrap_user"]; ok {
+		users := strings.Split(string(data), "\n")
+		for _, user := range users {
+			index := strings.Index(user, ":")
+			if index > 0 && user[:index] == defUsername {
+				username = user[:index]
+				password = user[index+1:]
+				return
+			}
+		}
+	}
+
+	err = emperror.Errorf("the secret does not contain the bootstrap_user")
+	return
 }

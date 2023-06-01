@@ -11,6 +11,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/tidwall/gjson"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,7 @@ import (
 
 type addListener struct {
 	*EmqxReconciler
-	Requester
+	Requester innerReq.RequesterInterface
 }
 
 func (a addListener) reconcile(ctx context.Context, instance v1beta4.Emqx, _ ...any) subResult {

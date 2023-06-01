@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/rory-z/go-hocon"
 	"github.com/sethvargo/go-password/password"
 )
@@ -21,7 +22,7 @@ type addBootstrap struct {
 	*EMQXReconciler
 }
 
-func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ Requester) subResult {
+func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ innerReq.RequesterInterface) subResult {
 	for _, resource := range []client.Object{
 		generateNodeCookieSecret(instance),
 		generateBootstrapUserSecret(instance),

@@ -8,6 +8,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +22,7 @@ type addRepl struct {
 	*EMQXReconciler
 }
 
-func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ Requester) subResult {
+func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ innerReq.RequesterInterface) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
 		return subResult{}
 	}

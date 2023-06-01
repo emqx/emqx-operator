@@ -7,6 +7,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,7 +16,7 @@ import (
 
 type updatePodConditions struct {
 	*EmqxReconciler
-	Requester
+	Requester innerReq.RequesterInterface
 }
 
 func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
@@ -79,7 +80,7 @@ func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4
 }
 
 func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnterprise, pod *corev1.Pod) (corev1.ConditionStatus, error) {
-	requester := &requester{
+	requester := &innerReq.Requester{
 		Username: u.Requester.GetUsername(),
 		Password: u.Requester.GetPassword(),
 		Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),

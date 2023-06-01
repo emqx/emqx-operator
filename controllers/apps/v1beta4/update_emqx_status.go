@@ -6,6 +6,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/tidwall/gjson"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +14,7 @@ import (
 
 type updateEmqxStatus struct {
 	*EmqxReconciler
-	Requester
+	Requester innerReq.RequesterInterface
 }
 
 func (s updateEmqxStatus) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {

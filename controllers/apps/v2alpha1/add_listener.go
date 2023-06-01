@@ -11,6 +11,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -22,7 +23,7 @@ type addListener struct {
 	*EMQXReconciler
 }
 
-func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, p Requester) subResult {
+func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
 		return subResult{}
 	}
@@ -33,7 +34,7 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX
 	}
 
 	resources := []client.Object{}
-	svc := generateListenerService(instance, a.getServicePorts(instance, p))
+	svc := generateListenerService(instance, a.getServicePorts(instance, r))
 	if svc == nil {
 		return subResult{}
 	}
@@ -67,7 +68,7 @@ func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha1.EMQ
 	return podMap[currentDeployment.UID]
 }
 
-func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, r Requester) []corev1.ServicePort {
+func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) []corev1.ServicePort {
 	listenerPorts, err := getAllListenersByAPI(r)
 	if err != nil {
 		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
@@ -156,7 +157,7 @@ type emqxListener struct {
 	Type   string `json:"type"`
 }
 
-func getAllListenersByAPI(r Requester) ([]corev1.ServicePort, error) {
+func getAllListenersByAPI(r innerReq.RequesterInterface) ([]corev1.ServicePort, error) {
 	ports, err := getListenerPortsByAPI(r, "api/v5/listeners")
 	if err != nil {
 		return nil, err
@@ -181,7 +182,7 @@ func getAllListenersByAPI(r Requester) ([]corev1.ServicePort, error) {
 	return ports, nil
 }
 
-func getGatewaysByAPI(r Requester) ([]emqxGateway, error) {
+func getGatewaysByAPI(r innerReq.RequesterInterface) ([]emqxGateway, error) {
 	resp, body, err := r.Request("GET", "api/v5/gateway", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/gateway")
@@ -196,7 +197,7 @@ func getGatewaysByAPI(r Requester) ([]emqxGateway, error) {
 	return gateway, nil
 }
 
-func getListenerPortsByAPI(r Requester, apiPath string) ([]corev1.ServicePort, error) {
+func getListenerPortsByAPI(r innerReq.RequesterInterface, apiPath string) ([]corev1.ServicePort, error) {
 	resp, body, err := r.Request("GET", apiPath, nil)
 	if err != nil {
 		return nil, emperror.Wrapf(err, "failed to get API %s", apiPath)

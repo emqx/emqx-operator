@@ -7,6 +7,7 @@ import (
 	emperror "emperror.dev/errors"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
 	"github.com/emqx/emqx-operator/internal/handler"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +18,7 @@ type addCore struct {
 	*EMQXReconciler
 }
 
-func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ Requester) subResult {
+func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ innerReq.RequesterInterface) subResult {
 	sts := generateStatefulSet(instance)
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{sts}); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update statefulSet")}

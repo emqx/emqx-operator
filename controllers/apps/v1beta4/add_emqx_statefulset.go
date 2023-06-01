@@ -11,6 +11,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,7 +22,7 @@ import (
 
 type addEmqxStatefulSet struct {
 	*EmqxReconciler
-	Requester
+	Requester innerReq.RequesterInterface
 }
 
 func (a addEmqxStatefulSet) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {

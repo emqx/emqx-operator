@@ -5,6 +5,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -15,7 +16,7 @@ type addSvc struct {
 	*EMQXReconciler
 }
 
-func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ Requester) subResult {
+func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ innerReq.RequesterInterface) subResult {
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{
 		generateHeadlessService(instance),
 		generateDashboardService(instance),

@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/emqx/emqx-operator/internal/handler"
@@ -189,7 +190,7 @@ func (r *EmqxPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *EmqxPluginReconciler) checkPluginStatusByAPI(requester *requester, pluginName string) error {
+func (r *EmqxPluginReconciler) checkPluginStatusByAPI(requester innerReq.RequesterInterface, pluginName string) error {
 	list, err := r.getPluginsByAPI(requester)
 	if err != nil {
 		return err
@@ -209,7 +210,7 @@ func (r *EmqxPluginReconciler) checkPluginStatusByAPI(requester *requester, plug
 	return nil
 }
 
-func (r *EmqxPluginReconciler) unloadPluginByAPI(requester *requester, pluginName string) error {
+func (r *EmqxPluginReconciler) unloadPluginByAPI(requester innerReq.RequesterInterface, pluginName string) error {
 	list, err := r.getPluginsByAPI(requester)
 	if err != nil {
 		return err
@@ -227,7 +228,7 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(requester *requester, pluginNam
 	return nil
 }
 
-func (r *EmqxPluginReconciler) doLoadPluginByAPI(requester Requester, nodeName, pluginName, reloadOrUnload string) error {
+func (r *EmqxPluginReconciler) doLoadPluginByAPI(requester innerReq.RequesterInterface, nodeName, pluginName, reloadOrUnload string) error {
 	resp, _, err := requester.Request("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
 	if err != nil {
 		return err
@@ -238,7 +239,7 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(requester Requester, nodeName, 
 	return nil
 }
 
-func (r *EmqxPluginReconciler) getPluginsByAPI(requester Requester) ([]pluginListByAPIReturn, error) {
+func (r *EmqxPluginReconciler) getPluginsByAPI(requester innerReq.RequesterInterface) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
 	resp, body, err := requester.Request("GET", "api/v4/plugins", nil)
 	if err != nil {

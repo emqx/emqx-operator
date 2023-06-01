@@ -6,6 +6,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -17,7 +18,7 @@ type updateStatus struct {
 	*EMQXReconciler
 }
 
-func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r Requester) subResult {
+func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) subResult {
 	var err error
 	var emqxNodes []appsv2alpha1.EMQXNode
 	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
@@ -54,7 +55,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQ
 	return subResult{}
 }
 
-func getNodeStatuesByAPI(r Requester) ([]appsv2alpha1.EMQXNode, error) {
+func getNodeStatuesByAPI(r innerReq.RequesterInterface) ([]appsv2alpha1.EMQXNode, error) {
 	resp, body, err := r.Request("GET", "api/v5/nodes", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
