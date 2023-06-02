@@ -104,7 +104,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
           emqxContainer:
             image:
               repository: emqx
-              version: 4.4
+              version: "4.4.18"
    ```
 
    For more details please check the [reference document](https://github.com/emqx/emqx-operator/blob/main/docs/en_US/reference/v1beta4-reference.md).
