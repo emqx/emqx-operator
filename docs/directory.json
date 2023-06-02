@@ -121,16 +121,8 @@
           "path": "deployment/on-tencent-cloud"
         },
         {
-          "title": "在 GCP 中部署 EMQX",
-          "path": "deployment/on-gcp-gke"
-        },
-        {
           "title": "在 AWS 中部署 EMQX",
           "path": "deployment/on-aws-eks"
-        },
-        {
-          "title": "在 Azure 中部署 EMQX",
-          "path": "deployment/on-azure-aks"
         }
       ]
     },
