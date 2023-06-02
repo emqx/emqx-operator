@@ -23,7 +23,8 @@ jobs:
           go-version: '1.19'
       - uses: golangci/golangci-lint-action@v3
         with:
-          version: latest
+          ## TODO: https://github.com/golangci/golangci-lint-action/issues/759
+          version: v1.52.2
           args: --timeout=5m
 
   test:
