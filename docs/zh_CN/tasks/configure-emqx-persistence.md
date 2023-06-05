@@ -28,7 +28,7 @@
       metadata:
         name: emqx-ee
       spec:
-        storageClassName: standard
+        # storageClassName: standard
         resources:
           requests:
             storage: 20Mi
@@ -84,7 +84,7 @@
     coreTemplate:
       spec:
         volumeClaimTemplates:
-          storageClassName: standard
+          # storageClassName: standard
           resources:
             requests:
               storage: 20Mi

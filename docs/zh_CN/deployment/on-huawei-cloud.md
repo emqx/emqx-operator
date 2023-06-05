@@ -46,7 +46,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
         name: emqx-ee
       spec:
         ## 更多内容：https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html#section1
-        storageClassName: csi-disk
+        # storageClassName: csi-disk
         resources:
           requests:
             storage: 10Gi
@@ -109,7 +109,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
         ## EMQX 自定义资源不支持在运行时更新这个字段
         volumeClaimTemplates:
           ## 更多内容：https://support.huaweicloud.com/usermanual-cce/cce_10_0380.html#section1
-          storageClassName: csi-disk
+          # storageClassName: csi-disk
           resources:
             requests:
               storage: 10Gi

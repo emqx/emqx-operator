@@ -36,7 +36,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
         name: emqx-ee
       spec:
         ## 更多内容：https://help.aliyun.com/document_detail/134722.html
-        storageClassName: alibabacloud-cnfs-nas
+        # storageClassName: alibabacloud-cnfs-nas
         resources:
           requests:
             storage: 10Gi
@@ -95,7 +95,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
         ## EMQX 自定义资源不支持在运行时更新这个字段
         volumeClaimTemplates:
           ## 更多内容：https://help.aliyun.com/document_detail/134722.html
-          storageClassName: alibabacloud-cnfs-nas
+          # storageClassName: alibabacloud-cnfs-nas
           resources:
             requests:
               storage: 10Gi
@@ -218,7 +218,7 @@ spec:
     metadata:
       name: emqx-ee
     spec:
-      storageClassName: alibabacloud-cnfs-nas
+      # storageClassName: alibabacloud-cnfs-nas
       resources:
         requests:
           storage: 20Mi
@@ -266,7 +266,7 @@ spec:
     spec:
       ## EMQX 自定义资源不支持在运行时更新这个字段
       volumeClaimTemplates:
-        storageClassName: alibabacloud-cnfs-nas
+        # storageClassName: alibabacloud-cnfs-nas
         resources:
           requests:
             storage: 20Mi

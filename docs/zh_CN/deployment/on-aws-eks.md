@@ -36,7 +36,7 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
       spec:
         ## 更多内容：https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/storage-classes.html
         ## 请将 Amazon EBS CSI 驱动程序作为 Amazon EKS 附加组件管理，更多文档请参考：https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-        storageClassName: gp2
+        # storageClassName: gp2
         resources:
           requests:
             storage: 10Gi
@@ -117,7 +117,7 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
           ## 更多内容：https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/storage-classes.html
           ## 请将 Amazon EBS CSI 驱动程序作为 Amazon EKS 附加组件管理，
           ## 更多文档请参考：https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-          storageClassName: gp2
+          # storageClassName: gp2
           resources:
             requests:
               storage: 10Gi

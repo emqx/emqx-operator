@@ -35,7 +35,7 @@ spec:
       name: emqx-ee
     spec:
       ## more information about storage classes: https://learn.microsoft.com/en-us/azure/aks/concepts-storage#storage-classes
-      storageClassName: default
+      # storageClassName: default
       resources:
         requests:
           storage: 10Gi
@@ -87,7 +87,7 @@ spec:
     spec:
       volumeClaimTemplates:
         ## more information about storage classes: https://learn.microsoft.com/en-us/azure/aks/concepts-storage#storage-classes
-        storageClassName: default
+        # storageClassName: default
         resources:
           requests:
             storage: 10Gi

@@ -28,7 +28,7 @@ When the user configures the `.spec.persistent` field, EMQX Operator will mount 
       metadata:
         name: emqx-ee
       spec:
-        storageClassName: standard
+        # storageClassName: standard
         resources:
           requests:
             storage: 20Mi
@@ -83,7 +83,7 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
     coreTemplate:
       spec:
         volumeClaimTemplates:
-          storageClassName: standard
+          # storageClassName: standard
           resources:
             requests:
               storage: 20Mi

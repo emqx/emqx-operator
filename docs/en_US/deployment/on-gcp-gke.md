@@ -51,7 +51,7 @@ spec:
       name: emqx-ee
     spec:
       ## more information about storage classes: https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses
-      storageClassName: standard
+      # storageClassName: standard
       resources:
         requests:
           storage: 10Gi
@@ -104,7 +104,7 @@ spec:
     spec:
       volumeClaimTemplates:
       ## more information about storage classes: https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses
-        storageClassName: standard
+        # storageClassName: standard
         resources:
           requests:
             storage: 10Gi

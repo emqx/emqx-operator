@@ -37,7 +37,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
         ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
         ## Please manage the Amazon EBS CSI driver as an Amazon EKS add-on.
         ## For more documentation please refer to: https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-        storageClassName: gp2
+        # storageClassName: gp2
         resources:
           requests:
             storage: 10Gi
@@ -118,7 +118,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
           ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
           ## Please manage the Amazon EBS CSI driver as an Amazon EKS add-on.
           ## For more documentation please refer to: https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-          storageClassName: gp2
+          # storageClassName: gp2
           resources:
             requests:
               storage: 10Gi
