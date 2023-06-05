@@ -88,10 +88,8 @@ jobs:
         run: |
           sudo curl -fL https://app.getambassador.io/download/tel2/linux/amd64/${TELEPRESENCE_VERSION}/telepresence -o /usr/local/bin/telepresence
           sudo chmod a+x /usr/local/bin/telepresence
-      - name: Install Traffic Manager
-        run: telepresence helm install
-      - name: Telepresence connect
-        run: telepresence connect
+      - run: telepresence helm install
+      - run: telepresence connect
       - name: Run e2e test cases
         env:
           FILE: ${{ matrix.file }}
@@ -136,7 +134,6 @@ jobs:
           echo "files=$files" >> $GITHUB_OUTPUT
       - uses: codecov/codecov-action@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.files.outputs.files }} # optional
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
