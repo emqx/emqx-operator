@@ -69,6 +69,10 @@
         {
           "title": "Monitor EMQX Cluster",
           "path": "tasks/configure-emqx-prometheus"
+        },
+        {
+          "title": "Cluster Load Rebalancing (EMQX Enterprise)",
+          "path": "tasks/configure-emqx-rebalance"
         }
       ]
     },
@@ -177,6 +181,10 @@
         {
           "title": "监控 EMQX 集群",
           "path": "tasks/configure-emqx-prometheus"
+        },
+        {
+          "title": "集群负载重平衡（EMQX 企业版）",
+          "path": "tasks/configure-emqx-rebalance"
         }
       ]
     },
