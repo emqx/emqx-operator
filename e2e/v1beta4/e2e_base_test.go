@@ -309,7 +309,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 				p.Spec.Config["lwm2m.bind.udp.2"] = "0.0.0.0:5696"
 				p.Spec.Config["lwm2m.bind.dtls.1"] = "0.0.0.0:5697"
 				p.Spec.Config["lwm2m.bind.dtls.2"] = "0.0.0.0:5698"
-				return k8sClient.Update(context.Background(), p)
+				return k8sClient.Patch(context.Background(), p.DeepCopy(), client.MergeFrom(p))
 			}, timeout, interval).Should(Succeed())
 
 			pluginPorts = []corev1.ServicePort{
@@ -387,7 +387,7 @@ func deleteEmqx(emqx appsv1beta4.Emqx) {
 	)
 	for _, plugin := range plugins.Items {
 		controllerutil.RemoveFinalizer(&plugin, finalizer)
-		Expect(k8sClient.Update(context.Background(), &plugin)).Should(Succeed())
+		Expect(k8sClient.Patch(context.Background(), plugin.DeepCopy(), client.MergeFrom(&plugin))).Should(Succeed())
 		Expect(k8sClient.Delete(context.Background(), &plugin)).Should(Succeed())
 	}
 	Expect(k8sClient.Delete(context.TODO(), emqx)).Should(Succeed())

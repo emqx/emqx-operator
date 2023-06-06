@@ -75,7 +75,7 @@ var _ = Describe("Base Test", func() {
 			By("change replicas, will trigger direct update")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), instance)).Should(Succeed())
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(3)
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Expect(k8sClient.Patch(context.TODO(), instance.DeepCopy(), client.MergeFrom(instance))).Should(Succeed())
 		})
 
 		It("Check Direct Update", func() {
@@ -113,7 +113,7 @@ var _ = Describe("Base Test", func() {
 			By("Change image, will trigger blue green update")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), instance)).Should(Succeed())
 			instance.Spec.Image = currentImage
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Expect(k8sClient.Patch(context.TODO(), instance.DeepCopy(), client.MergeFrom(instance))).Should(Succeed())
 		})
 
 		It("Check Blue Green Update", func() {

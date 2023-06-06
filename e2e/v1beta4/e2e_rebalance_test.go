@@ -156,12 +156,12 @@ var _ = Describe("Emqx Rebalance Test", Label("rebalance"), func() {
 				// mock rebalance processing
 				r.Status.Phase = appsv1beta4.RebalancePhaseProcessing
 				r.Status.Conditions = []appsv1beta4.RebalanceCondition{}
-				Expect(k8sClient.Status().Update(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Status().Patch(context.TODO(), r.DeepCopy(), client.MergeFrom(r))).Should(Succeed())
 
 				// update annotations for target reconciler
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)).Should(Succeed())
 				r.Annotations = map[string]string{"test": "e2e"}
-				Expect(k8sClient.Update(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Patch(context.TODO(), r.DeepCopy(), client.MergeFrom(r))).Should(Succeed())
 			})
 
 			By("Rebalance should completed", func() {

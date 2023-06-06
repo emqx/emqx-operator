@@ -62,12 +62,12 @@ var _ = Describe("Upgrade Test", Label("upgrade"), func() {
 					obj := &appsv1beta4.EmqxBroker{}
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), obj)).Should(Succeed())
 					obj.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.17"
-					Expect(k8sClient.Update(context.TODO(), obj)).Should(Succeed())
+					Expect(k8sClient.Patch(context.TODO(), obj.DeepCopy(), client.MergeFrom(obj))).Should(Succeed())
 				case *appsv1beta4.EmqxEnterprise:
 					obj := &appsv1beta4.EmqxEnterprise{}
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), obj)).Should(Succeed())
 					obj.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.17"
-					Expect(k8sClient.Update(context.TODO(), obj)).Should(Succeed())
+					Expect(k8sClient.Patch(context.TODO(), obj.DeepCopy(), client.MergeFrom(obj))).Should(Succeed())
 				}
 			})
 

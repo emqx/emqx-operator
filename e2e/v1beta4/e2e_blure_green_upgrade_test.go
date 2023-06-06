@@ -111,7 +111,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			})
-			Expect(k8sClient.Update(context.Background(), emqx)).Should(Succeed())
+			Expect(k8sClient.Patch(context.Background(), emqx.DeepCopy(), client.MergeFrom(emqx))).Should(Succeed())
 
 			By("wait create new sts")
 			existedStsList = &appsv1.StatefulSetList{}
