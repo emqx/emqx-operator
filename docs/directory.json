@@ -23,6 +23,18 @@
         {
           "title": "Deploy EMQX on Google Cloud",
           "path": "deployment/on-gcp-gke"
+        },
+        {
+          "title": "Deploy EMQX on ACK",
+          "path": "deployment/on-alibaba-cloud"
+        },
+        {
+          "title": "Deploy EMQX on CCE",
+          "path": "deployment/on-huawei-cloud"
+        },
+        {
+          "title": "Deploy EMQX on TKE",
+          "path": "deployment/on-tencent-cloud"
         }
       ]
     },

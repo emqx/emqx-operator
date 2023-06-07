@@ -20,8 +20,8 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
 
 - 通过 kubectl 命令连接 CCE 集群，你可以在本地安装 kubectl 工具，并获取集群的 KubeConfig 来连接集群，或是在容器服务 CCE 控制台上利用 CloudShell 通过 kubectl 管理集群。
 
-  - 通过本地安装 kubectl 工具连接 CCE 集群：具体请参考：[使用 kubectl 连接集群](https://support.huaweicloud.com/usermanual-cce/cce_10_0107.html#section3)
-  - 通过 CloudShell 连接 CCE 集群：具体请参考：[使用 CloudShell 连接集群](https://support.huaweicloud.com/usermanual-cce/cce_10_0107.html#section2)
+  - 通过本地安装 kubectl 工具连接 CCE 集群：具体请参考：[使用 kubectl 连接集群](https://support.huaweicloud.com/usermanual-cce/cce_10_0107.html#section2)
+  - 通过 CloudShell 连接 CCE 集群：具体请参考：[使用 CloudShell 连接集群](https://support.huaweicloud.com/usermanual-cce/cce_10_0671.html#section2)
 
 - 安装 EMQX Operator：具体请参考：[安装 EMQX Operator](../getting-started/getting-started.md)
 

@@ -5,6 +5,9 @@ This chapter provides instructions for deploying EMQX on public cloud platforms,
 - [Amazon Elastic Kubernetes Service (EKS)](./on-aws-eks.md)
 - [Azure Kubernetes Service (AKS)](./on-azure-aks.md)
 - [Google Cloud GKE](./on-gcp-gke.md)
+- [Alibaba Cloud ACK](./on-alibaba-cloud.md)
+- [Huawei Cloud CCE](./on-huawei-cloud.md)
+- [Tencent Cloud TKE](./on-tencent-cloud.md)
 
 The following topics will be covered in this chapter: <!--this part should be reviewed-->
 
