@@ -1,10 +1,10 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
 
 	emperror "emperror.dev/errors"
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +16,7 @@ type addSvc struct {
 	*EMQXReconciler
 }
 
-func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ innerReq.RequesterInterface) subResult {
+func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{
 		generateHeadlessService(instance),
 		generateDashboardService(instance),
@@ -27,7 +27,7 @@ func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ i
 	return subResult{}
 }
 
-func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
+func generateHeadlessService(instance *appsv2alpha2.EMQX) *corev1.Service {
 	headlessSvc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -56,7 +56,7 @@ func generateHeadlessService(instance *appsv2alpha1.EMQX) *corev1.Service {
 	return headlessSvc
 }
 
-func generateDashboardService(instance *appsv2alpha1.EMQX) *corev1.Service {
+func generateDashboardService(instance *appsv2alpha2.EMQX) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",

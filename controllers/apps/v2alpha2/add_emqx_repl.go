@@ -1,4 +1,4 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	"github.com/banzaicloud/k8s-objectmatcher/patch"
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
@@ -22,7 +22,7 @@ type addRepl struct {
 	*EMQXReconciler
 }
 
-func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ innerReq.RequesterInterface) subResult {
+func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
 		return subResult{}
 	}
@@ -49,7 +49,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ 
 	return subResult{}
 }
 
-func (a *addRepl) getNewDeployment(ctx context.Context, instance *appsv2alpha1.EMQX) *appsv1.Deployment {
+func (a *addRepl) getNewDeployment(ctx context.Context, instance *appsv2alpha2.EMQX) *appsv1.Deployment {
 	list := &appsv1.DeploymentList{}
 	_ = a.Client.List(ctx, list,
 		client.InNamespace(instance.Namespace),
@@ -77,7 +77,7 @@ func (a *addRepl) getNewDeployment(ctx context.Context, instance *appsv2alpha1.E
 	return deploy
 }
 
-func (a *addRepl) syncDeployment(ctx context.Context, instance *appsv2alpha1.EMQX) error {
+func (a *addRepl) syncDeployment(ctx context.Context, instance *appsv2alpha2.EMQX) error {
 	dList := getDeploymentList(ctx, a.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
@@ -99,7 +99,7 @@ func (a *addRepl) syncDeployment(ctx context.Context, instance *appsv2alpha1.EMQ
 	return nil
 }
 
-func canBeScaledDown(instance *appsv2alpha1.EMQX, currentDeployment *appsv1.Deployment, eList []*corev1.Event) bool {
+func canBeScaledDown(instance *appsv2alpha2.EMQX, currentDeployment *appsv1.Deployment, eList []*corev1.Event) bool {
 	var initialDelaySecondsReady bool
 	var waitTakeover bool
 	for _, c := range currentDeployment.Status.Conditions {
@@ -125,7 +125,7 @@ func canBeScaledDown(instance *appsv2alpha1.EMQX, currentDeployment *appsv1.Depl
 	return initialDelaySecondsReady && waitTakeover
 }
 
-func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
+func generateDeployment(instance *appsv2alpha2.EMQX) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -150,7 +150,7 @@ func generateDeployment(instance *appsv2alpha1.EMQX) *appsv1.Deployment {
 				Spec: corev1.PodSpec{
 					ReadinessGates: []corev1.PodReadinessGate{
 						{
-							ConditionType: appsv2alpha1.PodOnServing,
+							ConditionType: appsv2alpha2.PodOnServing,
 						},
 					},
 					ImagePullSecrets: instance.Spec.ImagePullSecrets,

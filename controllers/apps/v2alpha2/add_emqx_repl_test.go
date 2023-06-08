@@ -1,10 +1,10 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"testing"
 	"time"
 
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,13 +22,13 @@ var replicantLabels = map[string]string{
 
 func TestCanBeScaledDown(t *testing.T) {
 	t.Run("event list is empty, current deployment is not available, can not scale down", func(t *testing.T) {
-		assert.False(t, canBeScaledDown(&appsv2alpha1.EMQX{}, &appsv1.Deployment{}, []*corev1.Event{}))
+		assert.False(t, canBeScaledDown(&appsv2alpha2.EMQX{}, &appsv1.Deployment{}, []*corev1.Event{}))
 	})
 
 	t.Run("event list is empty, initialDelaySeconds not ready, can not scale down", func(t *testing.T) {
-		emqx := &appsv2alpha1.EMQX{
-			Spec: appsv2alpha1.EMQXSpec{
-				BlueGreenUpdate: appsv2alpha1.BlueGreenUpdate{
+		emqx := &appsv2alpha2.EMQX{
+			Spec: appsv2alpha2.EMQXSpec{
+				BlueGreenUpdate: appsv2alpha2.BlueGreenUpdate{
 					InitialDelaySeconds: 999999999,
 				},
 			},
@@ -49,9 +49,9 @@ func TestCanBeScaledDown(t *testing.T) {
 	})
 
 	t.Run("event list is empty, initialDelaySeconds is ready, can scale down", func(t *testing.T) {
-		emqx := &appsv2alpha1.EMQX{
-			Spec: appsv2alpha1.EMQXSpec{
-				BlueGreenUpdate: appsv2alpha1.BlueGreenUpdate{
+		emqx := &appsv2alpha2.EMQX{
+			Spec: appsv2alpha2.EMQXSpec{
+				BlueGreenUpdate: appsv2alpha2.BlueGreenUpdate{
 					InitialDelaySeconds: 1,
 				},
 			},
@@ -72,7 +72,7 @@ func TestCanBeScaledDown(t *testing.T) {
 	})
 
 	t.Run("event list not empty, current deployment is not available, can not scale down", func(t *testing.T) {
-		assert.False(t, canBeScaledDown(&appsv2alpha1.EMQX{}, &appsv1.Deployment{}, []*corev1.Event{
+		assert.False(t, canBeScaledDown(&appsv2alpha2.EMQX{}, &appsv1.Deployment{}, []*corev1.Event{
 			{
 				LastTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, 1)},
 			},
@@ -80,11 +80,11 @@ func TestCanBeScaledDown(t *testing.T) {
 	})
 
 	t.Run("event list is not empty, initialDelaySeconds is ready, waitTakeover not ready, can not scale down", func(t *testing.T) {
-		emqx := &appsv2alpha1.EMQX{
-			Spec: appsv2alpha1.EMQXSpec{
-				BlueGreenUpdate: appsv2alpha1.BlueGreenUpdate{
+		emqx := &appsv2alpha2.EMQX{
+			Spec: appsv2alpha2.EMQXSpec{
+				BlueGreenUpdate: appsv2alpha2.BlueGreenUpdate{
 					InitialDelaySeconds: 1,
-					EvacuationStrategy: appsv2alpha1.EvacuationStrategy{
+					EvacuationStrategy: appsv2alpha2.EvacuationStrategy{
 						WaitTakeover: 999999999,
 					},
 				},
@@ -113,11 +113,11 @@ func TestCanBeScaledDown(t *testing.T) {
 	})
 
 	t.Run("event list is not empty,initialDelaySeconds is ready, waitTakeover is ready, can scale down", func(t *testing.T) {
-		emqx := &appsv2alpha1.EMQX{
-			Spec: appsv2alpha1.EMQXSpec{
-				BlueGreenUpdate: appsv2alpha1.BlueGreenUpdate{
+		emqx := &appsv2alpha2.EMQX{
+			Spec: appsv2alpha2.EMQXSpec{
+				BlueGreenUpdate: appsv2alpha2.BlueGreenUpdate{
 					InitialDelaySeconds: 1,
-					EvacuationStrategy: appsv2alpha1.EvacuationStrategy{
+					EvacuationStrategy: appsv2alpha2.EvacuationStrategy{
 						WaitTakeover: 1,
 					},
 				},
@@ -147,15 +147,15 @@ func TestCanBeScaledDown(t *testing.T) {
 }
 
 func TestGenerateDeployment(t *testing.T) {
-	instance := &appsv2alpha1.EMQX{
+	instance := &appsv2alpha2.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: appsv2alpha1.EMQXSpec{
+		Spec: appsv2alpha2.EMQXSpec{
 			Image: "emqx/emqx:5.0",
-			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
-				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
+			ReplicantTemplate: appsv2alpha2.EMQXReplicantTemplate{
+				Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
 					Replicas: pointer.Int32(3),
 				},
 			},
@@ -199,7 +199,7 @@ func TestGenerateDeployment(t *testing.T) {
 		emqx := instance.DeepCopy()
 		got := generateDeployment(emqx)
 		assert.Equal(t, []corev1.PodReadinessGate{
-			{ConditionType: appsv2alpha1.PodOnServing},
+			{ConditionType: appsv2alpha2.PodOnServing},
 		}, got.Spec.Template.Spec.ReadinessGates)
 
 		emqx.Spec.ReplicantTemplate.Spec.Affinity = &corev1.Affinity{}

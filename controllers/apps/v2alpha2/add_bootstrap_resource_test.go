@@ -1,16 +1,16 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"strings"
 	"testing"
 
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGenerateNodeCookieSecret(t *testing.T) {
-	instance := &appsv2alpha1.EMQX{
+	instance := &appsv2alpha2.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
@@ -35,13 +35,13 @@ func TestGenerateNodeCookieSecret(t *testing.T) {
 }
 
 func TestGenerateBootstrapUserSecret(t *testing.T) {
-	instance := &appsv2alpha1.EMQX{
+	instance := &appsv2alpha2.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: appsv2alpha1.EMQXSpec{
-			BootstrapAPIKeys: []appsv2alpha1.BootstrapAPIKey{
+		Spec: appsv2alpha2.EMQXSpec{
+			BootstrapAPIKeys: []appsv2alpha2.BootstrapAPIKey{
 				{
 					Key:    "test_key",
 					Secret: "secret",
@@ -64,7 +64,7 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 }
 
 func TestGenerateBootstrapConfigMap(t *testing.T) {
-	instance := &appsv2alpha1.EMQX{
+	instance := &appsv2alpha2.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",

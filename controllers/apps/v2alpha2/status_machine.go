@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
+package v2alpha2
 
 import (
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -27,7 +27,7 @@ type status interface {
 }
 
 type emqxStatusMachine struct {
-	emqx *appsv2alpha1.EMQX
+	emqx *appsv2alpha2.EMQX
 
 	init         status
 	creating     status
@@ -38,7 +38,7 @@ type emqxStatusMachine struct {
 	currentStatus status
 }
 
-func newEMQXStatusMachine(emqx *appsv2alpha1.EMQX) *emqxStatusMachine {
+func newEMQXStatusMachine(emqx *appsv2alpha2.EMQX) *emqxStatusMachine {
 	emqxStatusMachine := &emqxStatusMachine{
 		emqx: emqx,
 	}
@@ -59,7 +59,7 @@ func newEMQXStatusMachine(emqx *appsv2alpha1.EMQX) *emqxStatusMachine {
 	return emqxStatusMachine
 }
 
-func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha1.EMQX) {
+func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha2.EMQX) {
 	if emqx.Status.Conditions == nil {
 		s.currentStatus = s.init
 	}
@@ -81,7 +81,7 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha1.EMQX) {
 	}
 }
 
-func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha1.EMQXNode) {
+func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha2.EMQXNode) {
 	s.emqx.Status.CoreNodeReplicas = *s.emqx.Spec.CoreTemplate.Spec.Replicas
 	s.emqx.Status.ReplicantNodeReplicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
 
@@ -108,7 +108,7 @@ func (s *emqxStatusMachine) NextStatus(existedSts *appsv1.StatefulSet, existedDe
 	s.currentStatus.nextStatus(existedSts, existedDeploy)
 }
 
-func (s *emqxStatusMachine) GetEMQX() *appsv2alpha1.EMQX {
+func (s *emqxStatusMachine) GetEMQX() *appsv2alpha2.EMQX {
 	return s.emqx
 }
 
@@ -117,8 +117,8 @@ type initStatus struct {
 }
 
 func (s *initStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
-	condition := appsv2alpha1.NewCondition(
-		appsv2alpha1.ClusterCreating,
+	condition := appsv2alpha2.NewCondition(
+		appsv2alpha2.ClusterCreating,
 		corev1.ConditionTrue,
 		"ClusterCreating",
 		"Creating EMQX cluster",
@@ -133,15 +133,15 @@ type createStatus struct {
 
 func (s *createStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
 	s.emqxStatusMachine.emqx.Status.CurrentImage = s.emqxStatusMachine.emqx.Spec.Image
-	condition := appsv2alpha1.NewCondition(
-		appsv2alpha1.ClusterCoreUpdating,
+	condition := appsv2alpha2.NewCondition(
+		appsv2alpha2.ClusterCoreUpdating,
 		corev1.ConditionTrue,
 		"ClusterCoreUpdating",
 		"Updating core nodes in cluster",
 	)
 	s.emqxStatusMachine.emqx.Status.SetCondition(*condition)
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha1.ClusterCoreReady)
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha1.ClusterRunning)
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterCoreReady)
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
 
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
@@ -175,8 +175,8 @@ func (s *coreUpdateStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDep
 	if s.emqxStatusMachine.emqx.Status.CoreNodeReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeReplicas {
 		return
 	}
-	condition := appsv2alpha1.NewCondition(
-		appsv2alpha1.ClusterCoreReady,
+	condition := appsv2alpha2.NewCondition(
+		appsv2alpha2.ClusterCoreReady,
 		corev1.ConditionTrue,
 		"ClusterCoreReady",
 		"Core nodes is ready",
@@ -218,8 +218,8 @@ func (s *coreReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDepl
 		return
 	}
 
-	condition := appsv2alpha1.NewCondition(
-		appsv2alpha1.ClusterRunning,
+	condition := appsv2alpha2.NewCondition(
+		appsv2alpha2.ClusterRunning,
 		corev1.ConditionTrue,
 		"ClusterRunning",
 		"Cluster is running",
@@ -239,12 +239,12 @@ func (s *runningStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy
 	}
 
 	if s.emqxStatusMachine.emqx.Status.ReplicantNodeReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodeReplicas {
-		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha1.ClusterRunning)
+		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
 	}
 
 	if s.emqxStatusMachine.emqx.Status.CoreNodeReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeReplicas {
-		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha1.ClusterRunning)
-		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha1.ClusterCoreReady)
+		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
+		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterCoreReady)
 	}
 
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)

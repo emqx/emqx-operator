@@ -1,4 +1,4 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	semver "github.com/Masterminds/semver/v3"
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +18,7 @@ type updatePodConditions struct {
 	*EMQXReconciler
 }
 
-func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) subResult {
+func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
 	pods := &corev1.PodList{}
 	_ = u.Client.List(ctx, pods,
 		client.InNamespace(instance.Namespace),
@@ -37,12 +37,12 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 		}
 
 		onServingCondition := corev1.PodCondition{
-			Type:               appsv2alpha1.PodOnServing,
+			Type:               appsv2alpha2.PodOnServing,
 			Status:             u.checkInCluster(instance, r, pod.DeepCopy()),
 			LastProbeTime:      metav1.Now(),
 			LastTransitionTime: metav1.Now(),
 		}
-		if index, ok := hash[appsv2alpha1.PodOnServing]; ok {
+		if index, ok := hash[appsv2alpha2.PodOnServing]; ok {
 			onServingCondition.LastTransitionTime = pod.Status.Conditions[index].LastTransitionTime
 		}
 
@@ -56,7 +56,7 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 	return subResult{}
 }
 
-func (u *updatePodConditions) checkInCluster(instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
+func (u *updatePodConditions) checkInCluster(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
 	for _, node := range instance.Status.EMQXNodes {
 		if node.Node == "emqx@"+pod.Status.PodIP {
 			if node.Edition == "enterprise" {
@@ -71,9 +71,9 @@ func (u *updatePodConditions) checkInCluster(instance *appsv2alpha1.EMQX, r inne
 	return corev1.ConditionFalse
 }
 
-func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
+func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
 	var port string
-	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
+	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance)
 	if err != nil || dashboardPort == nil {
 		port = "18083"
 	}

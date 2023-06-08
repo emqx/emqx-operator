@@ -35,9 +35,4 @@ runs:
         --create-namespace
   - name: Check operator
     shell: bash
-    run: |
-      set -euo pipefail
-      while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
-        echo "waiting operator controller pod running"
-        sleep 1
-      done
+    run: kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system

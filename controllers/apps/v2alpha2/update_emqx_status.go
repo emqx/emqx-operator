@@ -1,11 +1,11 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
 	"encoding/json"
 
 	emperror "emperror.dev/errors"
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,9 +18,9 @@ type updateStatus struct {
 	*EMQXReconciler
 }
 
-func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) subResult {
+func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
 	var err error
-	var emqxNodes []appsv2alpha1.EMQXNode
+	var emqxNodes []appsv2alpha2.EMQXNode
 	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
 	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
 
@@ -55,7 +55,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha1.EMQ
 	return subResult{}
 }
 
-func getNodeStatuesByAPI(r innerReq.RequesterInterface) ([]appsv2alpha1.EMQXNode, error) {
+func getNodeStatuesByAPI(r innerReq.RequesterInterface) ([]appsv2alpha2.EMQXNode, error) {
 	resp, body, err := r.Request("GET", "api/v5/nodes", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
@@ -64,7 +64,7 @@ func getNodeStatuesByAPI(r innerReq.RequesterInterface) ([]appsv2alpha1.EMQXNode
 		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/nodes", resp.Status, body)
 	}
 
-	nodeStatuses := []appsv2alpha1.EMQXNode{}
+	nodeStatuses := []appsv2alpha2.EMQXNode{}
 	if err := json.Unmarshal(body, &nodeStatuses); err != nil {
 		return nil, emperror.Wrap(err, "failed to unmarshal node statuses")
 	}

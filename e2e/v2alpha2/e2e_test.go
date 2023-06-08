@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
 	"sort"
 
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	appscontrollersv2alpha1 "github.com/emqx/emqx-operator/controllers/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+	appscontrollersv2alpha2 "github.com/emqx/emqx-operator/controllers/apps/v2alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegaTypes "github.com/onsi/gomega/types"
@@ -47,7 +47,7 @@ var _ = Describe("Base Test", func() {
 	})
 
 	Context("Check EMQX Custom Resource", Label("base"), func() {
-		instance := &appsv2alpha1.EMQX{}
+		instance := &appsv2alpha2.EMQX{}
 
 		It("Base Check", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), instance)).Should(Succeed())
@@ -67,7 +67,7 @@ var _ = Describe("Base Test", func() {
 	})
 
 	Context("Direct Update", Label("update"), func() {
-		instance := &appsv2alpha1.EMQX{}
+		instance := &appsv2alpha2.EMQX{}
 		JustBeforeEach(func() {
 			By("Wait EMQX cluster ready")
 			checkRunning(emqx.DeepCopy())
@@ -104,7 +104,7 @@ var _ = Describe("Base Test", func() {
 	})
 
 	Context("Blue Green Update", Label("blue"), func() {
-		instance := &appsv2alpha1.EMQX{}
+		instance := &appsv2alpha2.EMQX{}
 		currentImage := "emqx/emqx:5.0.23"
 		JustBeforeEach(func() {
 			By("Wait EMQX cluster ready")
@@ -143,7 +143,7 @@ var _ = Describe("Base Test", func() {
 					return len(dList)
 				}, timeout, interval).Should(Equal(2))
 
-				sort.Sort(appscontrollersv2alpha1.DeploymentsByCreationTimestamp(dList))
+				sort.Sort(appscontrollersv2alpha2.DeploymentsByCreationTimestamp(dList))
 
 				old := dList[0].DeepCopy()
 				Expect(old.Spec.Template.Spec.Containers[0].Image).Should(Equal(emqx.DeepCopy().Spec.Image))
@@ -179,7 +179,7 @@ var _ = Describe("Base Test", func() {
 	})
 })
 
-func createResource(instance *appsv2alpha1.EMQX) {
+func createResource(instance *appsv2alpha2.EMQX) {
 	instance.Default()
 	Expect(instance.ValidateCreate()).Should(Succeed())
 	Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
@@ -193,7 +193,7 @@ func createResource(instance *appsv2alpha1.EMQX) {
 	Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
 }
 
-func deleteResource(instance *appsv2alpha1.EMQX) {
+func deleteResource(instance *appsv2alpha2.EMQX) {
 	Expect(k8sClient.Delete(context.TODO(), instance)).Should(Succeed())
 
 	Expect(k8sClient.Delete(context.TODO(), &corev1.Namespace{
@@ -208,7 +208,7 @@ func deleteResource(instance *appsv2alpha1.EMQX) {
 	}, timeout, interval).Should(BeTrue())
 }
 
-func checkPodAndEndpointsAndEndpointSlices(instance *appsv2alpha1.EMQX, count int) {
+func checkPodAndEndpointsAndEndpointSlices(instance *appsv2alpha2.EMQX, count int) {
 	podList := &corev1.PodList{}
 	Eventually(func() []corev1.Pod {
 		_ = k8sClient.List(context.TODO(), podList,
@@ -223,7 +223,7 @@ func checkPodAndEndpointsAndEndpointSlices(instance *appsv2alpha1.EMQX, count in
 				HaveField("Status", And(
 					HaveField("Phase", corev1.PodRunning),
 					HaveField("Conditions", ContainElements(
-						HaveField("Type", appsv2alpha1.PodOnServing),
+						HaveField("Type", appsv2alpha2.PodOnServing),
 						HaveField("Type", corev1.PodReady),
 					)))),
 			),
@@ -327,7 +327,7 @@ func checkPodAndEndpointsAndEndpointSlices(instance *appsv2alpha1.EMQX, count in
 	)
 }
 
-func checkService(instance *appsv2alpha1.EMQX) {
+func checkService(instance *appsv2alpha2.EMQX) {
 	svc := &corev1.Service{}
 	Eventually(func() []corev1.ServicePort {
 		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, svc)
@@ -348,8 +348,8 @@ func checkService(instance *appsv2alpha1.EMQX) {
 	}))
 }
 
-func checkRunning(instance *appsv2alpha1.EMQX) {
-	Eventually(func() appsv2alpha1.EMQXStatus {
+func checkRunning(instance *appsv2alpha2.EMQX) {
+	Eventually(func() appsv2alpha2.EMQXStatus {
 		_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
 		return instance.Status
 	}, timeout, interval).Should(
@@ -360,10 +360,10 @@ func checkRunning(instance *appsv2alpha1.EMQX) {
 			HaveField("ReplicantNodeReplicas", Equal(int32(2))),
 			HaveField("ReplicantNodeReadyReplicas", Equal(int32(2))),
 			HaveField("Conditions", ConsistOf(
-				HaveField("Type", appsv2alpha1.ClusterRunning),
-				HaveField("Type", appsv2alpha1.ClusterCoreReady),
-				HaveField("Type", appsv2alpha1.ClusterCoreUpdating),
-				HaveField("Type", appsv2alpha1.ClusterCreating),
+				HaveField("Type", appsv2alpha2.ClusterRunning),
+				HaveField("Type", appsv2alpha2.ClusterCoreReady),
+				HaveField("Type", appsv2alpha2.ClusterCoreUpdating),
+				HaveField("Type", appsv2alpha2.ClusterCreating),
 			)),
 		),
 	)
