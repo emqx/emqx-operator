@@ -12,7 +12,7 @@ This chapter provides instructions for deploying EMQX on public cloud platforms,
 The following topics will be covered in this chapter: <!--this part should be reviewed-->
 
 - Preparing your environment for deploying EMQX on public cloud platforms
-- Creating a Kubernetes cluster on Amazon EKS, Azure AKS, and Google Cloud GKE
+- Creating a Kubernetes cluster on public cloud platforms
 - Creating the EMQX custom resource deployment files
 - Deploying EMQX on the Kubernetes cluster
 - Enabling persistence for the EMQX cluster
