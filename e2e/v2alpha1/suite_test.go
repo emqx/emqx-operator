@@ -130,7 +130,7 @@ func genEMQX() *appsv2alpha1.EMQX {
 					Replicas: pointer.Int32(2),
 				},
 			},
-			Image: "emqx:5.0",
+			Image: "emqx:5.0.23",
 			BootstrapConfig: `
 			gateway.lwm2m {
 			  auto_observe = true
