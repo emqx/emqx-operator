@@ -26,8 +26,8 @@ import (
 // ConvertTo converts this version to the Hub version (v1).
 func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v2alpha2.EMQX)
-	dst.ObjectMeta = src.ObjectMeta
-	structAssign(&dst.Spec, &src.Spec)
+	structAssign(dst, src)
+	dst.SetGroupVersionKind(v2alpha2.GroupVersion.WithKind("EMQX"))
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil
@@ -36,8 +36,8 @@ func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
 // ConvertFrom converts from the Hub version (v1) to this version.
 func (dst *EMQX) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v2alpha2.EMQX)
-	dst.ObjectMeta = src.ObjectMeta
-	structAssign(&dst.Spec, &src.Spec)
+	structAssign(dst, src)
+	dst.SetGroupVersionKind(GroupVersion.WithKind("EMQX"))
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil
@@ -46,12 +46,20 @@ func (dst *EMQX) ConvertFrom(srcRaw conversion.Hub) error {
 func structAssign(dist, src interface{}) {
 	dVal := reflect.ValueOf(dist).Elem()
 	sVal := reflect.ValueOf(src).Elem()
-	sType := sVal.Type()
-	for i := 0; i < sVal.NumField(); i++ {
-		// we need to check if the dist struct has the same field
-		name := sType.Field(i).Name
-		if ok := dVal.FieldByName(name).IsValid(); ok {
-			dVal.FieldByName(name).Set(reflect.ValueOf(sVal.Field(i).Interface()))
+
+	switch sVal.Type().Kind() {
+	case reflect.Struct:
+		for i := 0; i < sVal.NumField(); i++ {
+			name := sVal.Type().Field(i).Name
+			if dVal.FieldByName(name).IsValid() && dVal.FieldByName(name).CanSet() {
+				structAssign(dVal.FieldByName(name).Addr().Interface(), sVal.FieldByName(name).Addr().Interface())
+			}
 		}
+	case reflect.Array, reflect.Slice:
+		for i := 0; i < sVal.Len(); i++ {
+			dVal.Set(reflect.Append(dVal, sVal.Index(i)))
+		}
+	default:
+		dVal.Set(reflect.ValueOf(sVal.Interface()))
 	}
 }
