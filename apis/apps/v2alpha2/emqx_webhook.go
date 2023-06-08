@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
+package v2alpha2
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ func (r *EMQX) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v2alpha1-emqx,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxes,verbs=create;update,versions=v2alpha1,name=mutating.apps.emqx.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-apps-emqx-io-v2alpha2-emqx,mutating=true,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxes,verbs=create;update,versions=v2alpha2,name=mutating.apps.emqx.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &EMQX{}
 
@@ -61,7 +61,7 @@ func (r *EMQX) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v2alpha1-emqx,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxes,verbs=create;update,versions=v2alpha1,name=validator.apps.emqx.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v2alpha2-emqx,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxes,verbs=create;update,versions=v2alpha2,name=validator.apps.emqx.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &EMQX{}
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
+package v2alpha2
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -235,7 +235,7 @@ type EMQXSpec struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=emqx
-//+kubebuilder:deprecatedversion
+//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicantTemplate.spec.replicas,statuspath=.status.replicantNodeReplicas
 //+kubebuilder:printcolumn:name="Image",type="string",JSONPath=".status.currentImage"

@@ -112,8 +112,8 @@ jobs:
           - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-slim.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-full.yaml"]
-          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
-          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2alpha2/emqx-slim.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2alpha2/emqx-full.yaml"]
 
     steps:
       - if: matrix.kubernetes-env == 'k3s'

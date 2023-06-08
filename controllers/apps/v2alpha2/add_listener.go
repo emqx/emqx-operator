@@ -1,4 +1,4 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +23,7 @@ type addListener struct {
 	*EMQXReconciler
 }
 
-func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) subResult {
+func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
 	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
 		return subResult{}
 	}
@@ -51,7 +51,7 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX
 	return subResult{}
 }
 
-func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha1.EMQX) []*corev1.Pod {
+func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha2.EMQX) []*corev1.Pod {
 	dList := getDeploymentList(ctx, a.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
@@ -68,7 +68,7 @@ func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha1.EMQ
 	return podMap[currentDeployment.UID]
 }
 
-func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) []corev1.ServicePort {
+func (a *addListener) getServicePorts(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) []corev1.ServicePort {
 	listenerPorts, err := getAllListenersByAPI(r)
 	if err != nil {
 		a.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetListenerPorts", err.Error())
@@ -77,13 +77,13 @@ func (a *addListener) getServicePorts(instance *appsv2alpha1.EMQX, r innerReq.Re
 	return listenerPorts
 }
 
-func generateListenerService(instance *appsv2alpha1.EMQX, ports []corev1.ServicePort) *corev1.Service {
+func generateListenerService(instance *appsv2alpha2.EMQX, ports []corev1.ServicePort) *corev1.Service {
 	listener := instance.Spec.ListenersServiceTemplate.DeepCopy()
 	// We don't need to set the selector for the service
 	// because the Operator will manager the endpoints
 	// please check https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 	listener.Spec.Selector = map[string]string{}
-	listener.Spec.Ports = appsv2alpha1.MergeServicePorts(
+	listener.Spec.Ports = appsv2alpha2.MergeServicePorts(
 		listener.Spec.Ports,
 		ports,
 	)

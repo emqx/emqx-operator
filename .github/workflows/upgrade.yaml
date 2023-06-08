@@ -52,12 +52,7 @@ jobs:
             --version ${{ env.PRE_VERSION }}
       - name: Check operator
         timeout-minutes: 5
-        run: |
-          set -euo pipefail
-          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .containerID')" = "" ]; do
-            echo "waiting operator controller pod running"
-            sleep 1
-          done
+        run: kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
       - name: Deployment emqx
         timeout-minutes: 5
         uses: ./.github/actions/deploy-emqx
@@ -80,12 +75,7 @@ jobs:
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
         timeout-minutes: 5
-        run: |
-          set -euo pipefail
-          while [ "$(kubectl get pods -l "control-plane=controller-manager" -n emqx-operator-system -o json | jq '.items[0].status.containerStatuses[] | select(.ready==true) | .image' | tr -d '"')" != "$IMG" ]; do
-            echo "waiting operator controller pod running"
-            sleep 1
-          done
+        run: kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
       - name: Check emqx status
         timeout-minutes: 5
         run: |

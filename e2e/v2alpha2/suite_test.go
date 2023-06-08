@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
+package v2alpha2
 
 import (
 	"os"
@@ -35,8 +35,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	appscontrollersv2alpha1 "github.com/emqx/emqx-operator/controllers/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+	appscontrollersv2alpha2 "github.com/emqx/emqx-operator/controllers/apps/v2alpha2"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -47,7 +47,7 @@ import (
 var timeout, interval time.Duration
 var k8sClient client.Client
 var testEnv *envtest.Environment
-var emqx *appsv2alpha1.EMQX
+var emqx *appsv2alpha2.EMQX
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -87,7 +87,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = appsv2alpha1.AddToScheme(scheme.Scheme)
+	err = appsv2alpha2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -102,7 +102,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = appscontrollersv2alpha1.NewEMQXReconciler(k8sManager).SetupWithManager(k8sManager)
+	err = appscontrollersv2alpha2.NewEMQXReconciler(k8sManager).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
@@ -118,15 +118,15 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-func genEMQX() *appsv2alpha1.EMQX {
-	emqx := &appsv2alpha1.EMQX{
+func genEMQX() *appsv2alpha2.EMQX {
+	emqx := &appsv2alpha2.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
-			Namespace: "e2e-test-v2alpha1" + "-" + rand.String(5),
+			Namespace: "e2e-test-v2alpha2" + "-" + rand.String(5),
 		},
-		Spec: appsv2alpha1.EMQXSpec{
-			ReplicantTemplate: appsv2alpha1.EMQXReplicantTemplate{
-				Spec: appsv2alpha1.EMQXReplicantTemplateSpec{
+		Spec: appsv2alpha2.EMQXSpec{
+			ReplicantTemplate: appsv2alpha2.EMQXReplicantTemplate{
+				Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
 					Replicas: pointer.Int32(2),
 				},
 			},

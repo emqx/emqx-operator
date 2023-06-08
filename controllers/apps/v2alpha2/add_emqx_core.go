@@ -1,11 +1,11 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
 	"reflect"
 
 	emperror "emperror.dev/errors"
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	"github.com/emqx/emqx-operator/internal/handler"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,7 +18,7 @@ type addCore struct {
 	*EMQXReconciler
 }
 
-func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ innerReq.RequesterInterface) subResult {
+func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
 	sts := generateStatefulSet(instance)
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{sts}); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update statefulSet")}
@@ -26,7 +26,7 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ 
 	return subResult{}
 }
 
-func generateStatefulSet(instance *appsv2alpha1.EMQX) *appsv1.StatefulSet {
+func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      instance.Spec.CoreTemplate.Labels,

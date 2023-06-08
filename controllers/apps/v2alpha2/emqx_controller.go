@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
@@ -38,8 +38,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	"github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	"github.com/emqx/emqx-operator/internal/handler"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -53,7 +53,7 @@ type subResult struct {
 }
 
 type subReconciler interface {
-	reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, r innerReq.RequesterInterface) subResult
+	reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult
 }
 
 // EMQXReconciler reconciles a EMQX object
@@ -91,7 +91,7 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	instance := &appsv2alpha1.EMQX{}
+	instance := &appsv2alpha2.EMQX{}
 	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -140,7 +140,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // SetupWithManager sets up the controller with the Manager.
 func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appsv2alpha1.EMQX{}).
+		For(&appsv2alpha2.EMQX{}).
 		WithEventFilter(predicate.Funcs{
 			UpdateFunc: func(e event.UpdateEvent) bool {
 				// Ignore updates to CR status in which case metadata.Generation does not change
@@ -150,7 +150,7 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func newRequesterBySvc(client client.Client, instance *appsv2alpha1.EMQX) (innerReq.RequesterInterface, error) {
+func newRequesterBySvc(client client.Client, instance *appsv2alpha2.EMQX) (innerReq.RequesterInterface, error) {
 	username, password, err := getBootstrapUser(context.Background(), client, instance)
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func newRequesterBySvc(client client.Client, instance *appsv2alpha1.EMQX) (inner
 	headlessService := instance.HeadlessServiceNamespacedName()
 
 	var port string
-	dashboardPort, err := appsv2alpha1.GetDashboardServicePort(instance)
+	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance)
 	if err != nil || dashboardPort == nil {
 		port = "18083"
 	}
@@ -177,7 +177,7 @@ func newRequesterBySvc(client client.Client, instance *appsv2alpha1.EMQX) (inner
 	}, nil
 }
 
-func getBootstrapUser(ctx context.Context, client client.Client, instance *v2alpha1.EMQX) (username, password string, err error) {
+func getBootstrapUser(ctx context.Context, client client.Client, instance *v2alpha2.EMQX) (username, password string, err error) {
 	bootstrapUser := &corev1.Secret{}
 	if err = client.Get(ctx, types.NamespacedName{
 		Namespace: instance.GetNamespace(),

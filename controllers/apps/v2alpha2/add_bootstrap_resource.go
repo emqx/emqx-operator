@@ -1,4 +1,4 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/rory-z/go-hocon"
 	"github.com/sethvargo/go-password/password"
@@ -22,7 +22,7 @@ type addBootstrap struct {
 	*EMQXReconciler
 }
 
-func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha1.EMQX, _ innerReq.RequesterInterface) subResult {
+func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
 	for _, resource := range []client.Object{
 		generateNodeCookieSecret(instance),
 		generateBootstrapUserSecret(instance),
@@ -41,7 +41,7 @@ func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha1.EMQ
 	return subResult{}
 }
 
-func generateNodeCookieSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
+func generateNodeCookieSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
 	var cookie string
 
 	config, _ := hocon.ParseString(instance.Spec.BootstrapConfig)
@@ -67,7 +67,7 @@ func generateNodeCookieSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 	}
 }
 
-func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
+func generateBootstrapUserSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
 	bootstrapUsers := ""
 	for _, apiKey := range instance.Spec.BootstrapAPIKeys {
 		bootstrapUsers += apiKey.Key + ":" + apiKey.Secret + "\n"
@@ -93,7 +93,7 @@ func generateBootstrapUserSecret(instance *appsv2alpha1.EMQX) *corev1.Secret {
 	}
 }
 
-func generateBootstrapConfigMap(instance *appsv2alpha1.EMQX) *corev1.ConfigMap {
+func generateBootstrapConfigMap(instance *appsv2alpha2.EMQX) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",

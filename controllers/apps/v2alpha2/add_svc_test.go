@@ -1,9 +1,9 @@
-package v2alpha1
+package v2alpha2
 
 import (
 	"testing"
 
-	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,13 +11,13 @@ import (
 )
 
 func TestGenerateHeadlessSVC(t *testing.T) {
-	instance := &appsv2alpha1.EMQX{
+	instance := &appsv2alpha2.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: appsv2alpha1.EMQXSpec{
-			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
+		Spec: appsv2alpha2.EMQXSpec{
+			CoreTemplate: appsv2alpha2.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: coreLabels,
 				},
@@ -53,13 +53,13 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 }
 
 func TestGenerateDashboardService(t *testing.T) {
-	instance := &appsv2alpha1.EMQX{
+	instance := &appsv2alpha2.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: appsv2alpha1.EMQXSpec{
-			CoreTemplate: appsv2alpha1.EMQXCoreTemplate{
+		Spec: appsv2alpha2.EMQXSpec{
+			CoreTemplate: appsv2alpha2.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: coreLabels,
 				},
