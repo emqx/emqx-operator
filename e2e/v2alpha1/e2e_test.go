@@ -105,7 +105,7 @@ var _ = Describe("Base Test", func() {
 
 	Context("Blue Green Update", Label("blue"), func() {
 		instance := &appsv2alpha1.EMQX{}
-		currentImage := "emqx:5"
+		currentImage := "emqx/emqx:5.0.23"
 		JustBeforeEach(func() {
 			By("Wait EMQX cluster ready")
 			checkRunning(emqx.DeepCopy())
@@ -172,7 +172,7 @@ var _ = Describe("Base Test", func() {
 				Eventually(func() string {
 					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
 					return instance.Status.CurrentImage
-				}).Should(Equal("emqx:5"))
+				}).Should(Equal(currentImage))
 				checkRunning(instance.DeepCopy())
 			})
 		})
