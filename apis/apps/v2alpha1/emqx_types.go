@@ -54,8 +54,8 @@ type EMQXReplicantTemplateSpec struct {
 	// Replicas is the desired number of replicas of the given Template.
 	// These are replicas in the sense that they are instantiations of the
 	// same Template, but individual replicas also have a consistent identity.
-	// Defaults to 2 if EMQX core node, or 3 if EMQX replicant node.
-	//+kubebuilder:validation:Minimum=2
+	// If unspecified, defaults to 3.
+	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Entrypoint array. Not executed within a shell.
 	// The container image's ENTRYPOINT is used if this is not provided.
@@ -151,7 +151,6 @@ type EMQXReplicantTemplateSpec struct {
 
 type EMQXCoreTemplateSpec struct {
 	EMQXReplicantTemplateSpec `json:",inline"`
-
 	// VolumeClaimTemplates is a list of claims that pods are allowed to reference.
 	// The StatefulSet controller is responsible for mapping network identities to
 	// claims in a way that maintains the identity of a pod. Every claim in
@@ -179,45 +178,23 @@ type BootstrapAPIKey struct {
 	Secret string `json:"secret"`
 }
 
-type EvacuationStrategy struct {
-	//+kubebuilder:validation:Minimum=0
-	WaitTakeover int32 `json:"waitTakeover,omitempty"`
-	// Just work in EMQX Enterprise.
-	//+kubebuilder:validation:Minimum=1
-	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
-	// Just work in EMQX Enterprise.
-	//+kubebuilder:validation:Minimum=1
-	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
-}
-
-type BlueGreenUpdate struct {
-	// Number of seconds before evacuation connection start.
-	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
-	// Number of seconds before evacuation connection timeout.
-	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
-}
-
 // EMQXSpec defines the desired state of EMQX
 type EMQXSpec struct {
 	// EMQX image name.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
 	Image string `json:"image,omitempty"`
 	// Image pull policy.
-	// One of Always, Never, IfNotPresent.
-	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
-	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	// +kubebuilder:default="IfNotPresent"
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	// BlueGreenUpdate is the object that describes the EMQX blue-green update strategy
-	BlueGreenUpdate BlueGreenUpdate `json:"blueGreenUpdate,omitempty"`
 	// EMQX bootstrap user
 	// Cannot be updated.
 	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
-	// EMQX bootstrap config, HOCON style, like emqx.conf
+	// EMQX bootstrap config, hocon style, like emqx.conf
 	// Cannot be updated.
 	BootstrapConfig string `json:"bootstrapConfig,omitempty"`
 	// CoreTemplate is the object that describes the EMQX core node that will be created
