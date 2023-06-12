@@ -24,34 +24,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ConditionType string
+// EMQXStatus defines the observed state of EMQX
+type EMQXStatus struct {
+	// CurrentImage, indicates the image of the EMQX used to generate Pods in the
+	CurrentImage string `json:"currentImage,omitempty"`
+	// EMQX nodes info
+	EMQXNodes []EMQXNode `json:"emqxNodes,omitempty"`
+	// Represents the latest available observations of a EMQX Custom Resource current state.
+	Conditions []Condition `json:"conditions,omitempty"`
 
-const (
-	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
-	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
-)
+	CoreNodeStatus      EMQXNodeStatus `json:"coreNodeStatus,omitempty"`
+	ReplicantNodeStatus EMQXNodeStatus `json:"replicantNodeStatus,omitempty"`
+}
 
-const (
-	ClusterCreating     ConditionType = "Creating"
-	ClusterCoreUpdating ConditionType = "CoreNodesUpdating"
-	ClusterCoreReady    ConditionType = "CoreNodesReady"
-	ClusterRunning      ConditionType = "Running"
-)
-
-type Condition struct {
-	// Status of cluster condition.
-	Type ConditionType `json:"type"`
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-	// The reason for the condition's last transition.
-	Reason string `json:"reason,omitempty"`
-	// A human readable message indicating details about the transition.
-	Message string `json:"message,omitempty"`
-	// Last time the condition transitioned from one status to another.
-	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
-	// The last time this condition was updated.
-	LastUpdateTime string      `json:"lastUpdateTime,omitempty"`
-	LastUpdateAt   metav1.Time `json:"-"`
+type EMQXNodeStatus struct {
+	Replicas       int32  `json:"replicas,omitempty"`
+	ReadyReplicas  int32  `json:"readyReplicas,omitempty"`
+	CurrentVersion int32  `json:"currentVersion,omitempty"`
+	CollisionCount *int32 `json:"collisionCount,omitempty"`
 }
 
 type EMQXNode struct {
@@ -73,23 +63,35 @@ type EMQXNode struct {
 	Connections int64 `json:"connections,omitempty"`
 }
 
-// EMQXStatus defines the observed state of EMQX
-type EMQXStatus struct {
-	// CurrentImage, indicates the image of the EMQX used to generate Pods in the
-	CurrentImage string `json:"currentImage,omitempty"`
-	// CoreNodeReplicas is the number of EMQX core node Pods created by the EMQX controller.
-	CoreNodeReplicas int32 `json:"coreNodeReplicas,omitempty"`
-	// CoreNodeReadyReplicas is the number of EMQX core node Pods created for this EMQX Custom Resource with a Ready Condition.
-	CoreNodeReadyReplicas int32 `json:"coreNodeReadyReplicas,omitempty"`
-	// ReplicantNodeReplicas is the number of EMQX replicant node Pods created by the EMQX controller.
-	ReplicantNodeReplicas int32 `json:"replicantNodeReplicas,omitempty"`
-	// ReplicantNodeReadyReplicas is the number of EMQX replicant node Pods created for this EMQX Custom Resource with a Ready Condition.
-	ReplicantNodeReadyReplicas int32 `json:"replicantNodeReadyReplicas,omitempty"`
-	// EMQX nodes info
-	EMQXNodes []EMQXNode `json:"emqxNodes,omitempty"`
-	// Represents the latest available observations of a EMQX Custom Resource current state.
-	Conditions []Condition `json:"conditions,omitempty"`
+type Condition struct {
+	// Status of cluster condition.
+	Type ConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason,omitempty"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
+	// The last time this condition was updated.
+	LastUpdateTime string      `json:"lastUpdateTime,omitempty"`
+	LastUpdateAt   metav1.Time `json:"-"`
 }
+
+type ConditionType string
+
+const (
+	ClusterCreating     ConditionType = "Creating"
+	ClusterCoreUpdating ConditionType = "CoreNodesUpdating"
+	ClusterCoreReady    ConditionType = "CoreNodesReady"
+	ClusterRunning      ConditionType = "Running"
+)
+
+const (
+	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
+	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
+)
 
 // EMQX Status
 func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
