@@ -179,6 +179,23 @@ _Appears in:_
 | `connections` _integer_ | MQTT connection count |
 
 
+#### EMQXNodeStatus
+
+
+
+
+
+_Appears in:_
+- [EMQXStatus](#emqxstatus)
+
+| Field | Description |
+| --- | --- |
+| `replicas` _integer_ |  |
+| `readyReplicas` _integer_ |  |
+| `currentVersion` _integer_ |  |
+| `collisionCount` _integer_ |  |
+
+
 #### EMQXReplicantTemplate
 
 
@@ -246,10 +263,10 @@ _Appears in:_
 | `blueGreenUpdate` _[BlueGreenUpdate](#bluegreenupdate)_ | BlueGreenUpdate is the object that describes the EMQX blue-green update strategy |
 | `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
 | `bootstrapConfig` _string_ | EMQX bootstrap config, HOCON style, like emqx.conf Cannot be updated. |
+| `dashboardServiceTemplate` _[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#service-v1-core)_ |  |
+| `listenersServiceTemplate` _[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#service-v1-core)_ | ListenersServiceTemplate is the object that describes the EMQX listener service that will be created If the EMQX replicant node exist, this service will selector the EMQX replicant node Else this service will selector EMQX core node |
 | `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | CoreTemplate is the object that describes the EMQX core node that will be created |
 | `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | ReplicantTemplate is the object that describes the EMQX replicant node that will be created |
-| `dashboardServiceTemplate` _[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#service-v1-core)_ | DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created This service always selector the EMQX core node |
-| `listenersServiceTemplate` _[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#service-v1-core)_ | ListenersServiceTemplate is the object that describes the EMQX listener service that will be created If the EMQX replicant node exist, this service will selector the EMQX replicant node Else this service will selector EMQX core node |
 
 
 #### EMQXStatus
@@ -264,12 +281,10 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `currentImage` _string_ | CurrentImage, indicates the image of the EMQX used to generate Pods in the |
-| `coreNodeReplicas` _integer_ | CoreNodeReplicas is the number of EMQX core node Pods created by the EMQX controller. |
-| `coreNodeReadyReplicas` _integer_ | CoreNodeReadyReplicas is the number of EMQX core node Pods created for this EMQX Custom Resource with a Ready Condition. |
-| `replicantNodeReplicas` _integer_ | ReplicantNodeReplicas is the number of EMQX replicant node Pods created by the EMQX controller. |
-| `replicantNodeReadyReplicas` _integer_ | ReplicantNodeReadyReplicas is the number of EMQX replicant node Pods created for this EMQX Custom Resource with a Ready Condition. |
 | `emqxNodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
 | `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
+| `coreNodeStatus` _[EMQXNodeStatus](#emqxnodestatus)_ |  |
+| `replicantNodeStatus` _[EMQXNodeStatus](#emqxnodestatus)_ |  |
 
 
 #### EvacuationStrategy

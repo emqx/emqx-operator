@@ -12882,12 +12882,21 @@ spec:
                   - type
                   type: object
                 type: array
-              coreNodeReadyReplicas:
-                format: int32
-                type: integer
-              coreNodeReplicas:
-                format: int32
-                type: integer
+              coreNodeStatus:
+                properties:
+                  collisionCount:
+                    format: int32
+                    type: integer
+                  currentVersion:
+                    format: int32
+                    type: integer
+                  readyReplicas:
+                    format: int32
+                    type: integer
+                  replicas:
+                    format: int32
+                    type: integer
+                type: object
               currentImage:
                 type: string
               emqxNodes:
@@ -12913,12 +12922,21 @@ spec:
                       type: string
                   type: object
                 type: array
-              replicantNodeReadyReplicas:
-                format: int32
-                type: integer
-              replicantNodeReplicas:
-                format: int32
-                type: integer
+              replicantNodeStatus:
+                properties:
+                  collisionCount:
+                    format: int32
+                    type: integer
+                  currentVersion:
+                    format: int32
+                    type: integer
+                  readyReplicas:
+                    format: int32
+                    type: integer
+                  replicas:
+                    format: int32
+                    type: integer
+                type: object
             type: object
         type: object
     served: true

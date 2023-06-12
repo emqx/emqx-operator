@@ -82,11 +82,11 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha2.EMQX) {
 }
 
 func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha2.EMQXNode) {
-	s.emqx.Status.CoreNodeReplicas = *s.emqx.Spec.CoreTemplate.Spec.Replicas
-	s.emqx.Status.ReplicantNodeReplicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
+	s.emqx.Status.CoreNodeStatus.Replicas = *s.emqx.Spec.CoreTemplate.Spec.Replicas
+	s.emqx.Status.ReplicantNodeStatus.Replicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
 
-	s.emqx.Status.CoreNodeReadyReplicas = int32(0)
-	s.emqx.Status.ReplicantNodeReadyReplicas = int32(0)
+	s.emqx.Status.CoreNodeStatus.ReadyReplicas = int32(0)
+	s.emqx.Status.ReplicantNodeStatus.ReadyReplicas = int32(0)
 
 	if emqxNodes != nil {
 		s.emqx.Status.SetEMQXNodes(emqxNodes)
@@ -94,10 +94,10 @@ func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha2.EMQXNode) {
 		for _, node := range emqxNodes {
 			if node.NodeStatus == "running" {
 				if node.Role == "core" {
-					s.emqx.Status.CoreNodeReadyReplicas++
+					s.emqx.Status.CoreNodeStatus.ReadyReplicas++
 				}
 				if node.Role == "replicant" {
-					s.emqx.Status.ReplicantNodeReadyReplicas++
+					s.emqx.Status.ReplicantNodeStatus.ReadyReplicas++
 				}
 			}
 		}
@@ -172,7 +172,7 @@ func (s *coreUpdateStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDep
 		return
 	}
 	// core nodes is ready
-	if s.emqxStatusMachine.emqx.Status.CoreNodeReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeReplicas {
+	if s.emqxStatusMachine.emqx.Status.CoreNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeStatus.Replicas {
 		return
 	}
 	condition := appsv2alpha2.NewCondition(
@@ -213,8 +213,8 @@ func (s *coreReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDepl
 	}
 
 	// emqx nodes is ready
-	if s.emqxStatusMachine.emqx.Status.CoreNodeReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeReadyReplicas ||
-		s.emqxStatusMachine.emqx.Status.ReplicantNodeReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodeReadyReplicas {
+	if s.emqxStatusMachine.emqx.Status.CoreNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeStatus.Replicas ||
+		s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.Replicas {
 		return
 	}
 
@@ -238,11 +238,11 @@ func (s *runningStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy
 		return
 	}
 
-	if s.emqxStatusMachine.emqx.Status.ReplicantNodeReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodeReplicas {
+	if s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.Replicas {
 		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
 	}
 
-	if s.emqxStatusMachine.emqx.Status.CoreNodeReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeReplicas {
+	if s.emqxStatusMachine.emqx.Status.CoreNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeStatus.Replicas {
 		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
 		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterCoreReady)
 	}

@@ -52,10 +52,10 @@ func TestCheckNodeCount(t *testing.T) {
 
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
 		emqxStatusMachine.UpdateNodeCount(emqxNodes)
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeReplicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeReadyReplicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeReplicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeReadyReplicas, int32(1))
+		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeStatus.Replicas, int32(1))
+		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeStatus.ReadyReplicas, int32(1))
+		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeStatus.Replicas, int32(1))
+		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeStatus.ReadyReplicas, int32(1))
 	})
 }
 
@@ -157,7 +157,9 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 						Status: corev1.ConditionTrue,
 					},
 				},
-				CoreNodeReplicas: 1,
+				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
+					Replicas: 1,
+				},
 			},
 		}
 
@@ -184,7 +186,7 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 		assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// emqx core node is ready
-		emqx.Status.CoreNodeReadyReplicas = 1
+		emqx.Status.CoreNodeStatus.ReadyReplicas = 1
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
 		assert.Equal(t, emqxStatusMachine.coreReady, emqxStatusMachine.currentStatus)
 		assert.Equal(t, appsv2alpha2.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
@@ -268,8 +270,12 @@ func TestNextStatusForCoreReady(t *testing.T) {
 						Status: corev1.ConditionTrue,
 					},
 				},
-				CoreNodeReplicas:      1,
-				ReplicantNodeReplicas: 1,
+				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
+					Replicas: 1,
+				},
+				ReplicantNodeStatus: appsv2alpha2.EMQXNodeStatus{
+					Replicas: 1,
+				},
 			},
 		}
 
@@ -297,8 +303,8 @@ func TestNextStatusForCoreReady(t *testing.T) {
 		assert.Equal(t, appsv2alpha2.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// emqx nodes is ready
-		emqx.Status.CoreNodeReadyReplicas = 1
-		emqx.Status.ReplicantNodeReadyReplicas = 1
+		emqx.Status.CoreNodeStatus.ReadyReplicas = 1
+		emqx.Status.ReplicantNodeStatus.ReadyReplicas = 1
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
 		assert.Equal(t, emqxStatusMachine.running, emqxStatusMachine.currentStatus)
 		assert.Equal(t, appsv2alpha2.ClusterRunning, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
@@ -353,8 +359,10 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 						Status: corev1.ConditionTrue,
 					},
 				},
-				ReplicantNodeReplicas:      1,
-				ReplicantNodeReadyReplicas: 0,
+				ReplicantNodeStatus: appsv2alpha2.EMQXNodeStatus{
+					Replicas:      1,
+					ReadyReplicas: 0,
+				},
 			},
 		}
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
@@ -388,10 +396,14 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 						Status: corev1.ConditionTrue,
 					},
 				},
-				ReplicantNodeReplicas:      1,
-				ReplicantNodeReadyReplicas: 0,
-				CoreNodeReplicas:           1,
-				CoreNodeReadyReplicas:      0,
+				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
+					Replicas:      1,
+					ReadyReplicas: 0,
+				},
+				ReplicantNodeStatus: appsv2alpha2.EMQXNodeStatus{
+					Replicas:      1,
+					ReadyReplicas: 0,
+				},
 			},
 		}
 		emqxStatusMachine := newEMQXStatusMachine(emqx)

@@ -212,6 +212,7 @@ type EMQXSpec struct {
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
 	// BlueGreenUpdate is the object that describes the EMQX blue-green update strategy
 	BlueGreenUpdate BlueGreenUpdate `json:"blueGreenUpdate,omitempty"`
 	// EMQX bootstrap user
@@ -220,17 +221,19 @@ type EMQXSpec struct {
 	// EMQX bootstrap config, HOCON style, like emqx.conf
 	// Cannot be updated.
 	BootstrapConfig string `json:"bootstrapConfig,omitempty"`
+
+	DashboardServiceTemplate corev1.Service `json:"dashboardServiceTemplate,omitempty"`
+	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
+	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
+	// Else this service will selector EMQX core node
+	ListenersServiceTemplate corev1.Service `json:"listenersServiceTemplate,omitempty"`
+
 	// CoreTemplate is the object that describes the EMQX core node that will be created
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
 	ReplicantTemplate EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
 	// DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
 	// This service always selector the EMQX core node
-	DashboardServiceTemplate corev1.Service `json:"dashboardServiceTemplate,omitempty"`
-	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
-	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
-	// Else this service will selector EMQX core node
-	ListenersServiceTemplate corev1.Service `json:"listenersServiceTemplate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
