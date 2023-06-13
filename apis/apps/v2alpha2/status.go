@@ -32,11 +32,11 @@ type EMQXStatus struct {
 	// Represents the latest available observations of a EMQX Custom Resource current state.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	CoreNodeStatus      EMQXNodeStatus `json:"coreNodeStatus,omitempty"`
-	ReplicantNodeStatus EMQXNodeStatus `json:"replicantNodeStatus,omitempty"`
+	CoreNodeStatus      EMQXNodesStatus `json:"coreNodeStatus,omitempty"`
+	ReplicantNodeStatus EMQXNodesStatus `json:"replicantNodeStatus,omitempty"`
 }
 
-type EMQXNodeStatus struct {
+type EMQXNodesStatus struct {
 	Replicas       int32  `json:"replicas,omitempty"`
 	ReadyReplicas  int32  `json:"readyReplicas,omitempty"`
 	CurrentVersion int32  `json:"currentVersion,omitempty"`
@@ -63,10 +63,12 @@ type EMQXNode struct {
 }
 
 const (
-	ClusterCreating     string = "Creating"
-	ClusterCoreUpdating string = "CoreNodesUpdating"
-	ClusterCoreReady    string = "CoreNodesReady"
-	ClusterRunning      string = "Running"
+	Initialized               string = "Initialized"
+	CoreNodesProgressing      string = "CoreNodesProgressing"
+	CodeNodesReady            string = "CodeNodesReady"
+	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
+	ReplicantNodesReady       string = "ReplicantNodesReady"
+	Ready                     string = "Ready"
 )
 
 const (

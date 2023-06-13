@@ -149,7 +149,7 @@ _Appears in:_
 | `connections` _integer_ | MQTT connection count |
 
 
-#### EMQXNodeStatus
+#### EMQXNodesStatus
 
 
 
@@ -253,8 +253,8 @@ _Appears in:_
 | `currentImage` _string_ | CurrentImage, indicates the image of the EMQX used to generate Pods in the |
 | `emqxNodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
-| `coreNodeStatus` _[EMQXNodeStatus](#emqxnodestatus)_ |  |
-| `replicantNodeStatus` _[EMQXNodeStatus](#emqxnodestatus)_ |  |
+| `coreNodeStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
+| `replicantNodeStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
 
 
 #### EvacuationStrategy

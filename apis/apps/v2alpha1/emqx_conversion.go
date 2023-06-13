@@ -26,7 +26,8 @@ import (
 // ConvertTo converts this version to the Hub version (v1).
 func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v2alpha2.EMQX)
-	structAssign(dst, src)
+	assigned(&dst.ObjectMeta, src.ObjectMeta.DeepCopy())
+	assigned(&dst.Spec, src.Spec.DeepCopy())
 	dst.SetGroupVersionKind(v2alpha2.GroupVersion.WithKind("EMQX"))
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
@@ -36,14 +37,15 @@ func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
 // ConvertFrom converts from the Hub version (v1) to this version.
 func (dst *EMQX) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v2alpha2.EMQX)
-	structAssign(dst, src)
+	assigned(&dst.ObjectMeta, src.ObjectMeta.DeepCopy())
+	assigned(&dst.Spec, src.Spec.DeepCopy())
 	dst.SetGroupVersionKind(GroupVersion.WithKind("EMQX"))
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil
 }
 
-func structAssign(dist, src interface{}) {
+func assigned(dist, src interface{}) {
 	dVal := reflect.ValueOf(dist).Elem()
 	sVal := reflect.ValueOf(src).Elem()
 
@@ -52,7 +54,7 @@ func structAssign(dist, src interface{}) {
 		for i := 0; i < sVal.NumField(); i++ {
 			name := sVal.Type().Field(i).Name
 			if dVal.FieldByName(name).IsValid() && dVal.FieldByName(name).CanSet() {
-				structAssign(dVal.FieldByName(name).Addr().Interface(), sVal.FieldByName(name).Addr().Interface())
+				assigned(dVal.FieldByName(name).Addr().Interface(), sVal.FieldByName(name).Addr().Interface())
 			}
 		}
 	case reflect.Array, reflect.Slice:

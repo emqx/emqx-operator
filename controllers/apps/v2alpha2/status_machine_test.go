@@ -35,7 +35,7 @@ func TestCheckNodeCount(t *testing.T) {
 		emqx.Spec.CoreTemplate.Spec.Replicas = &replicas
 		emqx.Spec.ReplicantTemplate.Spec.Replicas = &replicas
 		emqx.Status.Conditions = []metav1.Condition{
-			{Type: appsv2alpha2.ClusterCreating, Status: metav1.ConditionTrue},
+			{Type: appsv2alpha2.Initialized, Status: metav1.ConditionTrue},
 		}
 
 		emqxNodes := []appsv2alpha2.EMQXNode{
@@ -70,8 +70,8 @@ func TestNextStatusForInit(t *testing.T) {
 	assert.Equal(t, emqxStatusMachine.init, emqxStatusMachine.currentStatus)
 
 	emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-	assert.Equal(t, emqxStatusMachine.creating, emqxStatusMachine.currentStatus)
-	assert.Equal(t, appsv2alpha2.ClusterCreating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	assert.Equal(t, emqxStatusMachine.initialized, emqxStatusMachine.currentStatus)
+	assert.Equal(t, appsv2alpha2.Initialized, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 }
 
 func TestNextStatusForCreate(t *testing.T) {
@@ -84,7 +84,7 @@ func TestNextStatusForCreate(t *testing.T) {
 		Status: appsv2alpha2.EMQXStatus{
 			Conditions: []metav1.Condition{
 				{
-					Type:   appsv2alpha2.ClusterCreating,
+					Type:   appsv2alpha2.Initialized,
 					Status: metav1.ConditionTrue,
 				},
 			},
@@ -92,11 +92,11 @@ func TestNextStatusForCreate(t *testing.T) {
 	}
 
 	emqxStatusMachine := newEMQXStatusMachine(emqx)
-	assert.Equal(t, emqxStatusMachine.creating, emqxStatusMachine.currentStatus)
+	assert.Equal(t, emqxStatusMachine.initialized, emqxStatusMachine.currentStatus)
 
 	emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-	assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
-	assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+	assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 }
 
 func TestNextStatusForCoreUpdate(t *testing.T) {
@@ -112,7 +112,7 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 				CurrentImage: "emqx/emqx:latest",
 				Conditions: []metav1.Condition{
 					{
-						Type:   appsv2alpha2.ClusterCoreUpdating,
+						Type:   appsv2alpha2.CoreNodesProgressing,
 						Status: metav1.ConditionTrue,
 					},
 				},
@@ -120,11 +120,11 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 		}
 
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
 
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
 	t.Run("next status", func(t *testing.T) {
@@ -156,47 +156,47 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 				CurrentImage: "emqx/emqx:latest",
 				Conditions: []metav1.Condition{
 					{
-						Type:   appsv2alpha2.ClusterCoreUpdating,
+						Type:   appsv2alpha2.CoreNodesProgressing,
 						Status: metav1.ConditionTrue,
 					},
 				},
-				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
+				CoreNodeStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas: 1,
 				},
 			},
 		}
 
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
 
 		// statefulSet not update
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// statefulSet already update, but not ready
 		existedSts.Status.ObservedGeneration = 1
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// statefulSet is ready, but emqx nodes not ready
 		existedSts.Status.ReadyReplicas = 1
 		existedSts.Status.UpdatedReplicas = 1
 		existedSts.Status.UpdateRevision = "fake"
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// emqx core node is ready
 		emqx.Status.CoreNodeStatus.ReadyReplicas = 1
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 }
 
-func TestNextStatusForCoreReady(t *testing.T) {
+func TestNextStatusForcodeNodesReady(t *testing.T) {
 	t.Run("change image", func(t *testing.T) {
 		existedSts := &appsv1.StatefulSet{}
 		existedDeploy := &appsv1.Deployment{}
@@ -209,7 +209,7 @@ func TestNextStatusForCoreReady(t *testing.T) {
 				CurrentImage: "emqx/emqx:latest",
 				Conditions: []metav1.Condition{
 					{
-						Type:   appsv2alpha2.ClusterCoreReady,
+						Type:   appsv2alpha2.CodeNodesReady,
 						Status: metav1.ConditionTrue,
 					},
 				},
@@ -217,11 +217,11 @@ func TestNextStatusForCoreReady(t *testing.T) {
 		}
 
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.coreReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
 
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
 	t.Run("next status", func(t *testing.T) {
@@ -269,53 +269,53 @@ func TestNextStatusForCoreReady(t *testing.T) {
 				CurrentImage: "emqx/emqx:latest",
 				Conditions: []metav1.Condition{
 					{
-						Type:   appsv2alpha2.ClusterCoreReady,
+						Type:   appsv2alpha2.CodeNodesReady,
 						Status: metav1.ConditionTrue,
 					},
 				},
-				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
+				CoreNodeStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas: 1,
 				},
-				ReplicantNodeStatus: appsv2alpha2.EMQXNodeStatus{
+				ReplicantNodeStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas: 1,
 				},
 			},
 		}
 
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.coreReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
 
 		// statefulSet and deployment not ready
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// statefulSet is ready, but deployment not ready
 		existedSts.Status.ReadyReplicas = 1
 		existedSts.Status.UpdatedReplicas = 1
 		existedSts.Status.UpdateRevision = "fake"
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// statefulSet and deployment is ready, but emqx nodes not ready
 		existedDeploy.Status.UpdatedReplicas = 1
 		existedDeploy.Status.ReadyReplicas = 1
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// emqx nodes is ready
 		emqx.Status.CoreNodeStatus.ReadyReplicas = 1
 		emqx.Status.ReplicantNodeStatus.ReadyReplicas = 1
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.running, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterRunning, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Ready, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
 }
 
-func TestNextStatusForCoreRunning(t *testing.T) {
+func TestNextStatusForCoreready(t *testing.T) {
 	t.Run("change image", func(t *testing.T) {
 		existedSts := &appsv1.StatefulSet{}
 		existedDeploy := &appsv1.Deployment{}
@@ -328,7 +328,7 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 				CurrentImage: "emqx/emqx:latest",
 				Conditions: []metav1.Condition{
 					{
-						Type:   appsv2alpha2.ClusterRunning,
+						Type:   appsv2alpha2.Ready,
 						Status: metav1.ConditionTrue,
 					},
 				},
@@ -336,11 +336,11 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 		}
 
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.running, emqxStatusMachine.currentStatus)
+		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
 	t.Run("replicant nodes not ready", func(t *testing.T) {
@@ -354,26 +354,26 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 				CurrentImage: "emqx/emqx:latest",
 				Conditions: []metav1.Condition{
 					{
-						Type:   appsv2alpha2.ClusterRunning,
+						Type:   appsv2alpha2.Ready,
 						Status: metav1.ConditionTrue,
 					},
 					{
-						Type:   appsv2alpha2.ClusterCoreReady,
+						Type:   appsv2alpha2.CodeNodesReady,
 						Status: metav1.ConditionTrue,
 					},
 				},
-				ReplicantNodeStatus: appsv2alpha2.EMQXNodeStatus{
+				ReplicantNodeStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas:      1,
 					ReadyReplicas: 0,
 				},
 			},
 		}
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.running, emqxStatusMachine.currentStatus)
+		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
 	t.Run("replicant nodes not ready", func(t *testing.T) {
@@ -387,34 +387,34 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 				CurrentImage: "emqx/emqx:latest",
 				Conditions: []metav1.Condition{
 					{
-						Type:   appsv2alpha2.ClusterRunning,
+						Type:   appsv2alpha2.Ready,
 						Status: metav1.ConditionTrue,
 					},
 					{
-						Type:   appsv2alpha2.ClusterCoreReady,
+						Type:   appsv2alpha2.CodeNodesReady,
 						Status: metav1.ConditionTrue,
 					},
 					{
-						Type:   appsv2alpha2.ClusterCoreUpdating,
+						Type:   appsv2alpha2.CoreNodesProgressing,
 						Status: metav1.ConditionTrue,
 					},
 				},
-				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
+				CoreNodeStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas:      1,
 					ReadyReplicas: 0,
 				},
-				ReplicantNodeStatus: appsv2alpha2.EMQXNodeStatus{
+				ReplicantNodeStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas:      1,
 					ReadyReplicas: 0,
 				},
 			},
 		}
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.running, emqxStatusMachine.currentStatus)
+		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.coreUpdating, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterCoreUpdating, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
 	t.Run("next status", func(t *testing.T) {
@@ -428,17 +428,17 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 				CurrentImage: "emqx/emqx:latest",
 				Conditions: []metav1.Condition{
 					{
-						Type:   appsv2alpha2.ClusterRunning,
+						Type:   appsv2alpha2.Ready,
 						Status: metav1.ConditionTrue,
 					},
 				},
 			},
 		}
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.running, emqxStatusMachine.currentStatus)
+		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 
 		emqxStatusMachine.NextStatus(existedSts, existedDeploy)
-		assert.Equal(t, emqxStatusMachine.running, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.ClusterRunning, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Ready, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 }

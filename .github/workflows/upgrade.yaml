@@ -81,10 +81,8 @@ jobs:
         run: |
           sleep 30
           while
-            condition="$(kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json | jq '.status.conditions[0]')";
-            [[ "$condition" == "null" ]] \
-            || [[ "$(echo $condition | jq --raw-output '.type')" != "Running" ]] \
-            || [[ "$(echo $condition | jq --raw-output '.status')" != "True" ]]
+            type="$(kubectl get ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }} -o json |jq '.status.conditions[0] | select(.status == "True")' | jq --raw-output '.type')"
+            [[ "$type" != "Ready" ]] && [[ "$type" != "Running" ]]
           do
             echo "waiting"
             sleep 1
