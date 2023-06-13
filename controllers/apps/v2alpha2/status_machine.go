@@ -19,7 +19,7 @@ package v2alpha2
 import (
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type status interface {
@@ -64,20 +64,22 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha2.EMQX) {
 		s.currentStatus = s.init
 	}
 
-	if emqx.Status.IsCreating() {
+	condition := emqx.Status.GetLastTrueCondition()
+	if condition == nil {
+		return
+	}
+
+	switch condition.Type {
+	case appsv2alpha2.ClusterCreating:
 		s.currentStatus = s.creating
-	}
-
-	if emqx.Status.IsCoreNodesUpdating() {
+	case appsv2alpha2.ClusterCoreUpdating:
 		s.currentStatus = s.coreUpdating
-	}
-
-	if emqx.Status.IsCoreNodesReady() {
+	case appsv2alpha2.ClusterCoreReady:
 		s.currentStatus = s.coreReady
-	}
-
-	if emqx.Status.IsRunning() {
+	case appsv2alpha2.ClusterRunning:
 		s.currentStatus = s.running
+	default:
+		panic("unknown condition type")
 	}
 }
 
@@ -117,13 +119,12 @@ type initStatus struct {
 }
 
 func (s *initStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
-	condition := appsv2alpha2.NewCondition(
-		appsv2alpha2.ClusterCreating,
-		corev1.ConditionTrue,
-		"ClusterCreating",
-		"Creating EMQX cluster",
-	)
-	s.emqxStatusMachine.emqx.Status.SetCondition(*condition)
+	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
+		Type:    appsv2alpha2.ClusterCreating,
+		Status:  metav1.ConditionTrue,
+		Reason:  "ClusterCreating",
+		Message: "Creating EMQX cluster",
+	})
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
 
@@ -133,13 +134,12 @@ type createStatus struct {
 
 func (s *createStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
 	s.emqxStatusMachine.emqx.Status.CurrentImage = s.emqxStatusMachine.emqx.Spec.Image
-	condition := appsv2alpha2.NewCondition(
-		appsv2alpha2.ClusterCoreUpdating,
-		corev1.ConditionTrue,
-		"ClusterCoreUpdating",
-		"Updating core nodes in cluster",
-	)
-	s.emqxStatusMachine.emqx.Status.SetCondition(*condition)
+	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
+		Type:    appsv2alpha2.ClusterCoreUpdating,
+		Status:  metav1.ConditionTrue,
+		Reason:  "ClusterCoreUpdating",
+		Message: "Updating core nodes in cluster",
+	})
 	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterCoreReady)
 	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
 
@@ -175,13 +175,12 @@ func (s *coreUpdateStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDep
 	if s.emqxStatusMachine.emqx.Status.CoreNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeStatus.Replicas {
 		return
 	}
-	condition := appsv2alpha2.NewCondition(
-		appsv2alpha2.ClusterCoreReady,
-		corev1.ConditionTrue,
-		"ClusterCoreReady",
-		"Core nodes is ready",
-	)
-	s.emqxStatusMachine.emqx.Status.SetCondition(*condition)
+	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
+		Type:    appsv2alpha2.ClusterCoreReady,
+		Status:  metav1.ConditionTrue,
+		Reason:  "ClusterCoreReady",
+		Message: "Core nodes is ready",
+	})
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
 
@@ -218,13 +217,12 @@ func (s *coreReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDepl
 		return
 	}
 
-	condition := appsv2alpha2.NewCondition(
-		appsv2alpha2.ClusterRunning,
-		corev1.ConditionTrue,
-		"ClusterRunning",
-		"Cluster is running",
-	)
-	s.emqxStatusMachine.emqx.Status.SetCondition(*condition)
+	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
+		Type:    appsv2alpha2.ClusterRunning,
+		Status:  metav1.ConditionTrue,
+		Reason:  "ClusterRunning",
+		Message: "Cluster is running",
+	})
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
 
