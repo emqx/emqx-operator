@@ -355,10 +355,10 @@ func checkRunning(instance *appsv2alpha2.EMQX) {
 	}, timeout, interval).Should(
 		And(
 			HaveField("Conditions", ConsistOf(
-				HaveField("Type", appsv2alpha2.ClusterRunning),
-				HaveField("Type", appsv2alpha2.ClusterCoreReady),
-				HaveField("Type", appsv2alpha2.ClusterCoreUpdating),
-				HaveField("Type", appsv2alpha2.ClusterCreating),
+				HaveField("Type", appsv2alpha2.Ready),
+				HaveField("Type", appsv2alpha2.CodeNodesReady),
+				HaveField("Type", appsv2alpha2.CoreNodesProgressing),
+				HaveField("Type", appsv2alpha2.Initialized),
 			)),
 			HaveField("EMQXNodes", HaveLen(4)),
 			HaveField("CoreNodeStatus", And(

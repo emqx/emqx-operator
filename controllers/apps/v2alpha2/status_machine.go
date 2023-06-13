@@ -29,11 +29,13 @@ type status interface {
 type emqxStatusMachine struct {
 	emqx *appsv2alpha2.EMQX
 
-	init         status
-	creating     status
-	coreUpdating status
-	coreReady    status
-	running      status
+	init status
+
+	// EMQX cluster status
+	initialized          status
+	coreNodesProgressing status
+	codeNodesReady       status
+	ready                status
 
 	currentStatus status
 }
@@ -44,16 +46,16 @@ func newEMQXStatusMachine(emqx *appsv2alpha2.EMQX) *emqxStatusMachine {
 	}
 
 	initStatus := &initStatus{emqxStatusMachine: emqxStatusMachine}
-	createStatus := &createStatus{emqxStatusMachine: emqxStatusMachine}
-	coreUpdateStatus := &coreUpdateStatus{emqxStatusMachine: emqxStatusMachine}
-	coreReadyStatus := &coreReadyStatus{emqxStatusMachine: emqxStatusMachine}
-	runningStatus := &runningStatus{emqxStatusMachine: emqxStatusMachine}
+	initializedStatus := &initializedStatus{emqxStatusMachine: emqxStatusMachine}
+	coreNodesProgressingStatus := &coreNodesProgressingStatus{emqxStatusMachine: emqxStatusMachine}
+	codeNodesReadyStatus := &codeNodesReadyStatus{emqxStatusMachine: emqxStatusMachine}
+	readyStatus := &readyStatus{emqxStatusMachine: emqxStatusMachine}
 
 	emqxStatusMachine.init = initStatus
-	emqxStatusMachine.creating = createStatus
-	emqxStatusMachine.coreUpdating = coreUpdateStatus
-	emqxStatusMachine.coreReady = coreReadyStatus
-	emqxStatusMachine.running = runningStatus
+	emqxStatusMachine.initialized = initializedStatus
+	emqxStatusMachine.coreNodesProgressing = coreNodesProgressingStatus
+	emqxStatusMachine.codeNodesReady = codeNodesReadyStatus
+	emqxStatusMachine.ready = readyStatus
 	emqxStatusMachine.setCurrentStatus(emqx)
 
 	return emqxStatusMachine
@@ -70,14 +72,14 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha2.EMQX) {
 	}
 
 	switch condition.Type {
-	case appsv2alpha2.ClusterCreating:
-		s.currentStatus = s.creating
-	case appsv2alpha2.ClusterCoreUpdating:
-		s.currentStatus = s.coreUpdating
-	case appsv2alpha2.ClusterCoreReady:
-		s.currentStatus = s.coreReady
-	case appsv2alpha2.ClusterRunning:
-		s.currentStatus = s.running
+	case appsv2alpha2.Initialized:
+		s.currentStatus = s.initialized
+	case appsv2alpha2.CoreNodesProgressing:
+		s.currentStatus = s.coreNodesProgressing
+	case appsv2alpha2.CodeNodesReady:
+		s.currentStatus = s.codeNodesReady
+	case appsv2alpha2.Ready:
+		s.currentStatus = s.ready
 	default:
 		panic("unknown condition type")
 	}
@@ -120,39 +122,39 @@ type initStatus struct {
 
 func (s *initStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
-		Type:    appsv2alpha2.ClusterCreating,
+		Type:    appsv2alpha2.Initialized,
 		Status:  metav1.ConditionTrue,
-		Reason:  "ClusterCreating",
-		Message: "Creating EMQX cluster",
+		Reason:  "Initialized",
+		Message: "initialized EMQX cluster",
 	})
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
 
-type createStatus struct {
+type initializedStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *createStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
+func (s *initializedStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
 	s.emqxStatusMachine.emqx.Status.CurrentImage = s.emqxStatusMachine.emqx.Spec.Image
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
-		Type:    appsv2alpha2.ClusterCoreUpdating,
+		Type:    appsv2alpha2.CoreNodesProgressing,
 		Status:  metav1.ConditionTrue,
-		Reason:  "ClusterCoreUpdating",
+		Reason:  "CoreNodesProgressing",
 		Message: "Updating core nodes in cluster",
 	})
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterCoreReady)
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.CodeNodesReady)
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.Ready)
 
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
 
-type coreUpdateStatus struct {
+type coreNodesProgressingStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *coreUpdateStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
+func (s *coreNodesProgressingStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
 	if s.emqxStatusMachine.emqx.Status.CurrentImage != s.emqxStatusMachine.emqx.Spec.Image {
-		s.emqxStatusMachine.creating.nextStatus(existedSts, existedDeploy)
+		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedDeploy)
 		return
 	}
 
@@ -176,21 +178,21 @@ func (s *coreUpdateStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDep
 		return
 	}
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
-		Type:    appsv2alpha2.ClusterCoreReady,
+		Type:    appsv2alpha2.CodeNodesReady,
 		Status:  metav1.ConditionTrue,
-		Reason:  "ClusterCoreReady",
+		Reason:  "CodeNodesReady",
 		Message: "Core nodes is ready",
 	})
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
 
-type coreReadyStatus struct {
+type codeNodesReadyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *coreReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
+func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
 	if s.emqxStatusMachine.emqx.Status.CurrentImage != s.emqxStatusMachine.emqx.Spec.Image {
-		s.emqxStatusMachine.creating.nextStatus(existedSts, existedDeploy)
+		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedDeploy)
 		return
 	}
 
@@ -218,31 +220,31 @@ func (s *coreReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDepl
 	}
 
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
-		Type:    appsv2alpha2.ClusterRunning,
+		Type:    appsv2alpha2.Ready,
 		Status:  metav1.ConditionTrue,
-		Reason:  "ClusterRunning",
-		Message: "Cluster is running",
+		Reason:  "Ready",
+		Message: "Cluster is ready",
 	})
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
 
-type runningStatus struct {
+type readyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *runningStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
+func (s *readyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
 	if s.emqxStatusMachine.emqx.Status.CurrentImage != s.emqxStatusMachine.emqx.Spec.Image {
-		s.emqxStatusMachine.creating.nextStatus(existedSts, existedDeploy)
+		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedDeploy)
 		return
 	}
 
 	if s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.Replicas {
-		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
+		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.Ready)
 	}
 
 	if s.emqxStatusMachine.emqx.Status.CoreNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeStatus.Replicas {
-		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterRunning)
-		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ClusterCoreReady)
+		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.Ready)
+		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.CodeNodesReady)
 	}
 
 	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
