@@ -21,152 +21,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func TestIsCoreNodesUpdating(t *testing.T) {
-	status := EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterCoreUpdating,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-
-	got := status.IsCoreNodesUpdating()
-	assert.True(t, got)
-
-	status = EMQXStatus{}
-	got = status.IsCoreNodesUpdating()
-	assert.False(t, got)
-
-	status = EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterRunning,
-				Status: v1.ConditionTrue,
-			},
-			{
-				Type:   ClusterCoreReady,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-	got = status.IsCoreNodesUpdating()
-	assert.False(t, got)
-}
-
-func TestIsCoreNodesReady(t *testing.T) {
-	status := EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterCoreReady,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-
-	got := status.IsCoreNodesReady()
-	assert.True(t, got)
-
-	status = EMQXStatus{}
-	got = status.IsCoreNodesReady()
-	assert.False(t, got)
-
-	status = EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterRunning,
-				Status: v1.ConditionTrue,
-			},
-			{
-				Type:   ClusterCoreReady,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-	got = status.IsCoreNodesReady()
-	assert.False(t, got)
-}
-
-func TestIsRunning(t *testing.T) {
-	status := EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterRunning,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-
-	got := status.IsRunning()
-	assert.True(t, got)
-
-	status = EMQXStatus{}
-	got = status.IsRunning()
-	assert.False(t, got)
-
-	status = EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterRunning,
-				Status: v1.ConditionFalse,
-			},
-		},
-	}
-	got = status.IsRunning()
-	assert.False(t, got)
-}
-
-func TestIsCreating(t *testing.T) {
-	status := &EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterCreating,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-
-	got := status.IsCreating()
-	assert.True(t, got)
-
-	status = &EMQXStatus{}
-	got = status.IsCreating()
-	assert.False(t, got)
-
-	status = &EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterCreating,
-				Status: v1.ConditionFalse,
-			},
-		},
-	}
-	got = status.IsCreating()
-	assert.False(t, got)
-}
-
-func TestIndexCondition(t *testing.T) {
-	status := &EMQXStatus{
-		Conditions: []Condition{
-			{
-				Type:   ClusterCoreUpdating,
-				Status: v1.ConditionTrue,
-			},
-			{
-				Type:   ClusterCreating,
-				Status: v1.ConditionFalse,
-			},
-		},
-	}
-	idx := indexCondition(status, ClusterCoreUpdating)
-	assert.Equal(t, 0, idx)
-
-	idx = indexCondition(status, ClusterCreating)
-	assert.Equal(t, 1, idx)
-}
 
 func TestSetEMQXNodes(t *testing.T) {
 	status := &EMQXStatus{}
@@ -195,19 +51,19 @@ func TestSetEMQXNodes(t *testing.T) {
 }
 
 func TestSetCondition(t *testing.T) {
-	c0 := Condition{
+	c0 := metav1.Condition{
 		Type:   ClusterCreating,
-		Status: v1.ConditionFalse,
+		Status: metav1.ConditionFalse,
 	}
 
-	c1 := Condition{
+	c1 := metav1.Condition{
 		Type:   ClusterRunning,
-		Status: v1.ConditionFalse,
+		Status: metav1.ConditionFalse,
 	}
 
-	c2 := Condition{
+	c2 := metav1.Condition{
 		Type:   ClusterRunning,
-		Status: v1.ConditionTrue,
+		Status: metav1.ConditionTrue,
 	}
 
 	c3 := c2
@@ -220,8 +76,6 @@ func TestSetCondition(t *testing.T) {
 
 		c0 = status.Conditions[0]
 		assert.NotEmpty(t, c0.LastTransitionTime)
-		assert.NotEmpty(t, c0.LastUpdateTime)
-		assert.NotEmpty(t, c0.LastUpdateAt)
 	})
 
 	t.Run("add different condition type", func(t *testing.T) {
@@ -236,10 +90,6 @@ func TestSetCondition(t *testing.T) {
 		assert.Equal(t, 2, len(status.Conditions))
 		assert.NotEmpty(t, c1.LastTransitionTime)
 		assert.NotEqual(t, c0.LastTransitionTime, c1.LastTransitionTime)
-		assert.NotEmpty(t, c1.LastUpdateTime)
-		assert.NotEqual(t, c0.LastUpdateTime, c1.LastUpdateTime)
-		assert.NotEmpty(t, c1.LastUpdateAt)
-		assert.NotEqual(t, c0.LastUpdateAt, c1.LastUpdateAt)
 	})
 
 	t.Run("add same condition type, but different condition status", func(t *testing.T) {
@@ -254,10 +104,6 @@ func TestSetCondition(t *testing.T) {
 		assert.Equal(t, 1, len(status.Conditions))
 		assert.NotEmpty(t, c2.LastTransitionTime)
 		assert.NotEqual(t, c1.LastTransitionTime, c2.LastTransitionTime)
-		assert.NotEmpty(t, c2.LastUpdateTime)
-		assert.NotEqual(t, c1.LastUpdateTime, c2.LastUpdateTime)
-		assert.NotEmpty(t, c2.LastUpdateAt)
-		assert.NotEqual(t, c1.LastUpdateAt, c2.LastUpdateAt)
 	})
 
 	t.Run("add same condition type and same condition status", func(t *testing.T) {
@@ -272,9 +118,82 @@ func TestSetCondition(t *testing.T) {
 		assert.Equal(t, 1, len(status.Conditions))
 		assert.NotEmpty(t, c3.LastTransitionTime)
 		assert.Equal(t, c2.LastTransitionTime, c3.LastTransitionTime)
-		assert.NotEmpty(t, c3.LastUpdateTime)
-		assert.NotEqual(t, c2.LastUpdateTime, c3.LastUpdateTime)
-		assert.NotEmpty(t, c3.LastUpdateAt)
-		assert.NotEqual(t, c2.LastUpdateAt, c3.LastUpdateAt)
 	})
+}
+
+func TestGetLastTrueCondition(t *testing.T) {
+	status := &EMQXStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type:   ClusterCoreUpdating,
+				Status: metav1.ConditionFalse,
+			},
+			{
+				Type:   ClusterCreating,
+				Status: metav1.ConditionTrue,
+			},
+		},
+	}
+
+	c := status.GetLastTrueCondition()
+	assert.Equal(t, ClusterCreating, c.Type)
+}
+
+func TestGetCondition(t *testing.T) {
+	status := &EMQXStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type:   ClusterCoreUpdating,
+				Status: metav1.ConditionTrue,
+			},
+			{
+				Type:   ClusterCreating,
+				Status: metav1.ConditionFalse,
+			},
+		},
+	}
+
+	var pos int
+
+	pos, _ = status.GetCondition(ClusterCoreUpdating)
+	assert.Equal(t, 0, pos)
+
+	pos, _ = status.GetCondition(ClusterCreating)
+	assert.Equal(t, 1, pos)
+}
+
+func TestIsConditionTrue(t *testing.T) {
+	status := &EMQXStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type:   ClusterCreating,
+				Status: metav1.ConditionTrue,
+			},
+			{
+				Type:   ClusterRunning,
+				Status: metav1.ConditionFalse,
+			},
+		},
+	}
+
+	assert.True(t, status.IsConditionTrue(ClusterCreating))
+	assert.False(t, status.IsConditionTrue("Nothing"))
+	assert.False(t, status.IsConditionTrue(ClusterRunning))
+}
+
+func TestRemoveCondition(t *testing.T) {
+	status := &EMQXStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type:   ClusterCreating,
+				Status: metav1.ConditionTrue,
+			},
+			{
+				Type:   ClusterRunning,
+				Status: metav1.ConditionFalse,
+			},
+		},
+	}
+	status.RemoveCondition(ClusterCreating)
+	assert.Equal(t, 1, len(status.Conditions))
 }

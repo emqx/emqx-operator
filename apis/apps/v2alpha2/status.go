@@ -18,7 +18,6 @@ package v2alpha2
 
 import (
 	"sort"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +30,7 @@ type EMQXStatus struct {
 	// EMQX nodes info
 	EMQXNodes []EMQXNode `json:"emqxNodes,omitempty"`
 	// Represents the latest available observations of a EMQX Custom Resource current state.
-	Conditions []Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	CoreNodeStatus      EMQXNodeStatus `json:"coreNodeStatus,omitempty"`
 	ReplicantNodeStatus EMQXNodeStatus `json:"replicantNodeStatus,omitempty"`
@@ -63,65 +62,17 @@ type EMQXNode struct {
 	Connections int64 `json:"connections,omitempty"`
 }
 
-type Condition struct {
-	// Status of cluster condition.
-	Type ConditionType `json:"type"`
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-	// The reason for the condition's last transition.
-	Reason string `json:"reason,omitempty"`
-	// A human readable message indicating details about the transition.
-	Message string `json:"message,omitempty"`
-	// Last time the condition transitioned from one status to another.
-	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
-	// The last time this condition was updated.
-	LastUpdateTime string      `json:"lastUpdateTime,omitempty"`
-	LastUpdateAt   metav1.Time `json:"-"`
-}
-
-type ConditionType string
-
 const (
-	ClusterCreating     ConditionType = "Creating"
-	ClusterCoreUpdating ConditionType = "CoreNodesUpdating"
-	ClusterCoreReady    ConditionType = "CoreNodesReady"
-	ClusterRunning      ConditionType = "Running"
+	ClusterCreating     string = "Creating"
+	ClusterCoreUpdating string = "CoreNodesUpdating"
+	ClusterCoreReady    string = "CoreNodesReady"
+	ClusterRunning      string = "Running"
 )
 
 const (
 	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
 	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
 )
-
-// EMQX Status
-func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
-	return &Condition{
-		Type:    condType,
-		Status:  status,
-		Reason:  reason,
-		Message: message,
-	}
-}
-
-func (s *EMQXStatus) IsCreating() bool {
-	index := indexCondition(s, ClusterCreating)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
-func (s *EMQXStatus) IsCoreNodesUpdating() bool {
-	index := indexCondition(s, ClusterCoreUpdating)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
-func (s *EMQXStatus) IsCoreNodesReady() bool {
-	index := indexCondition(s, ClusterCoreReady)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
-
-func (s *EMQXStatus) IsRunning() bool {
-	index := indexCondition(s, ClusterRunning)
-	return index == 0 && s.Conditions[index].Status == corev1.ConditionTrue
-}
 
 func (s *EMQXStatus) SetEMQXNodes(nodes []EMQXNode) {
 	sort.Slice(nodes, func(i, j int) bool {
@@ -130,42 +81,54 @@ func (s *EMQXStatus) SetEMQXNodes(nodes []EMQXNode) {
 	s.EMQXNodes = nodes
 }
 
-func (s *EMQXStatus) SetCondition(c Condition) {
-	now := metav1.Now()
-	c.LastUpdateAt = now
-	c.LastUpdateTime = now.Format(time.RFC3339)
-	c.LastTransitionTime = now.Format(time.RFC3339)
-	pos := indexCondition(s, c.Type)
+func (s *EMQXStatus) SetCondition(c metav1.Condition) {
+	c.LastTransitionTime = metav1.Now()
+	pos, _ := s.GetCondition(c.Type)
 	if pos >= 0 {
-		if s.Conditions[pos].Status == c.Status && s.Conditions[pos].LastTransitionTime != "" {
+		if s.Conditions[pos].Status == c.Status && !s.Conditions[pos].LastTransitionTime.IsZero() {
 			c.LastTransitionTime = s.Conditions[pos].LastTransitionTime
 		}
 		s.Conditions[pos] = c
 	} else {
 		s.Conditions = append(s.Conditions, c)
 	}
-	s.sortConditions(s.Conditions)
+	sort.Slice(s.Conditions, func(i, j int) bool {
+		return s.Conditions[j].LastTransitionTime.Before(&s.Conditions[i].LastTransitionTime)
+	})
 }
 
-func (s *EMQXStatus) RemoveCondition(t ConditionType) {
-	pos := indexCondition(s, t)
+func (s *EMQXStatus) GetLastTrueCondition() *metav1.Condition {
+	for i := range s.Conditions {
+		c := s.Conditions[i]
+		if c.Status == metav1.ConditionTrue {
+			return &c
+		}
+	}
+	return nil
+}
+
+func (s *EMQXStatus) GetCondition(conditionType string) (int, *metav1.Condition) {
+	for i := range s.Conditions {
+		c := s.Conditions[i]
+		if c.Type == conditionType {
+			return i, c.DeepCopy()
+		}
+	}
+	return -1, nil
+}
+
+func (s *EMQXStatus) IsConditionTrue(conditionType string) bool {
+	_, condition := s.GetCondition(conditionType)
+	if condition == nil {
+		return false
+	}
+	return condition.Status == metav1.ConditionTrue
+}
+
+func (s *EMQXStatus) RemoveCondition(conditionType string) {
+	pos, _ := s.GetCondition(conditionType)
 	if pos == -1 {
 		return
 	}
 	s.Conditions = append(s.Conditions[:pos], s.Conditions[pos+1:]...)
-}
-
-func (s *EMQXStatus) sortConditions(conditions []Condition) {
-	sort.Slice(conditions, func(i, j int) bool {
-		return s.Conditions[j].LastUpdateAt.Before(&s.Conditions[i].LastUpdateAt)
-	})
-}
-
-func indexCondition(status *EMQXStatus, t ConditionType) int {
-	for i, c := range status.Conditions {
-		if t == c.Type {
-			return i
-		}
-	}
-	return -1
 }

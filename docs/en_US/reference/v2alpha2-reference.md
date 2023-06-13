@@ -44,36 +44,6 @@ _Appears in:_
 | `secret` _string_ |  |
 
 
-#### Condition
-
-
-
-
-
-_Appears in:_
-- [EMQXStatus](#emqxstatus)
-
-| Field | Description |
-| --- | --- |
-| `type` _[ConditionType](#conditiontype)_ | Status of cluster condition. |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |
-| `reason` _string_ | The reason for the condition's last transition. |
-| `message` _string_ | A human readable message indicating details about the transition. |
-| `lastTransitionTime` _string_ | Last time the condition transitioned from one status to another. |
-| `lastUpdateTime` _string_ | The last time this condition was updated. |
-
-
-#### ConditionType
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [Condition](#condition)
-
-
-
 #### EMQX
 
 
@@ -282,7 +252,7 @@ _Appears in:_
 | --- | --- |
 | `currentImage` _string_ | CurrentImage, indicates the image of the EMQX used to generate Pods in the |
 | `emqxNodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
-| `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
 | `coreNodeStatus` _[EMQXNodeStatus](#emqxnodestatus)_ |  |
 | `replicantNodeStatus` _[EMQXNodeStatus](#emqxnodestatus)_ |  |
 

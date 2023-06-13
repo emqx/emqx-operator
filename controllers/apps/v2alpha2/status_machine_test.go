@@ -34,6 +34,9 @@ func TestCheckNodeCount(t *testing.T) {
 		emqx := &appsv2alpha2.EMQX{}
 		emqx.Spec.CoreTemplate.Spec.Replicas = &replicas
 		emqx.Spec.ReplicantTemplate.Spec.Replicas = &replicas
+		emqx.Status.Conditions = []metav1.Condition{
+			{Type: appsv2alpha2.ClusterCreating, Status: metav1.ConditionTrue},
+		}
 
 		emqxNodes := []appsv2alpha2.EMQXNode{
 			{
@@ -79,10 +82,10 @@ func TestNextStatusForCreate(t *testing.T) {
 			Image: "emqx/emqx:latest",
 		},
 		Status: appsv2alpha2.EMQXStatus{
-			Conditions: []appsv2alpha2.Condition{
+			Conditions: []metav1.Condition{
 				{
 					Type:   appsv2alpha2.ClusterCreating,
-					Status: corev1.ConditionTrue,
+					Status: metav1.ConditionTrue,
 				},
 			},
 		},
@@ -107,10 +110,10 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
-				Conditions: []appsv2alpha2.Condition{
+				Conditions: []metav1.Condition{
 					{
 						Type:   appsv2alpha2.ClusterCoreUpdating,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 				},
 			},
@@ -151,10 +154,10 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
-				Conditions: []appsv2alpha2.Condition{
+				Conditions: []metav1.Condition{
 					{
 						Type:   appsv2alpha2.ClusterCoreUpdating,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 				},
 				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
@@ -204,10 +207,10 @@ func TestNextStatusForCoreReady(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
-				Conditions: []appsv2alpha2.Condition{
+				Conditions: []metav1.Condition{
 					{
 						Type:   appsv2alpha2.ClusterCoreReady,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 				},
 			},
@@ -264,10 +267,10 @@ func TestNextStatusForCoreReady(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
-				Conditions: []appsv2alpha2.Condition{
+				Conditions: []metav1.Condition{
 					{
 						Type:   appsv2alpha2.ClusterCoreReady,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 				},
 				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
@@ -323,10 +326,10 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
-				Conditions: []appsv2alpha2.Condition{
+				Conditions: []metav1.Condition{
 					{
 						Type:   appsv2alpha2.ClusterRunning,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 				},
 			},
@@ -349,14 +352,14 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
-				Conditions: []appsv2alpha2.Condition{
+				Conditions: []metav1.Condition{
 					{
 						Type:   appsv2alpha2.ClusterRunning,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 					{
 						Type:   appsv2alpha2.ClusterCoreReady,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 				},
 				ReplicantNodeStatus: appsv2alpha2.EMQXNodeStatus{
@@ -382,18 +385,18 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
-				Conditions: []appsv2alpha2.Condition{
+				Conditions: []metav1.Condition{
 					{
 						Type:   appsv2alpha2.ClusterRunning,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 					{
 						Type:   appsv2alpha2.ClusterCoreReady,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 					{
 						Type:   appsv2alpha2.ClusterCoreUpdating,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 				},
 				CoreNodeStatus: appsv2alpha2.EMQXNodeStatus{
@@ -423,10 +426,10 @@ func TestNextStatusForCoreRunning(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
-				Conditions: []appsv2alpha2.Condition{
+				Conditions: []metav1.Condition{
 					{
 						Type:   appsv2alpha2.ClusterRunning,
-						Status: corev1.ConditionTrue,
+						Status: metav1.ConditionTrue,
 					},
 				},
 			},

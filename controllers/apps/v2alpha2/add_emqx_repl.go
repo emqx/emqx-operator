@@ -23,7 +23,8 @@ type addRepl struct {
 }
 
 func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
-	if !instance.Status.IsRunning() && !instance.Status.IsCoreNodesReady() {
+	condition := instance.Status.GetLastTrueCondition()
+	if condition == nil || (condition.Type != appsv2alpha2.ClusterRunning && condition.Type != appsv2alpha2.ClusterCoreReady) {
 		return subResult{}
 	}
 
