@@ -16,7 +16,7 @@ Before you begin, you must have the following:
 
 ## Quickly Deploy An EMQX Cluster
 
-The following is the relevant configuration of EMQX custom resources. You can select the corresponding APIVersion according to the EMQX version you want to deploy. For the specific compatibility relationship, please refer to [Compatibility list between EMQX and EMQX Operator](../README.md)
+The following is the relevant configuration of EMQX custom resources. You can select the corresponding APIVersion according to the EMQX version you want to deploy. For the specific compatibility relationship, please refer to [Compatibility list between EMQX and EMQX Operator](../index.md)
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
@@ -84,7 +84,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
 
@@ -164,7 +164,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
 
   ```bash
   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
 

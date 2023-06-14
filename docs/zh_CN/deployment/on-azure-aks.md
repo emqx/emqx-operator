@@ -17,7 +17,7 @@ EMQX 是一款高性能的开源分布式物联网 MQTT 消息服务器，它提
 
 ## 快速部署一个 EMQX 集群
 
-以下是 EMQX Custom Resource 的相关配置。您可以根据您想要部署的 EMQX 版本选择相应的 APIVersion。具体的兼容关系，请参考 [EMQX Operator 兼容性](../README.md)：
+以下是 EMQX Custom Resource 的相关配置。您可以根据您想要部署的 EMQX 版本选择相应的 APIVersion。具体的兼容关系，请参考 [EMQX Operator 兼容性](../index.md)：
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4

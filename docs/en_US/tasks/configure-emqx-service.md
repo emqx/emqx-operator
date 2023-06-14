@@ -6,7 +6,7 @@ Access the EMQX cluster through the Service of LoadBalancer type.
 
 ## Configure EMQX Cluster
 
-The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
@@ -46,7 +46,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
@@ -71,7 +71,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
-   ```
+  ```
 
   > By default, EMQX will open an MQTT TCP listener `tcp-default` corresponding to port 1883 and Dashboard listener `dashboard-listeners-http-bind` corresponding to port 18083.
 
@@ -90,7 +90,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
   ```bash
   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
 
@@ -121,7 +121,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
   ```bash
   $ mqttx conn -h ${external_ip} -p 1883
-
+  
   [4/17/2023] [5:17:31 PM] › … Connecting...
   [4/17/2023] [5:17:31 PM] › ✔ Connected
   ```
@@ -149,7 +149,7 @@ The screenshots of the Dashboard below are from EMQX 5, [EMQX 4 Dashboard](https
 
   ```bash
   kubectl get svc
-
+  
   NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                                         AGE
   emqx-dashboard   NodePort   10.105.110.235   <none>        18083:32012/TCP                                 13m
   emqx-listeners   NodePort   10.106.1.58      <none>        1883:32010/TCP,1884:30763/TCP                   12m

@@ -6,7 +6,7 @@
 
 在部署 EMQX Operator 之前，请确认以下组件已经准备就绪：
 
-- 一个正在运行的 [Kubernetes 集群](https://kubernetes.io/docs/concepts/overview/)，关于 Kubernetes 的版本，请查看[如何选择 Kubernetes 版本](../README.md)
+- 一个正在运行的 [Kubernetes 集群](https://kubernetes.io/docs/concepts/overview/)，关于 Kubernetes 的版本，请查看[如何选择 Kubernetes 版本](../index.md)
 
 - 一个可以访问 Kubernetes 集群的 [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) 工具。您可以使用 `kubectl cluster-info` 命令检查 Kubernetes 集群的状态。
 
@@ -47,7 +47,7 @@
 
    ```bash
    $ kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
-
+   
    pod/emqx-operator-controller-manager-57bd7b8bd4-h2mcr condition met
    ```
 
@@ -88,7 +88,7 @@
 
    ```bash
    $ kubectl get emqxenterprises
-
+   
    NAME      STATUS   AGE
    emqx-ee   Running  8m33s
    ```
@@ -125,7 +125,7 @@
 
    ```bash
    $ kubectl get emqxbrokers
-
+   
    NAME   STATUS   AGE
    emqx   Running  8m33s
    ```

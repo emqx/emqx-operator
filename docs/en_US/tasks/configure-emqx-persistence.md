@@ -7,7 +7,7 @@
 
 ## Configure EMQX Cluster Persistence
 
-The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
@@ -59,7 +59,7 @@ When the user configures the `.spec.persistent` field, EMQX Operator will mount 
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
@@ -114,7 +114,7 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
 
   ```bash
   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
 
@@ -175,7 +175,7 @@ Verification scheme: 1) Passed in the old EMQX Dashboard creates a test rule; 2)
 
   ```bash
   $ kubectl apply -f emqx.yaml
-
+  
   emqx.apps.emqx.io/emqx created
   # emqxenterprise.apps.emqx.io/emqx created
   ```

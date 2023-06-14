@@ -6,7 +6,7 @@
 
 ## 配置 EMQX 集群
 
-下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../README.md):
+下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考 [EMQX Operator 兼容性](../index.md):
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
@@ -46,7 +46,7 @@
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
   通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
@@ -90,7 +90,7 @@
 
   ```bash
   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
 
@@ -121,7 +121,7 @@
 
   ```bash
   $ mqttx conn -h ${external_ip} -p 1883
-
+  
   [4/17/2023] [5:17:31 PM] › …  Connecting...
   [4/17/2023] [5:17:31 PM] › ✔  Connected
   ```
@@ -150,7 +150,7 @@
 
   ```bash
   kubectl get svc
-
+  
   NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                                         AGE
   emqx-dashboard   NodePort   10.105.110.235   <none>        18083:32012/TCP                                 13m
   emqx-listeners   NodePort   10.106.1.58      <none>        1883:32010/TCP,1884:30763/TCP                   12m

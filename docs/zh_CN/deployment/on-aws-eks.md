@@ -16,7 +16,7 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
 
 ## 快速部署一个 EMQX 集群
 
-下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考 [EMQX 与 EMQX Operator 的兼容性列表](../README.md)
+下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考 [EMQX 与 EMQX Operator 的兼容性列表](../index.md)
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
@@ -83,7 +83,7 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
 
@@ -163,7 +163,7 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
 
   ```bash
   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-
+  
   192.168.1.200
   ```
 
