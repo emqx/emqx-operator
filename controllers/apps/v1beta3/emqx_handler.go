@@ -157,11 +157,13 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		serviceTemplate := instance.GetServiceTemplate()
 		serviceTemplate.MergePorts(r.getListenerPortsByAPI(instance))
 		instance.SetServiceTemplate(serviceTemplate)
+		svc := generateSvc(instance)
+		resources = append(resources, svc)
 	}
 
-	headlessSvc, svc := generateSvc(instance)
+	headlessSvc := generateHeadlessSvc(instance)
 	sts.Spec.ServiceName = headlessSvc.Name
-	resources = append(resources, headlessSvc, svc)
+	resources = append(resources, headlessSvc)
 
 	resources = append(resources, sts)
 
@@ -491,20 +493,10 @@ func generateDefaultPluginsConfig(instance appsv1beta3.Emqx) *corev1.ConfigMap {
 	return cm
 }
 
-func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
+func generateHeadlessSvc(instance appsv1beta3.Emqx) *corev1.Service {
 	names := appsv1beta3.Names{Object: instance}
-	serviceTemplate := instance.GetServiceTemplate()
 
-	svc = &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: serviceTemplate.ObjectMeta,
-		Spec:       serviceTemplate.Spec,
-	}
-
-	headlessSvc = &corev1.Service{
+	headlessSvc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Service",
@@ -522,7 +514,7 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 	}
 
 	compile := regexp.MustCompile(".*management.*")
-	for _, port := range svc.Spec.Ports {
+	for _, port := range instance.GetServiceTemplate().Spec.Ports {
 		if compile.MatchString(port.Name) {
 			// Headless services must not set nodePort
 			headlessSvc.Spec.Ports = append(headlessSvc.Spec.Ports, corev1.ServicePort{
@@ -534,8 +526,18 @@ func generateSvc(instance appsv1beta3.Emqx) (headlessSvc, svc *corev1.Service) {
 			})
 		}
 	}
+	return headlessSvc
+}
 
-	return headlessSvc, svc
+func generateSvc(instance appsv1beta3.Emqx) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: instance.GetServiceTemplate().ObjectMeta,
+		Spec:       instance.GetServiceTemplate().Spec,
+	}
 }
 
 func generateAcl(instance appsv1beta3.Emqx) *corev1.ConfigMap {
