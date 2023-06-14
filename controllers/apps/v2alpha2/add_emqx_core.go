@@ -93,7 +93,7 @@ func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 							},
 						},
 						{
-							Name:  "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE",
+							Name:  "EMQX_API_KEY__BOOTSTRAP_FILE",
 							Value: `"/opt/emqx/data/bootstrap_user"`,
 						},
 					}, instance.Spec.CoreTemplate.Spec.Env...),

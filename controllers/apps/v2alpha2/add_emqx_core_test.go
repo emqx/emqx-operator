@@ -204,7 +204,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 				},
 			},
 			{
-				Name:  "EMQX_DASHBOARD__BOOTSTRAP_USERS_FILE",
+				Name:  "EMQX_API_KEY__BOOTSTRAP_FILE",
 				Value: `"/opt/emqx/data/bootstrap_user"`,
 			},
 			{
