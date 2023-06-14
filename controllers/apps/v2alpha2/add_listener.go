@@ -170,7 +170,7 @@ func getAllListenersByAPI(r innerReq.RequesterInterface) ([]corev1.ServicePort, 
 
 	for _, gateway := range gateways {
 		if strings.ToLower(gateway.Status) == "running" {
-			apiPath := fmt.Sprintf("api/v5/gateway/%s/listeners", gateway.Name)
+			apiPath := fmt.Sprintf("api/v5/gateways/%s/listeners", gateway.Name)
 			gatewayPorts, err := getListenerPortsByAPI(r, apiPath)
 			if err != nil {
 				return nil, err
@@ -183,16 +183,16 @@ func getAllListenersByAPI(r innerReq.RequesterInterface) ([]corev1.ServicePort, 
 }
 
 func getGatewaysByAPI(r innerReq.RequesterInterface) ([]emqxGateway, error) {
-	resp, body, err := r.Request("GET", "api/v5/gateway", nil)
+	resp, body, err := r.Request("GET", "api/v5/gateways", nil)
 	if err != nil {
-		return nil, emperror.Wrap(err, "failed to get API api/v5/gateway")
+		return nil, emperror.Wrap(err, "failed to get API api/v5/gateways")
 	}
 	if resp.StatusCode != 200 {
-		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/gateway", resp.Status, body)
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/gateways", resp.Status, body)
 	}
 	gateway := []emqxGateway{}
 	if err := json.Unmarshal(body, &gateway); err != nil {
-		return nil, emperror.Wrap(err, "failed to parse gateway")
+		return nil, emperror.Wrap(err, "failed to parse gateways")
 	}
 	return gateway, nil
 }
