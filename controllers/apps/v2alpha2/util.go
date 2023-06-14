@@ -2,12 +2,18 @@ package v2alpha2
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
+	"hash"
+	"hash/fnv"
 	"sort"
 
+	"github.com/davecgh/go-spew/spew"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -24,7 +30,7 @@ func getPodMap(ctx context.Context, client client.Client, opts ...client.ListOpt
 		rsMap[rs.UID] = []*corev1.Pod{}
 	}
 	for _, p := range podList.Items {
-		// Do not ignore inactive Pods because Recreate Deployments need to verify that no
+		// Do not ignore inactive Pods because Recreate replicaSets need to verify that no
 		// Pods from older versions are running before spinning up new Pods.
 		pod := p.DeepCopy()
 		controllerRef := metav1.GetControllerOf(pod)
@@ -36,30 +42,13 @@ func getPodMap(ctx context.Context, client client.Client, opts ...client.ListOpt
 			rsMap[controllerRef.UID] = append(rsMap[controllerRef.UID], pod)
 		}
 	}
-
-	dList := getDeploymentList(ctx, client, opts...)
-	dMap := make(map[types.UID][]*corev1.Pod, len(dList))
-	for _, d := range dList {
-		dMap[d.UID] = []*corev1.Pod{}
-	}
-	for _, rs := range replicaSetList.Items {
-		controllerRef := metav1.GetControllerOf(rs.DeepCopy())
-		if controllerRef == nil {
-			continue
-		}
-		// Only append if we care about this UID.
-		if _, ok := dMap[controllerRef.UID]; ok {
-			dMap[controllerRef.UID] = rsMap[rs.UID]
-		}
-	}
-
-	return dMap
+	return rsMap
 }
 
-func getDeploymentList(ctx context.Context, client client.Client, opts ...client.ListOption) []*appsv1.Deployment {
-	deploymentList := &appsv1.DeploymentList{}
-	_ = client.List(ctx, deploymentList, opts...)
-	return handlerDeploymentList(deploymentList)
+func getReplicaSetList(ctx context.Context, client client.Client, opts ...client.ListOption) []*appsv1.ReplicaSet {
+	list := &appsv1.ReplicaSetList{}
+	_ = client.List(ctx, list, opts...)
+	return handlerReplicaSetList(list)
 }
 
 func getEventList(ctx context.Context, clientSet *kubernetes.Clientset, obj client.Object) []*corev1.Event {
@@ -70,21 +59,21 @@ func getEventList(ctx context.Context, clientSet *kubernetes.Clientset, obj clie
 	return handlerEventList(eventList)
 }
 
-func handlerDeploymentList(list *appsv1.DeploymentList) []*appsv1.Deployment {
-	dList := []*appsv1.Deployment{}
-	for _, d := range list.Items {
-		if d.Status.Replicas != 0 && d.Status.ReadyReplicas == d.Status.Replicas {
-			dList = append(dList, d.DeepCopy())
+func handlerReplicaSetList(list *appsv1.ReplicaSetList) []*appsv1.ReplicaSet {
+	rsList := []*appsv1.ReplicaSet{}
+	for _, rs := range list.Items {
+		if rs.Status.Replicas != 0 && rs.Status.ReadyReplicas == rs.Status.Replicas {
+			rsList = append(rsList, rs.DeepCopy())
 		}
 	}
-	sort.Sort(DeploymentsByCreationTimestamp(dList))
-	return dList
+	sort.Sort(ReplicaSetsByCreationTimestamp(rsList))
+	return rsList
 }
 
 func handlerEventList(list *corev1.EventList) []*corev1.Event {
 	eList := []*corev1.Event{}
 	for _, e := range list.Items {
-		if e.Reason == "ScalingReplicaSet" {
+		if e.Reason == "SuccessfulDelete" {
 			eList = append(eList, e.DeepCopy())
 		}
 	}
@@ -92,12 +81,12 @@ func handlerEventList(list *corev1.EventList) []*corev1.Event {
 	return eList
 }
 
-// DeploymentsByCreationTimestamp sorts a list of Deployment by creation timestamp, using their names as a tie breaker.
-type DeploymentsByCreationTimestamp []*appsv1.Deployment
+// ReplicaSetsByCreationTimestamp sorts a list of ReplicaSet by creation timestamp, using their names as a tie breaker.
+type ReplicaSetsByCreationTimestamp []*appsv1.ReplicaSet
 
-func (o DeploymentsByCreationTimestamp) Len() int      { return len(o) }
-func (o DeploymentsByCreationTimestamp) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
-func (o DeploymentsByCreationTimestamp) Less(i, j int) bool {
+func (o ReplicaSetsByCreationTimestamp) Len() int      { return len(o) }
+func (o ReplicaSetsByCreationTimestamp) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o ReplicaSetsByCreationTimestamp) Less(i, j int) bool {
 	if o[i].CreationTimestamp.Equal(&o[j].CreationTimestamp) {
 		return o[i].Name < o[j].Name
 	}
@@ -114,4 +103,51 @@ func (o EventsByLastTimestamp) Less(i, j int) bool {
 		return o[i].CreationTimestamp.Second() < o[j].CreationTimestamp.Second()
 	}
 	return o[i].LastTimestamp.Before(&o[j].LastTimestamp)
+}
+
+// Clones the given map and returns a new map with the given key and value added.
+// Returns the given map, if labelKey is empty.
+func cloneAndAddLabel(labels map[string]string, labelKey, labelValue string) map[string]string {
+	if labelKey == "" {
+		// Don't need to add a label.
+		return labels
+	}
+	// Clone.
+	newLabels := map[string]string{}
+	for key, value := range labels {
+		newLabels[key] = value
+	}
+	newLabels[labelKey] = labelValue
+	return newLabels
+}
+
+// ComputeHash returns a hash value calculated from pod template and
+// a collisionCount to avoid hash collision. The hash will be safe encoded to
+// avoid bad words.
+func computeHash(template *corev1.PodTemplateSpec, collisionCount *int32) string {
+	templateSpecHasher := fnv.New32a()
+	deepHashObject(templateSpecHasher, *template)
+
+	// Add collisionCount in the hash if it exists.
+	if collisionCount != nil {
+		collisionCountBytes := make([]byte, 8)
+		binary.LittleEndian.PutUint32(collisionCountBytes, uint32(*collisionCount))
+		templateSpecHasher.Write(collisionCountBytes)
+	}
+
+	return rand.SafeEncodeString(fmt.Sprint(templateSpecHasher.Sum32()))
+}
+
+// DeepHashObject writes specified object to hash using the spew library
+// which follows pointers and prints actual values of the nested objects
+// ensuring the hash does not change when a pointer changes.
+func deepHashObject(hasher hash.Hash, objectToWrite interface{}) {
+	hasher.Reset()
+	printer := spew.ConfigState{
+		Indent:         " ",
+		SortKeys:       true,
+		DisableMethods: true,
+		SpewKeys:       true,
+	}
+	printer.Fprintf(hasher, "%#v", objectToWrite)
 }

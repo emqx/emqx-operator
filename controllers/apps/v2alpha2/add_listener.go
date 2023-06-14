@@ -52,20 +52,20 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX
 }
 
 func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha2.EMQX) []*corev1.Pod {
-	dList := getDeploymentList(ctx, a.Client,
+	rsList := getReplicaSetList(ctx, a.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
-	if len(dList) == 0 {
+	if len(rsList) == 0 {
 		return nil
 	}
-	currentDeployment := dList[len(dList)-1]
+	currentRs := rsList[len(rsList)-1]
 
 	podMap := getPodMap(ctx, a.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
-	return podMap[currentDeployment.UID]
+	return podMap[currentRs.UID]
 }
 
 func (a *addListener) getServicePorts(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) []corev1.ServicePort {
