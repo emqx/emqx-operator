@@ -594,6 +594,79 @@ func TestUpdateDefaultPluginsConfigForSts(t *testing.T) {
 	assert.Equal(t, expectSts, sts)
 }
 
+func TestGenerateHeadlessSvc(t *testing.T) {
+	broker := &appsv1beta3.EmqxBroker{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"apps.emqx.io/test": "fake",
+			},
+		},
+		Spec: appsv1beta3.EmqxBrokerSpec{
+			EmqxTemplate: appsv1beta3.EmqxBrokerTemplate{
+				ServiceTemplate: appsv1beta3.ServiceTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake",
+						Namespace: "fake",
+						Labels: map[string]string{
+							"foo": "bar",
+						},
+						Annotations: map[string]string{
+							"foo": "bar",
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "mqtt-tcp-1883",
+								Port:       1883,
+								Protocol:   corev1.ProtocolTCP,
+								TargetPort: intstr.FromInt(1883),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	broker.Default()
+
+	expectHeadlessSvc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx-headless",
+			Namespace: "default",
+			Labels: map[string]string{
+				"apps.emqx.io/instance":   "emqx",
+				"apps.emqx.io/managed-by": "emqx-operator",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"apps.emqx.io/instance":   "emqx",
+				"apps.emqx.io/managed-by": "emqx-operator",
+			},
+			ClusterIP:                corev1.ClusterIPNone,
+			PublishNotReadyAddresses: true,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http-management-8081",
+					Port:       8081,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8081),
+				},
+			},
+		},
+	}
+
+	headlessSvc := generateHeadlessSvc(broker)
+	assert.Equal(t, expectHeadlessSvc, headlessSvc)
+}
+
 func TestGenerateSvc(t *testing.T) {
 	broker := &appsv1beta3.EmqxBroker{
 		ObjectMeta: metav1.ObjectMeta{
@@ -672,39 +745,7 @@ func TestGenerateSvc(t *testing.T) {
 		},
 	}
 
-	expectHeadlessSvc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-headless",
-			Namespace: "default",
-			Labels: map[string]string{
-				"apps.emqx.io/instance":   "emqx",
-				"apps.emqx.io/managed-by": "emqx-operator",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"apps.emqx.io/instance":   "emqx",
-				"apps.emqx.io/managed-by": "emqx-operator",
-			},
-			ClusterIP:                corev1.ClusterIPNone,
-			PublishNotReadyAddresses: true,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http-management-8081",
-					Port:       8081,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(8081),
-				},
-			},
-		},
-	}
-
-	headlessSvc, svc := generateSvc(broker)
-	assert.Equal(t, expectHeadlessSvc, headlessSvc)
+	svc := generateSvc(broker)
 	assert.Equal(t, expectSvc, svc)
 }
 
