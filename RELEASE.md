@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.7-ecp.1 is released.
+EMQX Operator 1.2.7-ecp.2 is released.
 
 ### Supported EMQX version
 
@@ -8,6 +8,6 @@ EMQX Operator 1.2.7-ecp.1 is released.
 
 - EMQX Enterprise 4.4.8 and later
 
-### Features 🌈
+### Fixes 🛠
 
-- Add a new field `.spec`.emqxTemplate.reloaderImage` to specify the reloader image
+- Fixed the bug where the service port disappears when a node in the EMQX cluster crashes.
