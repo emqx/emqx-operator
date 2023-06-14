@@ -79,18 +79,18 @@ var _ = Describe("Base Test", func() {
 		})
 
 		It("Check Direct Update", func() {
-			By("Checking just once deployment", func() {
-				var deployments *appsv1.DeploymentList
+			By("Checking just once replicaSet", func() {
+				var replicaSets *appsv1.ReplicaSetList
 				Eventually(func() int {
-					deployments = &appsv1.DeploymentList{}
-					_ = k8sClient.List(context.TODO(), deployments,
+					replicaSets = &appsv1.ReplicaSetList{}
+					_ = k8sClient.List(context.TODO(), replicaSets,
 						client.InNamespace(instance.Namespace),
 						client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 					)
-					return len(deployments.Items)
+					return len(replicaSets.Items)
 				}, timeout, interval).Should(Equal(1))
 
-				Expect(deployments.Items[0].Status.Replicas).Should(Equal(instance.Status.ReplicantNodeStatus.Replicas))
+				Expect(replicaSets.Items[0].Status.Replicas).Should(Equal(instance.Status.ReplicantNodeStatus.Replicas))
 			})
 
 			By("Checking the EMQX Custom Resource's Pod and EndpointSlice", func() {
@@ -128,22 +128,22 @@ var _ = Describe("Base Test", func() {
 				}, timeout, interval).Should(Equal(currentImage))
 			})
 
-			By("Checking deployment list", func() {
-				var dList []*appsv1.Deployment
+			By("Checking replicaSet list", func() {
+				var dList []*appsv1.ReplicaSet
 				Eventually(func() int {
-					deployments := &appsv1.DeploymentList{}
-					_ = k8sClient.List(context.TODO(), deployments,
+					replicaSets := &appsv1.ReplicaSetList{}
+					_ = k8sClient.List(context.TODO(), replicaSets,
 						client.InNamespace(instance.Namespace),
 						client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 					)
-					dList = []*appsv1.Deployment{}
-					for _, d := range deployments.Items {
+					dList = []*appsv1.ReplicaSet{}
+					for _, d := range replicaSets.Items {
 						dList = append(dList, d.DeepCopy())
 					}
 					return len(dList)
 				}, timeout, interval).Should(Equal(2))
 
-				sort.Sort(appscontrollersv2alpha2.DeploymentsByCreationTimestamp(dList))
+				sort.Sort(appscontrollersv2alpha2.ReplicaSetsByCreationTimestamp(dList))
 
 				old := dList[0].DeepCopy()
 				Expect(old.Spec.Template.Spec.Containers[0].Image).Should(Equal(emqx.DeepCopy().Spec.Image))

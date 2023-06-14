@@ -23,7 +23,7 @@ import (
 )
 
 type status interface {
-	nextStatus(*appsv1.StatefulSet, *appsv1.Deployment)
+	nextStatus(*appsv1.StatefulSet, *appsv1.ReplicaSet)
 }
 
 type emqxStatusMachine struct {
@@ -108,8 +108,8 @@ func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha2.EMQXNode) {
 	}
 }
 
-func (s *emqxStatusMachine) NextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
-	s.currentStatus.nextStatus(existedSts, existedDeploy)
+func (s *emqxStatusMachine) NextStatus(existedSts *appsv1.StatefulSet, existedRs *appsv1.ReplicaSet) {
+	s.currentStatus.nextStatus(existedSts, existedRs)
 }
 
 func (s *emqxStatusMachine) GetEMQX() *appsv2alpha2.EMQX {
@@ -120,7 +120,7 @@ type initStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *initStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
+func (s *initStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.ReplicaSet) {
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
 		Type:    appsv2alpha2.Initialized,
 		Status:  metav1.ConditionTrue,
@@ -134,7 +134,7 @@ type initializedStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *initializedStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.Deployment) {
+func (s *initializedStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.ReplicaSet) {
 	s.emqxStatusMachine.emqx.Status.CurrentImage = s.emqxStatusMachine.emqx.Spec.Image
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
 		Type:    appsv2alpha2.CoreNodesProgressing,
@@ -152,9 +152,9 @@ type coreNodesProgressingStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *coreNodesProgressingStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
+func (s *coreNodesProgressingStatus) nextStatus(existedSts *appsv1.StatefulSet, existedRs *appsv1.ReplicaSet) {
 	if s.emqxStatusMachine.emqx.Status.CurrentImage != s.emqxStatusMachine.emqx.Spec.Image {
-		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedDeploy)
+		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedRs)
 		return
 	}
 
@@ -190,9 +190,9 @@ type codeNodesReadyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
+func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedRs *appsv1.ReplicaSet) {
 	if s.emqxStatusMachine.emqx.Status.CurrentImage != s.emqxStatusMachine.emqx.Spec.Image {
-		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedDeploy)
+		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedRs)
 		return
 	}
 
@@ -205,11 +205,10 @@ func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existe
 		return
 	}
 
-	// deployment is ready
-	if existedDeploy.UID == "" ||
-		existedDeploy.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
-		existedDeploy.Status.UpdatedReplicas != existedDeploy.Status.Replicas ||
-		existedDeploy.Status.ReadyReplicas != existedDeploy.Status.Replicas {
+	// replicaSet is ready
+	if existedRs.UID == "" ||
+		existedRs.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
+		existedRs.Status.ReadyReplicas != existedRs.Status.Replicas {
 		return
 	}
 
@@ -232,9 +231,9 @@ type readyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *readyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedDeploy *appsv1.Deployment) {
+func (s *readyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedRs *appsv1.ReplicaSet) {
 	if s.emqxStatusMachine.emqx.Status.CurrentImage != s.emqxStatusMachine.emqx.Spec.Image {
-		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedDeploy)
+		s.emqxStatusMachine.initialized.nextStatus(existedSts, existedRs)
 		return
 	}
 

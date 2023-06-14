@@ -22,7 +22,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	var err error
 	var emqxNodes []appsv2alpha2.EMQXNode
 	var existedSts *appsv1.StatefulSet = &appsv1.StatefulSet{}
-	var existedDeploy *appsv1.Deployment = &appsv1.Deployment{}
+	var existedRs *appsv1.ReplicaSet = &appsv1.ReplicaSet{}
 
 	if r != nil {
 		if emqxNodes, err = getNodeStatuesByAPI(r); err != nil {
@@ -36,17 +36,17 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		}
 	}
 
-	dList := getDeploymentList(ctx, u.Client,
+	rsList := getReplicaSetList(ctx, u.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
-	if len(dList) > 0 {
-		existedDeploy = dList[len(dList)-1]
+	if len(rsList) > 0 {
+		existedRs = rsList[len(rsList)-1]
 	}
 
 	emqxStatusMachine := newEMQXStatusMachine(instance)
 	emqxStatusMachine.UpdateNodeCount(emqxNodes)
-	emqxStatusMachine.NextStatus(existedSts, existedDeploy)
+	emqxStatusMachine.NextStatus(existedSts, existedRs)
 	emqxStatusMachine.GetEMQX()
 
 	if err := u.Client.Status().Update(ctx, instance); err != nil {
