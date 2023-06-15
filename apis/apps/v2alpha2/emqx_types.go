@@ -54,8 +54,8 @@ type EMQXReplicantTemplateSpec struct {
 	// Replicas is the desired number of replicas of the given Template.
 	// These are replicas in the sense that they are instantiations of the
 	// same Template, but individual replicas also have a consistent identity.
-	// Defaults to 2 if EMQX core node, or 3 if EMQX replicant node.
-	//+kubebuilder:validation:Minimum=2
+	// Defaults to 3.
+	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Entrypoint array. Not executed within a shell.
 	// The container image's ENTRYPOINT is used if this is not provided.
@@ -231,7 +231,7 @@ type EMQXSpec struct {
 	// CoreTemplate is the object that describes the EMQX core node that will be created
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
-	ReplicantTemplate EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
+	ReplicantTemplate *EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
 	// DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
 	// This service always selector the EMQX core node
 }

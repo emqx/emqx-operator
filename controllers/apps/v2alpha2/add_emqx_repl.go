@@ -100,7 +100,7 @@ func (a *addRepl) generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.Replic
 		*instance.Status.ReplicantNodeStatus.CollisionCount++
 	}
 
-	podTemplate.Labels = cloneAndAddLabel(podTemplate.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+	podTemplate.Labels = appsv2alpha2.CloneAndAddLabel(podTemplate.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
 	rs := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        rsName,

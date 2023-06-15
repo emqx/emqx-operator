@@ -9350,8 +9350,8 @@ spec:
                               type: integer
                           type: object
                         replicas:
+                          default: 3
                           format: int32
-                          minimum: 2
                           type: integer
                         resources:
                           properties:
@@ -12753,8 +12753,8 @@ spec:
                               type: integer
                           type: object
                         replicas:
+                          default: 3
                           format: int32
-                          minimum: 2
                           type: integer
                         resources:
                           properties:

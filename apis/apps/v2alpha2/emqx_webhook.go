@@ -54,7 +54,6 @@ func (r *EMQX) Default() {
 	r.defaultLabels()
 	r.defaultAnnotations()
 	r.defaultBootstrapConfig()
-	r.defaultReplicas()
 	r.defaultDashboardServiceTemplate()
 	r.defaultProbe()
 	r.defaultSecurityContext()
@@ -69,6 +68,12 @@ var _ webhook.Validator = &EMQX{}
 func (r *EMQX) ValidateCreate() error {
 	emqxlog.Info("validate create", "name", r.Name)
 
+	if *r.Spec.CoreTemplate.Spec.Replicas < 2 {
+		err := emperror.New("the number of EMQX core nodes must be greater than 1")
+		emqxlog.Error(err, "validate create failed")
+		return err
+	}
+
 	if _, err := hocon.ParseString(r.Spec.BootstrapConfig); err != nil {
 		err = emperror.Wrap(err, "failed to parse bootstrap config")
 		emqxlog.Error(err, "validate create failed")
@@ -81,6 +86,12 @@ func (r *EMQX) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 	emqxlog.Info("validate update", "name", r.Name)
+
+	if *r.Spec.CoreTemplate.Spec.Replicas < 2 {
+		err := emperror.New("the number of EMQX core nodes must be greater than 1")
+		emqxlog.Error(err, "validate update failed")
+		return err
+	}
 
 	oldEMQX := old.(*EMQX)
 	if !reflect.DeepEqual(oldEMQX.Spec.BootstrapAPIKeys, r.Spec.BootstrapAPIKeys) {
@@ -103,13 +114,6 @@ func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 		return err
 	}
 
-	if !reflect.DeepEqual(oldEMQX.Spec.ReplicantTemplate.ObjectMeta, r.Spec.ReplicantTemplate.ObjectMeta) ||
-		!reflect.DeepEqual(oldEMQX.Spec.CoreTemplate.ObjectMeta, r.Spec.CoreTemplate.ObjectMeta) {
-		err := emperror.New(".spec.coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
-		emqxlog.Error(err, "validate update failed")
-		return err
-	}
-
 	return nil
 }
 
@@ -126,14 +130,6 @@ func (r *EMQX) defaultNames() {
 		r.Name = "emqx"
 	}
 
-	if r.Spec.CoreTemplate.Name == "" {
-		r.Spec.CoreTemplate.Name = r.CoreNodeNamespacedName().Name
-	}
-
-	if r.Spec.ReplicantTemplate.Name == "" {
-		r.Spec.ReplicantTemplate.Name = r.ReplicantNodeNamespacedName().Name
-	}
-
 	if r.Spec.DashboardServiceTemplate.Name == "" {
 		r.Spec.DashboardServiceTemplate.Name = r.DashboardServiceNamespacedName().Name
 	}
@@ -141,44 +137,42 @@ func (r *EMQX) defaultNames() {
 	if r.Spec.ListenersServiceTemplate.Name == "" {
 		r.Spec.ListenersServiceTemplate.Name = r.ListenersServiceNamespacedName().Name
 	}
+
+	if r.Spec.CoreTemplate.Name == "" {
+		r.Spec.CoreTemplate.Name = r.CoreNodeNamespacedName().Name
+	}
+
+	if r.Spec.ReplicantTemplate != nil {
+		if r.Spec.ReplicantTemplate.Name == "" {
+			r.Spec.ReplicantTemplate.Name = r.ReplicantNodeNamespacedName().Name
+		}
+	}
+
 }
 
 func (r *EMQX) defaultLabels() {
-	if r.Labels == nil {
-		r.Labels = make(map[string]string)
-	}
-	r.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Labels["apps.emqx.io/instance"] = r.GetName()
-
-	// Core
-	if r.Spec.CoreTemplate.Labels == nil {
-		r.Spec.CoreTemplate.Labels = make(map[string]string)
-	}
-	r.Spec.CoreTemplate.Labels["apps.emqx.io/instance"] = r.Name
-	r.Spec.CoreTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Spec.CoreTemplate.Labels["apps.emqx.io/db-role"] = "core"
-
-	// Replicant
-	if r.Spec.ReplicantTemplate.Labels == nil {
-		r.Spec.ReplicantTemplate.Labels = make(map[string]string)
-	}
-	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/instance"] = r.Name
-	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
-	r.Spec.ReplicantTemplate.Labels["apps.emqx.io/db-role"] = "replicant"
+	r.Labels = AddLabel(r.Labels, "apps.emqx.io/managed-by", "emqx-operator")
+	r.Labels = AddLabel(r.Labels, "apps.emqx.io/instance", r.GetName())
 
 	// Dashboard service
-	if r.Spec.DashboardServiceTemplate.Labels == nil {
-		r.Spec.DashboardServiceTemplate.Labels = make(map[string]string)
-	}
-	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/instance"] = r.Name
-	r.Spec.DashboardServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
+	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, "apps.emqx.io/managed-by", "emqx-operator")
+	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, "apps.emqx.io/instance", r.GetName())
 
 	// Listeners service
-	if r.Spec.ListenersServiceTemplate.Labels == nil {
-		r.Spec.ListenersServiceTemplate.Labels = make(map[string]string)
+	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, "apps.emqx.io/managed-by", "emqx-operator")
+	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, "apps.emqx.io/instance", r.GetName())
+
+	// Core
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, "apps.emqx.io/managed-by", "emqx-operator")
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, "apps.emqx.io/instance", r.GetName())
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, "apps.emqx.io/db-role", "core")
+
+	// Replicant
+	if r.Spec.ReplicantTemplate != nil {
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, "apps.emqx.io/managed-by", "emqx-operator")
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, "apps.emqx.io/instance", r.GetName())
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, "apps.emqx.io/db-role", "replicant")
 	}
-	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/instance"] = r.Name
-	r.Spec.ListenersServiceTemplate.Labels["apps.emqx.io/managed-by"] = "emqx-operator"
 }
 
 func (r *EMQX) defaultAnnotations() {
@@ -188,10 +182,12 @@ func (r *EMQX) defaultAnnotations() {
 	}
 	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
-	r.Spec.CoreTemplate.Annotations = mergeMap(r.Spec.CoreTemplate.Annotations, annotations)
-	r.Spec.ReplicantTemplate.Annotations = mergeMap(r.Spec.ReplicantTemplate.Annotations, annotations)
 	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
 	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
+	r.Spec.CoreTemplate.Annotations = mergeMap(r.Spec.CoreTemplate.Annotations, annotations)
+	if r.Spec.ReplicantTemplate != nil {
+		r.Spec.ReplicantTemplate.Annotations = mergeMap(r.Spec.ReplicantTemplate.Annotations, annotations)
+	}
 }
 
 func (r *EMQX) defaultBootstrapConfig() {
@@ -228,15 +224,6 @@ func (r *EMQX) defaultBootstrapConfig() {
 	}
 
 	r.Spec.BootstrapConfig = config.String()
-}
-
-func (r *EMQX) defaultReplicas() {
-	if r.Spec.CoreTemplate.Spec.Replicas == nil {
-		r.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
-	}
-	if r.Spec.ReplicantTemplate.Spec.Replicas == nil {
-		r.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(3)
-	}
 }
 
 func (r *EMQX) defaultDashboardServiceTemplate() {
@@ -300,34 +287,31 @@ func (r *EMQX) defaultProbe() {
 		r.Spec.CoreTemplate.Spec.LivenessProbe = defaultLivenessProbe
 	}
 
-	if r.Spec.ReplicantTemplate.Spec.ReadinessProbe == nil {
-		r.Spec.ReplicantTemplate.Spec.ReadinessProbe = defaultReadinessProbe
-	}
-	if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
-		r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
+	if r.Spec.ReplicantTemplate != nil {
+		if r.Spec.ReplicantTemplate.Spec.ReadinessProbe == nil {
+			r.Spec.ReplicantTemplate.Spec.ReadinessProbe = defaultReadinessProbe
+		}
+		if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
+			r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
+		}
 	}
 }
 
 func (r *EMQX) defaultSecurityContext() {
-	if r.Spec.CoreTemplate.Spec.PodSecurityContext == nil {
-		r.Spec.CoreTemplate.Spec.PodSecurityContext = &corev1.PodSecurityContext{
-			RunAsUser:  pointer.Int64(1000),
-			RunAsGroup: pointer.Int64(1000),
-			FSGroup:    pointer.Int64(1000),
-		}
-
-		r.Spec.CoreTemplate.Spec.PodSecurityContext.FSGroupChangePolicy = (*corev1.PodFSGroupChangePolicy)(pointer.String("Always"))
-		r.Spec.CoreTemplate.Spec.PodSecurityContext.SupplementalGroups = []int64{1000}
+	podSecurityContext := &corev1.PodSecurityContext{
+		RunAsUser:           pointer.Int64(1000),
+		RunAsGroup:          pointer.Int64(1000),
+		FSGroup:             pointer.Int64(1000),
+		FSGroupChangePolicy: (*corev1.PodFSGroupChangePolicy)(pointer.String("Always")),
+		SupplementalGroups:  []int64{1000},
 	}
 
-	if r.Spec.ReplicantTemplate.Spec.PodSecurityContext == nil {
-		r.Spec.ReplicantTemplate.Spec.PodSecurityContext = &corev1.PodSecurityContext{
-			RunAsUser:  pointer.Int64(1000),
-			RunAsGroup: pointer.Int64(1000),
-			FSGroup:    pointer.Int64(1000),
+	if r.Spec.CoreTemplate.Spec.PodSecurityContext == nil {
+		r.Spec.CoreTemplate.Spec.PodSecurityContext = podSecurityContext.DeepCopy()
+	}
+	if r.Spec.ReplicantTemplate != nil {
+		if r.Spec.ReplicantTemplate.Spec.PodSecurityContext == nil {
+			r.Spec.ReplicantTemplate.Spec.PodSecurityContext = podSecurityContext.DeepCopy()
 		}
-
-		r.Spec.ReplicantTemplate.Spec.PodSecurityContext.FSGroupChangePolicy = (*corev1.PodFSGroupChangePolicy)(pointer.String("Always"))
-		r.Spec.ReplicantTemplate.Spec.PodSecurityContext.SupplementalGroups = []int64{1000}
 	}
 }

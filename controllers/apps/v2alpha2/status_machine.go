@@ -205,11 +205,13 @@ func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existe
 		return
 	}
 
-	// replicaSet is ready
-	if existedRs.UID == "" ||
-		existedRs.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
-		existedRs.Status.ReadyReplicas != existedRs.Status.Replicas {
-		return
+	if isExistReplicant(s.emqxStatusMachine.emqx) {
+		// replicaSet is ready
+		if existedRs.UID == "" ||
+			existedRs.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
+			existedRs.Status.ReadyReplicas != existedRs.Status.Replicas {
+			return
+		}
 	}
 
 	// emqx nodes is ready

@@ -20,7 +20,7 @@ import (
 )
 
 func isExistReplicant(instance *appsv2alpha2.EMQX) bool {
-	return instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
+	return instance.Spec.ReplicantTemplate != nil && instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
 }
 
 func getPodMap(ctx context.Context, client client.Client, opts ...client.ListOption) map[types.UID][]*corev1.Pod {
@@ -108,22 +108,6 @@ func (o EventsByLastTimestamp) Less(i, j int) bool {
 		return o[i].CreationTimestamp.Second() < o[j].CreationTimestamp.Second()
 	}
 	return o[i].LastTimestamp.Before(&o[j].LastTimestamp)
-}
-
-// Clones the given map and returns a new map with the given key and value added.
-// Returns the given map, if labelKey is empty.
-func cloneAndAddLabel(labels map[string]string, labelKey, labelValue string) map[string]string {
-	if labelKey == "" {
-		// Don't need to add a label.
-		return labels
-	}
-	// Clone.
-	newLabels := map[string]string{}
-	for key, value := range labels {
-		newLabels[key] = value
-	}
-	newLabels[labelKey] = labelValue
-	return newLabels
 }
 
 // ComputeHash returns a hash value calculated from pod template and
