@@ -12918,6 +12918,26 @@ spec:
                     currentVersion:
                       format: int32
                       type: integer
+                    nodes:
+                      items:
+                        properties:
+                          edition:
+                            type: string
+                          node:
+                            type: string
+                          node_status:
+                            type: string
+                          otp_release:
+                            type: string
+                          role:
+                            type: string
+                          uptime:
+                            format: int64
+                            type: integer
+                          version:
+                            type: string
+                        type: object
+                      type: array
                     readyReplicas:
                       format: int32
                       type: integer
@@ -12927,29 +12947,6 @@ spec:
                   type: object
                 currentImage:
                   type: string
-                emqxNodes:
-                  items:
-                    properties:
-                      connections:
-                        format: int64
-                        type: integer
-                      edition:
-                        type: string
-                      node:
-                        type: string
-                      node_status:
-                        type: string
-                      otp_release:
-                        type: string
-                      role:
-                        type: string
-                      uptime:
-                        format: int64
-                        type: integer
-                      version:
-                        type: string
-                    type: object
-                  type: array
                 replicantNodeStatus:
                   properties:
                     collisionCount:
@@ -12958,6 +12955,26 @@ spec:
                     currentVersion:
                       format: int32
                       type: integer
+                    nodes:
+                      items:
+                        properties:
+                          edition:
+                            type: string
+                          node:
+                            type: string
+                          node_status:
+                            type: string
+                          otp_release:
+                            type: string
+                          role:
+                            type: string
+                          uptime:
+                            format: int64
+                            type: integer
+                          version:
+                            type: string
+                        type: object
+                      type: array
                     readyReplicas:
                       format: int32
                       type: integer

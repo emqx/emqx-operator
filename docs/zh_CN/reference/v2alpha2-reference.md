@@ -135,7 +135,7 @@ EMQXList contains a list of EMQX
 
 
 _Appears in:_
-- [EMQXStatus](#emqxstatus)
+- [EMQXNodesStatus](#emqxnodesstatus)
 
 | Field | Description |
 | --- | --- |
@@ -146,7 +146,6 @@ _Appears in:_
 | `role` _string_ | EMQX cluster node role, enum: "core" "replicant" |
 | `edition` _string_ | EMQX cluster node edition, enum: "Opensource" "Enterprise" |
 | `uptime` _integer_ | EMQX node uptime, milliseconds |
-| `connections` _integer_ | MQTT connection count |
 
 
 #### EMQXNodesStatus
@@ -160,6 +159,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
+| `nodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
 | `replicas` _integer_ |  |
 | `readyReplicas` _integer_ |  |
 | `currentVersion` _integer_ |  |
@@ -251,7 +251,6 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `currentImage` _string_ | CurrentImage, indicates the image of the EMQX used to generate Pods in the |
-| `emqxNodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
 | `coreNodeStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
 | `replicantNodeStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |

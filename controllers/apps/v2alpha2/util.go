@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/davecgh/go-spew/spew"
+	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +18,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func isExistReplicant(instance *appsv2alpha2.EMQX) bool {
+	return instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
+}
 
 func getPodMap(ctx context.Context, client client.Client, opts ...client.ListOption) map[types.UID][]*corev1.Pod {
 	podList := &corev1.PodList{}

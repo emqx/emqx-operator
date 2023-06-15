@@ -27,8 +27,6 @@ import (
 type EMQXStatus struct {
 	// CurrentImage, indicates the image of the EMQX used to generate Pods in the
 	CurrentImage string `json:"currentImage,omitempty"`
-	// EMQX nodes info
-	EMQXNodes []EMQXNode `json:"emqxNodes,omitempty"`
 	// Represents the latest available observations of a EMQX Custom Resource current state.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
@@ -37,10 +35,12 @@ type EMQXStatus struct {
 }
 
 type EMQXNodesStatus struct {
-	Replicas       int32  `json:"replicas,omitempty"`
-	ReadyReplicas  int32  `json:"readyReplicas,omitempty"`
-	CurrentVersion int32  `json:"currentVersion,omitempty"`
-	CollisionCount *int32 `json:"collisionCount,omitempty"`
+	// EMQX nodes info
+	Nodes          []EMQXNode `json:"nodes,omitempty"`
+	Replicas       int32      `json:"replicas,omitempty"`
+	ReadyReplicas  int32      `json:"readyReplicas,omitempty"`
+	CurrentVersion int32      `json:"currentVersion,omitempty"`
+	CollisionCount *int32     `json:"collisionCount,omitempty"`
 }
 
 type EMQXNode struct {
@@ -58,8 +58,6 @@ type EMQXNode struct {
 	Edition string `json:"edition,omitempty"`
 	// EMQX node uptime, milliseconds
 	Uptime int64 `json:"uptime,omitempty"`
-	// MQTT connection count
-	Connections int64 `json:"connections,omitempty"`
 }
 
 const (
@@ -76,11 +74,23 @@ const (
 	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
 )
 
-func (s *EMQXStatus) SetEMQXNodes(nodes []EMQXNode) {
+func (s *EMQXStatus) SetNodes(nodes []EMQXNode) {
+	var coreNodes, replNodes []EMQXNode = nil, nil
+
 	sort.Slice(nodes, func(i, j int) bool {
 		return nodes[i].Uptime < nodes[j].Uptime
 	})
-	s.EMQXNodes = nodes
+
+	for _, node := range nodes {
+		if node.Role == "core" {
+			coreNodes = append(coreNodes, node)
+		}
+		if node.Role == "replicant" {
+			replNodes = append(replNodes, node)
+		}
+	}
+	s.CoreNodeStatus.Nodes = coreNodes
+	s.ReplicantNodeStatus.Nodes = replNodes
 }
 
 func (s *EMQXStatus) SetCondition(c metav1.Condition) {

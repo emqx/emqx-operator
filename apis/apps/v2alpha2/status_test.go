@@ -24,30 +24,57 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestSetEMQXNodes(t *testing.T) {
+func TestSetNodes(t *testing.T) {
 	status := &EMQXStatus{}
 
 	nodes := []EMQXNode{
 		{
 			Node:   "emqx-0",
+			Role:   "core",
 			Uptime: 10000,
 		},
 		{
 			Node:   "emqx-1",
+			Role:   "core",
+			Uptime: 10,
+		},
+		{
+			Node:   "emqx-2",
+			Role:   "replicant",
+			Uptime: 10000,
+		},
+		{
+			Node:   "emqx-3",
+			Role:   "replicant",
 			Uptime: 10,
 		},
 	}
-	status.SetEMQXNodes(nodes)
+	status.SetNodes(nodes)
+
 	assert.Equal(t, []EMQXNode{
 		{
 			Node:   "emqx-1",
+			Role:   "core",
 			Uptime: 10,
 		},
 		{
 			Node:   "emqx-0",
+			Role:   "core",
 			Uptime: 10000,
 		},
-	}, status.EMQXNodes)
+	}, status.CoreNodeStatus.Nodes)
+	assert.Equal(t, []EMQXNode{
+		{
+			Node:   "emqx-3",
+			Role:   "replicant",
+			Uptime: 10,
+		},
+		{
+			Node:   "emqx-2",
+			Role:   "replicant",
+			Uptime: 10000,
+		},
+	}, status.ReplicantNodeStatus.Nodes)
 }
 
 func TestSetCondition(t *testing.T) {

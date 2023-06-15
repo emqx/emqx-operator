@@ -57,7 +57,11 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 }
 
 func (u *updatePodConditions) checkInCluster(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
-	for _, node := range instance.Status.EMQXNodes {
+	nodes := instance.Status.CoreNodeStatus.Nodes
+	if isExistReplicant(instance) {
+		nodes = instance.Status.ReplicantNodeStatus.Nodes
+	}
+	for _, node := range nodes {
 		if node.Node == "emqx@"+pod.Status.PodIP {
 			if node.Edition == "enterprise" {
 				v, _ := semver.NewVersion(node.Version)
