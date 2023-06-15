@@ -93,7 +93,7 @@ func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha2.EMQXNode) {
 	s.emqx.Status.ReplicantNodeStatus.ReadyReplicas = int32(0)
 
 	if emqxNodes != nil {
-		s.emqx.Status.SetEMQXNodes(emqxNodes)
+		s.emqx.Status.SetNodes(emqxNodes)
 
 		for _, node := range emqxNodes {
 			if node.NodeStatus == "running" {

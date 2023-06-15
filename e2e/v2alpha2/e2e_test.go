@@ -360,12 +360,13 @@ func checkRunning(instance *appsv2alpha2.EMQX) {
 				HaveField("Type", appsv2alpha2.CoreNodesProgressing),
 				HaveField("Type", appsv2alpha2.Initialized),
 			)),
-			HaveField("EMQXNodes", HaveLen(4)),
 			HaveField("CoreNodeStatus", And(
+				HaveField("Nodes", HaveLen(2)),
 				HaveField("Replicas", Equal(int32(2))),
 				HaveField("ReadyReplicas", Equal(int32(2))),
 			)),
 			HaveField("ReplicantNodeStatus", And(
+				HaveField("Nodes", HaveLen(2)),
 				HaveField("Replicas", Equal(int32(2))),
 				HaveField("ReadyReplicas", Equal(int32(2))),
 			)),
