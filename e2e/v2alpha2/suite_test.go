@@ -125,7 +125,14 @@ func genEMQX() *appsv2alpha2.EMQX {
 			Namespace: "e2e-test-v2alpha2" + "-" + rand.String(5),
 		},
 		Spec: appsv2alpha2.EMQXSpec{
-			ReplicantTemplate: appsv2alpha2.EMQXReplicantTemplate{
+			CoreTemplate: appsv2alpha2.EMQXCoreTemplate{
+				Spec: appsv2alpha2.EMQXCoreTemplateSpec{
+					EMQXReplicantTemplateSpec: appsv2alpha2.EMQXReplicantTemplateSpec{
+						Replicas: pointer.Int32(2),
+					},
+				},
+			},
+			ReplicantTemplate: &appsv2alpha2.EMQXReplicantTemplate{
 				Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
 					Replicas: pointer.Int32(2),
 				},

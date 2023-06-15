@@ -25,15 +25,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 func TestCheckNodeCount(t *testing.T) {
-	replicas := int32(1)
-
 	t.Run("have replicant nodes", func(t *testing.T) {
 		emqx := &appsv2alpha2.EMQX{}
-		emqx.Spec.CoreTemplate.Spec.Replicas = &replicas
-		emqx.Spec.ReplicantTemplate.Spec.Replicas = &replicas
+		emqx.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(1)
+		emqx.Spec.ReplicantTemplate = &appsv2alpha2.EMQXReplicantTemplate{
+			Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
+				Replicas: pointer.Int32(1),
+			},
+		}
 		emqx.Status.Conditions = []metav1.Condition{
 			{Type: appsv2alpha2.Initialized, Status: metav1.ConditionTrue},
 		}

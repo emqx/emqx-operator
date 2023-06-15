@@ -44,6 +44,10 @@ func TestValidateCreate(t *testing.T) {
 			Image: "emqx:latest",
 		},
 	}
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
+	assert.Error(t, instance.ValidateCreate(), "the number of EMQX core nodes must be greater than 1")
+
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
 	assert.Nil(t, instance.ValidateCreate())
 
 	instance.Spec.BootstrapConfig = "fake"
@@ -61,49 +65,42 @@ func TestValidateUpdate(t *testing.T) {
 		},
 		Spec: EMQXSpec{
 			Image:           "emqx:latest",
-			BootstrapConfig: "fake",
+			BootstrapConfig: `{a = 1, b = { c = 2, d = 3}}`,
 		},
 	}
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
+
+	t.Run("should return error if core nodes is less then 2", func(t *testing.T) {
+		new := instance.DeepCopy()
+		new.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
+		assert.Error(t, new.ValidateUpdate(instance), "the number of EMQX core nodes must be greater than 1")
+	})
 
 	t.Run("should return error if bootstrap config is invalid", func(t *testing.T) {
-		old := instance.DeepCopy()
-		instance.Spec.BootstrapConfig = "hello world"
-		assert.Error(t, instance.ValidateUpdate(old), "failed to parse bootstrap config")
+		new := instance.DeepCopy()
+		new.Spec.BootstrapConfig = "hello world"
+		assert.Error(t, new.ValidateUpdate(instance), "failed to parse bootstrap config")
 	})
 
 	t.Run("should return error if bootstrap APIKeys is changed", func(t *testing.T) {
-		old := instance.DeepCopy()
-		instance.Spec.BootstrapAPIKeys = []BootstrapAPIKey{{
+		new := instance.DeepCopy()
+		new.Spec.BootstrapAPIKeys = []BootstrapAPIKey{{
 			Key:    "test",
 			Secret: "test",
 		}}
-		assert.Error(t, instance.ValidateUpdate(old), "bootstrap APIKeys cannot be updated")
+		assert.Error(t, new.ValidateUpdate(instance), "bootstrap APIKeys cannot be updated")
 	})
 
 	t.Run("should return error if bootstrap config is changed", func(t *testing.T) {
-		old := instance.DeepCopy()
-		instance.Spec.BootstrapConfig = "foo = bar"
-		assert.Error(t, instance.ValidateUpdate(old), "bootstrap config cannot be updated")
+		new := instance.DeepCopy()
+		new.Spec.BootstrapConfig = "foo = bar"
+		assert.Error(t, new.ValidateUpdate(instance), "bootstrap config cannot be updated")
 	})
 
 	t.Run("check bootstrap config is map", func(t *testing.T) {
-		old := instance.DeepCopy()
-		old.Spec.BootstrapConfig = `{a = 1, b = { c = 2, d = 3}}`
-
-		instance.Spec.BootstrapConfig = `{b = { d = 3, c = 2 }, a = 1}`
-		assert.Nil(t, instance.ValidateUpdate(old))
-	})
-
-	t.Run("should return error if .spec.coreTemplate.metadata is update", func(t *testing.T) {
-		old := instance.DeepCopy()
-		old.Spec.CoreTemplate.Labels = map[string]string{"foo": "bar"}
-		assert.Error(t, instance.ValidateUpdate(old), "coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
-	})
-
-	t.Run("should return error if .spec.replicant.metadata is update", func(t *testing.T) {
-		old := instance.DeepCopy()
-		old.Spec.ReplicantTemplate.Labels = map[string]string{"foo": "bar"}
-		assert.Error(t, instance.ValidateUpdate(old), "coreTemplate.metadata and .spec.replicantTemplate.metadata cannot be updated")
+		new := instance.DeepCopy()
+		new.Spec.BootstrapConfig = `{b = { d = 3, c = 2 }, a = 1}`
+		assert.Nil(t, new.ValidateUpdate(instance))
 	})
 }
 
@@ -118,6 +115,7 @@ func TestDefaultName(t *testing.T) {
 			Name: "webhook-test",
 		},
 	}
+	instance.Spec.ReplicantTemplate = &EMQXReplicantTemplate{}
 	instance.defaultNames()
 	assert.Equal(t, "webhook-test", instance.Name)
 	assert.Equal(t, "webhook-test-core", instance.Spec.CoreTemplate.Name)
@@ -133,6 +131,7 @@ func TestDefaultLabels(t *testing.T) {
 			Namespace: "default",
 		},
 	}
+	instance.Spec.ReplicantTemplate = &EMQXReplicantTemplate{}
 	instance.defaultLabels()
 
 	assert.Equal(t, map[string]string{
@@ -251,13 +250,6 @@ func TestDefaultBootstrapConfig(t *testing.T) {
 	})
 }
 
-func TestDefaultReplicas(t *testing.T) {
-	instance := &EMQX{}
-	instance.defaultReplicas()
-	assert.Equal(t, int32(2), *instance.Spec.CoreTemplate.Spec.Replicas)
-	assert.Equal(t, int32(3), *instance.Spec.ReplicantTemplate.Spec.Replicas)
-}
-
 func TestDefaultDashboardServiceTemplate(t *testing.T) {
 	t.Run("failed to get dashboard listeners", func(t *testing.T) {
 		instance := &EMQX{}
@@ -373,20 +365,6 @@ func TestDefaultAnnotations(t *testing.T) {
 			},
 		},
 		Spec: EMQXSpec{
-			CoreTemplate: EMQXCoreTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"core": "test",
-					},
-				},
-			},
-			ReplicantTemplate: EMQXReplicantTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"replicant": "test",
-					},
-				},
-			},
 			DashboardServiceTemplate: corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -398,6 +376,20 @@ func TestDefaultAnnotations(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						"listeners": "test",
+					},
+				},
+			},
+			CoreTemplate: EMQXCoreTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"core": "test",
+					},
+				},
+			},
+			ReplicantTemplate: &EMQXReplicantTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"replicant": "test",
 					},
 				},
 			},
@@ -428,6 +420,9 @@ func TestDefaultSecurityContext(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "webhook-test",
 			Namespace: "default",
+		},
+		Spec: EMQXSpec{
+			ReplicantTemplate: &EMQXReplicantTemplate{},
 		},
 	}
 	instance.defaultSecurityContext()
