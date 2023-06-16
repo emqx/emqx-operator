@@ -86,7 +86,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
   198.18.3.10
   ```
 
@@ -159,11 +159,11 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
 
   ```bash
   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
   198.18.3.10
-  
+
   通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
-  
+
   ```
   :::
   ::::

@@ -84,7 +84,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
   192.168.1.200
   ```
 
@@ -164,7 +164,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
 
   ```bash
   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
   192.168.1.200
   ```
 

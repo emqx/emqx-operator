@@ -71,7 +71,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
   198.18.3.10
   ```
 
@@ -136,7 +136,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
   ```bash
   $ external_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
   $ echo $external_ip
-  
+
   198.18.3.10
   ```
 

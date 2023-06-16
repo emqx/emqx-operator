@@ -47,7 +47,7 @@
 
    ```bash
    $ kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
-   
+
    pod/emqx-operator-controller-manager-57bd7b8bd4-h2mcr condition met
    ```
 
@@ -88,7 +88,7 @@
 
    ```bash
    $ kubectl get emqxenterprises
-   
+
    NAME      STATUS   AGE
    emqx-ee   Running  8m33s
    ```
@@ -125,7 +125,7 @@
 
    ```bash
    $ kubectl get emqxbrokers
-   
+
    NAME   STATUS   AGE
    emqx   Running  8m33s
    ```

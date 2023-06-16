@@ -93,7 +93,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
   192.168.1.200
   ```
 
@@ -171,7 +171,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
 
    ```bash
    $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
    192.168.1.200
    ```
 

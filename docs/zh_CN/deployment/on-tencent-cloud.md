@@ -70,7 +70,7 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
   198.18.3.10
   ```
 
@@ -130,7 +130,7 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
 
   ```bash
   $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-  
+
   198.18.3.10
   ```
 
