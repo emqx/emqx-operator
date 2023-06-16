@@ -360,9 +360,9 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 			"-p", "public",
 			"-P", "8081",
 		},
-		EnvFrom:      emqxTemplate.Spec.EmqxContainer.EnvFrom,
+		EnvFrom:      emqxTemplate.Spec.EmqxContainer.DeepCopy().EnvFrom,
 		Env:          mergeEnvAndConfig(instance),
-		VolumeMounts: emqxTemplate.Spec.EmqxContainer.VolumeMounts,
+		VolumeMounts: emqxTemplate.Spec.EmqxContainer.DeepCopy().VolumeMounts,
 	}
 
 	emqxContainer := corev1.Container{
@@ -640,8 +640,10 @@ func mergeEnvAndConfig(instance appsv1beta4.Emqx, extraEnvs ...corev1.EnvVar) []
 		return false
 	}
 
-	envs := append(instance.GetSpec().GetTemplate().Spec.EmqxContainer.Env, extraEnvs...)
-	emqxConfig := instance.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig
+	container := instance.GetSpec().GetTemplate().Spec.EmqxContainer
+
+	envs := append(container.DeepCopy().Env, extraEnvs...)
+	emqxConfig := container.DeepCopy().EmqxConfig
 
 	for k, v := range emqxConfig {
 		key := fmt.Sprintf("EMQX_%s", strings.ToUpper(strings.ReplaceAll(k, ".", "__")))
