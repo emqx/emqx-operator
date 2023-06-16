@@ -115,6 +115,8 @@ func defaultLabelsAndAnnotations(r Emqx) {
 	template := r.GetSpec().GetTemplate()
 	template.Labels = mergeMap(template.Labels, labels)
 	template.Annotations = mergeMap(template.Annotations, r.GetAnnotations())
+	delete(template.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
 	r.GetSpec().SetTemplate(template)
 }
 
@@ -171,29 +173,13 @@ func defaultEmqxConfig(r Emqx) {
 func defaultServiceTemplate(r Emqx) {
 	s := r.GetSpec().GetServiceTemplate()
 
-	s.ObjectMeta.Namespace = r.GetNamespace()
-	if s.ObjectMeta.Name == "" {
-		s.ObjectMeta.Name = r.GetName()
+	if s.Name == "" {
+		s.Name = r.GetName()
 	}
-	if s.ObjectMeta.Labels == nil {
-		s.ObjectMeta.Labels = make(map[string]string)
-	}
-	for key, value := range r.GetLabels() {
-		if _, ok := s.ObjectMeta.Labels[key]; !ok {
-			s.ObjectMeta.Labels[key] = value
-		}
-	}
-	if s.ObjectMeta.Annotations == nil {
-		s.ObjectMeta.Annotations = map[string]string{}
-	}
-	for key, value := range r.GetAnnotations() {
-		if key == "kubectl.kubernetes.io/last-applied-configuration" {
-			continue
-		}
-		if _, ok := s.ObjectMeta.Annotations[key]; !ok {
-			s.ObjectMeta.Annotations[key] = value
-		}
-	}
+	s.Namespace = r.GetNamespace()
+	s.Labels = mergeMap(s.Labels, r.GetLabels())
+	s.Annotations = mergeMap(s.ObjectMeta.Annotations, r.GetAnnotations())
+	delete(s.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	s.Spec.Selector = r.GetLabels()
 	s.Spec.Ports = MergeServicePorts(
@@ -217,30 +203,15 @@ func defaultPersistent(r Emqx) {
 		return
 	}
 
-	p.ObjectMeta.Namespace = r.GetNamespace()
-	if p.ObjectMeta.Name == "" {
+	if p.Name == "" {
 		names := Names{Object: r}
-		p.ObjectMeta.Name = names.Data()
+		p.Name = names.Data()
 	}
-	if p.ObjectMeta.Labels == nil {
-		p.ObjectMeta.Labels = make(map[string]string)
-	}
-	for key, value := range r.GetLabels() {
-		if _, ok := p.ObjectMeta.Labels[key]; !ok {
-			p.ObjectMeta.Labels[key] = value
-		}
-	}
-	if p.ObjectMeta.Annotations == nil {
-		p.ObjectMeta.Annotations = map[string]string{}
-	}
-	for key, value := range r.GetAnnotations() {
-		if key == "kubectl.kubernetep.io/last-applied-configuration" {
-			continue
-		}
-		if _, ok := p.ObjectMeta.Annotations[key]; !ok {
-			p.ObjectMeta.Annotations[key] = value
-		}
-	}
+	p.Namespace = r.GetNamespace()
+	p.Labels = mergeMap(p.Labels, r.GetLabels())
+	p.Annotations = mergeMap(p.Annotations, r.GetAnnotations())
+	delete(p.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+	r.GetSpec().SetPersistent(p)
 }
 
 func defaultSecurityContext(r Emqx) {

@@ -36,6 +36,7 @@ func TestBrokerDefault(t *testing.T) {
 			},
 			Annotations: map[string]string{
 				"foo": "bar",
+				"kubectl.kubernetes.io/last-applied-configuration": "fake",
 			},
 		},
 		Spec: EmqxBrokerSpec{
@@ -69,6 +70,7 @@ func TestBrokerDefault(t *testing.T) {
 	t.Run("default annotations", func(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			"foo": "bar",
+			"kubectl.kubernetes.io/last-applied-configuration": "fake",
 		}, instance.Annotations)
 
 		assert.Equal(t, map[string]string{
