@@ -47,6 +47,9 @@ func TestValidateCreate(t *testing.T) {
 	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
 	assert.Error(t, instance.ValidateCreate(), "the number of EMQX core nodes must be greater than 1")
 
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(5)
+	assert.Error(t, instance.ValidateCreate(), "the number of EMQX core nodes must be less than or equal to 4")
+
 	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
 	assert.Nil(t, instance.ValidateCreate())
 
@@ -74,6 +77,12 @@ func TestValidateUpdate(t *testing.T) {
 		new := instance.DeepCopy()
 		new.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
 		assert.Error(t, new.ValidateUpdate(instance), "the number of EMQX core nodes must be greater than 1")
+	})
+
+	t.Run("should return error if core nodes is greater then 4", func(t *testing.T) {
+		new := instance.DeepCopy()
+		new.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(5)
+		assert.Error(t, new.ValidateUpdate(instance), "the number of EMQX core nodes must be less than or equal to 4")
 	})
 
 	t.Run("should return error if bootstrap config is invalid", func(t *testing.T) {
