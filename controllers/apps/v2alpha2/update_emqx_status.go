@@ -48,15 +48,15 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 
 	if existedSts.UID != "" {
 		instance.Status.CoreNodeStatus.CurrentVersion = existedSts.Status.CurrentRevision
+		instance.Status.CoreNodeStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	}
 	if existedRs.UID != "" {
 		instance.Status.ReplicantNodeStatus.CurrentVersion = existedRs.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+		instance.Status.ReplicantNodeStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 	}
+	instance.Status.SetNodes(emqxNodes)
 
-	emqxStatusMachine := newEMQXStatusMachine(instance)
-	emqxStatusMachine.UpdateNodeCount(emqxNodes)
-	emqxStatusMachine.NextStatus(existedSts, existedRs)
-	// emqxStatusMachine.GetEMQX()
+	newEMQXStatusMachine(instance).NextStatus(existedSts, existedRs)
 
 	if err := u.Client.Status().Update(ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}

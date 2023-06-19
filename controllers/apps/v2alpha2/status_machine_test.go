@@ -25,56 +25,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 )
 
-func TestCheckNodeCount(t *testing.T) {
-	t.Run("have replicant nodes", func(t *testing.T) {
-		emqx := &appsv2alpha2.EMQX{}
-		emqx.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(1)
-		emqx.Spec.ReplicantTemplate = &appsv2alpha2.EMQXReplicantTemplate{
-			Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
-				Replicas: pointer.Int32(1),
-			},
-		}
-		emqx.Status.Conditions = []metav1.Condition{
-			{Type: appsv2alpha2.Initialized, Status: metav1.ConditionTrue},
-		}
-
-		emqxNodes := []appsv2alpha2.EMQXNode{
-			{
-				Role:       "core",
-				NodeStatus: "running",
-			},
-			{
-				Role:       "replicant",
-				NodeStatus: "running",
-			},
-			{
-				Role:       "fake role",
-				NodeStatus: "stop",
-			},
-		}
-
-		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		emqxStatusMachine.UpdateNodeCount(emqxNodes)
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeStatus.Replicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.CoreNodeStatus.ReadyReplicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeStatus.Replicas, int32(1))
-		assert.Equal(t, emqxStatusMachine.GetEMQX().Status.ReplicantNodeStatus.ReadyReplicas, int32(1))
-	})
-}
-
 func TestNextStatusForInit(t *testing.T) {
-	existedSts := &appsv1.StatefulSet{}
-	existedRs := &appsv1.ReplicaSet{}
 	emqx := &appsv2alpha2.EMQX{}
 	emqxStatusMachine := newEMQXStatusMachine(emqx)
-	assert.Equal(t, emqxStatusMachine.init, emqxStatusMachine.currentStatus)
-
-	emqxStatusMachine.NextStatus(existedSts, existedRs)
 	assert.Equal(t, emqxStatusMachine.initialized, emqxStatusMachine.currentStatus)
-	assert.Equal(t, appsv2alpha2.Initialized, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	assert.Equal(t, appsv2alpha2.Initialized, emqxStatusMachine.emqx.Status.Conditions[0].Type)
 }
 
 func TestNextStatusForCreate(t *testing.T) {
@@ -199,7 +156,7 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 	})
 }
 
-func TestNextStatusForcodeNodesReady(t *testing.T) {
+func TestNextStatusForCodeNodesReady(t *testing.T) {
 	t.Run("change image", func(t *testing.T) {
 		existedSts := &appsv1.StatefulSet{}
 		existedRs := &appsv1.ReplicaSet{}
@@ -317,7 +274,7 @@ func TestNextStatusForcodeNodesReady(t *testing.T) {
 
 }
 
-func TestNextStatusForCoreready(t *testing.T) {
+func TestNextStatusForCoreReady(t *testing.T) {
 	t.Run("change image", func(t *testing.T) {
 		existedSts := &appsv1.StatefulSet{}
 		existedRs := &appsv1.ReplicaSet{}

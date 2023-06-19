@@ -29,8 +29,6 @@ type status interface {
 type emqxStatusMachine struct {
 	emqx *appsv2alpha2.EMQX
 
-	init status
-
 	// EMQX cluster status
 	initialized          status
 	coreNodesProgressing status
@@ -45,13 +43,11 @@ func newEMQXStatusMachine(emqx *appsv2alpha2.EMQX) *emqxStatusMachine {
 		emqx: emqx,
 	}
 
-	initStatus := &initStatus{emqxStatusMachine: emqxStatusMachine}
 	initializedStatus := &initializedStatus{emqxStatusMachine: emqxStatusMachine}
 	coreNodesProgressingStatus := &coreNodesProgressingStatus{emqxStatusMachine: emqxStatusMachine}
 	codeNodesReadyStatus := &codeNodesReadyStatus{emqxStatusMachine: emqxStatusMachine}
 	readyStatus := &readyStatus{emqxStatusMachine: emqxStatusMachine}
 
-	emqxStatusMachine.init = initStatus
 	emqxStatusMachine.initialized = initializedStatus
 	emqxStatusMachine.coreNodesProgressing = coreNodesProgressingStatus
 	emqxStatusMachine.codeNodesReady = codeNodesReadyStatus
@@ -62,18 +58,18 @@ func newEMQXStatusMachine(emqx *appsv2alpha2.EMQX) *emqxStatusMachine {
 }
 
 func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha2.EMQX) {
-	if emqx.Status.Conditions == nil {
-		s.currentStatus = s.init
-	}
-
 	condition := emqx.Status.GetLastTrueCondition()
 	if condition == nil {
-		return
+		condition = &metav1.Condition{
+			Type:    appsv2alpha2.Initialized,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Initialized",
+			Message: "initialized EMQX cluster",
+		}
+		s.emqx.Status.SetCondition(*condition)
 	}
 
 	switch condition.Type {
-	case appsv2alpha2.Initialized:
-		s.currentStatus = s.initialized
 	case appsv2alpha2.CoreNodesProgressing:
 		s.currentStatus = s.coreNodesProgressing
 	case appsv2alpha2.CodeNodesReady:
@@ -81,33 +77,7 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha2.EMQX) {
 	case appsv2alpha2.Ready:
 		s.currentStatus = s.ready
 	default:
-		panic("unknown condition type")
-	}
-}
-
-func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha2.EMQXNode) {
-	s.emqx.Status.CoreNodeStatus.Replicas = *s.emqx.Spec.CoreTemplate.Spec.Replicas
-
-	if isExistReplicant(s.emqx) {
-		s.emqx.Status.ReplicantNodeStatus.Replicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
-	}
-
-	s.emqx.Status.CoreNodeStatus.ReadyReplicas = int32(0)
-	s.emqx.Status.ReplicantNodeStatus.ReadyReplicas = int32(0)
-
-	if emqxNodes != nil {
-		s.emqx.Status.SetNodes(emqxNodes)
-
-		for _, node := range emqxNodes {
-			if node.NodeStatus == "running" {
-				if node.Role == "core" {
-					s.emqx.Status.CoreNodeStatus.ReadyReplicas++
-				}
-				if node.Role == "replicant" {
-					s.emqx.Status.ReplicantNodeStatus.ReadyReplicas++
-				}
-			}
-		}
+		s.currentStatus = s.initialized
 	}
 }
 
@@ -117,20 +87,6 @@ func (s *emqxStatusMachine) NextStatus(existedSts *appsv1.StatefulSet, existedRs
 
 func (s *emqxStatusMachine) GetEMQX() *appsv2alpha2.EMQX {
 	return s.emqx
-}
-
-type initStatus struct {
-	emqxStatusMachine *emqxStatusMachine
-}
-
-func (s *initStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.ReplicaSet) {
-	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
-		Type:    appsv2alpha2.Initialized,
-		Status:  metav1.ConditionTrue,
-		Reason:  "Initialized",
-		Message: "initialized EMQX cluster",
-	})
-	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
 }
 
 type initializedStatus struct {
