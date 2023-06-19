@@ -90,7 +90,9 @@ func (s *EMQXStatus) SetNodes(nodes []EMQXNode) {
 		}
 	}
 	s.CoreNodeStatus.Nodes = coreNodes
+	s.CoreNodeStatus.ReadyReplicas = int32(len(coreNodes))
 	s.ReplicantNodeStatus.Nodes = replNodes
+	s.ReplicantNodeStatus.ReadyReplicas = int32(len(replNodes))
 }
 
 func (s *EMQXStatus) SetCondition(c metav1.Condition) {

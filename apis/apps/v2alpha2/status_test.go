@@ -51,6 +51,7 @@ func TestSetNodes(t *testing.T) {
 	}
 	status.SetNodes(nodes)
 
+	assert.Equal(t, int32(2), status.CoreNodeStatus.ReadyReplicas)
 	assert.Equal(t, []EMQXNode{
 		{
 			Node:   "emqx-1",
@@ -63,6 +64,8 @@ func TestSetNodes(t *testing.T) {
 			Uptime: 10000,
 		},
 	}, status.CoreNodeStatus.Nodes)
+
+	assert.Equal(t, int32(2), status.ReplicantNodeStatus.ReadyReplicas)
 	assert.Equal(t, []EMQXNode{
 		{
 			Node:   "emqx-3",
