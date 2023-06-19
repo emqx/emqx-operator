@@ -68,8 +68,14 @@ var _ webhook.Validator = &EMQX{}
 func (r *EMQX) ValidateCreate() error {
 	emqxlog.Info("validate create", "name", r.Name)
 
-	if *r.Spec.CoreTemplate.Spec.Replicas < 2 {
+	if *r.Spec.CoreTemplate.Spec.Replicas <= 1 {
 		err := emperror.New("the number of EMQX core nodes must be greater than 1")
+		emqxlog.Error(err, "validate create failed")
+		return err
+	}
+
+	if *r.Spec.CoreTemplate.Spec.Replicas > 4 {
+		err := emperror.New("the number of EMQX core nodes must be less than or equal to 4")
 		emqxlog.Error(err, "validate create failed")
 		return err
 	}
@@ -87,9 +93,15 @@ func (r *EMQX) ValidateCreate() error {
 func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 	emqxlog.Info("validate update", "name", r.Name)
 
-	if *r.Spec.CoreTemplate.Spec.Replicas < 2 {
+	if *r.Spec.CoreTemplate.Spec.Replicas <= 1 {
 		err := emperror.New("the number of EMQX core nodes must be greater than 1")
 		emqxlog.Error(err, "validate update failed")
+		return err
+	}
+
+	if *r.Spec.CoreTemplate.Spec.Replicas > 4 {
+		err := emperror.New("the number of EMQX core nodes must be less than or equal to 4")
+		emqxlog.Error(err, "validate create failed")
 		return err
 	}
 
