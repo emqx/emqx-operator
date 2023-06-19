@@ -162,7 +162,7 @@ _Appears in:_
 | `nodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
 | `replicas` _integer_ |  |
 | `readyReplicas` _integer_ |  |
-| `currentVersion` _integer_ |  |
+| `currentVersion` _string_ |  |
 | `collisionCount` _integer_ |  |
 
 
