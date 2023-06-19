@@ -13,7 +13,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,32 +22,32 @@ func isExistReplicant(instance *appsv2alpha2.EMQX) bool {
 	return instance.Spec.ReplicantTemplate != nil && instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
 }
 
-func getPodMap(ctx context.Context, client client.Client, opts ...client.ListOption) map[types.UID][]*corev1.Pod {
-	podList := &corev1.PodList{}
-	_ = client.List(ctx, podList, opts...)
+// func getPodMap(ctx context.Context, client client.Client, opts ...client.ListOption) map[types.UID][]*corev1.Pod {
+// 	podList := &corev1.PodList{}
+// 	_ = client.List(ctx, podList, opts...)
 
-	replicaSetList := &appsv1.ReplicaSetList{}
-	_ = client.List(ctx, replicaSetList, opts...)
-	// Create a map from ReplicaSet UID to ReplicaSet.
-	rsMap := make(map[types.UID][]*corev1.Pod, len(replicaSetList.Items))
-	for _, rs := range replicaSetList.Items {
-		rsMap[rs.UID] = []*corev1.Pod{}
-	}
-	for _, p := range podList.Items {
-		// Do not ignore inactive Pods because Recreate replicaSets need to verify that no
-		// Pods from older versions are running before spinning up new Pods.
-		pod := p.DeepCopy()
-		controllerRef := metav1.GetControllerOf(pod)
-		if controllerRef == nil {
-			continue
-		}
-		// Only append if we care about this UID.
-		if _, ok := rsMap[controllerRef.UID]; ok {
-			rsMap[controllerRef.UID] = append(rsMap[controllerRef.UID], pod)
-		}
-	}
-	return rsMap
-}
+// 	replicaSetList := &appsv1.ReplicaSetList{}
+// 	_ = client.List(ctx, replicaSetList, opts...)
+// 	// Create a map from ReplicaSet UID to ReplicaSet.
+// 	rsMap := make(map[types.UID][]*corev1.Pod, len(replicaSetList.Items))
+// 	for _, rs := range replicaSetList.Items {
+// 		rsMap[rs.UID] = []*corev1.Pod{}
+// 	}
+// 	for _, p := range podList.Items {
+// 		// Do not ignore inactive Pods because Recreate replicaSets need to verify that no
+// 		// Pods from older versions are running before spinning up new Pods.
+// 		pod := p.DeepCopy()
+// 		controllerRef := metav1.GetControllerOf(pod)
+// 		if controllerRef == nil {
+// 			continue
+// 		}
+// 		// Only append if we care about this UID.
+// 		if _, ok := rsMap[controllerRef.UID]; ok {
+// 			rsMap[controllerRef.UID] = append(rsMap[controllerRef.UID], pod)
+// 		}
+// 	}
+// 	return rsMap
+// }
 
 func getReplicaSetList(ctx context.Context, client client.Client, opts ...client.ListOption) []*appsv1.ReplicaSet {
 	list := &appsv1.ReplicaSetList{}

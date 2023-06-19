@@ -12916,8 +12916,7 @@ spec:
                       format: int32
                       type: integer
                     currentVersion:
-                      format: int32
-                      type: integer
+                      type: string
                     nodes:
                       items:
                         properties:
@@ -12953,8 +12952,7 @@ spec:
                       format: int32
                       type: integer
                     currentVersion:
-                      format: int32
-                      type: integer
+                      type: string
                     nodes:
                       items:
                         properties:

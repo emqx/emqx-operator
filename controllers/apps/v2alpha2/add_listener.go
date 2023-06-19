@@ -12,6 +12,7 @@ import (
 	emperror "emperror.dev/errors"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -51,21 +52,19 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX
 	return subResult{}
 }
 
-func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha2.EMQX) []*corev1.Pod {
-	rsList := getReplicaSetList(ctx, a.Client,
-		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-	)
-	if len(rsList) == 0 {
-		return nil
+func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha2.EMQX) []corev1.Pod {
+	// labels := appsv2alpha2.AddLabel(instance.Spec.CoreTemplate.Labels, appsv1.ControllerRevisionHashLabelKey, instance.Status.CoreNodeStatus.CurrentVersion)
+	labels := instance.Spec.CoreTemplate.Labels
+	if isExistReplicant(instance) {
+		labels = appsv2alpha2.AddLabel(instance.Spec.ReplicantTemplate.Labels, appsv1.DefaultDeploymentUniqueLabelKey, instance.Status.ReplicantNodeStatus.CurrentVersion)
 	}
-	currentRs := rsList[len(rsList)-1]
 
-	podMap := getPodMap(ctx, a.Client,
+	podList := &corev1.PodList{}
+	_ = a.Client.List(ctx, podList,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+		client.MatchingLabels(labels),
 	)
-	return podMap[currentRs.UID]
+	return podList.Items
 }
 
 func (a *addListener) getServicePorts(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) []corev1.ServicePort {
@@ -105,7 +104,7 @@ func generateListenerService(instance *appsv2alpha2.EMQX, ports []corev1.Service
 	}
 }
 
-func generateEndpoints(svc *corev1.Service, pods []*corev1.Pod) *corev1.Endpoints {
+func generateEndpoints(svc *corev1.Service, pods []corev1.Pod) *corev1.Endpoints {
 	subSet := corev1.EndpointSubset{}
 	for _, port := range svc.Spec.Ports {
 		subSet.Ports = append(subSet.Ports, corev1.EndpointPort{

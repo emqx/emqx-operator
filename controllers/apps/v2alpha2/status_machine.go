@@ -87,7 +87,10 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha2.EMQX) {
 
 func (s *emqxStatusMachine) UpdateNodeCount(emqxNodes []appsv2alpha2.EMQXNode) {
 	s.emqx.Status.CoreNodeStatus.Replicas = *s.emqx.Spec.CoreTemplate.Spec.Replicas
-	s.emqx.Status.ReplicantNodeStatus.Replicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
+
+	if isExistReplicant(s.emqx) {
+		s.emqx.Status.ReplicantNodeStatus.Replicas = *s.emqx.Spec.ReplicantTemplate.Spec.Replicas
+	}
 
 	s.emqx.Status.CoreNodeStatus.ReadyReplicas = int32(0)
 	s.emqx.Status.ReplicantNodeStatus.ReadyReplicas = int32(0)

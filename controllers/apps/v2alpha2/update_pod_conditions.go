@@ -20,9 +20,13 @@ type updatePodConditions struct {
 
 func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
 	pods := &corev1.PodList{}
+	labels := instance.Spec.CoreTemplate.Labels
+	if isExistReplicant(instance) {
+		labels = instance.Spec.ReplicantTemplate.Labels
+	}
 	_ = u.Client.List(ctx, pods,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+		client.MatchingLabels(labels),
 	)
 
 	for _, pod := range pods.Items {
