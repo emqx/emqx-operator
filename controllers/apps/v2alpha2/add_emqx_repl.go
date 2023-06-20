@@ -33,8 +33,8 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 	}
 
 	rs, collisionCount := a.getNewReplicaSet(ctx, instance)
-	if collisionCount != instance.Status.ReplicantNodeStatus.CollisionCount {
-		instance.Status.ReplicantNodeStatus.CollisionCount = collisionCount
+	if collisionCount != instance.Status.ReplicantNodesStatus.CollisionCount {
+		instance.Status.ReplicantNodesStatus.CollisionCount = collisionCount
 		_ = a.Client.Status().Update(ctx, instance)
 	}
 
@@ -78,7 +78,7 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 			rs.ObjectMeta = *r.ObjectMeta.DeepCopy()
 			rs.Spec.Template.ObjectMeta = *r.Spec.Template.ObjectMeta.DeepCopy()
 			rs.Spec.Selector = r.Spec.Selector.DeepCopy()
-			return rs, instance.Status.ReplicantNodeStatus.CollisionCount
+			return rs, instance.Status.ReplicantNodesStatus.CollisionCount
 		}
 	}
 
@@ -90,7 +90,7 @@ func (a *addRepl) generateReplicaSet(instance *appsv2alpha2.EMQX) (*appsv1.Repli
 	var rsName string
 	var podTemplateSpecHash string
 
-	collisionCount = instance.Status.ReplicantNodeStatus.CollisionCount
+	collisionCount = instance.Status.ReplicantNodesStatus.CollisionCount
 	if collisionCount == nil {
 		collisionCount = new(int32)
 	}

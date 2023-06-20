@@ -30,8 +30,8 @@ type EMQXStatus struct {
 	// Represents the latest available observations of a EMQX Custom Resource current state.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	CoreNodeStatus      EMQXNodesStatus `json:"coreNodeStatus,omitempty"`
-	ReplicantNodeStatus EMQXNodesStatus `json:"replicantNodeStatus,omitempty"`
+	CoreNodesStatus      EMQXNodesStatus  `json:"CoreNodesStatus,omitempty"`
+	ReplicantNodesStatus *EMQXNodesStatus `json:"ReplicantNodesStatus,omitempty"`
 }
 
 type EMQXNodesStatus struct {
@@ -89,10 +89,12 @@ func (s *EMQXStatus) SetNodes(nodes []EMQXNode) {
 			replNodes = append(replNodes, node)
 		}
 	}
-	s.CoreNodeStatus.Nodes = coreNodes
-	s.CoreNodeStatus.ReadyReplicas = int32(len(coreNodes))
-	s.ReplicantNodeStatus.Nodes = replNodes
-	s.ReplicantNodeStatus.ReadyReplicas = int32(len(replNodes))
+	s.CoreNodesStatus.Nodes = coreNodes
+	s.CoreNodesStatus.ReadyReplicas = int32(len(coreNodes))
+	if s.ReplicantNodesStatus != nil {
+		s.ReplicantNodesStatus.Nodes = replNodes
+		s.ReplicantNodesStatus.ReadyReplicas = int32(len(replNodes))
+	}
 }
 
 func (s *EMQXStatus) SetCondition(c metav1.Condition) {

@@ -12862,6 +12862,74 @@ spec:
             type: object
           status:
             properties:
+              CoreNodesStatus:
+                properties:
+                  collisionCount:
+                    format: int32
+                    type: integer
+                  currentVersion:
+                    type: string
+                  nodes:
+                    items:
+                      properties:
+                        edition:
+                          type: string
+                        node:
+                          type: string
+                        node_status:
+                          type: string
+                        otp_release:
+                          type: string
+                        role:
+                          type: string
+                        uptime:
+                          format: int64
+                          type: integer
+                        version:
+                          type: string
+                      type: object
+                    type: array
+                  readyReplicas:
+                    format: int32
+                    type: integer
+                  replicas:
+                    format: int32
+                    type: integer
+                type: object
+              ReplicantNodesStatus:
+                properties:
+                  collisionCount:
+                    format: int32
+                    type: integer
+                  currentVersion:
+                    type: string
+                  nodes:
+                    items:
+                      properties:
+                        edition:
+                          type: string
+                        node:
+                          type: string
+                        node_status:
+                          type: string
+                        otp_release:
+                          type: string
+                        role:
+                          type: string
+                        uptime:
+                          format: int64
+                          type: integer
+                        version:
+                          type: string
+                      type: object
+                    type: array
+                  readyReplicas:
+                    format: int32
+                    type: integer
+                  replicas:
+                    format: int32
+                    type: integer
+                type: object
               conditions:
                 items:
                   properties:
@@ -12898,76 +12966,8 @@ spec:
                   - type
                   type: object
                 type: array
-              coreNodeStatus:
-                properties:
-                  collisionCount:
-                    format: int32
-                    type: integer
-                  currentVersion:
-                    type: string
-                  nodes:
-                    items:
-                      properties:
-                        edition:
-                          type: string
-                        node:
-                          type: string
-                        node_status:
-                          type: string
-                        otp_release:
-                          type: string
-                        role:
-                          type: string
-                        uptime:
-                          format: int64
-                          type: integer
-                        version:
-                          type: string
-                      type: object
-                    type: array
-                  readyReplicas:
-                    format: int32
-                    type: integer
-                  replicas:
-                    format: int32
-                    type: integer
-                type: object
               currentImage:
                 type: string
-              replicantNodeStatus:
-                properties:
-                  collisionCount:
-                    format: int32
-                    type: integer
-                  currentVersion:
-                    type: string
-                  nodes:
-                    items:
-                      properties:
-                        edition:
-                          type: string
-                        node:
-                          type: string
-                        node_status:
-                          type: string
-                        otp_release:
-                          type: string
-                        role:
-                          type: string
-                        uptime:
-                          format: int64
-                          type: integer
-                        version:
-                          type: string
-                      type: object
-                    type: array
-                  readyReplicas:
-                    format: int32
-                    type: integer
-                  replicas:
-                    format: int32
-                    type: integer
-                type: object
             type: object
         type: object
     served: true

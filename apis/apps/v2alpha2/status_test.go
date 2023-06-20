@@ -26,6 +26,7 @@ import (
 
 func TestSetNodes(t *testing.T) {
 	status := &EMQXStatus{}
+	status.ReplicantNodesStatus = &EMQXNodesStatus{}
 
 	nodes := []EMQXNode{
 		{
@@ -51,7 +52,7 @@ func TestSetNodes(t *testing.T) {
 	}
 	status.SetNodes(nodes)
 
-	assert.Equal(t, int32(2), status.CoreNodeStatus.ReadyReplicas)
+	assert.Equal(t, int32(2), status.CoreNodesStatus.ReadyReplicas)
 	assert.Equal(t, []EMQXNode{
 		{
 			Node:   "emqx-1",
@@ -63,9 +64,9 @@ func TestSetNodes(t *testing.T) {
 			Role:   "core",
 			Uptime: 10000,
 		},
-	}, status.CoreNodeStatus.Nodes)
+	}, status.CoreNodesStatus.Nodes)
 
-	assert.Equal(t, int32(2), status.ReplicantNodeStatus.ReadyReplicas)
+	assert.Equal(t, int32(2), status.ReplicantNodesStatus.ReadyReplicas)
 	assert.Equal(t, []EMQXNode{
 		{
 			Node:   "emqx-3",
@@ -77,7 +78,7 @@ func TestSetNodes(t *testing.T) {
 			Role:   "replicant",
 			Uptime: 10000,
 		},
-	}, status.ReplicantNodeStatus.Nodes)
+	}, status.ReplicantNodesStatus.Nodes)
 }
 
 func TestSetCondition(t *testing.T) {

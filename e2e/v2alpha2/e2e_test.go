@@ -90,7 +90,7 @@ var _ = Describe("Base Test", func() {
 					return len(replicaSets.Items)
 				}, timeout, interval).Should(Equal(1))
 
-				Expect(replicaSets.Items[0].Status.Replicas).Should(Equal(instance.Status.ReplicantNodeStatus.Replicas))
+				Expect(replicaSets.Items[0].Status.Replicas).Should(Equal(instance.Status.ReplicantNodesStatus.Replicas))
 			})
 
 			By("Checking the EMQX Custom Resource's Pod and EndpointSlice", func() {
@@ -157,7 +157,7 @@ var _ = Describe("Base Test", func() {
 				Eventually(func() int32 {
 					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(new), new)
 					return new.Status.Replicas
-				}, timeout, interval).Should(Equal(instance.Status.ReplicantNodeStatus.Replicas))
+				}, timeout, interval).Should(Equal(instance.Status.ReplicantNodesStatus.Replicas))
 			})
 
 			By("Checking endpointScales list", func() {
@@ -360,12 +360,12 @@ func checkRunning(instance *appsv2alpha2.EMQX) {
 				HaveField("Type", appsv2alpha2.CoreNodesProgressing),
 				HaveField("Type", appsv2alpha2.Initialized),
 			)),
-			HaveField("CoreNodeStatus", And(
+			HaveField("CoreNodesStatus", And(
 				HaveField("Nodes", HaveLen(2)),
 				HaveField("Replicas", Equal(int32(2))),
 				HaveField("ReadyReplicas", Equal(int32(2))),
 			)),
-			HaveField("ReplicantNodeStatus", And(
+			HaveField("ReplicantNodesStatus", And(
 				HaveField("Nodes", HaveLen(2)),
 				HaveField("Replicas", Equal(int32(2))),
 				HaveField("ReadyReplicas", Equal(int32(2))),
