@@ -19,8 +19,7 @@ package v2alpha2
 import (
 	"testing"
 
-	// "github.com/gurkankaymak/hocon"
-	hocon "github.com/rory-z/go-hocon"
+	"github.com/rory-z/go-hocon"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -44,13 +43,13 @@ func TestValidateCreate(t *testing.T) {
 			Image: "emqx:latest",
 		},
 	}
-	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(1)
 	assert.Error(t, instance.ValidateCreate(), "the number of EMQX core nodes must be greater than 1")
 
-	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(5)
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(5)
 	assert.Error(t, instance.ValidateCreate(), "the number of EMQX core nodes must be less than or equal to 4")
 
-	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(2)
 	assert.Nil(t, instance.ValidateCreate())
 
 	instance.Spec.BootstrapConfig = "fake"
@@ -71,45 +70,45 @@ func TestValidateUpdate(t *testing.T) {
 			BootstrapConfig: `{a = 1, b = { c = 2, d = 3}}`,
 		},
 	}
-	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
+	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(2)
 
 	t.Run("should return error if core nodes is less then 2", func(t *testing.T) {
-		new := instance.DeepCopy()
-		new.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
-		assert.Error(t, new.ValidateUpdate(instance), "the number of EMQX core nodes must be greater than 1")
+		newIns := instance.DeepCopy()
+		newIns.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(1)
+		assert.Error(t, newIns.ValidateUpdate(instance), "the number of EMQX core nodes must be greater than 1")
 	})
 
 	t.Run("should return error if core nodes is greater then 4", func(t *testing.T) {
-		new := instance.DeepCopy()
-		new.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(5)
-		assert.Error(t, new.ValidateUpdate(instance), "the number of EMQX core nodes must be less than or equal to 4")
+		newIns := instance.DeepCopy()
+		newIns.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(5)
+		assert.Error(t, newIns.ValidateUpdate(instance), "the number of EMQX core nodes must be less than or equal to 4")
 	})
 
 	t.Run("should return error if bootstrap config is invalid", func(t *testing.T) {
-		new := instance.DeepCopy()
-		new.Spec.BootstrapConfig = "hello world"
-		assert.Error(t, new.ValidateUpdate(instance), "failed to parse bootstrap config")
+		newIns := instance.DeepCopy()
+		newIns.Spec.BootstrapConfig = "hello world"
+		assert.Error(t, newIns.ValidateUpdate(instance), "failed to parse bootstrap config")
 	})
 
 	t.Run("should return error if bootstrap APIKeys is changed", func(t *testing.T) {
-		new := instance.DeepCopy()
-		new.Spec.BootstrapAPIKeys = []BootstrapAPIKey{{
+		newIns := instance.DeepCopy()
+		newIns.Spec.BootstrapAPIKeys = []BootstrapAPIKey{{
 			Key:    "test",
 			Secret: "test",
 		}}
-		assert.Error(t, new.ValidateUpdate(instance), "bootstrap APIKeys cannot be updated")
+		assert.Error(t, newIns.ValidateUpdate(instance), "bootstrap APIKeys cannot be updated")
 	})
 
 	t.Run("should return error if bootstrap config is changed", func(t *testing.T) {
-		new := instance.DeepCopy()
-		new.Spec.BootstrapConfig = "foo = bar"
-		assert.Error(t, new.ValidateUpdate(instance), "bootstrap config cannot be updated")
+		newIns := instance.DeepCopy()
+		newIns.Spec.BootstrapConfig = "foo = bar"
+		assert.Error(t, newIns.ValidateUpdate(instance), "bootstrap config cannot be updated")
 	})
 
 	t.Run("check bootstrap config is map", func(t *testing.T) {
-		new := instance.DeepCopy()
-		new.Spec.BootstrapConfig = `{b = { d = 3, c = 2 }, a = 1}`
-		assert.Nil(t, new.ValidateUpdate(instance))
+		newIns := instance.DeepCopy()
+		newIns.Spec.BootstrapConfig = `{b = { d = 3, c = 2 }, a = 1}`
+		assert.Nil(t, newIns.ValidateUpdate(instance))
 	})
 }
 
@@ -294,6 +293,68 @@ func TestDefaultDashboardServiceTemplate(t *testing.T) {
 		}, instance.Spec.DashboardServiceTemplate.Spec.Selector)
 	})
 
+}
+
+func TestDefaultContainerPort(t *testing.T) {
+	instance := &EMQX{}
+	t.Run("set default container port to core template", func(t *testing.T) {
+		instance.defaultContainerPort()
+		assert.Equal(t, len(instance.Spec.CoreTemplate.Spec.Ports), 1)
+		defaultPort := instance.Spec.CoreTemplate.Spec.Ports[0]
+		assert.Equal(t, int32(18083), defaultPort.ContainerPort)
+		assert.Equal(t, "dashboard-http", defaultPort.Name)
+		assert.Equal(t, corev1.ProtocolTCP, defaultPort.Protocol)
+	})
+
+	t.Run("set default container port to replica template", func(t *testing.T) {
+		instance.Spec.ReplicantTemplate = &EMQXReplicantTemplate{}
+		instance.defaultContainerPort()
+
+		assert.Equal(t, len(instance.Spec.ReplicantTemplate.Spec.Ports), 1)
+		defaultPort := instance.Spec.ReplicantTemplate.Spec.Ports[0]
+		assert.Equal(t, int32(18083), defaultPort.ContainerPort)
+		assert.Equal(t, "dashboard-http", defaultPort.Name)
+		assert.Equal(t, corev1.ProtocolTCP, defaultPort.Protocol)
+	})
+
+	t.Run("merge container port by same name", func(t *testing.T) {
+		instance.Spec.CoreTemplate.Spec.Ports = []corev1.ContainerPort{
+			{
+				Name:          "dashboard-http",
+				ContainerPort: 18084,
+			},
+			{
+				Name:          "other-port",
+				ContainerPort: 1883,
+			},
+		}
+		instance.defaultContainerPort()
+		assert.Equal(t, len(instance.Spec.CoreTemplate.Spec.Ports), 2)
+		index := -1
+		ports := instance.Spec.CoreTemplate.Spec.Ports
+		for index = range ports {
+			if ports[index].Name == "dashboard-http" {
+				break
+			}
+		}
+		assert.NotEqual(t, index, -1, "missing container port named as dashboard-http")
+		assert.NotEqual(t, index, len(ports), "missing container port named as dashboard-http")
+		assert.Equal(t, ports[index].ContainerPort, int32(18084))
+	})
+
+	t.Run("merge container port by same port", func(t *testing.T) {
+		instance.Spec.CoreTemplate.Spec.Ports = []corev1.ContainerPort{
+			{
+				Name:          "user-defined-dashboard-http",
+				ContainerPort: 18083,
+			},
+		}
+		instance.defaultContainerPort()
+		assert.Equal(t, len(instance.Spec.CoreTemplate.Spec.Ports), 1)
+		port := instance.Spec.CoreTemplate.Spec.Ports[0]
+		assert.Equal(t, port.Name, "user-defined-dashboard-http")
+		assert.Equal(t, port.ContainerPort, int32(18083))
+	})
 }
 
 func TestDefaultProbeForCoreNode(t *testing.T) {

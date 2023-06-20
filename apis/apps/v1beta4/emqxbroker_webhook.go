@@ -56,6 +56,7 @@ func (r *EmqxBroker) Default() {
 	defaultEmqxACL(r)
 	defaultEmqxConfig(r)
 	defaultServiceTemplate(r)
+	defaultContainerPort(r)
 	defaultPersistent(r)
 	defaultSecurityContext(r)
 }
@@ -195,6 +196,23 @@ func defaultServiceTemplate(r Emqx) {
 	)
 
 	r.GetSpec().SetServiceTemplate(s)
+}
+
+func defaultContainerPort(r Emqx) {
+	temp := r.GetSpec().GetTemplate()
+	container := &temp.Spec.EmqxContainer
+	container.Ports = MergeContainerPorts(
+		container.Ports,
+		[]corev1.ContainerPort{
+			{
+				Name:          "dashboard-http",
+				Protocol:      corev1.ProtocolTCP,
+				ContainerPort: 18083,
+			},
+		},
+	)
+
+	r.GetSpec().SetTemplate(temp)
 }
 
 func defaultPersistent(r Emqx) {

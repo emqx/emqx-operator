@@ -55,6 +55,7 @@ func (r *EMQX) Default() {
 	r.defaultAnnotations()
 	r.defaultBootstrapConfig()
 	r.defaultDashboardServiceTemplate()
+	r.defaultContainerPort()
 	r.defaultProbe()
 	r.defaultSecurityContext()
 }
@@ -246,7 +247,7 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 		dashboardPort = &corev1.ServicePort{
 			Name:       "dashboard-listeners-http-bind",
 			Protocol:   corev1.ProtocolTCP,
-			Port:       int32(18083),
+			Port:       18083,
 			TargetPort: intstr.FromInt(18083),
 		}
 	}
@@ -257,6 +258,36 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 			*dashboardPort,
 		},
 	)
+}
+
+func (r *EMQX) defaultContainerPort() {
+	var containerPort = corev1.ContainerPort{
+		Name:          "dashboard-http",
+		Protocol:      corev1.ProtocolTCP,
+		ContainerPort: 18083,
+	}
+
+	svcPort, err := GetDashboardServicePort(r)
+	if err != nil {
+		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
+	} else {
+		containerPort.ContainerPort = svcPort.Port
+	}
+
+	r.Spec.CoreTemplate.Spec.Ports = MergeContainerPorts(
+		r.Spec.CoreTemplate.Spec.Ports,
+		[]corev1.ContainerPort{
+			containerPort,
+		},
+	)
+	if r.Spec.ReplicantTemplate != nil {
+		r.Spec.ReplicantTemplate.Spec.Ports = MergeContainerPorts(
+			r.Spec.ReplicantTemplate.Spec.Ports,
+			[]corev1.ContainerPort{
+				containerPort,
+			},
+		)
+	}
 }
 
 func (r *EMQX) defaultProbe() {

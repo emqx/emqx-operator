@@ -169,6 +169,44 @@ func TestBrokerDefault(t *testing.T) {
 			SupplementalGroups:  []int64{1000},
 		}, *instance.Spec.Template.Spec.PodSecurityContext)
 	})
+
+	t.Run("default container port", func(t *testing.T) {
+		assert.GreaterOrEqual(t, len(instance.Spec.Template.Spec.EmqxContainer.Ports), 1)
+		defaultPort := instance.Spec.Template.Spec.EmqxContainer.Ports[0]
+		assert.Equal(t, defaultPort.Name, "dashboard-http")
+		assert.Equal(t, defaultPort.Protocol, corev1.ProtocolTCP)
+		assert.Equal(t, defaultPort.ContainerPort, int32(18083))
+	})
+
+	t.Run("merge container port by same port", func(t *testing.T) {
+		instance.Spec.Template.Spec.EmqxContainer.Ports = []corev1.ContainerPort{
+			{
+				Name:          "user-defined-dashboard-http",
+				ContainerPort: 18083,
+			},
+		}
+		instance.Default()
+
+		assert.GreaterOrEqual(t, len(instance.Spec.Template.Spec.EmqxContainer.Ports), 1)
+		defaultPort := instance.Spec.Template.Spec.EmqxContainer.Ports[0]
+		assert.Equal(t, defaultPort.Name, "user-defined-dashboard-http")
+		assert.Equal(t, defaultPort.ContainerPort, int32(18083))
+	})
+
+	t.Run("merge container port by same name", func(t *testing.T) {
+		instance.Spec.Template.Spec.EmqxContainer.Ports = []corev1.ContainerPort{
+			{
+				Name:          "dashboard-http",
+				ContainerPort: 18084,
+			},
+		}
+		instance.Default()
+
+		assert.GreaterOrEqual(t, len(instance.Spec.Template.Spec.EmqxContainer.Ports), 1)
+		defaultPort := instance.Spec.Template.Spec.EmqxContainer.Ports[0]
+		assert.Equal(t, defaultPort.Name, "dashboard-http")
+		assert.Equal(t, defaultPort.ContainerPort, int32(18084))
+	})
 }
 
 func TestBrokerValidateCreate(t *testing.T) {
@@ -250,49 +288,49 @@ func TestBrokerValidateUpdate(t *testing.T) {
 
 	t.Run("valid image version", func(t *testing.T) {
 		old := broker.DeepCopy()
-		new := broker.DeepCopy()
+		newIns := broker.DeepCopy()
 
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
-		assert.NoError(t, new.ValidateUpdate(old))
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
-		assert.NoError(t, new.ValidateUpdate(old))
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.5.0"
-		assert.NoError(t, new.ValidateUpdate(old))
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.10"
-		assert.NoError(t, new.ValidateUpdate(old))
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.123456789"
-		assert.NoError(t, new.ValidateUpdate(old))
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
+		assert.NoError(t, newIns.ValidateUpdate(old))
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.14"
+		assert.NoError(t, newIns.ValidateUpdate(old))
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4.5.0"
+		assert.NoError(t, newIns.ValidateUpdate(old))
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4.10"
+		assert.NoError(t, newIns.ValidateUpdate(old))
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4.123456789"
+		assert.NoError(t, newIns.ValidateUpdate(old))
 
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "image version can not be latest")
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = ""
-		assert.ErrorContains(t, new.ValidateUpdate(old), "invalid image version")
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "fake"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "invalid image version")
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.13"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4.3"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "4"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
-		new.Spec.Template.Spec.EmqxContainer.Image.Version = "5.0.0"
-		assert.ErrorContains(t, new.ValidateUpdate(old), "please downgrade to 5.0.0 earlier")
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "latest"
+		assert.ErrorContains(t, newIns.ValidateUpdate(old), "image version can not be latest")
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = ""
+		assert.ErrorContains(t, newIns.ValidateUpdate(old), "invalid image version")
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "fake"
+		assert.ErrorContains(t, newIns.ValidateUpdate(old), "invalid image version")
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.13"
+		assert.ErrorContains(t, newIns.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4"
+		assert.ErrorContains(t, newIns.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4.3"
+		assert.ErrorContains(t, newIns.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "4"
+		assert.ErrorContains(t, newIns.ValidateUpdate(old), "please upgrade to 4.4.14 or later")
+		newIns.Spec.Template.Spec.EmqxContainer.Image.Version = "5.0.0"
+		assert.ErrorContains(t, newIns.ValidateUpdate(old), "please downgrade to 5.0.0 earlier")
 	})
 
 	t.Run("valid volume template can not update", func(t *testing.T) {
 		old := broker.DeepCopy()
-		new := broker.DeepCopy()
+		newIns := broker.DeepCopy()
 
-		assert.Nil(t, new.ValidateUpdate(old))
+		assert.Nil(t, newIns.ValidateUpdate(old))
 
 		old.Spec.Persistent = &corev1.PersistentVolumeClaimTemplate{
 			Spec: corev1.PersistentVolumeClaimSpec{
 				StorageClassName: pointer.String("fake"),
 			},
 		}
-		assert.Error(t, new.ValidateUpdate(old))
+		assert.Error(t, newIns.ValidateUpdate(old))
 	})
 
 	t.Run("should return error if bootstrap APIKeys is changed", func(t *testing.T) {
@@ -306,25 +344,25 @@ func TestBrokerValidateUpdate(t *testing.T) {
 
 	t.Run("valid emqxConfig can not update", func(t *testing.T) {
 		old := broker.DeepCopy()
-		new := broker.DeepCopy()
+		newIns := broker.DeepCopy()
 
-		assert.Nil(t, new.ValidateUpdate(old))
+		assert.Nil(t, newIns.ValidateUpdate(old))
 
-		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx-test"
-		assert.Error(t, new.ValidateUpdate(old))
+		newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx-test"
+		assert.Error(t, newIns.ValidateUpdate(old))
 
-		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx"
-		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["cluster.dns.app"] = "emqx-test"
-		assert.Error(t, new.ValidateUpdate(old))
+		newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx"
+		newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig["cluster.dns.app"] = "emqx-test"
+		assert.Error(t, newIns.ValidateUpdate(old))
 
-		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx"
-		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["cluster.dns.app"] = "emqx"
-		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["listener.tcp.internal"] = "0.0.0.0:1884"
-		assert.Nil(t, new.ValidateUpdate(old))
+		newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig["name"] = "emqx"
+		newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig["cluster.dns.app"] = "emqx"
+		newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig["listener.tcp.internal"] = "0.0.0.0:1884"
+		assert.Nil(t, newIns.ValidateUpdate(old))
 
-		delete(new.Spec.Template.Spec.EmqxContainer.EmqxConfig, "name")
-		delete(new.Spec.Template.Spec.EmqxContainer.EmqxConfig, "cluster.dns.app")
-		new.Spec.Template.Spec.EmqxContainer.EmqxConfig["listener.tcp.internal"] = "0.0.0.0:1885"
-		assert.Nil(t, new.ValidateUpdate(old))
+		delete(newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig, "name")
+		delete(newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig, "cluster.dns.app")
+		newIns.Spec.Template.Spec.EmqxContainer.EmqxConfig["listener.tcp.internal"] = "0.0.0.0:1885"
+		assert.Nil(t, newIns.ValidateUpdate(old))
 	})
 }

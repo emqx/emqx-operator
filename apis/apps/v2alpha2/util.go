@@ -118,6 +118,27 @@ func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort
 	return result
 }
 
+func MergeContainerPorts(ports1, ports2 []corev1.ContainerPort) []corev1.ContainerPort {
+	ports := append(ports1, ports2...)
+
+	result := make([]corev1.ContainerPort, 0, len(ports))
+	tempName := map[string]struct{}{}
+	tempPort := map[int32]struct{}{}
+
+	for _, item := range ports {
+		_, nameOK := tempName[item.Name]
+		_, portOK := tempPort[item.ContainerPort]
+
+		if !nameOK && !portOK {
+			tempName[item.Name] = struct{}{}
+			tempPort[item.ContainerPort] = struct{}{}
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
 func mergeMap(dst, src map[string]string) map[string]string {
 	if dst == nil {
 		dst = make(map[string]string)
