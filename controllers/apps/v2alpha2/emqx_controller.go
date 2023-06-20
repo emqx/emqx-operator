@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	"github.com/emqx/emqx-operator/internal/handler"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -177,7 +176,7 @@ func newRequesterBySvc(client client.Client, instance *appsv2alpha2.EMQX) (inner
 	}, nil
 }
 
-func getBootstrapUser(ctx context.Context, client client.Client, instance *v2alpha2.EMQX) (username, password string, err error) {
+func getBootstrapUser(ctx context.Context, client client.Client, instance *appsv2alpha2.EMQX) (username, password string, err error) {
 	bootstrapUser := &corev1.Secret{}
 	if err = client.Get(ctx, types.NamespacedName{
 		Namespace: instance.GetNamespace(),

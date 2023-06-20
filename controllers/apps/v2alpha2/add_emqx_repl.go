@@ -32,7 +32,12 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		return subResult{}
 	}
 
-	rs := a.getNewReplicaSet(ctx, instance)
+	rs, collisionCount := a.getNewReplicaSet(ctx, instance)
+	if collisionCount != instance.Status.ReplicantNodeStatus.CollisionCount {
+		instance.Status.ReplicantNodeStatus.CollisionCount = collisionCount
+		_ = a.Client.Status().Update(ctx, instance)
+	}
+
 	if rs.UID == "" {
 		if err := ctrl.SetControllerReference(instance, rs, a.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
@@ -54,14 +59,14 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 	return subResult{}
 }
 
-func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
+func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.EMQX) (*appsv1.ReplicaSet, *int32) {
 	list := &appsv1.ReplicaSetList{}
 	_ = a.Client.List(ctx, list,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
 
-	rs := a.generateReplicaSet(instance)
+	rs, collisionCount := a.generateReplicaSet(instance)
 
 	for _, r := range list.Items {
 		patchResult, _ := a.Patcher.Calculate(
@@ -73,25 +78,28 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 			rs.ObjectMeta = *r.ObjectMeta.DeepCopy()
 			rs.Spec.Template.ObjectMeta = *r.Spec.Template.ObjectMeta.DeepCopy()
 			rs.Spec.Selector = r.Spec.Selector.DeepCopy()
-			return rs
+			return rs, instance.Status.ReplicantNodeStatus.CollisionCount
 		}
 	}
 
-	return rs
+	return rs, collisionCount
 }
 
-func (a *addRepl) generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
+func (a *addRepl) generateReplicaSet(instance *appsv2alpha2.EMQX) (*appsv1.ReplicaSet, *int32) {
+	var collisionCount *int32
 	var rsName string
 	var podTemplateSpecHash string
+
+	collisionCount = instance.Status.ReplicantNodeStatus.CollisionCount
+	if collisionCount == nil {
+		collisionCount = new(int32)
+	}
 
 	podTemplate := generatePodTemplateSpec(instance)
 
 	// Do-while loop
 	for {
-		if instance.Status.ReplicantNodeStatus.CollisionCount == nil {
-			instance.Status.ReplicantNodeStatus.CollisionCount = new(int32)
-		}
-		podTemplateSpecHash = computeHash(podTemplate.DeepCopy(), instance.Status.ReplicantNodeStatus.CollisionCount)
+		podTemplateSpecHash = computeHash(podTemplate.DeepCopy(), collisionCount)
 		rsName = instance.Spec.ReplicantTemplate.Name + "-" + podTemplateSpecHash
 		err := a.Client.Get(context.TODO(), types.NamespacedName{
 			Namespace: instance.Namespace,
@@ -100,7 +108,7 @@ func (a *addRepl) generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.Replic
 		if k8sErrors.IsNotFound(err) {
 			break
 		}
-		*instance.Status.ReplicantNodeStatus.CollisionCount++
+		*collisionCount++
 	}
 
 	podTemplate.Labels = appsv2alpha2.CloneAndAddLabel(podTemplate.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
@@ -120,7 +128,7 @@ func (a *addRepl) generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.Replic
 		},
 	}
 	rs.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("ReplicaSet"))
-	return rs
+	return rs, collisionCount
 }
 
 func (a *addRepl) syncReplicaSet(ctx context.Context, instance *appsv2alpha2.EMQX) error {
