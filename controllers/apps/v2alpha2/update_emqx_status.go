@@ -37,6 +37,10 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	}
 
 	if isExistReplicant(instance) {
+		if instance.Status.ReplicantNodesStatus == nil {
+			instance.Status.ReplicantNodesStatus = &appsv2alpha2.EMQXNodesStatus{}
+		}
+
 		rsList := getReplicaSetList(ctx, u.Client,
 			client.InNamespace(instance.Namespace),
 			client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
@@ -47,12 +51,12 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	}
 
 	if existedSts.UID != "" {
-		instance.Status.CoreNodeStatus.CurrentVersion = existedSts.Status.CurrentRevision
-		instance.Status.CoreNodeStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
+		instance.Status.CoreNodesStatus.CurrentVersion = existedSts.Status.CurrentRevision
+		instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	}
 	if existedRs.UID != "" {
-		instance.Status.ReplicantNodeStatus.CurrentVersion = existedRs.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
-		instance.Status.ReplicantNodeStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
+		instance.Status.ReplicantNodesStatus.CurrentVersion = existedRs.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 	}
 	instance.Status.SetNodes(emqxNodes)
 

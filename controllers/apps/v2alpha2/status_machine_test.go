@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 func TestNextStatusForInit(t *testing.T) {
@@ -120,7 +121,7 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 						Status: metav1.ConditionTrue,
 					},
 				},
-				CoreNodeStatus: appsv2alpha2.EMQXNodesStatus{
+				CoreNodesStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas: 1,
 				},
 			},
@@ -149,7 +150,7 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// emqx core node is ready
-		emqx.Status.CoreNodeStatus.ReadyReplicas = 1
+		emqx.Status.CoreNodesStatus.ReadyReplicas = 1
 		emqxStatusMachine.NextStatus(existedSts, existedRs)
 		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
 		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
@@ -233,10 +234,10 @@ func TestNextStatusForCodeNodesReady(t *testing.T) {
 						Status: metav1.ConditionTrue,
 					},
 				},
-				CoreNodeStatus: appsv2alpha2.EMQXNodesStatus{
+				CoreNodesStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas: 1,
 				},
-				ReplicantNodeStatus: appsv2alpha2.EMQXNodesStatus{
+				ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
 					Replicas: 1,
 				},
 			},
@@ -265,8 +266,8 @@ func TestNextStatusForCodeNodesReady(t *testing.T) {
 		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 
 		// emqx nodes is ready
-		emqx.Status.CoreNodeStatus.ReadyReplicas = 1
-		emqx.Status.ReplicantNodeStatus.ReadyReplicas = 1
+		emqx.Status.CoreNodesStatus.ReadyReplicas = 1
+		emqx.Status.ReplicantNodesStatus.ReadyReplicas = 1
 		emqxStatusMachine.NextStatus(existedSts, existedRs)
 		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 		assert.Equal(t, appsv2alpha2.Ready, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
@@ -308,6 +309,11 @@ func TestNextStatusForCoreReady(t *testing.T) {
 		emqx := &appsv2alpha2.EMQX{
 			Spec: appsv2alpha2.EMQXSpec{
 				Image: "emqx/emqx:latest",
+				ReplicantTemplate: &appsv2alpha2.EMQXReplicantTemplate{
+					Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
+						Replicas: pointer.Int32Ptr(1),
+					},
+				},
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
@@ -321,7 +327,7 @@ func TestNextStatusForCoreReady(t *testing.T) {
 						Status: metav1.ConditionTrue,
 					},
 				},
-				ReplicantNodeStatus: appsv2alpha2.EMQXNodesStatus{
+				ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
 					Replicas:      1,
 					ReadyReplicas: 0,
 				},
@@ -358,11 +364,11 @@ func TestNextStatusForCoreReady(t *testing.T) {
 						Status: metav1.ConditionTrue,
 					},
 				},
-				CoreNodeStatus: appsv2alpha2.EMQXNodesStatus{
+				CoreNodesStatus: appsv2alpha2.EMQXNodesStatus{
 					Replicas:      1,
 					ReadyReplicas: 0,
 				},
-				ReplicantNodeStatus: appsv2alpha2.EMQXNodesStatus{
+				ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
 					Replicas:      1,
 					ReadyReplicas: 0,
 				},

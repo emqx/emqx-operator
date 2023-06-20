@@ -133,7 +133,7 @@ func (s *coreNodesProgressingStatus) nextStatus(existedSts *appsv1.StatefulSet, 
 		return
 	}
 	// core nodes is ready
-	if s.emqxStatusMachine.emqx.Status.CoreNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeStatus.Replicas {
+	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
 		return
 	}
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
@@ -164,6 +164,11 @@ func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existe
 		return
 	}
 
+	// core nodes is ready
+	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
+		return
+	}
+
 	if isExistReplicant(s.emqxStatusMachine.emqx) {
 		// replicaSet is ready
 		if existedRs.UID == "" ||
@@ -171,12 +176,11 @@ func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existe
 			existedRs.Status.ReadyReplicas != existedRs.Status.Replicas {
 			return
 		}
-	}
 
-	// emqx nodes is ready
-	if s.emqxStatusMachine.emqx.Status.CoreNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeStatus.Replicas ||
-		s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.Replicas {
-		return
+		// replicant nodes is ready
+		if s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.Replicas {
+			return
+		}
 	}
 
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
@@ -198,11 +202,13 @@ func (s *readyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedRs *apps
 		return
 	}
 
-	if s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodeStatus.Replicas {
-		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.Ready)
+	if isExistReplicant(s.emqxStatusMachine.emqx) {
+		if s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.Replicas {
+			s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.Ready)
+		}
 	}
 
-	if s.emqxStatusMachine.emqx.Status.CoreNodeStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodeStatus.Replicas {
+	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
 		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.Ready)
 		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.CodeNodesReady)
 	}

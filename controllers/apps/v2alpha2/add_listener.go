@@ -53,10 +53,10 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX
 }
 
 func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha2.EMQX) []corev1.Pod {
-	// labels := appsv2alpha2.AddLabel(instance.Spec.CoreTemplate.Labels, appsv1.ControllerRevisionHashLabelKey, instance.Status.CoreNodeStatus.CurrentVersion)
+	// labels := appsv2alpha2.AddLabel(instance.Spec.CoreTemplate.Labels, appsv1.ControllerRevisionHashLabelKey, instance.Status.CoreNodesStatus.CurrentVersion)
 	labels := instance.Spec.CoreTemplate.Labels
 	if isExistReplicant(instance) {
-		labels = appsv2alpha2.AddLabel(instance.Spec.ReplicantTemplate.Labels, appsv1.DefaultDeploymentUniqueLabelKey, instance.Status.ReplicantNodeStatus.CurrentVersion)
+		labels = appsv2alpha2.AddLabel(instance.Spec.ReplicantTemplate.Labels, appsv1.DefaultDeploymentUniqueLabelKey, instance.Status.ReplicantNodesStatus.CurrentVersion)
 	}
 
 	podList := &corev1.PodList{}
