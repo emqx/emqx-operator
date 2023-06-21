@@ -14,21 +14,6 @@ Package v2alpha2 contains API Schema definitions for the apps v2alpha2 API group
 
 
 
-#### BlueGreenUpdate
-
-
-
-
-
-_Appears in:_
-- [EMQXSpec](#emqxspec)
-
-| Field | Description |
-| --- | --- |
-| `initialDelaySeconds` _integer_ | Number of seconds before evacuation connection start. |
-| `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ | Number of seconds before evacuation connection timeout. |
-
-
 #### BootstrapAPIKey
 
 
@@ -230,7 +215,7 @@ _Appears in:_
 | `image` _string_ | EMQX image name. More info: https://kubernetes.io/docs/concepts/containers/images |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
-| `blueGreenUpdate` _[BlueGreenUpdate](#bluegreenupdate)_ | BlueGreenUpdate is the object that describes the EMQX blue-green update strategy |
+| `updateStrategy` _[UpdateStrategy](#updatestrategy)_ | UpdateStrategy is the object that describes the EMQX blue-green update strategy |
 | `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
 | `bootstrapConfig` _string_ | EMQX bootstrap config, HOCON style, like emqx.conf Cannot be updated. |
 | `dashboardServiceTemplate` _[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#service-v1-core)_ |  |
@@ -263,7 +248,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [BlueGreenUpdate](#bluegreenupdate)
+- [UpdateStrategy](#updatestrategy)
 
 | Field | Description |
 | --- | --- |
@@ -272,5 +257,21 @@ _Appears in:_
 | `sessEvictRate` _integer_ | Just work in EMQX Enterprise. |
 
 
+
+
+#### UpdateStrategy
+
+
+
+
+
+_Appears in:_
+- [EMQXSpec](#emqxspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ |  |
+| `initialDelaySeconds` _integer_ | Number of seconds before evacuation connection start. |
+| `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ | Number of seconds before evacuation connection timeout. |
 
 

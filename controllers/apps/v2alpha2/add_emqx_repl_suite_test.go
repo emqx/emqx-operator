@@ -201,7 +201,7 @@ var _ = Describe("Check add repl controller", func() {
 		JustBeforeEach(func() {
 			instance = emqx.DeepCopy()
 			instance.Namespace = ns.Name
-			instance.Spec.BlueGreenUpdate = appsv2alpha2.BlueGreenUpdate{
+			instance.Spec.UpdateStrategy = appsv2alpha2.UpdateStrategy{
 				InitialDelaySeconds: 1,
 				EvacuationStrategy: appsv2alpha2.EvacuationStrategy{
 					WaitTakeover: 999999999,

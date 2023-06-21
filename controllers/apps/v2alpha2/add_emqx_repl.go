@@ -160,7 +160,7 @@ func canBeScaledDownRs(instance *appsv2alpha2.EMQX, current *appsv1.ReplicaSet, 
 	_, condition := instance.Status.GetCondition(appsv2alpha2.CodeNodesReady)
 	if condition != nil && condition.Status == metav1.ConditionTrue {
 		delay := time.Since(condition.LastTransitionTime.Time).Seconds()
-		if int32(delay) > instance.Spec.BlueGreenUpdate.InitialDelaySeconds {
+		if int32(delay) > instance.Spec.UpdateStrategy.InitialDelaySeconds {
 			initialDelaySecondsReady = true
 		}
 	}
@@ -172,7 +172,7 @@ func canBeScaledDownRs(instance *appsv2alpha2.EMQX, current *appsv1.ReplicaSet, 
 
 	lastEvent := eList[len(eList)-1]
 	delay := time.Since(lastEvent.LastTimestamp.Time).Seconds()
-	if int32(delay) > instance.Spec.BlueGreenUpdate.EvacuationStrategy.WaitTakeover {
+	if int32(delay) > instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover {
 		waitTakeover = true
 	}
 
