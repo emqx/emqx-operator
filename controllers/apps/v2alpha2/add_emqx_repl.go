@@ -25,7 +25,7 @@ type addRepl struct {
 }
 
 func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
-	if !isExistReplicant(instance) {
+	if instance.Spec.ReplicantTemplate == nil {
 		return subResult{}
 	}
 	if !instance.Status.IsConditionTrue(appsv2alpha2.CodeNodesReady) {
