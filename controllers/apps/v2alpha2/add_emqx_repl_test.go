@@ -19,7 +19,7 @@ func TestCanBeScaledDownRs(t *testing.T) {
 	t.Run("event list is empty, initialDelaySeconds not ready, can not scale down", func(t *testing.T) {
 		emqx := &appsv2alpha2.EMQX{
 			Spec: appsv2alpha2.EMQXSpec{
-				BlueGreenUpdate: appsv2alpha2.BlueGreenUpdate{
+				UpdateStrategy: appsv2alpha2.UpdateStrategy{
 					InitialDelaySeconds: 999999999,
 				},
 			},
@@ -35,7 +35,7 @@ func TestCanBeScaledDownRs(t *testing.T) {
 	t.Run("event list is empty, initialDelaySeconds is ready, can scale down", func(t *testing.T) {
 		emqx := &appsv2alpha2.EMQX{
 			Spec: appsv2alpha2.EMQXSpec{
-				BlueGreenUpdate: appsv2alpha2.BlueGreenUpdate{
+				UpdateStrategy: appsv2alpha2.UpdateStrategy{
 					InitialDelaySeconds: 1,
 				},
 			},
@@ -64,7 +64,7 @@ func TestCanBeScaledDownRs(t *testing.T) {
 	t.Run("event list is not empty, initialDelaySeconds is ready, waitTakeover not ready, can not scale down", func(t *testing.T) {
 		emqx := &appsv2alpha2.EMQX{
 			Spec: appsv2alpha2.EMQXSpec{
-				BlueGreenUpdate: appsv2alpha2.BlueGreenUpdate{
+				UpdateStrategy: appsv2alpha2.UpdateStrategy{
 					InitialDelaySeconds: 1,
 					EvacuationStrategy: appsv2alpha2.EvacuationStrategy{
 						WaitTakeover: 999999999,
@@ -94,7 +94,7 @@ func TestCanBeScaledDownRs(t *testing.T) {
 	t.Run("event list is not empty,initialDelaySeconds is ready, waitTakeover is ready, can scale down", func(t *testing.T) {
 		emqx := &appsv2alpha2.EMQX{
 			Spec: appsv2alpha2.EMQXSpec{
-				BlueGreenUpdate: appsv2alpha2.BlueGreenUpdate{
+				UpdateStrategy: appsv2alpha2.UpdateStrategy{
 					InitialDelaySeconds: 1,
 					EvacuationStrategy: appsv2alpha2.EvacuationStrategy{
 						WaitTakeover: 1,

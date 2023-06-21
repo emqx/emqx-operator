@@ -190,7 +190,10 @@ type EvacuationStrategy struct {
 	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
 }
 
-type BlueGreenUpdate struct {
+type UpdateStrategy struct {
+	//+kubebuilder:validation:Enum=Recreate
+	//+kubebuilder:default=Recreate
+	Type string `json:"type,omitempty"`
 	// Number of seconds before evacuation connection start.
 	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
 	// Number of seconds before evacuation connection timeout.
@@ -213,8 +216,8 @@ type EMQXSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	// BlueGreenUpdate is the object that describes the EMQX blue-green update strategy
-	BlueGreenUpdate BlueGreenUpdate `json:"blueGreenUpdate,omitempty"`
+	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
+	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 	// EMQX bootstrap user
 	// Cannot be updated.
 	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
