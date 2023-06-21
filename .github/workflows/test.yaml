@@ -111,7 +111,7 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: '1.20'
-      - run: go test -race --cover -covermode=atomic -coverpkg=./... -coverprofile=cover.out $(go list ./...|grep -v e2e)
+      - run: make test
       - uses: actions/upload-artifact@v3
         with:
           name: coverprofile
