@@ -91,6 +91,7 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 	t.Run("next status", func(t *testing.T) {
 		existedSts := &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
+				UID:        types.UID("fake"),
 				Generation: 1,
 			},
 			Spec: appsv1.StatefulSetSpec{
