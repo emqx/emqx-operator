@@ -24,7 +24,7 @@ import (
 	"hash/fnv"
 
 	emperror "emperror.dev/errors"
-	"github.com/banzaicloud/k8s-objectmatcher/patch"
+	"github.com/cisco-open/k8s-objectmatcher/patch"
 	"github.com/davecgh/go-spew/spew"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	"github.com/tidwall/gjson"

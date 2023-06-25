@@ -7,7 +7,7 @@ import (
 	json "github.com/json-iterator/go"
 
 	emperror "emperror.dev/errors"
-	"github.com/banzaicloud/k8s-objectmatcher/patch"
+	"github.com/cisco-open/k8s-objectmatcher/patch"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

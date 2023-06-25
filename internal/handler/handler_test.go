@@ -19,7 +19,7 @@ package handler_test
 import (
 	"testing"
 
-	"github.com/banzaicloud/k8s-objectmatcher/patch"
+	"github.com/cisco-open/k8s-objectmatcher/patch"
 	"github.com/emqx/emqx-operator/internal/handler"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
