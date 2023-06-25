@@ -66,7 +66,7 @@ func getEventList(ctx context.Context, clientSet *kubernetes.Clientset, obj clie
 func handlerReplicaSetList(list *appsv1.ReplicaSetList) []*appsv1.ReplicaSet {
 	rsList := []*appsv1.ReplicaSet{}
 	for _, rs := range list.Items {
-		if rs.Status.Replicas != 0 && rs.Status.ReadyReplicas == rs.Status.Replicas {
+		if *rs.Spec.Replicas != 0 && rs.Status.ReadyReplicas == rs.Status.Replicas {
 			rsList = append(rsList, rs.DeepCopy())
 		}
 	}
