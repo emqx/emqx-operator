@@ -10,7 +10,7 @@ def get_markdown_file(dir_config, base_path):
     for row in dir_config:
         if row.get('path'):
             current_files.append(
-                f'{base_path}/README.md' if row['path'] == './'
+                f'{base_path}/index.md' if row['path'] == './'
                 else f'{base_path}/{row["path"]}.md'
             )
         if row.get('children'):
