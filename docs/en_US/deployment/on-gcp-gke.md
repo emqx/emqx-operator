@@ -31,7 +31,7 @@ Before you begin, you must have the following:
 
 ## Quickly deploying an EMQX cluster
 
-Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
+Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4

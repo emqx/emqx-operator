@@ -27,7 +27,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
 
 ## 快速部署一个 EMQX 集群
 
-下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考[ EMQX 与 EMQX Operator 的兼容性列表](../README.md)：
+下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考[ EMQX 与 EMQX Operator 的兼容性列表](../index.md)：
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
@@ -72,7 +72,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
             }
       spec:
         type: LoadBalancer
-    ```
+  ```
 
 + 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 

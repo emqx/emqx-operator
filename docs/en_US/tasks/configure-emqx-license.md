@@ -9,7 +9,7 @@
 
 EMQX Enterprise License can be applied for free on EMQ official website: [Apply for EMQX Enterprise License](https://www.emqx.com/en/apply-licenses/emqx).
 
-The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 ## Configure EMQX Cluster
 

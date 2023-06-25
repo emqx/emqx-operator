@@ -6,7 +6,7 @@ Modify the log level of EMQX cluster.
 
 ## Configure EMQX Cluster
 
-The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../README.md):
+The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4

@@ -10,7 +10,7 @@ Grafana' deployment documentation can refer to [Grafana](https://grafana.com/doc
 
 ## Deploy EMQX Cluster
 
-Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
+Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
 ::: tab v2alpha1
