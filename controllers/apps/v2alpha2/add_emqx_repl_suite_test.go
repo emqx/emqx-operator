@@ -3,13 +3,12 @@ package v2alpha2
 import (
 	"context"
 	"errors"
+	"time"
 
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
-	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -17,9 +16,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Check add repl controller", func() {
+var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 	var a *addRepl
-	var req *innerReq.Requester = &innerReq.Requester{}
+	var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
 	BeforeEach(func() {
@@ -27,28 +26,51 @@ var _ = Describe("Check add repl controller", func() {
 
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-v2alpah2-test-" + rand.String(5),
+				Name: "controller-v2alpha2-add-emqx-repl-test",
 				Labels: map[string]string{
 					"test": "e2e",
 				},
 			},
 		}
-		Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
-	})
-	AfterEach(func() {
-		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
+
+		instance = emqx.DeepCopy()
+		instance.Namespace = ns.Name
+		instance.Spec.ReplicantTemplate = &appsv2alpha2.EMQXReplicantTemplate{
+			Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
+				Replicas: pointer.Int32(3),
+			},
+		}
+		instance.Status = appsv2alpha2.EMQXStatus{
+			ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
+				Replicas: 3,
+			},
+			Conditions: []metav1.Condition{
+				{
+					Type:               appsv2alpha2.Ready,
+					Status:             metav1.ConditionTrue,
+					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+				},
+				{
+					Type:               appsv2alpha2.CodeNodesReady,
+					Status:             metav1.ConditionTrue,
+					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+				},
+			},
+		}
+		instance.Default()
 	})
 
-	Context("if replicant template is nil", func() {
-		var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
+	It("create namespace", func() {
+		Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
+	})
+
+	Context("replicant template is nil", func() {
 		JustBeforeEach(func() {
-			instance = emqx.DeepCopy()
-			instance.Namespace = ns.Name
 			instance.Spec.ReplicantTemplate = nil
 		})
 
 		It("should do nothing", func() {
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -60,19 +82,13 @@ var _ = Describe("Check add repl controller", func() {
 		})
 	})
 
-	Context("if core nodes is not ready", func() {
-		var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
+	Context("core nodes is not ready", func() {
 		JustBeforeEach(func() {
-			instance = emqx.DeepCopy()
-			instance.Namespace = ns.Name
 			instance.Status.RemoveCondition(appsv2alpha2.CodeNodesReady)
 		})
 
 		It("should do nothing", func() {
-			instance := emqx.DeepCopy()
-			instance.Status.RemoveCondition(appsv2alpha2.CodeNodesReady)
-
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -85,14 +101,8 @@ var _ = Describe("Check add repl controller", func() {
 	})
 
 	Context("replicant template is not nil, and core code is ready", func() {
-		var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
-		JustBeforeEach(func() {
-			instance = emqx.DeepCopy()
-			instance.Namespace = ns.Name
-		})
-
-		It("should create replicaSet", func() {
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+		It("should update replicaSet", func() {
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -100,156 +110,120 @@ var _ = Describe("Check add repl controller", func() {
 					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 				)
 				return list.Items
-			}).Should(And(
-				HaveLen(1),
-				ContainElements(
-					WithTransform(func(rs appsv1.ReplicaSet) string { return rs.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
-				),
+			}).Should(ConsistOf(
+				WithTransform(func(rs appsv1.ReplicaSet) string { return rs.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
 			))
 		})
-
-		It("if change replica count, should update replicaSet", func() {
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
-			Eventually(func() []appsv1.ReplicaSet {
-				list := &appsv1.ReplicaSetList{}
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-				)
-				return list.Items
-			}).Should(And(
-				HaveLen(1),
-				ContainElements(
-					WithTransform(func(rs appsv1.ReplicaSet) int32 { return *rs.Spec.Replicas }, Equal(int32(3))),
-				),
-			))
-
-			By("update instance")
-			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(5)
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
-			Eventually(func() []appsv1.ReplicaSet {
-				list := &appsv1.ReplicaSetList{}
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-				)
-				return list.Items
-			}).Should(And(
-				HaveLen(1),
-				ContainElements(
-					WithTransform(func(rs appsv1.ReplicaSet) int32 { return *rs.Spec.Replicas }, Equal(int32(5))),
-				),
-			))
-
-			By("update instance")
-			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(0)
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
-			Eventually(func() []appsv1.ReplicaSet {
-				list := &appsv1.ReplicaSetList{}
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-				)
-				return list.Items
-			}).Should(And(
-				HaveLen(1),
-				ContainElements(
-					WithTransform(func(rs appsv1.ReplicaSet) int32 { return *rs.Spec.Replicas }, Equal(int32(0))),
-				),
-			))
-		})
-
-		It("if change image, should create new replicaSet", func() {
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
-			Eventually(func() []appsv1.ReplicaSet {
-				list := &appsv1.ReplicaSetList{}
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-				)
-				return list.Items
-			}).Should(And(
-				HaveLen(1),
-				ContainElements(
-					WithTransform(func(rs appsv1.ReplicaSet) string { return rs.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
-				),
-			))
-
-			By("update instance")
-			instance.Spec.Image = "emqx/emqx"
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
-			Eventually(func() []appsv1.ReplicaSet {
-				list := &appsv1.ReplicaSetList{}
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-				)
-				return list.Items
-			}).Should(And(
-				HaveLen(2),
-				ContainElements(
-					WithTransform(func(rs appsv1.ReplicaSet) string { return rs.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
-				),
-			))
-		})
-
 	})
 
-	Context("check can be scale up", func() {
-		var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
-		var old *appsv1.ReplicaSet = new(appsv1.ReplicaSet)
+	Context("scale down replicas count", func() {
 		JustBeforeEach(func() {
-			instance = emqx.DeepCopy()
-			instance.Namespace = ns.Name
-			instance.Spec.UpdateStrategy = appsv2alpha2.UpdateStrategy{
-				InitialDelaySeconds: 1,
-				EvacuationStrategy: appsv2alpha2.EvacuationStrategy{
-					WaitTakeover: 999999999,
-				},
-			}
+			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(0)
+		})
 
-			// create replicant
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
-			// get old replicant
-			Eventually(func() error {
+		It("should update replicaSet", func() {
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
+			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
 					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 				)
-				if len(list.Items) == 0 {
+				return list.Items
+			}).Should(ConsistOf(
+				WithTransform(func(rs appsv1.ReplicaSet) int32 { return *rs.Spec.Replicas }, Equal(*instance.Spec.ReplicantTemplate.Spec.Replicas)),
+			))
+		})
+	})
+
+	Context("scale up replicas count", func() {
+		JustBeforeEach(func() {
+			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(4)
+		})
+
+		It("should update replicaSet", func() {
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
+			Eventually(func() []appsv1.ReplicaSet {
+				list := &appsv1.ReplicaSetList{}
+				_ = k8sClient.List(ctx, list,
+					client.InNamespace(instance.Namespace),
+					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+				)
+				return list.Items
+			}).Should(ConsistOf(
+				WithTransform(func(rs appsv1.ReplicaSet) int32 { return *rs.Spec.Replicas }, Equal(*instance.Spec.ReplicantTemplate.Spec.Replicas)),
+			))
+		})
+	})
+
+	Context("change image", func() {
+		JustBeforeEach(func() {
+			instance.Spec.Image = "emqx/emqx"
+			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(999999999)
+		})
+
+		It("should create new replicaSet", func() {
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
+			Eventually(func() []appsv1.ReplicaSet {
+				list := &appsv1.ReplicaSetList{}
+				_ = k8sClient.List(ctx, list,
+					client.InNamespace(instance.Namespace),
+					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+				)
+				return list.Items
+			}).Should(ConsistOf(
+				WithTransform(func(rs appsv1.ReplicaSet) string { return rs.Spec.Template.Spec.Containers[0].Image }, Equal(emqx.Spec.Image)),
+				WithTransform(func(rs appsv1.ReplicaSet) string { return rs.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
+			))
+		})
+	})
+
+	Context("can be scale down", func() {
+		var old *appsv1.ReplicaSet = new(appsv1.ReplicaSet)
+		var realReplicas int32
+
+		JustBeforeEach(func() {
+			Eventually(func() error {
+				list := getReplicaSetList(ctx, a.Client,
+					client.InNamespace(instance.Namespace),
+					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+				)
+				if len(list) == 0 {
 					return errors.New("not found")
 				}
-				old = list.Items[0].DeepCopy()
+				old = list[0].DeepCopy()
 				return nil
 			}).Should(Succeed())
 
-			// update replicant
-			instance.Spec.Image = "emqx/emqx"
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+			realReplicas = *old.Spec.Replicas
+			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(0)
+			instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover = int32(0)
+		})
+		It("should scale down", func() {
+			for realReplicas > 1 {
+				//mock statefulSet status
+				old.Status.Replicas = realReplicas
+				old.Status.ReadyReplicas = realReplicas
+				Expect(k8sClient.Status().Update(ctx, old)).Should(Succeed())
+				Eventually(func() *appsv1.ReplicaSet {
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
+					return old
+				}).WithTimeout(timeout).WithPolling(interval).Should(And(
+					WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.Replicas }, Equal(realReplicas)),
+					WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.ReadyReplicas }, Equal(realReplicas)),
+				))
 
-			list := &appsv1.ReplicaSetList{}
-			_ = k8sClient.List(ctx, list,
-				client.InNamespace(instance.Namespace),
-				client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-			)
-			for _, rs := range list.Items {
-				Eventually(func() error {
-					rs.Status.Replicas = *rs.Spec.Replicas
-					rs.Status.ReadyReplicas = *rs.Spec.Replicas
-					return k8sClient.Status().Update(ctx, rs.DeepCopy())
-				}).Should(Succeed())
+				// retry it because update the replicaSet maybe will conflict
+				Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
+				Expect(*old.Spec.Replicas).Should(Equal(realReplicas - 1))
+
+				realReplicas--
 			}
 		})
+	})
 
-		It("can be scale down", func() {
-			// retry it because update the replicaSet maybe will conflict
-			Eventually(a.reconcile(ctx, instance, req)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
-			Eventually(func() int32 {
-				oldCP := old.DeepCopy()
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(oldCP), oldCP)
-				return *oldCP.Spec.Replicas
-			}).WithTimeout(timeout).WithPolling(interval).Should(Equal(int32(2)))
-		})
+	It("delete namespace", func() {
+		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
 	})
 })

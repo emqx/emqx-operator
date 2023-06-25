@@ -28,7 +28,6 @@ import (
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -57,28 +56,6 @@ var emqx *appsv2alpha2.EMQX = &appsv2alpha2.EMQX{
 	},
 	Spec: appsv2alpha2.EMQXSpec{
 		Image: "emqx",
-		ReplicantTemplate: &appsv2alpha2.EMQXReplicantTemplate{
-			Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
-				Replicas: pointer.Int32Ptr(3),
-			},
-		},
-	},
-	Status: appsv2alpha2.EMQXStatus{
-		Conditions: []metav1.Condition{
-			{
-				Type:               appsv2alpha2.Ready,
-				Status:             metav1.ConditionTrue,
-				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
-			},
-			{
-				Type:               appsv2alpha2.CodeNodesReady,
-				Status:             metav1.ConditionTrue,
-				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
-			},
-		},
-		ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
-			Replicas: 3,
-		},
 	},
 }
 

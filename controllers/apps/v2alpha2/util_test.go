@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 func TestHandlerReplicaSetList(t *testing.T) {
@@ -15,17 +16,26 @@ func TestHandlerReplicaSetList(t *testing.T) {
 		list := &appsv1.ReplicaSetList{
 			Items: []appsv1.ReplicaSet{
 				{
+					Spec: appsv1.ReplicaSetSpec{
+						Replicas: pointer.Int32(0),
+					},
 					Status: appsv1.ReplicaSetStatus{
 						Replicas: 0,
 					},
 				},
 				{
+					Spec: appsv1.ReplicaSetSpec{
+						Replicas: pointer.Int32(1),
+					},
 					Status: appsv1.ReplicaSetStatus{
 						Replicas:      1,
 						ReadyReplicas: 0,
 					},
 				},
 				{
+					Spec: appsv1.ReplicaSetSpec{
+						Replicas: pointer.Int32(1),
+					},
 					Status: appsv1.ReplicaSetStatus{
 						Replicas:      1,
 						ReadyReplicas: 1,
@@ -44,6 +54,9 @@ func TestHandlerReplicaSetList(t *testing.T) {
 						Name:              "emqx-1",
 						CreationTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, 1)},
 					},
+					Spec: appsv1.ReplicaSetSpec{
+						Replicas: pointer.Int32(1),
+					},
 					Status: appsv1.ReplicaSetStatus{
 						Replicas:      1,
 						ReadyReplicas: 1,
@@ -53,6 +66,9 @@ func TestHandlerReplicaSetList(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "emqx-0",
 						CreationTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+					},
+					Spec: appsv1.ReplicaSetSpec{
+						Replicas: pointer.Int32(1),
 					},
 					Status: appsv1.ReplicaSetStatus{
 						Replicas:      1,

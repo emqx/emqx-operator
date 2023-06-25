@@ -311,7 +311,7 @@ func TestNextStatusForCoreReady(t *testing.T) {
 				Image: "emqx/emqx:latest",
 				ReplicantTemplate: &appsv2alpha2.EMQXReplicantTemplate{
 					Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
-						Replicas: pointer.Int32Ptr(1),
+						Replicas: pointer.Int32(1),
 					},
 				},
 			},
