@@ -1,7 +1,7 @@
 resources:
   - ../crd
   - ../rbac
-  - ../manager
+  - namespace.yaml
   - ../webhook
 
 patches:
@@ -112,7 +112,7 @@ patches:
 
       - op: "add"
         path: "/webhooks/3/clientConfig/url"
-        value: "https://host.docker.internal:9443/mutate-apps-emqx-io-v2alpha1-emqx"
+        value: "https://host.docker.internal:9443/mutate-apps-emqx-io-v2alpha2-emqx"
       - op: "remove"
         path: "/webhooks/3/clientConfig/service"
       - op: "add"
@@ -252,11 +252,45 @@ patches:
 
       - op: "add"
         path: "/webhooks/3/clientConfig/url"
-        value: "https://host.docker.internal:9443/validate-apps-emqx-io-v2alpha1-emqx"
+        value: "https://host.docker.internal:9443/validate-apps-emqx-io-v1beta4-rebalance"
       - op: "remove"
         path: "/webhooks/3/clientConfig/service"
       - op: "add"
         path: "/webhooks/3/clientConfig/caBundle"
+        value:  |
+            LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6VENDQXJXZ0F3SUJBZ0lVTlJCMHZNZlVz
+            bVJGMlJITktIZWYvalN4WXJ3d0RRWUpLb1pJaHZjTkFRRUwKQlFBd2RqRUxNQWtHQTFVRUJoTUNR
+            MDR4Q3pBSkJnTlZCQWdNQWxORE1Rc3dDUVlEVlFRSERBSkRSREVMTUFrRwpBMVVFQ2d3Q1dWa3hD
+            ekFKQmdOVkJBc01BbGxaTVJJd0VBWURWUVFEREFreE1qY3VNQzR3TGpFeEh6QWRCZ2txCmhraUc5
+            dzBCQ1FFV0VETXdOakUwTWpBMU5FQnhjUzVqYjIwd0hoY05NakV3TmpJek1ESTFPRFU1V2hjTk16
+            RXcKTmpJeE1ESTFPRFU1V2pCMk1Rc3dDUVlEVlFRR0V3SkRUakVMTUFrR0ExVUVDQXdDVTBNeEN6
+            QUpCZ05WQkFjTQpBa05FTVFzd0NRWURWUVFLREFKWldURUxNQWtHQTFVRUN3d0NXVmt4RWpBUUJn
+            TlZCQU1NQ1RFeU55NHdMakF1Ck1URWZNQjBHQ1NxR1NJYjNEUUVKQVJZUU16QTJNVFF5TURVMFFI
+            RnhMbU52YlRDQ0FTSXdEUVlKS29aSWh2Y04KQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQUx1dWI5
+            V3FISy9MN29LQ1RDNDFSU1BVTVFwamkxbnJuakE0dkJaUwpmNXZSa0xDTGJJVzJWNVNvZThjV1dP
+            dkc0ZHpwaG5veWNEZmdSRXdVUG85YUVaNWliSFFkcGZIOEFuTlRBeXgzCk00RkdDRUxlcXlPcHhZ
+            NXMrR01ESCtqMXFnZSs3Snpram9oS3plZjFYbERoUTRRL1doY2NqVTM0MStZaGdnaS8KN2JHa0FS
+            b1piUVJsSGFjMlo5M2hxRmtrQnY4SXFhbDczSFhCelkxamFhNmV2cENnaEpaT0NybStiWkZWVzhR
+            ZApoa1BVM1FybDhiVW9DNGE3M29QbXpqMzZnT2pMOWdrK0RxSVpCODBZaGNDajR6VTZFUUM3cGlP
+            Szk5VEQ5SUN6CmdKcTRWUEVwMUszUHVROTcwazdrbWlURzkyYWhHQ1AybUJ4bUhGMmxWSk0xaTFr
+            Q0F3RUFBYU5UTUZFd0hRWUQKVlIwT0JCWUVGSXhPQnZSdEJ5YU56bktNMHFUR29tWENvQW5PTUI4
+            R0ExVWRJd1FZTUJhQUZJeE9CdlJ0QnlhTgp6bktNMHFUR29tWENvQW5PTUE4R0ExVWRFd0VCL3dR
+            Rk1BTUJBZjh3RFFZSktvWklodmNOQVFFTEJRQURnZ0VCCkFHb1NHMVk3MjhHU0RZYXpzQUMwZmxX
+            V0pFSEtDNExWVExHajdHQXdkTnJ6VERYNStqcjFwVENoeEZ0dFZVZGYKVHFlVjkzeDF6KysxUHAz
+            L2JibTRWOWhMTjZWUDBtYi81QTh4dGU4dVB0NmtEZkM0VEc2TkYxK2JSMnFRQnlnYgoydEdhakVC
+            SDlWaGcvZVlrRmRwOE1mY3dONm1SRWdPTHR2RXk5RldtZW16VUVqSnFqc0dzbnZYa29XSHFxSUdu
+            CnZsNU1GRjlaR24rSy9VMW1GUGNLNHNNS3VMeEZMcmNKeDduMk1VRlVSQmcvNmM1SWMzWStDRkxx
+            NWgwUCtOM2wKYXluOG9mcDBFdFJaTHlRSlZQdTNWYTJWaFE0QVdaMklVZ2UvRWExNlpPUjREL3pa
+            MW5ZMG9wb3RiRzdTNFE2VApDV0g3eGljRVlGdmhsVFREVlFGU1JMdz0KLS0tLS1FTkQgQ0VSVElG
+            SUNBVEUtLS0tLQo=
+
+      - op: "add"
+        path: "/webhooks/4/clientConfig/url"
+        value: "https://host.docker.internal:9443/validate-apps-emqx-io-v2alpha2-emqx"
+      - op: "remove"
+        path: "/webhooks/4/clientConfig/service"
+      - op: "add"
+        path: "/webhooks/4/clientConfig/caBundle"
         value:  |
             LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR6VENDQXJXZ0F3SUJBZ0lVTlJCMHZNZlVz
             bVJGMlJITktIZWYvalN4WXJ3d0RRWUpLb1pJaHZjTkFRRUwKQlFBd2RqRUxNQWtHQTFVRUJoTUNR
