@@ -36,6 +36,14 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		}
 	}
 
+	stsList := getStateFulSetList(ctx, u.Client,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+	)
+	if len(stsList) > 0 {
+		existedSts = stsList[len(stsList)-1]
+	}
+
 	if isExistReplicant(instance) {
 		if instance.Status.ReplicantNodesStatus == nil {
 			instance.Status.ReplicantNodesStatus = &appsv2alpha2.EMQXNodesStatus{}
@@ -51,7 +59,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	}
 
 	if existedSts.UID != "" {
-		instance.Status.CoreNodesStatus.CurrentVersion = existedSts.Status.CurrentRevision
+		instance.Status.CoreNodesStatus.CurrentVersion = existedSts.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 		instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	}
 	if existedRs.UID != "" {

@@ -2,21 +2,16 @@ package v2alpha2
 
 import (
 	"context"
-	"encoding/json"
-	"time"
 
 	emperror "emperror.dev/errors"
-	"github.com/banzaicloud/k8s-objectmatcher/patch"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
-	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -38,15 +33,15 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		_ = a.Client.Status().Update(ctx, instance)
 	}
 
-	if rs.UID == "" {
-		if err := ctrl.SetControllerReference(instance, rs, a.Scheme); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
-		}
-		if err := a.Handler.Create(rs); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to create replicaSet")}
-		}
-		return subResult{result: ctrl.Result{}}
-	}
+	// if rs.UID == "" {
+	// 	if err := ctrl.SetControllerReference(instance, rs, a.Scheme); err != nil {
+	// 		return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
+	// 	}
+	// 	if err := a.Handler.Create(rs); err != nil {
+	// 		return subResult{err: emperror.Wrap(err, "failed to create replicaSet")}
+	// 	}
+	// 	return subResult{result: ctrl.Result{}}
+	// }
 
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{rs}); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update replicaSet")}
@@ -143,7 +138,7 @@ func (a *addRepl) syncReplicaSet(ctx context.Context, instance *appsv2alpha2.EMQ
 	old := rsList[0].DeepCopy()
 	eList := getEventList(ctx, a.Clientset, old)
 
-	if canBeScaledDownRs(instance, rsList[len(rsList)-1].DeepCopy(), eList) {
+	if canBeScaledDown(instance, appsv2alpha2.CodeNodesReady, eList) {
 		old.Spec.Replicas = pointer.Int32(old.Status.Replicas - 1)
 		if err := a.Client.Update(ctx, old); err != nil {
 			return emperror.Wrap(err, "failed to scale down old replicaSet")
@@ -151,32 +146,6 @@ func (a *addRepl) syncReplicaSet(ctx context.Context, instance *appsv2alpha2.EMQ
 		return nil
 	}
 	return nil
-}
-
-func canBeScaledDownRs(instance *appsv2alpha2.EMQX, current *appsv1.ReplicaSet, eList []*corev1.Event) bool {
-	var initialDelaySecondsReady bool
-	var waitTakeover bool
-
-	_, condition := instance.Status.GetCondition(appsv2alpha2.CodeNodesReady)
-	if condition != nil && condition.Status == metav1.ConditionTrue {
-		delay := time.Since(condition.LastTransitionTime.Time).Seconds()
-		if int32(delay) > instance.Spec.UpdateStrategy.InitialDelaySeconds {
-			initialDelaySecondsReady = true
-		}
-	}
-
-	if len(eList) == 0 {
-		waitTakeover = true
-		return initialDelaySecondsReady && waitTakeover
-	}
-
-	lastEvent := eList[len(eList)-1]
-	delay := time.Since(lastEvent.LastTimestamp.Time).Seconds()
-	if int32(delay) > instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover {
-		waitTakeover = true
-	}
-
-	return initialDelaySecondsReady && waitTakeover
 }
 
 func generatePodTemplateSpec(instance *appsv2alpha2.EMQX) corev1.PodTemplateSpec {
@@ -299,32 +268,5 @@ func generatePodTemplateSpec(instance *appsv2alpha2.EMQX) corev1.PodTemplateSpec
 				},
 			}, instance.Spec.ReplicantTemplate.Spec.ExtraVolumes...),
 		},
-	}
-}
-
-// JustCheckPodTemplate will check only the differences between the podTemplate of the two statefulSets
-func justCheckPodTemplateSpec() patch.CalculateOption {
-	getPodTemplate := func(obj []byte) ([]byte, error) {
-		podTemplateSpecJson := gjson.GetBytes(obj, "spec.template.spec")
-		podTemplateSpec := &corev1.PodSpec{}
-		_ = json.Unmarshal([]byte(podTemplateSpecJson.String()), podTemplateSpec)
-
-		emptyRs := &appsv1.ReplicaSet{}
-		emptyRs.Spec.Template.Spec = *podTemplateSpec
-		return json.Marshal(emptyRs)
-	}
-
-	return func(current, modified []byte) ([]byte, []byte, error) {
-		current, err := getPodTemplate(current)
-		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not get pod template field from current byte sequence")
-		}
-
-		modified, err = getPodTemplate(modified)
-		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not get pod template field from modified byte sequence")
-		}
-
-		return current, modified, nil
 	}
 }

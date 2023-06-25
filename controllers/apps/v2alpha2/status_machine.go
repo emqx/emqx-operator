@@ -122,18 +122,20 @@ func (s *coreNodesProgressingStatus) nextStatus(existedSts *appsv1.StatefulSet, 
 	}
 
 	// statefulSet already updated
-	if existedSts.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
+	if existedSts.UID == "" ||
+		existedSts.Spec.Template.Spec.Containers[0].Image != s.emqxStatusMachine.emqx.Spec.Image ||
 		existedSts.Status.ObservedGeneration != existedSts.Generation {
 		return
 	}
 	// statefulSet is ready
-	if existedSts.Status.UpdateRevision != existedSts.Status.CurrentRevision ||
+	if existedSts.UID == "" ||
+		existedSts.Status.UpdateRevision != existedSts.Status.CurrentRevision ||
 		existedSts.Status.UpdatedReplicas != existedSts.Status.Replicas ||
 		existedSts.Status.ReadyReplicas != existedSts.Status.Replicas {
 		return
 	}
 	// core nodes is ready
-	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
+	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas < s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
 		return
 	}
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
@@ -165,7 +167,7 @@ func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existe
 	}
 
 	// core nodes is ready
-	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
+	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas < s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
 		return
 	}
 
@@ -178,7 +180,7 @@ func (s *codeNodesReadyStatus) nextStatus(existedSts *appsv1.StatefulSet, existe
 		}
 
 		// replicant nodes is ready
-		if s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.Replicas {
+		if s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.ReadyReplicas < s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.Replicas {
 			return
 		}
 	}

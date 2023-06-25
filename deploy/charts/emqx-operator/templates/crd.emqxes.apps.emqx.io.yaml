@@ -9329,7 +9329,7 @@ spec:
                               type: integer
                           type: object
                         replicas:
-                          default: 3
+                          default: 2
                           format: int32
                           type: integer
                         resources:
@@ -12732,7 +12732,7 @@ spec:
                               type: integer
                           type: object
                         replicas:
-                          default: 3
+                          default: 2
                           format: int32
                           type: integer
                         resources:

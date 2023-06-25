@@ -118,13 +118,13 @@ var _ = Describe("Base Test", func() {
 
 		It("Check Blue Green Update", func() {
 			By("Checking statefulSet image", func() {
-				sts := &appsv1.StatefulSet{}
+				list := &appsv1.StatefulSetList{}
 				Eventually(func() string {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKey{
-						Namespace: instance.Namespace,
-						Name:      instance.Spec.CoreTemplate.Name,
-					}, sts)
-					return sts.Spec.Template.Spec.Containers[0].Image
+					_ = k8sClient.List(context.TODO(), list,
+						client.InNamespace(instance.Namespace),
+						client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+					)
+					return list.Items[0].Spec.Template.Spec.Containers[0].Image
 				}, timeout, interval).Should(Equal(currentImage))
 			})
 

@@ -10,7 +10,10 @@ import (
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -19,11 +22,97 @@ type addCore struct {
 }
 
 func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
-	sts := generateStatefulSet(instance)
+	sts, collisionCount := a.getNewStatefulSet(ctx, instance)
+	if collisionCount != instance.Status.CoreNodesStatus.CollisionCount {
+		instance.Status.CoreNodesStatus.CollisionCount = collisionCount
+		_ = a.Client.Status().Update(ctx, instance)
+	}
+
 	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{sts}); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update statefulSet")}
 	}
+
+	if err := a.syncStatefulSet(ctx, instance); err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to sync replicaSet")}
+	}
+
 	return subResult{}
+}
+
+func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.EMQX) (*appsv1.StatefulSet, *int32) {
+	preSts := generateStatefulSet(instance)
+
+	list := &appsv1.StatefulSetList{}
+	_ = a.Client.List(ctx, list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+	)
+
+	for _, sts := range list.Items {
+		patchResult, _ := a.Patcher.Calculate(
+			sts.DeepCopy(),
+			preSts.DeepCopy(),
+			justCheckPodTemplateSpec(),
+		)
+		if patchResult.IsEmpty() {
+			preSts.ObjectMeta = *sts.ObjectMeta.DeepCopy()
+			preSts.Spec.Template.ObjectMeta = *sts.Spec.Template.ObjectMeta.DeepCopy()
+			preSts.Spec.Selector = sts.Spec.Selector.DeepCopy()
+			return preSts, instance.Status.CoreNodesStatus.CollisionCount
+		}
+	}
+
+	var collisionCount *int32
+	var staName, podTemplateSpecHash string
+	podTemplate := preSts.Spec.Template.DeepCopy()
+
+	collisionCount = instance.Status.CoreNodesStatus.CollisionCount
+	if collisionCount == nil {
+		collisionCount = new(int32)
+	}
+
+	// Do-while loop
+	for {
+		podTemplateSpecHash = computeHash(podTemplate.DeepCopy(), collisionCount)
+
+		staName = instance.Spec.CoreTemplate.Name + "-" + podTemplateSpecHash
+		err := a.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: instance.Namespace,
+			Name:      staName,
+		}, &appsv1.StatefulSet{})
+		if k8sErrors.IsNotFound(err) {
+			break
+		}
+		*collisionCount++
+	}
+
+	preSts.Name = staName
+	preSts.Labels = appsv2alpha2.CloneAndAddLabel(preSts.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+	preSts.Spec.Template.Labels = appsv2alpha2.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+	preSts.Spec.Selector = appsv2alpha2.CloneSelectorAndAddLabel(preSts.Spec.Selector, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+	return preSts, collisionCount
+}
+
+func (a *addCore) syncStatefulSet(ctx context.Context, instance *appsv2alpha2.EMQX) error {
+	stsList := getStateFulSetList(ctx, a.Client,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+	)
+	if len(stsList) <= 1 {
+		return nil
+	}
+
+	old := stsList[0].DeepCopy()
+	eList := getEventList(ctx, a.Clientset, old)
+
+	if canBeScaledDown(instance, appsv2alpha2.CodeNodesReady, eList) {
+		old.Spec.Replicas = pointer.Int32Ptr(old.Status.Replicas - 1)
+		if err := a.Client.Update(ctx, old); err != nil {
+			return emperror.Wrap(err, "failed to scale down old replicaSet")
+		}
+		return nil
+	}
+	return nil
 }
 
 func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
