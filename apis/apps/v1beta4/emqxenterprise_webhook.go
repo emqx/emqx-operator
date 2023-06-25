@@ -45,6 +45,7 @@ func (r *EmqxEnterprise) Default() {
 	defaultEmqxACL(r)
 	defaultEmqxConfig(r)
 	defaultServiceTemplate(r)
+	defaultContainerPort(r)
 	defaultPersistent(r)
 	defaultSecurityContext(r)
 }
