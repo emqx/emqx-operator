@@ -19,7 +19,6 @@ package v2alpha2
 import (
 	"sort"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -67,11 +66,6 @@ const (
 	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
 	ReplicantNodesReady       string = "ReplicantNodesReady"
 	Ready                     string = "Ready"
-)
-
-const (
-	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
-	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
 )
 
 func (s *EMQXStatus) SetNodes(nodes []EMQXNode) {

@@ -16,8 +16,6 @@ import (
 	"github.com/sethvargo/go-password/password"
 )
 
-const defUsername = "emqx_operator_controller"
-
 type addBootstrap struct {
 	*EMQXReconciler
 }
@@ -74,7 +72,7 @@ func generateBootstrapUserSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
 	}
 
 	defPassword, _ := password.Generate(64, 10, 0, true, true)
-	bootstrapUsers += defUsername + ":" + defPassword
+	bootstrapUsers += appsv2alpha2.DefaultBootstrapAPIKey + ":" + defPassword
 
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{

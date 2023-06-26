@@ -12,7 +12,6 @@ import (
 	emperror "emperror.dev/errors"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -56,7 +55,7 @@ func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha2.EMQ
 	// labels := appsv2alpha2.AddLabel(instance.Spec.CoreTemplate.Labels, appsv1.ControllerRevisionHashLabelKey, instance.Status.CoreNodesStatus.CurrentRevision)
 	labels := instance.Spec.CoreTemplate.Labels
 	if isExistReplicant(instance) {
-		labels = appsv2alpha2.AddLabel(instance.Spec.ReplicantTemplate.Labels, appsv1.DefaultDeploymentUniqueLabelKey, instance.Status.ReplicantNodesStatus.CurrentRevision)
+		labels = appsv2alpha2.AddLabel(instance.Spec.ReplicantTemplate.Labels, appsv2alpha2.PodTemplateHashLabelKey, instance.Status.ReplicantNodesStatus.CurrentRevision)
 	}
 
 	podList := &corev1.PodList{}

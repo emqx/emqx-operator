@@ -60,7 +60,7 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 	for _, user := range users {
 		usernames = append(usernames, user[:strings.Index(user, ":")])
 	}
-	assert.ElementsMatch(t, usernames, []string{defUsername, "test_key"})
+	assert.ElementsMatch(t, usernames, []string{appsv2alpha2.DefaultBootstrapAPIKey, "test_key"})
 }
 
 func TestGenerateBootstrapConfigMap(t *testing.T) {

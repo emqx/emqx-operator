@@ -164,27 +164,27 @@ func (r *EMQX) defaultNames() {
 }
 
 func (r *EMQX) defaultLabels() {
-	r.Labels = AddLabel(r.Labels, "apps.emqx.io/managed-by", "emqx-operator")
-	r.Labels = AddLabel(r.Labels, "apps.emqx.io/instance", r.GetName())
+	r.Labels = AddLabel(r.Labels, ManagerByLabelKey, "emqx-operator")
+	r.Labels = AddLabel(r.Labels, InstanceNameLabelKey, r.GetName())
 
 	// Dashboard service
-	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, "apps.emqx.io/managed-by", "emqx-operator")
-	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, "apps.emqx.io/instance", r.GetName())
+	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, ManagerByLabelKey, "emqx-operator")
+	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, InstanceNameLabelKey, r.GetName())
 
 	// Listeners service
-	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, "apps.emqx.io/managed-by", "emqx-operator")
-	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, "apps.emqx.io/instance", r.GetName())
+	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, ManagerByLabelKey, "emqx-operator")
+	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, InstanceNameLabelKey, r.GetName())
 
 	// Core
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, "apps.emqx.io/managed-by", "emqx-operator")
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, "apps.emqx.io/instance", r.GetName())
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, "apps.emqx.io/db-role", "core")
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, ManagerByLabelKey, "emqx-operator")
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, InstanceNameLabelKey, r.GetName())
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, DBRoleLabelKey, "core")
 
 	// Replicant
 	if r.Spec.ReplicantTemplate != nil {
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, "apps.emqx.io/managed-by", "emqx-operator")
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, "apps.emqx.io/instance", r.GetName())
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, "apps.emqx.io/db-role", "replicant")
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, ManagerByLabelKey, "emqx-operator")
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, InstanceNameLabelKey, r.GetName())
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, DBRoleLabelKey, "replicant")
 	}
 }
 

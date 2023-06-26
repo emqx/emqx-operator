@@ -143,30 +143,30 @@ func TestDefaultLabels(t *testing.T) {
 	instance.defaultLabels()
 
 	assert.Equal(t, map[string]string{
-		"apps.emqx.io/managed-by": "emqx-operator",
-		"apps.emqx.io/instance":   "webhook-test",
+		ManagerByLabelKey:    "emqx-operator",
+		InstanceNameLabelKey: "webhook-test",
 	}, instance.Labels)
 
 	assert.Equal(t, map[string]string{
-		"apps.emqx.io/managed-by": "emqx-operator",
-		"apps.emqx.io/instance":   "webhook-test",
+		ManagerByLabelKey:    "emqx-operator",
+		InstanceNameLabelKey: "webhook-test",
 	}, instance.Spec.DashboardServiceTemplate.Labels)
 
 	assert.Equal(t, map[string]string{
-		"apps.emqx.io/managed-by": "emqx-operator",
-		"apps.emqx.io/instance":   "webhook-test",
+		ManagerByLabelKey:    "emqx-operator",
+		InstanceNameLabelKey: "webhook-test",
 	}, instance.Spec.ListenersServiceTemplate.Labels)
 
 	assert.Equal(t, map[string]string{
-		"apps.emqx.io/managed-by": "emqx-operator",
-		"apps.emqx.io/instance":   "webhook-test",
-		"apps.emqx.io/db-role":    "core",
+		ManagerByLabelKey:    "emqx-operator",
+		InstanceNameLabelKey: "webhook-test",
+		DBRoleLabelKey:       "core",
 	}, instance.Spec.CoreTemplate.Labels)
 
 	assert.Equal(t, map[string]string{
-		"apps.emqx.io/managed-by": "emqx-operator",
-		"apps.emqx.io/instance":   "webhook-test",
-		"apps.emqx.io/db-role":    "replicant",
+		ManagerByLabelKey:    "emqx-operator",
+		InstanceNameLabelKey: "webhook-test",
+		DBRoleLabelKey:       "replicant",
 	}, instance.Spec.ReplicantTemplate.Labels)
 }
 

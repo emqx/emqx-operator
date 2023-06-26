@@ -42,8 +42,8 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		}
 	}
 
-	if instance.Status.CoreNodesStatus.CurrentRevision != sts.Labels[appsv1.DefaultDeploymentUniqueLabelKey] {
-		instance.Status.CoreNodesStatus.CurrentRevision = sts.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+	if instance.Status.CoreNodesStatus.CurrentRevision != sts.Labels[appsv2alpha2.PodTemplateHashLabelKey] {
+		instance.Status.CoreNodesStatus.CurrentRevision = sts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	}
 
@@ -62,7 +62,7 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 			instance.Spec.CoreTemplate.Labels,
-			appsv1.DefaultDeploymentUniqueLabelKey,
+			appsv2alpha2.PodTemplateHashLabelKey,
 			instance.Status.CoreNodesStatus.CurrentRevision,
 		)),
 	)
@@ -85,9 +85,9 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.
 
 	podTemplateSpecHash := computeHash(preSts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
 	preSts.Name = preSts.Name + "-" + podTemplateSpecHash
-	preSts.Labels = appsv2alpha2.CloneAndAddLabel(preSts.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
-	preSts.Spec.Template.Labels = appsv2alpha2.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
-	preSts.Spec.Selector = appsv2alpha2.CloneSelectorAndAddLabel(preSts.Spec.Selector, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+	preSts.Labels = appsv2alpha2.CloneAndAddLabel(preSts.Labels, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
+	preSts.Spec.Template.Labels = appsv2alpha2.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
+	preSts.Spec.Selector = appsv2alpha2.CloneSelectorAndAddLabel(preSts.Spec.Selector, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 	return preSts
 }
 
@@ -147,7 +147,7 @@ func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 					InitContainers:   instance.Spec.CoreTemplate.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
-							Name:            EMQXContainerName,
+							Name:            appsv2alpha2.DefaultContainerName,
 							Image:           instance.Spec.Image,
 							ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
 							Command:         instance.Spec.CoreTemplate.Spec.Command,

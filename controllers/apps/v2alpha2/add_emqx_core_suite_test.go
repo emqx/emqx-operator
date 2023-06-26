@@ -69,7 +69,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				)
 				return list.Items
 			}).Should(HaveLen(1))
-			instance.Status.CoreNodesStatus.CurrentRevision = list.Items[0].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+			instance.Status.CoreNodesStatus.CurrentRevision = list.Items[0].Labels[appsv2alpha2.PodTemplateHashLabelKey]
 
 			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(4)
 		})
@@ -131,7 +131,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 
 			//Sync the "change image" test case.
 			instance.Spec.Image = new.Spec.Template.Spec.Containers[0].Image
-			instance.Status.CoreNodesStatus.CurrentRevision = new.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+			instance.Status.CoreNodesStatus.CurrentRevision = new.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 			instance.Status.Conditions = []metav1.Condition{
 				{
 					Type:               appsv2alpha2.Ready,

@@ -41,7 +41,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 			instance.Spec.CoreTemplate.Labels,
-			appsv1.DefaultDeploymentUniqueLabelKey,
+			appsv2alpha2.PodTemplateHashLabelKey,
 			instance.Status.CoreNodesStatus.CurrentRevision,
 		)),
 	)
@@ -60,7 +60,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 			client.InNamespace(instance.Namespace),
 			client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 				instance.Spec.ReplicantTemplate.Labels,
-				appsv1.DefaultDeploymentUniqueLabelKey,
+				appsv2alpha2.PodTemplateHashLabelKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
 			)),
 		)
