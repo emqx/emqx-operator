@@ -136,14 +136,19 @@ func handlerEventList(list *corev1.EventList) []*corev1.Event {
 }
 
 // JustCheckPodTemplate will check only the differences between the podTemplate of the two statefulSets
-func justCheckPodTemplateSpec() patch.CalculateOption {
+func justCheckPodTemplate() patch.CalculateOption {
 	getPodTemplate := func(obj []byte) ([]byte, error) {
-		podTemplateSpecJson := gjson.GetBytes(obj, "spec.template.spec")
-		podTemplateSpec := &corev1.PodSpec{}
+		podTemplateSpecJson := gjson.GetBytes(obj, "spec.template")
+		podTemplateSpec := &corev1.PodTemplateSpec{}
 		_ = json.Unmarshal([]byte(podTemplateSpecJson.String()), podTemplateSpec)
 
+		// Remove the podTemplateHashLabelKey from the podTemplateSpec
+		if _, ok := podTemplateSpec.Labels[appsv2alpha2.PodTemplateHashLabelKey]; ok {
+			podTemplateSpec.Labels = appsv2alpha2.CloneAndRemoveLabel(podTemplateSpec.Labels, appsv2alpha2.PodTemplateHashLabelKey)
+		}
+
 		emptyRs := &appsv1.ReplicaSet{}
-		emptyRs.Spec.Template.Spec = *podTemplateSpec
+		emptyRs.Spec.Template = *podTemplateSpec
 		return json.Marshal(emptyRs)
 	}
 

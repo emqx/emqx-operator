@@ -78,7 +78,7 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 		patchResult, _ := a.Patcher.Calculate(
 			rs,
 			preRs.DeepCopy(),
-			justCheckPodTemplateSpec(),
+			justCheckPodTemplate(),
 		)
 		if patchResult.IsEmpty() {
 			preRs.ObjectMeta = rs.ObjectMeta
@@ -87,7 +87,7 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 			return preRs
 		}
 		logger := log.FromContext(ctx)
-		logger.V(1).Info("got different patch for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
+		logger.V(1).Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
 	}
 
 	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
@@ -140,8 +140,7 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      instance.Spec.ReplicantTemplate.Labels,
-					Annotations: instance.Spec.ReplicantTemplate.Annotations,
+					Labels: instance.Spec.ReplicantTemplate.Labels,
 				},
 				Spec: corev1.PodSpec{
 					ReadinessGates: []corev1.PodReadinessGate{
