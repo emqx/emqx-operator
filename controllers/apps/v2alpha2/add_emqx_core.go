@@ -71,7 +71,7 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.
 		patchResult, _ := a.Patcher.Calculate(
 			sts,
 			preSts.DeepCopy(),
-			justCheckPodTemplateSpec(),
+			justCheckPodTemplate(),
 		)
 		if patchResult.IsEmpty() {
 			preSts.ObjectMeta = sts.ObjectMeta
@@ -80,7 +80,7 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.
 			return preSts
 		}
 		logger := log.FromContext(ctx)
-		logger.V(1).Info("got different patch for EMQX core nodes, will create new statefulSet", "patch", string(patchResult.Patch))
+		logger.V(1).Info("got different pod template for EMQX core nodes, will create new statefulSet", "patch", string(patchResult.Patch))
 	}
 
 	podTemplateSpecHash := computeHash(preSts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
@@ -134,8 +134,7 @@ func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      instance.Spec.CoreTemplate.Labels,
-					Annotations: instance.Spec.CoreTemplate.Annotations,
+					Labels: instance.Spec.CoreTemplate.Labels,
 				},
 				Spec: corev1.PodSpec{
 					ImagePullSecrets: instance.Spec.ImagePullSecrets,
