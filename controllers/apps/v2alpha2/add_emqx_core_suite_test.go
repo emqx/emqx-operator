@@ -3,6 +3,7 @@ package v2alpha2
 import (
 	"context"
 	"errors"
+	"time"
 
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
@@ -37,6 +38,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
+
 	})
 
 	It("create namespace", func() {
@@ -52,16 +54,23 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
 			)
 			return list.Items
-		}).Should(And(
-			HaveLen(1),
-			ContainElements(
-				WithTransform(func(s appsv1.StatefulSet) string { return s.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
-			),
+		}).Should(ConsistOf(
+			WithTransform(func(s appsv1.StatefulSet) string { return s.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
 		))
 	})
 
 	Context("change replicas count", func() {
 		JustBeforeEach(func() {
+			list := &appsv1.StatefulSetList{}
+			Eventually(func() []appsv1.StatefulSet {
+				_ = k8sClient.List(ctx, list,
+					client.InNamespace(instance.Namespace),
+					client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+				)
+				return list.Items
+			}).Should(HaveLen(1))
+			instance.Status.CoreNodesStatus.CurrentVersion = list.Items[0].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+
 			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(4)
 		})
 
@@ -103,8 +112,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 	})
 
 	Context("can be scale down", func() {
-		var old *appsv1.StatefulSet = new(appsv1.StatefulSet)
-		var realReplicas int32
+		var old, new *appsv1.StatefulSet = new(appsv1.StatefulSet), new(appsv1.StatefulSet)
 
 		JustBeforeEach(func() {
 			Eventually(func() error {
@@ -116,33 +124,49 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 					return errors.New("not found")
 				}
 				old = list[0].DeepCopy()
+				new = list[len(list)-1].DeepCopy()
 				return nil
 			}).Should(Succeed())
+			Expect(old.UID).ShouldNot(Equal(new.UID))
 
-			realReplicas = *old.Spec.Replicas
+			//Sync the "change image" test case.
+			instance.Spec.Image = new.Spec.Template.Spec.Containers[0].Image
+			instance.Status.CoreNodesStatus.CurrentVersion = new.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+			instance.Status.Conditions = []metav1.Condition{
+				{
+					Type:               appsv2alpha2.Ready,
+					Status:             metav1.ConditionTrue,
+					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+				},
+				{
+					Type:               appsv2alpha2.CodeNodesReady,
+					Status:             metav1.ConditionTrue,
+					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+				},
+			}
+
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(0)
 			instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover = int32(0)
 		})
 		It("should scale down", func() {
-			for realReplicas > 1 {
+			for *old.Spec.Replicas > 0 {
+				preReplicas := *old.Spec.Replicas
 				//mock statefulSet status
-				old.Status.Replicas = realReplicas
-				old.Status.ReadyReplicas = realReplicas
+				old.Status.Replicas = preReplicas
+				old.Status.ReadyReplicas = preReplicas
 				Expect(k8sClient.Status().Update(ctx, old)).Should(Succeed())
 				Eventually(func() *appsv1.StatefulSet {
 					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
 					return old
 				}).WithTimeout(timeout).WithPolling(interval).Should(And(
-					WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.Replicas }, Equal(realReplicas)),
-					WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.ReadyReplicas }, Equal(realReplicas)),
+					WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.Replicas }, Equal(preReplicas)),
+					WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.ReadyReplicas }, Equal(preReplicas)),
 				))
 
 				// retry it because update the statefulSet maybe will conflict
 				Eventually(a.reconcile(ctx, instance, req)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
-				Expect(*old.Spec.Replicas).Should(Equal(realReplicas - 1))
-
-				realReplicas--
+				Expect(*old.Spec.Replicas).Should(Equal(preReplicas - 1))
 			}
 		})
 	})

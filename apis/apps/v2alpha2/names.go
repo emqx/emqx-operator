@@ -22,38 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (instance *EMQX) CoreNodeNamespacedName() types.NamespacedName {
-	return types.NamespacedName{
-		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-core", instance.Name),
-	}
-}
-
-func (instance *EMQX) ReplicantNodeNamespacedName() types.NamespacedName {
-	return types.NamespacedName{
-		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-replicant", instance.Name),
-	}
-}
-
 func (instance *EMQX) HeadlessServiceNamespacedName() types.NamespacedName {
 	return types.NamespacedName{
 		Namespace: instance.Namespace,
 		Name:      fmt.Sprintf("%s-headless", instance.Name),
-	}
-}
-
-func (instance *EMQX) DashboardServiceNamespacedName() types.NamespacedName {
-	return types.NamespacedName{
-		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-dashboard", instance.Name),
-	}
-}
-
-func (instance *EMQX) ListenersServiceNamespacedName() types.NamespacedName {
-	return types.NamespacedName{
-		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-listeners", instance.Name),
 	}
 }
 

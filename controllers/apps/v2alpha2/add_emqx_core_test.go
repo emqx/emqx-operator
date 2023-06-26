@@ -62,7 +62,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 		assert.Equal(t, coreLabels, got.Spec.Template.ObjectMeta.Labels)
 		assert.Equal(t, map[string]string{
 			"apps.emqx.io/headless-service-name": "emqx-headless",
-			"apps.emqx.io/manage-containers":     "emqx,fake-container",
 		}, got.Spec.Template.ObjectMeta.Annotations)
 	})
 

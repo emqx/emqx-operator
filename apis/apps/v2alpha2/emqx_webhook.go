@@ -144,20 +144,20 @@ func (r *EMQX) defaultNames() {
 	}
 
 	if r.Spec.DashboardServiceTemplate.Name == "" {
-		r.Spec.DashboardServiceTemplate.Name = r.DashboardServiceNamespacedName().Name
+		r.Spec.DashboardServiceTemplate.Name = r.Name + "-dashboard"
 	}
 
 	if r.Spec.ListenersServiceTemplate.Name == "" {
-		r.Spec.ListenersServiceTemplate.Name = r.ListenersServiceNamespacedName().Name
+		r.Spec.ListenersServiceTemplate.Name = r.Name + "-listeners"
 	}
 
 	if r.Spec.CoreTemplate.Name == "" {
-		r.Spec.CoreTemplate.Name = r.CoreNodeNamespacedName().Name
+		r.Spec.CoreTemplate.Name = r.Name + "-core"
 	}
 
 	if r.Spec.ReplicantTemplate != nil {
 		if r.Spec.ReplicantTemplate.Name == "" {
-			r.Spec.ReplicantTemplate.Name = r.ReplicantNodeNamespacedName().Name
+			r.Spec.ReplicantTemplate.Name = r.Name + "-replicant"
 		}
 	}
 

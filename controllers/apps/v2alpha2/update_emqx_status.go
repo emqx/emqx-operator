@@ -36,38 +36,41 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		}
 	}
 
-	stsList := getStateFulSetList(ctx, u.Client,
+	stsList := &appsv1.StatefulSetList{}
+	_ = u.Client.List(ctx, stsList,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
+			instance.Spec.CoreTemplate.Labels,
+			appsv1.DefaultDeploymentUniqueLabelKey,
+			instance.Status.CoreNodesStatus.CurrentVersion,
+		)),
 	)
-	if len(stsList) > 0 {
-		existedSts = stsList[len(stsList)-1]
+	if len(stsList.Items) > 0 {
+		existedSts = stsList.Items[0].DeepCopy()
 	}
 
 	if isExistReplicant(instance) {
 		if instance.Status.ReplicantNodesStatus == nil {
 			instance.Status.ReplicantNodesStatus = &appsv2alpha2.EMQXNodesStatus{}
+			instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 		}
 
-		rsList := getReplicaSetList(ctx, u.Client,
+		rsList := &appsv1.ReplicaSetList{}
+		_ = u.Client.List(ctx, rsList,
 			client.InNamespace(instance.Namespace),
-			client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+			client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
+				instance.Spec.ReplicantTemplate.Labels,
+				appsv1.DefaultDeploymentUniqueLabelKey,
+				instance.Status.ReplicantNodesStatus.CurrentVersion,
+			)),
 		)
-		if len(rsList) > 0 {
-			existedRs = rsList[len(rsList)-1]
+		if len(rsList.Items) > 0 {
+			existedRs = rsList.Items[0].DeepCopy()
 		}
 	}
 
-	if existedSts.UID != "" {
-		instance.Status.CoreNodesStatus.CurrentVersion = existedSts.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
-		instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
-	}
-	if existedRs.UID != "" {
-		instance.Status.ReplicantNodesStatus.CurrentVersion = existedRs.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
-		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
-	}
+	instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	instance.Status.SetNodes(emqxNodes)
-
 	newEMQXStatusMachine(instance).NextStatus(existedSts, existedRs)
 
 	if err := u.Client.Status().Update(ctx, instance); err != nil {

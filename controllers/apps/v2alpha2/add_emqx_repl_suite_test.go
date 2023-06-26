@@ -101,7 +101,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 	})
 
 	Context("replicant template is not nil, and core code is ready", func() {
-		It("should update replicaSet", func() {
+		It("should create replicaSet", func() {
 			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
@@ -118,6 +118,16 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 
 	Context("scale down replicas count", func() {
 		JustBeforeEach(func() {
+			list := &appsv1.ReplicaSetList{}
+			Eventually(func() []appsv1.ReplicaSet {
+				_ = k8sClient.List(ctx, list,
+					client.InNamespace(instance.Namespace),
+					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+				)
+				return list.Items
+			}).Should(HaveLen(1))
+			instance.Status.ReplicantNodesStatus.CurrentVersion = list.Items[0].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(0)
 		})
 
@@ -138,6 +148,16 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 
 	Context("scale up replicas count", func() {
 		JustBeforeEach(func() {
+			list := &appsv1.ReplicaSetList{}
+			Eventually(func() []appsv1.ReplicaSet {
+				_ = k8sClient.List(ctx, list,
+					client.InNamespace(instance.Namespace),
+					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+				)
+				return list.Items
+			}).Should(HaveLen(1))
+			instance.Status.ReplicantNodesStatus.CurrentVersion = list.Items[0].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(4)
 		})
 
@@ -179,8 +199,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 	})
 
 	Context("can be scale down", func() {
-		var old *appsv1.ReplicaSet = new(appsv1.ReplicaSet)
-		var realReplicas int32
+		var old, new *appsv1.ReplicaSet = new(appsv1.ReplicaSet), new(appsv1.ReplicaSet)
 
 		JustBeforeEach(func() {
 			Eventually(func() error {
@@ -192,33 +211,37 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 					return errors.New("not found")
 				}
 				old = list[0].DeepCopy()
+				new = list[len(list)-1].DeepCopy()
 				return nil
 			}).Should(Succeed())
+			Expect(old.UID).ShouldNot(Equal(new.UID))
 
-			realReplicas = *old.Spec.Replicas
+			//Sync the "change image" test case.
+			instance.Spec.Image = new.Spec.Template.Spec.Containers[0].Image
+			instance.Status.ReplicantNodesStatus.CurrentVersion = new.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(0)
 			instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover = int32(0)
 		})
 		It("should scale down", func() {
-			for realReplicas > 1 {
+			for *old.Spec.Replicas > 0 {
+				preReplicas := *old.Spec.Replicas
 				//mock statefulSet status
-				old.Status.Replicas = realReplicas
-				old.Status.ReadyReplicas = realReplicas
+				old.Status.Replicas = preReplicas
+				old.Status.ReadyReplicas = preReplicas
 				Expect(k8sClient.Status().Update(ctx, old)).Should(Succeed())
 				Eventually(func() *appsv1.ReplicaSet {
 					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
 					return old
 				}).WithTimeout(timeout).WithPolling(interval).Should(And(
-					WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.Replicas }, Equal(realReplicas)),
-					WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.ReadyReplicas }, Equal(realReplicas)),
+					WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.Replicas }, Equal(preReplicas)),
+					WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.ReadyReplicas }, Equal(preReplicas)),
 				))
 
 				// retry it because update the replicaSet maybe will conflict
 				Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
-				Expect(*old.Spec.Replicas).Should(Equal(realReplicas - 1))
-
-				realReplicas--
+				Expect(*old.Spec.Replicas).Should(Equal(preReplicas - 1))
 			}
 		})
 	})
