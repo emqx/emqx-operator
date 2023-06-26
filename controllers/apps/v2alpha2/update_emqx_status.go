@@ -42,7 +42,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 			instance.Spec.CoreTemplate.Labels,
 			appsv1.DefaultDeploymentUniqueLabelKey,
-			instance.Status.CoreNodesStatus.CurrentVersion,
+			instance.Status.CoreNodesStatus.CurrentRevision,
 		)),
 	)
 	if len(stsList.Items) > 0 {
@@ -61,7 +61,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 			client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 				instance.Spec.ReplicantTemplate.Labels,
 				appsv1.DefaultDeploymentUniqueLabelKey,
-				instance.Status.ReplicantNodesStatus.CurrentVersion,
+				instance.Status.ReplicantNodesStatus.CurrentRevision,
 			)),
 		)
 		if len(rsList.Items) > 0 {

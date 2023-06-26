@@ -126,7 +126,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				)
 				return list.Items
 			}).Should(HaveLen(1))
-			instance.Status.ReplicantNodesStatus.CurrentVersion = list.Items[0].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+			instance.Status.ReplicantNodesStatus.CurrentRevision = list.Items[0].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(0)
 		})
@@ -156,7 +156,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				)
 				return list.Items
 			}).Should(HaveLen(1))
-			instance.Status.ReplicantNodesStatus.CurrentVersion = list.Items[0].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+			instance.Status.ReplicantNodesStatus.CurrentRevision = list.Items[0].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(4)
 		})
@@ -218,7 +218,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 
 			//Sync the "change image" test case.
 			instance.Spec.Image = new.Spec.Template.Spec.Containers[0].Image
-			instance.Status.ReplicantNodesStatus.CurrentVersion = new.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+			instance.Status.ReplicantNodesStatus.CurrentRevision = new.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(0)
 			instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover = int32(0)

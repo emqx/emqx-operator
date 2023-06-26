@@ -36,11 +36,11 @@ type EMQXStatus struct {
 
 type EMQXNodesStatus struct {
 	// EMQX nodes info
-	Nodes          []EMQXNode `json:"nodes,omitempty"`
-	Replicas       int32      `json:"replicas,omitempty"`
-	ReadyReplicas  int32      `json:"readyReplicas,omitempty"`
-	CurrentVersion string     `json:"currentVersion,omitempty"`
-	CollisionCount *int32     `json:"collisionCount,omitempty"`
+	Nodes           []EMQXNode `json:"nodes,omitempty"`
+	Replicas        int32      `json:"replicas,omitempty"`
+	ReadyReplicas   int32      `json:"readyReplicas,omitempty"`
+	CurrentRevision string     `json:"currentRevision,omitempty"`
+	CollisionCount  *int32     `json:"collisionCount,omitempty"`
 }
 
 type EMQXNode struct {

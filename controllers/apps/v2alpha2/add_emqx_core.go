@@ -42,8 +42,8 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		}
 	}
 
-	if instance.Status.CoreNodesStatus.CurrentVersion != sts.Labels[appsv1.DefaultDeploymentUniqueLabelKey] {
-		instance.Status.CoreNodesStatus.CurrentVersion = sts.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+	if instance.Status.CoreNodesStatus.CurrentRevision != sts.Labels[appsv1.DefaultDeploymentUniqueLabelKey] {
+		instance.Status.CoreNodesStatus.CurrentRevision = sts.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	}
 
@@ -63,7 +63,7 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.
 		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 			instance.Spec.CoreTemplate.Labels,
 			appsv1.DefaultDeploymentUniqueLabelKey,
-			instance.Status.CoreNodesStatus.CurrentVersion,
+			instance.Status.CoreNodesStatus.CurrentRevision,
 		)),
 	)
 	if len(list.Items) > 0 {
