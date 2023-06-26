@@ -158,9 +158,6 @@ local-webhook: $(CERT_PATH)
 .PHONY: telepresence
 telepresence: $(TELEPRESENCE_GEN)
 $(TELEPRESENCE_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/telepresence || ARCH=$(shell uname -s | tr A-Z a-z) curl -fL https://app.getambassador.io/download/tel2/$(ARCH)/amd64/latest/telepresence -o $(TELEPRESENCE_GEN)
+	test -s $(LOCALBIN)/telepresence || curl -fL https://app.getambassador.io/download/tel2/$(shell go env GOOS)/$(shell go env GOARCH)/latest/telepresence -o $(TELEPRESENCE_GEN)
 	chmod +x $(TELEPRESENCE_GEN)
 	$(TELEPRESENCE_GEN) helm install
-
-
-
