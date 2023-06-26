@@ -12884,7 +12884,7 @@ spec:
                     collisionCount:
                       format: int32
                       type: integer
-                    currentVersion:
+                    currentRevision:
                       type: string
                     nodes:
                       items:
@@ -12918,7 +12918,7 @@ spec:
                     collisionCount:
                       format: int32
                       type: integer
-                    currentVersion:
+                    currentRevision:
                       type: string
                     nodes:
                       items:

@@ -126,7 +126,7 @@ var _ = Describe("Base Test", func() {
 						client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 							instance.Spec.CoreTemplate.Labels,
 							appsv1.DefaultDeploymentUniqueLabelKey,
-							instance.Status.CoreNodesStatus.CurrentVersion,
+							instance.Status.CoreNodesStatus.CurrentRevision,
 						)),
 					)
 					return list.Items

@@ -49,8 +49,8 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		}
 	}
 
-	if instance.Status.ReplicantNodesStatus.CurrentVersion != rs.Labels[appsv1.DefaultDeploymentUniqueLabelKey] {
-		instance.Status.ReplicantNodesStatus.CurrentVersion = rs.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+	if instance.Status.ReplicantNodesStatus.CurrentRevision != rs.Labels[appsv1.DefaultDeploymentUniqueLabelKey] {
+		instance.Status.ReplicantNodesStatus.CurrentRevision = rs.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	}
 
@@ -70,7 +70,7 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 			instance.Spec.ReplicantTemplate.Labels,
 			appsv1.DefaultDeploymentUniqueLabelKey,
-			instance.Status.ReplicantNodesStatus.CurrentVersion,
+			instance.Status.ReplicantNodesStatus.CurrentRevision,
 		)),
 	)
 	if len(list.Items) > 0 {
