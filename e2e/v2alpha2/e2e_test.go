@@ -119,13 +119,20 @@ var _ = Describe("Base Test", func() {
 		It("Check Blue Green Update", func() {
 			By("Checking statefulSet image", func() {
 				list := &appsv1.StatefulSetList{}
-				Eventually(func() string {
+				Eventually(func() []appsv1.StatefulSet {
+					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
 					_ = k8sClient.List(context.TODO(), list,
 						client.InNamespace(instance.Namespace),
-						client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+						client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
+							instance.Spec.CoreTemplate.Labels,
+							appsv1.DefaultDeploymentUniqueLabelKey,
+							instance.Status.CoreNodesStatus.CurrentVersion,
+						)),
 					)
-					return list.Items[0].Spec.Template.Spec.Containers[0].Image
-				}, timeout, interval).Should(Equal(currentImage))
+					return list.Items
+				}, timeout, interval).Should(ConsistOf(
+					WithTransform(func(s appsv1.StatefulSet) string { return s.Spec.Template.Spec.Containers[0].Image }, Equal(currentImage)),
+				))
 			})
 
 			By("Checking replicaSet list", func() {
