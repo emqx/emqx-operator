@@ -43,8 +43,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-const EMQXContainerName string = "emqx"
-
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
 	err    error
@@ -190,7 +188,7 @@ func getBootstrapUser(ctx context.Context, client client.Client, instance *appsv
 		users := strings.Split(string(data), "\n")
 		for _, user := range users {
 			index := strings.Index(user, ":")
-			if index > 0 && user[:index] == defUsername {
+			if index > 0 && user[:index] == appsv2alpha2.DefaultBootstrapAPIKey {
 				username = user[:index]
 				password = user[index+1:]
 				return

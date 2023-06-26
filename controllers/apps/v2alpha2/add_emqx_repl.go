@@ -49,8 +49,8 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		}
 	}
 
-	if instance.Status.ReplicantNodesStatus.CurrentRevision != rs.Labels[appsv1.DefaultDeploymentUniqueLabelKey] {
-		instance.Status.ReplicantNodesStatus.CurrentRevision = rs.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+	if instance.Status.ReplicantNodesStatus.CurrentRevision != rs.Labels[appsv2alpha2.PodTemplateHashLabelKey] {
+		instance.Status.ReplicantNodesStatus.CurrentRevision = rs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	}
 
@@ -69,7 +69,7 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
 			instance.Spec.ReplicantTemplate.Labels,
-			appsv1.DefaultDeploymentUniqueLabelKey,
+			appsv2alpha2.PodTemplateHashLabelKey,
 			instance.Status.ReplicantNodesStatus.CurrentRevision,
 		)),
 	)
@@ -92,9 +92,9 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 
 	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
 	preRs.Name = preRs.Name + "-" + podTemplateSpecHash
-	preRs.Labels = appsv2alpha2.CloneAndAddLabel(preRs.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
-	preRs.Spec.Template.Labels = appsv2alpha2.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
-	preRs.Spec.Selector = appsv2alpha2.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv1.DefaultDeploymentUniqueLabelKey, podTemplateSpecHash)
+	preRs.Labels = appsv2alpha2.CloneAndAddLabel(preRs.Labels, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
+	preRs.Spec.Template.Labels = appsv2alpha2.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
+	preRs.Spec.Selector = appsv2alpha2.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 
 	return preRs
 }
@@ -158,7 +158,7 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 					InitContainers:   instance.Spec.ReplicantTemplate.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
-							Name:            EMQXContainerName,
+							Name:            appsv2alpha2.DefaultContainerName,
 							Image:           instance.Spec.Image,
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
 							Command:         instance.Spec.ReplicantTemplate.Spec.Command,

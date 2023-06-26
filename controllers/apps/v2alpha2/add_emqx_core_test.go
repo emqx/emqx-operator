@@ -14,9 +14,9 @@ import (
 )
 
 var coreLabels = map[string]string{
-	"apps.emqx.io/instance":   "emqx",
-	"apps.emqx.io/managed-by": "emqx-operator",
-	"apps.emqx.io/db-role":    "core",
+	appsv2alpha2.InstanceNameLabelKey: "emqx",
+	appsv2alpha2.ManagerByLabelKey:    "emqx-operator",
+	appsv2alpha2.DBRoleLabelKey:       "core",
 }
 
 func TestGenerateStatefulSet(t *testing.T) {
