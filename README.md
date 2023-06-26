@@ -87,6 +87,17 @@ For more information on getting started, see the [getting started](docs/en_US/ge
 - Golang environment
 - docker (used for creating container images, etc.)
 - Kubernetes cluster
+- teleperence
+
+### Install Teleperence for once
+```shell
+make telepresence
+```
+
+### Connect to cluster
+```shell
+./bin/telepresence connect
+```
 
 ## Contributing
 Many files (API, config, controller, hack,...) in this repository are auto-generated.

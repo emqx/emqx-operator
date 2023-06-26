@@ -107,6 +107,7 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 CRD_REF_DOCS = $(LOCALBIN)/crd-ref-docs
+TELEPRESENCE_GEN ?= $(LOCALBIN)/telepresence
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4
@@ -151,5 +152,12 @@ endef
 
 .PHONY: local-webhook
 local-webhook: $(CERT_PATH)
-$(CERT_PATH): $(CERT_PATH)
 	test -s $(CERT_PATH)/tls.crt && test -s $(CERT_PATH)/tls.key || mkdir -p $(CERT_PATH) && cp config/dev/cert/* $(CERT_PATH)
+
+
+.PHONY: telepresence
+telepresence: $(TELEPRESENCE_GEN)
+$(TELEPRESENCE_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/telepresence || curl -fL https://app.getambassador.io/download/tel2/$(shell go env GOOS)/$(shell go env GOARCH)/latest/telepresence -o $(TELEPRESENCE_GEN)
+	chmod +x $(TELEPRESENCE_GEN)
+	$(TELEPRESENCE_GEN) helm install
