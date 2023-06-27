@@ -92,6 +92,17 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.
 }
 
 func (a *addCore) syncStatefulSet(ctx context.Context, instance *appsv2alpha2.EMQX) error {
+	if isExistReplicant(instance) {
+		rsList := getReplicaSetList(ctx, a.Client,
+			client.InNamespace(instance.Namespace),
+			client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+		)
+		if len(rsList) != 1 {
+			// wait for replicaSet finished the scale down
+			return nil
+		}
+	}
+
 	stsList := getStateFulSetList(ctx, a.Client,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
