@@ -205,12 +205,12 @@ func (s *readyStatus) nextStatus(existedSts *appsv1.StatefulSet, existedRs *apps
 	}
 
 	if isExistReplicant(s.emqxStatusMachine.emqx) {
-		if s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.Replicas {
+		if s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.ReadyReplicas < s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.Replicas {
 			s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.Ready)
 		}
 	}
 
-	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
+	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas < s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
 		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.Ready)
 		s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.CodeNodesReady)
 	}
