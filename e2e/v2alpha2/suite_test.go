@@ -24,11 +24,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"go.uber.org/zap/zapcore"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -51,6 +51,8 @@ var emqx *appsv2alpha2.EMQX
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
+
+	format.MaxLength = 0
 
 	// fetch the current config
 	suiteConfig, reporterConfig := GinkgoConfiguration()
@@ -125,19 +127,7 @@ func genEMQX() *appsv2alpha2.EMQX {
 			Namespace: "e2e-test-v2alpha2" + "-" + rand.String(5),
 		},
 		Spec: appsv2alpha2.EMQXSpec{
-			CoreTemplate: appsv2alpha2.EMQXCoreTemplate{
-				Spec: appsv2alpha2.EMQXCoreTemplateSpec{
-					EMQXReplicantTemplateSpec: appsv2alpha2.EMQXReplicantTemplateSpec{
-						Replicas: pointer.Int32(2),
-					},
-				},
-			},
-			ReplicantTemplate: &appsv2alpha2.EMQXReplicantTemplate{
-				Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
-					Replicas: pointer.Int32(2),
-				},
-			},
-			Image: "emqx:5.0.23",
+			Image: "emqx",
 			BootstrapConfig: `
 			gateway.lwm2m {
 			  auto_observe = true
