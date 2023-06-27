@@ -52,10 +52,17 @@ func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX
 }
 
 func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha2.EMQX) []corev1.Pod {
-	// labels := appsv2alpha2.AddLabel(instance.Spec.CoreTemplate.Labels, appsv1.ControllerRevisionHashLabelKey, instance.Status.CoreNodesStatus.CurrentRevision)
-	labels := instance.Spec.CoreTemplate.Labels
+	labels := appsv2alpha2.AddLabel(
+		instance.Spec.CoreTemplate.Labels,
+		appsv2alpha2.PodTemplateHashLabelKey,
+		instance.Status.CoreNodesStatus.CurrentRevision,
+	)
 	if isExistReplicant(instance) {
-		labels = appsv2alpha2.AddLabel(instance.Spec.ReplicantTemplate.Labels, appsv2alpha2.PodTemplateHashLabelKey, instance.Status.ReplicantNodesStatus.CurrentRevision)
+		labels = appsv2alpha2.AddLabel(
+			instance.Spec.ReplicantTemplate.Labels,
+			appsv2alpha2.PodTemplateHashLabelKey,
+			instance.Status.ReplicantNodesStatus.CurrentRevision,
+		)
 	}
 
 	podList := &corev1.PodList{}
@@ -63,7 +70,14 @@ func (a *addListener) getPodList(ctx context.Context, instance *appsv2alpha2.EMQ
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(labels),
 	)
-	return podList.Items
+
+	list := []corev1.Pod{}
+	for _, pod := range podList.Items {
+		if pod.Status.PodIP != "" {
+			list = append(list, pod)
+		}
+	}
+	return list
 }
 
 func (a *addListener) getServicePorts(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) []corev1.ServicePort {

@@ -137,6 +137,11 @@ func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 					Labels: instance.Spec.CoreTemplate.Labels,
 				},
 				Spec: corev1.PodSpec{
+					ReadinessGates: []corev1.PodReadinessGate{
+						{
+							ConditionType: appsv2alpha2.PodOnServing,
+						},
+					},
 					ImagePullSecrets: instance.Spec.ImagePullSecrets,
 					SecurityContext:  instance.Spec.CoreTemplate.Spec.PodSecurityContext,
 					Affinity:         instance.Spec.CoreTemplate.Spec.Affinity,
@@ -178,12 +183,12 @@ func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 									},
 								},
 								{
-									Name:  "EMQX_HOST",
-									Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
-								},
-								{
 									Name:  "EMQX_NODE__DB_ROLE",
 									Value: "core",
+								},
+								{
+									Name:  "EMQX_HOST",
+									Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
 								},
 								{
 									Name: "EMQX_NODE__COOKIE",

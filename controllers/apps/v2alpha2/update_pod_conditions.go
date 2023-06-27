@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	semver "github.com/Masterminds/semver/v3"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -20,13 +21,9 @@ type updatePodConditions struct {
 
 func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
 	pods := &corev1.PodList{}
-	labels := instance.Spec.CoreTemplate.Labels
-	if isExistReplicant(instance) {
-		labels = instance.Spec.ReplicantTemplate.Labels
-	}
 	_ = u.Client.List(ctx, pods,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(labels),
+		client.MatchingLabels(instance.Labels),
 	)
 
 	for _, pod := range pods.Items {
@@ -63,10 +60,14 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 func (u *updatePodConditions) checkInCluster(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
 	nodes := instance.Status.CoreNodesStatus.Nodes
 	if isExistReplicant(instance) {
-		nodes = instance.Status.ReplicantNodesStatus.Nodes
+		nodes = append(nodes, instance.Status.ReplicantNodesStatus.Nodes...)
 	}
 	for _, node := range nodes {
-		if node.Node == "emqx@"+pod.Status.PodIP {
+		l := strings.Split(node.Node, "@")
+		host := l[len(l)-1]
+
+		if (node.Role == "core" && strings.HasPrefix(host, pod.Name)) ||
+			(node.Role == "replicant" && host == pod.Status.PodIP) {
 			if node.Edition == "enterprise" {
 				v, _ := semver.NewVersion(node.Version)
 				if v.Compare(semver.MustParse("5.0.3")) >= 0 {

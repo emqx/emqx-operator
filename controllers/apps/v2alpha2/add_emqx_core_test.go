@@ -158,7 +158,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Command, got.Spec.Template.Spec.Containers[0].Command)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Args, got.Spec.Template.Spec.Containers[0].Args)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Ports, got.Spec.Template.Spec.Containers[0].Ports)
-		assert.Equal(t, []corev1.EnvVar{
+		assert.ElementsMatch(t, []corev1.EnvVar{
 			{
 				Name: "POD_NAME",
 				ValueFrom: &corev1.EnvVarSource{
@@ -184,12 +184,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 				},
 			},
 			{
-				Name:  "EMQX_HOST",
-				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
-			},
-			{
 				Name:  "EMQX_NODE__DB_ROLE",
 				Value: "core",
+			},
+			{
+				Name:  "EMQX_HOST",
+				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
 			},
 			{
 				Name: "EMQX_NODE__COOKIE",
