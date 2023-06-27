@@ -38,7 +38,6 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	if isExistReplicant(instance) {
 		if instance.Status.ReplicantNodesStatus == nil {
 			instance.Status.ReplicantNodesStatus = &appsv2alpha2.EMQXNodesStatus{}
-			instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 		}
 
 		rsList := &appsv1.ReplicaSetList{}
@@ -53,6 +52,8 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		if len(rsList.Items) > 0 {
 			existedRs = rsList.Items[0].DeepCopy()
 		}
+
+		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 	}
 
 	if r != nil {

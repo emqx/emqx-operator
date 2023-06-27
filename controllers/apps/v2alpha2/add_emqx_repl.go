@@ -111,7 +111,7 @@ func (a *addRepl) syncReplicaSet(ctx context.Context, instance *appsv2alpha2.EMQ
 	old := rsList[0].DeepCopy()
 	eList := getEventList(ctx, a.Clientset, old)
 
-	if canBeScaledDown(instance, appsv2alpha2.CodeNodesReady, eList) {
+	if canBeScaledDown(instance, appsv2alpha2.Ready, eList) {
 		old.Spec.Replicas = pointer.Int32(old.Status.Replicas - 1)
 		if err := a.Client.Update(ctx, old); err != nil {
 			return emperror.Wrap(err, "failed to scale down old replicaSet")
