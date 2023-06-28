@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	emperror.dev/errors v0.8.1
-	github.com/banzaicloud/k8s-objectmatcher v1.8.0
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/json-iterator/go v1.1.12
 	github.com/onsi/ginkgo/v2 v2.9.2
@@ -21,11 +20,11 @@ require (
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.0
-	github.com/rory-z/go-hocon v1.2.7-2
+	github.com/cisco-open/k8s-objectmatcher v1.9.0
+	github.com/rory-z/go-hocon v1.2.15-1
 )
 
 require (
-	github.com/cisco-open/k8s-objectmatcher v1.9.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	golang.org/x/tools v0.7.0 // indirect
@@ -78,7 +77,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/net v0.8.0
 	golang.org/x/oauth2 v0.0.0-20220808172628-8227340efae7 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect

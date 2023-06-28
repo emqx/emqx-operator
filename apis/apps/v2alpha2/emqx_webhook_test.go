@@ -57,6 +57,9 @@ func TestValidateCreate(t *testing.T) {
 
 	instance.Spec.BootstrapConfig = "foo = bar"
 	assert.Nil(t, instance.ValidateCreate())
+
+	instance.Spec.BootstrapConfig = `sql = "SELECT * FROM "t/#""`
+	assert.Nil(t, instance.ValidateCreate())
 }
 
 func TestValidateUpdate(t *testing.T) {
