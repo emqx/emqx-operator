@@ -88,7 +88,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
       license {
         key = "..."
       }
-    image: emqx/emqx-enterprise:5.0.0
+    image: emqx/emqx-enterprise:5.1.0
     listenersServiceTemplate:
       spec:
         type: LoadBalancer
@@ -104,7 +104,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
   ```bash
   $ kubectl get emqx emqx
   NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.0   Running   10m
+  emqx   emqx:5.1   Running   10m
   ```
 
 + 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台

@@ -23,7 +23,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx:5.0
+  image: emqx:5.1
   coreTemplate:
     spec:
       ports:
@@ -51,7 +51,7 @@ Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, w
 $ kubectl get emqx emqx
 
 NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.0   Running   10m
+emqx   emqx:5.1   Running   10m
 ```
 
 :::

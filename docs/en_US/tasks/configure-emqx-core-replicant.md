@@ -29,7 +29,7 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
   metadata:
     name: emqx
   spec:
-    image: emqx:5.0
+    image: emqx:5.1
     coreTemplate:
       spec:
         replicas: 3
@@ -56,7 +56,7 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
   ```bash
   $ kubectl get emqx emqx
   NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.0   Running   10m
+  emqx   emqx:5.1   Running   10m
   ```
 
 + Obtain the Dashboard External IP of EMQX cluster and access EMQX console

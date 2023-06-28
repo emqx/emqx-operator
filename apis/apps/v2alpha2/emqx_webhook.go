@@ -224,10 +224,10 @@ func (r *EMQX) defaultBootstrapConfig() {
 	  default_username = admin
 	  default_password = public
 	}
-	listeners.tcp.default {
-		bind = "0.0.0.0:1883"
-		max_connections = 1024000
-	}
+	listeners.tcp.default.bind = "0.0.0.0:1883"
+	listeners.ssl.default.bind = "0.0.0.0:8883"
+	listeners.ws.default.bind = "0.0.0.0:8083"
+	listeners.wss.default.bind = "0.0.0.0:8084"
 	`, dnsName)
 
 	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, r.Spec.BootstrapConfig)

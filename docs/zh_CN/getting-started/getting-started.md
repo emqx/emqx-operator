@@ -143,7 +143,7 @@
    metadata:
       name: emqx-ee
    spec:
-      image: emqx/emqx-enterprise:5.0.1
+      image: emqx/emqx-enterprise:5.1.0
    ```
 
    并使用 `kubectl apply` 命令来部署 EMQX。
@@ -160,7 +160,7 @@
    $ kubectl get emqx
 
    NAME      IMAGE                        STATUS    AGE
-   emqx-ee   emqx/emqx-enterprise:5.0.1   Running   2m55s
+   emqx-ee   emqx/emqx-enterprise:5.1.0   Running   2m55s
    ```
 :::
 
@@ -174,7 +174,7 @@
    metadata:
       name: emqx
    spec:
-      image: emqx:5.0
+      image: emqx:5.1
    ```
 
    并使用 `kubectl apply` 命令来部署 EMQX。
@@ -191,7 +191,7 @@
    $ kubectl get emqx
 
    NAME   IMAGE      STATUS    AGE
-   emqx   emqx:5.0   Running   2m55s
+   emqx   emqx:5.1   Running   2m55s
    ```
 :::
 

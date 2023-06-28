@@ -64,7 +64,7 @@
   metadata:
     name: emqx
   spec:
-    image: emqx:5.0
+    image: emqx:5.1
     listenersServiceTemplate:
       spec:
         type: LoadBalancer
@@ -82,7 +82,7 @@
   ```bash
   $ kubectl get emqx emqx
   NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.0   Running   10m
+  emqx   emqx:5.1   Running   10m
   ```
 + 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台
 

@@ -198,7 +198,9 @@ func TestDefaultBootstrapConfig(t *testing.T) {
 		assert.Equal(t, "public", bootstrapConfig.GetString("dashboard.default_password"))
 
 		assert.Equal(t, "\"0.0.0.0:1883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
-		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
+		assert.Equal(t, "\"0.0.0.0:8883\"", bootstrapConfig.GetString("listeners.ssl.default.bind"))
+		assert.Equal(t, "\"0.0.0.0:8083\"", bootstrapConfig.GetString("listeners.ws.default.bind"))
+		assert.Equal(t, "\"0.0.0.0:8084\"", bootstrapConfig.GetString("listeners.wss.default.bind"))
 	})
 
 	t.Run("already set cookie", func(t *testing.T) {
@@ -225,7 +227,6 @@ func TestDefaultBootstrapConfig(t *testing.T) {
 		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
-		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
 	})
 
 	t.Run("other style set listener", func(t *testing.T) {
@@ -247,7 +248,6 @@ func TestDefaultBootstrapConfig(t *testing.T) {
 		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
-		assert.Equal(t, "1024000", bootstrapConfig.GetString("listeners.tcp.default.max_connections"))
 	})
 
 	t.Run("wrong bootstrap config", func(t *testing.T) {
