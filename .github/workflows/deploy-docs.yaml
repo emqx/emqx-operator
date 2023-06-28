@@ -103,11 +103,11 @@ jobs:
         rm frontend/index.md || true
         mkdir -p frontend/docs/en/${DOCS_TYPE}/${VERSION}/
         mkdir -p frontend/docs/zh/${DOCS_TYPE}/${VERSION}/
-        mkdir -p frontend/docs/.vitepress/public/api/
+        mkdir -p frontend/docs/public/api/
         cp -r docs-files/docs/en_US/* frontend/docs/en/${DOCS_TYPE}/${VERSION}/
         cp -r docs-files/docs/zh_CN/* frontend/docs/zh/${DOCS_TYPE}/${VERSION}/
         cp docs-files/docs/directory.json frontend/docs/.vitepress/config/directory.json
-        cd docs-files && git tag -l | egrep "^[1-9]+\.[0-9]+\.[0-9]+$" | jq -R -s -c 'split("\n")[:-1] | . += ["latest"] | reverse' > ../frontend/docs/.vitepress/public/api/${DOCS_TYPE}_versions.json
+        cd docs-files && git tag -l | egrep "^[1-9]+\.[0-9]+\.[0-9]+$" | jq -R -s -c 'split("\n")[:-1] | . += ["latest"] | reverse' > ../frontend/docs/public/api/${DOCS_TYPE}_versions.json
 
     - name: build docs
       run: |
