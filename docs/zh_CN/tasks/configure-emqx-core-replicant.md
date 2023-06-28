@@ -29,7 +29,7 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
   metadata:
     name: emqx
   spec:
-    image: emqx:5.0
+    image: emqx:5.1
     coreTemplate:
       spec:
         replicas: 3
@@ -56,7 +56,7 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
   ```
   $ kubectl get emqx
   NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.0   Running   2m55s
+  emqx   emqx:5.1   Running   2m55s
   ```
 
 + 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台

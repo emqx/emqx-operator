@@ -67,7 +67,7 @@ func TestNextStatusForCoreUpdate(t *testing.T) {
 
 		emqx := &appsv2alpha2.EMQX{
 			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:5.0",
+				Image: "emqx/emqx:5.1",
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
@@ -165,7 +165,7 @@ func TestNextStatusForCodeNodesReady(t *testing.T) {
 
 		emqx := &appsv2alpha2.EMQX{
 			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:5.0",
+				Image: "emqx/emqx:5.1",
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",
@@ -283,7 +283,7 @@ func TestNextStatusForCoreReady(t *testing.T) {
 
 		emqx := &appsv2alpha2.EMQX{
 			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:5.0",
+				Image: "emqx/emqx:5.1",
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				CurrentImage: "emqx/emqx:latest",

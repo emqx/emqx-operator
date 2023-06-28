@@ -89,7 +89,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
   metadata:
     name: emqx
   spec:
-    image: "emqx:5.0"
+    image: "emqx:5.1"
     coreTemplate:
       spec:
         ## EMQX 自定义资源不支持在运行时更新这个字段
@@ -126,7 +126,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
   ```bash
   $ kubectl get emqx
   NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.0   Running   2m55s
+  emqx   emqx:5.1   Running   2m55s
   ```
 
 + 获取 EMQX 集群 Dashboard External IP, 访问 EMQX 控制台
@@ -261,7 +261,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: "emqx:5.0"
+  image: "emqx:5.1"
   coreTemplate:
     spec:
       ## EMQX 自定义资源不支持在运行时更新这个字段

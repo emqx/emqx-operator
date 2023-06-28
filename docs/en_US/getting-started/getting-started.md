@@ -131,7 +131,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
    metadata:
       name: emqx-ee
    spec:
-      image: emqx/emqx-enterprise:5.0.1
+      image: emqx/emqx-enterprise:5.1.0
    ```
 
    For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha1-reference.md).
@@ -142,7 +142,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
    $ kubectl get emqx
 
    NAME      IMAGE                        STATUS    AGE
-   emqx-ee   emqx/emqx-enterprise:5.0.1   Running   2m55s
+   emqx-ee   emqx/emqx-enterprise:5.1.0   Running   2m55s
    ```
 
    Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
@@ -158,7 +158,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
    metadata:
       name: emqx
    spec:
-      image: emqx:5.0
+      image: emqx:5.1
    ```
 
    For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha1-reference.md).
@@ -169,7 +169,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
    $ kubectl get emqx
 
    NAME   IMAGE      STATUS    AGE
-   emqx   emqx:5.0   Running   2m55s
+   emqx   emqx:5.1   Running   2m55s
    ```
 
    Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.

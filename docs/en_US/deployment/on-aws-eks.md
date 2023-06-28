@@ -101,7 +101,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
   metadata:
     name: emqx
   spec:
-    image: emqx:5.0
+    image: emqx:5.1
     coreTemplate:
       spec:
         ## If persistence is enabled, you need to configure podSecurityContext.
@@ -155,7 +155,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
   ```bash
   $ kubectl get emqx
   NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.0   Running   18m
+  emqx   emqx:5.1   Running   18m
   ```
 
 + Obtain Dashboard External IP of EMQX cluster and access EMQX console

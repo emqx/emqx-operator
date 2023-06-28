@@ -26,7 +26,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha2.EMQXSpec{
-			Image: "emqx/emqx:5.0",
+			Image: "emqx/emqx:5.1",
 		},
 	}
 	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(3)
@@ -102,7 +102,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 		got := generateStatefulSet(emqx)
 		assert.Len(t, got.Spec.Template.Spec.Containers, 2)
 
-		emqx.Spec.Image = "emqx/emqx:5.0"
+		emqx.Spec.Image = "emqx/emqx:5.1"
 		emqx.Spec.ImagePullPolicy = corev1.PullIfNotPresent
 		emqx.Spec.CoreTemplate.Spec.Command = []string{"fake"}
 		emqx.Spec.CoreTemplate.Spec.Args = []string{"fake"}
