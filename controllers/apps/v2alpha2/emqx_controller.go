@@ -100,7 +100,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	requester, err := newRequesterBySvc(r.Client, instance)
+	requester, err := newRequester(r.Client, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
 			_ = (&addBootstrap{r}).reconcile(ctx, instance, nil)
@@ -147,13 +147,11 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func newRequesterBySvc(client client.Client, instance *appsv2alpha2.EMQX) (innerReq.RequesterInterface, error) {
-	username, password, err := getBootstrapUser(context.Background(), client, instance)
+func newRequester(k8sClient client.Client, instance *appsv2alpha2.EMQX) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapUser(context.Background(), k8sClient, instance)
 	if err != nil {
 		return nil, err
 	}
-
-	headlessService := instance.HeadlessServiceNamespacedName()
 
 	var port string
 	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance)
@@ -165,13 +163,31 @@ func newRequesterBySvc(client client.Client, instance *appsv2alpha2.EMQX) (inner
 		port = dashboardPort.TargetPort.String()
 	}
 
-	return &innerReq.Requester{
-		// TODO: the telepersence is not support `$service.$namespace.svc` format in Linux
-		// Host:     fmt.Sprintf("%s.%s.svc:%s", headlessService.Name, headlessService.Namespace, port),
-		Host:     fmt.Sprintf("%s.%s.svc.cluster.local:%s", headlessService.Name, headlessService.Namespace, port),
-		Username: username,
-		Password: password,
-	}, nil
+	podList := &corev1.PodList{}
+	labels := instance.Spec.CoreTemplate.Labels
+	if instance.Status.CoreNodesStatus.CurrentRevision != "" {
+		labels = appsv2alpha2.CloneAndAddLabel(
+			labels,
+			appsv2alpha2.PodTemplateHashLabelKey,
+			instance.Status.CoreNodesStatus.CurrentRevision,
+		)
+	}
+
+	_ = k8sClient.List(context.Background(), podList,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(labels),
+	)
+	for _, pod := range podList.Items {
+		if pod.Status.Phase == corev1.PodRunning && pod.Status.PodIP != "" {
+			return &innerReq.Requester{
+				Host:     fmt.Sprintf("%s:%s", pod.Status.PodIP, port),
+				Username: username,
+				Password: password,
+			}, nil
+		}
+	}
+
+	return nil, nil
 }
 
 func getBootstrapUser(ctx context.Context, client client.Client, instance *appsv2alpha2.EMQX) (username, password string, err error) {
