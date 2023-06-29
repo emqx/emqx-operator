@@ -131,6 +131,8 @@ _Appears in:_
 | `role` _string_ | EMQX cluster node role, enum: "core" "replicant" |
 | `edition` _string_ | EMQX cluster node edition, enum: "Opensource" "Enterprise" |
 | `uptime` _integer_ | EMQX node uptime, milliseconds |
+| `connections` _integer_ | In EMQX's API of `/api/v5/nodes`, the `connections` field means the number of MQTT session count, |
+| `live_connections` _integer_ | In EMQX's API of `/api/v5/nodes`, the `live_connections` field means the number of connected MQTT clients. THe `live_connections` just work in EMQX 5.1 or later. |
 
 
 #### EMQXNodesStatus
