@@ -20,8 +20,8 @@ helm upgrade --install telegraf-operator influxdata/telegraf-operator
 The global configuration is mounted via secret, specifying the class name as logs, where
 
 - `agent` is to configure telegraf agent, refer to the detailed definition: [telegraf agent](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#agent)
-- `inputs.tail` is the tail plug-in used to configure the input and is defined in detail in [tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
-- `outputs.file` is a file plug-in used to configure the output is defined in detail in [file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
+- `inputs.tail` is the tail plug-in used to configure the input and is defined in detail in [tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/index.md)
+- `outputs.file` is a file plug-in used to configure the output is defined in detail in [file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/index.md)
 
 ```yaml
 apiVersion: v1
@@ -79,7 +79,7 @@ telegraf-operator-classes   Opaque   1      11h
 
 Telegraf uses annotations to inject sidecar for Pod log collection, for a detailed definition of annotations refer to the documentation: [telegraf annotations](https://github.com/influxdata/telegraf-operator#pod-level-annotations)
 
-Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../README.md):
+Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
 ::: tab v2alpha1
