@@ -2,7 +2,8 @@ package v2alpha2
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"sort"
 	"time"
 
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -38,7 +39,18 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-
+		instance.Status.Conditions = []metav1.Condition{
+			{
+				Type:               appsv2alpha2.Ready,
+				Status:             metav1.ConditionTrue,
+				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+			},
+			{
+				Type:               appsv2alpha2.CodeNodesReady,
+				Status:             metav1.ConditionTrue,
+				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+			},
+		}
 	})
 
 	It("create namespace", func() {
@@ -115,33 +127,28 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		var old, new *appsv1.StatefulSet = new(appsv1.StatefulSet), new(appsv1.StatefulSet)
 
 		JustBeforeEach(func() {
-			Eventually(func() error {
-				list := getStateFulSetList(ctx, a.Client,
+			list := &appsv1.StatefulSetList{}
+			Eventually(func() []appsv1.StatefulSet {
+				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
 					client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
 				)
-				if len(list) == 0 {
-					return errors.New("not found")
-				}
-				old = list[0].DeepCopy()
-				new = list[len(list)-1].DeepCopy()
-				return nil
-			}).Should(Succeed())
-			Expect(old.UID).ShouldNot(Equal(new.UID))
+				sort.Slice(list.Items, func(i, j int) bool {
+					return list.Items[i].CreationTimestamp.Before(&list.Items[j].CreationTimestamp)
+				})
+				return list.Items
+			}).Should(HaveLen(2))
+			old = list.Items[0].DeepCopy()
+			new = list.Items[1].DeepCopy()
 
 			//Sync the "change image" test case.
 			instance.Spec.Image = new.Spec.Template.Spec.Containers[0].Image
 			instance.Status.CoreNodesStatus.CurrentRevision = new.Labels[appsv2alpha2.PodTemplateHashLabelKey]
-			instance.Status.Conditions = []metav1.Condition{
+			instance.Status.CoreNodesStatus.Nodes = []appsv2alpha2.EMQXNode{
 				{
-					Type:               appsv2alpha2.Ready,
-					Status:             metav1.ConditionTrue,
-					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
-				},
-				{
-					Type:               appsv2alpha2.CodeNodesReady,
-					Status:             metav1.ConditionTrue,
-					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
+					Node:    fmt.Sprintf("emqx@%s.fake", fmt.Sprintf("%s-%d", new.Name, *new.Spec.Replicas)),
+					Edition: "Enterprise",
+					Session: 0,
 				},
 			}
 

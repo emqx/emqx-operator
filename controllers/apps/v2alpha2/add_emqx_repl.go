@@ -2,6 +2,8 @@ package v2alpha2
 
 import (
 	"context"
+	"sort"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -54,7 +56,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		_ = a.Client.Status().Update(ctx, instance)
 	}
 
-	if err := a.syncReplicaSet(ctx, instance); err != nil {
+	if err := a.sync(ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to sync replicaSet")}
 	}
 
@@ -63,62 +65,98 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 
 func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 	preRs := generateReplicaSet(instance)
-
-	list := &appsv1.ReplicaSetList{}
-	_ = a.Client.List(context.TODO(), list,
-		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
-			instance.Spec.ReplicantTemplate.Labels,
-			appsv2alpha2.PodTemplateHashLabelKey,
-			instance.Status.ReplicantNodesStatus.CurrentRevision,
-		)),
-	)
-	if len(list.Items) > 0 {
-		rs := list.Items[0].DeepCopy()
-		patchResult, _ := a.Patcher.Calculate(
-			rs,
-			preRs.DeepCopy(),
-			justCheckPodTemplate(),
-		)
-		if patchResult.IsEmpty() {
-			preRs.ObjectMeta = rs.ObjectMeta
-			preRs.Spec.Template.ObjectMeta = rs.Spec.Template.ObjectMeta
-			preRs.Spec.Selector = rs.Spec.Selector
-			return preRs
-		}
-		logger := log.FromContext(ctx)
-		logger.V(1).Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
-	}
-
 	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
 	preRs.Name = preRs.Name + "-" + podTemplateSpecHash
 	preRs.Labels = appsv2alpha2.CloneAndAddLabel(preRs.Labels, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 	preRs.Spec.Template.Labels = appsv2alpha2.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 	preRs.Spec.Selector = appsv2alpha2.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 
+	currentRs, _ := getReplicaSetList(ctx, a.Client, instance)
+	if currentRs == nil {
+		return preRs
+	}
+
+	patchResult, _ := a.Patcher.Calculate(
+		currentRs.DeepCopy(),
+		preRs.DeepCopy(),
+		justCheckPodTemplate(),
+	)
+	if patchResult.IsEmpty() {
+		preRs.ObjectMeta = currentRs.ObjectMeta
+		preRs.Spec.Template.ObjectMeta = currentRs.Spec.Template.ObjectMeta
+		preRs.Spec.Selector = currentRs.Spec.Selector
+		return preRs
+	}
+	logger := log.FromContext(ctx)
+	logger.V(1).Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
+
 	return preRs
 }
 
-func (a *addRepl) syncReplicaSet(ctx context.Context, instance *appsv2alpha2.EMQX) error {
-	rsList := getReplicaSetList(ctx, a.Client,
-		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-	)
-	if len(rsList) <= 1 {
+func (a *addRepl) sync(ctx context.Context, instance *appsv2alpha2.EMQX) error {
+	_, oldRsList := getReplicaSetList(ctx, a.Client, instance)
+	if len(oldRsList) == 0 {
 		return nil
 	}
 
-	old := rsList[0].DeepCopy()
-	eList := getEventList(ctx, a.Clientset, old)
+	oldest := oldRsList[0].DeepCopy()
 
-	if canBeScaledDown(instance, appsv2alpha2.Ready, eList) {
-		old.Spec.Replicas = pointer.Int32(old.Status.Replicas - 1)
-		if err := a.Client.Update(ctx, old); err != nil {
+	if pod := a.findCanBeDeletePod(ctx, instance, oldest); pod != nil {
+		if pod.Annotations == nil {
+			pod.Annotations = make(map[string]string)
+		}
+		// https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#pod-deletion-cost
+		pod.Annotations["controller.kubernetes.io/pod-deletion-cost"] = "-99999"
+		if err := a.Client.Patch(ctx, pod, client.MergeFrom(pod)); err != nil {
+			return emperror.Wrap(err, "failed patch pod deletion cost")
+		}
+
+		oldest.Spec.Replicas = pointer.Int32(oldest.Status.Replicas - 1)
+		if err := a.Client.Update(ctx, oldest); err != nil {
 			return emperror.Wrap(err, "failed to scale down old replicaSet")
 		}
 		return nil
 	}
 	return nil
+}
+
+func (a *addRepl) findCanBeDeletePod(ctx context.Context, instance *appsv2alpha2.EMQX, old *appsv1.ReplicaSet) *corev1.Pod {
+	if !canBeScaledDown(instance, appsv2alpha2.Ready, getEventList(ctx, a.Clientset, old)) {
+		return nil
+	}
+
+	type podSessionCount struct {
+		pod     *corev1.Pod
+		edition string
+		session int64
+	}
+	var podSessionCountList []*podSessionCount
+
+	list := &corev1.PodList{}
+	_ = a.Client.List(ctx, list, client.InNamespace(old.Namespace), client.MatchingLabels(old.Spec.Selector.MatchLabels))
+
+	for _, node := range instance.Status.ReplicantNodesStatus.Nodes {
+		for _, pod := range list.Items {
+			host := strings.Split(node.Node[strings.Index(node.Node, "@")+1:], ":")[0]
+			if pod.Status.PodIP == host {
+				podSessionCountList = append(podSessionCountList, &podSessionCount{
+					pod:     pod.DeepCopy(),
+					edition: node.Edition,
+					session: node.Session,
+				})
+			}
+		}
+	}
+
+	sort.Slice(podSessionCountList, func(i, j int) bool {
+		return podSessionCountList[i].session < podSessionCountList[j].session
+	})
+
+	if podSessionCountList[0].edition == "Enterprise" && podSessionCountList[0].session > 0 {
+		return nil
+	}
+
+	return podSessionCountList[0].pod
 }
 
 func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {

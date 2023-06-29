@@ -31,28 +31,28 @@ func isExistReplicant(instance *appsv2alpha2.EMQX) bool {
 // 	podList := &corev1.PodList{}
 // 	_ = client.List(ctx, podList, opts...)
 
-//		replicaSetList := &appsv1.ReplicaSetList{}
-//		_ = client.List(ctx, replicaSetList, opts...)
-//		// Create a map from ReplicaSet UID to ReplicaSet.
-//		rsMap := make(map[types.UID][]*corev1.Pod, len(replicaSetList.Items))
-//		for _, rs := range replicaSetList.Items {
-//			rsMap[rs.UID] = []*corev1.Pod{}
-//		}
-//		for _, p := range podList.Items {
-//			// Do not ignore inactive Pods because Recreate replicaSets need to verify that no
-//			// Pods from older versions are running before spinning up new Pods.
-//			pod := p.DeepCopy()
-//			controllerRef := metav1.GetControllerOf(pod)
-//			if controllerRef == nil {
-//				continue
-//			}
-//			// Only append if we care about this UID.
-//			if _, ok := rsMap[controllerRef.UID]; ok {
-//				rsMap[controllerRef.UID] = append(rsMap[controllerRef.UID], pod)
-//			}
-//		}
-//		return rsMap
-//	}
+// 	replicaSetList := &appsv1.ReplicaSetList{}
+// 	_ = client.List(ctx, replicaSetList, opts...)
+// 	// Create a map from ReplicaSet UID to ReplicaSet.
+// 	rsMap := make(map[types.UID][]*corev1.Pod, len(replicaSetList.Items))
+// 	for _, rs := range replicaSetList.Items {
+// 		rsMap[rs.UID] = []*corev1.Pod{}
+// 	}
+// 	for _, p := range podList.Items {
+// 		// Do not ignore inactive Pods because Recreate replicaSets need to verify that no
+// 		// Pods from older versions are running before spinning up new Pods.
+// 		pod := p.DeepCopy()
+// 		controllerRef := metav1.GetControllerOf(pod)
+// 		if controllerRef == nil {
+// 			continue
+// 		}
+// 		// Only append if we care about this UID.
+// 		if _, ok := rsMap[controllerRef.UID]; ok {
+// 			rsMap[controllerRef.UID] = append(rsMap[controllerRef.UID], pod)
+// 		}
+// 	}
+// 	return rsMap
+// }
 
 func canBeScaledDown(instance *appsv2alpha2.EMQX, conditionType string, eList []*corev1.Event) bool {
 	var initialDelaySecondsReady bool
@@ -80,16 +80,43 @@ func canBeScaledDown(instance *appsv2alpha2.EMQX, conditionType string, eList []
 	return initialDelaySecondsReady && waitTakeover
 }
 
-func getStateFulSetList(ctx context.Context, client client.Client, opts ...client.ListOption) []*appsv1.StatefulSet {
+func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *appsv2alpha2.EMQX) (currentSts *appsv1.StatefulSet, oldStsList []*appsv1.StatefulSet) {
 	list := &appsv1.StatefulSetList{}
-	_ = client.List(ctx, list, opts...)
-	return handlerStatefulSetList(list)
+	_ = k8sClient.List(ctx, list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+	)
+	for _, sts := range list.Items {
+		if hash, ok := sts.Labels[appsv2alpha2.PodTemplateHashLabelKey]; ok && hash == instance.Status.CoreNodesStatus.CurrentRevision {
+			currentSts = sts.DeepCopy()
+		} else {
+			if *sts.Spec.Replicas != 0 && sts.Status.ReadyReplicas == sts.Status.Replicas {
+				oldStsList = append(oldStsList, sts.DeepCopy())
+			}
+		}
+	}
+
+	sort.Sort(StatefulSetsByCreationTimestamp(oldStsList))
+	return
 }
 
-func getReplicaSetList(ctx context.Context, client client.Client, opts ...client.ListOption) []*appsv1.ReplicaSet {
+func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *appsv2alpha2.EMQX) (currentRs *appsv1.ReplicaSet, oldRsList []*appsv1.ReplicaSet) {
 	list := &appsv1.ReplicaSetList{}
-	_ = client.List(ctx, list, opts...)
-	return handlerReplicaSetList(list)
+	_ = k8sClient.List(ctx, list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+	)
+	for _, rs := range list.Items {
+		if hash, ok := rs.Labels[appsv2alpha2.PodTemplateHashLabelKey]; ok && hash == instance.Status.ReplicantNodesStatus.CurrentRevision {
+			currentRs = rs.DeepCopy()
+		} else {
+			if *rs.Spec.Replicas != 0 && rs.Status.ReadyReplicas == rs.Status.Replicas {
+				oldRsList = append(oldRsList, rs.DeepCopy())
+			}
+		}
+	}
+	sort.Sort(ReplicaSetsByCreationTimestamp(oldRsList))
+	return
 }
 
 func getEventList(ctx context.Context, clientSet *kubernetes.Clientset, obj client.Object) []*corev1.Event {
