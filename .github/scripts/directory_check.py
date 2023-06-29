@@ -67,7 +67,7 @@ def get_md_files(dir_config, path):
             if md_name.startswith(('http://', 'https://')):
                 continue
             elif md_name == './':
-                md_list.append(f'{docs_path}/{path}/README.md')
+                md_list.append(f'{docs_path}/{path}/index.md')
             else:
                 md_list.append(f'{docs_path}/{path}/{md_name}.md')
 

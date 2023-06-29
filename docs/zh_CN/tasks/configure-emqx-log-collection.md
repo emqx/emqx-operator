@@ -21,9 +21,9 @@ helm upgrade --install telegraf-operator influxdata/telegraf-operator
 
 `agent` 用来配置 telegraf agent，详细定义参考：[telegraf agent](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#agent)
 
-`inputs.tail` 用来配置输入的 tail 插件，详细定义参考：[tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
+`inputs.tail` 用来配置输入的 tail 插件，详细定义参考：[tail](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/index.md)
 
-`outputs.file` 用来配置输出的 file 插件，详细定义参考：[file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/README.md)
+`outputs.file` 用来配置输出的 file 插件，详细定义参考：[file](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/tail/index.md)
 
 ```yaml
 apiVersion: v1
