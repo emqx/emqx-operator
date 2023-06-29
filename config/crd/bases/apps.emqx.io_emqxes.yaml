@@ -12877,8 +12877,14 @@ spec:
                   nodes:
                     items:
                       properties:
+                        connections:
+                          format: int64
+                          type: integer
                         edition:
                           type: string
+                        live_connections:
+                          format: int64
+                          type: integer
                         node:
                           type: string
                         node_status:
@@ -12911,8 +12917,14 @@ spec:
                   nodes:
                     items:
                       properties:
+                        connections:
+                          format: int64
+                          type: integer
                         edition:
                           type: string
+                        live_connections:
+                          format: int64
+                          type: integer
                         node:
                           type: string
                         node_status:
