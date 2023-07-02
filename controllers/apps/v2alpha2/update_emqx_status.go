@@ -3,12 +3,14 @@ package v2alpha2
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,7 +59,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	}
 
 	if r != nil {
-		if emqxNodes, err := getNodeStatuesByAPI(r); err != nil {
+		if emqxNodes, err := u.getEMQXNodes(ctx, instance, r); err != nil {
 			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 		} else {
 			instance.Status.SetNodes(emqxNodes)
@@ -71,7 +73,36 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	return subResult{}
 }
 
-func getNodeStatuesByAPI(r innerReq.RequesterInterface) ([]appsv2alpha2.EMQXNode, error) {
+func (u *updateStatus) getEMQXNodes(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) ([]appsv2alpha2.EMQXNode, error) {
+	emqxNodes, err := getEMQXNodesByAPI(r)
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to get node statues by API")
+	}
+
+	list := &corev1.PodList{}
+	_ = u.Client.List(ctx, list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.Labels),
+	)
+	for _, p := range list.Items {
+		pod := p.DeepCopy()
+		for _, node := range emqxNodes {
+			host := strings.Split(node.Node[strings.Index(node.Node, "@")+1:], ":")[0]
+			if (node.Role == "core" && strings.HasPrefix(host, pod.Name)) ||
+				(node.Role == "replicant" && host == pod.Status.PodIP) {
+				node.PodUID = pod.UID
+				controllerRef := metav1.GetControllerOf(pod)
+				if controllerRef == nil {
+					continue
+				}
+				node.ControllerUID = controllerRef.UID
+			}
+		}
+	}
+	return emqxNodes, nil
+}
+
+func getEMQXNodesByAPI(r innerReq.RequesterInterface) ([]appsv2alpha2.EMQXNode, error) {
 	resp, body, err := r.Request("GET", "api/v5/nodes", nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
