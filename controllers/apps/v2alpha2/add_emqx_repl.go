@@ -3,7 +3,6 @@ package v2alpha2
 import (
 	"context"
 	"sort"
-	"strings"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -137,8 +136,7 @@ func (a *addRepl) findCanBeDeletePod(ctx context.Context, instance *appsv2alpha2
 
 	for _, node := range instance.Status.ReplicantNodesStatus.Nodes {
 		for _, pod := range list.Items {
-			host := strings.Split(node.Node[strings.Index(node.Node, "@")+1:], ":")[0]
-			if pod.Status.PodIP == host {
+			if pod.UID == node.PodUID {
 				podSessionCountList = append(podSessionCountList, &podSessionCount{
 					pod:     pod.DeepCopy(),
 					edition: node.Edition,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -124,8 +123,7 @@ func (a *addCore) findCanBeDeletePod(ctx context.Context, instance *appsv2alpha2
 	}, pod)
 
 	for _, node := range instance.Status.CoreNodesStatus.Nodes {
-		host := strings.Split(node.Node[strings.Index(node.Node, "@")+1:], ":")[0]
-		if strings.HasPrefix(host, pod.Name) {
+		if pod.UID == node.PodUID {
 			if node.Edition == "Enterprise" && node.Session != 0 {
 				return nil
 			}
