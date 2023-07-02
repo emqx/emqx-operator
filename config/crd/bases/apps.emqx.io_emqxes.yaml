@@ -12913,6 +12913,8 @@ spec:
                         connections:
                           format: int64
                           type: integer
+                        controllerUID:
+                          type: string
                         edition:
                           type: string
                         live_connections:
@@ -12923,6 +12925,8 @@ spec:
                         node_status:
                           type: string
                         otp_release:
+                          type: string
+                        podUID:
                           type: string
                         role:
                           type: string
@@ -12953,6 +12957,8 @@ spec:
                         connections:
                           format: int64
                           type: integer
+                        controllerUID:
+                          type: string
                         edition:
                           type: string
                         live_connections:
@@ -12963,6 +12969,8 @@ spec:
                         node_status:
                           type: string
                         otp_release:
+                          type: string
+                        podUID:
                           type: string
                         role:
                           type: string
