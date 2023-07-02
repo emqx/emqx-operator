@@ -133,9 +133,9 @@ type coreNodesProgressingStatus struct {
 
 func (s *coreNodesProgressingStatus) nextStatus(currentSts *appsv1.StatefulSet, currentRs *appsv1.ReplicaSet) {
 	// statefulSet is ready
-	if currentSts.UID == "" ||
+	if currentSts == nil ||
 		currentSts.Status.ObservedGeneration != currentSts.Generation ||
-		currentSts.Status.ReadyReplicas != currentSts.Status.Replicas {
+		currentSts.Status.ReadyReplicas != *currentSts.Spec.Replicas {
 		return
 	}
 
@@ -188,8 +188,8 @@ func (s *replicantNodesProgressingStatus) nextStatus(currentSts *appsv1.Stateful
 		return
 	}
 
-	if currentRs.UID == "" ||
-		currentRs.Status.ReadyReplicas != currentRs.Status.Replicas {
+	if currentRs == nil ||
+		currentRs.Status.ReadyReplicas != *currentRs.Spec.Replicas {
 		return
 	}
 

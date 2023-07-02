@@ -242,6 +242,7 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
 | `coreNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
 | `replicantNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
+| `nodEvacuationsStatus` _[NodeEvacuationStatus](#nodeevacuationstatus) array_ |  |
 
 
 #### EvacuationStrategy
@@ -258,6 +259,44 @@ _Appears in:_
 | `waitTakeover` _integer_ |  |
 | `connEvictRate` _integer_ | Just work in EMQX Enterprise. |
 | `sessEvictRate` _integer_ | Just work in EMQX Enterprise. |
+
+
+#### NodeEvacuationStats
+
+
+
+
+
+_Appears in:_
+- [NodeEvacuationStatus](#nodeevacuationstatus)
+
+| Field | Description |
+| --- | --- |
+| `initial_sessions` _integer_ |  |
+| `initial_connected` _integer_ |  |
+| `current_sessions` _integer_ |  |
+| `current_connected` _integer_ |  |
+
+
+#### NodeEvacuationStatus
+
+
+
+
+
+_Appears in:_
+- [EMQXStatus](#emqxstatus)
+
+| Field | Description |
+| --- | --- |
+| `node` _string_ |  |
+| `stats` _[NodeEvacuationStats](#nodeevacuationstats)_ |  |
+| `state` _string_ |  |
+| `session_recipients` _string array_ |  |
+| `session_goal` _integer_ |  |
+| `session_eviction_rate` _integer_ |  |
+| `connection_goal` _integer_ |  |
+| `connection_eviction_rate` _integer_ |  |
 
 
 

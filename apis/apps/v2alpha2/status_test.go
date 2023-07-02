@@ -24,63 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestSetNodes(t *testing.T) {
-	status := &EMQXStatus{}
-	status.ReplicantNodesStatus = &EMQXNodesStatus{}
-
-	nodes := []EMQXNode{
-		{
-			Node:   "emqx-0",
-			Role:   "core",
-			Uptime: 10000,
-		},
-		{
-			Node:   "emqx-1",
-			Role:   "core",
-			Uptime: 10,
-		},
-		{
-			Node:   "emqx-2",
-			Role:   "replicant",
-			Uptime: 10000,
-		},
-		{
-			Node:   "emqx-3",
-			Role:   "replicant",
-			Uptime: 10,
-		},
-	}
-	status.SetNodes(nodes)
-
-	assert.Equal(t, int32(2), status.CoreNodesStatus.ReadyReplicas)
-	assert.Equal(t, []EMQXNode{
-		{
-			Node:   "emqx-1",
-			Role:   "core",
-			Uptime: 10,
-		},
-		{
-			Node:   "emqx-0",
-			Role:   "core",
-			Uptime: 10000,
-		},
-	}, status.CoreNodesStatus.Nodes)
-
-	assert.Equal(t, int32(2), status.ReplicantNodesStatus.ReadyReplicas)
-	assert.Equal(t, []EMQXNode{
-		{
-			Node:   "emqx-3",
-			Role:   "replicant",
-			Uptime: 10,
-		},
-		{
-			Node:   "emqx-2",
-			Role:   "replicant",
-			Uptime: 10000,
-		},
-	}, status.ReplicantNodesStatus.Nodes)
-}
-
 func TestSetCondition(t *testing.T) {
 	c0 := metav1.Condition{
 		Type:   Initialized,
