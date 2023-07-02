@@ -2,8 +2,6 @@ package v2alpha2
 
 import (
 	"context"
-	"fmt"
-	"sort"
 	"time"
 
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -178,8 +176,13 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			Eventually(func() *appsv2alpha2.EMQX {
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
-			}).Should(WithTransform(
-				func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.ReplicantNodesProgressing),
+			}).Should(And(
+				WithTransform(func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.ReplicantNodesProgressing)),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.Ready) }, BeFalse()),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.Available) }, BeFalse()),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool {
+					return emqx.Status.IsConditionTrue(appsv2alpha2.ReplicantNodesReady)
+				}, BeFalse()),
 			))
 		})
 	})
@@ -207,83 +210,14 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			Eventually(func() *appsv2alpha2.EMQX {
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
-			}).Should(WithTransform(
-				func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.ReplicantNodesProgressing),
+			}).Should(And(
+				WithTransform(func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.ReplicantNodesProgressing)),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.Ready) }, BeFalse()),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.Available) }, BeFalse()),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool {
+					return emqx.Status.IsConditionTrue(appsv2alpha2.ReplicantNodesReady)
+				}, BeFalse()),
 			))
-		})
-	})
-
-	Context("can be scale down", func() {
-		var old, new *appsv1.ReplicaSet = new(appsv1.ReplicaSet), new(appsv1.ReplicaSet)
-
-		JustBeforeEach(func() {
-			list := &appsv1.ReplicaSetList{}
-			Eventually(func() []appsv1.ReplicaSet {
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
-				)
-				sort.Slice(list.Items, func(i, j int) bool {
-					return list.Items[i].CreationTimestamp.Before(&list.Items[j].CreationTimestamp)
-				})
-				return list.Items
-			}).Should(HaveLen(2))
-			old = list.Items[0].DeepCopy()
-			new = list.Items[1].DeepCopy()
-
-			fakeOldPod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: old.Name + "-",
-					Namespace:    old.Namespace,
-					Labels:       old.Spec.Template.Labels,
-					OwnerReferences: []metav1.OwnerReference{
-						*metav1.NewControllerRef(old, appsv1.SchemeGroupVersion.WithKind("ReplicaSet")),
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: "emqx", Image: old.Spec.Template.Spec.Containers[0].Image},
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, fakeOldPod)).Should(Succeed())
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(fakeOldPod), fakeOldPod)).Should(Succeed())
-			fakeOldPod.Status.PodIP = "1.2.3.4"
-			Expect(k8sClient.Status().Update(ctx, fakeOldPod)).Should(Succeed())
-
-			instance.Spec.Image = new.Spec.Template.Spec.Containers[0].Image
-			instance.Status.ReplicantNodesStatus.CurrentRevision = new.Labels[appsv2alpha2.PodTemplateHashLabelKey]
-			instance.Status.ReplicantNodesStatus.Nodes = []appsv2alpha2.EMQXNode{
-				{
-					Node:    fmt.Sprintf("emqx@%s", fakeOldPod.Status.PodIP),
-					Edition: "Enterprise",
-					Session: 0,
-				},
-			}
-
-			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(0)
-			instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover = int32(0)
-		})
-		It("should scale down", func() {
-			for *old.Spec.Replicas > 0 {
-				preReplicas := *old.Spec.Replicas
-				//mock statefulSet status
-				old.Status.Replicas = preReplicas
-				old.Status.ReadyReplicas = preReplicas
-				Expect(k8sClient.Status().Update(ctx, old)).Should(Succeed())
-				Eventually(func() *appsv1.ReplicaSet {
-					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
-					return old
-				}).WithTimeout(timeout).WithPolling(interval).Should(And(
-					WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.Replicas }, Equal(preReplicas)),
-					WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.ReadyReplicas }, Equal(preReplicas)),
-				))
-
-				// retry it because update the replicaSet maybe will conflict
-				Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
-				Expect(*old.Spec.Replicas).Should(Equal(preReplicas - 1))
-			}
 		})
 	})
 

@@ -127,7 +127,7 @@ func genEMQX() *appsv2alpha2.EMQX {
 			Namespace: "e2e-test-v2alpha2" + "-" + rand.String(5),
 		},
 		Spec: appsv2alpha2.EMQXSpec{
-			Image: "emqx:5.1",
+			Image: "emqx/emqx-enterprise:5.1.0",
 			BootstrapConfig: `
 			gateway.lwm2m {
 			  auto_observe = true

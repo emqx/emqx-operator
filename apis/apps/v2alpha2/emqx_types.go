@@ -184,9 +184,11 @@ type EvacuationStrategy struct {
 	WaitTakeover int32 `json:"waitTakeover,omitempty"`
 	// Just work in EMQX Enterprise.
 	//+kubebuilder:validation:Minimum=1
+	//+kubebuilder:default=1000
 	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
 	// Just work in EMQX Enterprise.
 	//+kubebuilder:validation:Minimum=1
+	//+kubebuilder:default=1000
 	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
 }
 
@@ -204,7 +206,7 @@ type UpdateStrategy struct {
 type EMQXSpec struct {
 	// EMQX image name.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
-	Image string `json:"image,omitempty"`
+	Image string `json:"image"`
 	// Image pull policy.
 	// One of Always, Never, IfNotPresent.
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
@@ -217,6 +219,7 @@ type EMQXSpec struct {
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
+	//+kubebuilder:default={type:Recreate,initialDelaySeconds:30,evacuationStrategy:{waitTakeover:30,connEvictRate:1000,sessEvictRate:1000}}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 	// EMQX bootstrap user
 	// Cannot be updated.

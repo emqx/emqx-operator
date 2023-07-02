@@ -2,7 +2,6 @@ package v2alpha2
 
 import (
 	"context"
-	"sort"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -50,6 +49,9 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 			Reason:  "CreateNewReplicaSet",
 			Message: "Create new replicaSet",
 		})
+		instance.Status.RemoveCondition(appsv2alpha2.Ready)
+		instance.Status.RemoveCondition(appsv2alpha2.Available)
+		instance.Status.RemoveCondition(appsv2alpha2.ReplicantNodesReady)
 		instance.Status.ReplicantNodesStatus.CurrentRevision = preRs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	} else {
@@ -63,19 +65,21 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 			logger := log.FromContext(ctx)
 			logger.V(1).Info("got different statefulSet for EMQX core nodes, will update statefulSet", "patch", string(patchResult.Patch))
 
-			_ = a.Handler.Update(preRs)
+			if err := a.Handler.Update(preRs); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
+			}
+
 			instance.Status.SetCondition(metav1.Condition{
 				Type:    appsv2alpha2.ReplicantNodesProgressing,
 				Status:  metav1.ConditionTrue,
 				Reason:  "CreateNewReplicaSet",
 				Message: "Create new replicaSet",
 			})
+			instance.Status.RemoveCondition(appsv2alpha2.Ready)
+			instance.Status.RemoveCondition(appsv2alpha2.Available)
+			instance.Status.RemoveCondition(appsv2alpha2.ReplicantNodesReady)
 			_ = a.Client.Status().Update(ctx, instance)
 		}
-	}
-
-	if err := a.sync(ctx, instance); err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to sync replicaSet")}
 	}
 
 	return subResult{}
@@ -109,75 +113,6 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 	logger.V(1).Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
 
 	return preRs
-}
-
-func (a *addRepl) sync(ctx context.Context, instance *appsv2alpha2.EMQX) error {
-	_, oldRsList := getReplicaSetList(ctx, a.Client, instance)
-	if len(oldRsList) == 0 {
-		return nil
-	}
-
-	oldest := oldRsList[0].DeepCopy()
-
-	if pod := a.findCanBeDeletePod(ctx, instance, oldest); pod != nil {
-		if pod.Annotations == nil {
-			pod.Annotations = make(map[string]string)
-		}
-		// https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#pod-deletion-cost
-		pod.Annotations["controller.kubernetes.io/pod-deletion-cost"] = "-99999"
-		if err := a.Client.Patch(ctx, pod, client.MergeFrom(pod)); err != nil {
-			return emperror.Wrap(err, "failed patch pod deletion cost")
-		}
-
-		oldest.Spec.Replicas = pointer.Int32(oldest.Status.Replicas - 1)
-		if err := a.Client.Update(ctx, oldest); err != nil {
-			return emperror.Wrap(err, "failed to scale down old replicaSet")
-		}
-		return nil
-	}
-	return nil
-}
-
-func (a *addRepl) findCanBeDeletePod(ctx context.Context, instance *appsv2alpha2.EMQX, old *appsv1.ReplicaSet) *corev1.Pod {
-	if !canBeScaledDown(instance, appsv2alpha2.Ready, getEventList(ctx, a.Clientset, old)) {
-		return nil
-	}
-
-	type podSessionCount struct {
-		pod     *corev1.Pod
-		edition string
-		session int64
-	}
-	var podSessionCountList []*podSessionCount
-
-	list := &corev1.PodList{}
-	_ = a.Client.List(ctx, list, client.InNamespace(old.Namespace), client.MatchingLabels(old.Spec.Selector.MatchLabels))
-
-	for _, node := range instance.Status.ReplicantNodesStatus.Nodes {
-		for _, pod := range list.Items {
-			if pod.UID == node.PodUID {
-				podSessionCountList = append(podSessionCountList, &podSessionCount{
-					pod:     pod.DeepCopy(),
-					edition: node.Edition,
-					session: node.Session,
-				})
-			}
-		}
-	}
-
-	if len(podSessionCountList) == 0 {
-		return nil
-	}
-
-	sort.Slice(podSessionCountList, func(i, j int) bool {
-		return podSessionCountList[i].session < podSessionCountList[j].session
-	})
-
-	if podSessionCountList[0].edition == "Enterprise" && podSessionCountList[0].session > 0 {
-		return nil
-	}
-
-	return podSessionCountList[0].pod
 }
 
 func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {

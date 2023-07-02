@@ -18,6 +18,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,57 +28,39 @@ func isExistReplicant(instance *appsv2alpha2.EMQX) bool {
 	return instance.Spec.ReplicantTemplate != nil && instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
 }
 
-// func getPodMap(ctx context.Context, client client.Client, opts ...client.ListOption) map[types.UID][]*corev1.Pod {
-// 	podList := &corev1.PodList{}
-// 	_ = client.List(ctx, podList, opts...)
+func getRsPodMap(ctx context.Context, k8sClient client.Client, instance *appsv2alpha2.EMQX) map[types.UID][]*corev1.Pod {
+	podList := &corev1.PodList{}
+	_ = k8sClient.List(ctx, podList,
+		client.InNamespace(instance.Namespace),
+		// Maybe current EMQX replicant template is nil
+		client.MatchingLabels(instance.Labels),
+	)
 
-// 	replicaSetList := &appsv1.ReplicaSetList{}
-// 	_ = client.List(ctx, replicaSetList, opts...)
-// 	// Create a map from ReplicaSet UID to ReplicaSet.
-// 	rsMap := make(map[types.UID][]*corev1.Pod, len(replicaSetList.Items))
-// 	for _, rs := range replicaSetList.Items {
-// 		rsMap[rs.UID] = []*corev1.Pod{}
-// 	}
-// 	for _, p := range podList.Items {
-// 		// Do not ignore inactive Pods because Recreate replicaSets need to verify that no
-// 		// Pods from older versions are running before spinning up new Pods.
-// 		pod := p.DeepCopy()
-// 		controllerRef := metav1.GetControllerOf(pod)
-// 		if controllerRef == nil {
-// 			continue
-// 		}
-// 		// Only append if we care about this UID.
-// 		if _, ok := rsMap[controllerRef.UID]; ok {
-// 			rsMap[controllerRef.UID] = append(rsMap[controllerRef.UID], pod)
-// 		}
-// 	}
-// 	return rsMap
-// }
-
-func canBeScaledDown(instance *appsv2alpha2.EMQX, conditionType string, eList []*corev1.Event) bool {
-	var initialDelaySecondsReady bool
-	var waitTakeover bool
-
-	_, condition := instance.Status.GetCondition(conditionType)
-	if condition != nil && condition.Status == metav1.ConditionTrue {
-		delay := time.Since(condition.LastTransitionTime.Time).Seconds()
-		if int32(delay) > instance.Spec.UpdateStrategy.InitialDelaySeconds {
-			initialDelaySecondsReady = true
+	replicaSetList := &appsv1.ReplicaSetList{}
+	_ = k8sClient.List(ctx, replicaSetList,
+		client.InNamespace(instance.Namespace),
+		// Maybe current EMQX replicant template is nil
+		client.MatchingLabels(instance.Labels),
+	)
+	// Create a map from ReplicaSet UID to ReplicaSet.
+	rsMap := make(map[types.UID][]*corev1.Pod, len(replicaSetList.Items))
+	for _, rs := range replicaSetList.Items {
+		rsMap[rs.UID] = []*corev1.Pod{}
+	}
+	for _, p := range podList.Items {
+		// Do not ignore inactive Pods because Recreate replicaSets need to verify that no
+		// Pods from older versions are running before spinning up new Pods.
+		pod := p.DeepCopy()
+		controllerRef := metav1.GetControllerOf(pod)
+		if controllerRef == nil {
+			continue
+		}
+		// Only append if we care about this UID.
+		if _, ok := rsMap[controllerRef.UID]; ok {
+			rsMap[controllerRef.UID] = append(rsMap[controllerRef.UID], pod)
 		}
 	}
-
-	if len(eList) == 0 {
-		waitTakeover = true
-		return initialDelaySecondsReady && waitTakeover
-	}
-
-	lastEvent := eList[len(eList)-1]
-	delay := time.Since(lastEvent.LastTimestamp.Time).Seconds()
-	if int32(delay) > instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover {
-		waitTakeover = true
-	}
-
-	return initialDelaySecondsReady && waitTakeover
+	return rsMap
 }
 
 func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *appsv2alpha2.EMQX) (currentSts *appsv1.StatefulSet, oldStsList []*appsv1.StatefulSet) {
@@ -90,7 +73,7 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 		if hash, ok := sts.Labels[appsv2alpha2.PodTemplateHashLabelKey]; ok && hash == instance.Status.CoreNodesStatus.CurrentRevision {
 			currentSts = sts.DeepCopy()
 		} else {
-			if *sts.Spec.Replicas != 0 && sts.Status.ReadyReplicas == sts.Status.Replicas {
+			if *sts.Spec.Replicas != 0 && sts.Status.ReadyReplicas == *sts.Spec.Replicas {
 				oldStsList = append(oldStsList, sts.DeepCopy())
 			}
 		}
@@ -101,6 +84,19 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 }
 
 func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *appsv2alpha2.EMQX) (currentRs *appsv1.ReplicaSet, oldRsList []*appsv1.ReplicaSet) {
+	if instance.Spec.ReplicantTemplate == nil {
+		list := &appsv1.ReplicaSetList{}
+		_ = k8sClient.List(ctx, list,
+			client.InNamespace(instance.Namespace),
+			client.MatchingLabels(instance.Labels),
+		)
+		for _, rs := range list.Items {
+			oldRsList = append(oldRsList, rs.DeepCopy())
+		}
+		sort.Sort(ReplicaSetsByCreationTimestamp(oldRsList))
+		return
+	}
+
 	list := &appsv1.ReplicaSetList{}
 	_ = k8sClient.List(ctx, list,
 		client.InNamespace(instance.Namespace),
@@ -110,7 +106,7 @@ func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *a
 		if hash, ok := rs.Labels[appsv2alpha2.PodTemplateHashLabelKey]; ok && hash == instance.Status.ReplicantNodesStatus.CurrentRevision {
 			currentRs = rs.DeepCopy()
 		} else {
-			if *rs.Spec.Replicas != 0 && rs.Status.ReadyReplicas == rs.Status.Replicas {
+			if *rs.Spec.Replicas != 0 && rs.Status.ReadyReplicas == *rs.Spec.Replicas {
 				oldRsList = append(oldRsList, rs.DeepCopy())
 			}
 		}
@@ -127,30 +123,6 @@ func getEventList(ctx context.Context, clientSet *kubernetes.Clientset, obj clie
 	return handlerEventList(eventList)
 }
 
-func handlerStatefulSetList(list *appsv1.StatefulSetList) []*appsv1.StatefulSet {
-	stsList := []*appsv1.StatefulSet{}
-
-	for _, sts := range list.Items {
-		if *sts.Spec.Replicas > 0 && sts.Status.ReadyReplicas == sts.Status.Replicas {
-			stsList = append(stsList, sts.DeepCopy())
-		}
-	}
-
-	sort.Sort(StatefulSetsByCreationTimestamp(stsList))
-	return stsList
-}
-
-func handlerReplicaSetList(list *appsv1.ReplicaSetList) []*appsv1.ReplicaSet {
-	rsList := []*appsv1.ReplicaSet{}
-	for _, rs := range list.Items {
-		if *rs.Spec.Replicas != 0 && rs.Status.ReadyReplicas == rs.Status.Replicas {
-			rsList = append(rsList, rs.DeepCopy())
-		}
-	}
-	sort.Sort(ReplicaSetsByCreationTimestamp(rsList))
-	return rsList
-}
-
 func handlerEventList(list *corev1.EventList) []*corev1.Event {
 	eList := []*corev1.Event{}
 	for _, e := range list.Items {
@@ -160,6 +132,25 @@ func handlerEventList(list *corev1.EventList) []*corev1.Event {
 	}
 	sort.Sort(EventsByLastTimestamp(eList))
 	return eList
+}
+
+func checkInitialDelaySecondsReady(instance *appsv2alpha2.EMQX) bool {
+	condition := instance.Status.GetLastTrueCondition()
+	if condition == nil || condition.Type != appsv2alpha2.Available {
+		return false
+	}
+	delay := time.Since(condition.LastTransitionTime.Time).Seconds()
+	return int32(delay) > instance.Spec.UpdateStrategy.InitialDelaySeconds
+}
+
+func checkWaitTakeoverReady(instance *appsv2alpha2.EMQX, eList []*corev1.Event) bool {
+	if len(eList) == 0 {
+		return true
+	}
+
+	lastEvent := eList[len(eList)-1]
+	delay := time.Since(lastEvent.LastTimestamp.Time).Seconds()
+	return int32(delay) > instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover
 }
 
 // JustCheckPodTemplate will check only the differences between the podTemplate of the two statefulSets
@@ -228,6 +219,44 @@ func (o EventsByLastTimestamp) Less(i, j int) bool {
 		return o[i].CreationTimestamp.Second() < o[j].CreationTimestamp.Second()
 	}
 	return o[i].LastTimestamp.Before(&o[j].LastTimestamp)
+}
+
+// PodsByCreationTimestamp sorts a list of Pod by creation timestamp, using their names as a tie breaker.
+type PodsByCreationTimestamp []*corev1.Pod
+
+func (o PodsByCreationTimestamp) Len() int      { return len(o) }
+func (o PodsByCreationTimestamp) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o PodsByCreationTimestamp) Less(i, j int) bool {
+	if o[i].CreationTimestamp.Equal(&o[j].CreationTimestamp) {
+		return o[i].Name < o[j].Name
+	}
+	return o[i].CreationTimestamp.Before(&o[j].CreationTimestamp)
+}
+
+// PodsByNameOlder sorts a list of Pod by size in descending order, using their creation timestamp or name as a tie breaker.
+// By using the creation timestamp, this sorts from old to new replica sets.
+type PodsByNameOlder []*corev1.Pod
+
+func (o PodsByNameOlder) Len() int      { return len(o) }
+func (o PodsByNameOlder) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o PodsByNameOlder) Less(i, j int) bool {
+	if o[i].Name == o[j].Name {
+		return PodsByCreationTimestamp(o).Less(i, j)
+	}
+	return o[i].Name > o[j].Name
+}
+
+// PodsByNameNewer sorts a list of Pod by size in descending order, using their creation timestamp or name as a tie breaker.
+// By using the creation timestamp, this sorts from new to old replica sets.
+type PodsByNameNewer []*corev1.Pod
+
+func (o PodsByNameNewer) Len() int      { return len(o) }
+func (o PodsByNameNewer) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
+func (o PodsByNameNewer) Less(i, j int) bool {
+	if o[i].Name == o[j].Name {
+		return PodsByCreationTimestamp(o).Less(j, i)
+	}
+	return o[i].Name > o[j].Name
 }
 
 // ComputeHash returns a hash value calculated from pod template and

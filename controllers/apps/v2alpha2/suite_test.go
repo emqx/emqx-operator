@@ -53,6 +53,10 @@ var emqx *appsv2alpha2.EMQX = &appsv2alpha2.EMQX{
 	ObjectMeta: metav1.ObjectMeta{
 		UID:  "fake-1234567890",
 		Name: "emqx",
+		Labels: map[string]string{
+			appsv2alpha2.ManagerByLabelKey:    "emqx-operator",
+			appsv2alpha2.InstanceNameLabelKey: instance.Name,
+		},
 	},
 	Spec: appsv2alpha2.EMQXSpec{
 		Image: "emqx",

@@ -47,6 +47,7 @@ func (requester *Requester) Request(method, path string, body []byte) (resp *htt
 		return nil, nil, emperror.Wrap(err, "failed to create request")
 	}
 	req.SetBasicAuth(requester.GetUsername(), requester.GetPassword())
+	req.Header.Set("Content-Type", "application/json")
 	req.Close = true
 	resp, err = httpClient.Do(req)
 	if err != nil {
@@ -59,4 +60,16 @@ func (requester *Requester) Request(method, path string, body []byte) (resp *htt
 		return resp, nil, emperror.Wrap(err, "failed to read response body")
 	}
 	return resp, body, nil
+}
+
+// Mock
+type FakeRequester struct {
+	ReqFunc func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error)
+}
+
+func (f *FakeRequester) GetHost() string     { return "" }
+func (f *FakeRequester) GetUsername() string { return "" }
+func (f *FakeRequester) GetPassword() string { return "" }
+func (f *FakeRequester) Request(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+	return f.ReqFunc(method, path, body)
 }
