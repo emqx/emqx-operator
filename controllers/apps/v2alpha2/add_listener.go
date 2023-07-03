@@ -24,7 +24,11 @@ type addListener struct {
 }
 
 func (a *addListener) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
-	if !instance.Status.IsConditionTrue(appsv2alpha2.CodeNodesReady) {
+	if r == nil {
+		return subResult{}
+	}
+
+	if !instance.Status.IsConditionTrue(appsv2alpha2.CoreNodesReady) {
 		return subResult{}
 	}
 

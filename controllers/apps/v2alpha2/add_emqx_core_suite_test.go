@@ -46,7 +46,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 			},
 			{
-				Type:               appsv2alpha2.CodeNodesReady,
+				Type:               appsv2alpha2.CoreNodesReady,
 				Status:             metav1.ConditionTrue,
 				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 			},
@@ -98,6 +98,13 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			}).Should(ConsistOf(
 				WithTransform(func(s appsv1.StatefulSet) int32 { return *s.Spec.Replicas }, Equal(*instance.Spec.CoreTemplate.Spec.Replicas)),
 			))
+
+			Eventually(func() *appsv2alpha2.EMQX {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+				return instance
+			}).Should(WithTransform(
+				func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.CoreNodesProgressing),
+			))
 		})
 	})
 
@@ -119,6 +126,13 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			}).WithTimeout(timeout).WithPolling(interval).Should(ConsistOf(
 				WithTransform(func(s appsv1.StatefulSet) string { return s.Spec.Template.Spec.Containers[0].Image }, Equal(emqx.Spec.Image)),
 				WithTransform(func(s appsv1.StatefulSet) string { return s.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
+			))
+
+			Eventually(func() *appsv2alpha2.EMQX {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+				return instance
+			}).Should(WithTransform(
+				func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.CoreNodesProgressing),
 			))
 		})
 	})
@@ -155,6 +169,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(0)
 			instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover = int32(0)
 		})
+
 		It("should scale down", func() {
 			for *old.Spec.Replicas > 0 {
 				preReplicas := *old.Spec.Replicas

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
+	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -24,10 +26,10 @@ type addCore struct {
 }
 
 func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
-	sts := a.getNewStatefulSet(ctx, instance)
-	if sts.UID == "" {
-		_ = ctrl.SetControllerReference(instance, sts, a.Scheme)
-		if err := a.Handler.Create(sts); err != nil {
+	preSts := a.getNewStatefulSet(ctx, instance)
+	if preSts.UID == "" {
+		_ = ctrl.SetControllerReference(instance, preSts, a.Scheme)
+		if err := a.Handler.Create(preSts); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				if instance.Status.CoreNodesStatus.CollisionCount == nil {
 					instance.Status.CoreNodesStatus.CollisionCount = pointer.Int32(0)
@@ -38,15 +40,34 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 			}
 			return subResult{err: emperror.Wrap(err, "failed to create statefulSet")}
 		}
-	} else {
-		if err := a.Handler.CreateOrUpdate(sts); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
-		}
-	}
-
-	if instance.Status.CoreNodesStatus.CurrentRevision != sts.Labels[appsv2alpha2.PodTemplateHashLabelKey] {
-		instance.Status.CoreNodesStatus.CurrentRevision = sts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
+		instance.Status.SetCondition(metav1.Condition{
+			Type:    appsv2alpha2.CoreNodesProgressing,
+			Status:  metav1.ConditionTrue,
+			Reason:  "CreateNewStatefulSet",
+			Message: "Create new statefulSet",
+		})
+		instance.Status.CoreNodesStatus.CurrentRevision = preSts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
+	} else {
+		storageSts := &appsv1.StatefulSet{}
+		_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preSts), storageSts)
+		patchResult, _ := a.Patcher.Calculate(storageSts, preSts,
+			patch.IgnoreStatusFields(),
+			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
+		)
+		if !patchResult.IsEmpty() {
+			logger := log.FromContext(ctx)
+			logger.V(1).Info("got different statefulSet for EMQX core nodes, will update statefulSet", "patch", string(patchResult.Patch))
+
+			_ = a.Handler.Update(preSts)
+			instance.Status.SetCondition(metav1.Condition{
+				Type:    appsv2alpha2.CoreNodesProgressing,
+				Status:  metav1.ConditionTrue,
+				Reason:  "CreateNewStatefulSet",
+				Message: "Create new statefulSet",
+			})
+			_ = a.Client.Status().Update(ctx, instance)
+		}
 	}
 
 	if err := a.sync(ctx, instance); err != nil {

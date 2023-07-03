@@ -244,7 +244,6 @@ type EMQXSpec struct {
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:subresource:scale:specpath=.spec.replicantTemplate.spec.replicas,statuspath=.status.replicantNodeReplicas
-//+kubebuilder:printcolumn:name="Image",type="string",JSONPath=".status.currentImage"
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 

@@ -24,13 +24,11 @@ import (
 
 // EMQXStatus defines the observed state of EMQX
 type EMQXStatus struct {
-	// CurrentImage, indicates the image of the EMQX used to generate Pods in the
-	CurrentImage string `json:"currentImage,omitempty"`
 	// Represents the latest available observations of a EMQX Custom Resource current state.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	CoreNodesStatus      EMQXNodesStatus  `json:"CoreNodesStatus,omitempty"`
-	ReplicantNodesStatus *EMQXNodesStatus `json:"ReplicantNodesStatus,omitempty"`
+	CoreNodesStatus      EMQXNodesStatus  `json:"coreNodesStatus,omitempty"`
+	ReplicantNodesStatus *EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
 }
 
 type EMQXNodesStatus struct {
@@ -67,9 +65,10 @@ type EMQXNode struct {
 const (
 	Initialized               string = "Initialized"
 	CoreNodesProgressing      string = "CoreNodesProgressing"
-	CodeNodesReady            string = "CodeNodesReady"
+	CoreNodesReady            string = "CoreNodesReady"
 	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
 	ReplicantNodesReady       string = "ReplicantNodesReady"
+	Available                 string = "Available"
 	Ready                     string = "Ready"
 )
 
@@ -100,9 +99,6 @@ func (s *EMQXStatus) SetCondition(c metav1.Condition) {
 	c.LastTransitionTime = metav1.Now()
 	pos, _ := s.GetCondition(c.Type)
 	if pos >= 0 {
-		if s.Conditions[pos].Status == c.Status && !s.Conditions[pos].LastTransitionTime.IsZero() {
-			c.LastTransitionTime = s.Conditions[pos].LastTransitionTime
-		}
 		s.Conditions[pos] = c
 	} else {
 		s.Conditions = append(s.Conditions, c)
