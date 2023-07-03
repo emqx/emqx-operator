@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
+	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,14 +27,14 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 	if instance.Spec.ReplicantTemplate == nil {
 		return subResult{}
 	}
-	if !instance.Status.IsConditionTrue(appsv2alpha2.CodeNodesReady) {
+	if !instance.Status.IsConditionTrue(appsv2alpha2.CoreNodesReady) {
 		return subResult{}
 	}
 
-	rs := a.getNewReplicaSet(ctx, instance)
-	if rs.UID == "" {
-		_ = ctrl.SetControllerReference(instance, rs, a.Scheme)
-		if err := a.Handler.Create(rs); err != nil {
+	preRs := a.getNewReplicaSet(ctx, instance)
+	if preRs.UID == "" {
+		_ = ctrl.SetControllerReference(instance, preRs, a.Scheme)
+		if err := a.Handler.Create(preRs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				if instance.Status.ReplicantNodesStatus.CollisionCount == nil {
 					instance.Status.ReplicantNodesStatus.CollisionCount = pointer.Int32(0)
@@ -44,16 +45,34 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 			}
 			return subResult{err: emperror.Wrap(err, "failed to create replicaSet")}
 		}
-
-	} else {
-		if err := a.Handler.CreateOrUpdate(rs); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
-		}
-	}
-
-	if instance.Status.ReplicantNodesStatus.CurrentRevision != rs.Labels[appsv2alpha2.PodTemplateHashLabelKey] {
-		instance.Status.ReplicantNodesStatus.CurrentRevision = rs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
+		instance.Status.SetCondition(metav1.Condition{
+			Type:    appsv2alpha2.ReplicantNodesProgressing,
+			Status:  metav1.ConditionTrue,
+			Reason:  "CreateNewReplicaSet",
+			Message: "Create new replicaSet",
+		})
+		instance.Status.ReplicantNodesStatus.CurrentRevision = preRs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
+	} else {
+		storageRs := &appsv1.ReplicaSet{}
+		_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preRs), storageRs)
+		patchResult, _ := a.Patcher.Calculate(storageRs, preRs,
+			patch.IgnoreStatusFields(),
+			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
+		)
+		if !patchResult.IsEmpty() {
+			logger := log.FromContext(ctx)
+			logger.V(1).Info("got different statefulSet for EMQX core nodes, will update statefulSet", "patch", string(patchResult.Patch))
+
+			_ = a.Handler.Update(preRs)
+			instance.Status.SetCondition(metav1.Condition{
+				Type:    appsv2alpha2.ReplicantNodesProgressing,
+				Status:  metav1.ConditionTrue,
+				Reason:  "CreateNewReplicaSet",
+				Message: "Create new replicaSet",
+			})
+			_ = a.Client.Status().Update(ctx, instance)
+		}
 	}
 
 	if err := a.sync(ctx, instance); err != nil {

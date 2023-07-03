@@ -22,388 +22,455 @@ import (
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 )
 
-func TestNextStatusForInit(t *testing.T) {
-	emqx := &appsv2alpha2.EMQX{}
-	emqxStatusMachine := newEMQXStatusMachine(emqx)
-	assert.Equal(t, emqxStatusMachine.initialized, emqxStatusMachine.currentStatus)
-	assert.Equal(t, appsv2alpha2.Initialized, emqxStatusMachine.emqx.Status.Conditions[0].Type)
-}
-
-func TestNextStatusForCreate(t *testing.T) {
-	existedSts := &appsv1.StatefulSet{}
-	existedRs := &appsv1.ReplicaSet{}
-	emqx := &appsv2alpha2.EMQX{
-		Spec: appsv2alpha2.EMQXSpec{
-			Image: "emqx/emqx:latest",
+var currentSts = &appsv1.StatefulSet{
+	ObjectMeta: metav1.ObjectMeta{
+		UID:        "fake",
+		Generation: 1,
+		Labels: map[string]string{
+			appsv2alpha2.PodTemplateHashLabelKey: "foo",
 		},
-		Status: appsv2alpha2.EMQXStatus{
-			Conditions: []metav1.Condition{
-				{
-					Type:   appsv2alpha2.Initialized,
-					Status: metav1.ConditionTrue,
+	},
+	Spec: appsv1.StatefulSetSpec{
+		Replicas: pointer.Int32Ptr(3),
+	},
+	Status: appsv1.StatefulSetStatus{
+		ObservedGeneration: 1,
+		ReadyReplicas:      3,
+		Replicas:           3,
+	},
+}
+var currentRs = &appsv1.ReplicaSet{
+	ObjectMeta: metav1.ObjectMeta{
+		UID:        "fake",
+		Generation: 1,
+		Labels: map[string]string{
+			appsv2alpha2.PodTemplateHashLabelKey: "foo",
+		},
+	},
+	Spec: appsv1.ReplicaSetSpec{
+		Replicas: pointer.Int32Ptr(3),
+	},
+	Status: appsv1.ReplicaSetStatus{
+		ObservedGeneration: 1,
+		ReadyReplicas:      3,
+		Replicas:           3,
+	},
+}
+var instance = &appsv2alpha2.EMQX{
+	Spec: appsv2alpha2.EMQXSpec{
+		CoreTemplate: appsv2alpha2.EMQXCoreTemplate{
+			Spec: appsv2alpha2.EMQXCoreTemplateSpec{
+				EMQXReplicantTemplateSpec: appsv2alpha2.EMQXReplicantTemplateSpec{
+					Replicas: pointer.Int32Ptr(3),
 				},
 			},
+		},
+		ReplicantTemplate: &appsv2alpha2.EMQXReplicantTemplate{
+			Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
+				Replicas: pointer.Int32Ptr(3),
+			},
+		},
+	},
+	Status: appsv2alpha2.EMQXStatus{
+		CoreNodesStatus: appsv2alpha2.EMQXNodesStatus{
+			CurrentRevision: "foo",
+			ReadyReplicas:   3,
+			Replicas:        3,
+		},
+		ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
+			CurrentRevision: "foo",
+			ReadyReplicas:   3,
+			Replicas:        3,
+		},
+	},
+}
+
+func TestNewStatusMachine(t *testing.T) {
+	t.Run("initialized", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		assert.Equal(t, emqxStatusMachine.initialized, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Initialized, emqxStatusMachine.emqx.Status.Conditions[0].Type)
+	})
+
+	t.Run("coreNodesProgressing", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{Type: appsv2alpha2.CoreNodesProgressing, Status: metav1.ConditionTrue},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.emqx.Status.Conditions[0].Type)
+	})
+
+	t.Run("coreNodesReady", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{Type: appsv2alpha2.CoreNodesReady, Status: metav1.ConditionTrue},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		assert.Equal(t, emqxStatusMachine.coreNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesReady, emqxStatusMachine.emqx.Status.Conditions[0].Type)
+	})
+
+	t.Run("replicantNodesProgressing", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{Type: appsv2alpha2.ReplicantNodesProgressing, Status: metav1.ConditionTrue},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		assert.Equal(t, emqxStatusMachine.replicantNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.ReplicantNodesProgressing, emqxStatusMachine.emqx.Status.Conditions[0].Type)
+	})
+
+	t.Run("replicantNodesReady", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{Type: appsv2alpha2.ReplicantNodesReady, Status: metav1.ConditionTrue},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		assert.Equal(t, emqxStatusMachine.replicantNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.ReplicantNodesReady, emqxStatusMachine.emqx.Status.Conditions[0].Type)
+	})
+
+	t.Run("available", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{Type: appsv2alpha2.Available, Status: metav1.ConditionTrue},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		assert.Equal(t, emqxStatusMachine.available, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Available, emqxStatusMachine.emqx.Status.Conditions[0].Type)
+	})
+
+	t.Run("ready", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{Type: appsv2alpha2.Ready, Status: metav1.ConditionTrue},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Ready, emqxStatusMachine.emqx.Status.Conditions[0].Type)
+	})
+}
+
+// func TestCheckIsNeedRollBackInitialized(t *testing.T) {
+// 	t.Run("nothing change", func(t *testing.T) {
+// 		sts := currentSts.DeepCopy()
+// 		rs := currentRs.DeepCopy()
+// 		emqx := instance.DeepCopy()
+// 		emqx.Status.Conditions = []metav1.Condition{
+// 			{
+// 				Type:   appsv2alpha2.Ready,
+// 				Status: metav1.ConditionTrue,
+// 			},
+// 		}
+// 		emqxStatusMachine := newEMQXStatusMachine(emqx)
+// 		emqxStatusMachine.NextStatus(sts, rs)
+// 		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
+// 		assert.Equal(t, appsv2alpha2.Ready, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+// 	})
+
+// 	t.Run("sts is change, need roll back to initialized next status", func(t *testing.T) {
+// 		sts := currentSts.DeepCopy()
+// 		rs := currentRs.DeepCopy()
+// 		emqx := instance.DeepCopy()
+// 		emqx.Status.Conditions = []metav1.Condition{
+// 			{Type: appsv2alpha2.Ready, Status: metav1.ConditionTrue},
+// 		}
+// 		emqxStatusMachine := newEMQXStatusMachine(emqx)
+
+// 		sts.Labels[appsv2alpha2.PodTemplateHashLabelKey] = "bar"
+
+// 		emqxStatusMachine.NextStatus(sts, rs)
+// 		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+// 		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+// 	})
+
+// 	t.Run("rs is change, need roll back to initialized next status", func(t *testing.T) {
+// 		sts := currentSts.DeepCopy()
+// 		rs := currentRs.DeepCopy()
+// 		rs.Labels[appsv2alpha2.PodTemplateHashLabelKey] = "bar"
+
+// 		emqx := instance.DeepCopy()
+// 		emqx.Status.Conditions = []metav1.Condition{
+// 			{Type: appsv2alpha2.Ready, Status: metav1.ConditionTrue},
+// 		}
+
+// 		emqxStatusMachine := newEMQXStatusMachine(emqx)
+// 		emqxStatusMachine.NextStatus(sts, rs)
+// 		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+// 		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+// 	})
+// }
+
+func TestNextStatusForInit(t *testing.T) {
+	sts := currentSts.DeepCopy()
+	rs := currentRs.DeepCopy()
+	emqx := instance.DeepCopy()
+	emqx.Status.Conditions = []metav1.Condition{
+		{
+			Type:   appsv2alpha2.Initialized,
+			Status: metav1.ConditionTrue,
 		},
 	}
 
 	emqxStatusMachine := newEMQXStatusMachine(emqx)
-	assert.Equal(t, emqxStatusMachine.initialized, emqxStatusMachine.currentStatus)
-
-	emqxStatusMachine.NextStatus(existedSts, existedRs)
+	emqxStatusMachine.NextStatus(sts, rs)
 	assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
 	assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 }
 
-func TestNextStatusForCoreUpdate(t *testing.T) {
-	t.Run("change image", func(t *testing.T) {
-		existedSts := &appsv1.StatefulSet{}
-		existedRs := &appsv1.ReplicaSet{}
-
-		emqx := &appsv2alpha2.EMQX{
-			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:5.1",
-			},
-			Status: appsv2alpha2.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
-				Conditions: []metav1.Condition{
-					{
-						Type:   appsv2alpha2.CoreNodesProgressing,
-						Status: metav1.ConditionTrue,
-					},
-				},
+func TestNextStatusForCoreNodeProgressing(t *testing.T) {
+	t.Run("still status when sts not ready", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.CoreNodesProgressing,
+				Status: metav1.ConditionTrue,
 			},
 		}
-
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
 
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
+		sts.Status.ReadyReplicas = 0
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	})
+
+	t.Run("still status when core nodes not ready", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.CoreNodesProgressing,
+				Status: metav1.ConditionTrue,
+			},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+
+		emqx.Status.CoreNodesStatus.ReadyReplicas = 0
+		emqxStatusMachine.NextStatus(sts, rs)
 		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
 		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
 	t.Run("next status", func(t *testing.T) {
-		existedSts := &appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				UID:        types.UID("fake"),
-				Generation: 1,
-			},
-			Spec: appsv1.StatefulSetSpec{
-				Template: corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{Image: "emqx/emqx:latest"},
-						},
-					},
-				},
-			},
-			Status: appsv1.StatefulSetStatus{
-				Replicas:        1,
-				CurrentRevision: "fake",
-			},
-		}
-		existedRs := &appsv1.ReplicaSet{}
-
-		emqx := &appsv2alpha2.EMQX{
-			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:latest",
-			},
-			Status: appsv2alpha2.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
-				Conditions: []metav1.Condition{
-					{
-						Type:   appsv2alpha2.CoreNodesProgressing,
-						Status: metav1.ConditionTrue,
-					},
-				},
-				CoreNodesStatus: appsv2alpha2.EMQXNodesStatus{
-					Replicas: 1,
-				},
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.CoreNodesProgressing,
+				Status: metav1.ConditionTrue,
 			},
 		}
 
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
-
-		// statefulSet not update
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
-
-		// statefulSet already update, but not ready
-		existedSts.Status.ObservedGeneration = 1
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
-
-		// statefulSet is ready, but emqx nodes not ready
-		existedSts.Status.ReadyReplicas = 1
-		existedSts.Status.UpdatedReplicas = 1
-		existedSts.Status.UpdateRevision = "fake"
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
-
-		// emqx core node is ready
-		emqx.Status.CoreNodesStatus.ReadyReplicas = 1
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.coreNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.CoreNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 }
 
 func TestNextStatusForCodeNodesReady(t *testing.T) {
-	t.Run("change image", func(t *testing.T) {
-		existedSts := &appsv1.StatefulSet{}
-		existedRs := &appsv1.ReplicaSet{}
-
-		emqx := &appsv2alpha2.EMQX{
-			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:5.1",
-			},
-			Status: appsv2alpha2.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
-				Conditions: []metav1.Condition{
-					{
-						Type:   appsv2alpha2.CodeNodesReady,
-						Status: metav1.ConditionTrue,
-					},
-				},
+	t.Run("next status when replicant template is not nil", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.CoreNodesReady,
+				Status: metav1.ConditionTrue,
 			},
 		}
-
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
-
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.replicantNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.ReplicantNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
-	t.Run("next status", func(t *testing.T) {
-		existedSts := &appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				UID: types.UID("fake"),
-			},
-			Spec: appsv1.StatefulSetSpec{
-				Template: corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{Image: "emqx/emqx:latest"},
-						},
-					},
-				},
-			},
-			Status: appsv1.StatefulSetStatus{
-				Replicas:        1,
-				CurrentRevision: "fake",
+	t.Run("next status when replicant template is nil", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.CoreNodesReady,
+				Status: metav1.ConditionTrue,
 			},
 		}
-		existedRs := &appsv1.ReplicaSet{
-			ObjectMeta: metav1.ObjectMeta{
-				UID: types.UID("fake"),
-			},
-			Spec: appsv1.ReplicaSetSpec{
-				Template: corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{Image: "emqx/emqx:latest"},
-						},
-					},
-				},
-			},
-			Status: appsv1.ReplicaSetStatus{
-				Replicas: 1,
-			},
-		}
-
-		emqx := &appsv2alpha2.EMQX{
-			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:latest",
-			},
-			Status: appsv2alpha2.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
-				Conditions: []metav1.Condition{
-					{
-						Type:   appsv2alpha2.CodeNodesReady,
-						Status: metav1.ConditionTrue,
-					},
-				},
-				CoreNodesStatus: appsv2alpha2.EMQXNodesStatus{
-					Replicas: 1,
-				},
-				ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
-					Replicas: 1,
-				},
-			},
-		}
-
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
 
-		// statefulSet and replicaSet not ready
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
-
-		// statefulSet is ready, but replicaSet not ready
-		existedSts.Status.ReadyReplicas = 1
-		existedSts.Status.UpdatedReplicas = 1
-		existedSts.Status.UpdateRevision = "fake"
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
-
-		// statefulSet and replicaSet is ready, but emqx nodes not ready
-		existedRs.Status.ReadyReplicas = 1
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
-
-		// emqx nodes is ready
-		emqx.Status.CoreNodesStatus.ReadyReplicas = 1
-		emqx.Status.ReplicantNodesStatus.ReadyReplicas = 1
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.Ready, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		emqx.Spec.ReplicantTemplate = nil
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.available, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Available, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
-
 }
 
-func TestNextStatusForCoreReady(t *testing.T) {
-	t.Run("change image", func(t *testing.T) {
-		existedSts := &appsv1.StatefulSet{}
-		existedRs := &appsv1.ReplicaSet{}
-
-		emqx := &appsv2alpha2.EMQX{
-			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:5.1",
-			},
-			Status: appsv2alpha2.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
-				Conditions: []metav1.Condition{
-					{
-						Type:   appsv2alpha2.Ready,
-						Status: metav1.ConditionTrue,
-					},
-				},
+func TestNextStatusForReplicantNodeProgressing(t *testing.T) {
+	t.Run("replicant template is nil, need roll back to initialized next status", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Spec.ReplicantTemplate = nil
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.ReplicantNodesProgressing,
+				Status: metav1.ConditionTrue,
 			},
 		}
-
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
+		emqxStatusMachine.NextStatus(sts, rs)
 		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
 		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
-	t.Run("replicant nodes not ready", func(t *testing.T) {
-		existedSts := &appsv1.StatefulSet{}
-		existedRs := &appsv1.ReplicaSet{}
-		emqx := &appsv2alpha2.EMQX{
-			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:latest",
-				ReplicantTemplate: &appsv2alpha2.EMQXReplicantTemplate{
-					Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
-						Replicas: pointer.Int32(1),
-					},
-				},
-			},
-			Status: appsv2alpha2.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
-				Conditions: []metav1.Condition{
-					{
-						Type:   appsv2alpha2.Ready,
-						Status: metav1.ConditionTrue,
-					},
-					{
-						Type:   appsv2alpha2.CodeNodesReady,
-						Status: metav1.ConditionTrue,
-					},
-				},
-				ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
-					Replicas:      1,
-					ReadyReplicas: 0,
-				},
+	t.Run("still status when rs not ready", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.ReplicantNodesProgressing,
+				Status: metav1.ConditionTrue,
 			},
 		}
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
-		assert.Equal(t, emqxStatusMachine.codeNodesReady, emqxStatusMachine.currentStatus)
-		assert.Equal(t, appsv2alpha2.CodeNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+		rs.Status.ReadyReplicas = 0
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.replicantNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.ReplicantNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
-	t.Run("replicant nodes not ready", func(t *testing.T) {
-		existedSts := &appsv1.StatefulSet{}
-		existedRs := &appsv1.ReplicaSet{}
-		emqx := &appsv2alpha2.EMQX{
-			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:latest",
-			},
-			Status: appsv2alpha2.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
-				Conditions: []metav1.Condition{
-					{
-						Type:   appsv2alpha2.Ready,
-						Status: metav1.ConditionTrue,
-					},
-					{
-						Type:   appsv2alpha2.CodeNodesReady,
-						Status: metav1.ConditionTrue,
-					},
-					{
-						Type:   appsv2alpha2.CoreNodesProgressing,
-						Status: metav1.ConditionTrue,
-					},
-				},
-				CoreNodesStatus: appsv2alpha2.EMQXNodesStatus{
-					Replicas:      1,
-					ReadyReplicas: 0,
-				},
-				ReplicantNodesStatus: &appsv2alpha2.EMQXNodesStatus{
-					Replicas:      1,
-					ReadyReplicas: 0,
-				},
+	t.Run("still status when replicant nodes not ready", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.ReplicantNodesProgressing,
+				Status: metav1.ConditionTrue,
 			},
 		}
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
+		emqx.Status.ReplicantNodesStatus.ReadyReplicas = 0
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.replicantNodesProgressing, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.ReplicantNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	})
+
+	t.Run("next status", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.ReplicantNodesProgressing,
+				Status: metav1.ConditionTrue,
+			},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.replicantNodesReady, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.ReplicantNodesReady, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	})
+}
+
+func TestNextStatusForReplicantNodesReady(t *testing.T) {
+	t.Run("replicant template is nil, need roll back to initialized next status", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Spec.ReplicantTemplate = nil
+		emqx.Status.Conditions = []metav1.Condition{
+			{Type: appsv2alpha2.ReplicantNodesReady, Status: metav1.ConditionTrue},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+
+		emqxStatusMachine.NextStatus(sts, rs)
 		assert.Equal(t, emqxStatusMachine.coreNodesProgressing, emqxStatusMachine.currentStatus)
 		assert.Equal(t, appsv2alpha2.CoreNodesProgressing, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})
 
 	t.Run("next status", func(t *testing.T) {
-		existedSts := &appsv1.StatefulSet{}
-		existedRs := &appsv1.ReplicaSet{}
-		emqx := &appsv2alpha2.EMQX{
-			Spec: appsv2alpha2.EMQXSpec{
-				Image: "emqx/emqx:latest",
-			},
-			Status: appsv2alpha2.EMQXStatus{
-				CurrentImage: "emqx/emqx:latest",
-				Conditions: []metav1.Condition{
-					{
-						Type:   appsv2alpha2.Ready,
-						Status: metav1.ConditionTrue,
-					},
-				},
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.ReplicantNodesReady,
+				Status: metav1.ConditionTrue,
 			},
 		}
 		emqxStatusMachine := newEMQXStatusMachine(emqx)
-		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 
-		emqxStatusMachine.NextStatus(existedSts, existedRs)
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.available, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Available, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	})
+}
+
+func TestNextStatusForAvailable(t *testing.T) {
+	t.Run("still status when core nodes ready replicas not equal replicas", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.Available,
+				Status: metav1.ConditionTrue,
+			},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+
+		emqx.Status.CoreNodesStatus.ReadyReplicas = 5
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.available, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Available, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	})
+
+	t.Run("still status when replicant nodes ready replicas not equal replicas", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.Available,
+				Status: metav1.ConditionTrue,
+			},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+
+		emqx.Status.ReplicantNodesStatus.ReadyReplicas = 5
+		emqxStatusMachine.NextStatus(sts, rs)
+		assert.Equal(t, emqxStatusMachine.available, emqxStatusMachine.currentStatus)
+		assert.Equal(t, appsv2alpha2.Available, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
+	})
+
+	t.Run("next status", func(t *testing.T) {
+		sts := currentSts.DeepCopy()
+		rs := currentRs.DeepCopy()
+		emqx := instance.DeepCopy()
+		emqx.Status.Conditions = []metav1.Condition{
+			{
+				Type:   appsv2alpha2.Available,
+				Status: metav1.ConditionTrue,
+			},
+		}
+		emqxStatusMachine := newEMQXStatusMachine(emqx)
+		emqxStatusMachine.NextStatus(sts, rs)
 		assert.Equal(t, emqxStatusMachine.ready, emqxStatusMachine.currentStatus)
 		assert.Equal(t, appsv2alpha2.Ready, emqxStatusMachine.GetEMQX().Status.Conditions[0].Type)
 	})

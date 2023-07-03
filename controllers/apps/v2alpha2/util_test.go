@@ -14,7 +14,7 @@ import (
 
 func TestCanBeScaledDown(t *testing.T) {
 	t.Run("event list is empty, current replicaSet is not available, can not scale down", func(t *testing.T) {
-		assert.False(t, canBeScaledDown(&appsv2alpha2.EMQX{}, appsv2alpha2.CodeNodesReady, []*corev1.Event{}))
+		assert.False(t, canBeScaledDown(&appsv2alpha2.EMQX{}, appsv2alpha2.CoreNodesReady, []*corev1.Event{}))
 	})
 
 	t.Run("event list is empty, initialDelaySeconds not ready, can not scale down", func(t *testing.T) {
@@ -26,11 +26,11 @@ func TestCanBeScaledDown(t *testing.T) {
 			},
 			Status: appsv2alpha2.EMQXStatus{
 				Conditions: []metav1.Condition{
-					{Type: appsv2alpha2.CodeNodesReady, Status: metav1.ConditionTrue},
+					{Type: appsv2alpha2.CoreNodesReady, Status: metav1.ConditionTrue},
 				},
 			},
 		}
-		assert.False(t, canBeScaledDown(emqx, appsv2alpha2.CodeNodesReady, []*corev1.Event{}))
+		assert.False(t, canBeScaledDown(emqx, appsv2alpha2.CoreNodesReady, []*corev1.Event{}))
 	})
 
 	t.Run("event list is empty, initialDelaySeconds is ready, can scale down", func(t *testing.T) {
@@ -43,7 +43,7 @@ func TestCanBeScaledDown(t *testing.T) {
 			Status: appsv2alpha2.EMQXStatus{
 				Conditions: []metav1.Condition{
 					{
-						Type:               appsv2alpha2.CodeNodesReady,
+						Type:               appsv2alpha2.CoreNodesReady,
 						Status:             metav1.ConditionTrue,
 						LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 					},
@@ -51,11 +51,11 @@ func TestCanBeScaledDown(t *testing.T) {
 			},
 		}
 
-		assert.True(t, canBeScaledDown(emqx, appsv2alpha2.CodeNodesReady, []*corev1.Event{}))
+		assert.True(t, canBeScaledDown(emqx, appsv2alpha2.CoreNodesReady, []*corev1.Event{}))
 	})
 
 	t.Run("event list not empty, current replicaSet is not available, can not scale down", func(t *testing.T) {
-		assert.False(t, canBeScaledDown(&appsv2alpha2.EMQX{}, appsv2alpha2.CodeNodesReady, []*corev1.Event{
+		assert.False(t, canBeScaledDown(&appsv2alpha2.EMQX{}, appsv2alpha2.CoreNodesReady, []*corev1.Event{
 			{
 				LastTimestamp: metav1.Time{Time: time.Now().AddDate(0, 0, 1)},
 			},
@@ -75,7 +75,7 @@ func TestCanBeScaledDown(t *testing.T) {
 			Status: appsv2alpha2.EMQXStatus{
 				Conditions: []metav1.Condition{
 					{
-						Type:               appsv2alpha2.CodeNodesReady,
+						Type:               appsv2alpha2.CoreNodesReady,
 						Status:             metav1.ConditionTrue,
 						LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 					},
@@ -89,7 +89,7 @@ func TestCanBeScaledDown(t *testing.T) {
 			},
 		}
 
-		assert.False(t, canBeScaledDown(emqx, appsv2alpha2.CodeNodesReady, eventList))
+		assert.False(t, canBeScaledDown(emqx, appsv2alpha2.CoreNodesReady, eventList))
 	})
 
 	t.Run("event list is not empty,initialDelaySeconds is ready, waitTakeover is ready, can scale down", func(t *testing.T) {
@@ -105,7 +105,7 @@ func TestCanBeScaledDown(t *testing.T) {
 			Status: appsv2alpha2.EMQXStatus{
 				Conditions: []metav1.Condition{
 					{
-						Type:               appsv2alpha2.CodeNodesReady,
+						Type:               appsv2alpha2.CoreNodesReady,
 						Status:             metav1.ConditionTrue,
 						LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 					},
@@ -119,7 +119,7 @@ func TestCanBeScaledDown(t *testing.T) {
 			},
 		}
 
-		assert.True(t, canBeScaledDown(emqx, appsv2alpha2.CodeNodesReady, eventList))
+		assert.True(t, canBeScaledDown(emqx, appsv2alpha2.CoreNodesReady, eventList))
 	})
 }
 

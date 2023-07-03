@@ -237,10 +237,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `currentImage` _string_ | CurrentImage, indicates the image of the EMQX used to generate Pods in the |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
-| `CoreNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
-| `ReplicantNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
+| `coreNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
+| `replicantNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
 
 
 #### EvacuationStrategy

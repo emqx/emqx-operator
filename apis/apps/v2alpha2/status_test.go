@@ -148,7 +148,7 @@ func TestSetCondition(t *testing.T) {
 
 		assert.Equal(t, 1, len(status.Conditions))
 		assert.NotEmpty(t, c3.LastTransitionTime)
-		assert.Equal(t, c2.LastTransitionTime, c3.LastTransitionTime)
+		assert.NotEqual(t, c2.LastTransitionTime, c3.LastTransitionTime)
 	})
 }
 

@@ -52,7 +52,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 				},
 				{
-					Type:               appsv2alpha2.CodeNodesReady,
+					Type:               appsv2alpha2.CoreNodesReady,
 					Status:             metav1.ConditionTrue,
 					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 				},
@@ -85,7 +85,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 
 	Context("core nodes is not ready", func() {
 		JustBeforeEach(func() {
-			instance.Status.RemoveCondition(appsv2alpha2.CodeNodesReady)
+			instance.Status.RemoveCondition(appsv2alpha2.CoreNodesReady)
 		})
 
 		It("should do nothing", func() {
@@ -174,6 +174,13 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			}).Should(ConsistOf(
 				WithTransform(func(rs appsv1.ReplicaSet) int32 { return *rs.Spec.Replicas }, Equal(*instance.Spec.ReplicantTemplate.Spec.Replicas)),
 			))
+
+			Eventually(func() *appsv2alpha2.EMQX {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+				return instance
+			}).Should(WithTransform(
+				func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.ReplicantNodesProgressing),
+			))
 		})
 	})
 
@@ -195,6 +202,13 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			}).Should(ConsistOf(
 				WithTransform(func(rs appsv1.ReplicaSet) string { return rs.Spec.Template.Spec.Containers[0].Image }, Equal(emqx.Spec.Image)),
 				WithTransform(func(rs appsv1.ReplicaSet) string { return rs.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
+			))
+
+			Eventually(func() *appsv2alpha2.EMQX {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+				return instance
+			}).Should(WithTransform(
+				func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.ReplicantNodesProgressing),
 			))
 		})
 	})
