@@ -191,6 +191,8 @@ type EMQXSpec struct {
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	//+kubebuilder:default:="cluster.local"
+	ClusterDomain string `json:"clusterDomain,omitempty"`
 	// EMQX bootstrap user
 	// Cannot be updated.
 	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`

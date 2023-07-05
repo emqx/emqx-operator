@@ -204,7 +204,7 @@ func (r *EMQX) defaultAnnotations() {
 }
 
 func (r *EMQX) defaultBootstrapConfig() {
-	dnsName := fmt.Sprintf("%s.%s.svc.cluster.local", r.HeadlessServiceNamespacedName().Name, r.Namespace)
+	dnsName := fmt.Sprintf("%s.%s.svc.%s", r.HeadlessServiceNamespacedName().Name, r.Namespace, r.Spec.ClusterDomain)
 	defaultBootstrapConfigStr := fmt.Sprintf(`
 	node {
 	  data_dir = data

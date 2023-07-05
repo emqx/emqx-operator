@@ -205,6 +205,7 @@ type EMQXSpec struct {
 	// EMQX image name.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
 	Image string `json:"image,omitempty"`
+
 	// Image pull policy.
 	// One of Always, Never, IfNotPresent.
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
@@ -215,6 +216,9 @@ type EMQXSpec struct {
 	// If specified, these secrets will be passed to individual puller implementations for them to use.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
+	//+kubebuilder:default:="cluster.local"
+	ClusterDomain string `json:"clusterDomain,omitempty"`
 
 	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
