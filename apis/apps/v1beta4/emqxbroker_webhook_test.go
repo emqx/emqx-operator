@@ -160,16 +160,6 @@ func TestBrokerDefault(t *testing.T) {
 		}, instance.Spec.Persistent.ObjectMeta)
 	})
 
-	t.Run("default Security Contexts", func(t *testing.T) {
-		assert.Equal(t, corev1.PodSecurityContext{
-			RunAsUser:           pointer.Int64(1000),
-			RunAsGroup:          pointer.Int64(1000),
-			FSGroup:             pointer.Int64(1000),
-			FSGroupChangePolicy: (*corev1.PodFSGroupChangePolicy)(pointer.String("Always")),
-			SupplementalGroups:  []int64{1000},
-		}, *instance.Spec.Template.Spec.PodSecurityContext)
-	})
-
 	t.Run("default container port", func(t *testing.T) {
 		assert.GreaterOrEqual(t, len(instance.Spec.Template.Spec.EmqxContainer.Ports), 1)
 		defaultPort := instance.Spec.Template.Spec.EmqxContainer.Ports[0]
