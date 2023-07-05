@@ -2,6 +2,9 @@ apiVersion: apps.emqx.io/v2alpha2
 kind: EMQX
 metadata:
   name: emqx
+  labels:
+    apps.emqx.io/instance: emqx
+    apps.emqx.io/managed-by: emqx-operator
 spec:
   image: "emqx/emqx-enterprise:5.1.0"
   imagePullPolicy: IfNotPresent
@@ -40,6 +43,7 @@ spec:
       name: emqx-core
       labels:
         apps.emqx.io/instance: emqx
+        apps.emqx.io/managed-by: emqx-operator
         apps.emqx.io/db-role: core
       annotations:
     spec:
@@ -61,7 +65,9 @@ spec:
         - "/opt/emqx/bin/emqx"
         - "foreground"
       ports:
-        - containerPort: 1883
+        - containerPort: 18083
+          name: dashboard
+          protocol: TCP
       env:
         - name: Foo
           value: Bar
@@ -75,14 +81,6 @@ spec:
       #   limits:
       #     memory: "1024Mi"
       #     cpu: "500m"
-      podSecurityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        fsGroupChangePolicy: Always
-      containerSecurityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
       extraVolumes:
         - name: fake-volume
           emptyDir: {}
@@ -110,10 +108,6 @@ spec:
       #   initialDelaySeconds: 10
       #   periodSeconds: 5
       #   failureThreshold: 12
-      lifecycle:
-        preStop:
-          exec:
-            command: ["/bin/sh","-c","emqx ctl cluster leave"]
       # extraContainers:
       #   - name: extra
       #     image: busybox:stable
@@ -165,6 +159,7 @@ spec:
       name: emqx-replicant
       labels:
         apps.emqx.io/instance: emqx
+        apps.emqx.io/managed-by: emqx-operator
         apps.emqx.io/db-role: replicant
     spec:
       replicas: 3
@@ -178,7 +173,8 @@ spec:
         - "/opt/emqx/bin/emqx"
         - "foreground"
       ports:
-        - containerPort: 1883
+        - containerPort: 18083
+          name: dashboard
       env:
         - name: Foo
           value: Bar
@@ -192,17 +188,6 @@ spec:
       #   limits:
       #     memory: "1024Mi"
       #     cpu: "500m"
-      podSecurityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        fsGroupChangePolicy: Always
-        supplementalGroups:
-          - 1000
-      containerSecurityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
       extraVolumes:
         - name: fake-volume
           emptyDir: {}
@@ -230,10 +215,6 @@ spec:
         initialDelaySeconds: 10
         periodSeconds: 5
         failureThreshold: 30
-      lifecycle:
-        preStop:
-          exec:
-            command: ["/bin/sh","-c","emqx ctl cluster leave"]
       # extraContainers:
       #   - name: extra
       #     image: busybox:stable

@@ -99,11 +99,12 @@ type EMQXReplicantTemplateSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings.
-	// Optional: Defaults to empty.  See type description for default values of each field.
+	//+kubebuilder:default={runAsUser:1000,runAsGroup:1000,fsGroup:1000,fsGroupChangePolicy:Always,supplementalGroups: {1000}}
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
 	// SecurityContext defines the security options the container should be run with.
 	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
 	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+	//+kubebuilder:default={runAsUser:1000,runAsGroup:1000,runAsNonRoot:true}
 	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 	// List of initialization containers belonging to the pod.
 	// Init containers are executed in order prior to containers being started. If any
