@@ -34,9 +34,8 @@ import (
 )
 
 const (
-	ReloaderContainerName  = "reloader"
-	ReloaderContainerImage = "emqx/emqx-operator-reloader:0.0.2"
-	defUsername            = "emqx_operator_controller"
+	ReloaderContainerName = "reloader"
+	defUsername           = "emqx_operator_controller"
 )
 
 func generateInitPluginList(instance appsv1beta4.Emqx, existPluginList *appsv1beta4.EmqxPluginList) []client.Object {
@@ -353,7 +352,7 @@ func generateStatefulSet(instance appsv1beta4.Emqx) *appsv1.StatefulSet {
 
 	reloaderContainer := corev1.Container{
 		Name:            ReloaderContainerName,
-		Image:           filepath.Join(emqxTemplate.Spec.EmqxContainer.Image.Registry, ReloaderContainerImage),
+		Image:           instance.GetSpec().GetReloaderImage(),
 		ImagePullPolicy: emqxTemplate.Spec.EmqxContainer.Image.PullPolicy,
 		Args: []string{
 			"-u", "admin",

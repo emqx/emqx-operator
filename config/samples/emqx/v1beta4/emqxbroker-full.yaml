@@ -7,6 +7,7 @@ metadata:
     "apps.emqx.io/instance": "emqx"
 spec:
   replicas: 3
+  clusterDomain: cluster.local
   # persistent:
   #   spec:
   #     storageClassName: standard
@@ -22,6 +23,7 @@ spec:
       annotations:
         foo: bar
     spec:
+      reloaderImage: emqx/emqx-operator-reloader:0.0.2
       # imagePullPolicy: [fake-secret]
       # nodeName:
       # nodeSelector:

@@ -126,6 +126,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `replicas` _integer_ |  |
+| `clusterDomain` _string_ |  |
 | `persistent` _[PersistentVolumeClaimTemplate](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimtemplate-v1-core)_ | Persistent describes the common attributes of storage devices |
 | `template` _[EmqxTemplate](#emqxtemplate)_ |  |
 | `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ | ServiceTemplate defines a logical set of ports and a policy by which to access them |
@@ -216,6 +217,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `replicas` _integer_ |  |
+| `clusterDomain` _string_ |  |
 | `license` _[EmqxLicense](#emqxlicense)_ |  |
 | `persistent` _[PersistentVolumeClaimTemplate](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimtemplate-v1-core)_ | Persistent describes the common attributes of storage devices |
 | `blueGreenUpdate` _[EmqxBlueGreenUpdate](#emqxbluegreenupdate)_ |  |
@@ -397,6 +399,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
+| `reloaderImage` _string_ |  |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ |  |
 | `emqxContainer` _[EmqxContainer](#emqxcontainer)_ |  |
 | `extraContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ |  |

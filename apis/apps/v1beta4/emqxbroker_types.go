@@ -26,6 +26,9 @@ type EmqxBrokerSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
+	//+kubebuilder:default:="cluster.local"
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
 	// Persistent describes the common attributes of storage devices
 	Persistent *corev1.PersistentVolumeClaimTemplate `json:"persistent,omitempty"`
 
@@ -41,6 +44,22 @@ func (s *EmqxBrokerSpec) GetReplicas() *int32 {
 
 func (s *EmqxBrokerSpec) SetReplicas(replicas int32) {
 	s.Replicas = &replicas
+}
+
+func (s *EmqxBrokerSpec) GetClusterDomain() string {
+	return s.ClusterDomain
+}
+
+func (s *EmqxBrokerSpec) SetClusterDomain(clusterDomain string) {
+	s.ClusterDomain = clusterDomain
+}
+
+func (s *EmqxBrokerSpec) GetReloaderImage() string {
+	return s.Template.Spec.ReloaderImage
+}
+
+func (s *EmqxBrokerSpec) SetReloaderImage(reloaderImage string) {
+	s.Template.Spec.ReloaderImage = reloaderImage
 }
 
 func (s *EmqxBrokerSpec) GetPersistent() *corev1.PersistentVolumeClaimTemplate {

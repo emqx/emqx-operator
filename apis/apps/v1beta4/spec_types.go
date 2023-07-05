@@ -10,6 +10,12 @@ type EmqxSpec interface {
 	GetReplicas() *int32
 	SetReplicas(int32)
 
+	GetClusterDomain() string
+	SetClusterDomain(string)
+
+	GetReloaderImage() string
+	SetReloaderImage(string)
+
 	GetPersistent() *corev1.PersistentVolumeClaimTemplate
 	SetPersistent(*corev1.PersistentVolumeClaimTemplate)
 
@@ -212,6 +218,8 @@ type BootstrapAPIKey struct {
 }
 
 type EmqxTemplateSpec struct {
+	// +kubebuilder:default:="emqx/emqx-operator-reloader:0.0.2"
+	ReloaderImage       string                        `json:"reloaderImage,omitempty"`
 	ImagePullSecrets    []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	EmqxContainer       EmqxContainer                 `json:"emqxContainer,omitempty"`
 	ExtraContainers     []corev1.Container            `json:"extraContainers,omitempty"`
