@@ -94,7 +94,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				HaveField("EmqxBlueGreenUpdateStatus", BeNil()),
 				HaveField("ReadyReplicas", Equal(int32(1))),
 				HaveField("EmqxNodes", ConsistOf(
-					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace()))),
+					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.%s", sts.Name, emqx.GetNamespace(), emqx.GetSpec().GetClusterDomain()))),
 				)),
 				HaveField("CurrentStatefulSetVersion", Equal(sts.Status.CurrentRevision)),
 			))
@@ -170,8 +170,8 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 					)),
 				HaveField("ReadyReplicas", Equal(int32(2))),
 				HaveField("EmqxNodes", ConsistOf(
-					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", sts.Name, emqx.GetNamespace()))),
-					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", newSts.Name, emqx.GetNamespace()))),
+					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.%s", sts.Name, emqx.GetNamespace(), emqx.GetSpec().GetClusterDomain()))),
+					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.%s", newSts.Name, emqx.GetNamespace(), emqx.GetSpec().GetClusterDomain()))),
 				)),
 			))
 
@@ -194,7 +194,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 				HaveField("EmqxBlueGreenUpdateStatus", BeNil()),
 				HaveField("ReadyReplicas", Equal(int32(1))),
 				HaveField("EmqxNodes", ConsistOf(
-					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.cluster.local", newSts.Name, emqx.GetNamespace()))),
+					HaveField("Node", Equal(fmt.Sprintf("emqx-ee@%s-0.emqx-ee-headless.%s.svc.%s", newSts.Name, emqx.GetNamespace(), emqx.GetSpec().GetClusterDomain()))),
 				)),
 				HaveField("CurrentStatefulSetVersion", Equal(newSts.Status.CurrentRevision)),
 			))

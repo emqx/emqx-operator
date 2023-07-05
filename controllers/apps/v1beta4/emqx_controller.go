@@ -143,7 +143,7 @@ func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (innerRe
 	return &innerReq.Requester{
 		// TODO: the telepersence is not support `$service.$namespace.svc` format in Linux
 		// Host:     fmt.Sprintf("%s.%s.svc:8081", names.HeadlessSvc(), instance.GetNamespace()),
-		Host:     fmt.Sprintf("%s.%s.svc.cluster.local:8081", names.HeadlessSvc(), instance.GetNamespace()),
+		Host:     fmt.Sprintf("%s.%s.svc.%s:8081", names.HeadlessSvc(), instance.GetNamespace(), instance.GetSpec().GetClusterDomain()),
 		Username: username,
 		Password: password,
 	}, nil

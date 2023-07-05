@@ -12,5 +12,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: brianbinbin/emqx-operator-controller
-  newTag: efd57ab
+  newName: emqx/emqx-operator-controller
+  newTag: 2.0.1
