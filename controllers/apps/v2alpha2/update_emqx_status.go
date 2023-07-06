@@ -37,17 +37,28 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 	}
 	instance.Status.CoreNodesStatus.Nodes = coreNodes
-	instance.Status.CoreNodesStatus.ReadyReplicas = int32(len(coreNodes))
 	instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
+	instance.Status.CoreNodesStatus.ReadyReplicas = 0
+	for _, node := range coreNodes {
+		if node.NodeStatus == "running" {
+			instance.Status.CoreNodesStatus.ReadyReplicas++
+		}
+	}
+
 	if len(replNodes) > 0 {
 		instance.Status.ReplicantNodesStatus.Nodes = replNodes
-		instance.Status.ReplicantNodesStatus.ReadyReplicas = int32(len(replNodes))
 		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
+		instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
+		for _, node := range replNodes {
+			if node.NodeStatus == "running" {
+				instance.Status.ReplicantNodesStatus.ReadyReplicas++
+			}
+		}
 	}
 
 	isEnterpriser := false
 	for _, node := range coreNodes {
-		if node.ControllerUID == currentSts.UID {
+		if node.ControllerUID == currentSts.UID && node.Edition == "Enterprise" {
 			isEnterpriser = true
 			break
 		}

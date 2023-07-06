@@ -48,6 +48,7 @@ func (requester *Requester) Request(method, path string, body []byte) (resp *htt
 	}
 	req.SetBasicAuth(requester.GetUsername(), requester.GetPassword())
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 	req.Close = true
 	resp, err = httpClient.Do(req)
 	if err != nil {
