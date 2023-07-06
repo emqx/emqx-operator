@@ -128,6 +128,7 @@ func genEMQX() *appsv2alpha2.EMQX {
 		},
 		Spec: appsv2alpha2.EMQXSpec{
 			Image: "emqx:5.1",
+			ClusterDomain: "cluster.local",
 			BootstrapConfig: `
 			gateway.lwm2m {
 			  auto_observe = true
