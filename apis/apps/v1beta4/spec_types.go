@@ -171,7 +171,7 @@ type EmqxContainer struct {
 	// SecurityContext defines the security options the container should be run with.
 	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
 	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
-	// +optional
+	//+kubebuilder:default={runAsUser:1000,runAsGroup:1000,runAsNonRoot:true}
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty" protobuf:"bytes,15,opt,name=securityContext"`
 
 	// Variables for interactive containers, these have very specialized use-cases (e.g. debugging)
@@ -218,11 +218,12 @@ type EmqxTemplateSpec struct {
 	InitContainers      []corev1.Container            `json:"initContainers,omitempty"`
 	EphemeralContainers []corev1.EphemeralContainer   `json:"ephemeralContainers,omitempty"`
 	Volumes             []corev1.Volume               `json:"volumes,omitempty"`
-	PodSecurityContext  *corev1.PodSecurityContext    `json:"podSecurityContext,omitempty"`
-	NodeSelector        map[string]string             `json:"nodeSelector,omitempty"`
-	NodeName            string                        `json:"nodeName,omitempty"`
-	Affinity            *corev1.Affinity              `json:"affinity,omitempty"`
-	Tolerations         []corev1.Toleration           `json:"tolerations,omitempty"`
+	//+kubebuilder:default={runAsUser:1000,runAsGroup:1000,fsGroup:1000,fsGroupChangePolicy:Always,supplementalGroups: {1000}}
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	NodeSelector       map[string]string          `json:"nodeSelector,omitempty"`
+	NodeName           string                     `json:"nodeName,omitempty"`
+	Affinity           *corev1.Affinity           `json:"affinity,omitempty"`
+	Tolerations        []corev1.Toleration        `json:"tolerations,omitempty"`
 }
 
 type EmqxTemplate struct {

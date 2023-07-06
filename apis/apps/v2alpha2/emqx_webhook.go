@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -57,7 +56,6 @@ func (r *EMQX) Default() {
 	r.defaultDashboardServiceTemplate()
 	r.defaultContainerPort()
 	r.defaultProbe()
-	r.defaultSecurityContext()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -336,25 +334,6 @@ func (r *EMQX) defaultProbe() {
 		}
 		if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
 			r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
-		}
-	}
-}
-
-func (r *EMQX) defaultSecurityContext() {
-	podSecurityContext := &corev1.PodSecurityContext{
-		RunAsUser:           pointer.Int64(1000),
-		RunAsGroup:          pointer.Int64(1000),
-		FSGroup:             pointer.Int64(1000),
-		FSGroupChangePolicy: (*corev1.PodFSGroupChangePolicy)(pointer.String("Always")),
-		SupplementalGroups:  []int64{1000},
-	}
-
-	if r.Spec.CoreTemplate.Spec.PodSecurityContext == nil {
-		r.Spec.CoreTemplate.Spec.PodSecurityContext = podSecurityContext.DeepCopy()
-	}
-	if r.Spec.ReplicantTemplate != nil {
-		if r.Spec.ReplicantTemplate.Spec.PodSecurityContext == nil {
-			r.Spec.ReplicantTemplate.Spec.PodSecurityContext = podSecurityContext.DeepCopy()
 		}
 	}
 }

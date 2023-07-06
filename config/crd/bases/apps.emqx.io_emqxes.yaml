@@ -6902,6 +6902,10 @@ spec:
                           type: string
                         type: array
                       containerSecurityContext:
+                        default:
+                          runAsGroup: 1000
+                          runAsNonRoot: true
+                          runAsUser: 1000
                         properties:
                           allowPrivilegeEscalation:
                             type: boolean
@@ -9158,6 +9162,13 @@ spec:
                           type: string
                         type: object
                       podSecurityContext:
+                        default:
+                          fsGroup: 1000
+                          fsGroupChangePolicy: Always
+                          runAsGroup: 1000
+                          runAsUser: 1000
+                          supplementalGroups:
+                          - 1000
                         properties:
                           fsGroup:
                             format: int64
@@ -10305,6 +10316,10 @@ spec:
                           type: string
                         type: array
                       containerSecurityContext:
+                        default:
+                          runAsGroup: 1000
+                          runAsNonRoot: true
+                          runAsUser: 1000
                         properties:
                           allowPrivilegeEscalation:
                             type: boolean
@@ -12561,6 +12576,13 @@ spec:
                           type: string
                         type: object
                       podSecurityContext:
+                        default:
+                          fsGroup: 1000
+                          fsGroupChangePolicy: Always
+                          runAsGroup: 1000
+                          runAsUser: 1000
+                          supplementalGroups:
+                          - 1000
                         properties:
                           fsGroup:
                             format: int64
@@ -12842,14 +12864,23 @@ spec:
                     type: object
                 type: object
               updateStrategy:
+                default:
+                  evacuationStrategy:
+                    connEvictRate: 1000
+                    sessEvictRate: 1000
+                    waitTakeover: 30
+                  initialDelaySeconds: 30
+                  type: Recreate
                 properties:
                   evacuationStrategy:
                     properties:
                       connEvictRate:
+                        default: 1000
                         format: int32
                         minimum: 1
                         type: integer
                       sessEvictRate:
+                        default: 1000
                         format: int32
                         minimum: 1
                         type: integer
@@ -12867,6 +12898,8 @@ spec:
                     - Recreate
                     type: string
                 type: object
+            required:
+            - image
             type: object
           status:
             properties:
@@ -12919,6 +12952,8 @@ spec:
                         connections:
                           format: int64
                           type: integer
+                        controllerUID:
+                          type: string
                         edition:
                           type: string
                         live_connections:
@@ -12929,6 +12964,8 @@ spec:
                         node_status:
                           type: string
                         otp_release:
+                          type: string
+                        podUID:
                           type: string
                         role:
                           type: string
@@ -12946,6 +12983,46 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              nodEvacuationsStatus:
+                items:
+                  properties:
+                    connection_eviction_rate:
+                      format: int32
+                      type: integer
+                    connection_goal:
+                      format: int32
+                      type: integer
+                    node:
+                      type: string
+                    session_eviction_rate:
+                      format: int32
+                      type: integer
+                    session_goal:
+                      format: int32
+                      type: integer
+                    session_recipients:
+                      items:
+                        type: string
+                      type: array
+                    state:
+                      type: string
+                    stats:
+                      properties:
+                        current_connected:
+                          format: int32
+                          type: integer
+                        current_sessions:
+                          format: int32
+                          type: integer
+                        initial_connected:
+                          format: int32
+                          type: integer
+                        initial_sessions:
+                          format: int32
+                          type: integer
+                      type: object
+                  type: object
+                type: array
               replicantNodesStatus:
                 properties:
                   collisionCount:
@@ -12959,6 +13036,8 @@ spec:
                         connections:
                           format: int64
                           type: integer
+                        controllerUID:
+                          type: string
                         edition:
                           type: string
                         live_connections:
@@ -12969,6 +13048,8 @@ spec:
                         node_status:
                           type: string
                         otp_release:
+                          type: string
+                        podUID:
                           type: string
                         role:
                           type: string

@@ -4080,6 +4080,10 @@ spec:
                                 type: object
                             type: object
                           securityContext:
+                            default:
+                              runAsGroup: 1000
+                              runAsNonRoot: true
+                              runAsUser: 1000
                             properties:
                               allowPrivilegeEscalation:
                                 type: boolean
@@ -6059,6 +6063,13 @@ spec:
                           type: string
                         type: object
                       podSecurityContext:
+                        default:
+                          fsGroup: 1000
+                          fsGroupChangePolicy: Always
+                          runAsGroup: 1000
+                          runAsUser: 1000
+                          supplementalGroups:
+                          - 1000
                         properties:
                           fsGroup:
                             format: int64

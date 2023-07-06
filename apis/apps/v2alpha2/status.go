@@ -20,6 +20,7 @@ import (
 	"sort"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // EMQXStatus defines the observed state of EMQX
@@ -29,6 +30,26 @@ type EMQXStatus struct {
 
 	CoreNodesStatus      EMQXNodesStatus  `json:"coreNodesStatus,omitempty"`
 	ReplicantNodesStatus *EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
+
+	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodEvacuationsStatus,omitempty"`
+}
+
+type NodeEvacuationStatus struct {
+	Node                   string              `json:"node,omitempty"`
+	Stats                  NodeEvacuationStats `json:"stats,omitempty"`
+	State                  string              `json:"state,omitempty"`
+	SessionRecipients      []string            `json:"session_recipients,omitempty"`
+	SessionGoal            int32               `json:"session_goal,omitempty"`
+	SessionEvictionRate    int32               `json:"session_eviction_rate,omitempty"`
+	ConnectionGoal         int32               `json:"connection_goal,omitempty"`
+	ConnectionEvictionRate int32               `json:"connection_eviction_rate,omitempty"`
+}
+
+type NodeEvacuationStats struct {
+	InitialSessions  *int32 `json:"initial_sessions,omitempty"`
+	InitialConnected *int32 `json:"initial_connected,omitempty"`
+	CurrentSessions  *int32 `json:"current_sessions,omitempty"`
+	CurrentConnected *int32 `json:"current_connected,omitempty"`
 }
 
 type EMQXNodesStatus struct {
@@ -41,6 +62,8 @@ type EMQXNodesStatus struct {
 }
 
 type EMQXNode struct {
+	ControllerUID types.UID `json:"controllerUID,omitempty"`
+	PodUID        types.UID `json:"podUID,omitempty"`
 	// EMQX node name, example: emqx@127.0.0.1
 	Node string `json:"node,omitempty"`
 	// EMQX node status, example: Running
@@ -71,29 +94,6 @@ const (
 	Available                 string = "Available"
 	Ready                     string = "Ready"
 )
-
-func (s *EMQXStatus) SetNodes(nodes []EMQXNode) {
-	var coreNodes, replNodes []EMQXNode = nil, nil
-
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].Uptime < nodes[j].Uptime
-	})
-
-	for _, node := range nodes {
-		if node.Role == "core" {
-			coreNodes = append(coreNodes, node)
-		}
-		if node.Role == "replicant" {
-			replNodes = append(replNodes, node)
-		}
-	}
-	s.CoreNodesStatus.Nodes = coreNodes
-	s.CoreNodesStatus.ReadyReplicas = int32(len(coreNodes))
-	if s.ReplicantNodesStatus != nil {
-		s.ReplicantNodesStatus.Nodes = replNodes
-		s.ReplicantNodesStatus.ReadyReplicas = int32(len(replNodes))
-	}
-}
 
 func (s *EMQXStatus) SetCondition(c metav1.Condition) {
 	c.LastTransitionTime = metav1.Now()

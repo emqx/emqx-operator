@@ -2,9 +2,7 @@ package v2alpha2
 
 import (
 	"context"
-	"fmt"
 	"reflect"
-	"strings"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -14,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +43,9 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 			Reason:  "CreateNewStatefulSet",
 			Message: "Create new statefulSet",
 		})
+		instance.Status.RemoveCondition(appsv2alpha2.Ready)
+		instance.Status.RemoveCondition(appsv2alpha2.Available)
+		instance.Status.RemoveCondition(appsv2alpha2.CoreNodesReady)
 		instance.Status.CoreNodesStatus.CurrentRevision = preSts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	} else {
@@ -59,19 +59,21 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 			logger := log.FromContext(ctx)
 			logger.V(1).Info("got different statefulSet for EMQX core nodes, will update statefulSet", "patch", string(patchResult.Patch))
 
-			_ = a.Handler.Update(preSts)
+			if err := a.Handler.Update(preSts); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
+			}
+
 			instance.Status.SetCondition(metav1.Condition{
 				Type:    appsv2alpha2.CoreNodesProgressing,
 				Status:  metav1.ConditionTrue,
 				Reason:  "CreateNewStatefulSet",
 				Message: "Create new statefulSet",
 			})
+			instance.Status.RemoveCondition(appsv2alpha2.Ready)
+			instance.Status.RemoveCondition(appsv2alpha2.Available)
+			instance.Status.RemoveCondition(appsv2alpha2.CoreNodesReady)
 			_ = a.Client.Status().Update(ctx, instance)
 		}
-	}
-
-	if err := a.sync(ctx, instance); err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to sync replicaSet")}
 	}
 
 	return subResult{}
@@ -105,55 +107,6 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("got different pod template for EMQX core nodes, will create new statefulSet", "patch", string(patchResult.Patch))
 	return preSts
-}
-
-func (a *addCore) sync(ctx context.Context, instance *appsv2alpha2.EMQX) error {
-	if isExistReplicant(instance) {
-		_, oldRsList := getReplicaSetList(ctx, a.Client, instance)
-		if len(oldRsList) != 0 {
-			// wait for replicaSet finished the scale down
-			return nil
-		}
-	}
-
-	_, oldStsList := getStateFulSetList(ctx, a.Client, instance)
-	if len(oldStsList) == 0 {
-		return nil
-	}
-
-	oldest := oldStsList[0].DeepCopy()
-
-	if a.findCanBeDeletePod(ctx, instance, oldest) != nil {
-		oldest.Spec.Replicas = pointer.Int32Ptr(oldest.Status.Replicas - 1)
-		if err := a.Client.Update(ctx, oldest); err != nil {
-			return emperror.Wrap(err, "failed to scale down old replicaSet")
-		}
-		return nil
-	}
-
-	return nil
-}
-
-func (a *addCore) findCanBeDeletePod(ctx context.Context, instance *appsv2alpha2.EMQX, old *appsv1.StatefulSet) *corev1.Pod {
-	if !canBeScaledDown(instance, appsv2alpha2.Ready, getEventList(ctx, a.Clientset, old)) {
-		return nil
-	}
-	pod := &corev1.Pod{}
-	_ = a.Client.Get(ctx, types.NamespacedName{
-		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-%d", old.Name, old.Status.Replicas-1),
-	}, pod)
-
-	for _, node := range instance.Status.CoreNodesStatus.Nodes {
-		host := strings.Split(node.Node[strings.Index(node.Node, "@")+1:], ":")[0]
-		if strings.HasPrefix(host, pod.Name) {
-			if node.Edition == "Enterprise" && node.Session != 0 {
-				return nil
-			}
-			return pod
-		}
-	}
-	return nil
 }
 
 func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {

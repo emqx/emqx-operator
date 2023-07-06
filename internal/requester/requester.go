@@ -9,11 +9,16 @@ import (
 	emperror "emperror.dev/errors"
 )
 
+type HeaderOpt struct {
+	Key   string
+	Value string
+}
+
 type RequesterInterface interface {
 	GetHost() string
 	GetUsername() string
 	GetPassword() string
-	Request(method, path string, body []byte) (resp *http.Response, respBody []byte, err error)
+	Request(method, path string, body []byte, opts ...HeaderOpt) (resp *http.Response, respBody []byte, err error)
 }
 
 type Requester struct {
@@ -34,7 +39,7 @@ func (requester *Requester) GetHost() string {
 	return requester.Host
 }
 
-func (requester *Requester) Request(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+func (requester *Requester) Request(method, path string, body []byte, opts ...HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 	url := url.URL{
 		Scheme: "http",
 		Host:   requester.GetHost(),
@@ -47,6 +52,15 @@ func (requester *Requester) Request(method, path string, body []byte) (resp *htt
 		return nil, nil, emperror.Wrap(err, "failed to create request")
 	}
 	req.SetBasicAuth(requester.GetUsername(), requester.GetPassword())
+	for _, opt := range opts {
+		req.Header.Set(opt.Key, opt.Value)
+	}
+	if req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if req.Header.Get("Accept") == "" {
+		req.Header.Set("Accept", "application/json")
+	}
 	req.Close = true
 	resp, err = httpClient.Do(req)
 	if err != nil {
@@ -59,4 +73,16 @@ func (requester *Requester) Request(method, path string, body []byte) (resp *htt
 		return resp, nil, emperror.Wrap(err, "failed to read response body")
 	}
 	return resp, body, nil
+}
+
+// Mock
+type FakeRequester struct {
+	ReqFunc func(method, path string, body []byte, opts ...HeaderOpt) (resp *http.Response, respBody []byte, err error)
+}
+
+func (f *FakeRequester) GetHost() string     { return "" }
+func (f *FakeRequester) GetUsername() string { return "" }
+func (f *FakeRequester) GetPassword() string { return "" }
+func (f *FakeRequester) Request(method, path string, body []byte, opts ...HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+	return f.ReqFunc(method, path, body)
 }

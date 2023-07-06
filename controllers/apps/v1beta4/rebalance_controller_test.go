@@ -14,23 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type fakeRequester struct {
-	request func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error)
-	// Pod     *corev1.Pod
-}
-
-func (f *fakeRequester) GetHost() string     { return "" }
-func (f *fakeRequester) GetUsername() string { return "" }
-func (f *fakeRequester) GetPassword() string { return "" }
-func (f *fakeRequester) Request(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
-	return f.request(method, path, body)
-}
-
 func TestGetRebalanceStatus(t *testing.T) {
-	f := &fakeRequester{}
+	f := &innerReq.FakeRequester{}
 
 	t.Run("check request args", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			assert.Equal(t, "GET", method)
 			assert.Equal(t, "api/v4/load_rebalance/global_status", path)
 			assert.Nil(t, body)
@@ -39,13 +27,12 @@ func TestGetRebalanceStatus(t *testing.T) {
 			err = nil
 			return
 		}
-
 		_, err := getRebalanceStatus(f)
 		assert.Nil(t, err)
 	})
 
 	t.Run("check request return error", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			return nil, nil, errors.New("fake error")
 		}
 		_, err := getRebalanceStatus(f)
@@ -53,7 +40,7 @@ func TestGetRebalanceStatus(t *testing.T) {
 	})
 
 	t.Run("check request return error status code", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil, nil
 		}
 		_, err := getRebalanceStatus(f)
@@ -61,7 +48,7 @@ func TestGetRebalanceStatus(t *testing.T) {
 	})
 
 	t.Run("check request return unexpected JSON", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			return &http.Response{StatusCode: http.StatusOK}, nil, nil
 		}
 		_, err := getRebalanceStatus(f)
@@ -70,7 +57,7 @@ func TestGetRebalanceStatus(t *testing.T) {
 }
 
 func TestStartRebalance(t *testing.T) {
-	f := &fakeRequester{}
+	f := &innerReq.FakeRequester{}
 	rebalance := &appsv1beta4.Rebalance{
 		Spec: appsv1beta4.RebalanceSpec{
 			RebalanceStrategy: appsv1beta4.RebalanceStrategy{
@@ -111,7 +98,7 @@ func TestStartRebalance(t *testing.T) {
 
 	t.Run("check request args", func(t *testing.T) {
 		startPath := fmt.Sprintf("api/v4/load_rebalance/%s/start", emqxNodeName)
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			assert.Equal(t, "POST", method)
 			assert.Equal(t, startPath, path)
 			assert.Equal(t, getRequestBytes(rebalance, emqx), body)
@@ -126,7 +113,7 @@ func TestStartRebalance(t *testing.T) {
 	})
 
 	t.Run("check request return bad request", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil, nil
 		}
 
@@ -135,7 +122,7 @@ func TestStartRebalance(t *testing.T) {
 	})
 
 	t.Run("check request start rebalance err", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			resp = &http.Response{StatusCode: http.StatusOK}
 			respBody = []byte(`{"message":"fake error","code":400}`)
 			err = nil
@@ -146,7 +133,7 @@ func TestStartRebalance(t *testing.T) {
 	})
 
 	t.Run("check request return error", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			return nil, nil, errors.New("fake error")
 		}
 		err := startRebalance(f, rebalance, emqx)
@@ -155,7 +142,7 @@ func TestStartRebalance(t *testing.T) {
 }
 
 func TestStopRebalance(t *testing.T) {
-	f := &fakeRequester{}
+	f := &innerReq.FakeRequester{}
 	emqxNodeName := "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local"
 	rebalance := &appsv1beta4.Rebalance{
 		Status: appsv1beta4.RebalanceStatus{
@@ -170,7 +157,7 @@ func TestStopRebalance(t *testing.T) {
 
 	t.Run("check requestAPI args", func(t *testing.T) {
 		stopPath := fmt.Sprintf("api/v4/load_rebalance/%s/stop", emqxNodeName)
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			assert.Equal(t, "POST", method)
 			assert.Equal(t, stopPath, path)
 			assert.Nil(t, body)
@@ -184,7 +171,7 @@ func TestStopRebalance(t *testing.T) {
 	})
 
 	t.Run("check request return bad request", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil, nil
 		}
 
@@ -193,7 +180,7 @@ func TestStopRebalance(t *testing.T) {
 	})
 
 	t.Run("check request stop rebalance err", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			resp = &http.Response{StatusCode: http.StatusOK}
 			respBody = []byte(`{"message": "rebalance is disabled","code":400}`)
 			err = nil
@@ -204,7 +191,7 @@ func TestStopRebalance(t *testing.T) {
 	})
 
 	t.Run("check request return error", func(t *testing.T) {
-		f.request = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		f.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			return nil, nil, errors.New("fake error")
 		}
 		err := stopRebalance(f, rebalance)
@@ -304,7 +291,7 @@ func TestRebalanceStatusHandler(t *testing.T) {
 		},
 	}
 	emqxEnterprise := &appsv1beta4.EmqxEnterprise{}
-	f := &fakeRequester{}
+	f := &innerReq.FakeRequester{}
 	defStartFun := func(requester innerReq.RequesterInterface, rebalance *appsv1beta4.Rebalance, emqx *appsv1beta4.EmqxEnterprise) error {
 		return nil
 	}

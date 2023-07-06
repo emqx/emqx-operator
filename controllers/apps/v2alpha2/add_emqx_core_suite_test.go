@@ -2,12 +2,9 @@ package v2alpha2
 
 import (
 	"context"
-	"fmt"
-	"sort"
 	"time"
 
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
-	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +17,6 @@ import (
 
 var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 	var a *addCore
-	var req *innerReq.Requester = &innerReq.Requester{}
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
 	var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
@@ -58,7 +54,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 	})
 
 	It("should create statefulSet", func() {
-		Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+		Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 		Eventually(func() []appsv1.StatefulSet {
 			list := &appsv1.StatefulSetList{}
 			_ = k8sClient.List(ctx, list,
@@ -87,7 +83,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		})
 
 		It("should update statefulSet", func() {
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.StatefulSet {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -102,8 +98,11 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			Eventually(func() *appsv2alpha2.EMQX {
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
-			}).Should(WithTransform(
-				func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.CoreNodesProgressing),
+			}).Should(And(
+				WithTransform(func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.CoreNodesProgressing)),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.Ready) }, BeFalse()),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.Available) }, BeFalse()),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.CoreNodesReady) }, BeFalse()),
 			))
 		})
 	})
@@ -115,7 +114,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		})
 
 		It("should create new statefulSet", func() {
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.StatefulSet {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -131,65 +130,12 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			Eventually(func() *appsv2alpha2.EMQX {
 				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
-			}).Should(WithTransform(
-				func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.CoreNodesProgressing),
+			}).Should(And(
+				WithTransform(func(emqx *appsv2alpha2.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2alpha2.CoreNodesProgressing)),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.Ready) }, BeFalse()),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.Available) }, BeFalse()),
+				WithTransform(func(emqx *appsv2alpha2.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2alpha2.CoreNodesReady) }, BeFalse()),
 			))
-		})
-	})
-
-	Context("can be scale down", func() {
-		var old, new *appsv1.StatefulSet = new(appsv1.StatefulSet), new(appsv1.StatefulSet)
-
-		JustBeforeEach(func() {
-			list := &appsv1.StatefulSetList{}
-			Eventually(func() []appsv1.StatefulSet {
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
-				)
-				sort.Slice(list.Items, func(i, j int) bool {
-					return list.Items[i].CreationTimestamp.Before(&list.Items[j].CreationTimestamp)
-				})
-				return list.Items
-			}).Should(HaveLen(2))
-			old = list.Items[0].DeepCopy()
-			new = list.Items[1].DeepCopy()
-
-			//Sync the "change image" test case.
-			instance.Spec.Image = new.Spec.Template.Spec.Containers[0].Image
-			instance.Status.CoreNodesStatus.CurrentRevision = new.Labels[appsv2alpha2.PodTemplateHashLabelKey]
-			instance.Status.CoreNodesStatus.Nodes = []appsv2alpha2.EMQXNode{
-				{
-					Node:    fmt.Sprintf("emqx@%s.fake", fmt.Sprintf("%s-%d", new.Name, *new.Spec.Replicas)),
-					Edition: "Enterprise",
-					Session: 0,
-				},
-			}
-
-			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(0)
-			instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover = int32(0)
-		})
-
-		It("should scale down", func() {
-			for *old.Spec.Replicas > 0 {
-				preReplicas := *old.Spec.Replicas
-				//mock statefulSet status
-				old.Status.Replicas = preReplicas
-				old.Status.ReadyReplicas = preReplicas
-				Expect(k8sClient.Status().Update(ctx, old)).Should(Succeed())
-				Eventually(func() *appsv1.StatefulSet {
-					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
-					return old
-				}).WithTimeout(timeout).WithPolling(interval).Should(And(
-					WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.Replicas }, Equal(preReplicas)),
-					WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.ReadyReplicas }, Equal(preReplicas)),
-				))
-
-				// retry it because update the statefulSet maybe will conflict
-				Eventually(a.reconcile(ctx, instance, req)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(old), old)
-				Expect(*old.Spec.Replicas).Should(Equal(preReplicas - 1))
-			}
 		})
 	})
 

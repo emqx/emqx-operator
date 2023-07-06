@@ -19,6 +19,7 @@ package v2alpha2
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -118,6 +119,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addRepl{r},
 		&addListener{r},
 		&updateStatus{r},
+		&updateNodes{r},
 		&updatePodConditions{r},
 	} {
 		subResult := subReconciler.reconcile(ctx, instance, requester)
@@ -128,10 +130,15 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			if innerErr.IsCommonError(subResult.err) {
 				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
+			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "ReconcilerFailed", emperror.Cause(subResult.err).Error())
 			return ctrl.Result{}, subResult.err
 		}
 	}
-	return ctrl.Result{RequeueAfter: time.Duration(20) * time.Second}, nil
+
+	if !instance.Status.IsConditionTrue(appsv2alpha2.Ready) {
+		return ctrl.Result{RequeueAfter: time.Second}, nil
+	}
+	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -172,11 +179,14 @@ func newRequester(k8sClient client.Client, instance *appsv2alpha2.EMQX) (innerRe
 			instance.Status.CoreNodesStatus.CurrentRevision,
 		)
 	}
-
 	_ = k8sClient.List(context.Background(), podList,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(labels),
 	)
+	sort.Slice(podList.Items, func(i, j int) bool {
+		return podList.Items[i].CreationTimestamp.Before(&podList.Items[j].CreationTimestamp)
+	})
+
 	for _, pod := range podList.Items {
 		if pod.Status.Phase == corev1.PodRunning && pod.Status.PodIP != "" {
 			return &innerReq.Requester{

@@ -47,7 +47,6 @@ func (r *EmqxEnterprise) Default() {
 	defaultServiceTemplate(r)
 	defaultContainerPort(r)
 	defaultPersistent(r)
-	defaultSecurityContext(r)
 }
 
 //+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-emqxenterprise,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=emqxenterprises,verbs=create;update,versions=v1beta4,name=validator.enterprise.emqx.io,admissionReviewVersions={v1,v1beta1}

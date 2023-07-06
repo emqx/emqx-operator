@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	semver "github.com/Masterminds/semver/v3"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -63,11 +62,7 @@ func (u *updatePodConditions) checkInCluster(instance *appsv2alpha2.EMQX, r inne
 		nodes = append(nodes, instance.Status.ReplicantNodesStatus.Nodes...)
 	}
 	for _, node := range nodes {
-		l := strings.Split(node.Node, "@")
-		host := l[len(l)-1]
-
-		if (node.Role == "core" && strings.HasPrefix(host, pod.Name)) ||
-			(node.Role == "replicant" && host == pod.Status.PodIP) {
+		if pod.UID == node.PodUID {
 			if node.Edition == "enterprise" {
 				v, _ := semver.NewVersion(node.Version)
 				if v.Compare(semver.MustParse("5.0.3")) >= 0 {
