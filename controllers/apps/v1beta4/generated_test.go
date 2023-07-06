@@ -262,9 +262,14 @@ func TestGenerateStatefulSet(t *testing.T) {
 			StorageClassName: pointer.String("fake"),
 		},
 	}
+
 	emqx.Default()
 
+	emqx.GetSpec().GetTemplate().Spec.EmqxContainer.EmqxConfig["cluster.dns.name"] = "emqx-headless.default.svc.cluster.local"
+	emqx.GetSpec().SetReloaderImage("emqx/emqx-operator-reloader:0.0.2")
+
 	got = generateStatefulSet(emqx)
+
 	assert.Equal(t, emqx.Spec.Persistent.ObjectMeta, got.Spec.VolumeClaimTemplates[0].ObjectMeta)
 	assert.Equal(t, emqx.Spec.Persistent.Spec, got.Spec.VolumeClaimTemplates[0].Spec)
 

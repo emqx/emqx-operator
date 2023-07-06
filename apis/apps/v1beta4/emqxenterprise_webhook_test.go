@@ -39,6 +39,7 @@ func TestEnterpriseDefault(t *testing.T) {
 			},
 		},
 		Spec: EmqxEnterpriseSpec{
+			ClusterDomain: "cluster.local",
 			Template: EmqxTemplate{
 				Spec: EmqxTemplateSpec{
 					EmqxContainer: EmqxContainer{
