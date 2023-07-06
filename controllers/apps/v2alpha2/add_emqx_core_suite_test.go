@@ -5,7 +5,6 @@ import (
 	"time"
 
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
-	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +17,6 @@ import (
 
 var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 	var a *addCore
-	var req *innerReq.Requester = &innerReq.Requester{}
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
 	var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
@@ -56,7 +54,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 	})
 
 	It("should create statefulSet", func() {
-		Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+		Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 		Eventually(func() []appsv1.StatefulSet {
 			list := &appsv1.StatefulSetList{}
 			_ = k8sClient.List(ctx, list,
@@ -85,7 +83,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		})
 
 		It("should update statefulSet", func() {
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.StatefulSet {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -116,7 +114,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		})
 
 		It("should create new statefulSet", func() {
-			Eventually(a.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.StatefulSet {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(ctx, list,

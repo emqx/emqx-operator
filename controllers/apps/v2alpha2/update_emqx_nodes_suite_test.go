@@ -30,7 +30,7 @@ var _ = Describe("Check update emqx nodes controller", Ordered, Label("node"), f
 	var storageRsPod *corev1.Pod
 
 	BeforeEach(func() {
-		fakeR.ReqFunc = func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+		fakeR.ReqFunc = func(method, path string, body []byte, otps ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 			resp = &http.Response{
 				StatusCode: 200,
 			}
@@ -245,7 +245,7 @@ var _ = Describe("Check update emqx nodes controller", Ordered, Label("node"), f
 
 var _ = Describe("check can be scale down", func() {
 	var u *updateNodes
-	var req *innerReq.Requester = &innerReq.Requester{}
+	var fakeR *innerReq.FakeRequester = &innerReq.FakeRequester{}
 	var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
@@ -298,14 +298,14 @@ var _ = Describe("check can be scale down", func() {
 		})
 		It("emqx is not available", func() {
 			instance.Status.Conditions = []metav1.Condition{}
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, req, oldSts, []string{})
+			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
 		})
 
 		It("emqx is available, but is not initial delay seconds", func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, req, oldSts, []string{})
+			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
 		})
@@ -321,14 +321,14 @@ var _ = Describe("check can be scale down", func() {
 				Replicas:      3,
 			}
 
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, req, oldSts, []string{})
+			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
-			Eventually(u.reconcile(ctx, instance, req)).Should(Equal(subResult{}))
+			Eventually(u.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
-			fakeFun := func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -342,9 +342,6 @@ var _ = Describe("check can be scale down", func() {
 
 				return resp, respBody, nil
 			}
-			fakeR := &innerReq.FakeRequester{
-				ReqFunc: fakeFun,
-			}
 
 			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -352,7 +349,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is enterprise, and node session is 0", func() {
-			fakeFun := func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -362,9 +359,6 @@ var _ = Describe("check can be scale down", func() {
 				})
 				return resp, respBody, nil
 			}
-			fakeR := &innerReq.FakeRequester{
-				ReqFunc: fakeFun,
-			}
 
 			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -372,7 +366,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is open source", func() {
-			fakeFun := func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -380,9 +374,6 @@ var _ = Describe("check can be scale down", func() {
 					Edition: "Opensource",
 				})
 				return resp, respBody, nil
-			}
-			fakeR := &innerReq.FakeRequester{
-				ReqFunc: fakeFun,
 			}
 
 			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
@@ -445,20 +436,20 @@ var _ = Describe("check can be scale down", func() {
 		})
 		It("emqx is not available", func() {
 			instance.Status.Conditions = []metav1.Condition{}
-			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, req, oldRs, []string{})
+			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, nil, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
 
 		It("emqx is available, but is not initial delay seconds", func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
-			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, req, oldRs, []string{})
+			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, nil, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
-			fakeFun := func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -472,9 +463,6 @@ var _ = Describe("check can be scale down", func() {
 
 				return resp, respBody, nil
 			}
-			fakeR := &innerReq.FakeRequester{
-				ReqFunc: fakeFun,
-			}
 
 			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -482,7 +470,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is enterprise, and node session is 0", func() {
-			fakeFun := func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -492,9 +480,6 @@ var _ = Describe("check can be scale down", func() {
 				})
 				return resp, respBody, nil
 			}
-			fakeR := &innerReq.FakeRequester{
-				ReqFunc: fakeFun,
-			}
 
 			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -502,7 +487,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is open source", func() {
-			fakeFun := func(method, path string, body []byte) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -510,9 +495,6 @@ var _ = Describe("check can be scale down", func() {
 					Edition: "Opensource",
 				})
 				return resp, respBody, nil
-			}
-			fakeR := &innerReq.FakeRequester{
-				ReqFunc: fakeFun,
 			}
 
 			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
