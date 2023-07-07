@@ -33,6 +33,8 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	dst.ObjectMeta = src.ObjectMeta
 	// Replicas
 	dst.Spec.Replicas = src.Spec.Replicas
+	// ClusterDomain
+	dst.Spec.ClusterDomain = "cluster.local"
 	// ServiceTemplate
 	if !reflect.ValueOf(src.Spec.EmqxTemplate.ServiceTemplate).IsZero() {
 		dst.Spec.ServiceTemplate = v1beta4.ServiceTemplate(src.Spec.EmqxTemplate.ServiceTemplate)

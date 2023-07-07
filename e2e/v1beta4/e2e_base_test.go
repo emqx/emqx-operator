@@ -87,7 +87,8 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 		},
 	},
 	Spec: appsv1beta4.EmqxEnterpriseSpec{
-		Replicas: pointer.Int32(1),
+		Replicas:      pointer.Int32(1),
+		ClusterDomain: "cluster.local",
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
 				EmqxContainer: appsv1beta4.EmqxContainer{
