@@ -36,6 +36,7 @@ func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 	dst.SetGroupVersionKind(v2alpha2.GroupVersion.WithKind("EMQX"))
+	dst.Spec.ClusterDomain = "cluster.local"
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil
