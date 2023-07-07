@@ -3062,6 +3062,9 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              clusterDomain:
+                default: cluster.local
+                type: string
               license:
                 properties:
                   data:
@@ -6177,6 +6180,9 @@ spec:
                                 type: string
                             type: object
                         type: object
+                      reloaderImage:
+                        default: emqx/emqx-operator-reloader:0.0.2
+                        type: string
                       tolerations:
                         items:
                           properties:

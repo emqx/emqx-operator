@@ -3039,6 +3039,9 @@ spec:
               type: object
             spec:
               properties:
+                clusterDomain:
+                  default: cluster.local
+                  type: string
                 persistent:
                   properties:
                     metadata:
@@ -6144,6 +6147,9 @@ spec:
                                   type: string
                               type: object
                           type: object
+                        reloaderImage:
+                          default: emqx/emqx-operator-reloader:0.0.2
+                          type: string
                         tolerations:
                           items:
                             properties:

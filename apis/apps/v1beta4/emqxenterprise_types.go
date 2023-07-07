@@ -58,6 +58,9 @@ type EmqxEnterpriseSpec struct {
 	//+kubebuilder:default:=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
+	//+kubebuilder:default:="cluster.local"
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
 	License EmqxLicense `json:"license,omitempty"`
 
 	// Persistent describes the common attributes of storage devices
@@ -77,6 +80,22 @@ func (s *EmqxEnterpriseSpec) GetReplicas() *int32 {
 
 func (s *EmqxEnterpriseSpec) SetReplicas(replicas int32) {
 	s.Replicas = &replicas
+}
+
+func (emqx *EmqxEnterpriseSpec) GetClusterDomain() string {
+	return emqx.ClusterDomain
+}
+
+func (emqx *EmqxEnterpriseSpec) SetClusterDomain(clusterDomain string) {
+	emqx.ClusterDomain = clusterDomain
+}
+
+func (emqx *EmqxEnterpriseSpec) GetReloaderImage() string {
+	return emqx.Template.Spec.ReloaderImage
+}
+
+func (emqx *EmqxEnterpriseSpec) SetReloaderImage(reloaderImage string) {
+	emqx.Template.Spec.ReloaderImage = reloaderImage
 }
 
 func (s *EmqxEnterpriseSpec) GetPersistent() *corev1.PersistentVolumeClaimTemplate {

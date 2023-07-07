@@ -40,6 +40,7 @@ func TestBrokerDefault(t *testing.T) {
 			},
 		},
 		Spec: EmqxBrokerSpec{
+			ClusterDomain: "cluster.local",
 			Template: EmqxTemplate{
 				Spec: EmqxTemplateSpec{
 					EmqxContainer: EmqxContainer{
