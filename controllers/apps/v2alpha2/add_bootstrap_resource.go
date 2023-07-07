@@ -24,7 +24,6 @@ func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	for _, resource := range []client.Object{
 		generateNodeCookieSecret(instance),
 		generateBootstrapUserSecret(instance),
-		generateBootstrapConfigMap(instance),
 	} {
 		if err := ctrl.SetControllerReference(instance, resource, a.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
@@ -54,10 +53,9 @@ func generateNodeCookieSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.NodeCookieNamespacedName().Name,
-			Namespace:   instance.Namespace,
-			Labels:      instance.Labels,
-			Annotations: instance.Annotations,
+			Name:      instance.NodeCookieNamespacedName().Name,
+			Namespace: instance.Namespace,
+			Labels:    instance.Labels,
 		},
 		StringData: map[string]string{
 			"node_cookie": cookie,
@@ -80,31 +78,12 @@ func generateBootstrapUserSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.BootstrapUserNamespacedName().Name,
-			Namespace:   instance.Namespace,
-			Labels:      instance.Labels,
-			Annotations: instance.Annotations,
+			Name:      instance.BootstrapUserNamespacedName().Name,
+			Namespace: instance.Namespace,
+			Labels:    instance.Labels,
 		},
 		StringData: map[string]string{
 			"bootstrap_user": bootstrapUsers,
-		},
-	}
-}
-
-func generateBootstrapConfigMap(instance *appsv2alpha2.EMQX) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        instance.BootstrapConfigNamespacedName().Name,
-			Namespace:   instance.Namespace,
-			Labels:      instance.Labels,
-			Annotations: instance.Annotations,
-		},
-		Data: map[string]string{
-			"emqx.conf": instance.Spec.BootstrapConfig,
 		},
 	}
 }

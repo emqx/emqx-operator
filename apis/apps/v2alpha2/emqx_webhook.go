@@ -23,6 +23,7 @@ import (
 	emperror "emperror.dev/errors"
 
 	// "github.com/gurkankaymak/hocon"
+
 	hocon "github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -120,9 +121,10 @@ func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 
 	oldConfig, _ := hocon.ParseString(oldEMQX.Spec.BootstrapConfig)
 	if !reflect.DeepEqual(oldConfig, config) {
-		err := emperror.Errorf("bootstrap config cannot be updated, old bootstrap config: %s, new bootstrap config: %s", oldEMQX.Spec.BootstrapConfig, r.Spec.BootstrapConfig)
-		emqxlog.Error(err, "validate update failed")
-		return err
+		if r.Annotations == nil {
+			r.Annotations = make(map[string]string)
+		}
+		r.Annotations[NeedReloadConfigsAnnotationKey] = "true"
 	}
 
 	return nil
@@ -187,11 +189,12 @@ func (r *EMQX) defaultLabels() {
 }
 
 func (r *EMQX) defaultAnnotations() {
-	annotations := r.Annotations
+	annotations := r.DeepCopy().Annotations
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
 	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+	delete(annotations, NeedReloadConfigsAnnotationKey)
 
 	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
 	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)

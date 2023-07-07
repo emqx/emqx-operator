@@ -6,8 +6,8 @@ metadata:
     apps.emqx.io/instance: emqx
     apps.emqx.io/managed-by: emqx-operator
 spec:
-  image: "emqx/emqx-enterprise:5.1.0"
-  imagePullPolicy: IfNotPresent
+  image: "emqx:5.1"
+  imagePullPolicy: Always
   # imagePullSecrets:
   #   - name: fake-secrets
   # bootstrapAPIKeys:

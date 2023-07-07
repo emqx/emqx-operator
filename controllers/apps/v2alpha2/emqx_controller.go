@@ -114,6 +114,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addBootstrap{r},
 		&updateStatus{r},
 		&updatePodConditions{r},
+		&syncConfig{r},
 		&addSvc{r},
 		&addCore{r},
 		&addRepl{r},
@@ -171,17 +172,13 @@ func newRequester(k8sClient client.Client, instance *appsv2alpha2.EMQX) (innerRe
 	}
 
 	podList := &corev1.PodList{}
-	labels := instance.Spec.CoreTemplate.Labels
-	if instance.Status.CoreNodesStatus.CurrentRevision != "" {
-		labels = appsv2alpha2.CloneAndAddLabel(
-			labels,
-			appsv2alpha2.PodTemplateHashLabelKey,
-			instance.Status.CoreNodesStatus.CurrentRevision,
-		)
-	}
 	_ = k8sClient.List(context.Background(), podList,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(labels),
+		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
+			instance.Spec.CoreTemplate.Labels,
+			appsv2alpha2.PodTemplateHashLabelKey,
+			instance.Status.CoreNodesStatus.CurrentRevision,
+		)),
 	)
 	sort.Slice(podList.Items, func(i, j int) bool {
 		return podList.Items[i].CreationTimestamp.Before(&podList.Items[j].CreationTimestamp)

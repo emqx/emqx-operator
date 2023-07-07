@@ -179,7 +179,7 @@ func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 									},
 								},
 								{
-									Name:  "EMQX_NODE__DB_ROLE",
+									Name:  "EMQX_NODE__ROLE",
 									Value: "core",
 								},
 								{

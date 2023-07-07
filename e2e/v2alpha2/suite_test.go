@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -127,8 +128,10 @@ func genEMQX() *appsv2alpha2.EMQX {
 			Namespace: "e2e-test-v2alpha2" + "-" + rand.String(5),
 		},
 		Spec: appsv2alpha2.EMQXSpec{
-			Image:         "emqx/emqx-enterprise:5.1.0",
-			ClusterDomain: "cluster.local",
+			// Image: "emqx/emqx-enterprise:5.1.0",
+			Image:           "emqx:latest",
+			ImagePullPolicy: corev1.PullAlways,
+			ClusterDomain:   "cluster.local",
 			BootstrapConfig: `
 			gateway.lwm2m {
 			  auto_observe = true

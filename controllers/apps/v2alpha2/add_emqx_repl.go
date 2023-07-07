@@ -159,7 +159,7 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 							Ports:           instance.Spec.ReplicantTemplate.Spec.Ports,
 							Env: append([]corev1.EnvVar{
 								{
-									Name:  "EMQX_NODE__DB_ROLE",
+									Name:  "EMQX_NODE__ROLE",
 									Value: "replicant",
 								},
 								{

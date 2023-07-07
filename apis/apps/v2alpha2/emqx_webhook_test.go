@@ -102,10 +102,11 @@ func TestValidateUpdate(t *testing.T) {
 		assert.Error(t, newIns.ValidateUpdate(instance), "bootstrap APIKeys cannot be updated")
 	})
 
-	t.Run("should return error if bootstrap config is changed", func(t *testing.T) {
+	t.Run("should have annotation if bootstrap config is changed", func(t *testing.T) {
 		newIns := instance.DeepCopy()
 		newIns.Spec.BootstrapConfig = "foo = bar"
-		assert.Error(t, newIns.ValidateUpdate(instance), "bootstrap config cannot be updated")
+		assert.Nil(t, newIns.ValidateUpdate(instance))
+		assert.Equal(t, "true", newIns.Annotations[NeedReloadConfigsAnnotationKey])
 	})
 
 	t.Run("check bootstrap config is map", func(t *testing.T) {
