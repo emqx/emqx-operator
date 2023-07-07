@@ -184,7 +184,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 				},
 			},
 			{
-				Name:  "EMQX_NODE__DB_ROLE",
+				Name:  "EMQX_NODE__ROLE",
 				Value: "core",
 			},
 			{

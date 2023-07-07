@@ -15,6 +15,11 @@ const (
 )
 
 const (
+	// annotations
+	NeedReloadConfigsAnnotationKey string = "apps.emqx.io/need-reload-emqx-configs"
+)
+
+const (
 	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
 	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
 )

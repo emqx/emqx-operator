@@ -62,17 +62,3 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 	}
 	assert.ElementsMatch(t, usernames, []string{appsv2alpha2.DefaultBootstrapAPIKey, "test_key"})
 }
-
-func TestGenerateBootstrapConfigMap(t *testing.T) {
-	instance := &appsv2alpha2.EMQX{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx",
-			Namespace: "emqx",
-		},
-	}
-
-	got := generateBootstrapConfigMap(instance)
-	assert.Equal(t, "emqx-bootstrap-config", got.Name)
-	_, ok := got.Data["emqx.conf"]
-	assert.True(t, ok)
-}
