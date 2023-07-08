@@ -42,8 +42,8 @@ var _ = Describe("E2E Test", Ordered, func() {
 	Context("replicant template is nil", func() {
 		JustBeforeEach(func() {
 			instance.Spec.ReplicantTemplate = nil
-			instance.Default()
 			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
+			instance.Default()
 			Expect(instance.ValidateCreate()).Should(Succeed())
 		})
 
@@ -95,6 +95,43 @@ var _ = Describe("E2E Test", Ordered, func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			storage := instance.DeepCopy()
 			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(3)
+			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+
+			Eventually(func() *appsv2alpha2.EMQX {
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+				return instance
+			}).WithTimeout(timeout).WithPolling(interval).Should(
+				And(
+					WithTransform(func(instance *appsv2alpha2.EMQX) bool {
+						return instance.Status.IsConditionTrue(appsv2alpha2.Ready)
+					}, BeTrue()),
+					WithTransform(func(instance *appsv2alpha2.EMQX) appsv2alpha2.EMQXNodesStatus {
+						return instance.Status.CoreNodesStatus
+					}, And(
+						HaveField("Nodes", HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
+					)),
+					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
+						return instance.Status.ReplicantNodesStatus
+					}, BeNil()),
+				),
+			)
+
+			checkServices(instance)
+			checkPods(instance)
+			checkEndpoints(instance, appsv2alpha2.CloneAndAddLabel(
+				instance.Spec.CoreTemplate.Labels,
+				appsv2alpha2.PodTemplateHashLabelKey,
+				instance.Status.CoreNodesStatus.CurrentRevision,
+			))
+		})
+
+		It("scale down EMQX core nodes", func() {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 
 			Eventually(func() *appsv2alpha2.EMQX {
@@ -183,6 +220,46 @@ var _ = Describe("E2E Test", Ordered, func() {
 					return *sts.Spec.Replicas
 				}, Equal(int32(0))),
 			))
+		})
+
+		It("change EMQX listener port", func() {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+			instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "11883"`
+			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
+			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+
+			Eventually(func() []corev1.ServicePort {
+				svc := &corev1.Service{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKey{
+					Namespace: instance.Namespace,
+					Name:      instance.Spec.ListenersServiceTemplate.Name,
+				}, svc)
+				return svc.Spec.Ports
+			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
+				WithTransform(func(port corev1.ServicePort) int32 {
+					return port.Port
+				}, Equal(int32(11883))),
+			))
+
+			Eventually(func() []corev1.EndpointPort {
+				ep := &corev1.Endpoints{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKey{
+					Namespace: instance.Namespace,
+					Name:      instance.Spec.ListenersServiceTemplate.Name,
+				}, ep)
+				return ep.Subsets[0].Ports
+			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
+				WithTransform(func(port corev1.EndpointPort) int32 {
+					return port.Port
+				}, Equal(int32(11883))),
+			))
+
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage = instance.DeepCopy()
+			instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "1883"`
+			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
+			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})
 	})
 
@@ -359,6 +436,46 @@ var _ = Describe("E2E Test", Ordered, func() {
 				}, Equal(int32(0))),
 			))
 		})
+
+		It("change EMQX listener port", func() {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+			instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "11883"`
+			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
+			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+
+			Eventually(func() []corev1.ServicePort {
+				svc := &corev1.Service{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKey{
+					Namespace: instance.Namespace,
+					Name:      instance.Spec.ListenersServiceTemplate.Name,
+				}, svc)
+				return svc.Spec.Ports
+			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
+				WithTransform(func(port corev1.ServicePort) int32 {
+					return port.Port
+				}, Equal(int32(11883))),
+			))
+
+			Eventually(func() []corev1.EndpointPort {
+				ep := &corev1.Endpoints{}
+				_ = k8sClient.Get(context.TODO(), client.ObjectKey{
+					Namespace: instance.Namespace,
+					Name:      instance.Spec.ListenersServiceTemplate.Name,
+				}, ep)
+				return ep.Subsets[0].Ports
+			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
+				WithTransform(func(port corev1.EndpointPort) int32 {
+					return port.Port
+				}, Equal(int32(11883))),
+			))
+
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage = instance.DeepCopy()
+			instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "1883"`
+			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
+			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+		})
 	})
 })
 
@@ -393,7 +510,6 @@ func checkServices(instance *appsv2alpha2.EMQX) {
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt(8084),
 			},
-
 			{
 				Name:       "lwm2m-udp-default",
 				Port:       5783,

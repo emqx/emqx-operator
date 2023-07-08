@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
 
@@ -358,76 +357,6 @@ func TestDefaultContainerPort(t *testing.T) {
 		port := instance.Spec.CoreTemplate.Spec.Ports[0]
 		assert.Equal(t, port.Name, "user-defined-dashboard-http")
 		assert.Equal(t, port.ContainerPort, int32(18083))
-	})
-}
-
-func TestDefaultProbeForCoreNode(t *testing.T) {
-	t.Run("failed to get dashboard listeners", func(t *testing.T) {
-		instance := &EMQX{}
-		instance.defaultProbe()
-
-		expectReadinessProbe := &corev1.Probe{
-			InitialDelaySeconds: 10,
-			PeriodSeconds:       5,
-			FailureThreshold:    12,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(18083),
-				},
-			},
-		}
-
-		expectLivenessProbe := &corev1.Probe{
-			InitialDelaySeconds: 60,
-			PeriodSeconds:       30,
-			FailureThreshold:    3,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(18083),
-				},
-			},
-		}
-
-		assert.Equal(t, expectReadinessProbe, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
-		assert.Equal(t, expectLivenessProbe, instance.Spec.CoreTemplate.Spec.LivenessProbe)
-	})
-
-	t.Run("set dashboard listeners", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				BootstrapConfig: `dashboard.listeners.http.bind = 18084`,
-			},
-		}
-		instance.defaultProbe()
-
-		expectReadinessProbe := &corev1.Probe{
-			InitialDelaySeconds: 10,
-			PeriodSeconds:       5,
-			FailureThreshold:    12,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(18084),
-				},
-			},
-		}
-
-		expectLivenessProbe := &corev1.Probe{
-			InitialDelaySeconds: 60,
-			PeriodSeconds:       30,
-			FailureThreshold:    3,
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/status",
-					Port: intstr.FromInt(18084),
-				},
-			},
-		}
-
-		assert.Equal(t, expectReadinessProbe, instance.Spec.CoreTemplate.Spec.ReadinessProbe)
-		assert.Equal(t, expectLivenessProbe, instance.Spec.CoreTemplate.Spec.LivenessProbe)
 	})
 }
 

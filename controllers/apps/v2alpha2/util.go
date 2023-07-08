@@ -135,7 +135,7 @@ func handlerEventList(list *corev1.EventList) []*corev1.Event {
 }
 
 func checkInitialDelaySecondsReady(instance *appsv2alpha2.EMQX) bool {
-	condition := instance.Status.GetLastTrueCondition()
+	_, condition := instance.Status.GetCondition(appsv2alpha2.Available)
 	if condition == nil || condition.Type != appsv2alpha2.Available {
 		return false
 	}

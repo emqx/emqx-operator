@@ -107,6 +107,10 @@ func (u *updateNodes) canBeScaleDownSts(ctx context.Context, instance *appsv2alp
 		return false, emperror.Wrap(err, "failed to get node info by API")
 	}
 
+	if shouldDeletePodInfo.NodeStatus == "stopped" {
+		return true, nil
+	}
+
 	if shouldDeletePodInfo.Edition == "Enterprise" {
 		if shouldDeletePodInfo.Session > 0 && len(instance.Status.NodeEvacuationsStatus) == 0 {
 			if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
@@ -139,6 +143,10 @@ func (u *updateNodes) canBeScaleDownRs(ctx context.Context, instance *appsv2alph
 		return nil, emperror.Wrap(err, "failed to get node info by API")
 	}
 
+	if shouldDeletePodInfo.NodeStatus == "stopped" {
+		return shouldDeletePod, nil
+	}
+
 	if shouldDeletePodInfo.Edition == "Enterprise" {
 		if shouldDeletePodInfo.Session > 0 {
 			if len(instance.Status.NodeEvacuationsStatus) == 0 {
@@ -163,6 +171,12 @@ func getEMQXNodeInfoByAPI(r innerReq.RequesterInterface, nodeName string) (*apps
 	resp, body, err := r.Request("GET", path, nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
+	}
+	if resp.StatusCode == 404 {
+		return &appsv2alpha2.EMQXNode{
+			Node:       nodeName,
+			NodeStatus: "stopped",
+		}, nil
 	}
 	if resp.StatusCode != 200 {
 		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", path, resp.Status, body)

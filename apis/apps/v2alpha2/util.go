@@ -17,8 +17,8 @@ limitations under the License.
 package v2alpha2
 
 import (
+	"fmt"
 	"net"
-	"strconv"
 	"strings"
 
 	emperror "emperror.dev/errors"
@@ -127,28 +127,114 @@ func AddLabel(labels map[string]string, labelKey, labelValue string) map[string]
 	return labels
 }
 
-func GetDashboardServicePort(instance *EMQX) (*corev1.ServicePort, error) {
-	hoconConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
+func GetDashboardServicePort(hoconString string) (*corev1.ServicePort, error) {
+	hoconConfig, err := hocon.ParseString(hoconString)
 	if err != nil {
-		return nil, emperror.Wrapf(err, "failed to parse %s", instance.Spec.BootstrapConfig)
+		return nil, emperror.Wrapf(err, "failed to parse %s", hoconString)
 	}
 	dashboardPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.http.bind"), `"`)
 	if dashboardPort == "" {
 		return nil, emperror.Errorf("failed to get dashboard.listeners.http.bind in %s", hoconConfig.String())
 	}
-
+	if !strings.Contains(dashboardPort, ":") {
+		// example: ":18083"
+		dashboardPort = fmt.Sprintf(":%s", dashboardPort)
+	}
 	_, strPort, err := net.SplitHostPort(dashboardPort)
 	if err != nil {
-		strPort = dashboardPort
+		return nil, emperror.Wrapf(err, "failed to split %s", dashboardPort)
 	}
-	port, _ := strconv.Atoi(strPort)
+	intStrValue := intstr.Parse(strPort)
 
 	return &corev1.ServicePort{
 		Name:       "dashboard-listeners-http-bind",
 		Protocol:   corev1.ProtocolTCP,
-		Port:       int32(port),
-		TargetPort: intstr.FromInt(port),
+		Port:       int32(intStrValue.IntValue()),
+		TargetPort: intStrValue,
 	}, nil
+}
+
+func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) {
+	hoconConfig, err := hocon.ParseString(hoconString)
+	if err != nil {
+		return nil, emperror.Wrapf(err, "failed to parse %s", hoconString)
+	}
+	svcPorts := []corev1.ServicePort{}
+
+	// Get listeners.tcp.default.bind
+	for t, listener := range hoconConfig.GetObject("listeners") {
+		listenerConfig, _ := hocon.ParseString(listener.String())
+
+		configs := listenerConfig.GetRoot()
+		if configs.Type() == hocon.ObjectType {
+			for name, config := range configs.(hocon.Object) {
+				c, _ := hocon.ParseString(config.String())
+				// Compatible with "enable" and "enabled"
+				// the default value of them both is true
+				if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
+					continue
+				}
+				bind := strings.Trim(c.GetString("bind"), `"`)
+				if !strings.Contains(bind, ":") {
+					// example: ":1883"
+					bind = fmt.Sprintf(":%s", bind)
+				}
+				_, strPort, _ := net.SplitHostPort(bind)
+				intStrValue := intstr.Parse(strPort)
+
+				protocol := corev1.ProtocolTCP
+				if t == "quic" {
+					protocol = corev1.ProtocolUDP
+				}
+
+				svcPorts = append(svcPorts, corev1.ServicePort{
+					Name:       fmt.Sprintf("%s-%s", t, name),
+					Protocol:   protocol,
+					Port:       int32(intStrValue.IntValue()),
+					TargetPort: intStrValue,
+				})
+			}
+		}
+	}
+
+	// Get gateway.lwm2m.listeners.udp.default.bind
+	for proto, gateway := range hoconConfig.GetObject("gateway") {
+		c, _ := hocon.ParseString(gateway.String())
+		if c.GetString("enable") == "" || c.GetString("enable") == "true" {
+			for t, listener := range c.GetObject("listeners") {
+				c, _ := hocon.ParseString(listener.String())
+				for name, config := range c.GetRoot().(hocon.Object) {
+					c, _ := hocon.ParseString(config.String())
+					// Compatible with "enable" and "enabled"
+					// the default value of them both is true
+					if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
+						continue
+					}
+					bind := strings.Trim(c.GetString("bind"), `"`)
+					if !strings.Contains(bind, ":") {
+						// example: ":1883"
+						bind = fmt.Sprintf(":%s", bind)
+					}
+					_, strPort, _ := net.SplitHostPort(bind)
+					intStrValue := intstr.Parse(strPort)
+
+					protocol := corev1.ProtocolTCP
+					if t == "udp" || t == "dtls" {
+						protocol = corev1.ProtocolUDP
+					}
+
+					svcPorts = append(svcPorts, corev1.ServicePort{
+						Name:       fmt.Sprintf("%s-%s-%s", proto, t, name),
+						Protocol:   protocol,
+						Port:       int32(intStrValue.IntValue()),
+						TargetPort: intStrValue,
+					})
+				}
+			}
+		}
+	}
+
+	return svcPorts, nil
 }
 
 func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
