@@ -55,8 +55,8 @@ func (r *EMQX) Default() {
 	r.defaultAnnotations()
 	r.defaultBootstrapConfig()
 	r.defaultDashboardServiceTemplate()
+	r.defaultListenersServiceTemplate()
 	r.defaultContainerPort()
-	r.defaultProbe()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -242,14 +242,14 @@ func (r *EMQX) defaultBootstrapConfig() {
 
 func (r *EMQX) defaultDashboardServiceTemplate() {
 	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
-	dashboardPort, err := GetDashboardServicePort(r)
+	dashboardPort, err := GetDashboardServicePort(r.Spec.BootstrapConfig)
 	if err != nil {
 		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
 		dashboardPort = &corev1.ServicePort{
 			Name:       "dashboard-listeners-http-bind",
 			Protocol:   corev1.ProtocolTCP,
 			Port:       18083,
-			TargetPort: intstr.FromInt(18083),
+			TargetPort: intstr.Parse("18083"),
 		}
 	}
 
@@ -261,6 +261,19 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 	)
 }
 
+func (r *EMQX) defaultListenersServiceTemplate() {
+	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
+	listenersPort, err := GetListenersServicePorts(r.Spec.BootstrapConfig)
+	if err != nil {
+		emqxlog.Info("failed to get listeners service port in bootstrap config", "error", err)
+	}
+
+	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
+		r.Spec.DashboardServiceTemplate.Spec.Ports,
+		listenersPort,
+	)
+}
+
 func (r *EMQX) defaultContainerPort() {
 	var containerPort = corev1.ContainerPort{
 		Name:          "dashboard-http",
@@ -268,7 +281,7 @@ func (r *EMQX) defaultContainerPort() {
 		ContainerPort: 18083,
 	}
 
-	svcPort, err := GetDashboardServicePort(r)
+	svcPort, err := GetDashboardServicePort(r.Spec.BootstrapConfig)
 	if err != nil {
 		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
 	} else {
@@ -288,55 +301,5 @@ func (r *EMQX) defaultContainerPort() {
 				containerPort,
 			},
 		)
-	}
-}
-
-func (r *EMQX) defaultProbe() {
-	dashboardPort, err := GetDashboardServicePort(r)
-	if err != nil {
-		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
-		dashboardPort = &corev1.ServicePort{
-			TargetPort: intstr.FromInt(18083),
-		}
-	}
-
-	defaultReadinessProbe := &corev1.Probe{
-		InitialDelaySeconds: 10,
-		PeriodSeconds:       5,
-		FailureThreshold:    12,
-		ProbeHandler: corev1.ProbeHandler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Path: "/status",
-				Port: dashboardPort.TargetPort,
-			},
-		},
-	}
-
-	defaultLivenessProbe := &corev1.Probe{
-		InitialDelaySeconds: 60,
-		PeriodSeconds:       30,
-		FailureThreshold:    3,
-		ProbeHandler: corev1.ProbeHandler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Path: "/status",
-				Port: dashboardPort.TargetPort,
-			},
-		},
-	}
-
-	if r.Spec.CoreTemplate.Spec.ReadinessProbe == nil {
-		r.Spec.CoreTemplate.Spec.ReadinessProbe = defaultReadinessProbe
-	}
-	if r.Spec.CoreTemplate.Spec.LivenessProbe == nil {
-		r.Spec.CoreTemplate.Spec.LivenessProbe = defaultLivenessProbe
-	}
-
-	if r.Spec.ReplicantTemplate != nil {
-		if r.Spec.ReplicantTemplate.Spec.ReadinessProbe == nil {
-			r.Spec.ReplicantTemplate.Spec.ReadinessProbe = defaultReadinessProbe
-		}
-		if r.Spec.ReplicantTemplate.Spec.LivenessProbe == nil {
-			r.Spec.ReplicantTemplate.Spec.LivenessProbe = defaultLivenessProbe
-		}
 	}
 }

@@ -6524,6 +6524,8 @@ spec:
                         type: string
                     type: object
                   spec:
+                    default:
+                      replicas: 2
                     properties:
                       affinity:
                         properties:
@@ -9075,6 +9077,13 @@ spec:
                             type: object
                         type: object
                       livenessProbe:
+                        default:
+                          failureThreshold: 3
+                          httpGet:
+                            path: /status
+                            port: dashboard-http
+                          initialDelaySeconds: 60
+                          periodSeconds: 30
                         properties:
                           exec:
                             properties:
@@ -9250,6 +9259,13 @@ spec:
                           type: object
                         type: array
                       readinessProbe:
+                        default:
+                          failureThreshold: 12
+                          httpGet:
+                            path: /status
+                            port: dashboard-http
+                          initialDelaySeconds: 10
+                          periodSeconds: 5
                         properties:
                           exec:
                             properties:
@@ -12489,6 +12505,13 @@ spec:
                             type: object
                         type: object
                       livenessProbe:
+                        default:
+                          failureThreshold: 3
+                          httpGet:
+                            path: /status
+                            port: dashboard-http
+                          initialDelaySeconds: 60
+                          periodSeconds: 30
                         properties:
                           exec:
                             properties:
@@ -12664,6 +12687,13 @@ spec:
                           type: object
                         type: array
                       readinessProbe:
+                        default:
+                          failureThreshold: 12
+                          httpGet:
+                            path: /status
+                            port: dashboard-http
+                          initialDelaySeconds: 10
+                          periodSeconds: 5
                         properties:
                           exec:
                             properties:
@@ -12865,8 +12895,8 @@ spec:
                   evacuationStrategy:
                     connEvictRate: 1000
                     sessEvictRate: 1000
-                    waitTakeover: 30
-                  initialDelaySeconds: 30
+                    waitTakeover: 10
+                  initialDelaySeconds: 10
                   type: Recreate
                 properties:
                   evacuationStrategy:

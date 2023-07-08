@@ -131,11 +131,13 @@ type EMQXReplicantTemplateSpec struct {
 	// Container will be restarted if the probe fails.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	//+kubebuilder:default={initialDelaySeconds:60,periodSeconds:30,failureThreshold:3,httpGet: {path:/status, port:"dashboard-http"}}
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 	// Periodic probe of container service readiness.
 	// Container will be removed from service endpoints if the probe fails.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	//+kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,failureThreshold:12,httpGet: {path:/status, port:"dashboard-http"}}
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	// StartupProbe indicates that the Pod has successfully initialized.
 	// If specified, no other probes are executed until this completes successfully.
@@ -151,6 +153,7 @@ type EMQXReplicantTemplateSpec struct {
 }
 
 type EMQXCoreTemplateSpec struct {
+	//+kubebuilder:default={replicas:2}
 	EMQXReplicantTemplateSpec `json:",inline"`
 
 	// VolumeClaimTemplates is a list of claims that pods are allowed to reference.
@@ -223,7 +226,7 @@ type EMQXSpec struct {
 	ClusterDomain string `json:"clusterDomain,omitempty"`
 
 	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
-	//+kubebuilder:default={type:Recreate,initialDelaySeconds:30,evacuationStrategy:{waitTakeover:30,connEvictRate:1000,sessEvictRate:1000}}
+	//+kubebuilder:default={type:Recreate,initialDelaySeconds:10,evacuationStrategy:{waitTakeover:10,connEvictRate:1000,sessEvictRate:1000}}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 	// EMQX bootstrap user
 	// Cannot be updated.

@@ -77,7 +77,7 @@ func (u *updatePodConditions) checkInCluster(instance *appsv2alpha2.EMQX, r inne
 
 func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
 	var port string
-	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance)
+	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance.Spec.BootstrapConfig)
 	if err != nil || dashboardPort == nil {
 		port = "18083"
 	}

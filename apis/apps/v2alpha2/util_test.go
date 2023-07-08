@@ -29,13 +29,13 @@ func TestGetDashboardServicePort(t *testing.T) {
 		Name:       "dashboard-listeners-http-bind",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       int32(18083),
-		TargetPort: intstr.FromInt(18083),
+		TargetPort: intstr.Parse("18083"),
 	}
 
 	t.Run("a single port", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = 18083`
-		got, err := GetDashboardServicePort(instance)
+		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 		assert.Equal(t, expect, got)
 	})
@@ -43,7 +43,7 @@ func TestGetDashboardServicePort(t *testing.T) {
 	t.Run("ipv4 address", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = "0.0.0.0:18083"`
-		got, err := GetDashboardServicePort(instance)
+		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 		assert.Equal(t, expect, got)
 	})
@@ -51,7 +51,7 @@ func TestGetDashboardServicePort(t *testing.T) {
 	t.Run("ipv6 address", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = "[::]:18083"`
-		got, err := GetDashboardServicePort(instance)
+		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
 		assert.Nil(t, err)
 		assert.Equal(t, expect, got)
 	})
@@ -59,14 +59,14 @@ func TestGetDashboardServicePort(t *testing.T) {
 	t.Run("wrong bootstrap config", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.BootstrapConfig = `hello world`
-		got, err := GetDashboardServicePort(instance)
+		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
 		assert.ErrorContains(t, err, "failed to parse")
 		assert.Nil(t, got)
 	})
 
 	t.Run("empty bootstrap config", func(t *testing.T) {
 		instance := &EMQX{}
-		got, err := GetDashboardServicePort(instance)
+		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
 		assert.ErrorContains(t, err, "failed to get dashboard.listeners.http.bind")
 		assert.Nil(t, got)
 	})
@@ -74,9 +74,101 @@ func TestGetDashboardServicePort(t *testing.T) {
 	t.Run("empty dashboard listeners config", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.BootstrapConfig = `foo = bar`
-		got, err := GetDashboardServicePort(instance)
+		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
 		assert.ErrorContains(t, err, "failed to get dashboard.listeners.http.bind")
 		assert.Nil(t, got)
+	})
+}
+
+func TestGetListenersServicePorts(t *testing.T) {
+	t.Run("check listeners", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.BootstrapConfig = `
+			listeners.tcp.default.bind = "0.0.0.0:1883"
+			listeners.ssl.default.bind = "0.0.0.0:8883"
+			listeners.ws.default.bind = "0.0.0.0:8083"
+			listeners.wss.default.bind = "0.0.0.0:8084"
+			listeners.quic.default.bind = "0.0.0.0:14567"
+		`
+		got, err := GetListenersServicePorts(instance.Spec.BootstrapConfig)
+		assert.Nil(t, err)
+		assert.ElementsMatch(t, []corev1.ServicePort{
+			{
+				Name:       "tcp-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       1883,
+				TargetPort: intstr.Parse("1883"),
+			},
+			{
+				Name:       "ssl-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8883,
+				TargetPort: intstr.Parse("8883"),
+			},
+			{
+				Name:       "ws-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8083,
+				TargetPort: intstr.Parse("8083"),
+			},
+			{
+				Name:       "wss-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8084,
+				TargetPort: intstr.Parse("8084"),
+			},
+			{
+				Name:       "quic-default",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       14567,
+				TargetPort: intstr.Parse("14567"),
+			},
+		}, got)
+	})
+
+	t.Run("check gateway listeners", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.BootstrapConfig = `
+		gateway.coap.listeners.udp.default.bind = "5683"
+		gateway.exporto.listeners.tcp.default.bind = "7993"
+		gateway.lwm2w.listeners.udp.default.bind = "5783"
+		gateway.mqttsn.listeners.udp.default.bind = "1884"
+		gateway.stomp.listeners.tcp.default.bind = "61613"
+		`
+		got, err := GetListenersServicePorts(instance.Spec.BootstrapConfig)
+		assert.Nil(t, err)
+		assert.ElementsMatch(t, []corev1.ServicePort{
+			{
+				Name:       "coap-udp-default",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       5683,
+				TargetPort: intstr.Parse("5683"),
+			},
+			{
+				Name:       "exporto-tcp-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       7993,
+				TargetPort: intstr.Parse("7993"),
+			},
+			{
+				Name:       "lwm2w-udp-default",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       5783,
+				TargetPort: intstr.Parse("5783"),
+			},
+			{
+				Name:       "mqttsn-udp-default",
+				Protocol:   corev1.ProtocolUDP,
+				Port:       1884,
+				TargetPort: intstr.Parse("1884"),
+			},
+			{
+				Name:       "stomp-tcp-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       61613,
+				TargetPort: intstr.Parse("61613"),
+			},
+		}, got)
 	})
 }
 

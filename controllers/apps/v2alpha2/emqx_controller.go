@@ -118,7 +118,6 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addSvc{r},
 		&addCore{r},
 		&addRepl{r},
-		&addListener{r},
 		&updateStatus{r},
 		&updateNodes{r},
 		&updatePodConditions{r},
@@ -162,7 +161,7 @@ func newRequester(k8sClient client.Client, instance *appsv2alpha2.EMQX) (innerRe
 	}
 
 	var port string
-	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance)
+	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance.Spec.BootstrapConfig)
 	if err != nil || dashboardPort == nil {
 		port = "18083"
 	}
