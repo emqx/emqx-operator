@@ -2,6 +2,7 @@ package v2alpha2
 
 import (
 	"context"
+	"fmt"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -159,8 +160,16 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 							Ports:           instance.Spec.ReplicantTemplate.Spec.Ports,
 							Env: append([]corev1.EnvVar{
 								{
-									Name:  "EMQX_NODE__ROLE",
-									Value: "replicant",
+									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
+									Value: "dns",
+								},
+								{
+									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
+									Value: "srv",
+								},
+								{
+									Name:  "EMQX_CLUSTER__DNS__NAME",
+									Value: fmt.Sprintf("%s.%s.svc.%s", instance.HeadlessServiceNamespacedName().Name, instance.Namespace, instance.Spec.ClusterDomain),
 								},
 								{
 									Name: "EMQX_HOST",
@@ -169,6 +178,14 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 											FieldPath: "status.podIP",
 										},
 									},
+								},
+								{
+									Name:  "EMQX_NODE__DATA_DIR",
+									Value: "data",
+								},
+								{
+									Name:  "EMQX_NODE__ROLE",
+									Value: "replicant",
 								},
 								{
 									Name: "EMQX_NODE__COOKIE",

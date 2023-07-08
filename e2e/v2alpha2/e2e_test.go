@@ -225,7 +225,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 		It("change EMQX listener port", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			storage := instance.DeepCopy()
-			instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "11883"`
+			instance.Spec.Config.Data = `listeners.tcp.default.bind = "11883"`
 			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 
@@ -257,7 +257,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			storage = instance.DeepCopy()
-			instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "1883"`
+			instance.Spec.Config.Data = `listeners.tcp.default.bind = "1883"`
 			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})
@@ -440,7 +440,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 		It("change EMQX listener port", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			storage := instance.DeepCopy()
-			instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "11883"`
+			instance.Spec.Config.Data = `listeners.tcp.default.bind = "11883"`
 			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 
@@ -472,7 +472,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			storage = instance.DeepCopy()
-			instance.Spec.BootstrapConfig = `listeners.tcp.default.bind = "1883"`
+			instance.Spec.Config.Data = `listeners.tcp.default.bind = "1883"`
 			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})

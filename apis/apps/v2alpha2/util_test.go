@@ -34,47 +34,47 @@ func TestGetDashboardServicePort(t *testing.T) {
 
 	t.Run("a single port", func(t *testing.T) {
 		instance := &EMQX{}
-		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = 18083`
-		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
+		instance.Spec.Config.Data = `dashboard.listeners.http.bind = 18083`
+		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
 		assert.Nil(t, err)
 		assert.Equal(t, expect, got)
 	})
 
 	t.Run("ipv4 address", func(t *testing.T) {
 		instance := &EMQX{}
-		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = "0.0.0.0:18083"`
-		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
+		instance.Spec.Config.Data = `dashboard.listeners.http.bind = "0.0.0.0:18083"`
+		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
 		assert.Nil(t, err)
 		assert.Equal(t, expect, got)
 	})
 
 	t.Run("ipv6 address", func(t *testing.T) {
 		instance := &EMQX{}
-		instance.Spec.BootstrapConfig = `dashboard.listeners.http.bind = "[::]:18083"`
-		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
+		instance.Spec.Config.Data = `dashboard.listeners.http.bind = "[::]:18083"`
+		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
 		assert.Nil(t, err)
 		assert.Equal(t, expect, got)
 	})
 
-	t.Run("wrong bootstrap config", func(t *testing.T) {
+	t.Run("wrong config", func(t *testing.T) {
 		instance := &EMQX{}
-		instance.Spec.BootstrapConfig = `hello world`
-		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
+		instance.Spec.Config.Data = `hello world`
+		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
 		assert.ErrorContains(t, err, "failed to parse")
 		assert.Nil(t, got)
 	})
 
-	t.Run("empty bootstrap config", func(t *testing.T) {
+	t.Run("empty config", func(t *testing.T) {
 		instance := &EMQX{}
-		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
+		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
 		assert.ErrorContains(t, err, "failed to get dashboard.listeners.http.bind")
 		assert.Nil(t, got)
 	})
 
 	t.Run("empty dashboard listeners config", func(t *testing.T) {
 		instance := &EMQX{}
-		instance.Spec.BootstrapConfig = `foo = bar`
-		got, err := GetDashboardServicePort(instance.Spec.BootstrapConfig)
+		instance.Spec.Config.Data = `foo = bar`
+		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
 		assert.ErrorContains(t, err, "failed to get dashboard.listeners.http.bind")
 		assert.Nil(t, got)
 	})
@@ -83,14 +83,14 @@ func TestGetDashboardServicePort(t *testing.T) {
 func TestGetListenersServicePorts(t *testing.T) {
 	t.Run("check listeners", func(t *testing.T) {
 		instance := &EMQX{}
-		instance.Spec.BootstrapConfig = `
+		instance.Spec.Config.Data = `
 			listeners.tcp.default.bind = "0.0.0.0:1883"
 			listeners.ssl.default.bind = "0.0.0.0:8883"
 			listeners.ws.default.bind = "0.0.0.0:8083"
 			listeners.wss.default.bind = "0.0.0.0:8084"
 			listeners.quic.default.bind = "0.0.0.0:14567"
 		`
-		got, err := GetListenersServicePorts(instance.Spec.BootstrapConfig)
+		got, err := GetListenersServicePorts(instance.Spec.Config.Data)
 		assert.Nil(t, err)
 		assert.ElementsMatch(t, []corev1.ServicePort{
 			{
@@ -128,14 +128,14 @@ func TestGetListenersServicePorts(t *testing.T) {
 
 	t.Run("check gateway listeners", func(t *testing.T) {
 		instance := &EMQX{}
-		instance.Spec.BootstrapConfig = `
+		instance.Spec.Config.Data = `
 		gateway.coap.listeners.udp.default.bind = "5683"
 		gateway.exporto.listeners.tcp.default.bind = "7993"
 		gateway.lwm2w.listeners.udp.default.bind = "5783"
 		gateway.mqttsn.listeners.udp.default.bind = "1884"
 		gateway.stomp.listeners.tcp.default.bind = "61613"
 		`
-		got, err := GetListenersServicePorts(instance.Spec.BootstrapConfig)
+		got, err := GetListenersServicePorts(instance.Spec.Config.Data)
 		assert.Nil(t, err)
 		assert.ElementsMatch(t, []corev1.ServicePort{
 			{

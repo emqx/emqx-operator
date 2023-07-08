@@ -41,7 +41,7 @@ func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 func generateNodeCookieSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
 	var cookie string
 
-	config, _ := hocon.ParseString(instance.Spec.BootstrapConfig)
+	config, _ := hocon.ParseString(instance.Spec.Config.Data)
 	cookie = config.GetString("node.cookie")
 	if cookie == "" {
 		cookie, _ = password.Generate(64, 10, 0, true, true)
