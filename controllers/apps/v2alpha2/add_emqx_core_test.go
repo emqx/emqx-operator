@@ -188,8 +188,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 				Value: "core",
 			},
 			{
+				Name:  "CLUSTER_DOMAIN",
+				Value: emqx.Spec.ClusterDomain,
+			},
+			{
 				Name:  "EMQX_HOST",
-				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.cluster.local",
+				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.$(CLUSTER_DOMAIN)",
 			},
 			{
 				Name: "EMQX_NODE__COOKIE",

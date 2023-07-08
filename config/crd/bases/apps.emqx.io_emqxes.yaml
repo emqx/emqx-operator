@@ -6499,6 +6499,9 @@ spec:
                 type: array
               bootstrapConfig:
                 type: string
+              clusterDomain:
+                default: cluster.local
+                type: string
               coreTemplate:
                 properties:
                   metadata:

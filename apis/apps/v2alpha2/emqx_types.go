@@ -219,6 +219,9 @@ type EMQXSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
+	//+kubebuilder:default:="cluster.local"
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
 	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
 	//+kubebuilder:default={type:Recreate,initialDelaySeconds:30,evacuationStrategy:{waitTakeover:30,connEvictRate:1000,sessEvictRate:1000}}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
