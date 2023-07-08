@@ -21,13 +21,116 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ServiceTemplate struct {
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=emqx
+// +kubebuilder:storageversion
+// +kubebuilder:subresource:status
+// +kubebuilder:subresource:scale:specpath=.spec.replicantTemplate.spec.replicas,statuspath=.status.replicantNodeReplicas
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// EMQX is the Schema for the emqxes API
+type EMQX struct {
+	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Spec defines the behavior of a service.
-	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-	Spec corev1.ServiceSpec `json:"spec,omitempty"`
+	// Spec defines the desired identities of EMQX nodes in this set.
+	Spec EMQXSpec `json:"spec,omitempty"`
+	// Status is the current status of EMQX nodes. This data
+	// may be out of date by some window of time.
+	Status EMQXStatus `json:"status,omitempty"`
+}
+
+// EMQXSpec defines the desired state of EMQX
+type EMQXSpec struct {
+	// EMQX image name.
+	// More info: https://kubernetes.io/docs/concepts/containers/images
+	Image string `json:"image"`
+	// Image pull policy.
+	// One of Always, Never, IfNotPresent.
+	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.
+	// If specified, these secrets will be passed to individual puller implementations for them to use.
+	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
+	// EMQX bootstrap user
+	// Cannot be updated.
+	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
+
+	// EMQX config
+	Config Config `json:"config,omitempty"`
+
+	//+kubebuilder:default:="cluster.local"
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
+	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
+	//+kubebuilder:default={type:Recreate,initialDelaySeconds:10,evacuationStrategy:{waitTakeover:10,connEvictRate:1000,sessEvictRate:1000}}
+	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
+
+	DashboardServiceTemplate corev1.Service `json:"dashboardServiceTemplate,omitempty"`
+	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
+	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
+	// Else this service will selector EMQX core node
+	ListenersServiceTemplate corev1.Service `json:"listenersServiceTemplate,omitempty"`
+
+	// CoreTemplate is the object that describes the EMQX core node that will be created
+	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
+	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
+	ReplicantTemplate *EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
+	// DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
+	// This service always selector the EMQX core node
+}
+
+type BootstrapAPIKey struct {
+	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d_]+$`
+	Key string `json:"key"`
+	// +kubebuilder:validation:MinLength:=3
+	// +kubebuilder:validation:MaxLength:=32
+	Secret string `json:"secret"`
+}
+
+type Config struct {
+	//+kubebuilder:validation:Enum=merge;replace
+	//+kubebuilder:default=merge
+	Mode string `json:"mode,omitempty"`
+	// EMQX config, HOCON format, like etc/emqx.conf file
+	Data string `json:"data,omitempty"`
+}
+
+type UpdateStrategy struct {
+	//+kubebuilder:validation:Enum=Recreate
+	//+kubebuilder:default=Recreate
+	Type string `json:"type,omitempty"`
+	// Number of seconds before evacuation connection start.
+	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
+	// Number of seconds before evacuation connection timeout.
+	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
+}
+
+type EvacuationStrategy struct {
+	//+kubebuilder:validation:Minimum=0
+	WaitTakeover int32 `json:"waitTakeover,omitempty"`
+	// Just work in EMQX Enterprise.
+	//+kubebuilder:validation:Minimum=1
+	//+kubebuilder:default=1000
+	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
+	// Just work in EMQX Enterprise.
+	//+kubebuilder:validation:Minimum=1
+	//+kubebuilder:default=1000
+	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
+}
+
+type EMQXCoreTemplate struct {
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// Specification of the desired behavior of the EMQX core node.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	Spec EMQXCoreTemplateSpec `json:"spec,omitempty"`
 }
 
 type EMQXReplicantTemplate struct {
@@ -39,14 +142,28 @@ type EMQXReplicantTemplate struct {
 	Spec EMQXReplicantTemplateSpec `json:"spec,omitempty"`
 }
 
+type EMQXCoreTemplateSpec struct {
+	//+kubebuilder:default={replicas:2}
+	EMQXReplicantTemplateSpec `json:",inline"`
+
+	// VolumeClaimTemplates is a list of claims that pods are allowed to reference.
+	// The StatefulSet controller is responsible for mapping network identities to
+	// claims in a way that maintains the identity of a pod. Every claim in
+	// this list must have at least one matching (by name) volumeMount in one
+	// container in the template. A claim in this list takes precedence over
+	// any volumes in the template, with the same name.
+	// More than EMQXReplicantTemplateSpec
+	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
+}
+
 type EMQXReplicantTemplateSpec struct {
 	// NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node.
-	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+	// More info: https://kubernetes.io/docs/concepts/config/assign-pod-node/
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
 	NodeName string `json:"nodeName,omitempty"`
 	// Affinity for pod assignment
-	// ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+	// ref: https://kubernetes.io/docs/concepts/config/assign-pod-node/#affinity-and-anti-affinity
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// If specified, the pod's tolerations.
 	// The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
@@ -96,7 +213,7 @@ type EMQXReplicantTemplateSpec struct {
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty" protobuf:"bytes,19,rep,name=envFrom"`
 	// Compute Resources required by this container.
 	// Cannot be updated.
-	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// More info: https://kubernetes.io/docs/concepts/config/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings.
 	//+kubebuilder:default={runAsUser:1000,runAsGroup:1000,fsGroup:1000,fsGroupChangePolicy:Always,supplementalGroups: {1000}}
@@ -152,126 +269,16 @@ type EMQXReplicantTemplateSpec struct {
 	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty" protobuf:"bytes,12,opt,name=lifecycle"`
 }
 
-type EMQXCoreTemplateSpec struct {
-	//+kubebuilder:default={replicas:2}
-	EMQXReplicantTemplateSpec `json:",inline"`
-
-	// VolumeClaimTemplates is a list of claims that pods are allowed to reference.
-	// The StatefulSet controller is responsible for mapping network identities to
-	// claims in a way that maintains the identity of a pod. Every claim in
-	// this list must have at least one matching (by name) volumeMount in one
-	// container in the template. A claim in this list takes precedence over
-	// any volumes in the template, with the same name.
-	// More than EMQXReplicantTemplateSpec
-	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
-}
-
-type EMQXCoreTemplate struct {
+type ServiceTemplate struct {
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Specification of the desired behavior of the EMQX core node.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-	Spec EMQXCoreTemplateSpec `json:"spec,omitempty"`
+	// Spec defines the behavior of a service.
+	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	Spec corev1.ServiceSpec `json:"spec,omitempty"`
 }
 
-type BootstrapAPIKey struct {
-	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d_]+$`
-	Key string `json:"key"`
-	// +kubebuilder:validation:MinLength:=3
-	// +kubebuilder:validation:MaxLength:=32
-	Secret string `json:"secret"`
-}
-
-type EvacuationStrategy struct {
-	//+kubebuilder:validation:Minimum=0
-	WaitTakeover int32 `json:"waitTakeover,omitempty"`
-	// Just work in EMQX Enterprise.
-	//+kubebuilder:validation:Minimum=1
-	//+kubebuilder:default=1000
-	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
-	// Just work in EMQX Enterprise.
-	//+kubebuilder:validation:Minimum=1
-	//+kubebuilder:default=1000
-	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
-}
-
-type UpdateStrategy struct {
-	//+kubebuilder:validation:Enum=Recreate
-	//+kubebuilder:default=Recreate
-	Type string `json:"type,omitempty"`
-	// Number of seconds before evacuation connection start.
-	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
-	// Number of seconds before evacuation connection timeout.
-	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
-}
-
-// EMQXSpec defines the desired state of EMQX
-type EMQXSpec struct {
-	// EMQX image name.
-	// More info: https://kubernetes.io/docs/concepts/containers/images
-	Image string `json:"image"`
-	// Image pull policy.
-	// One of Always, Never, IfNotPresent.
-	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
-	// Cannot be updated.
-	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.
-	// If specified, these secrets will be passed to individual puller implementations for them to use.
-	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
-
-	//+kubebuilder:default:="cluster.local"
-	ClusterDomain string `json:"clusterDomain,omitempty"`
-
-	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
-	//+kubebuilder:default={type:Recreate,initialDelaySeconds:10,evacuationStrategy:{waitTakeover:10,connEvictRate:1000,sessEvictRate:1000}}
-	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
-	// EMQX bootstrap user
-	// Cannot be updated.
-	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
-	// EMQX bootstrap config, HOCON style, like emqx.conf
-	// Cannot be updated.
-	BootstrapConfig string `json:"bootstrapConfig,omitempty"`
-
-	DashboardServiceTemplate corev1.Service `json:"dashboardServiceTemplate,omitempty"`
-	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
-	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
-	// Else this service will selector EMQX core node
-	ListenersServiceTemplate corev1.Service `json:"listenersServiceTemplate,omitempty"`
-
-	// CoreTemplate is the object that describes the EMQX core node that will be created
-	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
-	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
-	ReplicantTemplate *EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
-	// DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
-	// This service always selector the EMQX core node
-}
-
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:shortName=emqx
-//+kubebuilder:storageversion
-//+kubebuilder:subresource:status
-//+kubebuilder:subresource:scale:specpath=.spec.replicantTemplate.spec.replicas,statuspath=.status.replicantNodeReplicas
-//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type"
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-
-// EMQX is the Schema for the emqxes API
-type EMQX struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard object's metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Spec defines the desired identities of EMQX nodes in this set.
-	Spec EMQXSpec `json:"spec,omitempty"`
-	// Status is the current status of EMQX nodes. This data
-	// may be out of date by some window of time.
-	Status EMQXStatus `json:"status,omitempty"`
-}
-
-//+kubebuilder:object:root=true
-
+// +kubebuilder:object:root=true
 // EMQXList contains a list of EMQX
 type EMQXList struct {
 	metav1.TypeMeta `json:",inline"`

@@ -6509,11 +6509,20 @@ spec:
                       - secret
                     type: object
                   type: array
-                bootstrapConfig:
-                  type: string
                 clusterDomain:
                   default: cluster.local
                   type: string
+                config:
+                  properties:
+                    data:
+                      type: string
+                    mode:
+                      default: merge
+                      enum:
+                        - merge
+                        - replace
+                      type: string
+                  type: object
                 coreTemplate:
                   properties:
                     metadata:

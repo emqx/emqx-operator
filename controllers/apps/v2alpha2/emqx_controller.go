@@ -161,7 +161,7 @@ func newRequester(k8sClient client.Client, instance *appsv2alpha2.EMQX) (innerRe
 	}
 
 	var port string
-	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance.Spec.BootstrapConfig)
+	dashboardPort, err := appsv2alpha2.GetDashboardServicePort(instance.Spec.Config.Data)
 	if err != nil || dashboardPort == nil {
 		port = "18083"
 	}

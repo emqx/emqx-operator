@@ -2,6 +2,7 @@ package v2alpha2
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	emperror "emperror.dev/errors"
@@ -163,32 +164,28 @@ func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 									},
 								},
 								{
-									Name: "POD_NAMESPACE",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.namespace",
-										},
-									},
+									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
+									Value: "dns",
 								},
 								{
-									Name: "STS_HEADLESS_SERVICE_NAME",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.annotations['apps.emqx.io/headless-service-name']",
-										},
-									},
+									Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
+									Value: "srv",
+								},
+								{
+									Name:  "EMQX_CLUSTER__DNS__NAME",
+									Value: fmt.Sprintf("%s.%s.svc.%s", instance.HeadlessServiceNamespacedName().Name, instance.Namespace, instance.Spec.ClusterDomain),
+								},
+								{
+									Name:  "EMQX_HOST",
+									Value: "$(POD_NAME).$(EMQX_CLUSTER__DNS__NAME)",
+								},
+								{
+									Name:  "EMQX_NODE__DATA_DIR",
+									Value: "data",
 								},
 								{
 									Name:  "EMQX_NODE__ROLE",
 									Value: "core",
-								},
-								{
-									Name:  "CLUSTER_DOMAIN",
-									Value: instance.Spec.ClusterDomain,
-								},
-								{
-									Name:  "EMQX_HOST",
-									Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.$(CLUSTER_DOMAIN)",
 								},
 								{
 									Name: "EMQX_NODE__COOKIE",
@@ -267,12 +264,6 @@ func generateStatefulSet(instance *appsv2alpha2.EMQX) *appsv1.StatefulSet {
 			},
 		},
 	}
-
-	sts.Spec.Template.Annotations = appsv2alpha2.CloneAndAddLabel(
-		sts.Spec.Template.Annotations,
-		"apps.emqx.io/headless-service-name",
-		sts.Spec.ServiceName,
-	)
 
 	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates).IsZero() {
 		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{

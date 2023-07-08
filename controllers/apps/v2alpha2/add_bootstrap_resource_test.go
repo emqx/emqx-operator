@@ -25,7 +25,7 @@ func TestGenerateNodeCookieSecret(t *testing.T) {
 	})
 
 	t.Run("generate node cookie when already set node cookie", func(t *testing.T) {
-		instance.Spec.BootstrapConfig = "node.cookie = fake"
+		instance.Spec.Config.Data = "node.cookie = fake"
 		got := generateNodeCookieSecret(instance)
 		assert.Equal(t, "emqx-node-cookie", got.Name)
 		_, ok := got.StringData["node_cookie"]

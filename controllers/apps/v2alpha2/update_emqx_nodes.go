@@ -136,6 +136,9 @@ func (u *updateNodes) canBeScaleDownRs(ctx context.Context, instance *appsv2alph
 
 	oldRsPods := getRsPodMap(ctx, u.Client, instance)[oldRs.UID]
 	sort.Sort(PodsByNameOlder(oldRsPods))
+	if len(oldRsPods) == 0 {
+		return nil, nil
+	}
 
 	shouldDeletePod := oldRsPods[0].DeepCopy()
 	shouldDeletePodInfo, err := getEMQXNodeInfoByAPI(r, fmt.Sprintf("emqx@%s", shouldDeletePod.Status.PodIP))

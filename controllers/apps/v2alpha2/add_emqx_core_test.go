@@ -26,7 +26,8 @@ func TestGenerateStatefulSet(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Spec: appsv2alpha2.EMQXSpec{
-			Image: "emqx/emqx:5.1",
+			Image:         "emqx/emqx:5.1",
+			ClusterDomain: "cluster.local",
 		},
 	}
 	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(3)
@@ -36,12 +37,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
 		emqx.Annotations = map[string]string{
-			"kubectl.kubernetes.io/last-applied-configuration": "fake",
+			"kubectl.kubernetes.io/last-applied-config": "fake",
 		}
 
 		got := generateStatefulSet(emqx)
 		assert.Equal(t, coreLabels, got.Labels)
-		assert.NotContains(t, "kubectl.kubernetes.io/last-applied-configuration", got.Annotations)
+		assert.NotContains(t, "kubectl.kubernetes.io/last-applied-config", got.Annotations)
 	})
 
 	t.Run("check sts spec", func(t *testing.T) {
@@ -52,17 +53,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 		assert.Equal(t, "emqx-headless", got.Spec.ServiceName)
 		assert.Equal(t, coreLabels, got.Spec.Selector.MatchLabels)
 		assert.Equal(t, appsv1.ParallelPodManagement, got.Spec.PodManagementPolicy)
-	})
-
-	t.Run("check sts template metadata", func(t *testing.T) {
-		emqx := instance.DeepCopy()
-		emqx.Spec.CoreTemplate.Spec.ExtraContainers = []corev1.Container{{Name: "fake-container"}}
-
-		got := generateStatefulSet(emqx)
-		assert.Equal(t, coreLabels, got.Spec.Template.ObjectMeta.Labels)
-		assert.Equal(t, map[string]string{
-			"apps.emqx.io/headless-service-name": "emqx-headless",
-		}, got.Spec.Template.ObjectMeta.Annotations)
 	})
 
 	t.Run("check sts template spec", func(t *testing.T) {
@@ -168,32 +158,28 @@ func TestGenerateStatefulSet(t *testing.T) {
 				},
 			},
 			{
-				Name: "POD_NAMESPACE",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
-					},
-				},
+				Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
+				Value: "dns",
 			},
 			{
-				Name: "STS_HEADLESS_SERVICE_NAME",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.annotations['apps.emqx.io/headless-service-name']",
-					},
-				},
+				Name:  "EMQX_CLUSTER__DNS__RECORD_TYPE",
+				Value: "srv",
+			},
+			{
+				Name:  "EMQX_CLUSTER__DNS__NAME",
+				Value: "emqx-headless.emqx.svc.cluster.local",
+			},
+			{
+				Name:  "EMQX_NODE__DATA_DIR",
+				Value: "data",
 			},
 			{
 				Name:  "EMQX_NODE__ROLE",
 				Value: "core",
 			},
 			{
-				Name:  "CLUSTER_DOMAIN",
-				Value: emqx.Spec.ClusterDomain,
-			},
-			{
 				Name:  "EMQX_HOST",
-				Value: "$(POD_NAME).$(STS_HEADLESS_SERVICE_NAME).$(POD_NAMESPACE).svc.$(CLUSTER_DOMAIN)",
+				Value: "$(POD_NAME).$(EMQX_CLUSTER__DNS__NAME)",
 			},
 			{
 				Name: "EMQX_NODE__COOKIE",

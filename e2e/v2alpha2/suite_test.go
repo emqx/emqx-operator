@@ -132,35 +132,37 @@ func genEMQX() *appsv2alpha2.EMQX {
 			Image:           "emqx:latest",
 			ImagePullPolicy: corev1.PullAlways,
 			ClusterDomain:   "cluster.local",
-			BootstrapConfig: `
-			gateway.lwm2m {
-			  auto_observe = true
-			  enable_stats = true
-			  idle_timeout = "30s"
-			  lifetime_max = "86400s"
-			  lifetime_min = "1s"
-			  listeners {
-			    udp {
-			      default {
-			        bind = "5783"
-			        max_conn_rate = 1000
-			        max_connections = 1024000
-			      }
-			    }
-			  }
-			  mountpoint = ""
-			  qmode_time_window = "22s"
-			  translators {
-			    command {qos = 0, topic = "dn/#"}
-			    notify {qos = 0, topic = "up/notify"}
-			    register {qos = 0, topic = "up/resp"}
-			    response {qos = 0, topic = "up/resp"}
-			    update {qos = 0, topic = "up/update"}
-			  }
-			  update_msg_publish_condition = "contains_object_list"
-			  xml_dir = "etc/lwm2m_xml/"
-			}
-			`,
+			Config: appsv2alpha2.Config{
+				Data: `
+					gateway.lwm2m {
+					  auto_observe = true
+					  enable_stats = true
+					  idle_timeout = "30s"
+					  lifetime_max = "86400s"
+					  lifetime_min = "1s"
+					  listeners {
+					    udp {
+					      default {
+					        bind = "5783"
+					        max_conn_rate = 1000
+					        max_connections = 1024000
+					      }
+					    }
+					  }
+					  mountpoint = ""
+					  qmode_time_window = "22s"
+					  translators {
+					    command {qos = 0, topic = "dn/#"}
+					    notify {qos = 0, topic = "up/notify"}
+					    register {qos = 0, topic = "up/resp"}
+					    response {qos = 0, topic = "up/resp"}
+					    update {qos = 0, topic = "up/update"}
+					  }
+					  update_msg_publish_condition = "contains_object_list"
+					  xml_dir = "etc/lwm2m_xml/"
+					}
+				`,
+			},
 		},
 	}
 	emqx.Default()

@@ -53,7 +53,7 @@ func (r *EMQX) Default() {
 	r.defaultNames()
 	r.defaultLabels()
 	r.defaultAnnotations()
-	r.defaultBootstrapConfig()
+	r.defaultConfiguration()
 	r.defaultDashboardServiceTemplate()
 	r.defaultListenersServiceTemplate()
 	r.defaultContainerPort()
@@ -80,10 +80,17 @@ func (r *EMQX) ValidateCreate() error {
 		return err
 	}
 
-	if _, err := hocon.ParseString(r.Spec.BootstrapConfig); err != nil {
-		err = emperror.Wrap(err, "failed to parse bootstrap config")
+	if _, err := hocon.ParseString(r.Spec.Config.Data); err != nil {
+		err = emperror.Wrap(err, "failed to parse config")
 		emqxlog.Error(err, "validate create failed")
 		return err
+	}
+
+	if r.Spec.Config.Mode == "Replace" {
+		if r.Annotations == nil {
+			r.Annotations = make(map[string]string)
+		}
+		r.Annotations[NeedUpdateConfigsAnnotationKey] = "true"
 	}
 
 	return nil
@@ -112,19 +119,19 @@ func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 		return err
 	}
 
-	config, err := hocon.ParseString(r.Spec.BootstrapConfig)
+	config, err := hocon.ParseString(r.Spec.Config.Data)
 	if err != nil {
-		err = emperror.Wrap(err, "failed to parse bootstrap config")
+		err = emperror.Wrap(err, "failed to parse config")
 		emqxlog.Error(err, "validate update failed")
 		return err
 	}
 
-	oldConfig, _ := hocon.ParseString(oldEMQX.Spec.BootstrapConfig)
+	oldConfig, _ := hocon.ParseString(oldEMQX.Spec.Config.Data)
 	if !reflect.DeepEqual(oldConfig, config) {
 		if r.Annotations == nil {
 			r.Annotations = make(map[string]string)
 		}
-		r.Annotations[NeedReloadConfigsAnnotationKey] = "true"
+		r.Annotations[NeedUpdateConfigsAnnotationKey] = "true"
 	}
 
 	return nil
@@ -193,8 +200,8 @@ func (r *EMQX) defaultAnnotations() {
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
-	delete(annotations, NeedReloadConfigsAnnotationKey)
+	delete(annotations, "kubectl.kubernetes.io/last-applied-config")
+	delete(annotations, NeedUpdateConfigsAnnotationKey)
 
 	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
 	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
@@ -204,47 +211,21 @@ func (r *EMQX) defaultAnnotations() {
 	}
 }
 
-func (r *EMQX) defaultBootstrapConfig() {
-	dnsName := fmt.Sprintf("%s.%s.svc.%s", r.HeadlessServiceNamespacedName().Name, r.Namespace, r.Spec.ClusterDomain)
-	defaultBootstrapConfigStr := fmt.Sprintf(`
-	node {
-	  data_dir = data
-	  etc_dir = etc
-	}
-	cluster {
-		discovery_strategy = dns
-		dns {
-			record_type = srv
-			name = "%s"
-		}
-	}
-	dashboard {
-	  listeners.http {
-		bind = 18083
-	  }
-	  default_username = admin
-	  default_password = public
-	}
-	listeners.tcp.default.bind = "0.0.0.0:1883"
-	listeners.ssl.default.bind = "0.0.0.0:8883"
-	listeners.ws.default.bind = "0.0.0.0:8083"
-	listeners.wss.default.bind = "0.0.0.0:8084"
-	`, dnsName)
-
-	bootstrapConfig := fmt.Sprintf("%s\n%s", defaultBootstrapConfigStr, r.Spec.BootstrapConfig)
-	config, err := hocon.ParseString(bootstrapConfig)
+func (r *EMQX) defaultConfiguration() {
+	config := fmt.Sprintf("%s\n%s", "dashboard.listeners.http.bind = 18083", r.Spec.Config.Data)
+	hoconConfig, err := hocon.ParseString(config)
 	if err != nil {
 		return
 	}
 
-	r.Spec.BootstrapConfig = config.String()
+	r.Spec.Config.Data = hoconConfig.String()
 }
 
 func (r *EMQX) defaultDashboardServiceTemplate() {
 	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
-	dashboardPort, err := GetDashboardServicePort(r.Spec.BootstrapConfig)
+	dashboardPort, err := GetDashboardServicePort(r.Spec.Config.Data)
 	if err != nil {
-		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
+		emqxlog.Info("failed to get dashboard service port in config, use 18083", "error", err)
 		dashboardPort = &corev1.ServicePort{
 			Name:       "dashboard-listeners-http-bind",
 			Protocol:   corev1.ProtocolTCP,
@@ -263,9 +244,9 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 
 func (r *EMQX) defaultListenersServiceTemplate() {
 	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
-	listenersPort, err := GetListenersServicePorts(r.Spec.BootstrapConfig)
+	listenersPort, err := GetListenersServicePorts(r.Spec.Config.Data)
 	if err != nil {
-		emqxlog.Info("failed to get listeners service port in bootstrap config", "error", err)
+		emqxlog.Info("failed to get listeners service port in config", "error", err)
 	}
 
 	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
@@ -281,9 +262,9 @@ func (r *EMQX) defaultContainerPort() {
 		ContainerPort: 18083,
 	}
 
-	svcPort, err := GetDashboardServicePort(r.Spec.BootstrapConfig)
+	svcPort, err := GetDashboardServicePort(r.Spec.Config.Data)
 	if err != nil {
-		emqxlog.Info("failed to get dashboard service port in bootstrap config, use 18083", "error", err)
+		emqxlog.Info("failed to get dashboard service port in config, use 18083", "error", err)
 	} else {
 		containerPort.ContainerPort = svcPort.Port
 	}

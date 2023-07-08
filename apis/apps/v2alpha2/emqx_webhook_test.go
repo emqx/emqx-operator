@@ -51,13 +51,13 @@ func TestValidateCreate(t *testing.T) {
 	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(2)
 	assert.Nil(t, instance.ValidateCreate())
 
-	instance.Spec.BootstrapConfig = "fake"
-	assert.Error(t, instance.ValidateCreate(), "failed to parse bootstrap config")
+	instance.Spec.Config.Data = "fake"
+	assert.Error(t, instance.ValidateCreate(), "failed to parse configuration")
 
-	instance.Spec.BootstrapConfig = "foo = bar"
+	instance.Spec.Config.Data = "foo = bar"
 	assert.Nil(t, instance.ValidateCreate())
 
-	instance.Spec.BootstrapConfig = `sql = "SELECT * FROM "t/#""`
+	instance.Spec.Config.Data = `sql = "SELECT * FROM "t/#""`
 	assert.Nil(t, instance.ValidateCreate())
 }
 
@@ -68,8 +68,10 @@ func TestValidateUpdate(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: EMQXSpec{
-			Image:           "emqx:latest",
-			BootstrapConfig: `{a = 1, b = { c = 2, d = 3}}`,
+			Image: "emqx:latest",
+			Config: Config{
+				Data: `{a = 1, b = { c = 2, d = 3}}`,
+			},
 		},
 	}
 	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(2)
@@ -86,10 +88,10 @@ func TestValidateUpdate(t *testing.T) {
 		assert.Error(t, newIns.ValidateUpdate(instance), "the number of EMQX core nodes must be less than or equal to 4")
 	})
 
-	t.Run("should return error if bootstrap config is invalid", func(t *testing.T) {
+	t.Run("should return error if configuration is invalid", func(t *testing.T) {
 		newIns := instance.DeepCopy()
-		newIns.Spec.BootstrapConfig = "hello world"
-		assert.Error(t, newIns.ValidateUpdate(instance), "failed to parse bootstrap config")
+		newIns.Spec.Config.Data = "hello world"
+		assert.Error(t, newIns.ValidateUpdate(instance), "failed to parse configuration")
 	})
 
 	t.Run("should return error if bootstrap APIKeys is changed", func(t *testing.T) {
@@ -101,16 +103,16 @@ func TestValidateUpdate(t *testing.T) {
 		assert.Error(t, newIns.ValidateUpdate(instance), "bootstrap APIKeys cannot be updated")
 	})
 
-	t.Run("should have annotation if bootstrap config is changed", func(t *testing.T) {
+	t.Run("should have annotation if configuration is changed", func(t *testing.T) {
 		newIns := instance.DeepCopy()
-		newIns.Spec.BootstrapConfig = "foo = bar"
+		newIns.Spec.Config.Data = "foo = bar"
 		assert.Nil(t, newIns.ValidateUpdate(instance))
-		assert.Equal(t, "true", newIns.Annotations[NeedReloadConfigsAnnotationKey])
+		assert.Equal(t, "true", newIns.Annotations[NeedUpdateConfigsAnnotationKey])
 	})
 
-	t.Run("check bootstrap config is map", func(t *testing.T) {
+	t.Run("check configuration is map", func(t *testing.T) {
 		newIns := instance.DeepCopy()
-		newIns.Spec.BootstrapConfig = `{b = { d = 3, c = 2 }, a = 1}`
+		newIns.Spec.Config.Data = `{b = { d = 3, c = 2 }, a = 1}`
 		assert.Nil(t, newIns.ValidateUpdate(instance))
 	})
 }
@@ -173,91 +175,89 @@ func TestDefaultLabels(t *testing.T) {
 	}, instance.Spec.ReplicantTemplate.Labels)
 }
 
-func TestDefaultBootstrapConfig(t *testing.T) {
-	t.Run("empty bootstrap config", func(t *testing.T) {
+func TestDefaultConfiguration(t *testing.T) {
+	t.Run("empty configuration", func(t *testing.T) {
 		instance := &EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "webhook-test",
 				Namespace: "default",
 			},
 			Spec: EMQXSpec{
-				BootstrapConfig: "",
+				Config: Config{
+					Data: "",
+				},
 			},
 		}
-		instance.defaultBootstrapConfig()
+		instance.defaultConfiguration()
 
-		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
+		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
 		assert.Nil(t, err)
-
-		assert.NotNil(t, bootstrapConfig.GetString("node.cookie"))
-		assert.Equal(t, "data", bootstrapConfig.GetString("node.data_dir"))
-		assert.Equal(t, "etc", bootstrapConfig.GetString("node.etc_dir"))
-
-		assert.Equal(t, "18083", bootstrapConfig.GetString("dashboard.listeners.http.bind"))
-		assert.Equal(t, "admin", bootstrapConfig.GetString("dashboard.default_username"))
-		assert.Equal(t, "public", bootstrapConfig.GetString("dashboard.default_password"))
-
-		assert.Equal(t, "\"0.0.0.0:1883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
-		assert.Equal(t, "\"0.0.0.0:8883\"", bootstrapConfig.GetString("listeners.ssl.default.bind"))
-		assert.Equal(t, "\"0.0.0.0:8083\"", bootstrapConfig.GetString("listeners.ws.default.bind"))
-		assert.Equal(t, "\"0.0.0.0:8084\"", bootstrapConfig.GetString("listeners.wss.default.bind"))
+		assert.Equal(t, "18083", configuration.GetString("dashboard.listeners.http.bind"))
 	})
 
 	t.Run("already set cookie", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
-				BootstrapConfig: `node.cookie = "6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq"`,
+				Config: Config{
+					Data: `node.cookie = "6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq"`,
+				},
 			},
 		}
-		instance.defaultBootstrapConfig()
+		instance.defaultConfiguration()
 
-		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
+		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
 		assert.Nil(t, err)
-		assert.Equal(t, "\"6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq\"", bootstrapConfig.GetString("node.cookie"))
+		assert.Equal(t, "\"6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq\"", configuration.GetString("node.cookie"))
 	})
 
 	t.Run("already set listener", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
-				BootstrapConfig: `listeners.tcp.default.bind = "0.0.0.0:11883"`,
+				Config: Config{
+					Data: `listeners.tcp.default.bind = "0.0.0.0:11883"`,
+				},
 			},
 		}
-		instance.defaultBootstrapConfig()
+		instance.defaultConfiguration()
 
-		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
+		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
 		assert.Nil(t, err)
-		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
+		assert.Equal(t, "\"0.0.0.0:11883\"", configuration.GetString("listeners.tcp.default.bind"))
 	})
 
 	t.Run("other style set listener", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
-				BootstrapConfig: `
-					listeners {
-						tcp {
-							default {
-								bind = "0.0.0.0:11883"
+				Config: Config{
+					Data: `
+						listeners {
+							tcp {
+								default {
+									bind = "0.0.0.0:11883"
+								}
 							}
 						}
-					}
 					`,
+				},
 			},
 		}
-		instance.defaultBootstrapConfig()
+		instance.defaultConfiguration()
 
-		bootstrapConfig, err := hocon.ParseString(instance.Spec.BootstrapConfig)
+		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
 		assert.Nil(t, err)
-		assert.Equal(t, "\"0.0.0.0:11883\"", bootstrapConfig.GetString("listeners.tcp.default.bind"))
+		assert.Equal(t, "\"0.0.0.0:11883\"", configuration.GetString("listeners.tcp.default.bind"))
 	})
 
-	t.Run("wrong bootstrap config", func(t *testing.T) {
+	t.Run("wrong configuration", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
-				BootstrapConfig: `hello world`,
+				Config: Config{
+					Data: `hello world`,
+				},
 			},
 		}
-		instance.defaultBootstrapConfig()
-		assert.Equal(t, `hello world`, instance.Spec.BootstrapConfig)
+		instance.defaultConfiguration()
+		assert.Equal(t, `hello world`, instance.Spec.Config.Data)
 	})
 }
 
@@ -271,7 +271,9 @@ func TestDefaultDashboardServiceTemplate(t *testing.T) {
 	t.Run("set dashboard listeners", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
-				BootstrapConfig: `dashboard.listeners.http.bind = 18084`,
+				Config: Config{
+					Data: `dashboard.listeners.http.bind = 18084`,
+				},
 			},
 		}
 		instance.defaultDashboardServiceTemplate()

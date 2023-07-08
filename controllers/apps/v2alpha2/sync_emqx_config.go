@@ -18,25 +18,25 @@ type syncConfig struct {
 
 func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
 	if r == nil {
-		configMap := generateConfigMap(instance, instance.Spec.BootstrapConfig)
+		configMap := generateConfigMap(instance, instance.Spec.Config.Data)
 		if err := s.Handler.CreateOrUpdateList(instance, s.Scheme, []client.Object{configMap}); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to create or update configMap")}
 		}
 		return subResult{}
 	}
 
-	if _, ok := instance.Annotations[appsv2alpha2.NeedReloadConfigsAnnotationKey]; ok {
+	if _, ok := instance.Annotations[appsv2alpha2.NeedUpdateConfigsAnnotationKey]; ok && instance.Status.IsConditionTrue(appsv2alpha2.CoreNodesReady) {
 		// Delete readonly configs
-		config, _ := hocon.ParseString(instance.Spec.BootstrapConfig)
+		config, _ := hocon.ParseString(instance.Spec.Config.Data)
 		configObj := config.GetRoot().(hocon.Object)
 		delete(configObj, "node")
 		delete(configObj, "cluster")
 		delete(configObj, "dashboard")
 
-		if err := putEMQXConfigsByAPI(r, configObj.String()); err != nil {
+		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, configObj.String()); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
 		}
-		delete(instance.Annotations, appsv2alpha2.NeedReloadConfigsAnnotationKey)
+		delete(instance.Annotations, appsv2alpha2.NeedUpdateConfigsAnnotationKey)
 		if err := s.Client.Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx instance")}
 		}
@@ -87,17 +87,20 @@ func getEMQXConfigsByAPI(r innerReq.RequesterInterface) (string, error) {
 	return string(body), nil
 }
 
-func putEMQXConfigsByAPI(r innerReq.RequesterInterface, config string) error {
+func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) error {
 	headerOpt := innerReq.HeaderOpt{
 		Key:   "Content-Type",
 		Value: "text/plain",
 	}
-	resp, body, err := r.Request("PUT", "api/v5/configs", []byte(config), headerOpt)
+	// api := "api/v5/configs?mode=" + mode
+	api := "api/v5/configs"
+
+	resp, body, err := r.Request("PUT", api, []byte(config), headerOpt)
 	if err != nil {
-		return emperror.Wrap(err, "failed to put API api/v5/configs")
+		return emperror.Wrapf(err, "failed to put API %s", api)
 	}
 	if resp.StatusCode != 200 {
-		return emperror.Errorf("failed to put API %s, status : %s, body: %s", "api/v5/configs", resp.Status, body)
+		return emperror.Errorf("failed to put API %s, status : %s, body: %s", api, resp.Status, body)
 	}
 	return nil
 }
