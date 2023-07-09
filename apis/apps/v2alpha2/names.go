@@ -36,16 +36,16 @@ func (instance *EMQX) NodeCookieNamespacedName() types.NamespacedName {
 	}
 }
 
-func (instance *EMQX) BootstrapUserNamespacedName() types.NamespacedName {
+func (instance *EMQX) BootstrapAPIKeyNamespacedName() types.NamespacedName {
 	return types.NamespacedName{
 		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-bootstrap-user", instance.Name),
+		Name:      fmt.Sprintf("%s-bootstrap-api-key", instance.Name),
 	}
 }
 
-func (instance *EMQX) BootstrapConfigNamespacedName() types.NamespacedName {
+func (instance *EMQX) ConfigsNamespacedName() types.NamespacedName {
 	return types.NamespacedName{
 		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-bootstrap-config", instance.Name),
+		Name:      fmt.Sprintf("%s-configs", instance.Name),
 	}
 }

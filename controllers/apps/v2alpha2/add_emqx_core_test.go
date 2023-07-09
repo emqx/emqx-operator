@@ -194,7 +194,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 			{
 				Name:  "EMQX_API_KEY__BOOTSTRAP_FILE",
-				Value: `"/opt/emqx/data/bootstrap_user"`,
+				Value: `"/opt/emqx/data/bootstrap_api_key"`,
 			},
 			{
 				Name:  "foo",
@@ -208,9 +208,9 @@ func TestGenerateStatefulSet(t *testing.T) {
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Lifecycle, got.Spec.Template.Spec.Containers[0].Lifecycle)
 		assert.Equal(t, []corev1.VolumeMount{
 			{
-				Name:      "bootstrap-user",
-				MountPath: "/opt/emqx/data/bootstrap_user",
-				SubPath:   "bootstrap_user",
+				Name:      "bootstrap-api-key",
+				MountPath: "/opt/emqx/data/bootstrap_api_key",
+				SubPath:   "bootstrap_api_key",
 				ReadOnly:  true,
 			},
 			{
@@ -246,10 +246,10 @@ func TestGenerateStatefulSet(t *testing.T) {
 				},
 			},
 			{
-				Name: "bootstrap-user",
+				Name: "bootstrap-api-key",
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: emqx.BootstrapUserNamespacedName().Name,
+						SecretName: emqx.BootstrapAPIKeyNamespacedName().Name,
 					},
 				},
 			},
@@ -258,7 +258,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: emqx.BootstrapConfigNamespacedName().Name,
+							Name: emqx.ConfigsNamespacedName().Name,
 						},
 					},
 				},

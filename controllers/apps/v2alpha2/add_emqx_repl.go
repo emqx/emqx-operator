@@ -200,7 +200,7 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 								},
 								{
 									Name:  "EMQX_API_KEY__BOOTSTRAP_FILE",
-									Value: `"/opt/emqx/data/bootstrap_user"`,
+									Value: `"/opt/emqx/data/bootstrap_api_key"`,
 								},
 							}, instance.Spec.ReplicantTemplate.Spec.Env...),
 							EnvFrom:         instance.Spec.ReplicantTemplate.Spec.EnvFrom,
@@ -212,9 +212,9 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 							Lifecycle:       instance.Spec.ReplicantTemplate.Spec.Lifecycle,
 							VolumeMounts: append([]corev1.VolumeMount{
 								{
-									Name:      "bootstrap-user",
-									MountPath: "/opt/emqx/data/bootstrap_user",
-									SubPath:   "bootstrap_user",
+									Name:      "bootstrap-api-key",
+									MountPath: "/opt/emqx/data/bootstrap_api_key",
+									SubPath:   "bootstrap_api_key",
 									ReadOnly:  true,
 								},
 								{
@@ -236,10 +236,10 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 					}, instance.Spec.ReplicantTemplate.Spec.ExtraContainers...),
 					Volumes: append([]corev1.Volume{
 						{
-							Name: "bootstrap-user",
+							Name: "bootstrap-api-key",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: instance.BootstrapUserNamespacedName().Name,
+									SecretName: instance.BootstrapAPIKeyNamespacedName().Name,
 								},
 							},
 						},
@@ -248,7 +248,7 @@ func generateReplicaSet(instance *appsv2alpha2.EMQX) *appsv1.ReplicaSet {
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.BootstrapConfigNamespacedName().Name,
+										Name: instance.ConfigsNamespacedName().Name,
 									},
 								},
 							},

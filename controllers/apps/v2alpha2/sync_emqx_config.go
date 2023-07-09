@@ -63,7 +63,7 @@ func generateConfigMap(instance *appsv2alpha2.EMQX, data string) *corev1.ConfigM
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.BootstrapConfigNamespacedName().Name,
+			Name:      instance.ConfigsNamespacedName().Name,
 			Namespace: instance.Namespace,
 			Labels:    instance.Labels,
 		},

@@ -23,7 +23,7 @@ type addBootstrap struct {
 func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ innerReq.RequesterInterface) subResult {
 	for _, resource := range []client.Object{
 		generateNodeCookieSecret(instance),
-		generateBootstrapUserSecret(instance),
+		generateBootstrapAPIKeySecret(instance),
 	} {
 		if err := ctrl.SetControllerReference(instance, resource, a.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
@@ -63,14 +63,14 @@ func generateNodeCookieSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
 	}
 }
 
-func generateBootstrapUserSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
-	bootstrapUsers := ""
+func generateBootstrapAPIKeySecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
+	bootstrapAPIKeys := ""
 	for _, apiKey := range instance.Spec.BootstrapAPIKeys {
-		bootstrapUsers += apiKey.Key + ":" + apiKey.Secret + "\n"
+		bootstrapAPIKeys += apiKey.Key + ":" + apiKey.Secret + "\n"
 	}
 
 	defPassword, _ := password.Generate(64, 10, 0, true, true)
-	bootstrapUsers += appsv2alpha2.DefaultBootstrapAPIKey + ":" + defPassword
+	bootstrapAPIKeys += appsv2alpha2.DefaultBootstrapAPIKey + ":" + defPassword
 
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -78,12 +78,12 @@ func generateBootstrapUserSecret(instance *appsv2alpha2.EMQX) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.BootstrapUserNamespacedName().Name,
+			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
 			Namespace: instance.Namespace,
 			Labels:    instance.Labels,
 		},
 		StringData: map[string]string{
-			"bootstrap_user": bootstrapUsers,
+			"bootstrap_api_key": bootstrapAPIKeys,
 		},
 	}
 }

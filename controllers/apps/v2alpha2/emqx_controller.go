@@ -155,7 +155,7 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func newRequester(k8sClient client.Client, instance *appsv2alpha2.EMQX) (innerReq.RequesterInterface, error) {
-	username, password, err := getBootstrapUser(context.Background(), k8sClient, instance)
+	username, password, err := getBootstrapAPIKey(context.Background(), k8sClient, instance)
 	if err != nil {
 		return nil, err
 	}
@@ -196,17 +196,17 @@ func newRequester(k8sClient client.Client, instance *appsv2alpha2.EMQX) (innerRe
 	return nil, nil
 }
 
-func getBootstrapUser(ctx context.Context, client client.Client, instance *appsv2alpha2.EMQX) (username, password string, err error) {
-	bootstrapUser := &corev1.Secret{}
+func getBootstrapAPIKey(ctx context.Context, client client.Client, instance *appsv2alpha2.EMQX) (username, password string, err error) {
+	bootstrapAPIKey := &corev1.Secret{}
 	if err = client.Get(ctx, types.NamespacedName{
 		Namespace: instance.GetNamespace(),
-		Name:      instance.GetName() + "-bootstrap-user",
-	}, bootstrapUser); err != nil {
+		Name:      instance.GetName() + "-bootstrap-api-key",
+	}, bootstrapAPIKey); err != nil {
 		err = emperror.Wrap(err, "get secret failed")
 		return
 	}
 
-	if data, ok := bootstrapUser.Data["bootstrap_user"]; ok {
+	if data, ok := bootstrapAPIKey.Data["bootstrap_api_key"]; ok {
 		users := strings.Split(string(data), "\n")
 		for _, user := range users {
 			index := strings.Index(user, ":")
@@ -218,6 +218,6 @@ func getBootstrapUser(ctx context.Context, client client.Client, instance *appsv
 		}
 	}
 
-	err = emperror.Errorf("the secret does not contain the bootstrap_user")
+	err = emperror.Errorf("the secret does not contain the bootstrap_api_key")
 	return
 }

@@ -26,7 +26,7 @@ func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ i
 
 	configMap := &corev1.ConfigMap{}
 	if err := a.Client.Get(ctx, types.NamespacedName{
-		Name:      instance.BootstrapConfigNamespacedName().Name,
+		Name:      instance.ConfigsNamespacedName().Name,
 		Namespace: instance.Namespace,
 	}, configMap); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get configmap")}
