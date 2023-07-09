@@ -297,7 +297,6 @@ func TestDefaultDashboardServiceTemplate(t *testing.T) {
 			"foo": "bar",
 		}, instance.Spec.DashboardServiceTemplate.Spec.Selector)
 	})
-
 }
 
 func TestDefaultContainerPort(t *testing.T) {

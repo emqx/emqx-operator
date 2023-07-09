@@ -134,7 +134,7 @@ func generateListenerService(instance *appsv2alpha2.EMQX, ports []corev1.Service
 	// We don't need to set the selector for the service
 	// because the Operator will manager the endpoints
 	// please check https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
-	listener.Spec.Selector = map[string]string{}
+	listener.Spec.Selector = nil
 	listener.Spec.Ports = appsv2alpha2.MergeServicePorts(
 		listener.Spec.Ports,
 		ports,

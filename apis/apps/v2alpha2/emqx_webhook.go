@@ -55,7 +55,6 @@ func (r *EMQX) Default() {
 	r.defaultAnnotations()
 	r.defaultConfiguration()
 	r.defaultDashboardServiceTemplate()
-	r.defaultListenersServiceTemplate()
 	r.defaultContainerPort()
 }
 
@@ -239,19 +238,6 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 		[]corev1.ServicePort{
 			*dashboardPort,
 		},
-	)
-}
-
-func (r *EMQX) defaultListenersServiceTemplate() {
-	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
-	listenersPort, err := GetListenersServicePorts(r.Spec.Config.Data)
-	if err != nil {
-		emqxlog.Info("failed to get listeners service port in config", "error", err)
-	}
-
-	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
-		r.Spec.DashboardServiceTemplate.Spec.Ports,
-		listenersPort,
 	)
 }
 
