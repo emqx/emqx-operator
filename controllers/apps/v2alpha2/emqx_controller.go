@@ -119,8 +119,8 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addCore{r},
 		&addRepl{r},
 		&updateStatus{r},
-		&updateNodes{r},
 		&updatePodConditions{r},
+		&syncPods{r},
 	} {
 		subResult := subReconciler.reconcile(ctx, instance, requester)
 		if !subResult.result.IsZero() {
