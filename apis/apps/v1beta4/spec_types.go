@@ -218,6 +218,7 @@ type BootstrapAPIKey struct {
 }
 
 type EmqxTemplateSpec struct {
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 	// +kubebuilder:default:="emqx/emqx-operator-reloader:0.0.2"
 	ReloaderImage       string                        `json:"reloaderImage,omitempty"`
 	ImagePullSecrets    []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`

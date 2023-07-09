@@ -35,6 +35,8 @@ type EmqxBrokerTemplate struct {
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
 	// Username for EMQX Dashboard and API
 	//+kubebuilder:default:="admin"
 	Username string `json:"username,omitempty"`

@@ -68,6 +68,10 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Spec.Template.Spec.EmqxContainer.Image.PullPolicy = src.Spec.EmqxTemplate.ImagePullPolicy
 	}
 
+	if src.Spec.EmqxTemplate.ServiceAccountName != "" {
+		dst.Spec.Template.Spec.ServiceAccountName = src.Spec.EmqxTemplate.ServiceAccountName
+	}
+
 	if !reflect.ValueOf(src.Spec.EmqxTemplate.License).IsZero() {
 		dst.Spec.License = v1beta4.EmqxLicense(src.Spec.EmqxTemplate.License)
 	}

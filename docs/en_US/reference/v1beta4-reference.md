@@ -399,6 +399,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
+| `serviceAccountName` _string_ |  |
 | `reloaderImage` _string_ |  |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ |  |
 | `emqxContainer` _[EmqxContainer](#emqxcontainer)_ |  |

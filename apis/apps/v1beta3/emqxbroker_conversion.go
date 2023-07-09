@@ -70,6 +70,10 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Spec.Template.Spec.EmqxContainer.Image.PullPolicy = src.Spec.EmqxTemplate.ImagePullPolicy
 	}
 
+	if src.Spec.EmqxTemplate.ServiceAccountName != "" {
+		dst.Spec.Template.Spec.ServiceAccountName = src.Spec.EmqxTemplate.ServiceAccountName
+	}
+
 	if src.Spec.EmqxTemplate.EmqxConfig != nil {
 		dst.Spec.Template.Spec.EmqxContainer.EmqxConfig = src.Spec.EmqxTemplate.EmqxConfig
 	}
