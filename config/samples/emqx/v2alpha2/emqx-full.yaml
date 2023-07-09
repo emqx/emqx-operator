@@ -11,7 +11,7 @@ spec:
   # imagePullSecrets:
   #   - name: fake-secrets
   # bootstrapAPIKeys:
-  #   - key: bootstrap_user_key
+  #   - key: bootstrap_api_key_key
   #     secret: bootstrap_secret
   config:
     data: |

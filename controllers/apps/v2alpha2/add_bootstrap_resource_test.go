@@ -34,7 +34,7 @@ func TestGenerateNodeCookieSecret(t *testing.T) {
 	})
 }
 
-func TestGenerateBootstrapUserSecret(t *testing.T) {
+func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 	instance := &appsv2alpha2.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
@@ -50,9 +50,9 @@ func TestGenerateBootstrapUserSecret(t *testing.T) {
 		},
 	}
 
-	got := generateBootstrapUserSecret(instance)
-	assert.Equal(t, "emqx-bootstrap-user", got.Name)
-	data, ok := got.StringData["bootstrap_user"]
+	got := generateBootstrapAPIKeySecret(instance)
+	assert.Equal(t, "emqx-bootstrap-api-key", got.Name)
+	data, ok := got.StringData["bootstrap_api_key"]
 	assert.True(t, ok)
 
 	users := strings.Split(data, "\n")
