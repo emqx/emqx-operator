@@ -20,7 +20,7 @@ import (
 )
 
 var _ = Describe("Check update emqx nodes controller", Ordered, Label("node"), func() {
-	var u *updateNodes
+	var s *syncPods
 	var fakeR *innerReq.FakeRequester = &innerReq.FakeRequester{}
 	var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
 	var ns *corev1.Namespace = &corev1.Namespace{}
@@ -40,7 +40,7 @@ var _ = Describe("Check update emqx nodes controller", Ordered, Label("node"), f
 			return resp, respBody, nil
 		}
 
-		u = &updateNodes{emqxReconciler}
+		s = &syncPods{emqxReconciler}
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "controller-v2alpha2-update-emqx-nodes-test-" + rand.String(5),
@@ -212,7 +212,7 @@ var _ = Describe("Check update emqx nodes controller", Ordered, Label("node"), f
 	})
 
 	It("running update emqx node controller", func() {
-		Expect(u.reconcile(ctx, instance, fakeR)).Should(Equal(subResult{}))
+		Expect(s.reconcile(ctx, instance, fakeR)).Should(Equal(subResult{}))
 
 		By("should add pod deletion cost annotation")
 		Eventually(func() map[string]string {
@@ -233,7 +233,7 @@ var _ = Describe("Check update emqx nodes controller", Ordered, Label("node"), f
 		}).Should(Equal(int32(1)))
 
 		instance.Status.ReplicantNodesStatus.ReadyReplicas = instance.Status.ReplicantNodesStatus.Replicas
-		Expect(u.reconcile(ctx, instance, fakeR)).Should(Equal(subResult{}))
+		Expect(s.reconcile(ctx, instance, fakeR)).Should(Equal(subResult{}))
 		By("should scale down sts")
 		Eventually(func() int32 {
 			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(storageSts), storageSts)
@@ -244,13 +244,13 @@ var _ = Describe("Check update emqx nodes controller", Ordered, Label("node"), f
 })
 
 var _ = Describe("check can be scale down", func() {
-	var u *updateNodes
+	var s *syncPods
 	var fakeR *innerReq.FakeRequester = &innerReq.FakeRequester{}
 	var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
 	BeforeEach(func() {
-		u = &updateNodes{emqxReconciler}
+		s = &syncPods{emqxReconciler}
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "controller-v2alpha2-update-emqx-nodes-test-" + rand.String(5),
@@ -298,14 +298,14 @@ var _ = Describe("check can be scale down", func() {
 		})
 		It("emqx is not available", func() {
 			instance.Status.Conditions = []metav1.Condition{}
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
+			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
 		})
 
 		It("emqx is available, but is not initial delay seconds", func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
+			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
 		})
@@ -321,10 +321,10 @@ var _ = Describe("check can be scale down", func() {
 				Replicas:      3,
 			}
 
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
+			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
-			Eventually(u.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
+			Eventually(s.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
@@ -343,7 +343,7 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
+			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
 		})
@@ -360,7 +360,7 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
+			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeTrue())
 		})
@@ -376,7 +376,7 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 
-			canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
+			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeTrue())
 		})
@@ -436,14 +436,14 @@ var _ = Describe("check can be scale down", func() {
 		})
 		It("emqx is not available", func() {
 			instance.Status.Conditions = []metav1.Condition{}
-			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, nil, oldRs, []string{})
+			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, nil, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
 
 		It("emqx is available, but is not initial delay seconds", func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
-			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, nil, oldRs, []string{})
+			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, nil, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
@@ -464,7 +464,7 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 
-			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
@@ -481,7 +481,7 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 
-			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).ShouldNot(BeNil())
 		})
@@ -497,7 +497,7 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 
-			canBeScaledDown, err := u.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).ShouldNot(BeNil())
 		})

@@ -16,17 +16,17 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-type updateNodes struct {
+type syncPods struct {
 	*EMQXReconciler
 }
 
-func (u *updateNodes) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
+func (s *syncPods) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
 	if r == nil {
 		return subResult{}
 	}
 
-	currentSts, oldStsList := getStateFulSetList(ctx, u.Client, instance)
-	currentRs, oldRsList := getReplicaSetList(ctx, u.Client, instance)
+	currentSts, oldStsList := getStateFulSetList(ctx, s.Client, instance)
+	currentRs, oldRsList := getReplicaSetList(ctx, s.Client, instance)
 
 	targetedEMQXNodesName := []string{}
 	if isExistReplicant(instance) {
@@ -45,7 +45,7 @@ func (u *updateNodes) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX
 
 	if len(oldRsList) > 0 {
 		oldRs := oldRsList[0]
-		shouldDeletePod, err := u.canBeScaleDownRs(ctx, instance, r, oldRs, targetedEMQXNodesName)
+		shouldDeletePod, err := s.canBeScaleDownRs(ctx, instance, r, oldRs, targetedEMQXNodesName)
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to check if pod can be scale down")}
 		}
@@ -55,12 +55,12 @@ func (u *updateNodes) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX
 			}
 			// https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#pod-deletion-cost
 			shouldDeletePod.Annotations["controller.kubernetes.io/pod-deletion-cost"] = "-99999"
-			if err := u.Client.Update(ctx, shouldDeletePod); err != nil {
+			if err := s.Client.Update(ctx, shouldDeletePod); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed update pod deletion cost")}
 			}
 
 			oldRs.Spec.Replicas = pointer.Int32(*oldRs.Spec.Replicas - 1)
-			if err := u.Client.Update(ctx, oldRs); err != nil {
+			if err := s.Client.Update(ctx, oldRs); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to scale down old replicaSet")}
 			}
 		}
@@ -68,13 +68,13 @@ func (u *updateNodes) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX
 	}
 	if len(oldStsList) > 0 {
 		oldSts := oldStsList[0]
-		canBeScaledDown, err := u.canBeScaleDownSts(ctx, instance, r, oldSts, targetedEMQXNodesName)
+		canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, r, oldSts, targetedEMQXNodesName)
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to check if sts can be scale down")}
 		}
 		if canBeScaledDown {
 			oldSts.Spec.Replicas = pointer.Int32(*oldSts.Spec.Replicas - 1)
-			if err := u.Client.Update(ctx, oldSts); err != nil {
+			if err := s.Client.Update(ctx, oldSts); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to scale down old statefulSet")}
 			}
 		}
@@ -83,58 +83,14 @@ func (u *updateNodes) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX
 	return subResult{}
 }
 
-func (u *updateNodes) canBeScaleDownSts(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface,
-	oldSts *appsv1.StatefulSet, targetedEMQXNodesName []string,
-) (bool, error) {
-	if isExistReplicant(instance) {
-		if instance.Status.ReplicantNodesStatus.ReadyReplicas != *instance.Spec.ReplicantTemplate.Spec.Replicas {
-			return false, nil
-		}
-	}
-
-	if !checkInitialDelaySecondsReady(instance) {
-		return false, nil
-	}
-
-	shouldDeletePod := &corev1.Pod{}
-	_ = u.Client.Get(ctx, types.NamespacedName{
-		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-%d", oldSts.Name, *oldSts.Spec.Replicas-1),
-	}, shouldDeletePod)
-
-	shouldDeletePodInfo, err := getEMQXNodeInfoByAPI(r, fmt.Sprintf("emqx@%s.%s.%s.svc.cluster.local", shouldDeletePod.Name, oldSts.Spec.ServiceName, oldSts.Namespace))
-	if err != nil {
-		return false, emperror.Wrap(err, "failed to get node info by API")
-	}
-
-	if shouldDeletePodInfo.NodeStatus == "stopped" {
-		return true, nil
-	}
-
-	if shouldDeletePodInfo.Edition == "Enterprise" {
-		if shouldDeletePodInfo.Session > 0 && len(instance.Status.NodeEvacuationsStatus) == 0 {
-			if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
-				return false, emperror.Wrap(err, "failed to start node evacuation")
-			}
-			u.EventRecorder.Event(instance, corev1.EventTypeNormal, "NodeEvacuation", fmt.Sprintf("Node %s is being evacuated", shouldDeletePodInfo.Node))
-			return false, nil
-		}
-	}
-	// Open Source or Enterprise with no session
-	if !checkWaitTakeoverReady(instance, getEventList(ctx, u.Clientset, oldSts)) {
-		return false, nil
-	}
-	return true, nil
-}
-
-func (u *updateNodes) canBeScaleDownRs(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface,
+func (s *syncPods) canBeScaleDownRs(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface,
 	oldRs *appsv1.ReplicaSet, targetedEMQXNodesName []string,
 ) (*corev1.Pod, error) {
 	if !checkInitialDelaySecondsReady(instance) {
 		return nil, nil
 	}
 
-	oldRsPods := getRsPodMap(ctx, u.Client, instance)[oldRs.UID]
+	oldRsPods := getRsPodMap(ctx, s.Client, instance)[oldRs.UID]
 	sort.Sort(PodsByNameOlder(oldRsPods))
 	if len(oldRsPods) == 0 {
 		return nil, nil
@@ -157,16 +113,60 @@ func (u *updateNodes) canBeScaleDownRs(ctx context.Context, instance *appsv2alph
 					return nil, emperror.Wrap(err, "failed to start node evacuation")
 				}
 			}
-			u.EventRecorder.Event(instance, corev1.EventTypeNormal, "NodeEvacuation", fmt.Sprintf("Node %s is being evacuated", shouldDeletePodInfo.Node))
+			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "NodeEvacuation", fmt.Sprintf("Node %s is being evacuated", shouldDeletePodInfo.Node))
 			return nil, nil
 		}
 	}
 
 	// Open Source or Enterprise with no session
-	if !checkWaitTakeoverReady(instance, getEventList(ctx, u.Clientset, oldRs)) {
+	if !checkWaitTakeoverReady(instance, getEventList(ctx, s.Clientset, oldRs)) {
 		return nil, nil
 	}
 	return shouldDeletePod, nil
+}
+
+func (s *syncPods) canBeScaleDownSts(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface,
+	oldSts *appsv1.StatefulSet, targetedEMQXNodesName []string,
+) (bool, error) {
+	if isExistReplicant(instance) {
+		if instance.Status.ReplicantNodesStatus.ReadyReplicas != *instance.Spec.ReplicantTemplate.Spec.Replicas {
+			return false, nil
+		}
+	}
+
+	if !checkInitialDelaySecondsReady(instance) {
+		return false, nil
+	}
+
+	shouldDeletePod := &corev1.Pod{}
+	_ = s.Client.Get(ctx, types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-%d", oldSts.Name, *oldSts.Spec.Replicas-1),
+	}, shouldDeletePod)
+
+	shouldDeletePodInfo, err := getEMQXNodeInfoByAPI(r, fmt.Sprintf("emqx@%s.%s.%s.svc.cluster.local", shouldDeletePod.Name, oldSts.Spec.ServiceName, oldSts.Namespace))
+	if err != nil {
+		return false, emperror.Wrap(err, "failed to get node info by API")
+	}
+
+	if shouldDeletePodInfo.NodeStatus == "stopped" {
+		return true, nil
+	}
+
+	if shouldDeletePodInfo.Edition == "Enterprise" {
+		if shouldDeletePodInfo.Session > 0 && len(instance.Status.NodeEvacuationsStatus) == 0 {
+			if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
+				return false, emperror.Wrap(err, "failed to start node evacuation")
+			}
+			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "NodeEvacuation", fmt.Sprintf("Node %s is being evacuated", shouldDeletePodInfo.Node))
+			return false, nil
+		}
+	}
+	// Open Source or Enterprise with no session
+	if !checkWaitTakeoverReady(instance, getEventList(ctx, s.Clientset, oldSts)) {
+		return false, nil
+	}
+	return true, nil
 }
 
 func getEMQXNodeInfoByAPI(r innerReq.RequesterInterface, nodeName string) (*appsv2alpha2.EMQXNode, error) {
