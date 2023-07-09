@@ -119,7 +119,7 @@ func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
 
 // Request API
 func (s updateEmqxStatus) getNodeStatusesByAPI() ([]appsv1beta4.EmqxNode, error) {
-	_, body, err := s.Requester.Request("GET", "api/v4/nodes", nil)
+	_, body, err := s.Requester.Request("GET", s.Requester.GetURL("api/v4/nodes"), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (s updateEmqxStatus) getNodeStatusesByAPI() ([]appsv1beta4.EmqxNode, error)
 }
 
 func (s updateEmqxStatus) getEvacuationStatusByAPI() ([]appsv1beta4.EmqxEvacuationStatus, error) {
-	_, body, err := s.Requester.Request("GET", "api/v4/load_rebalance/global_status", nil)
+	_, body, err := s.Requester.Request("GET", s.Requester.GetURL("api/v4/load_rebalance/global_status"), nil, nil)
 	if err != nil {
 		return nil, err
 	}

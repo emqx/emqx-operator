@@ -2,6 +2,7 @@ package v2alpha2
 
 import (
 	"context"
+	"net/http"
 
 	emperror "emperror.dev/errors"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -73,34 +74,31 @@ func generateConfigMap(instance *appsv2alpha2.EMQX, data string) *corev1.ConfigM
 }
 
 func getEMQXConfigsByAPI(r innerReq.RequesterInterface) (string, error) {
-	headerOpt := innerReq.HeaderOpt{
-		Key:   "Accept",
-		Value: "text/plain",
-	}
-	resp, body, err := r.Request("GET", "api/v5/configs", nil, headerOpt)
+	url := r.GetURL("api/v5/configs")
+
+	resp, body, err := r.Request("GET", url, nil, http.Header{
+		"Accept": []string{"text/plain"},
+	})
 	if err != nil {
-		return "", emperror.Wrap(err, "failed to get API api/v5/configs")
+		return "", emperror.Wrapf(err, "failed to get API %s", url.String())
 	}
 	if resp.StatusCode != 200 {
-		return "", emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/configs", resp.Status, body)
+		return "", emperror.Errorf("failed to get API %s, status : %s, body: %s", url.String(), resp.Status, body)
 	}
 	return string(body), nil
 }
 
 func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) error {
-	headerOpt := innerReq.HeaderOpt{
-		Key:   "Content-Type",
-		Value: "text/plain",
-	}
-	// api := "api/v5/configs?mode=" + mode
-	api := "api/v5/configs"
+	url := r.GetURL("api/v5/configs", "mode="+mode)
 
-	resp, body, err := r.Request("PUT", api, []byte(config), headerOpt)
+	resp, body, err := r.Request("PUT", url, []byte(config), http.Header{
+		"Content-Type": []string{"text/plain"},
+	})
 	if err != nil {
-		return emperror.Wrapf(err, "failed to put API %s", api)
+		return emperror.Wrapf(err, "failed to put API %s", url.String())
 	}
 	if resp.StatusCode != 200 {
-		return emperror.Errorf("failed to put API %s, status : %s, body: %s", api, resp.Status, body)
+		return emperror.Errorf("failed to put API %s, status : %s, body: %s", url.String(), resp.Status, body)
 	}
 	return nil
 }

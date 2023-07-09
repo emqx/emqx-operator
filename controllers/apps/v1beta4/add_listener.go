@@ -158,7 +158,7 @@ func (a addListener) getListenerPortsByAPI() ([]corev1.ServicePort, error) {
 		return ans
 	}
 
-	_, body, err := a.Requester.Request("GET", "api/v4/listeners", nil)
+	_, body, err := a.Requester.Request("GET", a.Requester.GetURL("api/v4/listeners"), nil, nil)
 	if err != nil {
 		return nil, err
 	}

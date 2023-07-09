@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"time"
 
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
@@ -30,7 +31,7 @@ var _ = Describe("Check update emqx nodes controller", Ordered, Label("node"), f
 	var storageRsPod *corev1.Pod
 
 	BeforeEach(func() {
-		fakeR.ReqFunc = func(method, path string, body []byte, otps ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+		fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 			resp = &http.Response{
 				StatusCode: 200,
 			}
@@ -328,7 +329,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
-			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -349,7 +350,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is enterprise, and node session is 0", func() {
-			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -366,7 +367,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is open source", func() {
-			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -449,7 +450,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
-			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -470,7 +471,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is enterprise, and node session is 0", func() {
-			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -487,7 +488,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is open source", func() {
-			fakeR.ReqFunc = func(method, path string, body []byte, opts ...innerReq.HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}

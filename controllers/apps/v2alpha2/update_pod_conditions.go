@@ -92,7 +92,8 @@ func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2alpha2.EMQX, 
 		Host:     fmt.Sprintf("%s:%s", pod.Status.PodIP, port),
 	}
 
-	resp, _, err := requester.Request("GET", "api/v5/load_rebalance/availability_check", nil)
+	url := requester.GetURL("api/v5/load_rebalance/availability_check")
+	resp, _, err := requester.Request("GET", url, nil, nil)
 	if err != nil {
 		return corev1.ConditionUnknown
 	}

@@ -229,7 +229,8 @@ func (r *EmqxPluginReconciler) unloadPluginByAPI(requester innerReq.RequesterInt
 }
 
 func (r *EmqxPluginReconciler) doLoadPluginByAPI(requester innerReq.RequesterInterface, nodeName, pluginName, reloadOrUnload string) error {
-	resp, _, err := requester.Request("PUT", fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload), nil)
+	url := requester.GetURL(fmt.Sprintf("api/v4/nodes/%s/plugins/%s/%s", nodeName, pluginName, reloadOrUnload))
+	resp, _, err := requester.Request("PUT", url, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -241,7 +242,7 @@ func (r *EmqxPluginReconciler) doLoadPluginByAPI(requester innerReq.RequesterInt
 
 func (r *EmqxPluginReconciler) getPluginsByAPI(requester innerReq.RequesterInterface) ([]pluginListByAPIReturn, error) {
 	var data []pluginListByAPIReturn
-	resp, body, err := requester.Request("GET", "api/v4/plugins", nil)
+	resp, body, err := requester.Request("GET", requester.GetURL("api/v4/plugins"), nil, nil)
 	if err != nil {
 		return nil, err
 	}

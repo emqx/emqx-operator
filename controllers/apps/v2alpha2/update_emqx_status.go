@@ -127,12 +127,14 @@ func (u *updateStatus) getEMQXNodes(ctx context.Context, instance *appsv2alpha2.
 }
 
 func getEMQXNodesByAPI(r innerReq.RequesterInterface) ([]appsv2alpha2.EMQXNode, error) {
-	resp, body, err := r.Request("GET", "api/v5/nodes", nil)
+	url := r.GetURL("api/v5/nodes")
+
+	resp, body, err := r.Request("GET", url, nil, nil)
 	if err != nil {
-		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
+		return nil, emperror.Wrapf(err, "failed to get API %s", url.String())
 	}
 	if resp.StatusCode != 200 {
-		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/nodes", resp.Status, body)
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", url.String(), resp.Status, body)
 	}
 
 	nodeStatuses := []appsv2alpha2.EMQXNode{}
@@ -143,12 +145,13 @@ func getEMQXNodesByAPI(r innerReq.RequesterInterface) ([]appsv2alpha2.EMQXNode, 
 }
 
 func getNodeEvacuationStatusByAPI(r innerReq.RequesterInterface) ([]appsv2alpha2.NodeEvacuationStatus, error) {
-	resp, body, err := r.Request("GET", "api/v5/load_rebalance/global_status", nil)
+	url := r.GetURL("api/v5/load_rebalance/global_status")
+	resp, body, err := r.Request("GET", url, nil, nil)
 	if err != nil {
-		return nil, emperror.Wrap(err, "failed to get API api/v5/load_rebalance/global_status")
+		return nil, emperror.Wrapf(err, "failed to get API %s", url.String())
 	}
 	if resp.StatusCode != 200 {
-		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", "api/v5/load_rebalance/global_status", resp.Status, body)
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", url.String(), resp.Status, body)
 	}
 
 	nodeEvacuationStatuses := []appsv2alpha2.NodeEvacuationStatus{}
