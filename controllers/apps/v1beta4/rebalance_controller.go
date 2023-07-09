@@ -228,7 +228,7 @@ func startRebalance(requester innerReq.RequesterInterface, rebalance *appsv1beta
 	emqxNodeName := emqx.Status.EmqxNodes[0].Node
 
 	bytes := getRequestBytes(rebalance, emqx)
-	resp, respBody, err := requester.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/start", bytes)
+	resp, respBody, err := requester.Request("POST", requester.GetURL("api/v4/load_rebalance/"+emqxNodeName+"/start"), bytes, nil)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func startRebalance(requester innerReq.RequesterInterface, rebalance *appsv1beta
 }
 
 func getRebalanceStatus(requester innerReq.RequesterInterface) ([]appsv1beta4.RebalanceState, error) {
-	resp, body, err := requester.Request("GET", "api/v4/load_rebalance/global_status", nil)
+	resp, body, err := requester.Request("GET", requester.GetURL("api/v4/load_rebalance/global_status"), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func getRebalanceStatus(requester innerReq.RequesterInterface) ([]appsv1beta4.Re
 func stopRebalance(requester innerReq.RequesterInterface, rebalance *appsv1beta4.Rebalance) error {
 	// stop rebalance should use coordinatorNode as path parameter
 	emqxNodeName := rebalance.Status.RebalanceStates[0].CoordinatorNode
-	resp, respBody, err := requester.Request("POST", "api/v4/load_rebalance/"+emqxNodeName+"/stop", nil)
+	resp, respBody, err := requester.Request("POST", requester.GetURL("api/v4/load_rebalance/"+emqxNodeName+"/stop"), nil, nil)
 	if err != nil {
 		return err
 	}

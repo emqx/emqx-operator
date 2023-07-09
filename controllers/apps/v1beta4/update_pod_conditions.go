@@ -85,7 +85,7 @@ func (u updatePodConditions) checkRebalanceStatus(instance *appsv1beta4.EmqxEnte
 		Password: u.Requester.GetPassword(),
 		Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),
 	}
-	resp, _, err := requester.Request("GET", "api/v4/load_rebalance/availability_check", nil)
+	resp, _, err := requester.Request("GET", requester.GetURL("api/v4/load_rebalance/availability_check"), nil, nil)
 	if err != nil {
 		return corev1.ConditionUnknown, emperror.Wrapf(err, "failed to check availability for pod/%s", pod.Name)
 	}

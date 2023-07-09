@@ -15,10 +15,11 @@ type HeaderOpt struct {
 }
 
 type RequesterInterface interface {
+	GetURL(path string, query ...string) url.URL
 	GetHost() string
 	GetUsername() string
 	GetPassword() string
-	Request(method, path string, body []byte, opts ...HeaderOpt) (resp *http.Response, respBody []byte, err error)
+	Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error)
 }
 
 type Requester struct {
@@ -39,21 +40,40 @@ func (requester *Requester) GetHost() string {
 	return requester.Host
 }
 
-func (requester *Requester) Request(method, path string, body []byte, opts ...HeaderOpt) (resp *http.Response, respBody []byte, err error) {
+func (requester *Requester) GetURL(path string, query ...string) url.URL {
 	url := url.URL{
 		Scheme: "http",
 		Host:   requester.GetHost(),
 		Path:   path,
 	}
+	for _, q := range query {
+		if url.RawQuery == "" {
+			url.RawQuery = q
+			continue
+		}
+		url.RawQuery += "&" + q
+	}
+	return url
+}
 
-	httpClient := http.Client{}
+func (requester *Requester) Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+	if url.Scheme == "" {
+		url.Scheme = "http"
+	}
+	if url.Host == "" {
+		url.Host = requester.Host
+	}
+
 	req, err := http.NewRequest(method, url.String(), bytes.NewReader(body))
 	if err != nil {
 		return nil, nil, emperror.Wrap(err, "failed to create request")
 	}
-	req.SetBasicAuth(requester.GetUsername(), requester.GetPassword())
-	for _, opt := range opts {
-		req.Header.Set(opt.Key, opt.Value)
+
+	for k, v := range header {
+		req.Header[k] = v
+	}
+	if req.Header.Get("Authorization") == "" {
+		req.SetBasicAuth(requester.GetUsername(), requester.GetPassword())
 	}
 	if req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
@@ -62,6 +82,8 @@ func (requester *Requester) Request(method, path string, body []byte, opts ...He
 		req.Header.Set("Accept", "application/json")
 	}
 	req.Close = true
+
+	httpClient := http.Client{}
 	resp, err = httpClient.Do(req)
 	if err != nil {
 		return nil, nil, emperror.Wrap(err, "failed to request API")
@@ -77,12 +99,13 @@ func (requester *Requester) Request(method, path string, body []byte, opts ...He
 
 // Mock
 type FakeRequester struct {
-	ReqFunc func(method, path string, body []byte, opts ...HeaderOpt) (resp *http.Response, respBody []byte, err error)
+	ReqFunc func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error)
 }
 
-func (f *FakeRequester) GetHost() string     { return "" }
-func (f *FakeRequester) GetUsername() string { return "" }
-func (f *FakeRequester) GetPassword() string { return "" }
-func (f *FakeRequester) Request(method, path string, body []byte, opts ...HeaderOpt) (resp *http.Response, respBody []byte, err error) {
-	return f.ReqFunc(method, path, body)
+func (f *FakeRequester) GetURL(path string, query ...string) url.URL { return url.URL{Path: path} }
+func (f *FakeRequester) GetHost() string                             { return "" }
+func (f *FakeRequester) GetUsername() string                         { return "" }
+func (f *FakeRequester) GetPassword() string                         { return "" }
+func (f *FakeRequester) Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+	return f.ReqFunc(method, url, body, header)
 }

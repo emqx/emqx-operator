@@ -236,7 +236,7 @@ func (a addEmqxStatefulSet) startEvacuateNodeByAPI(instance appsv1beta4.Emqx, mi
 		return emperror.Wrap(err, "marshal body failed")
 	}
 
-	_, _, err = a.Requester.Request("POST", "api/v4/load_rebalance/"+nodeName+"/evacuation/start", b)
+	_, _, err = a.Requester.Request("POST", a.Requester.GetURL("api/v4/load_rebalance/"+nodeName+"/evacuation/start"), b, nil)
 	return err
 }
 

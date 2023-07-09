@@ -170,8 +170,9 @@ func (s *syncPods) canBeScaleDownSts(ctx context.Context, instance *appsv2alpha2
 }
 
 func getEMQXNodeInfoByAPI(r innerReq.RequesterInterface, nodeName string) (*appsv2alpha2.EMQXNode, error) {
-	path := fmt.Sprintf("api/v5/nodes/%s", nodeName)
-	resp, body, err := r.Request("GET", path, nil)
+	url := r.GetURL(fmt.Sprintf("api/v5/nodes/%s", nodeName))
+
+	resp, body, err := r.Request("GET", url, nil, nil)
 	if err != nil {
 		return nil, emperror.Wrap(err, "failed to get API api/v5/nodes")
 	}
@@ -182,7 +183,7 @@ func getEMQXNodeInfoByAPI(r innerReq.RequesterInterface, nodeName string) (*apps
 		}, nil
 	}
 	if resp.StatusCode != 200 {
-		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", path, resp.Status, body)
+		return nil, emperror.Errorf("failed to get API %s, status : %s, body: %s", url.String(), resp.Status, body)
 	}
 
 	nodeInfo := &appsv2alpha2.EMQXNode{}
@@ -207,7 +208,8 @@ func startEvacuationByAPI(r innerReq.RequesterInterface, instance *appsv2alpha2.
 		return emperror.Wrap(err, "marshal body failed")
 	}
 
-	resp, respBody, err := r.Request("POST", "api/v5/load_rebalance/"+nodeName+"/evacuation/start", b)
+	url := r.GetURL("api/v5/load_rebalance/" + nodeName + "/evacuation/start")
+	resp, respBody, err := r.Request("POST", url, b, nil)
 	if err != nil {
 		return emperror.Wrap(err, "failed to request API api/v5/load_rebalance/"+nodeName+"/evacuation/start")
 	}
@@ -218,7 +220,7 @@ func startEvacuationByAPI(r innerReq.RequesterInterface, instance *appsv2alpha2.
 		return nil
 	}
 	if resp.StatusCode != 200 {
-		return emperror.Errorf("failed to request API api/v5/load_rebalance/"+nodeName+"/evacuation/start, status : %s, body: %s", resp.Status, respBody)
+		return emperror.Errorf("failed to request API %s, status : %s, body: %s", url.String(), resp.Status, respBody)
 	}
 	return nil
 }
