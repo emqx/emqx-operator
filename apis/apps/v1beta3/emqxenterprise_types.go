@@ -46,10 +46,6 @@ type EmqxEnterpriseTemplate struct {
 	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
 
-	// Service Account Name
-	// This associates the StatefulSet or Pod with the specified Service Account for authentication purposes.
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-
 	// Image pull policy.
 	// One of Always, Never, IfNotPresent.
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.

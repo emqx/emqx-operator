@@ -120,7 +120,6 @@ _Appears in:_
 | `registry` _string_ | Registry will used for EMQX owner image, like ${registry}/emqx/emqx and ${registry}/emqx/emqx-operator-reloader, but it will not be used by other images, like sidecar container or else. |
 | `image` _string_ |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
-| `serviceAccountName` _string_ |  |
 | `username` _string_ | Username for EMQX Dashboard and API |
 | `password` _string_ | Password for EMQX Dashboard and API |
 | `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
@@ -212,7 +211,6 @@ _Appears in:_
 | --- | --- |
 | `registry` _string_ | Registry will used for EMQX owner image, like ${registry}/emqx/emqx-ee and ${registry}/emqx/emqx-operator-reloader, but it will not be used by other images, like sidecar container or else. |
 | `image` _string_ |  |
-| `serviceAccountName` _string_ | Service Account Name This associates the StatefulSet or Pod with the specified Service Account for authentication purposes. |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `username` _string_ | Username for EMQX Dashboard and API |
 | `password` _string_ | Password for EMQX Dashboard and API |

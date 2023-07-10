@@ -1412,8 +1412,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  serviceAccountName:
-                    type: string
                   serviceTemplate:
                     properties:
                       metadata:
