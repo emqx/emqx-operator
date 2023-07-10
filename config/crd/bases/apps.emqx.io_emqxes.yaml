@@ -9090,7 +9090,7 @@ spec:
                           failureThreshold: 3
                           httpGet:
                             path: /status
-                            port: dashboard-http
+                            port: dashboard
                           initialDelaySeconds: 60
                           periodSeconds: 30
                         properties:
@@ -9272,7 +9272,7 @@ spec:
                           failureThreshold: 12
                           httpGet:
                             path: /status
-                            port: dashboard-http
+                            port: dashboard
                           initialDelaySeconds: 10
                           periodSeconds: 5
                         properties:
@@ -12518,7 +12518,7 @@ spec:
                           failureThreshold: 3
                           httpGet:
                             path: /status
-                            port: dashboard-http
+                            port: dashboard
                           initialDelaySeconds: 60
                           periodSeconds: 30
                         properties:
@@ -12700,7 +12700,7 @@ spec:
                           failureThreshold: 12
                           httpGet:
                             path: /status
-                            port: dashboard-http
+                            port: dashboard
                           initialDelaySeconds: 10
                           periodSeconds: 5
                         properties:

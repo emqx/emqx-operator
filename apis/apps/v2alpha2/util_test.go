@@ -26,7 +26,7 @@ import (
 
 func TestGetDashboardServicePort(t *testing.T) {
 	expect := &corev1.ServicePort{
-		Name:       "dashboard-listeners-http-bind",
+		Name:       "dashboard",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       int32(18083),
 		TargetPort: intstr.Parse("18083"),

@@ -306,7 +306,7 @@ func TestDefaultContainerPort(t *testing.T) {
 		assert.Equal(t, len(instance.Spec.CoreTemplate.Spec.Ports), 1)
 		defaultPort := instance.Spec.CoreTemplate.Spec.Ports[0]
 		assert.Equal(t, int32(18083), defaultPort.ContainerPort)
-		assert.Equal(t, "dashboard-http", defaultPort.Name)
+		assert.Equal(t, "dashboard", defaultPort.Name)
 		assert.Equal(t, corev1.ProtocolTCP, defaultPort.Protocol)
 	})
 
@@ -317,14 +317,14 @@ func TestDefaultContainerPort(t *testing.T) {
 		assert.Equal(t, len(instance.Spec.ReplicantTemplate.Spec.Ports), 1)
 		defaultPort := instance.Spec.ReplicantTemplate.Spec.Ports[0]
 		assert.Equal(t, int32(18083), defaultPort.ContainerPort)
-		assert.Equal(t, "dashboard-http", defaultPort.Name)
+		assert.Equal(t, "dashboard", defaultPort.Name)
 		assert.Equal(t, corev1.ProtocolTCP, defaultPort.Protocol)
 	})
 
 	t.Run("merge container port by same name", func(t *testing.T) {
 		instance.Spec.CoreTemplate.Spec.Ports = []corev1.ContainerPort{
 			{
-				Name:          "dashboard-http",
+				Name:          "dashboard",
 				ContainerPort: 18084,
 			},
 			{
@@ -337,26 +337,26 @@ func TestDefaultContainerPort(t *testing.T) {
 		index := -1
 		ports := instance.Spec.CoreTemplate.Spec.Ports
 		for index = range ports {
-			if ports[index].Name == "dashboard-http" {
+			if ports[index].Name == "dashboard" {
 				break
 			}
 		}
-		assert.NotEqual(t, index, -1, "missing container port named as dashboard-http")
-		assert.NotEqual(t, index, len(ports), "missing container port named as dashboard-http")
+		assert.NotEqual(t, index, -1, "missing container port named as dashboard")
+		assert.NotEqual(t, index, len(ports), "missing container port named as dashboard")
 		assert.Equal(t, ports[index].ContainerPort, int32(18084))
 	})
 
 	t.Run("merge container port by same port", func(t *testing.T) {
 		instance.Spec.CoreTemplate.Spec.Ports = []corev1.ContainerPort{
 			{
-				Name:          "user-defined-dashboard-http",
+				Name:          "user-defined-dashboard",
 				ContainerPort: 18083,
 			},
 		}
 		instance.defaultContainerPort()
 		assert.Equal(t, len(instance.Spec.CoreTemplate.Spec.Ports), 1)
 		port := instance.Spec.CoreTemplate.Spec.Ports[0]
-		assert.Equal(t, port.Name, "user-defined-dashboard-http")
+		assert.Equal(t, port.Name, "user-defined-dashboard")
 		assert.Equal(t, port.ContainerPort, int32(18083))
 	})
 }

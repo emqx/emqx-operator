@@ -248,13 +248,13 @@ type EMQXReplicantTemplateSpec struct {
 	// Container will be restarted if the probe fails.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	//+kubebuilder:default={initialDelaySeconds:60,periodSeconds:30,failureThreshold:3,httpGet: {path:/status, port:"dashboard-http"}}
+	//+kubebuilder:default={initialDelaySeconds:60,periodSeconds:30,failureThreshold:3,httpGet: {path:/status, port:"dashboard"}}
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 	// Periodic probe of container service readiness.
 	// Container will be removed from service endpoints if the probe fails.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	//+kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,failureThreshold:12,httpGet: {path:/status, port:"dashboard-http"}}
+	//+kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,failureThreshold:12,httpGet: {path:/status, port:"dashboard"}}
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	// StartupProbe indicates that the Pod has successfully initialized.
 	// If specified, no other probes are executed until this completes successfully.
