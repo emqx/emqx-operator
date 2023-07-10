@@ -131,6 +131,12 @@ func TestBrokerDefault(t *testing.T) {
 						Protocol:   corev1.ProtocolTCP,
 						TargetPort: intstr.FromInt(8081),
 					},
+					{
+						Name:       "http-dashboard-18083",
+						Port:       18083,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(18083),
+					},
 				},
 			},
 		}, instance.Spec.ServiceTemplate)
@@ -162,17 +168,24 @@ func TestBrokerDefault(t *testing.T) {
 	})
 
 	t.Run("default container port", func(t *testing.T) {
-		assert.GreaterOrEqual(t, len(instance.Spec.Template.Spec.EmqxContainer.Ports), 1)
-		defaultPort := instance.Spec.Template.Spec.EmqxContainer.Ports[0]
-		assert.Equal(t, defaultPort.Name, "dashboard-http")
-		assert.Equal(t, defaultPort.Protocol, corev1.ProtocolTCP)
-		assert.Equal(t, defaultPort.ContainerPort, int32(18083))
+		assert.ElementsMatch(t, []corev1.ContainerPort{
+			{
+				Name:          "management",
+				Protocol:      corev1.ProtocolTCP,
+				ContainerPort: 8081,
+			},
+			{
+				Name:          "dashboard",
+				Protocol:      corev1.ProtocolTCP,
+				ContainerPort: 18083,
+			},
+		}, instance.Spec.Template.Spec.EmqxContainer.Ports)
 	})
 
 	t.Run("merge container port by same port", func(t *testing.T) {
 		instance.Spec.Template.Spec.EmqxContainer.Ports = []corev1.ContainerPort{
 			{
-				Name:          "user-defined-dashboard-http",
+				Name:          "user-defined-http-dashboard-18083",
 				ContainerPort: 18083,
 			},
 		}
@@ -180,14 +193,14 @@ func TestBrokerDefault(t *testing.T) {
 
 		assert.GreaterOrEqual(t, len(instance.Spec.Template.Spec.EmqxContainer.Ports), 1)
 		defaultPort := instance.Spec.Template.Spec.EmqxContainer.Ports[0]
-		assert.Equal(t, defaultPort.Name, "user-defined-dashboard-http")
+		assert.Equal(t, defaultPort.Name, "user-defined-http-dashboard-18083")
 		assert.Equal(t, defaultPort.ContainerPort, int32(18083))
 	})
 
 	t.Run("merge container port by same name", func(t *testing.T) {
 		instance.Spec.Template.Spec.EmqxContainer.Ports = []corev1.ContainerPort{
 			{
-				Name:          "dashboard-http",
+				Name:          "http-dashboard-18083",
 				ContainerPort: 18084,
 			},
 		}
@@ -195,7 +208,7 @@ func TestBrokerDefault(t *testing.T) {
 
 		assert.GreaterOrEqual(t, len(instance.Spec.Template.Spec.EmqxContainer.Ports), 1)
 		defaultPort := instance.Spec.Template.Spec.EmqxContainer.Ports[0]
-		assert.Equal(t, defaultPort.Name, "dashboard-http")
+		assert.Equal(t, defaultPort.Name, "http-dashboard-18083")
 		assert.Equal(t, defaultPort.ContainerPort, int32(18084))
 	})
 }

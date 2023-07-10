@@ -191,6 +191,12 @@ func defaultServiceTemplate(r Emqx) {
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt(8081),
 			},
+			{
+				Name:       "http-dashboard-18083",
+				Port:       18083,
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(18083),
+			},
 		},
 	)
 
@@ -204,7 +210,12 @@ func defaultContainerPort(r Emqx) {
 		container.Ports,
 		[]corev1.ContainerPort{
 			{
-				Name:          "dashboard-http",
+				Name:          "management",
+				Protocol:      corev1.ProtocolTCP,
+				ContainerPort: 8081,
+			},
+			{
+				Name:          "dashboard",
 				Protocol:      corev1.ProtocolTCP,
 				ContainerPort: 18083,
 			},
