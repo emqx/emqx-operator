@@ -147,7 +147,7 @@ func GetDashboardServicePort(hoconString string) (*corev1.ServicePort, error) {
 	intStrValue := intstr.Parse(strPort)
 
 	return &corev1.ServicePort{
-		Name:       "dashboard-listeners-http-bind",
+		Name:       "dashboard",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       int32(intStrValue.IntValue()),
 		TargetPort: intStrValue,

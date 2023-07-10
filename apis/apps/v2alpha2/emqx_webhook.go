@@ -226,7 +226,7 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 	if err != nil {
 		emqxlog.Info("failed to get dashboard service port in config, use 18083", "error", err)
 		dashboardPort = &corev1.ServicePort{
-			Name:       "dashboard-listeners-http-bind",
+			Name:       "dashboard",
 			Protocol:   corev1.ProtocolTCP,
 			Port:       18083,
 			TargetPort: intstr.Parse("18083"),
@@ -243,7 +243,7 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 
 func (r *EMQX) defaultContainerPort() {
 	var containerPort = corev1.ContainerPort{
-		Name:          "dashboard-http",
+		Name:          "dashboard",
 		Protocol:      corev1.ProtocolTCP,
 		ContainerPort: 18083,
 	}
