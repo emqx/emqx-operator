@@ -234,7 +234,7 @@ _Appears in:_
 | `image` _string_ | EMQX image name. More info: https://kubernetes.io/docs/concepts/containers/images |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
-| `serviceAccountName` _string_ |  |
+| `serviceAccountName` _string_ | Service Account Name This associates the Deployment, StatefulSet or Pod with the specified Service Account for authentication purposes. |
 | `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
 | `config` _[Config](#config)_ | EMQX config |
 | `clusterDomain` _string_ |  |

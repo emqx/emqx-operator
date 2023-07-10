@@ -6406,8 +6406,6 @@ spec:
                           type: array
                       type: object
                   type: object
-                serviceAccountName:
-                  type: string
               type: object
             status:
               properties:

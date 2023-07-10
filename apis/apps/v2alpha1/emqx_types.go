@@ -192,8 +192,6 @@ type EMQXSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-
 	// EMQX bootstrap user
 	// Cannot be updated.
 	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`

@@ -218,6 +218,8 @@ type BootstrapAPIKey struct {
 }
 
 type EmqxTemplateSpec struct {
+	// Service Account Name
+	// This associates the StatefulSet or Pod with the specified Service Account for authentication purposes.
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 	// +kubebuilder:default:="emqx/emqx-operator-reloader:0.0.2"
 	ReloaderImage       string                        `json:"reloaderImage,omitempty"`
