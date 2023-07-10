@@ -68,10 +68,10 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 100m
-            memory: 100Mi
+            cpu: 500m
+            memory: 512Mi
           requests:
             cpu: 100m
-            memory: 20Mi
+            memory: 128Mi
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

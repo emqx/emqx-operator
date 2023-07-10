@@ -200,36 +200,39 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 	// Get gateway.lwm2m.listeners.udp.default.bind
 	for proto, gateway := range hoconConfig.GetObject("gateway") {
 		c, _ := hocon.ParseString(gateway.String())
-		if c.GetString("enable") == "" || c.GetString("enable") == "true" {
-			for t, listener := range c.GetObject("listeners") {
-				c, _ := hocon.ParseString(listener.String())
-				for name, config := range c.GetRoot().(hocon.Object) {
-					c, _ := hocon.ParseString(config.String())
-					// Compatible with "enable" and "enabled"
-					// the default value of them both is true
-					if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
-						continue
-					}
-					bind := strings.Trim(c.GetString("bind"), `"`)
-					if !strings.Contains(bind, ":") {
-						// example: ":1883"
-						bind = fmt.Sprintf(":%s", bind)
-					}
-					_, strPort, _ := net.SplitHostPort(bind)
-					intStrValue := intstr.Parse(strPort)
-
-					protocol := corev1.ProtocolTCP
-					if t == "udp" || t == "dtls" {
-						protocol = corev1.ProtocolUDP
-					}
-
-					svcPorts = append(svcPorts, corev1.ServicePort{
-						Name:       fmt.Sprintf("%s-%s-%s", proto, t, name),
-						Protocol:   protocol,
-						Port:       int32(intStrValue.IntValue()),
-						TargetPort: intStrValue,
-					})
+		// Compatible with "enable" and "enabled"
+		// the default value of them both is true
+		if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
+			continue
+		}
+		for t, listener := range c.GetObject("listeners") {
+			c, _ := hocon.ParseString(listener.String())
+			for name, config := range c.GetRoot().(hocon.Object) {
+				c, _ := hocon.ParseString(config.String())
+				// Compatible with "enable" and "enabled"
+				// the default value of them both is true
+				if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
+					continue
 				}
+				bind := strings.Trim(c.GetString("bind"), `"`)
+				if !strings.Contains(bind, ":") {
+					// example: ":1883"
+					bind = fmt.Sprintf(":%s", bind)
+				}
+				_, strPort, _ := net.SplitHostPort(bind)
+				intStrValue := intstr.Parse(strPort)
+
+				protocol := corev1.ProtocolTCP
+				if t == "udp" || t == "dtls" {
+					protocol = corev1.ProtocolUDP
+				}
+
+				svcPorts = append(svcPorts, corev1.ServicePort{
+					Name:       fmt.Sprintf("%s-%s-%s", proto, t, name),
+					Protocol:   protocol,
+					Port:       int32(intStrValue.IntValue()),
+					TargetPort: intStrValue,
+				})
 			}
 		}
 	}

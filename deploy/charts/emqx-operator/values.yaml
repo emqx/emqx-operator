@@ -29,11 +29,11 @@ podAnnotations: {}
 
 resources:
   limits:
-    cpu: 100m
-    memory: 100Mi
+    cpu: 500m
+    memory: 512Mi
   requests:
     cpu: 100m
-    memory: 30Mi
+    memory: 128Mi
 
 nodeSelector: {}
 
