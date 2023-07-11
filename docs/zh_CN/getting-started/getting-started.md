@@ -61,19 +61,17 @@
 1. 将下面的 YAML 配置文件保存为 `emqx.yaml`。
 
    ```yaml
-    apiVersion: apps.emqx.io/v1beta4
-    kind: EmqxEnterprise
-    metadata:
-       name: emqx-ee
-    spec:
-       template:
-         spec:
-           emqxContainer:
-             image:
-               repository: emqx/emqx-ee
-               version: 4.4.15
-    EOF
-   EOF
+   apiVersion: apps.emqx.io/v1beta4
+   kind: EmqxEnterprise
+   metadata:
+      name: emqx-ee
+   spec:
+      template:
+        spec:
+          emqxContainer:
+            image:
+              repository: emqx/emqx-ee
+              version: 4.4.17
    ```
 
    并使用 `kubectl apply` 命令来部署 EMQX。
@@ -110,7 +108,7 @@
           emqxContainer:
             image:
               repository: emqx
-              version: 4.4
+              version: "4.4.18"
    ```
 
    并使用 `kubectl apply` 命令来部署 EMQX。
