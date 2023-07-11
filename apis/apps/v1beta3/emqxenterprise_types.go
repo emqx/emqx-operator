@@ -45,6 +45,7 @@ type EmqxEnterpriseTemplate struct {
 	Registry string `json:"registry,omitempty"`
 	//+kubebuilder:validation:Required
 	Image string `json:"image,omitempty"`
+
 	// Image pull policy.
 	// One of Always, Never, IfNotPresent.
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.

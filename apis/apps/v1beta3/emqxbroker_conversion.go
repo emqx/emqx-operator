@@ -69,7 +69,6 @@ func (src *EmqxBroker) ConvertTo(dstRaw conversion.Hub) error {
 	if len(src.Spec.EmqxTemplate.ImagePullPolicy) != 0 {
 		dst.Spec.Template.Spec.EmqxContainer.Image.PullPolicy = src.Spec.EmqxTemplate.ImagePullPolicy
 	}
-
 	if src.Spec.EmqxTemplate.EmqxConfig != nil {
 		dst.Spec.Template.Spec.EmqxContainer.EmqxConfig = src.Spec.EmqxTemplate.EmqxConfig
 	}

@@ -57,6 +57,11 @@ type EMQXSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
+	// Service Account Name
+	// This associates the ReplicaSet or StatefulSet with the specified Service Account for authentication purposes.
+	// More info: https://kubernetes.io/docs/concepts/security/service-accounts
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
 	// EMQX bootstrap user
 	// Cannot be updated.
 	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`

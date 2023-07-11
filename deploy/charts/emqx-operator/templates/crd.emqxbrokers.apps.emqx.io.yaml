@@ -6150,6 +6150,8 @@ spec:
                         reloaderImage:
                           default: emqx/emqx-operator-reloader:0.0.2
                           type: string
+                        serviceAccountName:
+                          type: string
                         tolerations:
                           items:
                             properties:

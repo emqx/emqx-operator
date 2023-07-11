@@ -67,7 +67,6 @@ func (src *EmqxEnterprise) ConvertTo(dstRaw conversion.Hub) error {
 	if len(src.Spec.EmqxTemplate.ImagePullPolicy) != 0 {
 		dst.Spec.Template.Spec.EmqxContainer.Image.PullPolicy = src.Spec.EmqxTemplate.ImagePullPolicy
 	}
-
 	if !reflect.ValueOf(src.Spec.EmqxTemplate.License).IsZero() {
 		dst.Spec.License = v1beta4.EmqxLicense(src.Spec.EmqxTemplate.License)
 	}

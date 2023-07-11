@@ -218,6 +218,10 @@ type BootstrapAPIKey struct {
 }
 
 type EmqxTemplateSpec struct {
+	// Service Account Name
+	// This associates the ReplicaSet or StatefulSet with the specified Service Account for authentication purposes.
+	// More info: https://kubernetes.io/docs/concepts/security/service-accounts
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 	// +kubebuilder:default:="emqx/emqx-operator-reloader:0.0.2"
 	ReloaderImage       string                        `json:"reloaderImage,omitempty"`
 	ImagePullSecrets    []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
