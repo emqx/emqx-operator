@@ -56,13 +56,13 @@ func (a *addSvc) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ i
 }
 
 func (a *addSvc) getPodList(ctx context.Context, instance *appsv2alpha2.EMQX) []corev1.Pod {
-	labels := appsv2alpha2.AddLabel(
+	labels := appsv2alpha2.CloneAndAddLabel(
 		instance.Spec.CoreTemplate.Labels,
 		appsv2alpha2.PodTemplateHashLabelKey,
 		instance.Status.CoreNodesStatus.CurrentRevision,
 	)
 	if isExistReplicant(instance) {
-		labels = appsv2alpha2.AddLabel(
+		labels = appsv2alpha2.CloneAndAddLabel(
 			instance.Spec.ReplicantTemplate.Labels,
 			appsv2alpha2.PodTemplateHashLabelKey,
 			instance.Status.ReplicantNodesStatus.CurrentRevision,

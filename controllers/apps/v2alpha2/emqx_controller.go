@@ -170,14 +170,19 @@ func newRequester(k8sClient client.Client, instance *appsv2alpha2.EMQX) (innerRe
 		port = dashboardPort.TargetPort.String()
 	}
 
+	labels := instance.Spec.CoreTemplate.Labels
+	if instance.Status.CoreNodesStatus.CurrentRevision != "" {
+		labels = appsv2alpha2.CloneAndAddLabel(
+			labels,
+			appsv2alpha2.PodTemplateHashLabelKey,
+			instance.Status.CoreNodesStatus.CurrentRevision,
+		)
+	}
+
 	podList := &corev1.PodList{}
 	_ = k8sClient.List(context.Background(), podList,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(appsv2alpha2.CloneAndAddLabel(
-			instance.Spec.CoreTemplate.Labels,
-			appsv2alpha2.PodTemplateHashLabelKey,
-			instance.Status.CoreNodesStatus.CurrentRevision,
-		)),
+		client.MatchingLabels(labels),
 	)
 	sort.Slice(podList.Items, func(i, j int) bool {
 		return podList.Items[i].CreationTimestamp.Before(&podList.Items[j].CreationTimestamp)

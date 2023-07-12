@@ -25,8 +25,8 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r
 		return subResult{}
 	}
 
-	currentSts, oldStsList := getStateFulSetList(ctx, s.Client, instance)
-	currentRs, oldRsList := getReplicaSetList(ctx, s.Client, instance)
+	updateSts, currentSts, _ := getStateFulSetList(ctx, s.Client, instance)
+	updateRs, currentRs, _ := getReplicaSetList(ctx, s.Client, instance)
 
 	targetedEMQXNodesName := []string{}
 	if isExistReplicant(instance) {
@@ -43,9 +43,8 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r
 		}
 	}
 
-	if len(oldRsList) > 0 {
-		oldRs := oldRsList[0]
-		shouldDeletePod, err := s.canBeScaleDownRs(ctx, instance, r, oldRs, targetedEMQXNodesName)
+	if updateRs != nil && currentRs != nil && updateRs.UID != currentRs.UID {
+		shouldDeletePod, err := s.canBeScaleDownRs(ctx, instance, r, currentRs, targetedEMQXNodesName)
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to check if pod can be scale down")}
 		}
@@ -59,22 +58,22 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r
 				return subResult{err: emperror.Wrap(err, "failed update pod deletion cost")}
 			}
 
-			oldRs.Spec.Replicas = pointer.Int32(*oldRs.Spec.Replicas - 1)
-			if err := s.Client.Update(ctx, oldRs); err != nil {
+			currentRs.Spec.Replicas = pointer.Int32(instance.Status.ReplicantNodesStatus.CurrentReplicas - 1)
+			if err := s.Client.Update(ctx, currentRs); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to scale down old replicaSet")}
 			}
 		}
 		return subResult{}
 	}
-	if len(oldStsList) > 0 {
-		oldSts := oldStsList[0]
-		canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, r, oldSts, targetedEMQXNodesName)
+
+	if updateSts != nil && currentSts != nil && updateSts.UID != currentSts.UID {
+		canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, r, currentSts, targetedEMQXNodesName)
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to check if sts can be scale down")}
 		}
 		if canBeScaledDown {
-			oldSts.Spec.Replicas = pointer.Int32(*oldSts.Spec.Replicas - 1)
-			if err := s.Client.Update(ctx, oldSts); err != nil {
+			currentSts.Spec.Replicas = pointer.Int32(instance.Status.CoreNodesStatus.CurrentReplicas - 1)
+			if err := s.Client.Update(ctx, currentSts); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to scale down old statefulSet")}
 			}
 		}
@@ -83,8 +82,12 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r
 	return subResult{}
 }
 
-func (s *syncPods) canBeScaleDownRs(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface,
-	oldRs *appsv1.ReplicaSet, targetedEMQXNodesName []string,
+func (s *syncPods) canBeScaleDownRs(
+	ctx context.Context,
+	instance *appsv2alpha2.EMQX,
+	r innerReq.RequesterInterface,
+	oldRs *appsv1.ReplicaSet,
+	targetedEMQXNodesName []string,
 ) (*corev1.Pod, error) {
 	if !checkInitialDelaySecondsReady(instance) {
 		return nil, nil
@@ -125,11 +128,15 @@ func (s *syncPods) canBeScaleDownRs(ctx context.Context, instance *appsv2alpha2.
 	return shouldDeletePod, nil
 }
 
-func (s *syncPods) canBeScaleDownSts(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface,
-	oldSts *appsv1.StatefulSet, targetedEMQXNodesName []string,
+func (s *syncPods) canBeScaleDownSts(
+	ctx context.Context,
+	instance *appsv2alpha2.EMQX,
+	r innerReq.RequesterInterface,
+	oldSts *appsv1.StatefulSet,
+	targetedEMQXNodesName []string,
 ) (bool, error) {
 	if isExistReplicant(instance) {
-		if instance.Status.ReplicantNodesStatus.ReadyReplicas != *instance.Spec.ReplicantTemplate.Spec.Replicas {
+		if instance.Status.ReplicantNodesStatus.CurrentRevision != instance.Status.ReplicantNodesStatus.UpdateRevision {
 			return false, nil
 		}
 	}

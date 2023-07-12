@@ -77,8 +77,11 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				)
 				return list.Items
 			}).Should(HaveLen(1))
-			instance.Status.CoreNodesStatus.CurrentRevision = list.Items[0].Labels[appsv2alpha2.PodTemplateHashLabelKey]
+			sts := list.Items[0].DeepCopy()
+			sts.Status.Replicas = 2
+			Expect(k8sClient.Status().Update(ctx, sts)).Should(Succeed())
 
+			instance.Status.CoreNodesStatus.UpdateRevision = sts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(4)
 		})
 

@@ -54,11 +54,18 @@ type NodeEvacuationStats struct {
 
 type EMQXNodesStatus struct {
 	// EMQX nodes info
-	Nodes           []EMQXNode `json:"nodes,omitempty"`
-	Replicas        int32      `json:"replicas,omitempty"`
-	ReadyReplicas   int32      `json:"readyReplicas,omitempty"`
-	CurrentRevision string     `json:"currentRevision,omitempty"`
-	CollisionCount  *int32     `json:"collisionCount,omitempty"`
+	Nodes []EMQXNode `json:"nodes,omitempty"`
+
+	Replicas      int32 `json:"replicas,omitempty"`
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+
+	CurrentRevision string `json:"currentRevision,omitempty"`
+	CurrentReplicas int32  `json:"currentReplicas,omitempty"`
+
+	UpdateRevision string `json:"updateRevision,omitempty"`
+	UpdateReplicas int32  `json:"updateReplicas,omitempty"`
+
+	CollisionCount *int32 `json:"collisionCount,omitempty"`
 }
 
 type EMQXNode struct {

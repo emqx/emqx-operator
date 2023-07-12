@@ -53,7 +53,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		instance.Status.RemoveCondition(appsv2alpha2.Ready)
 		instance.Status.RemoveCondition(appsv2alpha2.Available)
 		instance.Status.RemoveCondition(appsv2alpha2.ReplicantNodesReady)
-		instance.Status.ReplicantNodesStatus.CurrentRevision = preRs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
+		instance.Status.ReplicantNodesStatus.UpdateRevision = preRs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	} else {
 		storageRs := &appsv1.ReplicaSet{}
@@ -94,20 +94,20 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2alpha2.E
 	preRs.Spec.Template.Labels = appsv2alpha2.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 	preRs.Spec.Selector = appsv2alpha2.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 
-	currentRs, _ := getReplicaSetList(ctx, a.Client, instance)
-	if currentRs == nil {
+	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
+	if updateRs == nil {
 		return preRs
 	}
 
 	patchResult, _ := a.Patcher.Calculate(
-		currentRs.DeepCopy(),
+		updateRs.DeepCopy(),
 		preRs.DeepCopy(),
 		justCheckPodTemplate(),
 	)
 	if patchResult.IsEmpty() {
-		preRs.ObjectMeta = currentRs.ObjectMeta
-		preRs.Spec.Template.ObjectMeta = currentRs.Spec.Template.ObjectMeta
-		preRs.Spec.Selector = currentRs.Spec.Selector
+		preRs.ObjectMeta = updateRs.DeepCopy().ObjectMeta
+		preRs.Spec.Template.ObjectMeta = updateRs.DeepCopy().Spec.Template.ObjectMeta
+		preRs.Spec.Selector = updateRs.DeepCopy().Spec.Selector
 		return preRs
 	}
 	logger := log.FromContext(ctx)

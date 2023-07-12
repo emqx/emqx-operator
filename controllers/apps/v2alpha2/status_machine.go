@@ -18,12 +18,11 @@ package v2alpha2
 
 import (
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
-	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type status interface {
-	nextStatus(*appsv1.StatefulSet, *appsv1.ReplicaSet)
+	nextStatus()
 }
 
 type emqxStatusMachine struct {
@@ -96,8 +95,8 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2alpha2.EMQX) {
 	}
 }
 
-func (s *emqxStatusMachine) NextStatus(currentSts *appsv1.StatefulSet, currentRs *appsv1.ReplicaSet) {
-	s.currentStatus.nextStatus(currentSts, currentRs)
+func (s *emqxStatusMachine) NextStatus() {
+	s.currentStatus.nextStatus()
 }
 
 func (s *emqxStatusMachine) GetEMQX() *appsv2alpha2.EMQX {
@@ -108,7 +107,7 @@ type initializedStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *initializedStatus) nextStatus(_ *appsv1.StatefulSet, _ *appsv1.ReplicaSet) {
+func (s *initializedStatus) nextStatus() {
 	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ReplicantNodesProgressing)
 	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2alpha2.ReplicantNodesReady)
 
@@ -131,89 +130,79 @@ type coreNodesProgressingStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *coreNodesProgressingStatus) nextStatus(currentSts *appsv1.StatefulSet, currentRs *appsv1.ReplicaSet) {
-	// statefulSet is ready
-	if currentSts == nil ||
-		currentSts.Status.ObservedGeneration != currentSts.Generation ||
-		currentSts.Status.ReadyReplicas != *currentSts.Spec.Replicas {
-		return
+func (s *coreNodesProgressingStatus) nextStatus() {
+	emqx := s.emqxStatusMachine.GetEMQX()
+
+	if emqx.Status.CoreNodesStatus.UpdateReplicas == emqx.Status.CoreNodesStatus.Replicas {
+		emqx.Status.SetCondition(metav1.Condition{
+			Type:    appsv2alpha2.CoreNodesReady,
+			Status:  metav1.ConditionTrue,
+			Reason:  "CoreNodesReady",
+			Message: "Core nodes is ready",
+		})
 	}
 
-	// core nodes is ready
-	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas < s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
-		return
-	}
-
-	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
-		Type:    appsv2alpha2.CoreNodesReady,
-		Status:  metav1.ConditionTrue,
-		Reason:  "CoreNodesReady",
-		Message: "Core nodes is ready",
-	})
-	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
+	s.emqxStatusMachine.setCurrentStatus(emqx)
 }
 
 type codeNodesReadyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *codeNodesReadyStatus) nextStatus(currentSts *appsv1.StatefulSet, currentRs *appsv1.ReplicaSet) {
-	if isExistReplicant(s.emqxStatusMachine.emqx) {
-		s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
+func (s *codeNodesReadyStatus) nextStatus() {
+	emqx := s.emqxStatusMachine.GetEMQX()
+
+	if isExistReplicant(emqx) {
+		emqx.Status.SetCondition(metav1.Condition{
 			Type:    appsv2alpha2.ReplicantNodesProgressing,
 			Status:  metav1.ConditionTrue,
 			Reason:  appsv2alpha2.ReplicantNodesProgressing,
 			Message: "Replicant nodes progressing",
 		})
-		s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
+		s.emqxStatusMachine.setCurrentStatus(emqx)
 		return
 	}
 
-	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
+	emqx.Status.SetCondition(metav1.Condition{
 		Type:    appsv2alpha2.Available,
 		Status:  metav1.ConditionTrue,
 		Reason:  appsv2alpha2.Available,
 		Message: "Cluster is available",
 	})
-	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
+	s.emqxStatusMachine.setCurrentStatus(emqx)
 }
 
 type replicantNodesProgressingStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *replicantNodesProgressingStatus) nextStatus(currentSts *appsv1.StatefulSet, currentRs *appsv1.ReplicaSet) {
-	if !isExistReplicant(s.emqxStatusMachine.emqx) {
-		s.emqxStatusMachine.initialized.nextStatus(currentSts, currentRs)
+func (s *replicantNodesProgressingStatus) nextStatus() {
+	emqx := s.emqxStatusMachine.GetEMQX()
+
+	if !isExistReplicant(emqx) {
+		s.emqxStatusMachine.initialized.nextStatus()
 		return
 	}
 
-	if currentRs == nil ||
-		currentRs.Status.ReadyReplicas != *currentRs.Spec.Replicas {
-		return
+	if emqx.Status.ReplicantNodesStatus.UpdateReplicas == emqx.Status.ReplicantNodesStatus.Replicas {
+		emqx.Status.SetCondition(metav1.Condition{
+			Type:    appsv2alpha2.ReplicantNodesReady,
+			Status:  metav1.ConditionTrue,
+			Reason:  appsv2alpha2.ReplicantNodesReady,
+			Message: "Replicant nodes ready",
+		})
 	}
 
-	// replicant nodes is ready
-	if s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.ReadyReplicas < s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.Replicas {
-		return
-	}
-
-	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
-		Type:    appsv2alpha2.ReplicantNodesReady,
-		Status:  metav1.ConditionTrue,
-		Reason:  appsv2alpha2.ReplicantNodesReady,
-		Message: "Replicant nodes ready",
-	})
-	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
+	s.emqxStatusMachine.setCurrentStatus(emqx)
 }
 
 type replicantNodesReadyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *replicantNodesReadyStatus) nextStatus(currentSts *appsv1.StatefulSet, currentRs *appsv1.ReplicaSet) {
+func (s *replicantNodesReadyStatus) nextStatus() {
 	if !isExistReplicant(s.emqxStatusMachine.emqx) {
-		s.emqxStatusMachine.initialized.nextStatus(currentSts, currentRs)
+		s.emqxStatusMachine.initialized.nextStatus()
 		return
 	}
 
@@ -230,27 +219,32 @@ type availableStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *availableStatus) nextStatus(currentSts *appsv1.StatefulSet, currentRs *appsv1.ReplicaSet) {
-	if s.emqxStatusMachine.emqx.Status.CoreNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.CoreNodesStatus.Replicas {
+func (s *availableStatus) nextStatus() {
+	emqx := s.emqxStatusMachine.GetEMQX()
+
+	if emqx.Status.CoreNodesStatus.ReadyReplicas != emqx.Status.CoreNodesStatus.Replicas ||
+		emqx.Status.CoreNodesStatus.UpdateRevision != emqx.Status.CoreNodesStatus.CurrentRevision {
 		return
 	}
-	if isExistReplicant(s.emqxStatusMachine.emqx) {
-		if s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.ReadyReplicas != s.emqxStatusMachine.emqx.Status.ReplicantNodesStatus.Replicas {
+
+	if isExistReplicant(emqx) {
+		if emqx.Status.ReplicantNodesStatus.ReadyReplicas != emqx.Status.ReplicantNodesStatus.Replicas ||
+			emqx.Status.ReplicantNodesStatus.UpdateRevision != emqx.Status.ReplicantNodesStatus.CurrentRevision {
 			return
 		}
 	}
 
-	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
+	emqx.Status.SetCondition(metav1.Condition{
 		Type:    appsv2alpha2.Ready,
 		Status:  metav1.ConditionTrue,
 		Reason:  appsv2alpha2.Ready,
 		Message: "Cluster is ready",
 	})
-	s.emqxStatusMachine.setCurrentStatus(s.emqxStatusMachine.emqx)
+	s.emqxStatusMachine.setCurrentStatus(emqx)
 }
 
 type readyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *readyStatus) nextStatus(currentSts *appsv1.StatefulSet, currentRs *appsv1.ReplicaSet) {}
+func (s *readyStatus) nextStatus() {}

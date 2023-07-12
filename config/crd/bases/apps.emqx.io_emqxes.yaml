@@ -12982,6 +12982,9 @@ spec:
                   collisionCount:
                     format: int32
                     type: integer
+                  currentReplicas:
+                    format: int32
+                    type: integer
                   currentRevision:
                     type: string
                   nodes:
@@ -13020,6 +13023,11 @@ spec:
                   replicas:
                     format: int32
                     type: integer
+                  updateReplicas:
+                    format: int32
+                    type: integer
+                  updateRevision:
+                    type: string
                 type: object
               nodEvacuationsStatus:
                 items:
@@ -13066,6 +13074,9 @@ spec:
                   collisionCount:
                     format: int32
                     type: integer
+                  currentReplicas:
+                    format: int32
+                    type: integer
                   currentRevision:
                     type: string
                   nodes:
@@ -13104,6 +13115,11 @@ spec:
                   replicas:
                     format: int32
                     type: integer
+                  updateReplicas:
+                    format: int32
+                    type: integer
+                  updateRevision:
+                    type: string
                 type: object
             type: object
         type: object
