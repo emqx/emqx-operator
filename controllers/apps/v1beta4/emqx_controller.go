@@ -149,18 +149,18 @@ func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (innerRe
 	}, nil
 }
 
-func newRequesterByPod(client client.Client, instance appsv1beta4.Emqx, pod *corev1.Pod) (innerReq.RequesterInterface, error) {
-	username, password, err := getBootstrapUser(context.Background(), client, instance)
-	if err != nil {
-		return nil, err
-	}
+// func newRequesterByPod(client client.Client, instance appsv1beta4.Emqx, pod *corev1.Pod) (innerReq.RequesterInterface, error) {
+// 	username, password, err := getBootstrapUser(context.Background(), client, instance)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return &innerReq.Requester{
-		Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),
-		Username: username,
-		Password: password,
-	}, nil
-}
+// 	return &innerReq.Requester{
+// 		Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),
+// 		Username: username,
+// 		Password: password,
+// 	}, nil
+// }
 
 func getBootstrapUser(ctx context.Context, client client.Client, instance appsv1beta4.Emqx) (username, password string, err error) {
 	bootstrapUser := &corev1.Secret{}
