@@ -167,6 +167,9 @@ _Appears in:_
 | `replicas` _integer_ |  |
 | `readyReplicas` _integer_ |  |
 | `currentRevision` _string_ |  |
+| `currentReplicas` _integer_ |  |
+| `updateRevision` _string_ |  |
+| `updateReplicas` _integer_ |  |
 | `collisionCount` _integer_ |  |
 
 

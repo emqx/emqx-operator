@@ -125,8 +125,11 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				)
 				return list.Items
 			}).Should(HaveLen(1))
-			instance.Status.ReplicantNodesStatus.CurrentRevision = list.Items[0].Labels[appsv2alpha2.PodTemplateHashLabelKey]
+			rs := list.Items[0].DeepCopy()
+			rs.Status.Replicas = 3
+			Expect(k8sClient.Status().Update(ctx, rs)).Should(Succeed())
 
+			instance.Status.ReplicantNodesStatus.UpdateRevision = rs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(0)
 		})
 
@@ -155,7 +158,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				)
 				return list.Items
 			}).Should(HaveLen(1))
-			instance.Status.ReplicantNodesStatus.CurrentRevision = list.Items[0].Labels[appsv2alpha2.PodTemplateHashLabelKey]
+			instance.Status.ReplicantNodesStatus.UpdateRevision = list.Items[0].Labels[appsv2alpha2.PodTemplateHashLabelKey]
 
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(4)
 		})

@@ -47,7 +47,7 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, _ 
 		instance.Status.RemoveCondition(appsv2alpha2.Ready)
 		instance.Status.RemoveCondition(appsv2alpha2.Available)
 		instance.Status.RemoveCondition(appsv2alpha2.CoreNodesReady)
-		instance.Status.CoreNodesStatus.CurrentRevision = preSts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
+		instance.Status.CoreNodesStatus.UpdateRevision = preSts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	} else {
 		storageSts := &appsv1.StatefulSet{}
@@ -88,20 +88,20 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2alpha2.
 	preSts.Spec.Template.Labels = appsv2alpha2.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 	preSts.Spec.Selector = appsv2alpha2.CloneSelectorAndAddLabel(preSts.Spec.Selector, appsv2alpha2.PodTemplateHashLabelKey, podTemplateSpecHash)
 
-	currentSts, _ := getStateFulSetList(ctx, a.Client, instance)
-	if currentSts == nil {
+	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
+	if updateSts == nil {
 		return preSts
 	}
 
 	patchResult, _ := a.Patcher.Calculate(
-		currentSts.DeepCopy(),
+		updateSts.DeepCopy(),
 		preSts.DeepCopy(),
 		justCheckPodTemplate(),
 	)
 	if patchResult.IsEmpty() {
-		preSts.ObjectMeta = currentSts.ObjectMeta
-		preSts.Spec.Template.ObjectMeta = currentSts.Spec.Template.ObjectMeta
-		preSts.Spec.Selector = currentSts.Spec.Selector
+		preSts.ObjectMeta = updateSts.DeepCopy().ObjectMeta
+		preSts.Spec.Template.ObjectMeta = updateSts.DeepCopy().Spec.Template.ObjectMeta
+		preSts.Spec.Selector = updateSts.DeepCopy().Spec.Selector
 		return preSts
 	}
 

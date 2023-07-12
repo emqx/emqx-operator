@@ -21,37 +21,73 @@ type updateStatus struct {
 
 func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
 	if isExistReplicant(instance) && instance.Status.ReplicantNodesStatus == nil {
-		instance.Status.ReplicantNodesStatus = &appsv2alpha2.EMQXNodesStatus{}
+		instance.Status.ReplicantNodesStatus = &appsv2alpha2.EMQXNodesStatus{
+			Replicas: *instance.Spec.ReplicantTemplate.Spec.Replicas,
+		}
 	}
 
 	if r == nil {
 		return subResult{}
 	}
 
-	currentSts, _ := getStateFulSetList(ctx, u.Client, instance)
-	currentRs, _ := getReplicaSetList(ctx, u.Client, instance)
-
 	// check emqx node status
 	coreNodes, replNodes, err := u.getEMQXNodes(ctx, instance, r)
 	if err != nil {
 		u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 	}
+
+	updateSts, currentSts, oldStsList := getStateFulSetList(ctx, u.Client, instance)
+	if currentSts == nil {
+		if len(oldStsList) > 0 {
+			currentSts = oldStsList[0]
+		} else {
+			currentSts = updateSts
+		}
+		instance.Status.CoreNodesStatus.CurrentRevision = currentSts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
+	}
+
 	instance.Status.CoreNodesStatus.Nodes = coreNodes
 	instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	instance.Status.CoreNodesStatus.ReadyReplicas = 0
+	instance.Status.CoreNodesStatus.CurrentReplicas = 0
+	instance.Status.CoreNodesStatus.UpdateReplicas = 0
 	for _, node := range coreNodes {
 		if node.NodeStatus == "running" {
 			instance.Status.CoreNodesStatus.ReadyReplicas++
 		}
+		if currentSts != nil && node.ControllerUID == currentSts.UID {
+			instance.Status.CoreNodesStatus.CurrentReplicas++
+		}
+		if updateSts != nil && node.ControllerUID == updateSts.UID {
+			instance.Status.CoreNodesStatus.UpdateReplicas++
+		}
 	}
 
 	if len(replNodes) > 0 {
+		updateRs, currentRs, oldRsList := getReplicaSetList(ctx, u.Client, instance)
+		if currentRs == nil {
+			if len(oldRsList) > 0 {
+				currentRs = oldRsList[0]
+			} else {
+				currentRs = updateRs
+			}
+			instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
+		}
+
 		instance.Status.ReplicantNodesStatus.Nodes = replNodes
 		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 		instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
+		instance.Status.ReplicantNodesStatus.CurrentReplicas = 0
+		instance.Status.ReplicantNodesStatus.UpdateReplicas = 0
 		for _, node := range replNodes {
 			if node.NodeStatus == "running" {
 				instance.Status.ReplicantNodesStatus.ReadyReplicas++
+			}
+			if currentRs != nil && node.ControllerUID == currentRs.UID {
+				instance.Status.ReplicantNodesStatus.CurrentReplicas++
+			}
+			if updateRs != nil && node.ControllerUID == updateRs.UID {
+				instance.Status.ReplicantNodesStatus.UpdateReplicas++
 			}
 		}
 	}
@@ -72,7 +108,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	}
 
 	// update status condition
-	newEMQXStatusMachine(instance).NextStatus(currentSts, currentRs)
+	newEMQXStatusMachine(instance).NextStatus()
 
 	if err := u.Client.Status().Update(ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}

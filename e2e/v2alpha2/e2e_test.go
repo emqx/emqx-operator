@@ -75,6 +75,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Not(BeEmpty())),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Not(BeEmpty())),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
@@ -112,6 +115,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Not(BeEmpty())),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
@@ -149,6 +155,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
@@ -183,6 +192,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 						return instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("CurrentRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
+						HaveField("UpdateRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
 					)),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
@@ -293,6 +303,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Not(BeEmpty())),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Not(BeEmpty())),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
@@ -300,6 +313,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Not(BeEmpty())),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Not(BeEmpty())),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 					)),
 				),
 			)
@@ -334,6 +350,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
@@ -342,6 +361,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.ReplicantNodesStatus.CurrentRevision)),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Equal(storage.Status.ReplicantNodesStatus.CurrentRevision)),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 					)),
 				),
 			)
@@ -373,11 +395,13 @@ var _ = Describe("E2E Test", Ordered, func() {
 						return instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("CurrentRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
+						HaveField("UpdateRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
 					)),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("CurrentRevision", Not(Equal(storage.Status.ReplicantNodesStatus.CurrentRevision))),
+						HaveField("UpdateRevision", Not(Equal(storage.Status.ReplicantNodesStatus.CurrentRevision))),
 					)),
 				),
 			)
