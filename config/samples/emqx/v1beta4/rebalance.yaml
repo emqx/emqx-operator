@@ -1,8 +1,9 @@
-apiVersion: apps.emqx.io/v1beta4
+apiVersion: apps.emqx.io/v2alpha2
 kind: Rebalance
 metadata:
   name: rebalance-sample
 spec:
+  instanceKind: EmqxEnterprise
   instanceName: emqx-ee
   rebalanceStrategy:
     connEvictRate: 5

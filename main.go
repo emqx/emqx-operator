@@ -130,19 +130,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = appscontrollersv1beta4.NewRebalanceReconciler(mgr).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Rebalance")
-	}
-
 	//+kubebuilder:scaffold:builder
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&appsv1beta4.EmqxPlugin{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EmqxPlugin")
-			os.Exit(1)
-		}
-		if err = (&appsv1beta4.Rebalance{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Rebalance")
 			os.Exit(1)
 		}
 		if err = (&appsv1beta4.EmqxBroker{}).SetupWebhookWithManager(mgr); err != nil {

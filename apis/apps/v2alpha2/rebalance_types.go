@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta4
+package v2alpha2
 
 import (
 	"fmt"
@@ -26,6 +26,11 @@ import (
 
 // RebalanceSpec represents the desired spec of Rebalance
 type RebalanceSpec struct {
+	// InstanceKind is used to distinguish between v1beta4 and v2alpha2.
+	// When it is set to "EMQX", it means that the CR is v2alpha2,
+	// and when it is set to "EmqxEnterprise", it means that the CR is v1beta4.
+	// +kubebuilder:validation:Required
+	InstanceKind string `json:"instanceKind"`
 	// InstanceName represents the name of EmqxEnterprise CR
 	// +kubebuilder:validation:Required
 	InstanceName string `json:"instanceName"`

@@ -11,6 +11,8 @@ Package v2alpha2 contains API Schema definitions for the apps v2alpha2 API group
 ### Resource Types
 - [EMQX](#emqx)
 - [EMQXList](#emqxlist)
+- [Rebalance](#rebalance)
+- [RebalanceList](#rebalancelist)
 
 
 
@@ -314,6 +316,156 @@ _Appears in:_
 | `session_eviction_rate` _integer_ |  |
 | `connection_goal` _integer_ |  |
 | `connection_eviction_rate` _integer_ |  |
+
+
+#### Rebalance
+
+
+
+Rebalance is the Schema for the rebalances API
+
+_Appears in:_
+- [RebalanceList](#rebalancelist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v2alpha2`
+| `kind` _string_ | `Rebalance`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[RebalanceSpec](#rebalancespec)_ |  |
+| `status` _[RebalanceStatus](#rebalancestatus)_ |  |
+
+
+#### RebalanceCondition
+
+
+
+RebalanceCondition describes current state of a EMQX rebalancing job.
+
+_Appears in:_
+- [RebalanceStatus](#rebalancestatus)
+
+| Field | Description |
+| --- | --- |
+| `type` _[RebalanceConditionType](#rebalanceconditiontype)_ | Status of rebalance condition type. one of Processing, Complete, Failed. |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |
+| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | The last time this condition was updated. |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |
+| `reason` _string_ | The reason for the condition's last transition. |
+| `message` _string_ | A human readable message indicating details about the transition. |
+
+
+#### RebalanceConditionType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [RebalanceCondition](#rebalancecondition)
+
+
+
+#### RebalanceList
+
+
+
+RebalanceList contains a list of Rebalance
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v2alpha2`
+| `kind` _string_ | `RebalanceList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[Rebalance](#rebalance) array_ |  |
+
+
+#### RebalancePhase
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [RebalanceStatus](#rebalancestatus)
+
+
+
+#### RebalanceSpec
+
+
+
+RebalanceSpec represents the desired spec of Rebalance
+
+_Appears in:_
+- [Rebalance](#rebalance)
+
+| Field | Description |
+| --- | --- |
+| `instanceKind` _string_ | InstanceKind is used to distinguish between v1beta4 and v2alpha2. When it is set to "EMQX", it means that the CR is v2alpha2, and when it is set to "EmqxEnterprise", it means that the CR is v1beta4. |
+| `instanceName` _string_ | InstanceName represents the name of EmqxEnterprise CR |
+| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |
+
+
+#### RebalanceState
+
+
+
+Rebalance defines the observed Rebalancing state of EMQX
+
+_Appears in:_
+- [RebalanceStatus](#rebalancestatus)
+
+| Field | Description |
+| --- | --- |
+| `state` _string_ | State represents the state of emqx cluster rebalancing. |
+| `session_eviction_rate` _integer_ | SessionEvictionRate represents the node session evacuation rate per second. |
+| `recipients` _string array_ | Recipients represent the target node for rebalancing. |
+| `node` _string_ | Node represents the rebalancing scheduling node. |
+| `donors` _string array_ | Donors represent the source nodes for rebalancing. |
+| `coordinator_node` _string_ | CoordinatorNode represents the node currently undergoing rebalancing. |
+| `connection_eviction_rate` _integer_ | ConnectionEvictionRate represents the node session evacuation rate per second. |
+
+
+#### RebalanceStatus
+
+
+
+RebalanceStatus represents the current state of Rebalance
+
+_Appears in:_
+- [Rebalance](#rebalance)
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[RebalanceCondition](#rebalancecondition) array_ | The latest available observations of an object's current state. When Rebalance fails, the condition will have type "Failed" and status false. When Rebalance is in processing, the condition will have a type "Processing" and status true. When Rebalance is completed, the condition will have a type "Complete" and status true. |
+| `phase` _[RebalancePhase](#rebalancephase)_ | Phase represents the phase of Rebalance. |
+| `rebalanceStates` _[RebalanceState](#rebalancestate) array_ |  |
+| `startedTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | StartedTime Represents the time when rebalance job start. |
+| `completedTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | CompletedTime Represents the time when the rebalance job was completed. |
+
+
+#### RebalanceStrategy
+
+
+
+RebalanceStrategy represents the strategy of EMQX rebalancing
+
+_Appears in:_
+- [RebalanceSpec](#rebalancespec)
+
+| Field | Description |
+| --- | --- |
+| `connEvictRate` _integer_ | ConnEvictRate represents the source node client disconnect rate per second. same to conn-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 |
+| `sessEvictRate` _integer_ | SessEvictRate represents the source node session evacuation rate per second. same to sess-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Defaults to 500. |
+| `waitTakeover` _integer_ | WaitTakeover represents the time in seconds to wait for a client to reconnect to take over the session after all connections are disconnected. same to wait-takeover in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Defaults to 60 seconds. |
+| `waitHealthCheck` _integer_ | WaitHealthCheck represents the time (in seconds) to wait for the LB to remove the source node from the list of active backend nodes. After the specified waiting time is exceeded,the rebalancing task will start. same to wait-health-check in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Defaults to 60 seconds. |
+| `absConnThreshold` _integer_ | AbsConnThreshold represents the absolute threshold for checking connection balance. same to abs-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Defaults to 1000. |
+| `relConnThreshold` _string_ | RelConnThreshold represents the relative threshold for checkin connection balance. same to rel-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelConnThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
+| `absSessThreshold` _integer_ | AbsSessThreshold represents the absolute threshold for checking session connection balance. same to abs-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Default to 1000. |
+| `relSessThreshold` _string_ | RelSessThreshold represents the relative threshold for checking session connection balance. same to rel-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelSessThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
 
 
 

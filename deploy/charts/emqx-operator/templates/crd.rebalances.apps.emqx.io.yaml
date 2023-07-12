@@ -24,7 +24,7 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-      name: v1beta4
+      name: v2alpha2
       schema:
         openAPIV3Schema:
           properties:
@@ -36,6 +36,8 @@ spec:
               type: object
             spec:
               properties:
+                instanceKind:
+                  type: string
                 instanceName:
                   type: string
                 rebalanceStrategy:
@@ -74,6 +76,7 @@ spec:
                     - connEvictRate
                   type: object
               required:
+                - instanceKind
                 - instanceName
                 - rebalanceStrategy
               type: object
