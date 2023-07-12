@@ -71,7 +71,7 @@
           emqxContainer:
             image:
               repository: emqx/emqx-ee
-              version: 4.4.17
+              version: 4.4.19
    ```
 
    并使用 `kubectl apply` 命令来部署 EMQX。
@@ -108,7 +108,7 @@
           emqxContainer:
             image:
               repository: emqx
-              version: "4.4.18"
+              version: 4.4.19
    ```
 
    并使用 `kubectl apply` 命令来部署 EMQX。
