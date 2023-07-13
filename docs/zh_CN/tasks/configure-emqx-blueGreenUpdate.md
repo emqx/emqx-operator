@@ -1,53 +1,106 @@
-# 配置蓝绿发布（EMQX 4 企业版）
+# 通过蓝绿发布优雅的升级 EMQX 集群
 
 ## 任务目标
 
 如何通过蓝绿发布优雅的升级 EMQX 集群
 
-## 为什么需要蓝绿发布
-
-传统的滚动升级在生产环境中可能会面临以下问题：
-
-1. 升级过程中会逐个销毁旧的节点再创建新的节点，因此可能导致客户端多次断连（最坏的情况下断连次数与节点数量一致）
-
-2. 当集群处于较高连接的情况下，一个节点被销毁，那么该节点上面的连接会在瞬间断开，由客户端重试逻辑来进行重连。当单节点连接数较大时，如果大量客户端进行重连，则可能会给服务端造成压力导致过载
-
-3. 升级完成后，各节点间的负载不均衡
-
-4. 由于 StatefulSets 的滚动升级策略，导致在升级过程中提供服务的节点会比实际节点要少一个
-
-
-因此 EMQX Operator 基于 EMQX 企业版的节点疏散（Node Evacuation）功能实现了蓝绿发布来解决上述问题。
-
-
-EMQX 节点疏散功能用于疏散节点中的所有连接，手动/自动的将客户端连接和会话移动到集群中的其他节点或者其他集群。关于 EMQX 节点疏散的详细介绍可以参考文档：[Node Evacuation](https://docs.emqx.com/zh/enterprise/v4.4/advanced/rebalancing.html#%E8%8A%82%E7%82%B9%E7%96%8F%E6%95%A3) 。
-
 :::tip
 
-节点疏散功能仅在 EMQX 企业版 4.4.12 版本后才开放。
+该功能仅支持 `apps.emqx.io/v1beta4 EmqxEnterprise` 及 `apps.emqx.io/v2alpha2 EMQX`
 
 :::
 
-## 蓝绿发布流程
+## 背景
 
-![](./assets/configure-emqx-blueGreenUpdate/blue-green.png)
+在传统的 EMQX 集群部署中，通常使用 StatefulSet 默认的滚动升级策略来更新 EMQX Pod。然而，这种方式存在以下两个问题：
+
+1. 在进行滚动更新时，对应的 Service 会同时选中新的和旧的 Pod。这可能导致 MQTT 客户端连接到错误的 Pod 上，从而频繁断开连接并进行重连操作。
+2. 在滚动更新过程中，只有 N - 1 个 Pod 能够提供服务，因为新的 Pod 需要一定时间来启动和准备就绪。这可能导致服务的可用性下降。
+
+```mermaid
+timeline
+				section Update start
+					Current Cluster<br>Have Endpoint
+						: pod-0
+						: pod-1
+						: pod-2
+				section Rolling update
+					Current Cluster<br>Have Endpoint
+						: pod-0
+						: pod-1
+					Update Cluster<br>Have Endpoint
+						: pod-2
+					Current Cluster<br>Have Endpoint
+						: pod-0
+					Update Cluster<br>Have Endpoint
+						: pod-1
+						: pod-2
+				section Finish Update
+					Update Cluster<br>Have Endpoint
+						: pod-0
+						: pod-1
+						: pod-2
+```
+
+## 解决方案
+
+针对上文提到的滚动更新的问题，EMQX Operator 提供了蓝绿发布的升级方案，通过 EMQX 自定义资源升级 EMQX 集群时，EMQX Operator 会创建新的 EMQX 集群，并在集群就绪后将 Kubernetes Service 指向新的 EMQX 集群，并逐步删除旧的 EMQX 集群的 Pod，从而达到更新 EMQX 集群的目的。
+
+在删除旧的 EMQX 集群的 Pod 时，EMQX Operator 还可以利用 EMQX 节点疏散的特性，以用户所希望的速率将 MQTT 连接转移到新的集群中，避免了段时间内大量连接的问题。
 
 整个升级流程大致可分为以下几步：
-1. 升级时我们会先创建一个同规格的节点加入到现有集群中。
 
-2. 当新节点全部就绪后，我们将 service 全部指向新创建的节点，此时新节点开始接受新的连接请求。
+1. 创建一个相同规格的集群。
+2. 新集群就绪后，将 service 指向新集群，并将旧集群从 service 中摘除，此时新集群开始接受流量，旧集群现有的连接不受影响。
+3. （仅支持 EMQX 企业版）通过 EMQX 节点疏散功能，逐个对节点上的连接进行疏散。
+4. 将旧的集群逐步缩容到 0 个节点。
+5. 完成升级。
 
-3. 将旧节点从 service 中摘出，此时旧节点不再接收新的连接请求。
+```mermaid
+timeline
+				section Update start
+					Current Cluster<br>Have Endpoint
+						: pod-0
+						: pod-1
+						: pod-2
+				section Create update cluster
+					Current Cluster
+						: pod-0
+						: pod-1
+						: pod-2
+					Update Cluster<br>Have Endpoint
+						: pod-0
+						: pod-1
+						: pod-2
+				section Updating cluster
+					Current Cluster
+						: pod-0
+						: pod-1
+					Update Cluster<br>Have Endpoint
+						: pod-0
+						: pod-1
+						: pod-2
+					Current Cluster
+						: pod-0
+					Update Cluster<br>Have Endpoint
+						: pod-0
+						: pod-1
+						: pod-2
+				section Finish Update
+					Update Cluster<br>Have Endpoint
+						: pod-0
+						: pod-1
+						: pod-2
+```
 
-4. 通过 EMQX 节点疏散功能，逐个对节点上的连接进行可控迁移，直至连接全部完成迁移，再对节点进行销毁。
+## 如何通过蓝绿发布更新 EMQX 集群
 
+### 配置更新策略
 
+:::: tabs type:card
+::: tab apps.emqx.io/v1beta4
 
-## 如何使用蓝绿发布
-
-### 配置蓝绿发布参数
-
-EMQX 企业版在 EMQX Operator 里面对应的 CRD 为 EmqxEnterprise，EmqxEnterprise 支持通过 `.spec.blueGreenUpdate` 字段来配置 EMQX 企业版蓝绿升级，blueGreenUpdate 字段的具体描述可以参考：[blueGreenUpdate](https://github.com/emqx/emqx-operator/blob/main-2.1/docs/en_US/reference/v1beta4-reference.md#evacuationstrategy)。
+创建 `apps.emqx.io/v1beta4 EmqxEnterprise` 并配置更新策略。
 
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
@@ -73,9 +126,9 @@ spec:
 
 `waitTakeover`: 所有连接断开后，等待客户端重连以接管会话的时间（单位: second）。
 
-`connEvictRate`: 客户端断开速率（单位: count/second）。
+`connEvictRate`: MQTT 客户端疏散速率（单位: count/second）。
 
-`sessEvictRate`: `waitTakeover` 之后会话疏散速度（单位：count/second）。
+`sessEvictRate`: MQTT Session 疏散速度（单位：count/second）。
 
 将上述内容保存为：emqx-update.yaml，执行如下命令部署 EMQX 企业版集群：
 
@@ -87,12 +140,60 @@ emqxenterprise.apps.emqx.io/emqx-ee created
 
 检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
 
-   ```bash
+```bash
 $ kubectl get emqxenterprises
 
 NAME      STATUS   AGE
 emqx-ee   Running  8m33s
-   ```
+```
+
+:::
+::: tab apps.emqx.io/v2alpha2
+
+创建 `apps.emqx.io/v2alpha2 EMQX`，并配置更新策略
+
+```yaml
+apiVersion: apps.emqx.io/v2alpha2
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: emqx:5.1
+	updateStrategy:
+    evacuationStrategy:
+      connEvictRate: 1000
+      sessEvictRate: 1000
+      waitTakeover: 10
+    initialDelaySeconds: 10
+    type: Recreate
+```
+
+`initialDelaySeconds`: 所有的节点就绪后，开始更新前的等待时间（单位: second）。
+
+`waitTakeover`: 删除 Pod 时的间隔时间（单位: second）。
+
+`connEvictRate`: MQTT  客户端疏散速率，仅支持 EMQX 企业版（单位: count/second）。
+
+`sessEvictRate`: MQTT Session 疏散速率，仅支持 EMQX 企业版（单位：count/second）。
+
+将上述内容保存为：emqx-update.yaml，执行如下命令部署 EMQX：
+
+```bash
+$ kubectl apply -f emqx-update.yaml
+
+emqx.apps.emqx.io/emqx-ee created
+```
+
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+```bash
+$ kubectl get emqx
+
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+```
+
+:::
 
 ### 使用 MQTT X CLI 连接 EMQX 集群
 
@@ -101,16 +202,8 @@ MQTT X CLI 是一个开源的，支持自动重连的 MQTT 5.0 CLI Client，也�
 执行如下命令连接 EMQX 集群：
 
 ```bash
-mqttx bench conn -h ${IP} -p ${PORT}  -c 3000
+mqttx bench conn -h ${IP} -p ${PORT} -c 3000
 ```
-
-本文在部署 EMQX 集群的时候采用的是 NodePort 模式暴露服务。
-
-`-h`: EMQX Pod 所在宿主机 IP。
-
-`-p`: NodePort 端口。
-
-`-c`: 创建的连接数。
 
 输出类似于：
 
@@ -120,22 +213,22 @@ mqttx bench conn -h ${IP} -p ${PORT}  -c 3000
 [10:06:13 AM] › ℹ  Done, total time: 31.113s
 ```
 
-### 触发 EMQX Operator 进行蓝绿升级
+### 升级 EMQX 集群
 
-- 修改 EmqxEnterprise 对象 `.spec.template` 字段的任意内容都会触发 EMQX Operator 进行蓝绿升级
+- 任何作用到 Pod Template 的修改都会触发 EMQX Operator 的升级策略
 
   > 在本文中通过我们修改 EMQX Container Image 来触发升级，用户可根据实际需求自行修改。
 
   ```bash
-  $ kubectl patch EmqxEnterprise emqx-ee --type='merge' -p '{"spec": {"template": {"spec": {"emqxContainer": {"emqxConfig": {"image": {"version": "4.4.15"}}}}}}}'
+  $ kubectl patch emqx emqx-ee --type=merge -p '{"spec": {"imagePullPolicy": "Never"}}'
 
-  emqxenterprise.apps.emqx.io/emqx-ee patched
+  emqx.apps.emqx.io/emqx-ee patched
   ```
 
 - 检查蓝绿升级的状态
 
   ```bash
-  $ kubectl get emqxEnterprise emqx-ee -o json | jq ".status.blueGreenUpdateStatus.evacuationsStatus"
+  $ kubectl get emqx emqx-ee -o json | jq ".status.nodEvacuationsStatus"
 
   [
     {
@@ -175,13 +268,13 @@ mqttx bench conn -h ${IP} -p ${PORT}  -c 3000
 - 等待完成升级
 
   ```bash
-  $ kubectl get emqxenterprises
+  $ kubectl get emqx
 
   NAME      STATUS   AGE
-  emqx-ee   Running  8m33s
+  emqx-ee   Ready    8m33s
   ```
 
-  请确保 `STATUS` 为 `Running`， 这需要一些时间等待 EMQX 集群完成升级。
+  请确保 `STATUS` 为 `Ready`， 这需要一些时间等待 EMQX 集群完成升级。
 
   升级完成后， 通过 `$ kubectl get pods` 命令可以观察到旧的 EMQX 节点已经被删除。
 
