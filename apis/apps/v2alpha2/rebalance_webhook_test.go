@@ -96,5 +96,4 @@ func TestRebalanceValidateUpdate(t *testing.T) {
 		old.DeletionTimestamp = &v1.Time{Time: time.Now()}
 		assert.NoError(t, rebalance.ValidateUpdate(old))
 	})
-
 }

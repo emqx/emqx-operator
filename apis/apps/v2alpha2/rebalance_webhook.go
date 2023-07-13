@@ -36,8 +36,6 @@ func (r *Rebalance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-rebalance,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=rebalances,verbs=create;update,versions=v1beta4,name=validator.rebalance.emqx.io,admissionReviewVersions={v1,v1beta1}
 

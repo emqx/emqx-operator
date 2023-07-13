@@ -397,15 +397,15 @@ _Appears in:_
 
 
 
-RebalanceSpec represents the desired spec of Rebalance
+RebalanceSpec defines the desired state of Rebalance
 
 _Appears in:_
 - [Rebalance](#rebalance)
 
 | Field | Description |
 | --- | --- |
-| `instanceKind` _string_ | InstanceKind is used to distinguish between v1beta4 and v2alpha2. When it is set to "EMQX", it means that the CR is v2alpha2, and when it is set to "EmqxEnterprise", it means that the CR is v1beta4. |
-| `instanceName` _string_ | InstanceName represents the name of EmqxEnterprise CR |
+| `instanceKind` _string_ | InstanceKind is used to distinguish between EMQX and EMQXEnterprise. When it is set to "EMQX", it means that the EMQX CR is v2alpha2, and when it is set to "EmqxEnterprise", it means that the EmqxEnterprise CR is v1beta4. |
+| `instanceName` _string_ | InstanceName represents the name of EMQX CR, just work for EMQX Enterprise |
 | `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |
 
 
