@@ -28,7 +28,10 @@ type EMQXStatus struct {
 	// Represents the latest available observations of a EMQX Custom Resource current state.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	CoreNodesStatus      EMQXNodesStatus  `json:"coreNodesStatus,omitempty"`
+	CoreNodes       []EMQXNode      `json:"coreNodes,omitempty"`
+	CoreNodesStatus EMQXNodesStatus `json:"coreNodesStatus,omitempty"`
+
+	ReplicantNodes       []EMQXNode       `json:"replicantNodes,omitempty"`
 	ReplicantNodesStatus *EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
 
 	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodEvacuationsStatus,omitempty"`
@@ -53,9 +56,6 @@ type NodeEvacuationStats struct {
 }
 
 type EMQXNodesStatus struct {
-	// EMQX nodes info
-	Nodes []EMQXNode `json:"nodes,omitempty"`
-
 	Replicas      int32 `json:"replicas,omitempty"`
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 

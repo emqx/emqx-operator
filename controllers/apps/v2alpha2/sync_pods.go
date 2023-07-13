@@ -30,13 +30,13 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r
 
 	targetedEMQXNodesName := []string{}
 	if isExistReplicant(instance) {
-		for _, node := range instance.Status.ReplicantNodesStatus.Nodes {
+		for _, node := range instance.Status.ReplicantNodes {
 			if node.ControllerUID == currentRs.UID {
 				targetedEMQXNodesName = append(targetedEMQXNodesName, node.Node)
 			}
 		}
 	} else {
-		for _, node := range instance.Status.CoreNodesStatus.Nodes {
+		for _, node := range instance.Status.CoreNodes {
 			if node.ControllerUID == currentSts.UID {
 				targetedEMQXNodesName = append(targetedEMQXNodesName, node.Node)
 			}

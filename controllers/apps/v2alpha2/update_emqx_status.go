@@ -26,6 +26,35 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		}
 	}
 
+	updateRs, currentRs, oldRsList := getReplicaSetList(ctx, u.Client, instance)
+	if updateRs != nil && currentRs == nil {
+		if len(oldRsList) > 0 {
+			currentRs = oldRsList[0]
+		} else {
+			currentRs = updateRs
+		}
+		instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
+		if err := u.Client.Status().Update(ctx, instance); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update status")}
+		}
+		return subResult{}
+	}
+
+	updateSts, currentSts, oldStsList := getStateFulSetList(ctx, u.Client, instance)
+	if updateSts != nil && currentSts == nil {
+		if len(oldStsList) > 0 {
+			currentSts = oldStsList[0]
+		} else {
+			currentSts = updateSts
+		}
+		instance.Status.CoreNodesStatus.CurrentRevision = currentSts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
+
+		if err := u.Client.Status().Update(ctx, instance); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update status")}
+		}
+		return subResult{}
+	}
+
 	if r == nil {
 		return subResult{}
 	}
@@ -36,17 +65,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 		u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatuses", err.Error())
 	}
 
-	updateSts, currentSts, oldStsList := getStateFulSetList(ctx, u.Client, instance)
-	if currentSts == nil {
-		if len(oldStsList) > 0 {
-			currentSts = oldStsList[0]
-		} else {
-			currentSts = updateSts
-		}
-		instance.Status.CoreNodesStatus.CurrentRevision = currentSts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
-	}
-
-	instance.Status.CoreNodesStatus.Nodes = coreNodes
+	instance.Status.CoreNodes = coreNodes
 	instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	instance.Status.CoreNodesStatus.ReadyReplicas = 0
 	instance.Status.CoreNodesStatus.CurrentReplicas = 0
@@ -64,17 +83,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQ
 	}
 
 	if len(replNodes) > 0 {
-		updateRs, currentRs, oldRsList := getReplicaSetList(ctx, u.Client, instance)
-		if currentRs == nil {
-			if len(oldRsList) > 0 {
-				currentRs = oldRsList[0]
-			} else {
-				currentRs = updateRs
-			}
-			instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
-		}
-
-		instance.Status.ReplicantNodesStatus.Nodes = replNodes
+		instance.Status.ReplicantNodes = replNodes
 		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 		instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
 		instance.Status.ReplicantNodesStatus.CurrentReplicas = 0

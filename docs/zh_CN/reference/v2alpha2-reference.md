@@ -135,7 +135,7 @@ EMQXList contains a list of EMQX
 
 
 _Appears in:_
-- [EMQXNodesStatus](#emqxnodesstatus)
+- [EMQXStatus](#emqxstatus)
 
 | Field | Description |
 | --- | --- |
@@ -163,7 +163,6 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `nodes` _[EMQXNode](#emqxnode) array_ | EMQX nodes info |
 | `replicas` _integer_ |  |
 | `readyReplicas` _integer_ |  |
 | `currentRevision` _string_ |  |
@@ -260,7 +259,9 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta) array_ | Represents the latest available observations of a EMQX Custom Resource current state. |
+| `coreNodes` _[EMQXNode](#emqxnode) array_ |  |
 | `coreNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
+| `replicantNodes` _[EMQXNode](#emqxnode) array_ |  |
 | `replicantNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |
 | `nodEvacuationsStatus` _[NodeEvacuationStatus](#nodeevacuationstatus) array_ |  |
 
