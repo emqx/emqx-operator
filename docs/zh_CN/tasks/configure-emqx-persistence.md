@@ -66,16 +66,16 @@
   通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段配置 EMQX 集群 Core 节点持久化。`.spec.coreTemplate.spec.volumeClaimTemplates` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core) 。
+`apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段配置 EMQX 集群 Core 节点持久化。`.spec.coreTemplate.spec.volumeClaimTemplates` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core) 。
 
 当用户配置了 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段时，EMQX Operator 会将 PVC（PersistentVolumeClaim） 作为 Volume 挂载到 EMQX Pod 中，PVC 表示用户持久化请求，最终负责存储的是持久化卷（PersistentVolume，PV），PV 和 PVC 是一一对应的。EMQX Operator 使用 [StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/) 动态创建 PV，PV 存储了 EMQX 容器中 `/opt/emqx/data` 目录下的数据，当用户不再使用 PV 资源时，可以手动删除 PVC 对象，从而允许该 PV 资源被回收再利用。
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
@@ -141,7 +141,7 @@
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

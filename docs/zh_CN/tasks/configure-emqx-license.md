@@ -70,24 +70,25 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
   通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.bootstrapConfig` 配置 EMQX 集群 License，bootstrapConfig 的配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。
+`apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.config.data` 配置 EMQX 集群 License，EMQX 配置可以参考文档：[配置手册](https://www.emqx.io/docs/zh/v5.1/configuration/configuration-manual.html#%E8%8A%82%E7%82%B9%E8%AE%BE%E7%BD%AE)。
 
 > 在创建 EMQX 集群之后，如果需要更新 License，请通过 EMQX Dashboard 进行更新。
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx-ee
   spec:
-    bootstrapConfig: |
-      license {
-        key = "..."
-      }
+    config:
+      data: |
+        license {
+          key = "..."
+        }
     image: emqx/emqx-enterprise:5.1.0
     listenersServiceTemplate:
       spec:
@@ -97,7 +98,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
         type: LoadBalancer
   ```
 
-  > `bootstrapConfig` 字段里面的 `license.key` 表示 Licesne 内容，此例中 License 内容被省略，请用户自行填充。
+  > `config.data` 字段里面的 `license.key` 表示 Licesne 内容，此例中 License 内容被省略，请用户自行填充。
 
 + 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
@@ -175,7 +176,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
     expiry                   : false
     ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   + 通过 EMQX Dashboard 更新 License
 

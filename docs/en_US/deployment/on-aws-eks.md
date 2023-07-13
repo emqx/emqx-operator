@@ -91,12 +91,12 @@ The following is the relevant configuration of EMQX custom resources. You can se
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
@@ -104,15 +104,6 @@ The following is the relevant configuration of EMQX custom resources. You can se
     image: emqx:5.1
     coreTemplate:
       spec:
-        ## If persistence is enabled, you need to configure podSecurityContext.
-        ## For details, please refer to the discussion: https://github.com/emqx/emqx-operator/discussions/716
-        podSecurityContext:
-          runAsUser: 1000
-          runAsGroup: 1000
-          fsGroup: 1000
-          fsGroupChangePolicy: Always
-          supplementalGroups:
-            - 1000
         ## EMQX custom resources do not support updating this field at runtime
         volumeClaimTemplates:
           ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
@@ -186,7 +177,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

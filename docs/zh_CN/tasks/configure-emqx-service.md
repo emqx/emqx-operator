@@ -52,14 +52,14 @@
   通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.dashboardServiceTemplate` 配置 EMQX 集群 Dashboard Service ，通过 `.spec.listenersServiceTemplate` 配置 EMQX 集群 listener Service，其文档可以参考：[Service](../reference/v2alpha1-reference.md#emqxspec)。
+`apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.dashboardServiceTemplate` 配置 EMQX 集群 Dashboard Service ，通过 `.spec.listenersServiceTemplate` 配置 EMQX 集群 listener Service，其文档可以参考：[Service](../reference/v2alpha2-reference.md#emqxspec)。
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
@@ -75,7 +75,7 @@
 
   > EMQX 默认会开启一个 MQTT TCP 监听器 `tcp-default` 对应的端口为1883 以及 Dashboard 监听器 `dashboard-listeners-http-bind` 对应的端口为18083 。
 
-  > 用户可以通过 `.spec.bootstrapConfig` 字段或者 EMQX Dashboard 增加新的监听器。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
+  > 用户可以通过 `.spec.config.data` 字段或者 EMQX Dashboard 增加新的监听器。EMQX Operator 在创建 Service 时会将缺省的监听器信息自动注入到 Service 里面，但是当用户配置的 Service 和 EMQX 配置的监听器有冲突时（name 或者 port 字段重复），EMQX Operator 会以用户的配置为准。
 
 + 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
@@ -109,7 +109,7 @@
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

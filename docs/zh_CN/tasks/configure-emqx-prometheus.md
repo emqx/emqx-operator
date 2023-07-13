@@ -13,12 +13,12 @@ Grafana 部署文档可以参考：[Grafana](https://grafana.com/docs/grafana/la
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../index.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab v2alpha2
 
-EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[HTTP API](https://www.emqx.io/docs/zh/v5.0/observability/prometheus.html)
+EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[集成 Prometheus](https://www.emqx.io/docs/zh/v5.1/observability/prometheus.html#%E9%9B%86%E6%88%90-prometheus)
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha1
+apiVersion: apps.emqx.io/v2alpha2
 kind: EMQX
 metadata:
   name: emqx
@@ -115,7 +115,7 @@ spec:
 emqx-exporter 和 Prometheus 通过访问 EMQX dashboard API 拉取监控指标，因此需要提前登录 dashboard 创建 API 密钥。
 
 注意，EMQX 5 和 EMQX 4.4 创建 API 密钥的方式有所不同。
-* **EMQX 5** 创建一个新的 [API 密钥](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys)
+* **EMQX 5** 创建一个新的 [API 密钥](https://www.emqx.io/docs/zh/v5.1/dashboard/system.html#api-%E5%AF%86%E9%92%A5)
 * **EMQX 4.4** 创建一个新的用户
 
 ## 部署 [EMQX Exporter](https://github.com/emqx/emqx-exporter)
@@ -201,7 +201,7 @@ emqx-exporter-856564c95-j4q5v   Running  8m33s
 Prometheus-operator 使用 [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor) 和 [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) CRD 定义如何动态的监视一组 pod 或者 service。
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab v2alpha2
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1

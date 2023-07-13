@@ -88,13 +88,13 @@ $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 Access the EMQX console by opening a web browser and visiting http://34.68.80.122:18083. Login using the default username and password `admin/public`.
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
 Save the following content as a YAML file and deploy it using the `kubectl apply` command.
 
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha1
+apiVersion: apps.emqx.io/v2alpha2
 kind: EMQX
 metadata:
   name: emqx
@@ -157,7 +157,7 @@ external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress
 ```
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
 ```shell
 external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

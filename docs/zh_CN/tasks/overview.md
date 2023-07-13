@@ -10,7 +10,7 @@
   - [License 配置 (EMQX 企业版)](./configure-emqx-license.md)
   - [在 EMQX 中开启 TLS](./configure-emqx-tls.md)
 - 集群配置
-  - [通过 EMQX Operator 修改 EMQX 配置](./configure-emqx-bootstrapConfig.md)
+  - [通过 EMQX Operator 修改 EMQX 配置](./configure-emqx-config.md)
   - [开启 Core + Replicant 集群 (EMQX 5.x)](./configure-emqx-core-replicant.md)
   - [在 EMQX 集群中开启持久化](./configure-emqx-persistence.md)
   - [通过 Kubernetes Service 访问 EMQX 集群](./configure-emqx-service.md)

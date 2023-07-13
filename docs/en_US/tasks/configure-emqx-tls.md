@@ -100,30 +100,31 @@ There are many types of Volumes. For the description of Volumes, please refer to
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` supports `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to EMQX The cluster configures additional volumes and mount points. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
+`apps.emqx.io/v2alpha2 EMQX` supports `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to EMQX The cluster configures additional volumes and mount points. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
 
 There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/#secret). In this article we are using the `secret` type.
 
 + Save the following as a YAML file and deploy it with the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
   spec:
     image: emqx:5.1
-    bootstrapConfig: |
-      listeners.ssl.default {
-        bind = "0.0.0.0:8883"
-        ssl_options {
-          cacertfile = "/mounted/cert/ca.crt"
-          certfile = "/mounted/cert/tls.crt"
-          keyfile = "/mounted/cert/tls.key"
+    config:
+      data: |
+        listeners.ssl.default {
+          bind = "0.0.0.0:8883"
+          ssl_options {
+            cacertfile = "/mounted/cert/ca.crt"
+            certfile = "/mounted/cert/tls.crt"
+            keyfile = "/mounted/cert/tls.key"
+          }
         }
-      }
     coreTemplate:
       spec:
         extraVolumes:
@@ -154,7 +155,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
 
   > The `.spec.coreTemplate.extraVolumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`.
 
-  > The `.spec.bootstrapConfig` field configures the TLS listener certificate path. For more TLS listener configurations, please refer to the document: [ssllistener](https://www.emqx.io/docs/en/v5.0/admin/cfg.html#broker-mqtt-ssl-listener).
+  > The `.spec.config.data` field configures the TLS listener certificate path. For more TLS listener configurations, please refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual).
 
 + Wait for EMQX cluster to be ready, you can check the status of EMQX cluster through the `kubectl get` command, please make sure that `STATUS` is `Running`, this may take some time
 
@@ -193,7 +194,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

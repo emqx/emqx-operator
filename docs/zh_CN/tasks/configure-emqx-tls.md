@@ -100,30 +100,31 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
   通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.coreTemplate.extraVolumes` 和 `.spec.coreTemplate.extraVolumeMounts` 以及 `.spec.replicantTemplate.extraVolumes` 和 `.spec.replicantTemplate.extraVolumeMounts` 字段给 EMQX 集群配置额外的卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
+`apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.coreTemplate.extraVolumes` 和 `.spec.coreTemplate.extraVolumeMounts` 以及 `.spec.replicantTemplate.extraVolumes` 和 `.spec.replicantTemplate.extraVolumeMounts` 字段给 EMQX 集群配置额外的卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
 
 Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/#secret)。在本文中我们使用的是 `secret` 类型。
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
   spec:
     image: emqx:5.1
-    bootstrapConfig: |
-      listeners.ssl.default {
-        bind = "0.0.0.0:8883"
-        ssl_options {
-          cacertfile = "/mounted/cert/ca.crt"
-          certfile = "/mounted/cert/tls.crt"
-          keyfile = "/mounted/cert/tls.key"
+    config:
+      data: |
+        listeners.ssl.default {
+          bind = "0.0.0.0:8883"
+          ssl_options {
+            cacertfile = "/mounted/cert/ca.crt"
+            certfile = "/mounted/cert/tls.crt"
+            keyfile = "/mounted/cert/tls.key"
+          }
         }
-      }
     coreTemplate:
       spec:
         extraVolumes:
@@ -154,7 +155,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
 
   >`.spec.coreTemplate.extraVolumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。
 
-  >`.spec.bootstrapConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[ssllistener](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html#broker-mqtt-ssl-listener)。
+  >`.spec.config.data` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[配置手册](https://www.emqx.io/docs/zh/v5.1/configuration/configuration-manual.html#%E9%85%8D%E7%BD%AE%E6%89%8B%E5%86%8C)。
 
 + 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
@@ -191,7 +192,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

@@ -71,31 +71,32 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-  `apps.emqx.io/v2alpha1 EMQX` supports configuring EMQX cluster license through `.spec.bootstrapConfig`. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating.
+  `apps.emqx.io/v2alpha2 EMQX` supports configuring EMQX cluster license through `.spec.config.data`. For config.data configuration, please refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating.
 
   > After the EMQX cluster is created, if the license needs to be updated, please update it through the EMQX Dashboard.
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx-ee
   spec:
-    bootstrapConfig: |
-      license {
-        key = "..."
-      }
+    config:
+      data: |
+        license {
+          key = "..."
+        }
     image: emqx/emqx-enterprise:5.1.0
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
   ```
 
-  > The `license.key` in the `bootstrapConfig` field represents the Licesne content. In this example, the License content is omitted, please fill it in by the user.
+  > The `license.key` in the `config.data` field represents the Licesne content. In this example, the License content is omitted, please fill it in by the user.
 
 + Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
@@ -174,7 +175,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
     expiry                   : false
     ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   + Update License through EMQX Dashboard
 

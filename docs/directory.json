@@ -40,7 +40,7 @@
         },
         {
           "title": "Change EMQX Configurations",
-          "path": "tasks/configure-emqx-bootstrapConfig"
+          "path": "tasks/configure-emqx-config"
         },
         {
           "title": "Enable Core + Replicant Cluster (EMQX 5.x)",
@@ -95,6 +95,10 @@
         {
           "title": "v2alpha1 Reference",
           "path": "reference/v2alpha1-reference"
+        },
+        {
+          "title": "v2alpha2 Reference",
+          "path": "reference/v2alpha2-reference"
         }
       ]
     }
@@ -152,7 +156,7 @@
         },
         {
           "title": "EMQX 配置",
-          "path": "tasks/configure-emqx-bootstrapConfig"
+          "path": "tasks/configure-emqx-config"
         },
         {
           "title": "配置 Core + Replicant 集群 (EMQX 5.x)",
@@ -207,6 +211,10 @@
         {
           "title": "v2alpha1 参考",
           "path": "reference/v2alpha1-reference"
+        },
+        {
+          "title": "v2alpha2 参考",
+          "path": "reference/v2alpha2-reference"
         }
       ]
     }

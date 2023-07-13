@@ -74,10 +74,10 @@ Access the EMQX console by opening a web browser and visiting http://20.245.123.
 
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha1
+apiVersion: apps.emqx.io/v2alpha2
 kind: EMQX
 metadata:
   name: emqx
@@ -140,7 +140,7 @@ external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.
 ```
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
 ```shell
 external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')

@@ -19,12 +19,12 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
 
 ## Configure EMQX Cluster
 
-`apps.emqx.io/v2alpha1 EMQX` supports configuring the Core node of the EMQX cluster through the `.spec.coreTemplate` field, and configuring the Replicant node of the EMQX cluster using the `.spec.replicantTemplate` field. For more information, please refer to: [API Reference](../reference/v2alpha1-reference.md#emqxspec).
+`apps.emqx.io/v2alpha2 EMQX` supports configuring the Core node of the EMQX cluster through the `.spec.coreTemplate` field, and configuring the Replicant node of the EMQX cluster using the `.spec.replicantTemplate` field. For more information, please refer to: [API Reference](../reference/v2alpha2-reference.md#emqxspec).
 
 + Save the following content as a YAML file and deploy it with the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx

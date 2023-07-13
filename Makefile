@@ -154,7 +154,6 @@ endef
 local-webhook: $(CERT_PATH)
 	test -s $(CERT_PATH)/tls.crt && test -s $(CERT_PATH)/tls.key || mkdir -p $(CERT_PATH) && cp config/dev/cert/* $(CERT_PATH)
 
-
 .PHONY: telepresence
 telepresence: $(TELEPRESENCE_GEN)
 $(TELEPRESENCE_GEN): $(LOCALBIN)
