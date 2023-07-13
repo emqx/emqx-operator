@@ -55,7 +55,7 @@
           "path": "tasks/configure-emqx-service"
         },
         {
-          "title": "Configure Blue-Green Upgrade (EMQX 4 Enterprise)",
+          "title": "Configure Blue-Green Upgrade",
           "path": "tasks/configure-emqx-blueGreenUpdate"
         },
         {
@@ -171,7 +171,7 @@
           "path": "tasks/configure-emqx-service"
         },
         {
-          "title": "配置蓝绿发布 (EMQX 4 企业版)",
+          "title": "配置蓝绿发布",
           "path": "tasks/configure-emqx-blueGreenUpdate"
         },
         {
