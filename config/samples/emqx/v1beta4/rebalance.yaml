@@ -3,7 +3,6 @@ kind: Rebalance
 metadata:
   name: rebalance-sample
 spec:
-  instanceKind: EmqxEnterprise
   instanceName: emqx-ee
   rebalanceStrategy:
     connEvictRate: 5
