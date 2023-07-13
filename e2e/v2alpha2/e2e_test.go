@@ -68,10 +68,12 @@ var _ = Describe("E2E Test", Ordered, func() {
 					WithTransform(func(instance *appsv2alpha2.EMQX) bool {
 						return instance.Status.IsConditionTrue(appsv2alpha2.Ready)
 					}, BeTrue()),
+					WithTransform(func(instance *appsv2alpha2.EMQX) []appsv2alpha2.EMQXNode {
+						return instance.Status.CoreNodes
+					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2alpha2.EMQX) appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.CoreNodesStatus
 					}, And(
-						HaveField("Nodes", HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Not(BeEmpty())),
@@ -79,6 +81,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("UpdateRevision", Not(BeEmpty())),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
+					WithTransform(func(instance *appsv2alpha2.EMQX) []appsv2alpha2.EMQXNode {
+						return instance.Status.ReplicantNodes
+					}, BeNil()),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, BeNil()),
@@ -108,10 +113,12 @@ var _ = Describe("E2E Test", Ordered, func() {
 					WithTransform(func(instance *appsv2alpha2.EMQX) bool {
 						return instance.Status.IsConditionTrue(appsv2alpha2.Ready)
 					}, BeTrue()),
+					WithTransform(func(instance *appsv2alpha2.EMQX) []appsv2alpha2.EMQXNode {
+						return instance.Status.CoreNodes
+					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2alpha2.EMQX) appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.CoreNodesStatus
 					}, And(
-						HaveField("Nodes", HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
@@ -119,6 +126,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("UpdateRevision", Not(BeEmpty())),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
+					WithTransform(func(instance *appsv2alpha2.EMQX) []appsv2alpha2.EMQXNode {
+						return instance.Status.ReplicantNodes
+					}, BeNil()),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, BeNil()),
@@ -148,10 +158,12 @@ var _ = Describe("E2E Test", Ordered, func() {
 					WithTransform(func(instance *appsv2alpha2.EMQX) bool {
 						return instance.Status.IsConditionTrue(appsv2alpha2.Ready)
 					}, BeTrue()),
+					WithTransform(func(instance *appsv2alpha2.EMQX) []appsv2alpha2.EMQXNode {
+						return instance.Status.CoreNodes
+					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2alpha2.EMQX) appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.CoreNodesStatus
 					}, And(
-						HaveField("Nodes", HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
@@ -159,6 +171,9 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("UpdateRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
+					WithTransform(func(instance *appsv2alpha2.EMQX) []appsv2alpha2.EMQXNode {
+						return instance.Status.ReplicantNodes
+					}, BeNil()),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, BeNil()),
@@ -343,10 +358,12 @@ var _ = Describe("E2E Test", Ordered, func() {
 					WithTransform(func(instance *appsv2alpha2.EMQX) bool {
 						return instance.Status.IsConditionTrue(appsv2alpha2.Ready)
 					}, BeTrue()),
+					WithTransform(func(instance *appsv2alpha2.EMQX) []appsv2alpha2.EMQXNode {
+						return instance.Status.CoreNodes
+					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2alpha2.EMQX) appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.CoreNodesStatus
 					}, And(
-						HaveField("Nodes", HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
@@ -354,10 +371,12 @@ var _ = Describe("E2E Test", Ordered, func() {
 						HaveField("UpdateRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
+					WithTransform(func(instance *appsv2alpha2.EMQX) []appsv2alpha2.EMQXNode {
+						return instance.Status.ReplicantNodes
+					}, HaveLen(int(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2alpha2.EMQX) *appsv2alpha2.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, And(
-						HaveField("Nodes", HaveLen(int(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.ReplicantNodesStatus.CurrentRevision)),

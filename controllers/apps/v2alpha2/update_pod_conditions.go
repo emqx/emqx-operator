@@ -57,9 +57,9 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 }
 
 func (u *updatePodConditions) checkInCluster(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
-	nodes := instance.Status.CoreNodesStatus.Nodes
+	nodes := instance.Status.CoreNodes
 	if isExistReplicant(instance) {
-		nodes = append(nodes, instance.Status.ReplicantNodesStatus.Nodes...)
+		nodes = append(nodes, instance.Status.ReplicantNodes...)
 	}
 	for _, node := range nodes {
 		if pod.UID == node.PodUID {

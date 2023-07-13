@@ -12977,6 +12977,36 @@ spec:
                   - type
                   type: object
                 type: array
+              coreNodes:
+                items:
+                  properties:
+                    connections:
+                      format: int64
+                      type: integer
+                    controllerUID:
+                      type: string
+                    edition:
+                      type: string
+                    live_connections:
+                      format: int64
+                      type: integer
+                    node:
+                      type: string
+                    node_status:
+                      type: string
+                    otp_release:
+                      type: string
+                    podUID:
+                      type: string
+                    role:
+                      type: string
+                    uptime:
+                      format: int64
+                      type: integer
+                    version:
+                      type: string
+                  type: object
+                type: array
               coreNodesStatus:
                 properties:
                   collisionCount:
@@ -12987,36 +13017,6 @@ spec:
                     type: integer
                   currentRevision:
                     type: string
-                  nodes:
-                    items:
-                      properties:
-                        connections:
-                          format: int64
-                          type: integer
-                        controllerUID:
-                          type: string
-                        edition:
-                          type: string
-                        live_connections:
-                          format: int64
-                          type: integer
-                        node:
-                          type: string
-                        node_status:
-                          type: string
-                        otp_release:
-                          type: string
-                        podUID:
-                          type: string
-                        role:
-                          type: string
-                        uptime:
-                          format: int64
-                          type: integer
-                        version:
-                          type: string
-                      type: object
-                    type: array
                   readyReplicas:
                     format: int32
                     type: integer
@@ -13069,6 +13069,36 @@ spec:
                       type: object
                   type: object
                 type: array
+              replicantNodes:
+                items:
+                  properties:
+                    connections:
+                      format: int64
+                      type: integer
+                    controllerUID:
+                      type: string
+                    edition:
+                      type: string
+                    live_connections:
+                      format: int64
+                      type: integer
+                    node:
+                      type: string
+                    node_status:
+                      type: string
+                    otp_release:
+                      type: string
+                    podUID:
+                      type: string
+                    role:
+                      type: string
+                    uptime:
+                      format: int64
+                      type: integer
+                    version:
+                      type: string
+                  type: object
+                type: array
               replicantNodesStatus:
                 properties:
                   collisionCount:
@@ -13079,36 +13109,6 @@ spec:
                     type: integer
                   currentRevision:
                     type: string
-                  nodes:
-                    items:
-                      properties:
-                        connections:
-                          format: int64
-                          type: integer
-                        controllerUID:
-                          type: string
-                        edition:
-                          type: string
-                        live_connections:
-                          format: int64
-                          type: integer
-                        node:
-                          type: string
-                        node_status:
-                          type: string
-                        otp_release:
-                          type: string
-                        podUID:
-                          type: string
-                        role:
-                          type: string
-                        uptime:
-                          format: int64
-                          type: integer
-                        version:
-                          type: string
-                      type: object
-                    type: array
                   readyReplicas:
                     format: int32
                     type: integer
