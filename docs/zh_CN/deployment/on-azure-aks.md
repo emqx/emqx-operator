@@ -73,10 +73,10 @@ $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 通过打开一个网络浏览器并访问 http://20.245.123.100:18083 来访问 EMQX 控制台。使用默认的用户名和密码 admin/public 登录。
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha1
+apiVersion: apps.emqx.io/v2alpha2
 kind: EMQX
 metadata:
   name: emqx
@@ -139,7 +139,7 @@ MQTT X CLI 是一个开源的 MQTT 5.0 命令行客户端工具，旨在帮助�
     ```
 
     :::
-    ::: tab apps.emqx.io/v2alpha1
+    ::: tab apps.emqx.io/v2alpha2
 
     ```shell
     external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')

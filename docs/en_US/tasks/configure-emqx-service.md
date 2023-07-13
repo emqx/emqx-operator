@@ -11,7 +11,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 :::: tabs type:card
 ::: tab apps.emqx.io/v1beta4
 
-`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX cluster Service through `.spec.serviceTemplate` field. For the specific description of the serviceTemplate field, please refer to: [serviceTemplate](../reference/v1beta4-reference.md#servicetemplate).
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX cluster Service through `.spec.serviceTemplate` field. For the specific description of the serviceTemplate field, please refer to [serviceTemplate](../reference/v1beta4-reference.md#servicetemplate).
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
@@ -42,24 +42,24 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   emqx-ee   Running  8m33s
   ```
 
-+ Obtain the External IP of EMQX cluster and access EMQX console
++ Obtain the External IP of the EMQX cluster and access the EMQX console
 
   ```bash
   $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
   192.168.1.200
   ```
-  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to log in to the EMQX console.
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` supports configuring EMQX cluster Dashboard Service through `.spec.dashboardServiceTemplate`, and configuring EMQX cluster listener Service through `.spec.listenersServiceTemplate`, its documentation can refer to: [Service](../reference/v2alpha1-reference.md#emqxspec).
+`apps.emqx.io/v2alpha2 EMQX` supports configuring EMQX cluster Dashboard Service through `.spec.dashboardServiceTemplate`, and configuring EMQX cluster listener Service through `.spec.listenersServiceTemplate`, its documentation can refer to [Service](../reference/v2alpha2-reference.md#emqxspec).
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
@@ -75,7 +75,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
   > By default, EMQX will open an MQTT TCP listener `tcp-default` corresponding to port 1883 and Dashboard listener `dashboard-listeners-http-bind` corresponding to port 18083.
 
-  > Users can add new listeners through `.spec.bootstrapConfig` field or EMQX Dashboard. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (name or port fields are repeated), EMQX Operator will use the user's configuration prevail.
+  > Users can add new listeners through `.spec.config.data` field or EMQX Dashboard. EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (name or port fields are repeated), EMQX Operator will use the user's configuration prevail.
 
 + Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
@@ -84,7 +84,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   NAME   IMAGE      STATUS    AGE
   emqx   emqx:5.1   Running   10m
   ```
-+ Obtain the Dashboard External IP of EMQX cluster and access EMQX console
++ Obtain the Dashboard External IP of the EMQX cluster and access the EMQX console
 
   EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
 
@@ -94,7 +94,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   192.168.1.200
   ```
 
-  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to log in to the EMQX console.
 
 :::
 ::::
@@ -109,7 +109,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
@@ -117,7 +117,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   :::
   ::::
 
-+ Use MQTT X CLI to connect to EMQX cluster
++ Use MQTT X CLI to connect to the EMQX cluster
 
   ```bash
   $ mqttx conn -h ${external_ip} -p 1883

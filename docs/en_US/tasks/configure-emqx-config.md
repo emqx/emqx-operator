@@ -2,33 +2,30 @@
 
 ## Task Target
 
-Change EMQX configuration by `bootstrapConfig` in EMQX Custom Resource.
+Change EMQX configuration by `config.data` in EMQX Custom Resource.
 
 ## Configure EMQX Cluster
 
-The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5.0, EMQX adopts [HOCON](https://www.emqx.io/docs/en/v5.0/configuration/configuration.html#hocon-configuration-format) as the configuration file format.
+The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5.0, EMQX adopts [HOCON](https://www.emqx.io/docs/en/v5.1/configuration/configuration.html#hocon-configuration-format) as the configuration file format.
 
-`apps.emqx.io/v2alpha1 EMQX` supports configuring EMQX cluster through `.spec.bootstrapConfig` field. For bootstrapConfig configuration, please refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html).
-
-:::tip
-This is only applicable before EMQX is started. If you need to modify the cluster configuration after creating EMQX, please modify it through EMQX Dashboard.
-:::
+`apps.emqx.io/v2alpha2 EMQX` supports configuring EMQX cluster through `.spec.config.data` field. For config.data configuration, please refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual).
 
 + Save the following content as a YAML file and deploy it with the `kubectl apply` command
 
    ```yaml
-   apiVersion: apps.emqx.io/v2alpha1
+   apiVersion: apps.emqx.io/v2alpha2
    kind: EMQX
    metadata:
       name: emqx
    spec:
       image: emqx:5.1
       imagePullPolicy: IfNotPresent
-      bootstrapConfig: |
-         listeners.tcp.test {
-            bind = "0.0.0.0:1884"
-            max_connections = 1024000
-         }
+      config:
+         data: |
+            listeners.tcp.test {
+               bind = "0.0.0.0:1884"
+               max_connections = 1024000
+            }
       listenersServiceTemplate:
          spec:
             type: LoadBalancer
@@ -37,7 +34,7 @@ This is only applicable before EMQX is started. If you need to modify the cluste
             type: LoadBalancer
    ```
 
-   > In the `.spec.bootstrapConfig` field, we have configured a TCP listener for the EMQX cluster. The name of this listener is: test, and the listening port is: 1884.
+   > In the `.spec.config.data` field, we have configured a TCP listener for the EMQX cluster. The name of this listener is: test, and the listening port is: 1884.
 
 + Wait for the EMQX cluster to be ready, you can check the status of EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 

@@ -65,16 +65,16 @@ When the user configures the `.spec.persistent` field, EMQX Operator will mount 
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` supports configuration of EMQX cluster Core node persistence through `.spec.coreTemplate.spec.volumeClaimTemplates` field. The semantics and configuration of `.spec.coreTemplate.spec.volumeClaimTemplates` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
+`apps.emqx.io/v2alpha2 EMQX` supports configuration of EMQX cluster Core node persistence through `.spec.coreTemplate.spec.volumeClaimTemplates` field. The semantics and configuration of `.spec.coreTemplate.spec.volumeClaimTemplates` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
 
 When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` field, EMQX Operator will mount the `/opt/emqx/data` directory in the EMQX container to [StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/) in the PV and PVC created, when the EMQX Pod is deleted, the PV and PVC will not be deleted, so as to achieve the purpose of saving EMQX runtime data. For more information about PV and PVC, refer to the document [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
@@ -140,7 +140,7 @@ Verification scheme: 1) Passed in the old EMQX Dashboard creates a test rule; 2)
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1x
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

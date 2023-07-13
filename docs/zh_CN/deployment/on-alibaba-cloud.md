@@ -79,12 +79,12 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
 
 :::
 
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它。
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
@@ -159,7 +159,7 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
   ```
   :::
 
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
@@ -253,10 +253,10 @@ spec:
 ```
 :::
 
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha1
+apiVersion: apps.emqx.io/v2alpha2
 kind: EMQX
 metadata:
   name: emqx

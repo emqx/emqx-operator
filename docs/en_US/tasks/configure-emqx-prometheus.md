@@ -13,28 +13,17 @@ Grafana' deployment documentation can refer to [Grafana](https://grafana.com/doc
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab v2alpha2
 
-EMQX supports exposing indicators through the http interface. For all statistical indicators under the cluster, please refer to the document: [HTTP API](https://www.emqx.io/docs/en/v5.0/observability/prometheus.html)
+EMQX supports exposing indicators through the http interface. For all statistical indicators under the cluster, please refer to the document: [Integrate with Prometheus](https://www.emqx.io/docs/en/v5.1/observability/prometheus.html)
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha1
+apiVersion: apps.emqx.io/v2alpha2
 kind: EMQX
 metadata:
   name: emqx
 spec:
   image: emqx:5.1
-  coreTemplate:
-    spec:
-      ports:
-        # prometheus monitor requires the pod must name the target port
-        - name: dashboard
-          containerPort: 18083
-  replicantTemplate:
-    spec:
-      ports:
-        - name: dashboard
-          containerPort: 18083
 ```
 
 Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
@@ -116,7 +105,7 @@ spec:
 emqx-exporter and Prometheus will pull metrics from EMQX dashboard API, so you need to sign in to dashboard to create an API secret.
 
 Note that it is different to create a secret between EMQX 5 and EMQX 4.4 on the dashboard.
-* **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.0/dashboard/system.html#api-keys).
+* **EMQX 5** create a new [API KEY](https://www.emqx.io/docs/en/v5.1/dashboard/system.html#api-keys).
 * **EMQX 4.4** create a new `User` instead of `Application`
 
 ## Deploy [EMQX Exporter](https://github.com/emqx/emqx-exporter)
@@ -201,7 +190,7 @@ emqx-exporter-856564c95-j4q5v   Running  8m33s
 Prometheus-operator uses [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor) and [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) CRD to define how to monitor a set of pods or services dynamically.
 
 :::: tabs type:card
-::: tab v2alpha1
+::: tab v2alpha2
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1

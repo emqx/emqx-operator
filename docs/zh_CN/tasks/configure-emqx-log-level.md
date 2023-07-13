@@ -55,27 +55,24 @@
   通过浏览器访问 `http://192.168.1.200:18083`，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` 支持通过 `.spec.bootstrapConfig` 来配置 EMQX 集群日志等级，bootstrapConfig 的配置可以参考文档：[bootstrapConfig](https://www.emqx.io/docs/zh/v5.0/admin/cfg.html)。
+`apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.config.data` 来配置 EMQX 集群日志等级，EMQX 配置可以参考文档：[配置手册](https://www.emqx.io/docs/zh/v5.1/configuration/configuration-manual.html#%E8%8A%82%E7%82%B9%E8%AE%BE%E7%BD%AE)。
 
 > 这个字段只允许在创建 EMQX 集群的时候配置，不支持更新。如果在创建 EMQX 之后需要修改集群日志等级，请通过 EMQX Dashboard 进行修改。
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
   spec:
     image: emqx5.0
-    bootstrapConfig: |
-      log {
-        console_handler {
-            level  =  debug
-          }
-      }
+    config:
+      data: |
+        log.console.level = debug
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
@@ -84,7 +81,7 @@
         type: LoadBalancer
   ```
 
-  > `.spec.bootstrapConfig` 字段配置 EMQX 集群日志等级为 `debug`。
+  > `.spec.config.data` 字段配置 EMQX 集群日志等级为 `debug`。
 
 + 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
@@ -120,7 +117,7 @@
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

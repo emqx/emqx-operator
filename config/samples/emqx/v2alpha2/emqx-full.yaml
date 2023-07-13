@@ -8,11 +8,6 @@ metadata:
 spec:
   image: "emqx:5.1"
   imagePullPolicy: Always
-  # imagePullSecrets:
-  #   - name: fake-secrets
-  # bootstrapAPIKeys:
-  #   - key: bootstrap_api_key_key
-  #     secret: bootstrap_secret
   config:
     data: |
       dashboard.listeners.http.bind = 18083

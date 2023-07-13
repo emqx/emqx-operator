@@ -54,27 +54,24 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab apps.emqx.io/v2alpha1
+::: tab apps.emqx.io/v2alpha2
 
-`apps.emqx.io/v2alpha1 EMQX` supports configuration of EMQX cluster log level through `.spec.bootstrapConfig`. The configuration of bootstrapConfig can refer to the document: [bootstrapConfig](https://www.emqx.io/docs/en/v5.0/admin/cfg.html).
+`apps.emqx.io/v2alpha2 EMQX` supports configuration of EMQX cluster log level through `.spec.config.data`. The configuration of config.data can refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual).
 
 > This field is only allowed to be configured when creating an EMQX cluster, and does not support updating. If you need to modify the cluster log level after creating EMQX, please modify it through EMQX Dashboard.
 
 + Save the following content as a YAML file and deploy it with the kubectl apply command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha1
+  apiVersion: apps.emqx.io/v2alpha2
   kind: EMQX
   metadata:
     name: emqx
   spec:
     image: emqx5.0
-    bootstrapConfig: |
-      log {
-        console_handler {
-            level = debug
-          }
-      }
+    config:
+      data: |
+        log.console.level = debug
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
@@ -83,7 +80,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
         type: LoadBalancer
   ```
 
-  > The `.spec.bootstrapConfig` field configures the EMQX cluster log level to `debug`.
+  > The `.spec.config.data` field configures the EMQX cluster log level to `debug`.
 
 + Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through the kubectl get command, please make sure that `STATUS` is Running, this may take some time
 
@@ -119,7 +116,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
-  ::: tab apps.emqx.io/v2alpha1
+  ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

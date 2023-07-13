@@ -10,7 +10,7 @@ The chapter is divided into sections covering
   - [License Configuration (EMQX Enterprise)](./configure-emqx-license.md)
   - [Enable TLS In EMQX](./configure-emqx-tls.md)
 - Cluster Configuration
-  - [Change EMQX Configurations Via Operator](./configure-emqx-bootstrapConfig.md)
+  - [Change EMQX Configurations Via Operator](./configure-emqx-config.md)
   - [Enable Core + Replicant Cluster (EMQX 5.x)](./configure-emqx-core-replicant.md)
   - [Enable Persistence In EMQX Cluster](./configure-emqx-persistence.md)
   - [Access EMQX Cluster by Kubernetes Service](./configure-emqx-service.md)
