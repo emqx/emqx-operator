@@ -118,8 +118,8 @@ webhooks:
     - emqxes
   sideEffects: None
 - admissionReviewVersions:
-  - v2
-  - v2alpha2
+  - v1
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
