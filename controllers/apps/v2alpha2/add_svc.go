@@ -101,10 +101,16 @@ func generateHeadlessService(instance *appsv2alpha2.EMQX) *corev1.Service {
 			PublishNotReadyAddresses: true,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "ekka",
+					Name:       "erlang-dist",
 					Port:       4370,
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(4370),
+				},
+				{
+					Name:       "gen-rpc",
+					Port:       5369,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(5369),
 				},
 			},
 			Selector: instance.Spec.CoreTemplate.Labels,

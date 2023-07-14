@@ -40,10 +40,18 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 			PublishNotReadyAddresses: true,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "ekka",
+					// default Erlang distribution port
+					Name:       "erlang-dist",
 					Port:       4370,
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(4370),
+				},
+				{
+					// emqx back plane gen_rpc port
+					Name:       "gen-rpc",
+					Port:       5369,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(5369),
 				},
 			},
 			Selector: coreLabels,
