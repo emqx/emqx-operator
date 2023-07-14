@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta4
+package v2alpha2
 
 import (
 	"errors"
@@ -36,10 +36,8 @@ func (r *Rebalance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-apps-emqx-io-v1beta4-rebalance,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=rebalances,verbs=create;update,versions=v1beta4,name=validator.rebalance.emqx.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-apps-emqx-io-v2alpha2-rebalance,mutating=false,failurePolicy=fail,sideEffects=None,groups=apps.emqx.io,resources=rebalances,verbs=create;update,versions=v2alpha2,name=validator.rebalance.emqx.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &Rebalance{}
 

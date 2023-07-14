@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta4
+package v2alpha2
 
 import (
 	"fmt"
@@ -24,9 +24,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RebalanceSpec represents the desired spec of Rebalance
+// RebalanceSpec defines the desired state of Rebalance
 type RebalanceSpec struct {
-	// InstanceName represents the name of EmqxEnterprise CR
+	// InstanceKind is used to distinguish between EMQX and EMQXEnterprise.
+	// When it is set to "EMQX", it means that the EMQX CR is v2alpha2,
+	// and when it is set to "EmqxEnterprise", it means that the EmqxEnterprise CR is v1beta4.
+	//+kubebuilder:default:="EMQX"
+	InstanceKind string `json:"instanceKind"`
+	// InstanceName represents the name of EMQX CR, just work for EMQX Enterprise
 	// +kubebuilder:validation:Required
 	InstanceName string `json:"instanceName"`
 	// RebalanceStrategy represents the strategy of EMQX rebalancing
@@ -130,7 +135,7 @@ type RebalanceState struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:deprecatedversion
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // Rebalance is the Schema for the rebalances API

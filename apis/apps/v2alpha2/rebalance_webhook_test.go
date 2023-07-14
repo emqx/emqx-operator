@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta4
+package v2alpha2
 
 import (
 	"testing"
@@ -96,5 +96,4 @@ func TestRebalanceValidateUpdate(t *testing.T) {
 		old.DeletionTimestamp = &v1.Time{Time: time.Now()}
 		assert.NoError(t, rebalance.ValidateUpdate(old))
 	})
-
 }
