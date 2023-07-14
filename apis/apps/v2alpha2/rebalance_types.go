@@ -29,7 +29,7 @@ type RebalanceSpec struct {
 	// InstanceKind is used to distinguish between EMQX and EMQXEnterprise.
 	// When it is set to "EMQX", it means that the EMQX CR is v2alpha2,
 	// and when it is set to "EmqxEnterprise", it means that the EmqxEnterprise CR is v1beta4.
-	// +kubebuilder:validation:Required
+	//+kubebuilder:default:="EMQX"
 	InstanceKind string `json:"instanceKind"`
 	// InstanceName represents the name of EMQX CR, just work for EMQX Enterprise
 	// +kubebuilder:validation:Required
