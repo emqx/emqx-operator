@@ -159,6 +159,7 @@ spec:
           spec:
             properties:
               instanceKind:
+                default: EMQX
                 type: string
               instanceName:
                 type: string
