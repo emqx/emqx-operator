@@ -77,8 +77,14 @@ func (a *addSvc) getPodList(ctx context.Context, instance *appsv2alpha2.EMQX) []
 
 	list := []corev1.Pod{}
 	for _, pod := range podList.Items {
-		if pod.Status.PodIP != "" {
-			list = append(list, pod)
+		for _, condition := range pod.Status.Conditions {
+			// We also add readiness gate to the pod, so if pod is ready, the EMQX will definitely be in the cluster.
+			// More info: https://git.k8s.io/enhancements/keps/sig-network/580-pod-readiness-gates
+			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+				if pod.Status.PodIP != "" {
+					list = append(list, pod)
+				}
+			}
 		}
 	}
 	return list
