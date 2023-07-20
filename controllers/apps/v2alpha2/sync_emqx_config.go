@@ -18,7 +18,8 @@ type syncConfig struct {
 }
 
 func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
-	if r == nil {
+	// If core nodes is nil, the EMQX is in the process of being created
+	if len(instance.Status.CoreNodes) == 0 {
 		configMap := generateConfigMap(instance, instance.Spec.Config.Data)
 		if err := s.Handler.CreateOrUpdateList(instance, s.Scheme, []client.Object{configMap}); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to create or update configMap")}

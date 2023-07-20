@@ -20,7 +20,7 @@ type updateStatus struct {
 }
 
 func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
-	if isExistReplicant(instance) && instance.Status.ReplicantNodesStatus == nil {
+	if instance.Spec.ReplicantTemplate != nil && instance.Status.ReplicantNodesStatus == nil {
 		instance.Status.ReplicantNodesStatus = &appsv2alpha2.EMQXNodesStatus{
 			Replicas: *instance.Spec.ReplicantTemplate.Spec.Replicas,
 		}
