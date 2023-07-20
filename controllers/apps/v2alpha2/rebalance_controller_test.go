@@ -14,11 +14,12 @@ import (
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type EmqxVer struct {
 	name string
-	emqx interface{}
+	emqx client.Object
 }
 
 var emqxNodeName = "emqx-ee@emqx-ee-0.emqx-ee-headless.default.svc.cluster.local"
@@ -374,16 +375,16 @@ func TestRebalanceStatusHandler(t *testing.T) {
 	for _, tc := range emqxVers {
 		tc := tc // Create a new variable to avoid variable capture in closures
 		t.Run(tc.name, func(t *testing.T) {
-			defStartFun := func(emqx interface{}, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error {
+			defStartFun := func(emqx client.Object, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error {
 				return nil
 			}
-			defGetFun := func(emqx interface{}, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error) {
+			defGetFun := func(emqx client.Object, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error) {
 				return []appsv2alpha2.RebalanceState{}, nil
 			}
 			t.Run("check start rebalance failed", func(t *testing.T) {
 				r := rebalance.DeepCopy()
 
-				startFun := func(emqx interface{}, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error {
+				startFun := func(emqx client.Object, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error {
 					return errors.New("fake error")
 				}
 				rebalanceStatusHandler(tc.emqx, r, f, startFun, defGetFun)
@@ -399,7 +400,7 @@ func TestRebalanceStatusHandler(t *testing.T) {
 				r := rebalance.DeepCopy()
 				r.Status.Phase = appsv2alpha2.RebalancePhaseProcessing
 
-				getFun := func(emqx interface{}, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error) {
+				getFun := func(emqx client.Object, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error) {
 					return nil, errors.New("fake error")
 				}
 
@@ -419,7 +420,7 @@ func TestRebalanceStatusHandler(t *testing.T) {
 				r := rebalance.DeepCopy()
 				r.Status.Phase = appsv2alpha2.RebalancePhaseProcessing
 
-				getFun := func(emqx interface{}, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error) {
+				getFun := func(emqx client.Object, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error) {
 					return []appsv2alpha2.RebalanceState{
 						{
 							State: "processing",
