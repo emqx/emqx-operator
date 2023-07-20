@@ -70,15 +70,16 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
 	)
 	for _, sts := range list.Items {
-		hash, ok := sts.Labels[appsv2alpha2.PodTemplateHashLabelKey]
-		if ok && sts.Status.Replicas != 0 {
+		if hash, ok := sts.Labels[appsv2alpha2.PodTemplateHashLabelKey]; ok {
 			if hash == instance.Status.CoreNodesStatus.UpdateRevision {
 				updateSts = sts.DeepCopy()
 			}
-			if hash == instance.Status.CoreNodesStatus.CurrentRevision {
+			if sts.Status.Replicas != 0 &&
+				hash == instance.Status.CoreNodesStatus.CurrentRevision {
 				currentSts = sts.DeepCopy()
 			}
-			if hash != instance.Status.CoreNodesStatus.UpdateRevision &&
+			if sts.Status.Replicas != 0 &&
+				hash != instance.Status.CoreNodesStatus.UpdateRevision &&
 				hash != instance.Status.CoreNodesStatus.CurrentRevision {
 				oldStsList = append(oldStsList, sts.DeepCopy())
 			}
@@ -109,15 +110,16 @@ func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *a
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
 	for _, rs := range list.Items {
-		hash, ok := rs.Labels[appsv2alpha2.PodTemplateHashLabelKey]
-		if ok && rs.Status.Replicas != 0 {
+		if hash, ok := rs.Labels[appsv2alpha2.PodTemplateHashLabelKey]; ok {
 			if hash == instance.Status.ReplicantNodesStatus.UpdateRevision {
 				updateRs = rs.DeepCopy()
 			}
-			if hash == instance.Status.ReplicantNodesStatus.CurrentRevision {
+			if rs.Status.Replicas != 0 &&
+				hash == instance.Status.ReplicantNodesStatus.CurrentRevision {
 				currentRs = rs.DeepCopy()
 			}
-			if hash != instance.Status.ReplicantNodesStatus.UpdateRevision &&
+			if rs.Status.Replicas != 0 &&
+				hash != instance.Status.ReplicantNodesStatus.UpdateRevision &&
 				hash != instance.Status.ReplicantNodesStatus.CurrentRevision {
 				oldRsList = append(oldRsList, rs.DeepCopy())
 			}
