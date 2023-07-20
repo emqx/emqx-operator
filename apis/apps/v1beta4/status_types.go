@@ -49,6 +49,8 @@ type EmqxStatus interface {
 	GetCurrentStatefulSetVersion() string
 	SetCurrentStatefulSetVersion(version string)
 	GetConditions() []Condition
+	GetCondition(t ConditionType) (int, *Condition)
+	IsConditionTrue(t ConditionType) bool
 	AddCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string)
 }
 
