@@ -38,6 +38,7 @@ import (
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
 	controllerv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
+
 	// controllerv2alpha2 "github.com/emqx/emqx-operator/controllers/apps/v2alpha2"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/tidwall/gjson"
@@ -46,11 +47,6 @@ import (
 const (
 	ApiRebalanceV4 = "api/v4/load_rebalance"
 	ApiRebalanceV5 = "api/v5/load_rebalance"
-)
-
-const (
-	V1beta4InstanceKind  = "EmqxEnterprise"
-	V2alpha2InstanceKind = "EMQX"
 )
 
 // RebalanceReconciler reconciles a Rebalance object
@@ -70,164 +66,6 @@ func NewRebalanceReconciler(mgr manager.Manager) *RebalanceReconciler {
 	}
 }
 
-func doV1beta4(reb *appsv2alpha2.Rebalance, rec *RebalanceReconciler, ctx context.Context) (ctrl.Result, error) {
-	finalizer := "apps.emqx.io/finalizer"
-
-	emqx := &appsv1beta4.EmqxEnterprise{}
-	if err := rec.Client.Get(ctx, client.ObjectKey{
-		Name:      reb.Spec.InstanceName,
-		Namespace: reb.Namespace,
-	}, emqx); err != nil {
-		if !k8sErrors.IsNotFound(err) {
-			return ctrl.Result{}, err
-		}
-		if !reb.DeletionTimestamp.IsZero() {
-			controllerutil.RemoveFinalizer(reb, finalizer)
-			return ctrl.Result{}, rec.Client.Update(ctx, reb)
-		}
-		_ = reb.Status.SetFailed(appsv2alpha2.RebalanceCondition{
-			Type:    appsv2alpha2.RebalanceConditionFailed,
-			Status:  corev1.ConditionTrue,
-			Message: fmt.Sprintf("EMQX Enterprise %s is not found", reb.Spec.InstanceName),
-		})
-		return ctrl.Result{}, rec.Client.Status().Update(ctx, reb)
-	}
-
-	// check if emqx is ready
-	if !emqx.Status.IsConditionTrue(appsv1beta4.ConditionRunning) {
-		_ = reb.Status.SetFailed(appsv2alpha2.RebalanceCondition{
-			Type:    appsv2alpha2.RebalanceConditionFailed,
-			Status:  corev1.ConditionTrue,
-			Message: fmt.Sprintf("EMQX Enterprise %s is not ready", reb.Spec.InstanceName),
-		})
-		return ctrl.Result{}, rec.Client.Status().Update(ctx, reb)
-	}
-
-	readyPod := rec.getReadyPod(emqx)
-	if readyPod == nil {
-		return ctrl.Result{}, emperror.New("failed to get ready pod")
-	}
-
-	requester, err := controllerv1beta4.NewRequesterByPod(rec.Client, emqx, readyPod)
-	if err != nil {
-		return ctrl.Result{}, emperror.New("failed to get create emqx http API")
-	}
-
-	if !reb.DeletionTimestamp.IsZero() {
-		if reb.Status.Phase == appsv2alpha2.RebalancePhaseProcessing {
-			_ = stopRebalance(emqx, requester, reb)
-		}
-		controllerutil.RemoveFinalizer(reb, finalizer)
-		return ctrl.Result{}, rec.Client.Update(ctx, reb)
-	}
-
-	if !controllerutil.ContainsFinalizer(reb, finalizer) {
-		controllerutil.AddFinalizer(reb, finalizer)
-		if err := rec.Client.Update(ctx, reb); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	rebalanceStatusHandler(emqx, reb, requester, startRebalance, getRebalanceStatus)
-	if err := rec.Client.Status().Update(ctx, reb); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	switch reb.Status.Phase {
-	case "Failed":
-		rec.EventRecorder.Event(reb, corev1.EventTypeWarning, "Reb", "reb failed")
-		return ctrl.Result{}, nil
-	case "Completed":
-		rec.EventRecorder.Event(reb, corev1.EventTypeNormal, "Reb", "reb completed")
-		return ctrl.Result{}, nil
-	case "Processing":
-		rec.EventRecorder.Event(reb, corev1.EventTypeNormal, "Reb", "rebalance is processing")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-	default:
-		panic("unknown rebalance phase")
-	}
-}
-
-func doV2alpha2(reb *appsv2alpha2.Rebalance, rec *RebalanceReconciler, ctx context.Context) (ctrl.Result, error) {
-	finalizer := "apps.emqx.io/finalizer"
-
-	emqx := &appsv2alpha2.EMQX{}
-	if err := rec.Client.Get(ctx, client.ObjectKey{
-		Name:      reb.Spec.InstanceName,
-		Namespace: reb.Namespace,
-	}, emqx); err != nil {
-		if !k8sErrors.IsNotFound(err) {
-			return ctrl.Result{}, err
-		}
-		if !reb.DeletionTimestamp.IsZero() {
-			controllerutil.RemoveFinalizer(reb, finalizer)
-			return ctrl.Result{}, rec.Client.Update(ctx, reb)
-		}
-		_ = reb.Status.SetFailed(appsv2alpha2.RebalanceCondition{
-			Type:    appsv2alpha2.RebalanceConditionFailed,
-			Status:  corev1.ConditionTrue,
-			Message: fmt.Sprintf("EMQX %s is not found", reb.Spec.InstanceName),
-		})
-		return ctrl.Result{}, rec.Client.Status().Update(ctx, reb)
-	}
-
-	// check if emqx is ready
-	if !emqx.Status.IsConditionTrue(appsv2alpha2.Ready) {
-		// return ctrl.Result{}, emperror.New("EMQX is not ready")
-		_ = reb.Status.SetFailed(appsv2alpha2.RebalanceCondition{
-			Type:    appsv2alpha2.RebalanceConditionFailed,
-			Status:  corev1.ConditionTrue,
-			Message: fmt.Sprintf("EMQX %s is not ready", reb.Spec.InstanceName),
-		})
-		return ctrl.Result{}, rec.Client.Status().Update(ctx, reb)
-	}
-
-	// check if emqx is enterprise edition
-	if emqx.Status.CoreNodes[0].Edition != "Enterprise" {
-		return ctrl.Result{}, emperror.New("only support enterprise edition")
-	}
-
-	requester, err := newRequester(rec.Client, emqx)
-	if err != nil {
-		return ctrl.Result{}, emperror.New("failed to get create emqx http API")
-	}
-
-	if !reb.DeletionTimestamp.IsZero() {
-		if reb.Status.Phase == appsv2alpha2.RebalancePhaseProcessing {
-			_ = stopRebalance(emqx, requester, reb)
-		}
-		controllerutil.RemoveFinalizer(reb, finalizer)
-		return ctrl.Result{}, rec.Client.Update(ctx, reb)
-	}
-
-	if !controllerutil.ContainsFinalizer(reb, finalizer) {
-		controllerutil.AddFinalizer(reb, finalizer)
-		if err := rec.Client.Update(ctx, reb); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	rebalanceStatusHandler(emqx, reb, requester, startRebalance, getRebalanceStatus)
-	if err := rec.Client.Status().Update(ctx, reb); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	switch reb.Status.Phase {
-	case "Failed":
-		rec.EventRecorder.Event(reb, corev1.EventTypeWarning, "Reb", "reb failed")
-		return ctrl.Result{}, nil
-	case "Completed":
-		rec.EventRecorder.Event(reb, corev1.EventTypeNormal, "Reb", "reb completed")
-		return ctrl.Result{}, nil
-	case "Processing":
-		rec.EventRecorder.Event(reb, corev1.EventTypeNormal, "Reb", "rebalance is processing")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-	default:
-		panic("unknown rebalance phase")
-	}
-
-}
-
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=rebalances,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=rebalances/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apps.emqx.io,resources=rebalances/finalizers,verbs=update
@@ -235,7 +73,7 @@ func doV2alpha2(reb *appsv2alpha2.Rebalance, rec *RebalanceReconciler, ctx conte
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the EmqxRebalance object against the actual cluster state, and then
+// the Rebalance object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
@@ -243,6 +81,11 @@ func doV2alpha2(reb *appsv2alpha2.Rebalance, rec *RebalanceReconciler, ctx conte
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
 
 func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var err error
+	var finalizer string = "apps.emqx.io/finalizer"
+	var requester innerReq.RequesterInterface
+	var targetEMQX client.Object
+
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("Reconcile rebalance")
 
@@ -255,11 +98,117 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// check instanceKind is v1beta4 or v2alpha2
-	// TODO: instance.GroupVersionKind().Kind
-	if rebalance.Spec.InstanceKind == V1beta4InstanceKind {
-		return doV1beta4(rebalance, r, ctx)
+	if rebalance.Spec.InstanceKind == "EmqxEnterprise" {
+		emqx := &appsv1beta4.EmqxEnterprise{}
+		if err := r.Client.Get(ctx, client.ObjectKey{
+			Name:      rebalance.Spec.InstanceName,
+			Namespace: rebalance.Namespace,
+		}, emqx); err != nil {
+			if !k8sErrors.IsNotFound(err) {
+				return ctrl.Result{}, emperror.Wrap(err, "failed to get EMQX Enterprise")
+			}
+			if !rebalance.DeletionTimestamp.IsZero() {
+				controllerutil.RemoveFinalizer(rebalance, finalizer)
+				return ctrl.Result{}, r.Client.Update(ctx, rebalance)
+			}
+			_ = rebalance.Status.SetFailed(appsv2alpha2.RebalanceCondition{
+				Type:    appsv2alpha2.RebalanceConditionFailed,
+				Status:  corev1.ConditionTrue,
+				Message: fmt.Sprintf("EMQX Enterprise %s is not found", rebalance.Spec.InstanceName),
+			})
+			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
+		}
+
+		if !emqx.Status.IsConditionTrue(appsv1beta4.ConditionRunning) {
+			_ = rebalance.Status.SetFailed(appsv2alpha2.RebalanceCondition{
+				Type:    appsv2alpha2.RebalanceConditionFailed,
+				Status:  corev1.ConditionTrue,
+				Message: fmt.Sprintf("EMQX Enterprise %s is not ready", rebalance.Spec.InstanceName),
+			})
+			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
+		}
+
+		requester, err = controllerv1beta4.NewRequesterByPod(r.Client, emqx)
+		if err != nil {
+			return ctrl.Result{}, emperror.New("failed to get create emqx http API")
+		}
+		targetEMQX = emqx
 	} else {
-		return doV2alpha2(rebalance, r, ctx)
+		emqx := &appsv2alpha2.EMQX{}
+		if err := r.Client.Get(ctx, client.ObjectKey{
+			Name:      rebalance.Spec.InstanceName,
+			Namespace: rebalance.Namespace,
+		}, emqx); err != nil {
+			if !k8sErrors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			if !rebalance.DeletionTimestamp.IsZero() {
+				controllerutil.RemoveFinalizer(rebalance, finalizer)
+				return ctrl.Result{}, r.Client.Update(ctx, rebalance)
+			}
+			_ = rebalance.Status.SetFailed(appsv2alpha2.RebalanceCondition{
+				Type:    appsv2alpha2.RebalanceConditionFailed,
+				Status:  corev1.ConditionTrue,
+				Message: fmt.Sprintf("EMQX %s is not found", rebalance.Spec.InstanceName),
+			})
+			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
+		}
+
+		// check if emqx is ready
+		if !emqx.Status.IsConditionTrue(appsv2alpha2.Ready) {
+			// return ctrl.Result{}, emperror.New("EMQX is not ready")
+			_ = rebalance.Status.SetFailed(appsv2alpha2.RebalanceCondition{
+				Type:    appsv2alpha2.RebalanceConditionFailed,
+				Status:  corev1.ConditionTrue,
+				Message: fmt.Sprintf("EMQX %s is not ready", rebalance.Spec.InstanceName),
+			})
+			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
+		}
+
+		// check if emqx is enterprise edition
+		if emqx.Status.CoreNodes[0].Edition != "Enterprise" {
+			return ctrl.Result{}, emperror.New("only support enterprise edition")
+		}
+
+		requester, err = newRequester(r.Client, emqx)
+		if err != nil {
+			return ctrl.Result{}, emperror.New("failed to get create emqx http API")
+		}
+		targetEMQX = emqx
+	}
+
+	if !rebalance.DeletionTimestamp.IsZero() {
+		if rebalance.Status.Phase == appsv2alpha2.RebalancePhaseProcessing {
+			_ = stopRebalance(targetEMQX, requester, rebalance)
+		}
+		controllerutil.RemoveFinalizer(rebalance, finalizer)
+		return ctrl.Result{}, r.Client.Update(ctx, rebalance)
+	}
+
+	if !controllerutil.ContainsFinalizer(rebalance, finalizer) {
+		controllerutil.AddFinalizer(rebalance, finalizer)
+		if err := r.Client.Update(ctx, rebalance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	rebalanceStatusHandler(targetEMQX, rebalance, requester, startRebalance, getRebalanceStatus)
+	if err := r.Client.Status().Update(ctx, rebalance); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	switch rebalance.Status.Phase {
+	case "Failed":
+		r.EventRecorder.Event(rebalance, corev1.EventTypeWarning, "Rebalance", "rebalance failed")
+		return ctrl.Result{}, nil
+	case "Completed":
+		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", "rebalance completed")
+		return ctrl.Result{}, nil
+	case "Processing":
+		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", "rebalance is processing")
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	default:
+		panic("unknown rebalance phase")
 	}
 }
 
@@ -270,28 +219,12 @@ func (r *RebalanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *RebalanceReconciler) getReadyPod(emqxEnterprise *appsv1beta4.EmqxEnterprise) *corev1.Pod {
-	podList := &corev1.PodList{}
-	_ = r.Client.List(context.Background(), podList,
-		client.InNamespace(emqxEnterprise.GetNamespace()),
-		client.MatchingLabels(emqxEnterprise.GetSpec().GetTemplate().Labels),
-	)
-	for _, pod := range podList.Items {
-		for _, c := range pod.Status.Conditions {
-			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
-				return pod.DeepCopy()
-			}
-		}
-	}
-	return nil
-}
-
 // Rebalance Handler
-type GetRebalanceStatusFunc func(emqx interface{}, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error)
-type StartRebalanceFunc func(emqx interface{}, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error
-type StopRebalanceFunc func(emqx interface{}, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error
+type GetRebalanceStatusFunc func(emqx client.Object, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error)
+type StartRebalanceFunc func(emqx client.Object, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error
+type StopRebalanceFunc func(emqx client.Object, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error
 
-func rebalanceStatusHandler(emqx interface{}, rebalance *appsv2alpha2.Rebalance, requester innerReq.RequesterInterface,
+func rebalanceStatusHandler(emqx client.Object, rebalance *appsv2alpha2.Rebalance, requester innerReq.RequesterInterface,
 	startFun StartRebalanceFunc, getRebalanceStatusFun GetRebalanceStatusFunc,
 ) {
 	switch rebalance.Status.Phase {
@@ -338,7 +271,7 @@ func rebalanceStatusHandler(emqx interface{}, rebalance *appsv2alpha2.Rebalance,
 	}
 }
 
-func startRebalance(emqx interface{}, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error {
+func startRebalance(emqx client.Object, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error {
 	nodes, err := getEmqxNodes(emqx)
 	if err != nil {
 		return err
@@ -367,7 +300,7 @@ func startRebalance(emqx interface{}, requester innerReq.RequesterInterface, reb
 	return nil
 }
 
-func getRebalanceStatus(emqx interface{}, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error) {
+func getRebalanceStatus(emqx client.Object, requester innerReq.RequesterInterface) ([]appsv2alpha2.RebalanceState, error) {
 	path, err := rebalanceStatusUrl(emqx)
 	if err != nil {
 		return nil, err
@@ -388,7 +321,7 @@ func getRebalanceStatus(emqx interface{}, requester innerReq.RequesterInterface)
 	return rebalanceStates, nil
 }
 
-func stopRebalance(emqx interface{}, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error {
+func stopRebalance(emqx client.Object, requester innerReq.RequesterInterface, rebalance *appsv2alpha2.Rebalance) error {
 	// stop rebalance should use coordinatorNode as path parameter
 	path, err := rebalanceStopUrl(emqx, rebalance.Status.RebalanceStates[0].CoordinatorNode)
 	if err != nil {
@@ -436,7 +369,7 @@ func getRequestBytes(rebalance *appsv2alpha2.Rebalance, nodes []string) []byte {
 }
 
 // helper functions
-func getEmqxNodes(emqx interface{}) ([]string, error) {
+func getEmqxNodes(emqx client.Object) ([]string, error) {
 	nodes := []string{}
 	if e, ok := emqx.(*appsv1beta4.EmqxEnterprise); ok {
 		for _, node := range e.Status.EmqxNodes {
@@ -458,7 +391,7 @@ func getEmqxNodes(emqx interface{}) ([]string, error) {
 	return nodes, nil
 }
 
-func rebalanceStartUrl(emqx interface{}, node string) (string, error) {
+func rebalanceStartUrl(emqx client.Object, node string) (string, error) {
 	if _, ok := emqx.(*appsv1beta4.EmqxEnterprise); ok {
 		return fmt.Sprintf("%s/%s/start", ApiRebalanceV4, node), nil
 	} else if _, ok := emqx.(*appsv2alpha2.EMQX); ok {
@@ -468,7 +401,7 @@ func rebalanceStartUrl(emqx interface{}, node string) (string, error) {
 	}
 }
 
-func rebalanceStopUrl(emqx interface{}, node string) (string, error) {
+func rebalanceStopUrl(emqx client.Object, node string) (string, error) {
 	if _, ok := emqx.(*appsv1beta4.EmqxEnterprise); ok {
 		return fmt.Sprintf("%s/%s/stop", ApiRebalanceV4, node), nil
 	} else if _, ok := emqx.(*appsv2alpha2.EMQX); ok {
@@ -478,7 +411,7 @@ func rebalanceStopUrl(emqx interface{}, node string) (string, error) {
 	}
 }
 
-func rebalanceStatusUrl(emqx interface{}) (string, error) {
+func rebalanceStatusUrl(emqx client.Object) (string, error) {
 	if _, ok := emqx.(*appsv1beta4.EmqxEnterprise); ok {
 		return fmt.Sprintf("%s/global_status", ApiRebalanceV4), nil
 	} else if _, ok := emqx.(*appsv2alpha2.EMQX); ok {

@@ -133,17 +133,29 @@ func (r *EmqxReconciler) processResult(subResult subResult, instance appsv1beta4
 	return subResult.result, subResult.err
 }
 
-func NewRequesterByPod(client client.Client, instance appsv1beta4.Emqx, pod *corev1.Pod) (innerReq.RequesterInterface, error) {
-	username, password, err := getBootstrapUser(context.Background(), client, instance)
+func NewRequesterByPod(k8sClient client.Client, instance appsv1beta4.Emqx) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapUser(context.Background(), k8sClient, instance)
 	if err != nil {
 		return nil, err
 	}
 
-	return &innerReq.Requester{
-		Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),
-		Username: username,
-		Password: password,
-	}, nil
+	podList := &corev1.PodList{}
+	_ = k8sClient.List(context.Background(), podList,
+		client.InNamespace(instance.GetNamespace()),
+		client.MatchingLabels(instance.GetSpec().GetTemplate().Labels),
+	)
+	for _, pod := range podList.Items {
+		for _, c := range pod.Status.Conditions {
+			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+				return &innerReq.Requester{
+					Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),
+					Username: username,
+					Password: password,
+				}, nil
+			}
+		}
+	}
+	return nil, emperror.New("failed to get ready pod")
 }
 
 func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (innerReq.RequesterInterface, error) {

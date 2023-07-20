@@ -520,6 +520,14 @@ var _ = Describe("E2E Test", Ordered, func() {
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})
 	})
+
+	It("should delete namespace", func() {
+		Expect(k8sClient.Delete(context.Background(), &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: instance.Namespace,
+			},
+		})).Should(Succeed())
+	})
 })
 
 func checkServices(instance *appsv2alpha2.EMQX) {
