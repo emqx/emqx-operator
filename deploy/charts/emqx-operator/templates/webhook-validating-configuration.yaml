@@ -90,3 +90,24 @@ webhooks:
     resources:
     - emqxes
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: {{ include "emqx-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
+      path: /validate-apps-emqx-io-v1beta4-rebalance
+  failurePolicy: Fail
+  name: validator.rebalance.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta4
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - rebalances
+  sideEffects: None

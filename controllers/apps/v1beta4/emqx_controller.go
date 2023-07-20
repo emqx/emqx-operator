@@ -133,6 +133,19 @@ func (r *EmqxReconciler) processResult(subResult subResult, instance appsv1beta4
 	return subResult.result, subResult.err
 }
 
+func NewRequesterByPod(client client.Client, instance appsv1beta4.Emqx, pod *corev1.Pod) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapUser(context.Background(), client, instance)
+	if err != nil {
+		return nil, err
+	}
+
+	return &innerReq.Requester{
+		Host:     fmt.Sprintf("%s:8081", pod.Status.PodIP),
+		Username: username,
+		Password: password,
+	}, nil
+}
+
 func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (innerReq.RequesterInterface, error) {
 	username, password, err := getBootstrapUser(context.Background(), client, instance)
 	if err != nil {

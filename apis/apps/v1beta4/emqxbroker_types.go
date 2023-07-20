@@ -135,6 +135,20 @@ func (s *EmqxBrokerStatus) GetConditions() []Condition {
 	return s.Conditions
 }
 
+func (s *EmqxBrokerStatus) GetCondition(t ConditionType) (int, *Condition) {
+	for i, c := range s.GetConditions() {
+		if t == c.Type {
+			return i, &c
+		}
+	}
+	return -1, nil
+}
+
+func (s *EmqxBrokerStatus) IsConditionTrue(t ConditionType) bool {
+	_, c := s.GetCondition(t)
+	return c != nil && c.Status == corev1.ConditionTrue
+}
+
 func (s *EmqxBrokerStatus) AddCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) {
 	s.Conditions = addCondition(s.Conditions, Condition{
 		Type:    condType,

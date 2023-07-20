@@ -173,6 +173,20 @@ func (s *EmqxEnterpriseStatus) GetConditions() []Condition {
 	return s.Conditions
 }
 
+func (s *EmqxEnterpriseStatus) GetCondition(t ConditionType) (int, *Condition) {
+	for i, c := range s.GetConditions() {
+		if t == c.Type {
+			return i, &c
+		}
+	}
+	return -1, nil
+}
+
+func (s *EmqxEnterpriseStatus) IsConditionTrue(t ConditionType) bool {
+	_, c := s.GetCondition(t)
+	return c != nil && c.Status == corev1.ConditionTrue
+}
+
 func (s *EmqxEnterpriseStatus) AddCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) {
 	s.Conditions = addCondition(s.Conditions, Condition{
 		Type:    condType,
