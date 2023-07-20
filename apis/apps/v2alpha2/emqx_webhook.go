@@ -17,7 +17,6 @@ limitations under the License.
 package v2alpha2
 
 import (
-	"fmt"
 	"reflect"
 
 	emperror "emperror.dev/errors"
@@ -211,13 +210,7 @@ func (r *EMQX) defaultAnnotations() {
 }
 
 func (r *EMQX) defaultConfiguration() {
-	config := fmt.Sprintf("%s\n%s", "dashboard.listeners.http.bind = 18083", r.Spec.Config.Data)
-	hoconConfig, err := hocon.ParseString(config)
-	if err != nil {
-		return
-	}
-
-	r.Spec.Config.Data = hoconConfig.String()
+	r.Spec.Config.Data = "dashboard.listeners.http.bind = 18083\n" + r.Spec.Config.Data
 }
 
 func (r *EMQX) defaultDashboardServiceTemplate() {

@@ -247,18 +247,6 @@ func TestDefaultConfiguration(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "\"0.0.0.0:11883\"", configuration.GetString("listeners.tcp.default.bind"))
 	})
-
-	t.Run("wrong configuration", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				Config: Config{
-					Data: `hello world`,
-				},
-			},
-		}
-		instance.defaultConfiguration()
-		assert.Equal(t, `hello world`, instance.Spec.Config.Data)
-	})
 }
 
 func TestDefaultDashboardServiceTemplate(t *testing.T) {
