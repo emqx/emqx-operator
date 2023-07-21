@@ -10,61 +10,6 @@
 The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX cluster persistence through the `.spec.persistent` field. The semantics and configuration of the `.spec.persistent` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
-
-When the user configures the `.spec.persistent` field, EMQX Operator will mount the `/opt/emqx/data` directory in the EMQX container to [StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/) in the PV and PVC created, when the EMQX Pod is deleted, the PV and PVC will not be deleted, so as to achieve the purpose of saving EMQX runtime data. For more information about PV and PVC, refer to the document [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
-
-+ Save the following content as a YAML file and deploy it via the `kubectl apply` command
-
-  ```yaml
-  apiVersion: apps.emqx.io/v1beta4
-  kind: EmqxEnterprise
-  metadata:
-    name: emqx-ee
-  spec:
-    persistent:
-      metadata:
-        name: emqx-ee
-      spec:
-        storageClassName: standard
-        resources:
-          requests:
-            storage: 20Mi
-        accessModes:
-          - ReadWriteOnce
-    template:
-      spec:
-        emqxContainer:
-          image:
-            repository: emqx/emqx-ee
-            version: 4.4.14
-    serviceTemplate:
-      spec:
-        type: LoadBalancer
-  ```
-
-  > The `storageClassName` field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs.
-
-+ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
-
-  ```bash
-  $ kubectl get emqxenterprises
-  NAME      STATUS   AGE
-  emqx-ee   Running  8m33s
-  ```
-
-+ Obtain the External IP of EMQX cluster and access EMQX console
-
-  ```bash
-  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  192.168.1.200
-  ```
-  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
-
-:::
 ::: tab apps.emqx.io/v2alpha2
 
 `apps.emqx.io/v2alpha2 EMQX` supports configuration of EMQX cluster Core node persistence through `.spec.coreTemplate.spec.volumeClaimTemplates` field. The semantics and configuration of `.spec.coreTemplate.spec.volumeClaimTemplates` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
@@ -121,6 +66,61 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
+::: tab apps.emqx.io/v1beta4
+
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX cluster persistence through the `.spec.persistent` field. The semantics and configuration of the `.spec.persistent` field are consistent with `PersistentVolumeClaimSpec` of Kubernetes, and its configuration can refer to the document: [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core).
+
+When the user configures the `.spec.persistent` field, EMQX Operator will mount the `/opt/emqx/data` directory in the EMQX container to [StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/) in the PV and PVC created, when the EMQX Pod is deleted, the PV and PVC will not be deleted, so as to achieve the purpose of saving EMQX runtime data. For more information about PV and PVC, refer to the document [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/).
+
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+          - ReadWriteOnce
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
+
+  > The `storageClassName` field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs.
+
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ Obtain the External IP of EMQX cluster and access EMQX console
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
+
+:::
 ::::
 
 ## Verify EMQX Cluster Persistence
@@ -134,16 +134,16 @@ Verification scheme: 1) Passed in the old EMQX Dashboard creates a test rule; 2)
 + Access EMQX Dashboard through browser to create test rules
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v1beta4
-
-  ```bash
-  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-  ```
-  :::
   ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v1beta4
+
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
   ::::

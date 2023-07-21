@@ -20,6 +20,56 @@ EMQX 是一款高性能的开源分布式物联网 MQTT 消息服务器，它提
 以下是 EMQX Custom Resource 的相关配置。您可以根据您想要部署的 EMQX 版本选择相应的 APIVersion。具体的兼容关系，请参考 [EMQX Operator 兼容性](../index.md)：
 
 :::: tabs type:card
+::: tab apps.emqx.io/v2alpha2
+
+```yaml
+apiVersion: apps.emqx.io/v2alpha2
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: "emqx:5.1"
+  coreTemplate:
+    spec:
+      volumeClaimTemplates:
+        ## 关于存储类的更多信息：https://learn.microsoft.com/zh-cn/azure/aks/concepts-storage#storage-classes
+        storageClassName: default
+        resources:
+          requests:
+            storage: 10Gi
+        accessModes:
+        - ReadWriteOnce
+  dashboardServiceTemplate:
+    spec:
+      ## 关于负载均衡器的更多信息：https://learn.microsoft.com/zh-cn/azure/aks/load-balancer-standard
+      type: LoadBalancer
+  listenersServiceTemplate:
+    spec:
+      ## 关于负载均衡器的更多信息：https://learn.microsoft.com/zh-cn/azure/aks/load-balancer-standard
+      type: LoadBalancer
+```
+
+等待 EMQX 集群准备就绪。您可以使用 kubectl get 命令检查 EMQX 集群的状态。请确保状态为 Running，这可能需要一些时间。
+
+```shell
+$ kubectl get emqx
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.1   Running   118s
+```
+
+获取 EMQX 集群的外部 IP，并访问 EMQX 控制台。
+
+EMQX Operator 将创建两个 EMQX 服务资源，一个是 emqx-dashboard，另一个是 emqx-listeners，分别对应 EMQX 控制台和 EMQX 监听端口。
+
+```shell
+$ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+52.132.12.100
+```
+
+通过打开一个网络浏览器并访问 http://52.132.12.100:18083 来访问 EMQX 控制台。使用默认的用户名和密码 admin/public 登录。
+
+:::
 ::: tab apps.emqx.io/v1beta4
 
 将以下内容保存为一个 YAML 文件，并使用 `kubectl apply` 命令进行部署。
@@ -73,56 +123,6 @@ $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 通过打开一个网络浏览器并访问 http://20.245.123.100:18083 来访问 EMQX 控制台。使用默认的用户名和密码 admin/public 登录。
 
 :::
-::: tab apps.emqx.io/v2alpha2
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha2
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: "emqx:5.1"
-  coreTemplate:
-    spec:
-      volumeClaimTemplates:
-        ## 关于存储类的更多信息：https://learn.microsoft.com/zh-cn/azure/aks/concepts-storage#storage-classes
-        storageClassName: default
-        resources:
-          requests:
-            storage: 10Gi
-        accessModes:
-        - ReadWriteOnce
-  dashboardServiceTemplate:
-    spec:
-      ## 关于负载均衡器的更多信息：https://learn.microsoft.com/zh-cn/azure/aks/load-balancer-standard
-      type: LoadBalancer
-  listenersServiceTemplate:
-    spec:
-      ## 关于负载均衡器的更多信息：https://learn.microsoft.com/zh-cn/azure/aks/load-balancer-standard
-      type: LoadBalancer
-```
-
-等待 EMQX 集群准备就绪。您可以使用 kubectl get 命令检查 EMQX 集群的状态。请确保状态为 Running，这可能需要一些时间。
-
-```shell
-$ kubectl get emqx
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.1   Running   118s
-```
-
-获取 EMQX 集群的外部 IP，并访问 EMQX 控制台。
-
-EMQX Operator 将创建两个 EMQX 服务资源，一个是 emqx-dashboard，另一个是 emqx-listeners，分别对应 EMQX 控制台和 EMQX 监听端口。
-
-```shell
-$ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-52.132.12.100
-```
-
-通过打开一个网络浏览器并访问 http://52.132.12.100:18083 来访问 EMQX 控制台。使用默认的用户名和密码 admin/public 登录。
-
-:::
 ::::
 
 ## 使用 MQTT X CLI 连接到 EMQX 集群以发布/订阅消息
@@ -132,17 +132,17 @@ MQTT X CLI 是一个开源的 MQTT 5.0 命令行客户端工具，旨在帮助�
 - 获取 EMQX 集群的外部 IP
 
     :::: tabs type:card
-    ::: tab apps.emqx.io/v1beta4
-
-    ```shell
-    external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
-    ```
-
-    :::
     ::: tab apps.emqx.io/v2alpha2
 
     ```shell
     external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
+    ```
+
+    :::
+    ::: tab apps.emqx.io/v1beta4
+
+    ```shell
+    external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
     ```
 
     :::

@@ -57,6 +57,68 @@
 
 :::: tabs type:card
 
+::: tab EMQX Enterprise 5
+
+1. 将下面的 YAML 配置文件保存为 `emqx.yaml`。
+
+   ```yaml
+   apiVersion: apps.emqx.io/v2alpha2
+   kind: EMQX
+   metadata:
+      name: emqx-ee
+   spec:
+      image: emqx/emqx-enterprise:5.1.0
+   ```
+
+   并使用 `kubectl apply` 命令来部署 EMQX。
+
+   ```bash
+   $ kubectl apply -f emqx.yaml
+   ```
+
+   关于 EMQX 自定义资源的更多信息，请查看 [API 参考](../reference/v2alpha2-reference.md)
+
+2. 检查 EMQX 集群状态，请确保 STATUS 为 Running，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+   ```bash
+   $ kubectl get emqx
+
+   NAME      IMAGE                        STATUS    AGE
+   emqx-ee   emqx/emqx-enterprise:5.1.0   Running   2m55s
+   ```
+:::
+
+::: tab EMQX Open Source 5
+
+1. 将下面的 YAML 配置文件保存为 `emqx.yaml`。
+
+   ```yaml
+   apiVersion: apps.emqx.io/v2alpha2
+   kind: EMQX
+   metadata:
+      name: emqx
+   spec:
+      image: emqx:5.1
+   ```
+
+   并使用 `kubectl apply` 命令来部署 EMQX。
+
+   ```bash
+   $ kubectl apply -f emqx.yaml
+   ```
+
+   关于 EMQX 自定义资源的更多信息，请查看 [API 参考](../reference/v2alpha2-reference.md)
+
+2. 检查 EMQX 集群状态，请确保 STATUS 为 Running，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+   ```bash
+   $ kubectl get emqx
+
+   NAME   IMAGE      STATUS    AGE
+   emqx   emqx:5.1   Running   2m55s
+   ```
+:::
+
 ::: tab EMQX Enterprise 4
 1. 将下面的 YAML 配置文件保存为 `emqx.yaml`。
 
@@ -129,68 +191,6 @@
    ```
 
   请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
-:::
-
-::: tab EMQX Enterprise 5
-
-1. 将下面的 YAML 配置文件保存为 `emqx.yaml`。
-
-   ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
-   kind: EMQX
-   metadata:
-      name: emqx-ee
-   spec:
-      image: emqx/emqx-enterprise:5.1.0
-   ```
-
-   并使用 `kubectl apply` 命令来部署 EMQX。
-
-   ```bash
-   $ kubectl apply -f emqx.yaml
-   ```
-
-   关于 EMQX 自定义资源的更多信息，请查看 [API 参考](../reference/v2alpha2-reference.md)
-
-2. 检查 EMQX 集群状态，请确保 STATUS 为 Running，这可能需要一些时间等待 EMQX 集群准备就绪。
-
-   ```bash
-   $ kubectl get emqx
-
-   NAME      IMAGE                        STATUS    AGE
-   emqx-ee   emqx/emqx-enterprise:5.1.0   Running   2m55s
-   ```
-:::
-
-::: tab EMQX Open Source 5
-
-1. 将下面的 YAML 配置文件保存为 `emqx.yaml`。
-
-   ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
-   kind: EMQX
-   metadata:
-      name: emqx
-   spec:
-      image: emqx:5.1
-   ```
-
-   并使用 `kubectl apply` 命令来部署 EMQX。
-
-   ```bash
-   $ kubectl apply -f emqx.yaml
-   ```
-
-   关于 EMQX 自定义资源的更多信息，请查看 [API 参考](../reference/v2alpha2-reference.md)
-
-2. 检查 EMQX 集群状态，请确保 STATUS 为 Running，这可能需要一些时间等待 EMQX 集群准备就绪。
-
-   ```bash
-   $ kubectl get emqx
-
-   NAME   IMAGE      STATUS    AGE
-   emqx   emqx:5.1   Running   2m55s
-   ```
 :::
 
 ::::

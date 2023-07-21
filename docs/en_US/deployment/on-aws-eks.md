@@ -19,6 +19,77 @@ Before you begin, you must have the following:
 The following is the relevant configuration of EMQX custom resources. You can select the corresponding APIVersion according to the EMQX version you want to deploy. For the specific compatibility relationship, please refer to [Compatibility list between EMQX and EMQX Operator](../index.md)
 
 :::: tabs type:card
+::: tab apps.emqx.io/v2alpha2
+
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
+
+  ```yaml
+  apiVersion: apps.emqx.io/v2alpha2
+  kind: EMQX
+  metadata:
+    name: emqx
+  spec:
+    image: emqx:5.1
+    coreTemplate:
+      spec:
+        ## EMQX custom resources do not support updating this field at runtime
+        volumeClaimTemplates:
+          ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
+          ## Please manage the Amazon EBS CSI driver as an Amazon EKS add-on.
+          ## For more documentation please refer to: https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
+          storageClassName: gp2
+          resources:
+            requests:
+              storage: 10Gi
+          accessModes:
+            - ReadWriteOnce
+    dashboardServiceTemplate:
+      metadata:
+        ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
+        annotations:
+          ## Specifies whether the NLB is Internet-facing or internal. If not specified, defaults to internal.
+          service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+          ## Specify the availability zone to which the NLB will route traffic. Specify at least one subnet, either subnetID or subnetName (subnet name label) can be used.
+          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
+      spec:
+        type: LoadBalancer
+        ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
+        loadBalancerClass: service.k8s.aws/nlb
+    listenersServiceTemplate:
+      metadata:
+        ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
+        annotations:
+          ## Specifies whether the NLB is Internet-facing or internal. If not specified, defaults to internal.
+          service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+          ## Specify the availability zone to which the NLB will route traffic. Specify at least one subnet, either subnetID or subnetName (subnet name label) can be used.
+          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
+      spec:
+        type: LoadBalancer
+        ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
+        loadBalancerClass: service.k8s.aws/nlb
+  ```
+
++ Wait for EMQX cluster to be ready, you can check the status of EMQX cluster through `kubectl get` command, please make sure that `STATUS` is `Running`, this may take some time
+
+  ```bash
+  $ kubectl get emqx
+  NAME   IMAGE      STATUS    AGE
+  emqx   emqx:5.1   Running   18m
+  ```
+
++ Obtain Dashboard External IP of EMQX cluster and access EMQX console
+
+  EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
+
+  ```bash
+  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
+
+:::
 ::: tab apps.emqx.io/v1beta4
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
@@ -91,77 +162,6 @@ The following is the relevant configuration of EMQX custom resources. You can se
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab apps.emqx.io/v2alpha2
-
-+ Save the following content as a YAML file and deploy it via the `kubectl apply` command
-
-  ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
-  kind: EMQX
-  metadata:
-    name: emqx
-  spec:
-    image: emqx:5.1
-    coreTemplate:
-      spec:
-        ## EMQX custom resources do not support updating this field at runtime
-        volumeClaimTemplates:
-          ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
-          ## Please manage the Amazon EBS CSI driver as an Amazon EKS add-on.
-          ## For more documentation please refer to: https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-          storageClassName: gp2
-          resources:
-            requests:
-              storage: 10Gi
-          accessModes:
-            - ReadWriteOnce
-    dashboardServiceTemplate:
-      metadata:
-        ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
-        annotations:
-          ## Specifies whether the NLB is Internet-facing or internal. If not specified, defaults to internal.
-          service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-          ## Specify the availability zone to which the NLB will route traffic. Specify at least one subnet, either subnetID or subnetName (subnet name label) can be used.
-          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
-      spec:
-        type: LoadBalancer
-        ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
-        loadBalancerClass: service.k8s.aws/nlb
-    listenersServiceTemplate:
-      metadata:
-        ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
-        annotations:
-          ## Specifies whether the NLB is Internet-facing or internal. If not specified, defaults to internal.
-          service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-          ## Specify the availability zone to which the NLB will route traffic. Specify at least one subnet, either subnetID or subnetName (subnet name label) can be used.
-          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
-      spec:
-        type: LoadBalancer
-        ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
-        loadBalancerClass: service.k8s.aws/nlb
-  ```
-
-+ Wait for EMQX cluster to be ready, you can check the status of EMQX cluster through `kubectl get` command, please make sure that `STATUS` is `Running`, this may take some time
-
-  ```bash
-  $ kubectl get emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   18m
-  ```
-
-+ Obtain Dashboard External IP of EMQX cluster and access EMQX console
-
-  EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
-
-  ```bash
-  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  192.168.1.200
-  ```
-
-  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
-
-:::
 ::::
 
 ## Use MQTT X CLI To Publish/Subscribe Messages
@@ -171,16 +171,16 @@ The following is the relevant configuration of EMQX custom resources. You can se
 + Obtain External IP of EMQX cluster
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v1beta4
-
-  ```bash
-  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-  ```
-  :::
   ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v1beta4
+
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
   ::::

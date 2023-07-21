@@ -103,6 +103,52 @@ timeline
 ### Configuration update strategy
 
 :::: tabs type:card
+::: tab apps.emqx.io/v2alpha2
+
+Create `apps.emqx.io/v2alpha2` EMQX and configure update strategy.
+
+```yaml
+apiVersion: apps.emqx.io/v2alpha2
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: emqx:5.1
+	updateStrategy:
+    evacuationStrategy:
+      connEvictRate: 1000
+      sessEvictRate: 1000
+      waitTakeover: 10
+    initialDelaySeconds: 10
+    type: Recreate
+```
+
+`initialDelaySeconds`:The waiting time before starting the update after all nodes are ready (unit: second).
+
+`waitTakeover`: Interval time when deleting a Pod (unit: second)。
+
+`connEvictRate`: MQTT client evacuation rate, only supported by EMQX Enterprise Edition (unit: count/second)。
+
+`sessEvictRate`: MQTT Session evacuation rate, only supported by EMQX Enterprise Edition (unit: count/second)。
+
+Save the above content as: `emqx-update.yaml`, execute the following command to deploy EMQX:
+
+```bash
+$ kubectl apply -f emqx-update.yaml
+
+emqx.apps.emqx.io/emqx-ee created
+```
+
+Check the status of the EMQX cluster, please make sure that `STATUS` is `Ready`. This may require some time to wait for the EMQX cluster to be ready.
+
+```bash
+$ kubectl get emqx
+
+NAME      STATUS   AGE
+emqx-ee   Ready    8m33s
+```
+
+:::
 ::: tab apps.emqx.io/v1beta4
 
 Create `apps.emqx.io/v1beta4 EmqxEnterprise` and configure update strategy.
@@ -145,60 +191,15 @@ emqxenterprise.apps.emqx.io/emqx-ee created
 
 Check the status of the EMQX cluster, please make sure that `STATUS` is `Running`. This may require some time to wait for the EMQX cluster to be ready.
 
-   ```bash
+```bash
 $ kubectl get emqxenterprises
 
 NAME      STATUS   AGE
 emqx-ee   Running  8m33s
-   ```
-
-:::
-::: tab apps.emqx.io/v2alpha2
-
-Create `apps.emqx.io/v2alpha2` EMQX and configure update strategy.
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha2
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx:5.1
-	updateStrategy:
-    evacuationStrategy:
-      connEvictRate: 1000
-      sessEvictRate: 1000
-      waitTakeover: 10
-    initialDelaySeconds: 10
-    type: Recreate
 ```
 
-`initialDelaySeconds`:The waiting time before starting the update after all nodes are ready (unit: second).
-
-`waitTakeover`: Interval time when deleting a Pod (unit: second)。
-
-`connEvictRate`: MQTT client evacuation rate, only supported by EMQX Enterprise Edition (unit: count/second)。
-
-`sessEvictRate`: MQTT Session evacuation rate, only supported by EMQX Enterprise Edition (unit: count/second)。
-
-Save the above content as: `emqx-update.yaml`, execute the following command to deploy EMQX:
-
-```bash
-$ kubectl apply -f emqx-update.yaml
-
-emqx.apps.emqx.io/emqx-ee created
-```
-
-Check the status of the EMQX cluster, please make sure that `STATUS` is `Ready`. This may require some time to wait for the EMQX cluster to be ready.
-
-   ```bash
-$ kubectl get emqx
-
-NAME      STATUS   AGE
-emqx-ee   Ready    8m33s
-   ```
-
 :::
+::::
 
 ### Connect to EMQX cluster using MQTT X CLI.
 

@@ -32,58 +32,6 @@ EMQX 是一款高性能的开源分布式物联网 MQTT 消息服务器，它提
 以下是 EMQX 自定义资源的相关配置。您可以根据您希望部署的 EMQX 版本选择相应的 APIVersion。有关具体的兼容关系，请参阅 [EMQX Operator 兼容性](../index.md)：
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-将以下内容保存为 YAML 文件，并使用 `kubectl apply` 命令进行部署。
-
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  persistent:
-    metadata:
-      name: emqx-ee
-    spec:
-      ## 关于存储类的更多信息：https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses
-      storageClassName: standard
-      resources:
-        requests:
-          storage: 10Gi
-      accessModes:
-        - ReadWriteOnce
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.15
-  serviceTemplate:
-    spec:
-      ## 关于负载均衡器的更多信息：https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
-      type: LoadBalancer
-```
-
-等待 EMQX 集群准备就绪。您可以使用 kubectl get 命令检查 EMQX 集群的状态。请确保状态为 Running，这可能需要一些时间。
-
-```shell
-$ kubectl get emqxenterprises
-NAME      STATUS   AGE
-emqx-ee   Running  8m33s
-```
-
-获取 EMQX 集群的外部 IP 地址，并访问 EMQX 控制台。
-
-```shell
-$ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-34.68.80.122
-```
-
-通过在 Web 浏览器中打开 http://34.68.80.122:18083，访问 EMQX 控制台。使用默认的用户名和密码 admin/public 进行登录。
-
-:::
 ::: tab apps.emqx.io/v2alpha2
 
 将以下内容保存为 YAML 文件，并使用 kubectl apply 命令进行部署。
@@ -136,6 +84,58 @@ $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].i
 通过在 Web 浏览器中打开 http://34.122.174.166:18083，访问 EMQX 控制台。使用默认的用户名和密码 admin/public 进行登录。
 
 :::
+::: tab apps.emqx.io/v1beta4
+
+将以下内容保存为 YAML 文件，并使用 `kubectl apply` 命令进行部署。
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  persistent:
+    metadata:
+      name: emqx-ee
+    spec:
+      ## 关于存储类的更多信息：https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 10Gi
+      accessModes:
+        - ReadWriteOnce
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.15
+  serviceTemplate:
+    spec:
+      ## 关于负载均衡器的更多信息：https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
+      type: LoadBalancer
+```
+
+等待 EMQX 集群准备就绪。您可以使用 kubectl get 命令检查 EMQX 集群的状态。请确保状态为 Running，这可能需要一些时间。
+
+```shell
+$ kubectl get emqxenterprises
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+```
+
+获取 EMQX 集群的外部 IP 地址，并访问 EMQX 控制台。
+
+```shell
+$ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+34.68.80.122
+```
+
+通过在 Web 浏览器中打开 http://34.68.80.122:18083，访问 EMQX 控制台。使用默认的用户名和密码 admin/public 进行登录。
+
+:::
 ::::
 
 ## 使用 MQTT X CLI 连接到 EMQX 集群发布/订阅消息
@@ -145,17 +145,17 @@ MQTT X CLI 是一个开源的 MQTT 5.0 命令行客户端工具，旨在帮助�
 - 获取 EMQX 集群的外部 IP 地址
 
     :::: tabs type:card
-    ::: tab apps.emqx.io/v1beta4
-
-    ```shell
-    external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-    ```
-
-    :::
     ::: tab apps.emqx.io/v2alpha2
 
     ```shell
     external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+    ```
+
+    :::
+    ::: tab apps.emqx.io/v1beta4
+
+    ```shell
+    external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
     ```
 
     :::

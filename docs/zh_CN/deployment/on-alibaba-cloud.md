@@ -20,65 +20,6 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
 下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考[EMQX 与 EMQX Operator 的兼容性列表](../index.md)：
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-+ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它。
-
-  ```yaml
-  apiVersion: apps.emqx.io/v1beta4
-  kind: EmqxEnterprise
-  metadata:
-    name: emqx-ee
-  spec:
-    ## EMQX 自定义资源不支持在运行时更新这个字段
-    persistent:
-      metadata:
-        name: emqx-ee
-      spec:
-        ## 更多内容：https://help.aliyun.com/document_detail/134722.html
-        storageClassName: alibabacloud-cnfs-nas
-        resources:
-          requests:
-            storage: 10Gi
-        accessModes:
-          - ReadWriteOnce
-    template:
-      spec:
-        emqxContainer:
-          image:
-            repository: emqx/emqx-ee
-            version: 4.4.14
-    serviceTemplate:
-      metadata:
-        annotations:
-          ## NLB 支持的地域及可用区可以登录 NLB 控制台查看，至少需要两个可用区。多个可用区间用逗号分隔，如 cn-hangzhou-k:vsw-i123456,cn-hangzhou-j:vsw-j654321 。
-          service.beta.kubernetes.io/alibaba-cloud-loadbalancer-zone-maps: "${zone-A}:${vsw-A},${zone-B}:${vsw-B}"
-      spec:
-        type: LoadBalancer
-        ## 更多内容：https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/configurenlbthroughannotation
-        loadBalancerClass: "alibabacloud.com/nlb"
-  ```
-
-+ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
-
-  ```bash
-  $ kubectl get emqxenterprises
-  NAME      STATUS   AGE
-  emqx-ee   Running  8m33s
-  ```
-
-+ 获取 EMQX 集群的 External IP, 访问 EMQX 控制台
-
-  ```bash
-  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  198.18.3.10
-  ```
-
-  通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
-
-:::
-
 ::: tab apps.emqx.io/v2alpha2
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它。
@@ -136,6 +77,64 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
   ```bash
   $ external_ip=$(kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip')
   $ echo $external_ip
+
+  198.18.3.10
+  ```
+
+  通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+
+:::
+::: tab apps.emqx.io/v1beta4
+
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它。
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    ## EMQX 自定义资源不支持在运行时更新这个字段
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
+        ## 更多内容：https://help.aliyun.com/document_detail/134722.html
+        storageClassName: alibabacloud-cnfs-nas
+        resources:
+          requests:
+            storage: 10Gi
+        accessModes:
+          - ReadWriteOnce
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      metadata:
+        annotations:
+          ## NLB 支持的地域及可用区可以登录 NLB 控制台查看，至少需要两个可用区。多个可用区间用逗号分隔，如 cn-hangzhou-k:vsw-i123456,cn-hangzhou-j:vsw-j654321 。
+          service.beta.kubernetes.io/alibaba-cloud-loadbalancer-zone-maps: "${zone-A}:${vsw-A},${zone-B}:${vsw-B}"
+      spec:
+        type: LoadBalancer
+        ## 更多内容：https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/configurenlbthroughannotation
+        loadBalancerClass: "alibabacloud.com/nlb"
+  ```
+
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ 获取 EMQX 集群的 External IP, 访问 EMQX 控制台
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 
   198.18.3.10
   ```
@@ -205,54 +204,6 @@ EMQX Operator 支持在阿里云容器服务 Kubernetes 版部署 EMQX。阿里�
 
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-```yaml
-apiVersion: apps.emqx.io/v1beta4
-kind: EmqxEnterprise
-metadata:
-  name: emqx-ee
-spec:
-  ## EMQX 自定义资源不支持在运行时更新这个字段
-  persistent:
-    metadata:
-      name: emqx-ee
-    spec:
-      storageClassName: alibabacloud-cnfs-nas
-      resources:
-        requests:
-          storage: 20Mi
-      accessModes:
-        - ReadWriteOnce
-  template:
-    spec:
-      emqxContainer:
-        image:
-          repository: emqx/emqx-ee
-          version: 4.4.14
-  serviceTemplate:
-    metadata:
-      annotations:
-        ## NLB 支持的地域及可用区可以登录 NLB 控制台查看，至少需要两个可用区。多个可用区间用逗号分隔，如 cn-hangzhou-k:vsw-i123456,cn-hangzhou-j:vsw-j654321 。
-        service.beta.kubernetes.io/alibaba-cloud-loadbalancer-zone-maps: "${zone-A}:${vsw-A},${zone-B}:${vsw-B}"
-        ## 如集群为中国内地 Region 时，组合后的证书 ID 为 ${your-cert-id}-cn-hangzhou。如集群为的其他 Region 时，组合后的证书 ID 为 ${your-cert-id}-ap-southeast-1。
-        service.beta.kubernetes.io/alibaba-cloud-loadbalancer-cert-id: "${组合后的证书 ID}"
-        ## LoadBalancer 监听的 SSL 端口
-        service.beta.kubernetes.io/alibaba-cloud-loadbalancer-protocol-port: "tcpssl:30883"
-    spec:
-      type: LoadBalancer
-      ## 更多内容：https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/configurenlbthroughannotation
-      loadBalancerClass: "alibabacloud.com/nlb"
-      ports:
-        - name: tcpssl
-          ## LoadBalancer 监听的 SSL 端口
-          port: 30883
-          protocol: TCP
-          ## MQTT TCP 端口
-          targetPort: 1883
-```
-:::
-
 ::: tab apps.emqx.io/v2alpha2
 
 ```yaml
@@ -303,6 +254,53 @@ spec:
           targetPort: 1883
 ```
 
+:::
+::: tab apps.emqx.io/v1beta4
+
+```yaml
+apiVersion: apps.emqx.io/v1beta4
+kind: EmqxEnterprise
+metadata:
+  name: emqx-ee
+spec:
+  ## EMQX 自定义资源不支持在运行时更新这个字段
+  persistent:
+    metadata:
+      name: emqx-ee
+    spec:
+      storageClassName: alibabacloud-cnfs-nas
+      resources:
+        requests:
+          storage: 20Mi
+      accessModes:
+        - ReadWriteOnce
+  template:
+    spec:
+      emqxContainer:
+        image:
+          repository: emqx/emqx-ee
+          version: 4.4.14
+  serviceTemplate:
+    metadata:
+      annotations:
+        ## NLB 支持的地域及可用区可以登录 NLB 控制台查看，至少需要两个可用区。多个可用区间用逗号分隔，如 cn-hangzhou-k:vsw-i123456,cn-hangzhou-j:vsw-j654321 。
+        service.beta.kubernetes.io/alibaba-cloud-loadbalancer-zone-maps: "${zone-A}:${vsw-A},${zone-B}:${vsw-B}"
+        ## 如集群为中国内地 Region 时，组合后的证书 ID 为 ${your-cert-id}-cn-hangzhou。如集群为的其他 Region 时，组合后的证书 ID 为 ${your-cert-id}-ap-southeast-1。
+        service.beta.kubernetes.io/alibaba-cloud-loadbalancer-cert-id: "${组合后的证书 ID}"
+        ## LoadBalancer 监听的 SSL 端口
+        service.beta.kubernetes.io/alibaba-cloud-loadbalancer-protocol-port: "tcpssl:30883"
+    spec:
+      type: LoadBalancer
+      ## 更多内容：https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/configurenlbthroughannotation
+      loadBalancerClass: "alibabacloud.com/nlb"
+      ports:
+        - name: tcpssl
+          ## LoadBalancer 监听的 SSL 端口
+          port: 30883
+          protocol: TCP
+          ## MQTT TCP 端口
+          targetPort: 1883
+```
 :::
 ::::
 

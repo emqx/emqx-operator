@@ -19,77 +19,6 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
 下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考 [EMQX 与 EMQX Operator 的兼容性列表](../index.md)
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-+ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
-
-  ```yaml
-  apiVersion: apps.emqx.io/v1beta4
-  kind: EmqxEnterprise
-  metadata:
-    name: emqx-ee
-  spec:
-     ## EMQX 自定义资源不支持在运行时更新这个字段
-    persistent:
-      metadata:
-        name: emqx-ee
-      spec:
-        ## 更多内容：https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/storage-classes.html
-        ## 请将 Amazon EBS CSI 驱动程序作为 Amazon EKS 附加组件管理，更多文档请参考：https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-        storageClassName: gp2
-        resources:
-          requests:
-            storage: 10Gi
-        accessModes:
-          - ReadWriteOnce
-    template:
-      spec:
-        ## 若开启了持久化，您需要配置 podSecurityContext，
-        ## 详情请参考 discussion: https://github.com/emqx/emqx-operator/discussions/716
-        podSecurityContext:
-          runAsUser: 1000
-          runAsGroup: 1000
-          fsGroup: 1000
-          fsGroupChangePolicy: Always
-          supplementalGroups:
-            - 1000
-        emqxContainer:
-          image:
-            repository: emqx/emqx-ee
-            version: 4.4.14
-    serviceTemplate:
-      metadata:
-        ## 更多内容：https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
-        annotations:
-          ## 指定 NLB 是面向 Internet 的还是内部的。如果未指定，则默认为内部。
-          service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-          ## 指定 NLB 将流量路由到的可用区。指定至少一个子网，subnetID 或 subnetName（子网名称标签）都可以使用。
-          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1, subnet-xxx2
-      spec:
-        type: LoadBalancer
-        ## 更多内容：https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
-        loadBalancerClass: service.k8s.aws/nlb
-  ```
-
-+ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
-
-  ```bash
-  $ kubectl get emqxenterprises
-  NAME      STATUS   AGE
-  emqx-ee   Running  26m
-  ```
-
-+ 获取 EMQX 集群的 External IP, 访问 EMQX 控制台
-
-  ```bash
-  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  192.168.1.200
-  ```
-
-  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
-
-:::
 ::: tab apps.emqx.io/v2alpha2
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
@@ -170,6 +99,77 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
   通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
+::: tab apps.emqx.io/v1beta4
+
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+     ## EMQX 自定义资源不支持在运行时更新这个字段
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
+        ## 更多内容：https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/storage-classes.html
+        ## 请将 Amazon EBS CSI 驱动程序作为 Amazon EKS 附加组件管理，更多文档请参考：https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
+        storageClassName: gp2
+        resources:
+          requests:
+            storage: 10Gi
+        accessModes:
+          - ReadWriteOnce
+    template:
+      spec:
+        ## 若开启了持久化，您需要配置 podSecurityContext，
+        ## 详情请参考 discussion: https://github.com/emqx/emqx-operator/discussions/716
+        podSecurityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+          fsGroupChangePolicy: Always
+          supplementalGroups:
+            - 1000
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      metadata:
+        ## 更多内容：https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
+        annotations:
+          ## 指定 NLB 是面向 Internet 的还是内部的。如果未指定，则默认为内部。
+          service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+          ## 指定 NLB 将流量路由到的可用区。指定至少一个子网，subnetID 或 subnetName（子网名称标签）都可以使用。
+          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1, subnet-xxx2
+      spec:
+        type: LoadBalancer
+        ## 更多内容：https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
+        loadBalancerClass: service.k8s.aws/nlb
+  ```
+
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  26m
+  ```
+
++ 获取 EMQX 集群的 External IP, 访问 EMQX 控制台
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+
+:::
 ::::
 
 ## 使用 MQTT X CLI 发布/订阅消息
@@ -179,16 +179,16 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
 + 获取 EMQX 集群的 External IP
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v1beta4
-
-  ```bash
-  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-  ```
-  :::
   ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v1beta4
+
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
   ::::

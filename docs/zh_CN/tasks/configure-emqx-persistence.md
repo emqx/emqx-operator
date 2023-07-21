@@ -10,62 +10,6 @@
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../index.md):
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-`apps.emqx.io/v1beta4 EmqxEnterprise` 支持通过 `.spec.persistent` 字段配置 EMQX 集群持久化。`.spec.persistent` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core)。
-
-当用户配置了 `.spec.persistent` 字段时，EMQX Operator 会将 EMQX 容器中 `/opt/emqx/data` 目录挂载到通过 [StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/) 创建的 PV 和 PVC 中，当 EMQX Pod 被删除时，PV 和 PVC 不会被删除，从而达到保存 EMQX 运行时数据的目的。关于 PV 和 PVC 的更多信息，请参考文档 [Persistent Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/)。
-
-+ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
-
-  ``` yaml
-  apiVersion: apps.emqx.io/v1beta4
-  kind: EmqxEnterprise
-  metadata:
-    name: emqx-ee
-  spec:
-    persistent:
-      metadata:
-        name: emqx-ee
-      spec:
-        storageClassName: standard
-        resources:
-          requests:
-            storage: 20Mi
-        accessModes:
-          - ReadWriteOnce
-    template:
-      spec:
-        emqxContainer:
-          image:
-            repository: emqx/emqx-ee
-            version: 4.4.14
-    serviceTemplate:
-      spec:
-        type: LoadBalancer
-  ```
-
-  > `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。
-
-+ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
-
-  ```bash
-  $ kubectl get emqxenterprises
-  NAME      STATUS   AGE
-  emqx-ee   Running  8m33s
-  ```
-
-+ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
-
-  ```bash
-  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  192.168.1.200
-  ```
-
-  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
-
-:::
 ::: tab apps.emqx.io/v2alpha2
 
 `apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.coreTemplate.spec.volumeClaimTemplates` 字段配置 EMQX 集群 Core 节点持久化。`.spec.coreTemplate.spec.volumeClaimTemplates` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core) 。
@@ -122,6 +66,62 @@
   通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
 :::
+::: tab apps.emqx.io/v1beta4
+
+`apps.emqx.io/v1beta4 EmqxEnterprise` 支持通过 `.spec.persistent` 字段配置 EMQX 集群持久化。`.spec.persistent` 字段的语义及配置与 Kubernetes 的 `PersistentVolumeClaimSpec` 一致，其配置可以参考文档：[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core)。
+
+当用户配置了 `.spec.persistent` 字段时，EMQX Operator 会将 EMQX 容器中 `/opt/emqx/data` 目录挂载到通过 [StorageClass](https://kubernetes.io/zh-cn/docs/concepts/storage/storage-classes/) 创建的 PV 和 PVC 中，当 EMQX Pod 被删除时，PV 和 PVC 不会被删除，从而达到保存 EMQX 运行时数据的目的。关于 PV 和 PVC 的更多信息，请参考文档 [Persistent Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/)。
+
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
+
+  ``` yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+          - ReadWriteOnce
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
+
+  > `storageClassName` 字段表示 StorageClass 的名称，可以使用命令 `kubectl get storageclass` 获取 Kubernetes 集群已经存在的 StorageClass，也可以根据自己需求自行创建 StorageClass。
+
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+
+:::
 ::::
 
 ## 验证 EMQX 集群持久化
@@ -135,16 +135,16 @@
 + 通过浏览器访问 EMQX Dashboard 创建测试规则
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v1beta4
-
-  ```bash
-  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-  ```
-  :::
   ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v1beta4
+
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
   ::::

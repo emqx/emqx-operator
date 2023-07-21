@@ -34,6 +34,59 @@ Before you begin, you must have the following:
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
+::: tab apps.emqx.io/v2alpha2
+
+Save the following content as a YAML file and deploy it using the `kubectl apply` command.
+
+
+```yaml
+apiVersion: apps.emqx.io/v2alpha2
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: "emqx:5.1"
+  coreTemplate:
+    spec:
+      volumeClaimTemplates:
+      ## more information about storage classes: https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi
+        accessModes:
+        - ReadWriteOnce
+  dashboardServiceTemplate:
+    spec:
+      ## more information about load balancer: https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
+      type: LoadBalancer
+  listenersServiceTemplate:
+    spec:
+      ## more information about load balancer: https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
+      type: LoadBalancer
+```
+
+Wait for the EMQX cluster to be ready. You can check the status of the EMQX cluster using the `kubectl get` command. Please ensure that the STATUS is `Running` which may take some time.
+
+```shell
+$ kubectl get emqx
+NAME   IMAGE      STATUS    AGE
+emqx   emqx:5.1   Running   118s
+```
+
+Get the External IP of the EMQX cluster and access the EMQX console.
+
+The EMQX Operator will create two EMQX Service resources, one is `emqx-dashboard`, and the other is `emqx-listeners`, corresponding to the EMQX console and EMQX listening port, respectively.
+
+```shell
+$ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+34.122.174.166
+```
+
+Access the EMQX console by opening a web browser and visiting http://34.122.174.166:18083. Login using the default username and password `admin/public`.
+
+:::
 ::: tab apps.emqx.io/v1beta4
 
 Save the following content as a YAML file and deploy it using the `kubectl apply` command.
@@ -86,59 +139,6 @@ $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
 ```
 
 Access the EMQX console by opening a web browser and visiting http://34.68.80.122:18083. Login using the default username and password `admin/public`.
-
-:::
-::: tab apps.emqx.io/v2alpha2
-
-Save the following content as a YAML file and deploy it using the `kubectl apply` command.
-
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha2
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: "emqx:5.1"
-  coreTemplate:
-    spec:
-      volumeClaimTemplates:
-      ## more information about storage classes: https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes#storageclasses
-        storageClassName: standard
-        resources:
-          requests:
-            storage: 10Gi
-        accessModes:
-        - ReadWriteOnce
-  dashboardServiceTemplate:
-    spec:
-      ## more information about load balancer: https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
-      type: LoadBalancer
-  listenersServiceTemplate:
-    spec:
-      ## more information about load balancer: https://cloud.google.com/kubernetes-engine/docs/how-to/internal-load-balancing
-      type: LoadBalancer
-```
-
-Wait for the EMQX cluster to be ready. You can check the status of the EMQX cluster using the `kubectl get` command. Please ensure that the STATUS is `Running` which may take some time.
-
-```shell
-$ kubectl get emqx
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.1   Running   118s
-```
-
-Get the External IP of the EMQX cluster and access the EMQX console.
-
-The EMQX Operator will create two EMQX Service resources, one is `emqx-dashboard`, and the other is `emqx-listeners`, corresponding to the EMQX console and EMQX listening port, respectively.
-
-```shell
-$ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-34.122.174.166
-```
-
-Access the EMQX console by opening a web browser and visiting http://34.122.174.166:18083. Login using the default username and password `admin/public`.
 
 :::
 ::::

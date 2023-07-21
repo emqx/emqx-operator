@@ -38,68 +38,6 @@ Secret 是一种包含少量敏感信息例如密码、令牌或密钥的对象�
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考 [EMQX Operator 兼容性](../index.md):
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-`apps.emqx.io/v1beta4 EmqxEnterprise` 支持通过 `.spec.template.spec.volumes` 和 `.spec.template.spec.emqxContainer.volumeMounts` 字段给 EMQX 集群配置卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
-
-Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/)。在本文中我们使用的是 `secret` 类型。
-
-+ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
-
-  ```yaml
-  apiVersion: apps.emqx.io/v1beta4
-  kind: EmqxEnterprise
-  metadata:
-    name: emqx-ee
-  spec:
-    template:
-      spec:
-        emqxContainer:
-          image:
-            repository: emqx/emqx-ee
-            version: 4.4.14
-          emqxConfig:
-            listener.ssl.external.cacertfile: /mounted/cert/ca.crt
-            listener.ssl.external.certfile: /mounted/cert/tls.crt
-            listener.ssl.external.keyfile: /mounted/cert/tls.key
-            listener.ssl.external: "0.0.0.0:8883"
-          volumeMounts:
-            - name: emqx-tls
-              mountPath: /mounted/cert
-        volumes:
-          - name: emqx-tls
-            secret:
-              secretName: emqx-tls
-    serviceTemplate:
-      spec:
-        type: LoadBalancer
-  ```
-
-  > `.spec.template.spec.volumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。
-
-  > `.spec.template.spec.emqxContainer.volumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。
-
-  > `.spec.template.spec.emqxContainer.emqxConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。
-
-+ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
-
-  ```bash
-  $ kubectl get emqxenterprises
-  NAME      STATUS   AGE
-  emqx-ee   Running  8m33s
-  ```
-
-+ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
-
-  ```bash
-  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  192.168.1.200
-  ```
-
-  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
-
-:::
 ::: tab apps.emqx.io/v2alpha2
 
 `apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.coreTemplate.extraVolumes` 和 `.spec.coreTemplate.extraVolumeMounts` 以及 `.spec.replicantTemplate.extraVolumes` 和 `.spec.replicantTemplate.extraVolumeMounts` 字段给 EMQX 集群配置额外的卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
@@ -177,6 +115,68 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
 
   通过浏览器访问 `http://192.168.1.200:18083`，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 :::
+::: tab apps.emqx.io/v1beta4
+
+`apps.emqx.io/v1beta4 EmqxEnterprise` 支持通过 `.spec.template.spec.volumes` 和 `.spec.template.spec.emqxContainer.volumeMounts` 字段给 EMQX 集群配置卷和挂载点。在本文中我们可以使用这个两个字段为 EMQX 集群配置 TLS 证书。
+
+Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volumes](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/)。在本文中我们使用的是 `secret` 类型。
+
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+          emqxConfig:
+            listener.ssl.external.cacertfile: /mounted/cert/ca.crt
+            listener.ssl.external.certfile: /mounted/cert/tls.crt
+            listener.ssl.external.keyfile: /mounted/cert/tls.key
+            listener.ssl.external: "0.0.0.0:8883"
+          volumeMounts:
+            - name: emqx-tls
+              mountPath: /mounted/cert
+        volumes:
+          - name: emqx-tls
+            secret:
+              secretName: emqx-tls
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
+
+  > `.spec.template.spec.volumes` 字段配置了卷的类型为：secret，名称为：emqx-tls。
+
+  > `.spec.template.spec.emqxContainer.volumeMounts` 字段配置了 TLS 证书挂载到 EMQX 的目录为：`/mounted/cert`。
+
+  > `.spec.template.spec.emqxContainer.emqxConfig` 字段配置了 TLS 监听器证书路径，更多 TLS 监听器的配置可以参考文档：[tlsexternal](https://docs.emqx.com/zh/enterprise/v4.4/configuration/configuration.html#tlsexternal)。
+
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  通过浏览器访问 `http://192.168.1.200:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+
+:::
 ::::
 
 ## 使用 MQTT X CLI 验证 TLS 连接
@@ -186,16 +186,16 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
 + 获取 EMQX 集群的 External IP
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v1beta4
-
-  ```bash
-  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-  ```
-  :::
   ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v1beta4
+
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
   ::::

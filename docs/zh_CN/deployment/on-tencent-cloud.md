@@ -20,63 +20,6 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
 下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考[ EMQX 与 EMQX Operator 的兼容性列表](../index.md)：
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-+ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
-
-  ```yaml
-  apiVersion: apps.emqx.io/v1beta4
-  kind: EmqxEnterprise
-  metadata:
-    name: emqx-ee
-  spec:
-     ## EMQX 自定义资源不支持在运行时更新这个字段
-    persistent:
-      metadata:
-        name: emqx-ee
-      spec:
-        ## 更多内容：https://cloud.tencent.com/document/product/457/44239
-        storageClassName: cbs
-        resources:
-          requests:
-            ## 腾讯云 TKE 要求云硬盘大小必须为 10 的倍数，默认提供的 cbs（高性能云盘） 要求硬盘最小为 10GB，更多内容请参考：https://cloud.tencent.com/document/product/457/44239
-            storage: 10Gi
-        accessModes:
-          - ReadWriteOnce
-    template:
-      spec:
-        emqxContainer:
-          image:
-            repository: emqx/emqx-ee
-            version: 4.4.14
-    serviceTemplate:
-      metadata:
-        annotations:
-          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490
-          service.cloud.tencent.com/tke-service-config-auto: "true"
-      spec:
-        type: LoadBalancer
-  ```
-
-+ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
-
-  ```bash
-  $ kubectl get emqxenterprises
-  NAME      STATUS   AGE
-  emqx-ee   Running  8m33s
-  ```
-
-+ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
-
-  ```bash
-  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  198.18.3.10
-  ```
-
-  通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
-
-:::
 ::: tab apps.emqx.io/v2alpha2
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
@@ -136,8 +79,65 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
 
   通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
 
-  :::
-  ::::
+:::
+::: tab apps.emqx.io/v1beta4
+
++ 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+     ## EMQX 自定义资源不支持在运行时更新这个字段
+    persistent:
+      metadata:
+        name: emqx-ee
+      spec:
+        ## 更多内容：https://cloud.tencent.com/document/product/457/44239
+        storageClassName: cbs
+        resources:
+          requests:
+            ## 腾讯云 TKE 要求云硬盘大小必须为 10 的倍数，默认提供的 cbs（高性能云盘） 要求硬盘最小为 10GB，更多内容请参考：https://cloud.tencent.com/document/product/457/44239
+            storage: 10Gi
+        accessModes:
+          - ReadWriteOnce
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      metadata:
+        annotations:
+          # 自动创建 tke-service-config，更多内容请参考：https://cloud.tencent.com/document/product/457/45490
+          service.cloud.tencent.com/tke-service-config-auto: "true"
+      spec:
+        type: LoadBalancer
+  ```
+
++ 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ 获取 EMQX 集群的 External IP，访问 EMQX 控制台
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  198.18.3.10
+  ```
+
+  通过浏览器访问 `http://198.18.3.10:18083` ，使用默认的用户名和密码 `admin/public` 登录 EMQX 控制台。
+
+:::
+::::
 
 ## 使用 MQTT X CLI 连接 EMQX 集群发布/订阅消息
 
