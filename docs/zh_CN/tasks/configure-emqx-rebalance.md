@@ -14,7 +14,7 @@
 
 - **降低运维成本**：如果系统中某些节点负载过高或过低，需要对这些节点进行手动调整，而通过重平衡，可以自动调整节点的负载，降低运维成本。
 
-关于 EMQX 集群负载重平衡可以参考文档：[重平衡](https://docs.emqx.com/zh/enterprise/v4.4/advanced/rebalancing.html#%E9%87%8D%E5%B9%B3%E8%A1%A1)。
+关于 EMQX 集群负载重平衡可以参考文档：[重平衡](https://docs.emqx.com/zh/enterprise/v5.1/deploy/cluster/rebalancing.html#%E9%9B%86%E7%BE%A4%E8%B4%9F%E8%BD%BD%E9%87%8D%E5%B9%B3%E8%A1%A1)
 
 :::tip
 
@@ -26,6 +26,35 @@
 
 集群重平衡在 EMQX Operator 里面对应的 CRD 为 `Rebalance`，其示例如下所示：
 
+:::: tabs type:card
+
+::: tab apps.emqx.io/v2alpha2
+
+```yaml
+apiVersion: apps.emqx.io/v2alpha2
+kind: Rebalance
+metadata:
+  name: rebalance-sample
+spec:
+  instanceName: emqx-ee
+  instanceKind: EMQX
+  rebalanceStrategy:
+    connEvictRate: 10
+    sessEvictRate: 10
+    waitTakeover: 10
+    waitHealthCheck: 10
+    absConnThreshold: 100
+    absSessThreshold: 100
+    relConnThreshold: "1.1"
+    relSessThreshold: "1.1"
+```
+
+> 关于 Rebalance 配置可以参考文档：[Rebalance reference](../reference/v2alpha2-reference.md#rebalancestrategy)。
+
+:::
+
+::: tab apps.emqx.io/v1beta4
+
 ```yaml
 apiVersion: apps.emqx.io/v1beta4
 kind: Rebalance
@@ -33,6 +62,7 @@ metadata:
   name: rebalance-sample
 spec:
   instanceName: emqx-ee
+  instanceKind: EmqxEnterprise
   rebalanceStrategy:
     connEvictRate: 10
     sessEvictRate: 10
@@ -45,6 +75,12 @@ spec:
 ```
 
 > 关于 Rebalance 配置可以参考文档：[Rebalance reference](../reference/v1beta4-reference.md#rebalancestrategy)。
+
+:::
+
+::::
+
+
 
 ## 测试集群负载重平衡
 
@@ -65,6 +101,7 @@ metadata:
   name: rebalance-sample
 spec:
   instanceName: emqx-ee
+  instanceKind: EmqxEnterprise
   rebalanceStrategy:
     connEvictRate: 10
     sessEvictRate: 10
