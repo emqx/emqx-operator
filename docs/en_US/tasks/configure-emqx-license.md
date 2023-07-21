@@ -123,6 +123,62 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
 ## Update License
 
+:::: tabs type:card
+::: tab apps.emqx.io/v2alpha2
+
++ View License information
+  ```bash
+  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
+  $ kubectl exec -it ${pod_name} -c emqx -- emqx_ctl license info
+  ```
+
+  The following output can be obtained. From the output, we can see the basic information of the license we applied for, including applicant's information, maximum connection supported by the license, and expiration time of the license.
+  ```bash
+  customer        : Evaluation
+  email           : contact@emqx.io
+  deployment      : default
+  max_connections : 100
+  start_at        : 2023-01-09
+  expiry_at       : 2028-01-08
+  type            : trial
+  customer_type   : 10
+  expiry          : false
+  ```
+
++ Modify EMQX custom resources to update the License.
+  ```bash
+  $ kubectl edit emqx emqx-ee
+  ...
+  spec:
+    image: emqx/emqx-enterprise:5.1.0
+    config:
+      data: |
+        license {
+          key = "${new_license_key}"
+        }
+  ...
+  ```
+
+  + Check if the EMQX cluster license has been updated.
+  ```bash
+  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
+  $ kubectl exec -it ${pod_name} -c emqx -- emqx_ctl license info
+  ```
+
+  It can be seen from the "max_connections" field that the content of the License has been updated, indicating that the EMQX Enterprise Edition License update is successful. If the certificate information is not updated, you can wait for a while as there may be some delay in updating the License.
+  ```bash
+  customer        : Evaluation
+  email           : contact@emqx.io
+  deployment      : default
+  max_connections : 100000
+  start_at        : 2023-01-09
+  expiry_at       : 2028-01-08
+  type            : trial
+  customer_type   : 10
+  expiry          : false
+  ```
+:::
+::: tab apps.emqx.io/v1beta4
 + View License Information
 
   ```bash
@@ -143,55 +199,32 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   expiry          : false
   ```
 
-+ Update License
-  :::: tabs type:card
-  ::: tab apps.emqx.io/v2alpha2
++ Update EMQX Enterprise License Secret
 
-  + Update License through EMQX Dashboard
+  ```bash
+  $ kubectl create secret generic ${your_license_name} --from-file=emqx.lic=${/path/to/license/file} --dry-run -o yaml | kubectl apply -f -
+  ```
 
-    Open the browser, enter Dashboard, click Overview and pull down the page to the bottom to see the current license information of the cluster, as shown in the following figure:
++ Check whether the EMQX cluster license has been updated
 
-    ![](./assets/configure-emqx-license/emqx-dashboard-license.png)
+  ```bash
+  $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
+  ```
 
-    Then click the **Update License** button to upload the latest License Key content, as shown in the following figure:
+  You can get information similar to the following. From the `max_connections` field, you can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully. If the certificate information is not updated, you can wait for a while, the update of the license will be delayed.
 
-    ![](./assets/configure-emqx-license/emqx-license-upload.png)
-
-    Finally, click the **Save** button to save the update. The following picture shows the updated License information:
-
-    ![](./assets/configure-emqx-license/emqx-license-update.png)
-
-    As can be seen from the above figure, the content of the license has been updated, which means that the license has been updated successfully.
-
-  :::
-  ::: tab apps.emqx.io/v1beta4
-
-  + Update EMQX Enterprise License Secret
-
-    ```bash
-    $ kubectl create secret generic ${your_license_name} --from-file=emqx.lic=${/path/to/license/file} --dry-run -o yaml | kubectl apply -f -
-    ```
-
-  + Check whether the EMQX cluster license has been updated
-
-    ```bash
-    $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
-    ```
-
-    You can get information similar to the following. From the `max_connections` field, you can see that the content of the License has been updated, which means that the EMQX Enterprise Edition License has been updated successfully. If the certificate information is not updated, you can wait for a while, the update of the license will be delayed.
-
-    ```bash
-    customer                 : cloudnative
-    email                    : cloudnative@emqx.io
-    max_connections          : 100000
-    original_max_connections : 100000
-    issued_at                : 2022-11-21 02:49:35
-    expiry_at                : 2022-12-01 02:49:35
-    vendor                   : EMQ Technologies Co., Ltd.
-    version                  : 4.4.14
-    type                     : official
-    customer_type            : 2
-    expiry                   : false
-    ```
-  :::
-  ::::
+  ```bash
+  customer                 : cloudnative
+  email                    : cloudnative@emqx.io
+  max_connections          : 100000
+  original_max_connections : 100000
+  issued_at                : 2022-11-21 02:49:35
+  expiry_at                : 2022-12-01 02:49:35
+  vendor                   : EMQ Technologies Co., Ltd.
+  version                  : 4.4.14
+  type                     : official
+  customer_type            : 2
+  expiry                   : false
+  ```
+:::
+::::

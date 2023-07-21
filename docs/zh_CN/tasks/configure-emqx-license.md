@@ -31,7 +31,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
     config:
       data: |
         license {
-          key = "..."
+          key = "${your_license_key}"
         }
     image: emqx/emqx-enterprise:5.1.0
     listenersServiceTemplate:
@@ -125,6 +125,64 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
 
 ## 更新 License
 
+:::: tabs type:card
+::: tab apps.emqx.io/v2alpha2
+
++ 查看 License 信息
+
+  ```bash
+  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
+  $ kubectl exec -it ${pod_name} -c emqx -- emqx_ctl license info
+  ```
+
+  可以获取到如下输出，从输出结果可以看到我们申请的 License 的基本信息，包括申请人的信息和 License 支持最大连接数以及 License 过期时间等。
+  ```bash
+  customer        : Evaluation
+  email           : contact@emqx.io
+  deployment      : default
+  max_connections : 100
+  start_at        : 2023-01-09
+  expiry_at       : 2028-01-08
+  type            : trial
+  customer_type   : 10
+  expiry          : false
+  ```
+
++ 修改 EMQX 自定义资源以更新 License
+  ```bash
+  $ kubectl edit emqx emqx-ee
+  ...
+  spec:
+    image: emqx/emqx-enterprise:5.1.0
+    config:
+      data: |
+        license {
+          key = "${new_license_key}"
+        }
+  ...
+  ```
+
+  + 查看 EMQX 集群 License 是否被更新
+
+  ```bash
+  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
+  $ kubectl exec -it ${pod_name} -c emqx -- emqx_ctl license info
+  ```
+  可以获取到类似如下的信息，从获取到 `max_connections` 字段可以看出 License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。若证书信息没有更新，可以等待一会，License 的更新会有些时延。
+
+  ```bash
+  customer        : Evaluation
+  email           : contact@emqx.io
+  deployment      : default
+  max_connections : 100000
+  start_at        : 2023-01-09
+  expiry_at       : 2028-01-08
+  type            : trial
+  customer_type   : 10
+  expiry          : false
+  ```
+:::
+::: tab apps.emqx.io/v1beta4
 + 查看 License 信息
 
   ```bash
@@ -145,54 +203,31 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
   expiry          : false
   ```
 
-+ 更新 License
-  :::: tabs type:card
-  ::: tab apps.emqx.io/v2alpha2
++ 更新 EMQX 企业版 License Secret
 
-  + 通过 EMQX Dashboard 更新 License
+  ```bash
+  $ kubectl create secret generic ${your_license_name} --from-file=emqx.lic=${/path/to/license/file} --dry-run -o yaml | kubectl apply -f -
+  ```
++ 查看 EMQX 集群 License 是否被更新
 
-    打开浏览器，进入 Dashboard 点击 Overview 将页面下拉到底部可以看到集群当前的 License 信息，如下图所示：
+  ```bash
+  $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
+  ```
 
-    ![](./assets/configure-emqx-license/emqx-dashboard-license.png)
+  可以获取到类似如下的信息，从获取到 `max_connections` 字段可以看出 License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。若证书信息没有更新，可以等待一会，License 的更新会有些时延。
 
-    然后点击 **Update License** 按钮上传最新的 License Key 内容，如下图所示：
-
-    ![](./assets/configure-emqx-license/emqx-license-upload.png)
-
-    最后点击 **Save** 按钮保存更新，下图是更新后的 License 信息：
-
-    ![](./assets/configure-emqx-license/emqx-license-update.png)
-
-    从上面的图中可以看出，License 的内容已经更新，则说明 License 更新成功。
-
-  :::
-  ::: tab apps.emqx.io/v1beta4
-
-  + 更新 EMQX 企业版 License Secret
-
-    ```bash
-    $ kubectl create secret generic ${your_license_name} --from-file=emqx.lic=${/path/to/license/file} --dry-run -o yaml | kubectl apply -f -
-    ```
-  + 查看 EMQX 集群 License 是否被更新
-
-    ```bash
-    $ kubectl exec -it emqx-ee-0 -c emqx -- emqx_ctl license info
-    ```
-
-    可以获取到类似如下的信息，从获取到 `max_connections` 字段可以看出 License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。若证书信息没有更新，可以等待一会，License 的更新会有些时延。
-
-    ```bash
-    customer                 : cloudnative
-    email                    : cloudnative@emqx.io
-    max_connections          : 100000
-    original_max_connections : 100000
-    issued_at                : 2022-11-21 02:49:35
-    expiry_at                : 2022-12-01 02:49:35
-    vendor                   : EMQ Technologies Co., Ltd.
-    version                  : 4.4.14
-    type                     : official
-    customer_type            : 2
-    expiry                   : false
-    ```
-  :::
-  ::::
+  ```bash
+  customer                 : cloudnative
+  email                    : cloudnative@emqx.io
+  max_connections          : 100000
+  original_max_connections : 100000
+  issued_at                : 2022-11-21 02:49:35
+  expiry_at                : 2022-12-01 02:49:35
+  vendor                   : EMQ Technologies Co., Ltd.
+  version                  : 4.4.14
+  type                     : official
+  customer_type            : 2
+  expiry                   : false
+  ```
+:::
+::::
