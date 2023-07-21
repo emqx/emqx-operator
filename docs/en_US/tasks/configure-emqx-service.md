@@ -9,49 +9,6 @@ Access the EMQX cluster through the Service of LoadBalancer type.
 The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX cluster Service through `.spec.serviceTemplate` field. For the specific description of the serviceTemplate field, please refer to [serviceTemplate](../reference/v1beta4-reference.md#servicetemplate).
-
-+ Save the following content as a YAML file and deploy it via the `kubectl apply` command
-
-  ```yaml
-  apiVersion: apps.emqx.io/v1beta4
-  kind: EmqxEnterprise
-  metadata:
-    name: emqx-ee
-  spec:
-    template:
-      spec:
-        emqxContainer:
-          image:
-            repository: emqx/emqx-ee
-            version: 4.4.14
-    serviceTemplate:
-      spec:
-        type: LoadBalancer
-  ```
-
-  > EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's The configuration prevails.
-
-+ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
-
-  ```bash
-  $ kubectl get emqxenterprises
-  NAME      STATUS   AGE
-  emqx-ee   Running  8m33s
-  ```
-
-+ Obtain the External IP of the EMQX cluster and access the EMQX console
-
-  ```bash
-  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  192.168.1.200
-  ```
-  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to log in to the EMQX console.
-
-:::
 ::: tab apps.emqx.io/v2alpha2
 
 `apps.emqx.io/v2alpha2 EMQX` supports configuring EMQX cluster Dashboard Service through `.spec.dashboardServiceTemplate`, and configuring EMQX cluster listener Service through `.spec.listenersServiceTemplate`, its documentation can refer to [Service](../reference/v2alpha2-reference.md#emqxspec).
@@ -97,6 +54,49 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to log in to the EMQX console.
 
 :::
+::: tab apps.emqx.io/v1beta4
+
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring EMQX cluster Service through `.spec.serviceTemplate` field. For the specific description of the serviceTemplate field, please refer to [serviceTemplate](../reference/v1beta4-reference.md#servicetemplate).
+
++ Save the following content as a YAML file and deploy it via the `kubectl apply` command
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+    serviceTemplate:
+      spec:
+        type: LoadBalancer
+  ```
+
+  > EMQX Operator will automatically inject the default listener information into the Service when creating the Service, but when there is a conflict between the Service configured by the user and the listener configured by EMQX (the name or port field is repeated), EMQX Operator will use the user's The configuration prevails.
+
++ Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ Obtain the External IP of the EMQX cluster and access the EMQX console
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to log in to the EMQX console.
+
+:::
 ::::
 
 ## Connect To EMQX Cluster By MQTT X CLI
@@ -104,15 +104,15 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 + Obtain the External IP of the EMQX cluster
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v1beta4
-  ```bash
-  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
-  ```
-  :::
   ::: tab apps.emqx.io/v2alpha2
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')
+  ```
+  :::
+  ::: tab apps.emqx.io/v1beta4
+  ```bash
+  external_ip=$(kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip')
   ```
   :::
   ::::

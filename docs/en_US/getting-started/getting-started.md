@@ -59,6 +59,60 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
 
 :::: tabs type:card
 
+::: tab EMQX Enterprise 5
+
+1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
+
+   ```yaml
+   apiVersion: apps.emqx.io/v2alpha2
+   kind: EMQX
+   metadata:
+      name: emqx-ee
+   spec:
+      image: emqx/emqx-enterprise:5.1.0
+   ```
+
+   For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha2-reference.md).
+
+2. Wait the EMQX cluster is running.
+
+   ```bash
+   $ kubectl get emqx
+
+   NAME      IMAGE                        STATUS    AGE
+   emqx-ee   emqx/emqx-enterprise:5.1.0   Running   2m55s
+   ```
+
+   Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
+:::
+
+::: tab EMQX Open Source 5
+
+1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
+
+   ```yaml
+   apiVersion: apps.emqx.io/v2alpha2
+   kind: EMQX
+   metadata:
+      name: emqx
+   spec:
+      image: emqx:5.1
+   ```
+
+   For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha2-reference.md).
+
+2. Wait the EMQX cluster is running.
+
+   ```bash
+   $ kubectl get emqx
+
+   NAME   IMAGE      STATUS    AGE
+   emqx   emqx:5.1   Running   2m55s
+   ```
+
+   Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
+:::
+
 ::: tab EMQX Enterprise 4
 1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
 
@@ -116,60 +170,6 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
 
    NAME   STATUS   AGE
    emqx   Running  8m33s
-   ```
-
-   Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
-:::
-
-::: tab EMQX Enterprise 5
-
-1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
-
-   ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
-   kind: EMQX
-   metadata:
-      name: emqx-ee
-   spec:
-      image: emqx/emqx-enterprise:5.1.0
-   ```
-
-   For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha2-reference.md).
-
-2. Wait the EMQX cluster is running.
-
-   ```bash
-   $ kubectl get emqx
-
-   NAME      IMAGE                        STATUS    AGE
-   emqx-ee   emqx/emqx-enterprise:5.1.0   Running   2m55s
-   ```
-
-   Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.
-:::
-
-::: tab EMQX Open Source 5
-
-1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
-
-   ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
-   kind: EMQX
-   metadata:
-      name: emqx
-   spec:
-      image: emqx:5.1
-   ```
-
-   For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha2-reference.md).
-
-2. Wait the EMQX cluster is running.
-
-   ```bash
-   $ kubectl get emqx
-
-   NAME   IMAGE      STATUS    AGE
-   emqx   emqx:5.1   Running   2m55s
    ```
 
    Make sure the `STATUS` is `Running`, it maybe takes some time to wait for the EMQX cluster to be ready.

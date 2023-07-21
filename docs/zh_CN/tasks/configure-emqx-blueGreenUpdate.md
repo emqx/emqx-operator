@@ -98,6 +98,52 @@ timeline
 ### 配置更新策略
 
 :::: tabs type:card
+::: tab apps.emqx.io/v2alpha2
+
+创建 `apps.emqx.io/v2alpha2 EMQX`，并配置更新策略
+
+```yaml
+apiVersion: apps.emqx.io/v2alpha2
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: emqx:5.1
+	updateStrategy:
+    evacuationStrategy:
+      connEvictRate: 1000
+      sessEvictRate: 1000
+      waitTakeover: 10
+    initialDelaySeconds: 10
+    type: Recreate
+```
+
+`initialDelaySeconds`: 所有的节点就绪后，开始更新前的等待时间（单位: second）。
+
+`waitTakeover`: 删除 Pod 时的间隔时间（单位: second）。
+
+`connEvictRate`: MQTT  客户端疏散速率，仅支持 EMQX 企业版（单位: count/second）。
+
+`sessEvictRate`: MQTT Session 疏散速率，仅支持 EMQX 企业版（单位：count/second）。
+
+将上述内容保存为：emqx-update.yaml，执行如下命令部署 EMQX：
+
+```bash
+$ kubectl apply -f emqx-update.yaml
+
+emqx.apps.emqx.io/emqx-ee created
+```
+
+检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
+
+```bash
+$ kubectl get emqx
+
+NAME      STATUS   AGE
+emqx-ee   Running  8m33s
+```
+
+:::
 ::: tab apps.emqx.io/v1beta4
 
 创建 `apps.emqx.io/v1beta4 EmqxEnterprise` 并配置更新策略。
@@ -148,52 +194,7 @@ emqx-ee   Running  8m33s
 ```
 
 :::
-::: tab apps.emqx.io/v2alpha2
-
-创建 `apps.emqx.io/v2alpha2 EMQX`，并配置更新策略
-
-```yaml
-apiVersion: apps.emqx.io/v2alpha2
-kind: EMQX
-metadata:
-  name: emqx
-spec:
-  image: emqx:5.1
-	updateStrategy:
-    evacuationStrategy:
-      connEvictRate: 1000
-      sessEvictRate: 1000
-      waitTakeover: 10
-    initialDelaySeconds: 10
-    type: Recreate
-```
-
-`initialDelaySeconds`: 所有的节点就绪后，开始更新前的等待时间（单位: second）。
-
-`waitTakeover`: 删除 Pod 时的间隔时间（单位: second）。
-
-`connEvictRate`: MQTT  客户端疏散速率，仅支持 EMQX 企业版（单位: count/second）。
-
-`sessEvictRate`: MQTT Session 疏散速率，仅支持 EMQX 企业版（单位：count/second）。
-
-将上述内容保存为：emqx-update.yaml，执行如下命令部署 EMQX：
-
-```bash
-$ kubectl apply -f emqx-update.yaml
-
-emqx.apps.emqx.io/emqx-ee created
-```
-
-检查 EMQX 集群状态，请确保 `STATUS` 为 `Running`，这可能需要一些时间等待 EMQX 集群准备就绪。
-
-```bash
-$ kubectl get emqx
-
-NAME      STATUS   AGE
-emqx-ee   Running  8m33s
-```
-
-:::
+::::
 
 ### 使用 MQTT X CLI 连接 EMQX 集群
 
