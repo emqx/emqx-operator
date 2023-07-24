@@ -36,7 +36,6 @@ metadata:
    name: rebalance-sample
 spec:
    instanceName: emqx-ee
-   instanceKind: EMQX
    rebalanceStrategy:
      connEvictRate: 10
      sessEvictRate: 10
