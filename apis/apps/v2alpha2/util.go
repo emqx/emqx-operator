@@ -168,7 +168,23 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 		configs := listenerConfig.GetRoot()
 		if configs.Type() == hocon.ObjectType {
 			for name, config := range configs.(hocon.Object) {
-				c, _ := hocon.ParseString(config.String())
+				// Wait fix this issue: https://github.com/gurkankaymak/hocon/issues/39
+				// c, err := hocon.ParseString(config.String())
+				obj := config.(hocon.Object)
+				cutConfig := hocon.Object{}
+				if v, ok := obj["enable"]; ok {
+					cutConfig["enable"] = v
+				}
+				if v, ok := obj["enabled"]; ok {
+					cutConfig["enabled"] = v
+				}
+				if v, ok := obj["bind"]; ok {
+					cutConfig["bind"] = v
+				}
+				c, err := hocon.ParseString(cutConfig.String())
+				if err != nil {
+					return nil, emperror.Wrapf(err, "failed to parse %s", config.String())
+				}
 				// Compatible with "enable" and "enabled"
 				// the default value of them both is true
 				if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
