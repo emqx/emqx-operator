@@ -36,7 +36,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+
+	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
 	appscontrollersv2alpha2 "github.com/emqx/emqx-operator/controllers/apps/v2alpha2"
 	//+kubebuilder:scaffold:imports
 )
@@ -90,6 +93,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
+	err = appsv1beta4.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = appsv2alpha2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -103,6 +109,11 @@ var _ = BeforeSuite(func() {
 		Scheme:             scheme.Scheme,
 		MetricsBindAddress: "0",
 	})
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&appscontrollersv1beta4.EmqxEnterpriseReconciler{
+		EmqxReconciler: appscontrollersv1beta4.NewEmqxReconciler(k8sManager),
+	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = appscontrollersv2alpha2.NewEMQXReconciler(k8sManager).SetupWithManager(k8sManager)
