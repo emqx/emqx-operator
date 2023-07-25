@@ -28,7 +28,7 @@
 
 :::: tabs type:card
 
-::: tab apps.emqx.io/v2alpha2
+::: tab EMQX Enterprise 5.x
 
 ```yaml
 apiVersion: apps.emqx.io/v2alpha2
@@ -52,10 +52,10 @@ spec:
 
 :::
 
-::: tab apps.emqx.io/v1beta4
+::: tab EMQX Enterprise 4.x
 
 ```yaml
-apiVersion: apps.emqx.io/v1beta4
+apiVersion: apps.emqx.io/v2alpha2
 kind: Rebalance
 metadata:
   name: rebalance-sample
