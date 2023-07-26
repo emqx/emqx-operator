@@ -16,7 +16,7 @@ const (
 
 const (
 	// annotations
-	NeedUpdateConfigsAnnotationKey string = "apps.emqx.io/need-update-emqx-configs"
+	LastEMQXConfigAnnotationKey = "apps.emqx.io/last-emqx-configuration"
 )
 
 const (

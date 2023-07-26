@@ -33,7 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-var _ = Describe("E2E Test", Ordered, func() {
+var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 	var instance *appsv2alpha2.EMQX = new(appsv2alpha2.EMQX)
 	BeforeEach(func() {
 		instance = emqx.DeepCopy()
@@ -249,9 +249,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 
 		It("change EMQX listener port", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage := instance.DeepCopy()
 			instance.Spec.Config.Data = `listeners.tcp.default.bind = "11883"`
-			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 
 			Eventually(func() []corev1.ServicePort {
@@ -281,9 +279,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 			))
 
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage = instance.DeepCopy()
 			instance.Spec.Config.Data = `listeners.tcp.default.bind = "1883"`
-			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})
 	})
@@ -292,14 +288,12 @@ var _ = Describe("E2E Test", Ordered, func() {
 		JustBeforeEach(func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 
-			instanceCopy := instance.DeepCopy()
 			instance.Spec.ReplicantTemplate = &appsv2alpha2.EMQXReplicantTemplate{
 				Spec: appsv2alpha2.EMQXReplicantTemplateSpec{
 					Replicas: pointer.Int32Ptr(2),
 				},
 			}
 			instance.Default()
-			Expect(instanceCopy.ValidateUpdate(instance)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})
 
@@ -482,9 +476,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 
 		It("change EMQX listener port", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage := instance.DeepCopy()
 			instance.Spec.Config.Data = `listeners.tcp.default.bind = "11883"`
-			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 
 			Eventually(func() []corev1.ServicePort {
@@ -514,9 +506,7 @@ var _ = Describe("E2E Test", Ordered, func() {
 			))
 
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage = instance.DeepCopy()
 			instance.Spec.Config.Data = `listeners.tcp.default.bind = "1883"`
-			Expect(instance.ValidateUpdate(storage)).Should(Succeed())
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})
 	})
