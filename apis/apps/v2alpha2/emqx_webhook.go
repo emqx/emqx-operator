@@ -84,13 +84,6 @@ func (r *EMQX) ValidateCreate() error {
 		return err
 	}
 
-	if r.Spec.Config.Mode == "Replace" {
-		if r.Annotations == nil {
-			r.Annotations = make(map[string]string)
-		}
-		r.Annotations[NeedUpdateConfigsAnnotationKey] = "true"
-	}
-
 	return nil
 }
 
@@ -117,19 +110,11 @@ func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 		return err
 	}
 
-	config, err := hocon.ParseString(r.Spec.Config.Data)
+	_, err := hocon.ParseString(r.Spec.Config.Data)
 	if err != nil {
 		err = emperror.Wrap(err, "failed to parse config")
 		emqxlog.Error(err, "validate update failed")
 		return err
-	}
-
-	oldConfig, _ := hocon.ParseString(oldEMQX.Spec.Config.Data)
-	if !reflect.DeepEqual(oldConfig, config) {
-		if r.Annotations == nil {
-			r.Annotations = make(map[string]string)
-		}
-		r.Annotations[NeedUpdateConfigsAnnotationKey] = "true"
 	}
 
 	return nil
@@ -199,7 +184,7 @@ func (r *EMQX) defaultAnnotations() {
 		annotations = make(map[string]string)
 	}
 	delete(annotations, "kubectl.kubernetes.io/last-applied-config")
-	delete(annotations, NeedUpdateConfigsAnnotationKey)
+	delete(annotations, LastEMQXConfigAnnotationKey)
 
 	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
 	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
@@ -210,7 +195,10 @@ func (r *EMQX) defaultAnnotations() {
 }
 
 func (r *EMQX) defaultConfiguration() {
-	r.Spec.Config.Data = "dashboard.listeners.http.bind = 18083\n" + r.Spec.Config.Data
+	configuration, _ := hocon.ParseString(r.Spec.Config.Data)
+	if configuration.GetString("listeners.tcp.default.bind") == "" {
+		r.Spec.Config.Data = "dashboard.listeners.http.bind = 18083\n" + r.Spec.Config.Data
+	}
 }
 
 func (r *EMQX) defaultDashboardServiceTemplate() {

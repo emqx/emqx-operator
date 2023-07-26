@@ -103,13 +103,6 @@ func TestValidateUpdate(t *testing.T) {
 		assert.Error(t, newIns.ValidateUpdate(instance), "bootstrap APIKeys cannot be updated")
 	})
 
-	t.Run("should have annotation if configuration is changed", func(t *testing.T) {
-		newIns := instance.DeepCopy()
-		newIns.Spec.Config.Data = "foo = bar"
-		assert.Nil(t, newIns.ValidateUpdate(instance))
-		assert.Equal(t, "true", newIns.Annotations[NeedUpdateConfigsAnnotationKey])
-	})
-
 	t.Run("check configuration is map", func(t *testing.T) {
 		newIns := instance.DeepCopy()
 		newIns.Spec.Config.Data = `{b = { d = 3, c = 2 }, a = 1}`
@@ -195,11 +188,11 @@ func TestDefaultConfiguration(t *testing.T) {
 		assert.Equal(t, "18083", configuration.GetString("dashboard.listeners.http.bind"))
 	})
 
-	t.Run("already set cookie", func(t *testing.T) {
+	t.Run("already set dashboard listeners", func(t *testing.T) {
 		instance := &EMQX{
 			Spec: EMQXSpec{
 				Config: Config{
-					Data: `node.cookie = "6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq"`,
+					Data: `dashboard.listeners.http.bind = "28083"`,
 				},
 			},
 		}
@@ -207,7 +200,7 @@ func TestDefaultConfiguration(t *testing.T) {
 
 		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
 		assert.Nil(t, err)
-		assert.Equal(t, "\"6gokwjslds3rcx256bkyrv9hnefft2zz7h4ezhzjmalehjedwlliisxtt7nsbvbq\"", configuration.GetString("node.cookie"))
+		assert.Equal(t, `"28083"`, configuration.GetString("dashboard.listeners.http.bind"))
 	})
 
 	t.Run("already set listener", func(t *testing.T) {
