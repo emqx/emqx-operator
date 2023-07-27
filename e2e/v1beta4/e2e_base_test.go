@@ -231,7 +231,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 			Expect(emqx.GetStatus().GetReadyReplicas()).Should(Equal(int32(1)))
 			Expect(emqx.GetStatus().GetEmqxNodes()).Should(HaveLen(1))
 			Expect(emqx.GetStatus().GetCurrentStatefulSetVersion()).ShouldNot(BeEmpty())
-			Expect(emqx.GetStatus().GetConditions()).ShouldNot(BeEmpty())
+			Expect(emqx.GetStatus().IsConditionTrue(appsv1beta4.ConditionRunning)).Should(BeTrue())
 
 			By("check pod annotations")
 			sts := &appsv1.StatefulSet{}
