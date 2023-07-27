@@ -29,6 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+func IsExistReplicant(instance *EMQX) bool {
+	return instance.Spec.ReplicantTemplate != nil && instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
+}
+
 // Clones the given selector and returns a new selector with the given key and value added.
 // Returns the given selector, if labelKey is empty.
 func CloneSelectorAndAddLabel(selector *metav1.LabelSelector, labelKey, labelValue string) *metav1.LabelSelector {

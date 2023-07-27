@@ -29,7 +29,7 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r
 	updateRs, currentRs, _ := getReplicaSetList(ctx, s.Client, instance)
 
 	targetedEMQXNodesName := []string{}
-	if isExistReplicant(instance) {
+	if appsv2alpha2.IsExistReplicant(instance) {
 		for _, node := range instance.Status.ReplicantNodes {
 			if node.ControllerUID == currentRs.UID {
 				targetedEMQXNodesName = append(targetedEMQXNodesName, node.Node)
@@ -135,7 +135,7 @@ func (s *syncPods) canBeScaleDownSts(
 	oldSts *appsv1.StatefulSet,
 	targetedEMQXNodesName []string,
 ) (bool, error) {
-	if isExistReplicant(instance) {
+	if appsv2alpha2.IsExistReplicant(instance) {
 		if instance.Status.ReplicantNodesStatus.CurrentRevision != instance.Status.ReplicantNodesStatus.UpdateRevision {
 			return false, nil
 		}

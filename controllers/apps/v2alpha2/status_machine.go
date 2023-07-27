@@ -152,7 +152,7 @@ type codeNodesReadyStatus struct {
 func (s *codeNodesReadyStatus) nextStatus() {
 	emqx := s.emqxStatusMachine.GetEMQX()
 
-	if isExistReplicant(emqx) {
+	if appsv2alpha2.IsExistReplicant(emqx) {
 		emqx.Status.SetCondition(metav1.Condition{
 			Type:    appsv2alpha2.ReplicantNodesProgressing,
 			Status:  metav1.ConditionTrue,
@@ -179,7 +179,7 @@ type replicantNodesProgressingStatus struct {
 func (s *replicantNodesProgressingStatus) nextStatus() {
 	emqx := s.emqxStatusMachine.GetEMQX()
 
-	if !isExistReplicant(emqx) {
+	if !appsv2alpha2.IsExistReplicant(emqx) {
 		s.emqxStatusMachine.initialized.nextStatus()
 		return
 	}
@@ -201,7 +201,7 @@ type replicantNodesReadyStatus struct {
 }
 
 func (s *replicantNodesReadyStatus) nextStatus() {
-	if !isExistReplicant(s.emqxStatusMachine.emqx) {
+	if !appsv2alpha2.IsExistReplicant(s.emqxStatusMachine.emqx) {
 		s.emqxStatusMachine.initialized.nextStatus()
 		return
 	}
@@ -227,7 +227,7 @@ func (s *availableStatus) nextStatus() {
 		return
 	}
 
-	if isExistReplicant(emqx) {
+	if appsv2alpha2.IsExistReplicant(emqx) {
 		if emqx.Status.ReplicantNodesStatus.ReadyReplicas != emqx.Status.ReplicantNodesStatus.Replicas ||
 			emqx.Status.ReplicantNodesStatus.UpdateRevision != emqx.Status.ReplicantNodesStatus.CurrentRevision {
 			return

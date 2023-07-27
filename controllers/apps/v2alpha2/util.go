@@ -24,10 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func isExistReplicant(instance *appsv2alpha2.EMQX) bool {
-	return instance.Spec.ReplicantTemplate != nil && instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
-}
-
 func getRsPodMap(ctx context.Context, k8sClient client.Client, instance *appsv2alpha2.EMQX) map[types.UID][]*corev1.Pod {
 	podList := &corev1.PodList{}
 	_ = k8sClient.List(ctx, podList,
