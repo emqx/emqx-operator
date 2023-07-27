@@ -242,6 +242,42 @@ func TestDefaultConfiguration(t *testing.T) {
 	})
 }
 
+func TestDefaultListeneresServiceTemplate(t *testing.T) {
+	t.Run("check selector", func(t *testing.T) {
+		instance := &EMQX{
+			Spec: EMQXSpec{
+				CoreTemplate: EMQXCoreTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							DBRoleLabelKey: "core",
+						},
+					},
+				},
+				ReplicantTemplate: nil,
+			},
+		}
+		instance.defaultListenersServiceTemplate()
+		assert.Equal(t, "core", instance.Spec.ListenersServiceTemplate.Spec.Selector[DBRoleLabelKey])
+
+		instance.Spec.ReplicantTemplate = &EMQXReplicantTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					DBRoleLabelKey: "replicant",
+				},
+			},
+			Spec: EMQXReplicantTemplateSpec{
+				Replicas: pointer.Int32(0),
+			},
+		}
+		instance.defaultListenersServiceTemplate()
+		assert.Equal(t, "core", instance.Spec.ListenersServiceTemplate.Spec.Selector[DBRoleLabelKey])
+
+		instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(1)
+		instance.defaultListenersServiceTemplate()
+		assert.Equal(t, "replicant", instance.Spec.ListenersServiceTemplate.Spec.Selector[DBRoleLabelKey])
+	})
+}
+
 func TestDefaultDashboardServiceTemplate(t *testing.T) {
 	t.Run("failed to get dashboard listeners", func(t *testing.T) {
 		instance := &EMQX{}

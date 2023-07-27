@@ -53,6 +53,7 @@ func (r *EMQX) Default() {
 	r.defaultLabels()
 	r.defaultAnnotations()
 	r.defaultConfiguration()
+	r.defaultListenersServiceTemplate()
 	r.defaultDashboardServiceTemplate()
 	r.defaultContainerPort()
 }
@@ -198,6 +199,13 @@ func (r *EMQX) defaultConfiguration() {
 	configuration, _ := hocon.ParseString(r.Spec.Config.Data)
 	if configuration.GetString("listeners.tcp.default.bind") == "" {
 		r.Spec.Config.Data = "dashboard.listeners.http.bind = 18083\n" + r.Spec.Config.Data
+	}
+}
+
+func (r *EMQX) defaultListenersServiceTemplate() {
+	r.Spec.ListenersServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
+	if IsExistReplicant(r) {
+		r.Spec.ListenersServiceTemplate.Spec.Selector = r.Spec.ReplicantTemplate.Labels
 	}
 }
 

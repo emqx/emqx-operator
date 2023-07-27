@@ -19,31 +19,37 @@ type updatePodConditions struct {
 }
 
 func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface) subResult {
+	updateRs, _, _ := getReplicaSetList(ctx, u.Client, instance)
+	updateSts, _, _ := getStateFulSetList(ctx, u.Client, instance)
+
 	pods := &corev1.PodList{}
 	_ = u.Client.List(ctx, pods,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(instance.Labels),
 	)
 
-	for _, pod := range pods.Items {
-		hash := make(map[corev1.PodConditionType]int)
-
-		for i, condition := range pod.Status.Conditions {
-			hash[condition.Type] = i
-		}
-
-		if index, ok := hash[corev1.ContainersReady]; !ok || pod.Status.Conditions[index].Status != corev1.ConditionTrue {
+	for _, p := range pods.Items {
+		pod := p.DeepCopy()
+		controllerRef := metav1.GetControllerOf(pod)
+		if controllerRef == nil {
 			continue
 		}
 
 		onServingCondition := corev1.PodCondition{
 			Type:               appsv2alpha2.PodOnServing,
-			Status:             u.checkInCluster(instance, r, pod.DeepCopy()),
+			Status:             corev1.ConditionFalse,
 			LastProbeTime:      metav1.Now(),
 			LastTransitionTime: metav1.Now(),
 		}
-		if index, ok := hash[appsv2alpha2.PodOnServing]; ok {
-			onServingCondition.LastTransitionTime = pod.Status.Conditions[index].LastTransitionTime
+
+		if (updateSts != nil && controllerRef.UID == updateSts.UID) ||
+			(updateRs != nil && controllerRef.UID == updateRs.UID) {
+			for _, condition := range pod.Status.Conditions {
+				if condition.Type == corev1.ContainersReady && condition.Status == corev1.ConditionTrue {
+					onServingCondition.Status = u.checkInCluster(instance, r, pod)
+					break
+				}
+			}
 		}
 
 		patchBytes, _ := json.Marshal(corev1.Pod{
@@ -51,14 +57,14 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2alp
 				Conditions: []corev1.PodCondition{onServingCondition},
 			},
 		})
-		_ = u.Client.Status().Patch(ctx, &pod, client.RawPatch(types.StrategicMergePatchType, patchBytes))
+		_ = u.Client.Status().Patch(ctx, pod.DeepCopy(), client.RawPatch(types.StrategicMergePatchType, patchBytes))
 	}
 	return subResult{}
 }
 
 func (u *updatePodConditions) checkInCluster(instance *appsv2alpha2.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
 	nodes := instance.Status.CoreNodes
-	if isExistReplicant(instance) {
+	if appsv2alpha2.IsExistReplicant(instance) {
 		nodes = append(nodes, instance.Status.ReplicantNodes...)
 	}
 	for _, node := range nodes {
