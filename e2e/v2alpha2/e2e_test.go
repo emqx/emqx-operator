@@ -192,7 +192,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		It("change EMQX image", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			storage := instance.DeepCopy()
-			instance.Spec.Image = "emqx/emqx:5.1"
+			instance.Spec.Image = "emqx:5.1"
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 
 			Eventually(func() *appsv2alpha2.EMQX {
@@ -393,7 +393,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		It("change EMQX image", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			storage := instance.DeepCopy()
-			instance.Spec.Image = "emqx:5.1"
+			instance.Spec.Image = "emqx/emqx:5.1"
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 
 			Eventually(func() *appsv2alpha2.EMQX {

@@ -46,7 +46,7 @@ var _ = Describe("EMQX 5 Rebalance Test", func() {
 	var r *appsv2alpha2.Rebalance
 	BeforeEach(func() {
 		instance = genEMQX().DeepCopy()
-		instance.Spec.Image = "emqx/emqx-enterprise:5.1.1-alpha.4"
+		instance.Spec.Image = "emqx/emqx-enterprise:5.1"
 		instance.Default()
 	})
 
@@ -257,7 +257,7 @@ var _ = Describe("EMQX 4 Rebalance Test", Label("rebalance"), func() {
 						EmqxContainer: appsv1beta4.EmqxContainer{
 							Image: appsv1beta4.EmqxImage{
 								Repository: "emqx/emqx-ee",
-								Version:    "4.4.18",
+								Version:    "4.4.19",
 							},
 						},
 					},
