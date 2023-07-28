@@ -167,6 +167,9 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 
 	// Get listeners.tcp.default.bind
 	for t, listener := range hoconConfig.GetObject("listeners") {
+		if listener.Type() != hocon.ObjectType {
+			continue
+		}
 		listenerConfig, _ := hocon.ParseString(listener.String())
 
 		configs := listenerConfig.GetRoot()
@@ -226,6 +229,9 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 			continue
 		}
 		for t, listener := range c.GetObject("listeners") {
+			if listener.Type() != hocon.ObjectType {
+				continue
+			}
 			c, _ := hocon.ParseString(listener.String())
 			for name, config := range c.GetRoot().(hocon.Object) {
 				c, _ := hocon.ParseString(config.String())

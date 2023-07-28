@@ -91,7 +91,7 @@ type EMQXSpec struct {
 }
 
 type BootstrapAPIKey struct {
-	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d_]+$`
+	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d-_]+$`
 	Key string `json:"key"`
 	// +kubebuilder:validation:MinLength:=3
 	// +kubebuilder:validation:MaxLength:=32
