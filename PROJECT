@@ -122,8 +122,8 @@ resources:
   domain: emqx.io
   group: apps
   kind: EMQX
-  path: github.com/emqx/emqx-operator/apis/apps/v2alpha2
-  version: v2alpha2
+  path: github.com/emqx/emqx-operator/apis/apps/v2beta1
+  version: v2beta1
   webhooks:
     conversion: true
     defaulting: true
@@ -136,8 +136,8 @@ resources:
   domain: emqx.io
   group: apps
   kind: Rebalance
-  path: github.com/emqx/emqx-operator/apis/apps/v2alpha2
-  version: v2alpha2
+  path: github.com/emqx/emqx-operator/apis/apps/v2beta1
+  version: v2beta1
   webhooks:
     conversion: true
     defaulting: true

@@ -112,7 +112,7 @@ patches:
 
       - op: "add"
         path: "/webhooks/3/clientConfig/url"
-        value: "https://host.docker.internal:9443/mutate-apps-emqx-io-v2alpha2-emqx"
+        value: "https://host.docker.internal:9443/mutate-apps-emqx-io-v2beta1-emqx"
       - op: "remove"
         path: "/webhooks/3/clientConfig/service"
       - op: "add"
@@ -286,7 +286,7 @@ patches:
 
       - op: "add"
         path: "/webhooks/4/clientConfig/url"
-        value: "https://host.docker.internal:9443/validate-apps-emqx-io-v2alpha2-emqx"
+        value: "https://host.docker.internal:9443/validate-apps-emqx-io-v2beta1-emqx"
       - op: "remove"
         path: "/webhooks/4/clientConfig/service"
       - op: "add"

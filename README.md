@@ -30,7 +30,7 @@ The EMQX Operator includes, but is not limited to, the following features:
 | 4.4.8 (included) ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3 | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
 | 4.4.14 (included) or higher 4.4.x   |                  2.1.0, 2.1.1                   | [apps.emqx.io/v1beta4](./docs/en_US/reference/v1beta4-reference.md) | EmqxEnterprise |
 |      5.0.0 (included) ~ 5.0.23        |    2.0.0, 2.0.1, 2.0.2, 2.0.3, 2.1.0, 2.1.1     | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md) |      EMQX      |
-|      5.1.1 or higher       |    2.2.0                                        | [apps.emqx.io/v2alpha2](./docs/en_US/reference/v2alpha2-reference.md) |      EMQX      |
+|      5.1.1 or higher       |    2.2.0                                        | [apps.emqx.io/v2beta1](./docs/en_US/reference/v2beta1-reference.md) |      EMQX      |
 
 ### EMQX Open Source
 
@@ -43,7 +43,7 @@ The EMQX Operator includes, but is not limited to, the following features:
 | 5.0.6 (included) ～ 5.0.8 | 2.0.0, 2.0.1, 2.0.3                                |  [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         |  EMQX     |
 | 5.0.8 (included) ～  5.0.14 | 2.0.2                                            |  [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         |  EMQX     |
 | 5.0.14 (included)  ~ 5.0.23 | 2.1.0, 2.1.1                                                | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         | EMQX     |
-|      5.1.1 or higher       |    2.2.0                                        | [apps.emqx.io/v2alpha2](./docs/en_US/reference/v2alpha2-reference.md) |      EMQX      |
+|      5.1.1 or higher       |    2.2.0                                        | [apps.emqx.io/v2beta1](./docs/en_US/reference/v2beta1-reference.md) |      EMQX      |
 
 ## How to selector Kubernetes version
 

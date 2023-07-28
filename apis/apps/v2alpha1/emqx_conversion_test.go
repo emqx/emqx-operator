@@ -19,21 +19,21 @@ package v2alpha1
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+	"github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestConvertTo(t *testing.T) {
-	dst := &v2alpha2.EMQX{}
+	dst := &v2beta1.EMQX{}
 	src := &EMQX{}
 
 	assert.Nil(t, src.ConvertTo(dst))
-	assert.Equal(t, v2alpha2.GroupVersion.String(), dst.GroupVersionKind().GroupVersion().String())
+	assert.Equal(t, v2beta1.GroupVersion.String(), dst.GroupVersionKind().GroupVersion().String())
 }
 
 func TestConvertFrom(t *testing.T) {
 	dst := &EMQX{}
-	src := &v2alpha2.EMQX{}
+	src := &v2beta1.EMQX{}
 
 	assert.Nil(t, dst.ConvertFrom(src))
 	assert.Equal(t, GroupVersion.String(), dst.GroupVersionKind().GroupVersion().String())

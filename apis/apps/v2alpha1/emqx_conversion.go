@@ -19,13 +19,13 @@ package v2alpha1
 import (
 	"encoding/json"
 
-	"github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+	"github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
 // ConvertTo converts this version to the Hub version (v1).
 func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v2alpha2.EMQX)
+	dst := dstRaw.(*v2beta1.EMQX)
 
 	b, err := json.Marshal(src)
 	if err != nil {
@@ -35,7 +35,7 @@ func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
 	if err := json.Unmarshal(b, dst); err != nil {
 		return err
 	}
-	dst.SetGroupVersionKind(v2alpha2.GroupVersion.WithKind("EMQX"))
+	dst.SetGroupVersionKind(v2beta1.GroupVersion.WithKind("EMQX"))
 	dst.Spec.ClusterDomain = "cluster.local"
 	dst.Spec.Config.Data = src.Spec.BootstrapConfig
 
@@ -45,7 +45,7 @@ func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
 
 // ConvertFrom converts from the Hub version (v1) to this version.
 func (dst *EMQX) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v2alpha2.EMQX)
+	src := srcRaw.(*v2beta1.EMQX)
 
 	b, err := json.Marshal(src)
 	if err != nil {

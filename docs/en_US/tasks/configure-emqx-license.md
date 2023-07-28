@@ -14,16 +14,16 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 ## Configure EMQX Cluster
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
-  `apps.emqx.io/v2alpha2 EMQX` supports configuring EMQX cluster license through `.spec.config.data`. For config.data configuration, please refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating.
+  `apps.emqx.io/v2beta1 EMQX` supports configuring EMQX cluster license through `.spec.config.data`. For config.data configuration, please refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual). This field is only allowed to be configured when creating an EMQX cluster, and does not support updating.
 
   > After the EMQX cluster is created, if the license needs to be updated, please update it through the EMQX Dashboard.
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
+  apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx-ee
@@ -124,7 +124,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 ## Update License
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
 + View License information
   ```bash

@@ -31,7 +31,7 @@
 ::: tab EMQX Enterprise 5.x
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha2
+apiVersion: apps.emqx.io/v2beta1
 kind: Rebalance
 metadata:
   name: rebalance-sample
@@ -48,14 +48,14 @@ spec:
     relSessThreshold: "1.1"
 ```
 
-> 关于 Rebalance 配置可以参考文档：[Rebalance reference](../reference/v2alpha2-reference.md#rebalancestrategy)。
+> 关于 Rebalance 配置可以参考文档：[Rebalance reference](../reference/v2beta1-reference.md#rebalancestrategy)。
 
 :::
 
 ::: tab EMQX Enterprise 4.x
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha2
+apiVersion: apps.emqx.io/v2beta1
 kind: Rebalance
 metadata:
   name: rebalance-sample

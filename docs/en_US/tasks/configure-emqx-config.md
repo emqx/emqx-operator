@@ -8,12 +8,12 @@ Change EMQX configuration by `config.data` in EMQX Custom Resource.
 
 The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5.0, EMQX adopts [HOCON](https://www.emqx.io/docs/en/v5.1/configuration/configuration.html#hocon-configuration-format) as the configuration file format.
 
-`apps.emqx.io/v2alpha2 EMQX` supports configuring EMQX cluster through `.spec.config.data` field. For config.data configuration, please refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual).
+`apps.emqx.io/v2beta1 EMQX` supports configuring EMQX cluster through `.spec.config.data` field. For config.data configuration, please refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual).
 
 + Save the following content as a YAML file and deploy it with the `kubectl apply` command
 
    ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
+   apiVersion: apps.emqx.io/v2beta1
    kind: EMQX
    metadata:
       name: emqx

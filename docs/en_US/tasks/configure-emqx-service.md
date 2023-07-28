@@ -9,14 +9,14 @@ Access the EMQX cluster through the Service of LoadBalancer type.
 The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
-`apps.emqx.io/v2alpha2 EMQX` supports configuring EMQX cluster Dashboard Service through `.spec.dashboardServiceTemplate`, and configuring EMQX cluster listener Service through `.spec.listenersServiceTemplate`, its documentation can refer to [Service](../reference/v2alpha2-reference.md#emqxspec).
+`apps.emqx.io/v2beta1 EMQX` supports configuring EMQX cluster Dashboard Service through `.spec.dashboardServiceTemplate`, and configuring EMQX cluster listener Service through `.spec.listenersServiceTemplate`, its documentation can refer to [Service](../reference/v2beta1-reference.md#emqxspec).
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
+  apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx
@@ -104,7 +104,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 + Obtain the External IP of the EMQX cluster
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v2alpha2
+  ::: tab apps.emqx.io/v2beta1
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

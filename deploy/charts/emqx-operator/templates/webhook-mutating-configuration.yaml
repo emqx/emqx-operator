@@ -76,14 +76,14 @@ webhooks:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
       namespace: {{ .Release.Namespace }}
-      path: /mutate-apps-emqx-io-v2alpha2-emqx
+      path: /mutate-apps-emqx-io-v2beta1-emqx
   failurePolicy: Fail
   name: mutating.apps.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
     apiVersions:
-    - v2alpha2
+    - v2beta1
     operations:
     - CREATE
     - UPDATE

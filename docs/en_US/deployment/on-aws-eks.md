@@ -19,12 +19,12 @@ Before you begin, you must have the following:
 The following is the relevant configuration of EMQX custom resources. You can select the corresponding APIVersion according to the EMQX version you want to deploy. For the specific compatibility relationship, please refer to [Compatibility list between EMQX and EMQX Operator](../index.md)
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
+  apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx
@@ -171,7 +171,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
 + Obtain External IP of EMQX cluster
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v2alpha2
+  ::: tab apps.emqx.io/v2beta1
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

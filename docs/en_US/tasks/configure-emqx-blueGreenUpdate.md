@@ -6,7 +6,7 @@ How to gracefully upgrade the EMQX cluster through blue-green deployment
 
 :::tip
 
-This feature only supports `apps.emqx.io/v1beta4 EmqxEnterprise` and `apps.emqx.io/v2alpha2 EMQX`.
+This feature only supports `apps.emqx.io/v1beta4 EmqxEnterprise` and `apps.emqx.io/v2beta1 EMQX`.
 
 :::
 
@@ -103,12 +103,12 @@ timeline
 ### Configuration update strategy
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
-Create `apps.emqx.io/v2alpha2` EMQX and configure update strategy.
+Create `apps.emqx.io/v2beta1` EMQX and configure update strategy.
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha2
+apiVersion: apps.emqx.io/v2beta1
 kind: EMQX
 metadata:
   name: emqx
