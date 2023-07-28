@@ -30,15 +30,20 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2alpha2.EMQX, r
 
 	targetedEMQXNodesName := []string{}
 	if appsv2alpha2.IsExistReplicant(instance) {
-		for _, node := range instance.Status.ReplicantNodes {
-			if node.ControllerUID == currentRs.UID {
-				targetedEMQXNodesName = append(targetedEMQXNodesName, node.Node)
+		if currentRs != nil {
+			for _, node := range instance.Status.ReplicantNodes {
+				if node.ControllerUID == currentRs.UID {
+					targetedEMQXNodesName = append(targetedEMQXNodesName, node.Node)
+				}
 			}
 		}
+
 	} else {
-		for _, node := range instance.Status.CoreNodes {
-			if node.ControllerUID == currentSts.UID {
-				targetedEMQXNodesName = append(targetedEMQXNodesName, node.Node)
+		if currentSts != nil {
+			for _, node := range instance.Status.CoreNodes {
+				if node.ControllerUID == currentSts.UID {
+					targetedEMQXNodesName = append(targetedEMQXNodesName, node.Node)
+				}
 			}
 		}
 	}
@@ -109,16 +114,14 @@ func (s *syncPods) canBeScaleDownRs(
 		return shouldDeletePod, nil
 	}
 
-	if shouldDeletePodInfo.Edition == "Enterprise" {
-		if shouldDeletePodInfo.Session > 0 {
-			if len(instance.Status.NodeEvacuationsStatus) == 0 {
-				if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
-					return nil, emperror.Wrap(err, "failed to start node evacuation")
-				}
+	if shouldDeletePodInfo.Edition == "Enterprise" && shouldDeletePodInfo.Session > 0 {
+		if len(instance.Status.NodeEvacuationsStatus) == 0 {
+			if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
+				return nil, emperror.Wrap(err, "failed to start node evacuation")
 			}
 			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "NodeEvacuation", fmt.Sprintf("Node %s is being evacuated", shouldDeletePodInfo.Node))
-			return nil, nil
 		}
+		return nil, nil
 	}
 
 	// Open Source or Enterprise with no session
@@ -160,14 +163,14 @@ func (s *syncPods) canBeScaleDownSts(
 		return true, nil
 	}
 
-	if shouldDeletePodInfo.Edition == "Enterprise" {
-		if shouldDeletePodInfo.Session > 0 && len(instance.Status.NodeEvacuationsStatus) == 0 {
+	if shouldDeletePodInfo.Edition == "Enterprise" && shouldDeletePodInfo.Session > 0 {
+		if len(instance.Status.NodeEvacuationsStatus) == 0 {
 			if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
 				return false, emperror.Wrap(err, "failed to start node evacuation")
 			}
 			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "NodeEvacuation", fmt.Sprintf("Node %s is being evacuated", shouldDeletePodInfo.Node))
-			return false, nil
 		}
+		return false, nil
 	}
 	// Open Source or Enterprise with no session
 	if !checkWaitTakeoverReady(instance, getEventList(ctx, s.Clientset, oldSts)) {
