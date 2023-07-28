@@ -73,7 +73,7 @@ spec:
     relSessThreshold: "1.1"
 ```
 
-> 关于 Rebalance 配置可以参考文档：[Rebalance reference](../reference/v1beta4-reference.md#rebalancestrategy)。
+> 关于 Rebalance 配置可以参考文档：[Rebalance reference](../reference/v2alpha2-reference.md#rebalancestrategy)。
 
 :::
 
@@ -94,7 +94,7 @@ spec:
 - 提交 Rebalance 任务
 
 ```yaml
-apiVersion: apps.emqx.io/v1beta4
+apiVersion: apps.emqx.io/v2alpha2
 kind: Rebalance
 metadata:
   name: rebalance-sample
@@ -140,7 +140,7 @@ $ kubectl get rebalances rebalance-sample -o json | jq '.status.rebalanceStates'
 }
 ```
 
-> 关于 rebalanceStates 字段的详细描述可以参考文档：[rebalanceStates reference](../reference/v1beta4-reference.md#rebalancestate)。
+> 关于 rebalanceStates 字段的详细描述可以参考文档：[rebalanceStates reference](../reference/v2alpha2-reference.md#rebalancestate)。
 
 等待 Rebalance 任务完成:
 

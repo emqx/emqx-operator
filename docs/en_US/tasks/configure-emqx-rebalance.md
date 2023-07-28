@@ -72,7 +72,7 @@ spec:
     relSessThreshold: "1.1"
 ```
 
-> For Rebalance configuration, please refer to the document: [Rebalance reference](../reference/v1beta4-reference.md#rebalancestrategy).
+> For Rebalance configuration, please refer to the document: [Rebalance reference](../reference/v2alpha2-reference.md#rebalancestrategy).
 
 
 :::
@@ -92,7 +92,7 @@ It can be seen from the figure that there are four EMQX nodes in the current clu
 - Submit the Rebalance task
 
 ```yaml
-apiVersion: apps.emqx.io/v1beta4
+apiVersion: apps.emqx.io/v2alpha2
 kind: Rebalance
 metadata:
    name: rebalance-sample
@@ -137,7 +137,7 @@ $ kubectl get rebalances rebalance-sample -o json | jq '.status.rebalanceStates'
      "connection_eviction_rate": 10
 }
 ```
-> For a detailed description of the rebalanceStates field, please refer to the document: [rebalanceStates reference](../reference/v1beta4-reference.md#rebalancestate).
+> For a detailed description of the rebalanceStates field, please refer to the document: [rebalanceStates reference](../reference/v2alpha2-reference.md#rebalancestate).
 
 Wait for the Rebalance task to complete:
 

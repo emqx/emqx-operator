@@ -12,27 +12,6 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-apps-emqx-io-v2alpha2-emqx
-  failurePolicy: Fail
-  name: mutating.apps.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v2alpha2
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxes
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
       path: /mutate-apps-emqx-io-v1beta4-emqxbroker
   failurePolicy: Fail
   name: mutating.broker.emqx.io
@@ -89,13 +68,6 @@ webhooks:
     resources:
     - emqxplugins
   sideEffects: None
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  creationTimestamp: null
-  name: validating-webhook-configuration
-webhooks:
 - admissionReviewVersions:
   - v1
   - v1beta1
@@ -103,9 +75,9 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-apps-emqx-io-v2alpha2-emqx
+      path: /mutate-apps-emqx-io-v2alpha2-emqx
   failurePolicy: Fail
-  name: validator.apps.emqx.io
+  name: mutating.apps.emqx.io
   rules:
   - apiGroups:
     - apps.emqx.io
@@ -117,27 +89,13 @@ webhooks:
     resources:
     - emqxes
   sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-apps-emqx-io-v2alpha2-rebalance
-  failurePolicy: Fail
-  name: validator.rebalance.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v2alpha2
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - rebalances
-  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
 - admissionReviewVersions:
   - v1
   - v1beta1
@@ -200,4 +158,46 @@ webhooks:
     - UPDATE
     resources:
     - emqxplugins
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-apps-emqx-io-v2alpha2-emqx
+  failurePolicy: Fail
+  name: validator.apps.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v2alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxes
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-apps-emqx-io-v2alpha2-rebalance
+  failurePolicy: Fail
+  name: validator.rebalance.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v2alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - rebalances
   sideEffects: None
