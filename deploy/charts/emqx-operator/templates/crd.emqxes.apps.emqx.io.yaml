@@ -6498,7 +6498,7 @@ spec:
                   items:
                     properties:
                       key:
-                        pattern: ^[a-zA-Z\d_]+$
+                        pattern: ^[a-zA-Z\d-_]+$
                         type: string
                       secret:
                         maxLength: 32
