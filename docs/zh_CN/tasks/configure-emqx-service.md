@@ -9,14 +9,14 @@
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考 [EMQX Operator 兼容性](../index.md):
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
-`apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.dashboardServiceTemplate` 配置 EMQX 集群 Dashboard Service ，通过 `.spec.listenersServiceTemplate` 配置 EMQX 集群 listener Service，其文档可以参考：[Service](../reference/v2alpha2-reference.md#emqxspec)。
+`apps.emqx.io/v2beta1 EMQX` 支持通过 `.spec.dashboardServiceTemplate` 配置 EMQX 集群 Dashboard Service ，通过 `.spec.listenersServiceTemplate` 配置 EMQX 集群 listener Service，其文档可以参考：[Service](../reference/v2beta1-reference.md#emqxspec)。
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
+  apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx
@@ -104,7 +104,7 @@
 + 获取 EMQX 集群的 External IP
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v2alpha2
+  ::: tab apps.emqx.io/v2beta1
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

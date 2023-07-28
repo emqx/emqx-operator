@@ -97,8 +97,8 @@
           "path": "reference/v2alpha1-reference"
         },
         {
-          "title": "v2alpha2 Reference",
-          "path": "reference/v2alpha2-reference"
+          "title": "v2beta1 Reference",
+          "path": "reference/v2beta1-reference"
         }
       ]
     }
@@ -213,8 +213,8 @@
           "path": "reference/v2alpha1-reference"
         },
         {
-          "title": "v2alpha2 参考",
-          "path": "reference/v2alpha2-reference"
+          "title": "v2beta1 参考",
+          "path": "reference/v2beta1-reference"
         }
       ]
     }

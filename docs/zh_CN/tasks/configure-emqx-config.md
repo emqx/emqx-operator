@@ -8,7 +8,7 @@
 
 EMQX 主配置文件为 `etc/emqx.conf`，从 5.0 版本开始，EMQX 采用 [HOCON](https://www.emqx.io/docs/zh/v5.1/configuration/configuration.html#hocon-%E9%85%8D%E7%BD%AE%E6%A0%BC%E5%BC%8F) 作为配置文件格式。
 
-`apps.emqx.io/v2alpha2 EMQX` 支持通过 `.spec.config.data` 字段配置 EMQX 集群。EMQX 配置可以参考文档：[配置手册](https://www.emqx.io/docs/zh/v5.1/configuration/configuration-manual.html#%E8%8A%82%E7%82%B9%E8%AE%BE%E7%BD%AE)。
+`apps.emqx.io/v2beta1 EMQX` 支持通过 `.spec.config.data` 字段配置 EMQX 集群。EMQX 配置可以参考文档：[配置手册](https://www.emqx.io/docs/zh/v5.1/configuration/configuration-manual.html#%E8%8A%82%E7%82%B9%E8%AE%BE%E7%BD%AE)。
 
 :::tip
 如果在创建 EMQX 之后需要修改集群配置，请通过 EMQX Dashboard 进行修改。
@@ -17,7 +17,7 @@ EMQX 主配置文件为 `etc/emqx.conf`，从 5.0 版本开始，EMQX 采用 [HO
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
+  apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx

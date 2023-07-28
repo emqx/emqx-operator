@@ -19,13 +19,13 @@ package v1beta4
 import (
 	"encoding/json"
 
-	"github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+	"github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
 // ConvertTo converts this version to the Hub version (v1).
 func (src *Rebalance) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v2alpha2.Rebalance)
+	dst := dstRaw.(*v2beta1.Rebalance)
 
 	b, err := json.Marshal(src)
 	if err != nil {
@@ -44,7 +44,7 @@ func (src *Rebalance) ConvertTo(dstRaw conversion.Hub) error {
 
 // ConvertFrom converts from the Hub version (v1) to this version.
 func (dst *Rebalance) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v2alpha2.Rebalance)
+	src := srcRaw.(*v2beta1.Rebalance)
 
 	b, err := json.Marshal(src)
 	if err != nil {

@@ -30,12 +30,12 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
 下面是 EMQX 自定义资源的相关配置。你可以根据你想部署的 EMQX 版本选择相应的 APIVersion。关于具体的兼容性关系，请参考[ EMQX 与 EMQX Operator 的兼容性列表](../index.md)：
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
 + 将下面的内容保存成 YAML 文件，并通过 `kubectl apply` 命令部署它
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
+  apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx
@@ -175,7 +175,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
 + 获取 EMQX 集群的 External IP
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v2alpha2
+  ::: tab apps.emqx.io/v2beta1
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

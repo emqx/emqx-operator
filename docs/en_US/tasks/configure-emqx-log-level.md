@@ -9,16 +9,16 @@ Modify the log level of EMQX cluster.
 The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
-`apps.emqx.io/v2alpha2 EMQX` supports configuration of EMQX cluster log level through `.spec.config.data`. The configuration of config.data can refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual).
+`apps.emqx.io/v2beta1 EMQX` supports configuration of EMQX cluster log level through `.spec.config.data`. The configuration of config.data can refer to the document: [Configuration Manual](https://www.emqx.io/docs/en/v5.1/configuration/configuration-manual.html#configuration-manual).
 
 > This field is only allowed to be configured when creating an EMQX cluster, and does not support updating. If you need to modify the cluster log level after creating EMQX, please modify it through EMQX Dashboard.
 
 + Save the following content as a YAML file and deploy it with the kubectl apply command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
+  apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx
@@ -110,7 +110,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 + Obtain the External IP of EMQX cluster
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v2alpha2
+  ::: tab apps.emqx.io/v2beta1
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

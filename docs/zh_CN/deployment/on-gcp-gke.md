@@ -32,12 +32,12 @@ EMQX 是一款高性能的开源分布式物联网 MQTT 消息服务器，它提
 以下是 EMQX 自定义资源的相关配置。您可以根据您希望部署的 EMQX 版本选择相应的 APIVersion。有关具体的兼容关系，请参阅 [EMQX Operator 兼容性](../index.md)：
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
 将以下内容保存为 YAML 文件，并使用 kubectl apply 命令进行部署。
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha2
+apiVersion: apps.emqx.io/v2beta1
 kind: EMQX
 metadata:
   name: emqx
@@ -145,7 +145,7 @@ MQTT X CLI 是一个开源的 MQTT 5.0 命令行客户端工具，旨在帮助�
 - 获取 EMQX 集群的外部 IP 地址
 
     :::: tabs type:card
-    ::: tab apps.emqx.io/v2alpha2
+    ::: tab apps.emqx.io/v2beta1
 
     ```shell
     external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

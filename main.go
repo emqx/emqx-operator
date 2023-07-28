@@ -38,9 +38,9 @@ import (
 	appsv1beta3 "github.com/emqx/emqx-operator/apis/apps/v1beta3"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	appsv2alpha1 "github.com/emqx/emqx-operator/apis/apps/v2alpha1"
-	appsv2alpha2 "github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	appscontrollersv1beta4 "github.com/emqx/emqx-operator/controllers/apps/v1beta4"
-	appscontrollersv2alpha2 "github.com/emqx/emqx-operator/controllers/apps/v2alpha2"
+	appscontrollersv2beta1 "github.com/emqx/emqx-operator/controllers/apps/v2beta1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -55,7 +55,7 @@ func init() {
 	utilruntime.Must(appsv1beta3.AddToScheme(scheme))
 	utilruntime.Must(appsv1beta4.AddToScheme(scheme))
 	utilruntime.Must(appsv2alpha1.AddToScheme(scheme))
-	utilruntime.Must(appsv2alpha2.AddToScheme(scheme))
+	utilruntime.Must(appsv2beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -125,12 +125,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = appscontrollersv2alpha2.NewEMQXReconciler(mgr).SetupWithManager(mgr); err != nil {
+	if err = appscontrollersv2beta1.NewEMQXReconciler(mgr).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EMQX")
 		os.Exit(1)
 	}
 
-	if err = appscontrollersv2alpha2.NewRebalanceReconciler(mgr).SetupWithManager(mgr); err != nil {
+	if err = appscontrollersv2beta1.NewRebalanceReconciler(mgr).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Rebalance")
 	}
 
@@ -150,12 +150,12 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err = (&appsv2alpha2.EMQX{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&appsv2beta1.EMQX{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "EMQX")
 			os.Exit(1)
 		}
 
-		if err = (&appsv2alpha2.Rebalance{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&appsv2beta1.Rebalance{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Rebalance")
 			os.Exit(1)
 		}

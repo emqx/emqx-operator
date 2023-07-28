@@ -13,12 +13,12 @@ Grafana 部署文档可以参考：[Grafana](https://grafana.com/docs/grafana/la
 下面是 EMQX Custom Resource 的相关配置，你可以根据希望部署的 EMQX 的版本来选择对应的 APIVersion，具体的兼容性关系，请参考[EMQX Operator 兼容性](../index.md):
 
 :::: tabs type:card
-::: tab v2alpha2
+::: tab v2beta1
 
 EMQX 支持通过 http 接口对外暴露指标，集群下所有统计指标数据可以参考文档：[集成 Prometheus](https://www.emqx.io/docs/zh/v5.1/observability/prometheus.html#%E9%9B%86%E6%88%90-prometheus)
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha2
+apiVersion: apps.emqx.io/v2beta1
 kind: EMQX
 metadata:
   name: emqx
@@ -201,7 +201,7 @@ emqx-exporter-856564c95-j4q5v   Running  8m33s
 Prometheus-operator 使用 [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor) 和 [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) CRD 定义如何动态的监视一组 pod 或者 service。
 
 :::: tabs type:card
-::: tab v2alpha2
+::: tab v2beta1
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1

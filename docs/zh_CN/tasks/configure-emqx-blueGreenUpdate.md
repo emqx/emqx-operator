@@ -6,7 +6,7 @@
 
 :::tip
 
-该功能仅支持 `apps.emqx.io/v1beta4 EmqxEnterprise` 及 `apps.emqx.io/v2alpha2 EMQX`
+该功能仅支持 `apps.emqx.io/v1beta4 EmqxEnterprise` 及 `apps.emqx.io/v2beta1 EMQX`
 
 :::
 
@@ -98,12 +98,12 @@ timeline
 ### 配置更新策略
 
 :::: tabs type:card
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
-创建 `apps.emqx.io/v2alpha2 EMQX`，并配置更新策略
+创建 `apps.emqx.io/v2beta1 EMQX`，并配置更新策略
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha2
+apiVersion: apps.emqx.io/v2beta1
 kind: EMQX
 metadata:
   name: emqx

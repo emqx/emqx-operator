@@ -64,7 +64,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
 1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
 
    ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
+   apiVersion: apps.emqx.io/v2beta1
    kind: EMQX
    metadata:
       name: emqx-ee
@@ -72,7 +72,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
       image: emqx/emqx-enterprise:5.1.0
    ```
 
-   For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha2-reference.md).
+   For more details about the EMQX CRD, please check the [reference document](../reference/v2beta1-reference.md).
 
 2. Wait the EMQX cluster is running.
 
@@ -91,7 +91,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
 1. Save the following content as a YAML file and deploy it with the `kubectl apply`.
 
    ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
+   apiVersion: apps.emqx.io/v2beta1
    kind: EMQX
    metadata:
       name: emqx
@@ -99,7 +99,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
       image: emqx:5.1
    ```
 
-   For more details about the EMQX CRD, please check the [reference document](../reference/v2alpha2-reference.md).
+   For more details about the EMQX CRD, please check the [reference document](../reference/v2beta1-reference.md).
 
 2. Wait the EMQX cluster is running.
 

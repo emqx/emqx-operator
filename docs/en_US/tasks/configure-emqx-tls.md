@@ -100,16 +100,16 @@ There are many types of Volumes. For the description of Volumes, please refer to
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
 :::
-::: tab apps.emqx.io/v2alpha2
+::: tab apps.emqx.io/v2beta1
 
-`apps.emqx.io/v2alpha2 EMQX` supports `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to EMQX The cluster configures additional volumes and mount points. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
+`apps.emqx.io/v2beta1 EMQX` supports `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to EMQX The cluster configures additional volumes and mount points. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
 
 There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/#secret). In this article we are using the `secret` type.
 
 + Save the following as a YAML file and deploy it with the `kubectl apply` command
 
   ```yaml
-  apiVersion: apps.emqx.io/v2alpha2
+  apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx
@@ -188,7 +188,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
 + Obtain the External IP of EMQX cluster
 
   :::: tabs type:card
-  ::: tab apps.emqx.io/v2alpha2
+  ::: tab apps.emqx.io/v2beta1
 
   ```bash
   external_ip=$(kubectl get svc emqx-listeners -o json | jq '.status.loadBalancer.ingress[0].ip')

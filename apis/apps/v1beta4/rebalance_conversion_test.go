@@ -19,12 +19,12 @@ package v1beta4
 import (
 	"testing"
 
-	"github.com/emqx/emqx-operator/apis/apps/v2alpha2"
+	"github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestConvertTo(t *testing.T) {
-	dst := &v2alpha2.Rebalance{}
+	dst := &v2beta1.Rebalance{}
 	src := &Rebalance{}
 
 	assert.Nil(t, src.ConvertTo(dst))
@@ -32,7 +32,7 @@ func TestConvertTo(t *testing.T) {
 
 func TestConvertFrom(t *testing.T) {
 	dst := &Rebalance{}
-	src := &v2alpha2.Rebalance{}
+	src := &v2beta1.Rebalance{}
 
 	assert.Nil(t, dst.ConvertFrom(src))
 }

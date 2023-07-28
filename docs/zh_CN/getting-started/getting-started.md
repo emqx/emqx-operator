@@ -62,7 +62,7 @@
 1. 将下面的 YAML 配置文件保存为 `emqx.yaml`。
 
    ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
+   apiVersion: apps.emqx.io/v2beta1
    kind: EMQX
    metadata:
       name: emqx-ee
@@ -76,7 +76,7 @@
    $ kubectl apply -f emqx.yaml
    ```
 
-   关于 EMQX 自定义资源的更多信息，请查看 [API 参考](../reference/v2alpha2-reference.md)
+   关于 EMQX 自定义资源的更多信息，请查看 [API 参考](../reference/v2beta1-reference.md)
 
 2. 检查 EMQX 集群状态，请确保 STATUS 为 Running，这可能需要一些时间等待 EMQX 集群准备就绪。
 
@@ -93,7 +93,7 @@
 1. 将下面的 YAML 配置文件保存为 `emqx.yaml`。
 
    ```yaml
-   apiVersion: apps.emqx.io/v2alpha2
+   apiVersion: apps.emqx.io/v2beta1
    kind: EMQX
    metadata:
       name: emqx
@@ -107,7 +107,7 @@
    $ kubectl apply -f emqx.yaml
    ```
 
-   关于 EMQX 自定义资源的更多信息，请查看 [API 参考](../reference/v2alpha2-reference.md)
+   关于 EMQX 自定义资源的更多信息，请查看 [API 参考](../reference/v2beta1-reference.md)
 
 2. 检查 EMQX 集群状态，请确保 STATUS 为 Running，这可能需要一些时间等待 EMQX 集群准备就绪。
 

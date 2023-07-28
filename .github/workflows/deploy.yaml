@@ -30,8 +30,8 @@ jobs:
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
 
-          - [EMQX, emqx, "config/samples/emqx/v2alpha2/emqx-slim.yaml"]
-          - [EMQX, emqx, "config/samples/emqx/v2alpha2/emqx-full.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-slim.yaml"]
+          - [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-full.yaml"]
 
     steps:
       - run: minikube start

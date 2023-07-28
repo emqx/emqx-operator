@@ -13,12 +13,12 @@ Grafana' deployment documentation can refer to [Grafana](https://grafana.com/doc
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
-::: tab v2alpha2
+::: tab v2beta1
 
 EMQX supports exposing indicators through the http interface. For all statistical indicators under the cluster, please refer to the document: [Integrate with Prometheus](https://www.emqx.io/docs/en/v5.1/observability/prometheus.html)
 
 ```yaml
-apiVersion: apps.emqx.io/v2alpha2
+apiVersion: apps.emqx.io/v2beta1
 kind: EMQX
 metadata:
   name: emqx
@@ -190,7 +190,7 @@ emqx-exporter-856564c95-j4q5v   Running  8m33s
 Prometheus-operator uses [PodMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#podmonitor) and [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/design.md#servicemonitor) CRD to define how to monitor a set of pods or services dynamically.
 
 :::: tabs type:card
-::: tab v2alpha2
+::: tab v2beta1
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
