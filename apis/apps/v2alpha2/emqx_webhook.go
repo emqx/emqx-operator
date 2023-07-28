@@ -197,7 +197,7 @@ func (r *EMQX) defaultAnnotations() {
 
 func (r *EMQX) defaultConfiguration() {
 	configuration, _ := hocon.ParseString(r.Spec.Config.Data)
-	if configuration.GetString("listeners.tcp.default.bind") == "" {
+	if configuration.GetString("dashboard.listeners.http.bind") == "" {
 		r.Spec.Config.Data = "dashboard.listeners.http.bind = 18083\n" + r.Spec.Config.Data
 	}
 }
