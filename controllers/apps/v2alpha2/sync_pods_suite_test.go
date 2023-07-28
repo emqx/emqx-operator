@@ -219,7 +219,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 	})
 
 	It("running update emqx node controller", func() {
-		Expect(s.reconcile(ctx, instance, fakeR)).Should(Equal(subResult{}))
+		Eventually(s.reconcile(ctx, instance, fakeR)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 
 		By("should add pod deletion cost annotation")
 		Eventually(func() map[string]string {
@@ -240,7 +240,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		}).Should(Equal(int32(1)))
 
 		instance.Status.ReplicantNodesStatus.CurrentRevision = instance.Status.ReplicantNodesStatus.UpdateRevision
-		Expect(s.reconcile(ctx, instance, fakeR)).Should(Equal(subResult{}))
+		Eventually(s.reconcile(ctx, instance, fakeR)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 		By("should scale down sts")
 		Eventually(func() int32 {
 			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
@@ -331,7 +331,7 @@ var _ = Describe("check can be scale down", func() {
 			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
-			Eventually(s.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
+			Eventually(s.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {

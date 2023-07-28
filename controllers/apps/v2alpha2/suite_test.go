@@ -76,8 +76,8 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	timeout = time.Second * 5
-	interval = time.Millisecond * 500
+	timeout = time.Second
+	interval = time.Millisecond * 250
 	ctx = context.TODO()
 	emqx.Default()
 

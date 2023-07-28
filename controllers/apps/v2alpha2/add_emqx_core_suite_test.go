@@ -54,7 +54,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 	})
 
 	It("should create statefulSet", func() {
-		Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
+		Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 		Eventually(func() []appsv1.StatefulSet {
 			list := &appsv1.StatefulSetList{}
 			_ = k8sClient.List(ctx, list,
@@ -86,7 +86,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		})
 
 		It("should update statefulSet", func() {
-			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.StatefulSet {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -117,7 +117,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		})
 
 		It("should create new statefulSet", func() {
-			Eventually(a.reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.StatefulSet {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(ctx, list,
