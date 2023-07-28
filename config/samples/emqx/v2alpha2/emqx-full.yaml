@@ -161,6 +161,9 @@ spec:
   dashboardServiceTemplate:
     metadata:
       name: emqx-dashboard
+      labels:
+        apps.emqx.io/instance: emqx
+        apps.emqx.io/managed-by: emqx-operator
     spec:
       selector:
         apps.emqx.io/db-role: core
@@ -172,9 +175,9 @@ spec:
   listenersServiceTemplate:
     metadata:
       name: emqx-listeners
+      labels:
+        apps.emqx.io/instance: emqx
+        apps.emqx.io/managed-by: emqx-operator
     spec:
-      ports:
-        - name: "tcp-default"
-          protocol: TCP
-          port: 1883
-          targetPort: 1883
+      selector:
+        apps.emqx.io/db-role: replicant
