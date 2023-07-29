@@ -455,6 +455,17 @@ var _ = Describe("check can be scale down", func() {
 			Expect(canBeScaledDown).Should(BeNil())
 		})
 
+		It("emqx is in node evacuations", func() {
+			instance.Status.NodeEvacuationsStatus = []appsv2beta1.NodeEvacuationStatus{
+				{
+					State: "fake",
+				},
+			}
+			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(canBeScaledDown).Should(BeNil())
+		})
+
 		It("emqx is enterprise, and node session more than 0", func() {
 			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
