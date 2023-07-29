@@ -17,8 +17,11 @@ limitations under the License.
 package v2beta1
 
 import (
+	"context"
+
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type status interface {
@@ -26,7 +29,8 @@ type status interface {
 }
 
 type emqxStatusMachine struct {
-	emqx *appsv2beta1.EMQX
+	emqx   *appsv2beta1.EMQX
+	client client.Client
 
 	// EMQX cluster status
 	initialized               status
@@ -40,9 +44,10 @@ type emqxStatusMachine struct {
 	currentStatus status
 }
 
-func newEMQXStatusMachine(emqx *appsv2beta1.EMQX) *emqxStatusMachine {
+func newEMQXStatusMachine(k8sClient client.Client, emqx *appsv2beta1.EMQX) *emqxStatusMachine {
 	emqxStatusMachine := &emqxStatusMachine{
-		emqx: emqx,
+		client: k8sClient,
+		emqx:   emqx,
 	}
 
 	initializedStatus := &initializedStatus{emqxStatusMachine: emqxStatusMachine}
@@ -133,7 +138,8 @@ type coreNodesProgressingStatus struct {
 func (s *coreNodesProgressingStatus) nextStatus() {
 	emqx := s.emqxStatusMachine.GetEMQX()
 
-	if emqx.Status.CoreNodesStatus.UpdateReplicas == emqx.Status.CoreNodesStatus.Replicas {
+	updateSts, _, _ := getStateFulSetList(context.Background(), s.emqxStatusMachine.client, emqx)
+	if updateSts.Status.ReadyReplicas == emqx.Status.CoreNodesStatus.Replicas {
 		emqx.Status.SetCondition(metav1.Condition{
 			Type:    appsv2beta1.CoreNodesReady,
 			Status:  metav1.ConditionTrue,
@@ -184,7 +190,8 @@ func (s *replicantNodesProgressingStatus) nextStatus() {
 		return
 	}
 
-	if emqx.Status.ReplicantNodesStatus.UpdateReplicas == emqx.Status.ReplicantNodesStatus.Replicas {
+	updateRs, _, _ := getReplicaSetList(context.Background(), s.emqxStatusMachine.client, emqx)
+	if updateRs.Status.ReadyReplicas == emqx.Status.ReplicantNodesStatus.Replicas {
 		emqx.Status.SetCondition(metav1.Condition{
 			Type:    appsv2beta1.ReplicantNodesReady,
 			Status:  metav1.ConditionTrue,

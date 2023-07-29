@@ -117,7 +117,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2beta1.EMQX
 	}
 
 	// update status condition
-	newEMQXStatusMachine(instance).NextStatus()
+	newEMQXStatusMachine(u.Client, instance).NextStatus()
 
 	if err := u.Client.Status().Update(ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}
