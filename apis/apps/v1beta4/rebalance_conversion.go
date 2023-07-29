@@ -36,6 +36,7 @@ func (src *Rebalance) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 
+	dst.SetGroupVersionKind(v2beta1.GroupVersion.WithKind("Rebalance"))
 	dst.Spec.InstanceKind = "EMQX"
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
@@ -54,6 +55,7 @@ func (dst *Rebalance) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := json.Unmarshal(b, dst); err != nil {
 		return err
 	}
+	dst.SetGroupVersionKind(GroupVersion.WithKind("Rebalance"))
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil

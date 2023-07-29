@@ -28,6 +28,7 @@ func TestConvertTo(t *testing.T) {
 	src := &Rebalance{}
 
 	assert.Nil(t, src.ConvertTo(dst))
+	assert.Equal(t, v2beta1.GroupVersion.Version, dst.GetObjectKind().GroupVersionKind().Version)
 }
 
 func TestConvertFrom(t *testing.T) {
@@ -35,4 +36,5 @@ func TestConvertFrom(t *testing.T) {
 	src := &v2beta1.Rebalance{}
 
 	assert.Nil(t, dst.ConvertFrom(src))
+	assert.Equal(t, GroupVersion.Version, dst.GetObjectKind().GroupVersionKind().Version)
 }
