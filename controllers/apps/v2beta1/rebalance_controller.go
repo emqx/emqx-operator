@@ -167,7 +167,12 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		// check if emqx is enterprise edition
 		if emqx.Status.CoreNodes[0].Edition != "Enterprise" {
-			return ctrl.Result{}, emperror.New("only support enterprise edition")
+			_ = rebalance.Status.SetFailed(appsv2beta1.RebalanceCondition{
+				Type:    appsv2beta1.RebalanceConditionFailed,
+				Status:  corev1.ConditionTrue,
+				Message: "Only enterprise edition can be rebalanced",
+			})
+			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 		}
 
 		requester, err = newRequester(r.Client, emqx)

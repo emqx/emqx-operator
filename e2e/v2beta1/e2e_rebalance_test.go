@@ -41,7 +41,7 @@ var rebalance = appsv2beta1.Rebalance{
 	},
 }
 
-var _ = Describe("EMQX 5 Rebalance Test", func() {
+var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 	var instance *appsv2beta1.EMQX
 	var r *appsv2beta1.Rebalance
 	BeforeEach(func() {
@@ -103,6 +103,84 @@ var _ = Describe("EMQX 5 Rebalance Test", func() {
 				)),
 				HaveField("Conditions", ContainElements(
 					HaveField("Message", ContainSubstring(fmt.Sprintf("%s is not found", r.Spec.InstanceName)))),
+				),
+			))
+		})
+	})
+
+	Context("EMQX is not enterprise", func() {
+		BeforeEach(func() {
+			instance.Spec.Image = "emqx/emqx:5.1"
+			r = rebalance.DeepCopy()
+			r.Namespace = instance.GetNamespace()
+			r.Spec.InstanceKind = instance.GroupVersionKind().Kind
+			r.Spec.InstanceName = instance.Name
+
+			By("Creating namespace", func() {
+				// create namespace
+				Eventually(func() bool {
+					err := k8sClient.Create(context.TODO(), &corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: instance.GetNamespace(),
+							Labels: map[string]string{
+								"test": "e2e",
+							},
+						},
+					})
+					return err == nil || k8sErrors.IsAlreadyExists(err)
+				}).Should(BeTrue())
+			})
+
+			By("Creating EMQX CR", func() {
+				// create EMQX CR
+				instance.Spec.ReplicantTemplate = nil
+				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
+				instance.Default()
+				Expect(instance.ValidateCreate()).Should(Succeed())
+				Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
+
+				// check EMQX CR if created successfully
+				Eventually(func() *appsv2beta1.EMQX {
+					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+					return instance
+				}).WithTimeout(timeout).WithPolling(interval).Should(
+					WithTransform(func(instance *appsv2beta1.EMQX) bool {
+						return instance.Status.IsConditionTrue(appsv2beta1.Ready)
+					}, BeTrue()),
+				)
+			})
+
+			By("Creating Rebalance CR", func() {
+				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
+			})
+		})
+
+		AfterEach(func() {
+			By("Deleting Rebalance CR, can be successful", func() {
+				Eventually(func() error {
+					return k8sClient.Delete(context.TODO(), r)
+				}, timeout, interval).Should(Succeed())
+				Eventually(func() bool {
+					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+				}).Should(BeTrue())
+			})
+		})
+
+		It("Rebalance will failed, because the EMQX is not enterprise", func() {
+			Eventually(func() appsv2beta1.RebalanceStatus {
+				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+				return r.Status
+			}, timeout, interval).Should(And(
+				HaveField("Phase", appsv2beta1.RebalancePhaseFailed),
+				HaveField("RebalanceStates", BeNil()),
+				HaveField("Conditions", ContainElements(
+					HaveField("Type", appsv2beta1.RebalanceConditionFailed),
+				)),
+				HaveField("Conditions", ContainElements(
+					HaveField("Status", corev1.ConditionTrue),
+				)),
+				HaveField("Conditions", ContainElements(
+					HaveField("Message", ContainSubstring("Only enterprise edition can be rebalanced"))),
 				),
 			))
 		})
@@ -233,7 +311,7 @@ var _ = Describe("EMQX 5 Rebalance Test", func() {
 	})
 })
 
-var _ = Describe("EMQX 4 Rebalance Test", Label("rebalance"), func() {
+var _ = Describe("EMQX 4 Rebalance Test", func() {
 	var instance *appsv1beta4.EmqxEnterprise
 	var r *appsv2beta1.Rebalance
 	BeforeEach(func() {
