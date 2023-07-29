@@ -55,7 +55,7 @@ var emqx *appsv2beta1.EMQX = &appsv2beta1.EMQX{
 		Name: "emqx",
 		Labels: map[string]string{
 			appsv2beta1.ManagerByLabelKey:    "emqx-operator",
-			appsv2beta1.InstanceNameLabelKey: instance.Name,
+			appsv2beta1.InstanceNameLabelKey: "emqx",
 		},
 	},
 	Spec: appsv2beta1.EMQXSpec{
