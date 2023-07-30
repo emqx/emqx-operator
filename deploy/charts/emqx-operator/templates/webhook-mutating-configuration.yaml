@@ -13,6 +13,27 @@ webhooks:
     service:
       name: {{ include "emqx-operator.fullname" . }}-webhook-service
       namespace: {{ .Release.Namespace }}
+      path: /mutate-apps-emqx-io-v2beta1-emqx
+  failurePolicy: Fail
+  name: mutating.apps.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v2beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxes
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: {{ include "emqx-operator.fullname" . }}-webhook-service
+      namespace: {{ .Release.Namespace }}
       path: /mutate-apps-emqx-io-v1beta4-emqxbroker
   failurePolicy: Fail
   name: mutating.broker.emqx.io
@@ -68,25 +89,4 @@ webhooks:
     - UPDATE
     resources:
     - emqxplugins
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: {{ include "emqx-operator.fullname" . }}-webhook-service
-      namespace: {{ .Release.Namespace }}
-      path: /mutate-apps-emqx-io-v2beta1-emqx
-  failurePolicy: Fail
-  name: mutating.apps.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v2beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxes
   sideEffects: None
