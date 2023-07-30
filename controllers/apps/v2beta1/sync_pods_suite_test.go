@@ -225,19 +225,19 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		Eventually(func() map[string]string {
 			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentRsPod), currentRsPod)
 			return currentRsPod.Annotations
-		}).Should(HaveKeyWithValue("controller.kubernetes.io/pod-deletion-cost", "-99999"))
+		}).WithTimeout(timeout).WithPolling(interval).Should(HaveKeyWithValue("controller.kubernetes.io/pod-deletion-cost", "-99999"))
 
 		By("should scale down rs")
 		Eventually(func() int32 {
 			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentRs), currentRs)
 			return *currentRs.Spec.Replicas
-		}).Should(Equal(int32(0)))
+		}).WithTimeout(timeout).WithPolling(interval).Should(Equal(int32(0)))
 
 		By("before scale down rs, do nothing for sts")
 		Eventually(func() int32 {
 			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
 			return *currentSts.Spec.Replicas
-		}).Should(Equal(int32(1)))
+		}).WithTimeout(timeout).WithPolling(interval).Should(Equal(int32(1)))
 
 		instance.Status.ReplicantNodesStatus.CurrentRevision = instance.Status.ReplicantNodesStatus.UpdateRevision
 		Eventually(s.reconcile(ctx, instance, fakeR)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
@@ -245,7 +245,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		Eventually(func() int32 {
 			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
 			return *currentSts.Spec.Replicas
-		}).Should(Equal(int32(0)))
+		}).WithTimeout(timeout).WithPolling(interval).Should(Equal(int32(0)))
 	})
 
 })
