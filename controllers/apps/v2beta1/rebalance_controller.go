@@ -205,9 +205,11 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	switch rebalance.Status.Phase {
 	case "Failed":
 		r.EventRecorder.Event(rebalance, corev1.EventTypeWarning, "Rebalance", "rebalance failed")
+		controllerutil.RemoveFinalizer(rebalance, finalizer)
 		return ctrl.Result{}, nil
 	case "Completed":
 		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", "rebalance completed")
+		controllerutil.RemoveFinalizer(rebalance, finalizer)
 		return ctrl.Result{}, nil
 	case "Processing":
 		r.EventRecorder.Event(rebalance, corev1.EventTypeNormal, "Rebalance", "rebalance is processing")
