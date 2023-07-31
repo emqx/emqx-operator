@@ -17,6 +17,10 @@
 1. 在进行滚动更新时，对应的 Service 会同时选中新的和旧的 Pod。这可能导致 MQTT 客户端连接到错误的 Pod 上，从而频繁断开连接并进行重连操作。
 2. 在滚动更新过程中，只有 N - 1 个 Pod 能够提供服务，因为新的 Pod 需要一定时间来启动和准备就绪。这可能导致服务的可用性下降。
 
+![rolling update](./assets/configure-emqx-blueGreenUpdate/roll-update.png)
+
+<!--
+wait emqx.io support mermaid
 ```mermaid
 timeline
 				section Update start
@@ -41,6 +45,7 @@ timeline
 						: pod-1
 						: pod-2
 ```
+-->
 
 ## 解决方案
 
@@ -56,6 +61,9 @@ timeline
 4. 将旧的集群逐步缩容到 0 个节点。
 5. 完成升级。
 
+![blue green deploy](./assets/configure-emqx-blueGreenUpdate/blue-green-deploy.png)
+
+<!--
 ```mermaid
 timeline
 				section Update start
@@ -92,6 +100,7 @@ timeline
 						: pod-1
 						: pod-2
 ```
+-->
 
 ## 如何通过蓝绿发布更新 EMQX 集群
 
