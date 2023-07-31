@@ -27,6 +27,10 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r 
 		return subResult{}
 	}
 
+	if !instance.Status.IsConditionTrue(appsv2beta1.Available) {
+		return subResult{}
+	}
+
 	updateSts, currentSts, _ := getStateFulSetList(ctx, s.Client, instance)
 	updateRs, currentRs, _ := getReplicaSetList(ctx, s.Client, instance)
 
@@ -55,7 +59,7 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r 
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to check if pod can be scale down")}
 		}
-		if shouldDeletePod != nil {
+		if shouldDeletePod != nil && shouldDeletePod.DeletionTimestamp == nil {
 			if shouldDeletePod.Annotations == nil {
 				shouldDeletePod.Annotations = make(map[string]string)
 			}
@@ -71,7 +75,7 @@ func (s *syncPods) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r 
 					return subResult{err: emperror.Wrap(err, "failed to get should delete pod")}
 				}
 			}
-			if _, ok := pod.Annotations["controller.kubernetes.io/pod-deletion-cost"]; ok && pod.DeletionTimestamp == nil {
+			if _, ok := pod.Annotations["controller.kubernetes.io/pod-deletion-cost"]; ok {
 				currentRs.Spec.Replicas = pointer.Int32(instance.Status.ReplicantNodesStatus.CurrentReplicas - 1)
 				if err := s.Client.Update(ctx, currentRs); err != nil {
 					return subResult{err: emperror.Wrap(err, "failed to scale down old replicaSet")}
@@ -140,9 +144,11 @@ func (s *syncPods) canBeScaleDownRs(
 		sort.Sort(PodsByNameOlder(oldRsPods))
 		shouldDeletePod = oldRsPods[0].DeepCopy()
 		for _, pod := range oldRsPods {
+			if pod.DeletionTimestamp != nil {
+				return pod.DeepCopy(), nil
+			}
 			if _, ok := pod.Annotations["controller.kubernetes.io/pod-deletion-cost"]; ok {
-				shouldDeletePod = pod.DeepCopy()
-				break
+				return pod.DeepCopy(), nil
 			}
 		}
 
@@ -203,6 +209,10 @@ func (s *syncPods) canBeScaleDownSts(
 		Namespace: instance.Namespace,
 		Name:      fmt.Sprintf("%s-%d", oldSts.Name, *oldSts.Spec.Replicas-1),
 	}, shouldDeletePod)
+
+	if shouldDeletePod.DeletionTimestamp != nil {
+		return false, nil
+	}
 
 	shouldDeletePodInfo, err = getEMQXNodeInfoByAPI(r, fmt.Sprintf("emqx@%s.%s.%s.svc.cluster.local", shouldDeletePod.Name, oldSts.Spec.ServiceName, oldSts.Namespace))
 	if err != nil {
