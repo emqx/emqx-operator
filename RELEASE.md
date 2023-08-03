@@ -3,7 +3,7 @@
 EMQX Operator 2.2.0 is released.
 
 ## Supported version
-+ apps.emqx.io/v2alpha2
++ apps.emqx.io/v2beta1
 
   + EMQX at 5.1.1 and later
   + EMQX Enterprise at 5.1.1 and later
