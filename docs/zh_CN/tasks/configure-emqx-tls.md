@@ -61,6 +61,8 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
             cacertfile = "/mounted/cert/ca.crt"
             certfile = "/mounted/cert/tls.crt"
             keyfile = "/mounted/cert/tls.key"
+            gc_after_handshake = true
+            hibernate_after = 5s
           }
         }
     coreTemplate:
@@ -140,6 +142,8 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
             listener.ssl.external.certfile: /mounted/cert/tls.crt
             listener.ssl.external.keyfile: /mounted/cert/tls.key
             listener.ssl.external: "0.0.0.0:8883"
+            listener.ssl.external.gc_after_handshake: "true"
+            listener.ssl.external.hibernate_after: 5s
           volumeMounts:
             - name: emqx-tls
               mountPath: /mounted/cert
