@@ -38,68 +38,6 @@ Secret is an object that contains a small amount of sensitive information such a
 The following is the relevant configuration of EMQX Custom Resource. You can choose the corresponding APIVersion according to the version of EMQX you want to deploy. For the specific compatibility relationship, please refer to [EMQX Operator Compatibility](../index.md):
 
 :::: tabs type:card
-::: tab apps.emqx.io/v1beta4
-
-`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring volumes and mount points for EMQX clusters through `.spec.template.spec.volumes` and `.spec.template.spec.emqxContainer.volumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
-
-There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this article we are using the `secret` type.
-
-+ Save the following as a YAML file and deploy it with the `kubectl apply` command
-
-  ```yaml
-  apiVersion: apps.emqx.io/v1beta4
-  kind: EmqxEnterprise
-  metadata:
-    name: emqx-ee
-  spec:
-    template:
-      spec:
-        emqxContainer:
-          image:
-            repository: emqx/emqx-ee
-            version: 4.4.14
-          emqxConfig:
-            listener.ssl.external.cacertfile: /mounted/cert/ca.crt
-            listener.ssl.external.certfile: /mounted/cert/tls.crt
-            listener.ssl.external.keyfile: /mounted/cert/tls.key
-            listener.ssl.external: "0.0.0.0:8883"
-          volumeMounts:
-            - name: emqx-tls
-              mountPath: /mounted/cert
-        volumes:
-          - name: emqx-tls
-            secret:
-              secretName: emqx-tls
-  serviceTemplate:
-    spec:
-      type: LoadBalancer
-  ```
-
-  > The `.spec.template.spec.volumes` field configures the volume type as: secret, and the name as: emqx-tls.
-
-  > The `.spec.template.spec.emqxContainer.volumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`.
-
-  > The `.spec.template.spec.emqxContainer.emqxConfig` field configures the TLS listener certificate path. For more TLS listener configurations, please refer to the document: [tlsexternal](https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html#tlsexternal).
-
-+ Wait for EMQX cluster to be ready, you can check the status of EMQX cluster through the `kubectl get` command, please make sure that `STATUS` is `Running`, this may take some time
-
-  ```bash
-  $ kubectl get emqxenterprises
-  NAME      STATUS   AGE
-  emqx-ee   Running  8m33s
-  ```
-
-+ Obtain the External IP of EMQX cluster and access EMQX console
-
-  ```bash
-  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
-
-  192.168.1.200
-  ```
-
-  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
-
-:::
 ::: tab apps.emqx.io/v2beta1
 
 `apps.emqx.io/v2beta1 EMQX` supports `.spec.coreTemplate.extraVolumes` and `.spec.coreTemplate.extraVolumeMounts` and `.spec.replicantTemplate.extraVolumes` and `.spec.replicantTemplate.extraVolumeMounts` fields to EMQX The cluster configures additional volumes and mount points. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
@@ -123,6 +61,8 @@ There are many types of Volumes. For the description of Volumes, please refer to
             cacertfile = "/mounted/cert/ca.crt"
             certfile = "/mounted/cert/tls.crt"
             keyfile = "/mounted/cert/tls.key"
+            gc_after_handshake = true
+            hibernate_after = 5s
           }
         }
     coreTemplate:
@@ -177,6 +117,72 @@ There are many types of Volumes. For the description of Volumes, please refer to
    ```
 
    Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
+
+:::
+::: tab apps.emqx.io/v1beta4
+
+`apps.emqx.io/v1beta4 EmqxEnterprise` supports configuring volumes and mount points for EMQX clusters through `.spec.template.spec.volumes` and `.spec.template.spec.emqxContainer.volumeMounts` fields. In this article, we can use these two fields to configure TLS certificates for the EMQX cluster.
+
+There are many types of Volumes. For the description of Volumes, please refer to the document: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/). In this article we are using the `secret` type.
+
++ Save the following as a YAML file and deploy it with the `kubectl apply` command
+
+  ```yaml
+  apiVersion: apps.emqx.io/v1beta4
+  kind: EmqxEnterprise
+  metadata:
+    name: emqx-ee
+  spec:
+    template:
+      spec:
+        emqxContainer:
+          image:
+            repository: emqx/emqx-ee
+            version: 4.4.14
+          emqxConfig:
+            listener.ssl.external.cacertfile: /mounted/cert/ca.crt
+            listener.ssl.external.certfile: /mounted/cert/tls.crt
+            listener.ssl.external.keyfile: /mounted/cert/tls.key
+            listener.ssl.external: "0.0.0.0:8883"
+            listener.ssl.external.gc_after_handshake: "true"
+            listener.ssl.external.hibernate_after: 5s
+          volumeMounts:
+            - name: emqx-tls
+              mountPath: /mounted/cert
+        volumes:
+          - name: emqx-tls
+            secret:
+              secretName: emqx-tls
+  serviceTemplate:
+    spec:
+      type: LoadBalancer
+  ```
+
+  > The `.spec.template.spec.volumes` field configures the volume type as: secret, and the name as: emqx-tls.
+
+  > The `.spec.template.spec.emqxContainer.volumeMounts` field configures the directory where the TLS certificate is mounted to EMQX: `/mounted/cert`.
+
+  > The `.spec.template.spec.emqxContainer.emqxConfig` field configures the TLS listener certificate path. For more TLS listener configurations, please refer to the document: [tlsexternal](https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html#tlsexternal).
+
+
++ Wait for EMQX cluster to be ready, you can check the status of EMQX cluster through the `kubectl get` command, please make sure that `STATUS` is `Running`, this may take some time
+
+  ```bash
+  $ kubectl get emqxenterprises
+  NAME      STATUS   AGE
+  emqx-ee   Running  8m33s
+  ```
+
++ Obtain the External IP of EMQX cluster and access EMQX console
+
+  ```bash
+  $ kubectl get svc emqx-ee -o json | jq '.status.loadBalancer.ingress[0].ip'
+
+  192.168.1.200
+  ```
+
+  Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
+
 
 :::
 ::::
