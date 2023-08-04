@@ -37,9 +37,8 @@ Here are the relevant configurations for EMQX Custom Resource. You can choose th
 
   ::: warning
   If you want to request CPU and memory resources, you need to ensure that the CPU is greater than or equal to 250m and the memory is greater than or equal to 512M.
-  
+
   - [Resource requests in Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests)
-  
   :::
 
 :::: tabs type:card

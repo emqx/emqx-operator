@@ -16,8 +16,7 @@ EMQX 是一款高性能的开源分布式物联网 MQTT 消息服务器，它提
 
 - 要安装 EMQX Operator，请参考 [安装 EMQX Operator](../getting-started/getting-started.md)。
 
-
-## 安装 cert-manager 
+## 安装 cert-manager
 
 ```yaml
 $ helm repo add jetstack https://charts.jetstack.io
