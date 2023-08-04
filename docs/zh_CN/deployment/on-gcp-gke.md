@@ -16,20 +16,29 @@ EMQX 是一款高性能的开源分布式物联网 MQTT 消息服务器，它提
 
 - 要安装 EMQX Operator，请参考 [安装 EMQX Operator](../getting-started/getting-started.md)。
 
-  ::: warning
-  要在 Google Kubernetes Engine 上安装 `cert-manager`，请参阅官方文档：
 
-  - [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
-  - [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
+## 安装 cert-manager 
 
-  运行 `helm` 命令时，请记得使用 `--set installCRDs=true` 标志安装 CRD。
-
-  更多信息请访问 [cert-manager](https://cert-manager.io)。
-  :::
+```yaml
+$ helm repo add jetstack https://charts.jetstack.io
+$ helm repo update
+$ helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --set installCRDs=true \
+  --set global.leaderElection.namespace=cert-manager
+```
 
 ## 快速部署 EMQX 集群
 
 以下是 EMQX 自定义资源的相关配置。您可以根据您希望部署的 EMQX 版本选择相应的 APIVersion。有关具体的兼容关系，请参阅 [EMQX Operator 兼容性](../index.md)：
+
+  ::: warning
+  如果要请求 cpu 和 mem 资源，需要保证 cpu 大于等于 250m，memory 大于等于 512M
+
+  - [Autopilot 中的资源请求](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests?hl=zh-cn)
+  :::
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v2beta1
