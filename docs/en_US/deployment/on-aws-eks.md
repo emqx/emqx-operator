@@ -1,4 +1,4 @@
-# Deploy EMQX On Amazon Elastic Kubernetes Service
+# Deploy EMQX on Amazon Elastic Kubernetes Service
 
 EMQX Operator supports deploying EMQX on Amazon Container Service EKS (Elastic Kubernetes Service). Amazon EKS is a managed Kubernetes service that makes it easy to deploy, manage, and scale containerized applications. EKS provides the Kubernetes control plane and node groups, automatically handling node replacements, upgrades, and patching. It supports AWS services such as Load Balancers, RDS, and IAM, and integrates seamlessly with other Kubernetes ecosystem tools. For details, please see [What is Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html)
 

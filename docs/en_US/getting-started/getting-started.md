@@ -1,4 +1,4 @@
-# Deploy EMQX Operator
+# Getting Started
 
 In this section, we will walk you through the steps required to efficiently set up the environment for the EMQX Operator, install the Operator, and then use it to deploy EMQX. By following the guidelines outlined in this section, you will be able to effectively install and manage EMQX using the EMQX Operator.
 
