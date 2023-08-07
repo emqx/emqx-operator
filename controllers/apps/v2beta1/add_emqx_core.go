@@ -267,6 +267,12 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 	}
 
 	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates).IsZero() {
+		volumeClaimTemplates := instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates.DeepCopy()
+		if volumeClaimTemplates.VolumeMode == nil {
+			// Wait https://github.com/cisco-open/k8s-objectmatcher/issues/51 fixed
+			fs := corev1.PersistentVolumeFilesystem
+			volumeClaimTemplates.VolumeMode = &fs
+		}
 		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -274,7 +280,7 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 					Namespace: instance.Namespace,
 					Labels:    instance.Spec.CoreTemplate.Labels,
 				},
-				Spec: instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates,
+				Spec: *volumeClaimTemplates,
 			},
 		}
 	} else {
