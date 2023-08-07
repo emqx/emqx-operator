@@ -13,7 +13,7 @@ The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deploymen
 The EMQX Operator includes, but is not limited to, the following features:
 
 
-* **Simplified Deployment EMQX**: Declare EMQX clusters with EMQX custom resources and deploy them quickly. For more details, please check [Quick Start](./docs/en_US/getting-started/getting-started.md).
+* **Simplified Deployment EMQX**: Declare EMQX clusters with EMQX custom resources and deploy them quickly. For more details, please check [Getting Started](./docs/en_US/getting-started/getting-started.md).
 
 * **Manage EMQX Cluster**: Automate operations and maintenance for EMQX, including cluster upgrades, runtime data persistence, updating Kubernetes resources based on the status of EMQX, etc. For more details, please check [Manage EMQX](./docs/en_US/tasks/overview.md).
 
@@ -75,7 +75,7 @@ For more information on getting started, see the [getting started](docs/en_US/ge
 
 |  Public Cloud Platform   | Deployment Guide                                         |
 |--------------------------|----------------------------------------------------------|
-|    AWS                   | [Deploy EMQX On Amazon Elastic Kubernetes Service](docs/en_US/deployment/on-aws-eks.md)       |
+|    AWS                   | [Deploy EMQX on Amazon Elastic Kubernetes Service](docs/en_US/deployment/on-aws-eks.md)       |
 |    Azure                 | [Deploy EMQX on Azure Kubernetes Service](docs/en_US/deployment/on-azure-aks.md)       |
 |    Google Cloud          | [Deploy EMQX on Google Cloud GKE](docs/en_US/deployment/on-gcp-gke.md)       |
 |    Alibaba Cloud         | [Deploy EMQX on Alibaba Cloud ACK](docs/zh_CN/deployment/on-alibaba-cloud.md)    |

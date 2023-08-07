@@ -1,4 +1,4 @@
-# 部署 EMQX Operator
+# 快速开始
 
 在本文中，我们将指导您完成高效设置 EMQX Operator 环境、安装 EMQX Operator，然后使用它部署 EMQX 所需的步骤。通过遵循本节中概述的指南，您将能够使用 EMQX Operator 有效地安装和管理 EMQX。
 
