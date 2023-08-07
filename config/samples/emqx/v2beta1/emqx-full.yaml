@@ -22,13 +22,13 @@ spec:
       annotations:
     spec:
       replicas: 2
-      # volumeClaimTemplates:
-      #   storageClassName: standard
-      #   resources:
-      #     requests:
-      #       storage: 20Mi
-      #   accessModes:
-      #   - ReadWriteOnce
+      volumeClaimTemplates:
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 20Mi
+        accessModes:
+        - ReadWriteOnce
       # nodeName:
       # nodeSelector:
       # affinity:
