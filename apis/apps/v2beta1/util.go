@@ -170,53 +170,59 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 		if listener.Type() != hocon.ObjectType {
 			continue
 		}
-		listenerConfig, _ := hocon.ParseString(listener.String())
+
+		listenerConfig, err := hocon.ParseString(listener.String())
+		if err != nil {
+			continue
+		}
 
 		configs := listenerConfig.GetRoot()
-		if configs.Type() == hocon.ObjectType {
-			for name, config := range configs.(hocon.Object) {
-				// Wait fix this issue: https://github.com/gurkankaymak/hocon/issues/39
-				// c, err := hocon.ParseString(config.String())
-				obj := config.(hocon.Object)
-				cutConfig := hocon.Object{}
-				if v, ok := obj["enable"]; ok {
-					cutConfig["enable"] = v
-				}
-				if v, ok := obj["enabled"]; ok {
-					cutConfig["enabled"] = v
-				}
-				if v, ok := obj["bind"]; ok {
-					cutConfig["bind"] = v
-				}
-				c, err := hocon.ParseString(cutConfig.String())
-				if err != nil {
-					return nil, emperror.Wrapf(err, "failed to parse %s", config.String())
-				}
-				// Compatible with "enable" and "enabled"
-				// the default value of them both is true
-				if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
-					continue
-				}
-				bind := strings.Trim(c.GetString("bind"), `"`)
-				if !strings.Contains(bind, ":") {
-					// example: ":1883"
-					bind = fmt.Sprintf(":%s", bind)
-				}
-				_, strPort, _ := net.SplitHostPort(bind)
-				intStrValue := intstr.Parse(strPort)
+		if configs.Type() != hocon.ObjectType {
+			continue
+		}
 
-				protocol := corev1.ProtocolTCP
-				if t == "quic" {
-					protocol = corev1.ProtocolUDP
-				}
-
-				svcPorts = append(svcPorts, corev1.ServicePort{
-					Name:       fmt.Sprintf("%s-%s", t, name),
-					Protocol:   protocol,
-					Port:       int32(intStrValue.IntValue()),
-					TargetPort: intStrValue,
-				})
+		for name, config := range configs.(hocon.Object) {
+			// Wait fix this issue: https://github.com/gurkankaymak/hocon/issues/39
+			// c, err := hocon.ParseString(config.String())
+			obj := config.(hocon.Object)
+			cutConfig := hocon.Object{}
+			if v, ok := obj["enable"]; ok {
+				cutConfig["enable"] = v
 			}
+			if v, ok := obj["enabled"]; ok {
+				cutConfig["enabled"] = v
+			}
+			if v, ok := obj["bind"]; ok {
+				cutConfig["bind"] = v
+			}
+			c, err := hocon.ParseString(cutConfig.String())
+			if err != nil {
+				return nil, emperror.Wrapf(err, "failed to parse %s", config.String())
+			}
+			// Compatible with "enable" and "enabled"
+			// the default value of them both is true
+			if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
+				continue
+			}
+			bind := strings.Trim(c.GetString("bind"), `"`)
+			if !strings.Contains(bind, ":") {
+				// example: ":1883"
+				bind = fmt.Sprintf(":%s", bind)
+			}
+			_, strPort, _ := net.SplitHostPort(bind)
+			intStrValue := intstr.Parse(strPort)
+
+			protocol := corev1.ProtocolTCP
+			if t == "quic" {
+				protocol = corev1.ProtocolUDP
+			}
+
+			svcPorts = append(svcPorts, corev1.ServicePort{
+				Name:       fmt.Sprintf("%s-%s", t, name),
+				Protocol:   protocol,
+				Port:       int32(intStrValue.IntValue()),
+				TargetPort: intStrValue,
+			})
 		}
 	}
 
@@ -232,8 +238,18 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 			if listener.Type() != hocon.ObjectType {
 				continue
 			}
-			c, _ := hocon.ParseString(listener.String())
-			for name, config := range c.GetRoot().(hocon.Object) {
+
+			listenerConfig, err := hocon.ParseString(listener.String())
+			if err != nil {
+				continue
+			}
+
+			configs := listenerConfig.GetRoot()
+			if configs.Type() != hocon.ObjectType {
+				continue
+			}
+
+			for name, config := range configs.(hocon.Object) {
 				c, _ := hocon.ParseString(config.String())
 				// Compatible with "enable" and "enabled"
 				// the default value of them both is true
