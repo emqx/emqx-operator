@@ -48,8 +48,16 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
       spec:
         type: LoadBalancer
   ```
-
+  
   > In the YAML above, we declared that this is an EMQX cluster consisting of three Core nodes and three Replicant nodes. Core nodes require a minimum of 256Mi of memory, and Replicant nodes require a minimum of 512Mi of memory. In actual business, the Replicant node will accept all client requests, so the resources required by the Replicant node will be higher.
+
+  ::: warning
+  If you want to request CPU and memory resources Google Kubernetes Engine (GKE) , you need to ensure that the CPU is greater than or equal to 250m and the memory is greater than or equal to 512M on both of core and replicant nodes.
+
+  - [Autopilot 中的资源请求](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests?hl=zh-cn)
+  :::
+
+
 
 + Wait for the EMQX cluster to be ready, you can check the status of EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 

@@ -29,12 +29,17 @@ $ helm install \
   --set global.leaderElection.namespace=cert-manager
 ```
 
+  ::: warning
+  默认配置安装 cert-manager 可能会导致 bootstrapping 问题。所以通过 `global.leaderElection.namespacer` 这个配置将 `cert-manager` 配置为在 leader 选举中使用不同的命名空间。
+  :::
+
+
 ## 快速部署 EMQX 集群
 
 以下是 EMQX 自定义资源的相关配置。您可以根据您希望部署的 EMQX 版本选择相应的 APIVersion。有关具体的兼容关系，请参阅 [EMQX Operator 兼容性](../index.md)：
 
   ::: warning
-  如果要请求 cpu 和 mem 资源，需要保证 cpu 大于等于 250m，memory 大于等于 512M
+  如果要请求 cpu 和 memory 资源，需要保证 cpu 大于等于 250m，memory 大于等于 512M
 
   - [Autopilot 中的资源请求](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests?hl=zh-cn)
   :::
