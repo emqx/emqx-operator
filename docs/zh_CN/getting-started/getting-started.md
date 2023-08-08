@@ -33,6 +33,10 @@
 
    或者按照 [cert-manager 安装指南](https://cert-manager.io/docs/installation/)来安装它。
 
+   ::: warning
+   如果您在Google Kubernetes Engine（GKE）上安装它。那么通过默认配置安装可能会导致 bootstraping 问题。请查看 [GKE 部署文档](../deployment/on-gcp-gke.md)。
+   :::
+
 2. 运行以下命令来安装 EMQX Operator。
 
    ```bash

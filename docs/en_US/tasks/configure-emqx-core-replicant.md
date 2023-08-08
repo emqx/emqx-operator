@@ -54,7 +54,7 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
   ::: warning
   If you want to request CPU and memory resources Google Kubernetes Engine (GKE) , you need to ensure that the CPU is greater than or equal to 250m and the memory is greater than or equal to 512M on both of core and replicant nodes.
 
-  - [Autopilot 中的资源请求](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests?hl=zh-cn)
+  - [Resource requests in Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests)
   :::
 
 

@@ -47,7 +47,7 @@ Here are the relevant configurations for EMQX Custom Resource. You can choose th
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v2beta1
-  * [ ]
+
 Save the following content as a YAML file and deploy it using the `kubectl apply` command.
 
 
