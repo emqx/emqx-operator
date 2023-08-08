@@ -1,6 +1,10 @@
 # EMQX Operator Docs
 
-## Preview
+## Official documentation
+
+Visit the link to view [the latest official documentation of EMQX Operator](https://docs.emqx.com/en/emqx-operator/latest).
+
+## Local preview
 
 ```sh
 ./preview.sh 8080
