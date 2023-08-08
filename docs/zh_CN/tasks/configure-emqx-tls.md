@@ -62,7 +62,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
             certfile = "/mounted/cert/tls.crt"
             keyfile = "/mounted/cert/tls.key"
             gc_after_handshake = true
-            hibernate_after = 5s
+            handshake_timeout = 5s
           }
         }
     coreTemplate:

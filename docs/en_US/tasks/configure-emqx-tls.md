@@ -62,7 +62,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
             certfile = "/mounted/cert/tls.crt"
             keyfile = "/mounted/cert/tls.key"
             gc_after_handshake = true
-            hibernate_after = 5s
+            handshake_timeout = 5s
           }
         }
     coreTemplate:
