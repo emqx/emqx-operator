@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.0 is released.
+EMQX Operator 2.2.1-rc.1 is released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -13,16 +13,13 @@ EMQX Operator 2.2.0 is released.
   + EMQX at 4.4.14 and later
   + EMQX Enterprise at 4.4.14 and later
 
-## Features 🌈
+## Fixes 🛠
 
-+ The `apps.emqx.io/v2alpha1 EMQX` upgrade to `apps.emqx.io/v2beta1 EMQX`.
++ `apps.emqx.io/v2beta1 EMQX`.
 
-  + New configuration management, now can manage and update EMQX configuration through `apps.emqx.io/v2beta1 EMQX`, for more details, please refer to [Change EMQX Configurations](https://docs.emqx.com/en/emqx-operator/latest/tasks/configure-emqx-config.html).
+  + Fix EMQX Operator controller will crash when getting EMQX listeners failed.
 
-  + New upgrade strategy, now both EMQX 5 and EMQX Enterprise 5 can be upgraded through blue-green deployment. EMQX Enterprise Edition 5 also supports the feature of node evacuation, for more details, please refer to [Upgrade the EMQX cluster elegantly through blue-green deployment](https://docs.emqx.com/en/emqx-operator/latest/tasks/configure-emqx-blueGreenUpdate.html).
-
-
-+ The `apps.emqx.io/v1beta4 rebalance` upgrade to `apps.emqx.io/v2beta1 rebalance`, now `rebalance` can support both EMQX Enterprise 4 and EMQX Enterprise 5, for more details, please refer to [Cluster Load Rebalancing](https://docs.emqx.com/en/emqx-operator/latest/tasks/configure-emqx-rebalance.html).
+  + Fix always update statefulSet when set volume template in EMQX customer resource.
 
 ## How to install/upgrade EMQX Operator 💡
 
