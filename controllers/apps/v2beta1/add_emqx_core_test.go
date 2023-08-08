@@ -288,6 +288,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 			},
 		}
 
+		fs := corev1.PersistentVolumeFilesystem
 		got := generateStatefulSet(emqx)
 		assert.Equal(t, []corev1.PersistentVolumeClaim{
 			{
@@ -305,6 +306,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 							corev1.ResourceStorage: resource.MustParse("20Mi"),
 						},
 					},
+					VolumeMode: &fs,
 				},
 			},
 		}, got.Spec.VolumeClaimTemplates)
