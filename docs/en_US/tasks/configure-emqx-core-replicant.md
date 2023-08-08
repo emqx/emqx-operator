@@ -48,7 +48,7 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
       spec:
         type: LoadBalancer
   ```
-  
+
   > In the YAML above, we declared that this is an EMQX cluster consisting of three Core nodes and three Replicant nodes. Core nodes require a minimum of 256Mi of memory, and Replicant nodes require a minimum of 512Mi of memory. In actual business, the Replicant node will accept all client requests, so the resources required by the Replicant node will be higher.
 
   ::: warning
