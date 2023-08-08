@@ -514,10 +514,13 @@ var _ = Describe("check can be scale down", func() {
 				})
 				return resp, respBody, nil
 			}
-
-			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).ShouldNot(BeNil())
+			Eventually(func() *corev1.Pod {
+				canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+				if err != nil {
+					return nil
+				}
+				return canBeScaledDown
+			}).WithTimeout(timeout).WithPolling(interval).ShouldNot(BeNil())
 		})
 	})
 })

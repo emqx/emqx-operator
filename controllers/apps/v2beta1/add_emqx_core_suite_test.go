@@ -80,6 +80,12 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			sts := list.Items[0].DeepCopy()
 			sts.Status.Replicas = 2
 			Expect(k8sClient.Status().Update(ctx, sts)).Should(Succeed())
+			Eventually(func() *appsv1.StatefulSet {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(sts), sts)
+				return sts
+			}).WithTimeout(timeout).WithPolling(interval).Should(
+				WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.Replicas }, Equal(int32(2))),
+			)
 
 			instance.Status.CoreNodesStatus.UpdateRevision = sts.Labels[appsv2beta1.PodTemplateHashLabelKey]
 			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(4)

@@ -128,6 +128,12 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			rs := list.Items[0].DeepCopy()
 			rs.Status.Replicas = 3
 			Expect(k8sClient.Status().Update(ctx, rs)).Should(Succeed())
+			Eventually(func() *appsv1.ReplicaSet {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(rs), rs)
+				return rs
+			}).WithTimeout(timeout).WithPolling(interval).Should(
+				WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.Replicas }, Equal(int32(3))),
+			)
 
 			instance.Status.ReplicantNodesStatus.UpdateRevision = rs.Labels[appsv2beta1.PodTemplateHashLabelKey]
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(0)
