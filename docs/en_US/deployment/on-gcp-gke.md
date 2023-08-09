@@ -17,21 +17,15 @@ Before you begin, you must have the following:
 
 - To install EMQX Operator, please refer to [Install EMQX Operator](../getting-started/getting-started.md)
 
-  ::: warning
-  For installing `cert-manager` on Google Kubernetes Engine, see the official documentation:
-
-  - [GKE Autopilot](https://cert-manager.io/docs/installation/compatibility/#gke-autopilot)
-  - [Private GKE Cluster](https://cert-manager.io/docs/installation/compatibility/#gke)
-
-  Remember to install CRDs when running `helm` with the `--set installCRDs=true` flag.
-
-  More information can be found at [cert-manager](https://cert-manager.io).
-  :::
-
-
 ## Quickly deploying an EMQX cluster
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../index.md):
+
+  ::: warning
+  If you want to request CPU and memory resources, you need to ensure that the CPU is greater than or equal to 250m and the memory is greater than or equal to 512M.
+
+  - [Resource requests in Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests)
+  :::
 
 :::: tabs type:card
 ::: tab apps.emqx.io/v2beta1
