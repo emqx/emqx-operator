@@ -32,7 +32,7 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
     image: emqx:5.1
     coreTemplate:
       spec:
-        replicas: 3
+        replicas: 2
         resources:
           requests:
             cpu: 250m
@@ -43,13 +43,13 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
         resources:
           requests:
             cpu: 250m
-            memory: 512Mi
+            memory: 1Gi
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
   ```
 
-  > 上文的 YAML 中，我们声明了这是一个由三个 Core 节点和三个 Replicant 节点组成的 EMQX 集群。Core 节点最低需要 256Mi 内存 ，Replicant 节点最低需要512Mi 内存。在实际业务中，Replicant 节点会接受全部的客户端请求，所以 Replicant 节点需要的资源会更高一些。
+  > 上文的 YAML 中，我们声明了这是一个由二个 Core 节点和三个 Replicant 节点组成的 EMQX 集群。Core 节点最低需要 512Mi 内存 ，Replicant 节点最低需要 1Gi 内存。你可以根据实际的业务负载进行调整。在实际业务中，Replicant 节点会接受全部的客户端请求，所以 Replicant 节点需要的资源会更高一些。
 
 + 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 

@@ -32,7 +32,7 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
     image: emqx:5.1
     coreTemplate:
       spec:
-        replicas: 3
+        replicas: 2
         resources:
           requests:
             cpu: 250m
@@ -43,13 +43,13 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
         resources:
           requests:
             cpu: 250m
-            memory: 512Mi
+            memory: 1Gi
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
   ```
 
-  > In the YAML above, we declared that this is an EMQX cluster consisting of three Core nodes and three Replicant nodes. Core nodes require a minimum of 256Mi of memory, and Replicant nodes require a minimum of 512Mi of memory. In actual business, the Replicant node will accept all client requests, so the resources required by the Replicant node will be higher.
+  > In the YAML above, we declared that this is an EMQX cluster consisting of two Core nodes and three Replicant nodes. Core nodes require a minimum of 512Mi of memory, and Replicant nodes require a minimum of 1Gi of memory. You can adjust according to the actual business load. In actual business, the Replicant node will accept all client requests, so the resources required by the Replicant node will be higher.
 
 + Wait for the EMQX cluster to be ready, you can check the status of EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
