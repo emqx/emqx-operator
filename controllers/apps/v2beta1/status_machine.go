@@ -139,7 +139,7 @@ func (s *coreNodesProgressingStatus) nextStatus() {
 	emqx := s.emqxStatusMachine.GetEMQX()
 
 	updateSts, _, _ := getStateFulSetList(context.Background(), s.emqxStatusMachine.client, emqx)
-	if updateSts.Status.ReadyReplicas == emqx.Status.CoreNodesStatus.Replicas {
+	if updateSts != nil && updateSts.Status.ReadyReplicas == emqx.Status.CoreNodesStatus.Replicas {
 		emqx.Status.SetCondition(metav1.Condition{
 			Type:    appsv2beta1.CoreNodesReady,
 			Status:  metav1.ConditionTrue,
@@ -191,7 +191,7 @@ func (s *replicantNodesProgressingStatus) nextStatus() {
 	}
 
 	updateRs, _, _ := getReplicaSetList(context.Background(), s.emqxStatusMachine.client, emqx)
-	if updateRs.Status.ReadyReplicas == emqx.Status.ReplicantNodesStatus.Replicas {
+	if updateRs != nil && updateRs.Status.ReadyReplicas == emqx.Status.ReplicantNodesStatus.Replicas {
 		emqx.Status.SetCondition(metav1.Condition{
 			Type:    appsv2beta1.ReplicantNodesReady,
 			Status:  metav1.ConditionTrue,
