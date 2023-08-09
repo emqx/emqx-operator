@@ -34,7 +34,7 @@ Before deploying EMQX Operator, please confirm that the following components hav
    Or you can follow the [cert-manager installation guide](https://cert-manager.io/docs/installation/) to install it.
 
     ::: warning
-    If you install cert-manager on Google Kubernetes Engine (GKE) with default configuration may cause bootstrapping issues. Please check [GKE deployment document](../deployment/on-gcp-gke.md).
+    If you install cert-manager on Google Kubernetes Engine (GKE) with default configuration may cause bootstrapping issues. Therefore, by adding the configuration of `--set global.leaderElection.namespace=cert-manager`, configure to use a different namespace in leader election. Please check [cert-manager compatibility](https://cert-manager.io/docs/installation/compatibility/)
     :::
 
 

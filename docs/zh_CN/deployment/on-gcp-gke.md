@@ -16,24 +16,6 @@ EMQX 是一款高性能的开源分布式物联网 MQTT 消息服务器，它提
 
 - 要安装 EMQX Operator，请参考 [安装 EMQX Operator](../getting-started/getting-started.md)。
 
-## 安装 cert-manager
-
-```yaml
-$ helm repo add jetstack https://charts.jetstack.io
-$ helm repo update
-$ helm install \
-  cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --create-namespace \
-  --set installCRDs=true \
-  --set global.leaderElection.namespace=cert-manager
-```
-
-  ::: warning
-  默认配置安装 cert-manager 可能会导致 bootstrapping 问题。所以通过 `global.leaderElection.namespacer` 这个配置将 `cert-manager` 配置为在 leader 选举中使用不同的命名空间。
-  :::
-
-
 ## 快速部署 EMQX 集群
 
 以下是 EMQX 自定义资源的相关配置。您可以根据您希望部署的 EMQX 版本选择相应的 APIVersion。有关具体的兼容关系，请参阅 [EMQX Operator 兼容性](../index.md)：

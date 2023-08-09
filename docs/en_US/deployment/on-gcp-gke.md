@@ -17,24 +17,6 @@ Before you begin, you must have the following:
 
 - To install EMQX Operator, please refer to [Install EMQX Operator](../getting-started/getting-started.md)
 
-
-## Install cert-manager
-
-```yaml
-$ helm repo add jetstack https://charts.jetstack.io
-$ helm repo update
-$ helm install \
-  cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --create-namespace \
-  --set installCRDs=true \
-  --set global.leaderElection.namespace=cert-manager
-```
-
-::: warning
-The default configuration of installing cert-manager may cause bootstrapping issues. Therefore, by using the configuration of `global.leaderElection.namespacer`, `cert-manager` is configured to use a different namespace in leader election.
-:::
-
 ## Quickly deploying an EMQX cluster
 
 Here are the relevant configurations for EMQX Custom Resource. You can choose the corresponding APIVersion based on the version of EMQX you wish to deploy. For specific compatibility relationships, please refer to [EMQX Operator Compatibility](../index.md):

@@ -35,14 +35,14 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
         replicas: 3
         resources:
           requests:
-            cpu: 100m
-            memory: 256Mi
+            cpu: 250m
+            memory: 512Mi
     replicantTemplate:
       spec:
         replicas: 3
         resources:
           requests:
-            cpu: 100m
+            cpu: 250m
             memory: 512Mi
     dashboardServiceTemplate:
       spec:
@@ -50,12 +50,6 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
   ```
 
   > 上文的 YAML 中，我们声明了这是一个由三个 Core 节点和三个 Replicant 节点组成的 EMQX 集群。Core 节点最低需要 256Mi 内存 ，Replicant 节点最低需要512Mi 内存。在实际业务中，Replicant 节点会接受全部的客户端请求，所以 Replicant 节点需要的资源会更高一些。
-
-  ::: warning
-  如果要在 Google Kubernetes Engine (GKE) 请求 cpu 和 memory 资源，需要保证在 core 和 replicant 节点上的 cpu 大于等于 250m，memory 大于等于 512M
-
-  - [Autopilot 中的资源请求](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests?hl=zh-cn)
-  :::
 
 + 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
