@@ -87,7 +87,7 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
 	instance := &appsv2beta1.EMQX{}
 	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
@@ -117,8 +117,8 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&syncConfig{r},
 		&addSvc{r},
 		&updatePodConditions{r},
-		&syncPods{r},
 		&updateStatus{r},
+		&syncPods{r},
 	} {
 		subResult := subReconciler.reconcile(ctx, instance, requester)
 		if !subResult.result.IsZero() {
@@ -126,6 +126,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		if subResult.err != nil {
 			if innerErr.IsCommonError(subResult.err) {
+				logger.V(1).Info("requeue reconcile", "reconciler", subReconciler, "reason", subResult.err)
 				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
 			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "ReconcilerFailed", emperror.Cause(subResult.err).Error())

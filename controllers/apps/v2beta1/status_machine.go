@@ -113,14 +113,14 @@ type initializedStatus struct {
 }
 
 func (s *initializedStatus) nextStatus() {
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.ReplicantNodesProgressing)
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
-
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.CoreNodesProgressing)
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.CoreNodesReady)
-
-	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Available)
 	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Ready)
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Available)
+
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.ReplicantNodesProgressing)
+
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.CoreNodesReady)
+	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.CoreNodesProgressing)
 
 	s.emqxStatusMachine.emqx.Status.SetCondition(metav1.Condition{
 		Type:    appsv2beta1.CoreNodesProgressing,
@@ -254,4 +254,29 @@ type readyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *readyStatus) nextStatus() {}
+func (s *readyStatus) nextStatus() {
+	emqx := s.emqxStatusMachine.GetEMQX()
+	updateSts, _, _ := getStateFulSetList(context.Background(), s.emqxStatusMachine.client, emqx)
+	if updateSts != nil && updateSts.Status.ReadyReplicas != emqx.Status.CoreNodesStatus.Replicas {
+		s.emqxStatusMachine.initialized.nextStatus()
+		return
+	}
+
+	if appsv2beta1.IsExistReplicant(emqx) {
+		updateRs, _, _ := getReplicaSetList(context.Background(), s.emqxStatusMachine.client, emqx)
+		if updateRs != nil && updateRs.Status.ReadyReplicas != emqx.Status.ReplicantNodesStatus.Replicas {
+			s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Ready)
+			s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Available)
+			s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
+
+			emqx.Status.SetCondition(metav1.Condition{
+				Type:    appsv2beta1.ReplicantNodesProgressing,
+				Status:  metav1.ConditionTrue,
+				Reason:  appsv2beta1.ReplicantNodesProgressing,
+				Message: "Replicant nodes progressing",
+			})
+			s.emqxStatusMachine.setCurrentStatus(emqx)
+			return
+		}
+	}
+}

@@ -28,24 +28,6 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 	}
 
 	lastConfig, ok := instance.Annotations[appsv2beta1.LastEMQXConfigAnnotationKey]
-	if ok && instance.Spec.Config.Data != lastConfig {
-		// Delete readonly configs
-		config, _ := hocon.ParseString(instance.Spec.Config.Data)
-		configObj := config.GetRoot().(hocon.Object)
-		delete(configObj, "node")
-		delete(configObj, "cluster")
-		delete(configObj, "dashboard")
-
-		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, configObj.String()); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
-		}
-
-		instance.Annotations[appsv2beta1.LastEMQXConfigAnnotationKey] = instance.Spec.Config.Data
-		if err := s.Client.Update(ctx, instance); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update emqx instance")}
-		}
-	}
-
 	if !ok {
 		// If it is the first time to start and Mode = Replace, update the EMQX configuration once.
 		if instance.Spec.Config.Mode == "Replace" {
@@ -67,6 +49,25 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 		if err := s.Client.Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx instance")}
 		}
+		return subResult{}
+	}
+	if ok && instance.Spec.Config.Data != lastConfig {
+		// Delete readonly configs
+		config, _ := hocon.ParseString(instance.Spec.Config.Data)
+		configObj := config.GetRoot().(hocon.Object)
+		delete(configObj, "node")
+		delete(configObj, "cluster")
+		delete(configObj, "dashboard")
+
+		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, configObj.String()); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
+		}
+
+		instance.Annotations[appsv2beta1.LastEMQXConfigAnnotationKey] = instance.Spec.Config.Data
+		if err := s.Client.Update(ctx, instance); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update emqx instance")}
+		}
+		return subResult{}
 	}
 
 	config, err := getEMQXConfigsByAPI(r)
