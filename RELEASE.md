@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.1-rc.2 is released.
+EMQX Operator 2.2.1-rc.3 is released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -13,6 +13,12 @@ EMQX Operator 2.2.1-rc.2 is released.
   + EMQX at 4.4.14 and later
   + EMQX Enterprise at 4.4.14 and later
 
+## Enhancements ✨
+
++ `apps.emqx.io/v2beta1 EMQX`.
+
+  + The window period when the service is unavailable during blue-green deployment has been canceled. Now, even during the blue-green release process, the EMQX service remains available.
+
 ## Fixes 🛠
 
 + `apps.emqx.io/v2beta1 EMQX`.
@@ -23,6 +29,8 @@ EMQX Operator 2.2.1-rc.2 is released.
 
   + Fix nil pointer error caused by not finding statefulSet in certain situations.
 
+  + Fix the issue where EMQX customer resource status is still `Ready` when deleting a Pod.
+
 ## How to install/upgrade EMQX Operator 💡
 
 > Need make sure the [cert-manager](https://cert-manager.io/) is ready
@@ -32,7 +40,8 @@ helm repo add emqx https://repos.emqx.io/charts
 helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
-  --create-namespace
+  --create-namespace \
+  --version 2.2.1-rc.3
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
