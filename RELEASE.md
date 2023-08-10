@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.1-rc.1 is released.
+EMQX Operator 2.2.1-rc.2 is released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -20,6 +20,8 @@ EMQX Operator 2.2.1-rc.1 is released.
   + Fix EMQX Operator controller will crash when getting EMQX listeners failed.
 
   + Fix always update statefulSet when set volume template in EMQX customer resource.
+
+  + Fix nil pointer error caused by not finding statefulSet in certain situations.
 
 ## How to install/upgrade EMQX Operator 💡
 
