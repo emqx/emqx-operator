@@ -141,30 +141,30 @@ func TestDefaultLabels(t *testing.T) {
 	instance.defaultLabels()
 
 	assert.Equal(t, map[string]string{
-		ManagerByLabelKey:    "emqx-operator",
-		InstanceNameLabelKey: "webhook-test",
+		LabelsManagedByKey: "emqx-operator",
+		LabelsInstanceKey:  "webhook-test",
 	}, instance.Labels)
 
 	assert.Equal(t, map[string]string{
-		ManagerByLabelKey:    "emqx-operator",
-		InstanceNameLabelKey: "webhook-test",
+		LabelsManagedByKey: "emqx-operator",
+		LabelsInstanceKey:  "webhook-test",
 	}, instance.Spec.DashboardServiceTemplate.Labels)
 
 	assert.Equal(t, map[string]string{
-		ManagerByLabelKey:    "emqx-operator",
-		InstanceNameLabelKey: "webhook-test",
+		LabelsManagedByKey: "emqx-operator",
+		LabelsInstanceKey:  "webhook-test",
 	}, instance.Spec.ListenersServiceTemplate.Labels)
 
 	assert.Equal(t, map[string]string{
-		ManagerByLabelKey:    "emqx-operator",
-		InstanceNameLabelKey: "webhook-test",
-		DBRoleLabelKey:       "core",
+		LabelsManagedByKey: "emqx-operator",
+		LabelsInstanceKey:  "webhook-test",
+		LabelsComponentKey: "core",
 	}, instance.Spec.CoreTemplate.Labels)
 
 	assert.Equal(t, map[string]string{
-		ManagerByLabelKey:    "emqx-operator",
-		InstanceNameLabelKey: "webhook-test",
-		DBRoleLabelKey:       "replicant",
+		LabelsManagedByKey: "emqx-operator",
+		LabelsInstanceKey:  "webhook-test",
+		LabelsComponentKey: "replicant",
 	}, instance.Spec.ReplicantTemplate.Labels)
 }
 
@@ -249,7 +249,7 @@ func TestDefaultListeneresServiceTemplate(t *testing.T) {
 				CoreTemplate: EMQXCoreTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							DBRoleLabelKey: "core",
+							LabelsComponentKey: "core",
 						},
 					},
 				},
@@ -257,12 +257,12 @@ func TestDefaultListeneresServiceTemplate(t *testing.T) {
 			},
 		}
 		instance.defaultListenersServiceTemplate()
-		assert.Equal(t, "core", instance.Spec.ListenersServiceTemplate.Spec.Selector[DBRoleLabelKey])
+		assert.Equal(t, "core", instance.Spec.ListenersServiceTemplate.Spec.Selector[LabelsComponentKey])
 
 		instance.Spec.ReplicantTemplate = &EMQXReplicantTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					DBRoleLabelKey: "replicant",
+					LabelsComponentKey: "replicant",
 				},
 			},
 			Spec: EMQXReplicantTemplateSpec{
@@ -270,11 +270,11 @@ func TestDefaultListeneresServiceTemplate(t *testing.T) {
 			},
 		}
 		instance.defaultListenersServiceTemplate()
-		assert.Equal(t, "core", instance.Spec.ListenersServiceTemplate.Spec.Selector[DBRoleLabelKey])
+		assert.Equal(t, "core", instance.Spec.ListenersServiceTemplate.Spec.Selector[LabelsComponentKey])
 
 		instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(1)
 		instance.defaultListenersServiceTemplate()
-		assert.Equal(t, "replicant", instance.Spec.ListenersServiceTemplate.Spec.Selector[DBRoleLabelKey])
+		assert.Equal(t, "replicant", instance.Spec.ListenersServiceTemplate.Spec.Selector[LabelsComponentKey])
 	})
 }
 

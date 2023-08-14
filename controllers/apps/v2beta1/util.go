@@ -66,7 +66,7 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
 	)
 	for _, sts := range list.Items {
-		if hash, ok := sts.Labels[appsv2beta1.PodTemplateHashLabelKey]; ok {
+		if hash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
 			if hash == instance.Status.CoreNodesStatus.UpdateRevision {
 				updateSts = sts.DeepCopy()
 			}
@@ -106,7 +106,7 @@ func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *a
 		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
 	)
 	for _, rs := range list.Items {
-		if hash, ok := rs.Labels[appsv2beta1.PodTemplateHashLabelKey]; ok {
+		if hash, ok := rs.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
 			if hash == instance.Status.ReplicantNodesStatus.UpdateRevision {
 				updateRs = rs.DeepCopy()
 			}
@@ -171,8 +171,8 @@ func justCheckPodTemplate() patch.CalculateOption {
 		_ = json.Unmarshal([]byte(podTemplateSpecJson.String()), podTemplateSpec)
 
 		// Remove the podTemplateHashLabelKey from the podTemplateSpec
-		if _, ok := podTemplateSpec.Labels[appsv2beta1.PodTemplateHashLabelKey]; ok {
-			podTemplateSpec.Labels = appsv2beta1.CloneAndRemoveLabel(podTemplateSpec.Labels, appsv2beta1.PodTemplateHashLabelKey)
+		if _, ok := podTemplateSpec.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
+			podTemplateSpec.Labels = appsv2beta1.CloneAndRemoveLabel(podTemplateSpec.Labels, appsv2beta1.LabelsPodTemplateHashKey)
 		}
 
 		emptyRs := &appsv1.ReplicaSet{}

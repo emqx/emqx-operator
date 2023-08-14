@@ -53,7 +53,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		instance.Status.RemoveCondition(appsv2beta1.Ready)
 		instance.Status.RemoveCondition(appsv2beta1.Available)
 		instance.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
-		instance.Status.ReplicantNodesStatus.UpdateRevision = preRs.Labels[appsv2beta1.PodTemplateHashLabelKey]
+		instance.Status.ReplicantNodesStatus.UpdateRevision = preRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	} else {
 		storageRs := &appsv1.ReplicaSet{}
@@ -90,9 +90,9 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EM
 	preRs := generateReplicaSet(instance)
 	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
 	preRs.Name = preRs.Name + "-" + podTemplateSpecHash
-	preRs.Labels = appsv2beta1.CloneAndAddLabel(preRs.Labels, appsv2beta1.PodTemplateHashLabelKey, podTemplateSpecHash)
-	preRs.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv2beta1.PodTemplateHashLabelKey, podTemplateSpecHash)
-	preRs.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv2beta1.PodTemplateHashLabelKey, podTemplateSpecHash)
+	preRs.Labels = appsv2beta1.CloneAndAddLabel(preRs.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preRs.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preRs.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
 
 	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
 	if updateRs == nil {

@@ -155,27 +155,27 @@ func (r *EMQX) defaultNames() {
 }
 
 func (r *EMQX) defaultLabels() {
-	r.Labels = AddLabel(r.Labels, ManagerByLabelKey, "emqx-operator")
-	r.Labels = AddLabel(r.Labels, InstanceNameLabelKey, r.GetName())
+	r.Labels = AddLabel(r.Labels, LabelsManagedByKey, "emqx-operator")
+	r.Labels = AddLabel(r.Labels, LabelsInstanceKey, r.GetName())
 
 	// Dashboard service
-	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, ManagerByLabelKey, "emqx-operator")
-	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, InstanceNameLabelKey, r.GetName())
+	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, LabelsManagedByKey, "emqx-operator")
+	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, LabelsInstanceKey, r.GetName())
 
 	// Listeners service
-	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, ManagerByLabelKey, "emqx-operator")
-	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, InstanceNameLabelKey, r.GetName())
+	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, LabelsManagedByKey, "emqx-operator")
+	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, LabelsInstanceKey, r.GetName())
 
 	// Core
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, ManagerByLabelKey, "emqx-operator")
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, InstanceNameLabelKey, r.GetName())
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, DBRoleLabelKey, "core")
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, LabelsManagedByKey, "emqx-operator")
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, LabelsInstanceKey, r.GetName())
+	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, LabelsComponentKey, "core")
 
 	// Replicant
 	if r.Spec.ReplicantTemplate != nil {
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, ManagerByLabelKey, "emqx-operator")
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, InstanceNameLabelKey, r.GetName())
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, DBRoleLabelKey, "replicant")
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, LabelsManagedByKey, "emqx-operator")
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, LabelsInstanceKey, r.GetName())
+		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, LabelsComponentKey, "replicant")
 	}
 }
 
@@ -185,7 +185,7 @@ func (r *EMQX) defaultAnnotations() {
 		annotations = make(map[string]string)
 	}
 	delete(annotations, "kubectl.kubernetes.io/last-applied-config")
-	delete(annotations, LastEMQXConfigAnnotationKey)
+	delete(annotations, AnnotationsLastEMQXConfigKey)
 
 	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
 	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
