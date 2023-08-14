@@ -76,7 +76,7 @@ func TestGenerateDashboardService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "emqx-dashboard",
 					Labels: map[string]string{
-						appsv2beta1.InstanceNameLabelKey: "emqx",
+						appsv2beta1.LabelsInstanceKey: "emqx",
 					},
 					Annotations: map[string]string{
 						"foo": "bar",
@@ -106,7 +106,7 @@ func TestGenerateDashboardService(t *testing.T) {
 			Name:      "emqx-dashboard",
 			Namespace: "emqx",
 			Labels: map[string]string{
-				appsv2beta1.InstanceNameLabelKey: "emqx",
+				appsv2beta1.LabelsInstanceKey: "emqx",
 			},
 			Annotations: map[string]string{
 				"foo": "bar",

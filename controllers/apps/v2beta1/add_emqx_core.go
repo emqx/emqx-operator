@@ -47,7 +47,7 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		instance.Status.RemoveCondition(appsv2beta1.Ready)
 		instance.Status.RemoveCondition(appsv2beta1.Available)
 		instance.Status.RemoveCondition(appsv2beta1.CoreNodesReady)
-		instance.Status.CoreNodesStatus.UpdateRevision = preSts.Labels[appsv2beta1.PodTemplateHashLabelKey]
+		instance.Status.CoreNodesStatus.UpdateRevision = preSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 		_ = a.Client.Status().Update(ctx, instance)
 	} else {
 		storageSts := &appsv1.StatefulSet{}
@@ -84,9 +84,9 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2beta1.E
 	preSts := generateStatefulSet(instance)
 	podTemplateSpecHash := computeHash(preSts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
 	preSts.Name = preSts.Name + "-" + podTemplateSpecHash
-	preSts.Labels = appsv2beta1.CloneAndAddLabel(preSts.Labels, appsv2beta1.PodTemplateHashLabelKey, podTemplateSpecHash)
-	preSts.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv2beta1.PodTemplateHashLabelKey, podTemplateSpecHash)
-	preSts.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preSts.Spec.Selector, appsv2beta1.PodTemplateHashLabelKey, podTemplateSpecHash)
+	preSts.Labels = appsv2beta1.CloneAndAddLabel(preSts.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preSts.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preSts.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preSts.Spec.Selector, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
 
 	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
 	if updateSts == nil {

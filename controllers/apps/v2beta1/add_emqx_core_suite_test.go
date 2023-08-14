@@ -87,7 +87,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.Replicas }, Equal(int32(2))),
 			)
 
-			instance.Status.CoreNodesStatus.UpdateRevision = sts.Labels[appsv2beta1.PodTemplateHashLabelKey]
+			instance.Status.CoreNodesStatus.UpdateRevision = sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(4)
 		})
 

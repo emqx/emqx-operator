@@ -8,15 +8,17 @@ const DefaultBootstrapAPIKey string = "emqx-operator-controller"
 
 const (
 	// labels
-	ManagerByLabelKey       string = "apps.emqx.io/managed-by"
-	InstanceNameLabelKey    string = "apps.emqx.io/instance"
-	DBRoleLabelKey          string = "apps.emqx.io/db-role"
-	PodTemplateHashLabelKey string = "apps.emqx.io/pod-template-hash"
+	LabelsNameKey            string = "app.kubernetes.io/name"       // emqx
+	LabelsInstanceKey        string = "app.kubernetes.io/instance"   // my-emqx
+	LabelsComponentKey       string = "app.kubernetes.io/component"  // core, replicant, dashboard, listeners, config
+	LabelsPartOfKey          string = "app.kubernetes.io/part-of"    // emqx
+	LabelsManagedByKey       string = "app.kubernetes.io/managed-by" // emqx-operator
+	LabelsPodTemplateHashKey string = "apps.emqx.io/pod-template-hash"
 )
 
 const (
 	// annotations
-	LastEMQXConfigAnnotationKey = "apps.emqx.io/last-emqx-configuration"
+	AnnotationsLastEMQXConfigKey string = "apps.emqx.io/last-emqx-configuration"
 )
 
 const (

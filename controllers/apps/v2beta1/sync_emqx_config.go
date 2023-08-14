@@ -27,7 +27,7 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 		return subResult{}
 	}
 
-	lastConfig, ok := instance.Annotations[appsv2beta1.LastEMQXConfigAnnotationKey]
+	lastConfig, ok := instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey]
 	if !ok {
 		// If it is the first time to start and Mode = Replace, update the EMQX configuration once.
 		if instance.Spec.Config.Mode == "Replace" {
@@ -45,7 +45,7 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 		if instance.Annotations == nil {
 			instance.Annotations = map[string]string{}
 		}
-		instance.Annotations[appsv2beta1.LastEMQXConfigAnnotationKey] = instance.Spec.Config.Data
+		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = instance.Spec.Config.Data
 		if err := s.Client.Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx instance")}
 		}
@@ -63,7 +63,7 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
 		}
 
-		instance.Annotations[appsv2beta1.LastEMQXConfigAnnotationKey] = instance.Spec.Config.Data
+		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = instance.Spec.Config.Data
 		if err := s.Client.Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx instance")}
 		}

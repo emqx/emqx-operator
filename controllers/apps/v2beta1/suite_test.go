@@ -54,8 +54,8 @@ var emqx *appsv2beta1.EMQX = &appsv2beta1.EMQX{
 		UID:  "fake-1234567890",
 		Name: "emqx",
 		Labels: map[string]string{
-			appsv2beta1.ManagerByLabelKey:    "emqx-operator",
-			appsv2beta1.InstanceNameLabelKey: "emqx",
+			appsv2beta1.LabelsManagedByKey: "emqx-operator",
+			appsv2beta1.LabelsInstanceKey:  "emqx",
 		},
 	},
 	Spec: appsv2beta1.EMQXSpec{

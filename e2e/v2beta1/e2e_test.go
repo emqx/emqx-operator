@@ -94,7 +94,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
 				instance.Spec.CoreTemplate.Labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
 		})
@@ -139,7 +139,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
 				instance.Spec.CoreTemplate.Labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
 		})
@@ -184,7 +184,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
 				instance.Spec.CoreTemplate.Labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
 		})
@@ -219,7 +219,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
 				instance.Spec.CoreTemplate.Labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
 		})
@@ -233,7 +233,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					client.MatchingLabels(instance.Labels),
 				)
 				for i, sts := range list.Items {
-					if podTemplateHash, ok := sts.Labels[appsv2beta1.PodTemplateHashLabelKey]; ok {
+					if podTemplateHash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
 						if podTemplateHash == instance.Status.CoreNodesStatus.CurrentRevision {
 							list.Items = append(list.Items[:i], list.Items[i+1:]...)
 						}
@@ -333,7 +333,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
 				instance.Spec.ReplicantTemplate.Labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
 			))
 		})
@@ -385,7 +385,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
 				instance.Spec.ReplicantTemplate.Labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
 			))
 		})
@@ -423,7 +423,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
 				instance.Spec.ReplicantTemplate.Labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
 			))
 		})
@@ -437,7 +437,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					client.MatchingLabels(instance.Labels),
 				)
 				for i, sts := range list.Items {
-					if podTemplateHash, ok := sts.Labels[appsv2beta1.PodTemplateHashLabelKey]; ok {
+					if podTemplateHash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
 						if podTemplateHash == instance.Status.ReplicantNodesStatus.CurrentRevision {
 							list.Items = append(list.Items[:i], list.Items[i+1:]...)
 						}
@@ -460,7 +460,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					client.MatchingLabels(instance.Labels),
 				)
 				for i, sts := range list.Items {
-					if podTemplateHash, ok := sts.Labels[appsv2beta1.PodTemplateHashLabelKey]; ok {
+					if podTemplateHash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
 						if podTemplateHash == instance.Status.CoreNodesStatus.CurrentRevision {
 							list.Items = append(list.Items[:i], list.Items[i+1:]...)
 						}

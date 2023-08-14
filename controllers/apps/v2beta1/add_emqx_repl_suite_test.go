@@ -135,7 +135,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				WithTransform(func(s *appsv1.ReplicaSet) int32 { return s.Status.Replicas }, Equal(int32(3))),
 			)
 
-			instance.Status.ReplicantNodesStatus.UpdateRevision = rs.Labels[appsv2beta1.PodTemplateHashLabelKey]
+			instance.Status.ReplicantNodesStatus.UpdateRevision = rs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(0)
 		})
 
@@ -164,7 +164,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				)
 				return list.Items
 			}).Should(HaveLen(1))
-			instance.Status.ReplicantNodesStatus.UpdateRevision = list.Items[0].Labels[appsv2beta1.PodTemplateHashLabelKey]
+			instance.Status.ReplicantNodesStatus.UpdateRevision = list.Items[0].Labels[appsv2beta1.LabelsPodTemplateHashKey]
 
 			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(4)
 		})

@@ -95,7 +95,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Namespace:    instance.Namespace,
 				Labels: appsv2beta1.CloneAndAddLabel(
 					instance.Labels,
-					appsv2beta1.PodTemplateHashLabelKey,
+					appsv2beta1.LabelsPodTemplateHashKey,
 					"update",
 				),
 			},
@@ -104,7 +104,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Selector: &metav1.LabelSelector{
 					MatchLabels: appsv2beta1.CloneAndAddLabel(
 						instance.Labels,
-						appsv2beta1.PodTemplateHashLabelKey,
+						appsv2beta1.LabelsPodTemplateHashKey,
 						"update",
 					),
 				},
@@ -112,7 +112,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: appsv2beta1.CloneAndAddLabel(
 							instance.Labels,
-							appsv2beta1.PodTemplateHashLabelKey,
+							appsv2beta1.LabelsPodTemplateHashKey,
 							"update",
 						),
 					},
@@ -126,9 +126,9 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		}
 
 		currentSts = updateSts.DeepCopy()
-		currentSts.Labels[appsv2beta1.PodTemplateHashLabelKey] = "current"
-		currentSts.Spec.Selector.MatchLabels[appsv2beta1.PodTemplateHashLabelKey] = "current"
-		currentSts.Spec.Template.Labels[appsv2beta1.PodTemplateHashLabelKey] = "current"
+		currentSts.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
+		currentSts.Spec.Selector.MatchLabels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
+		currentSts.Spec.Template.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
 
 		Expect(k8sClient.Create(context.Background(), updateSts)).Should(Succeed())
 		updateSts.Status.Replicas = 1
@@ -146,7 +146,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Namespace:    instance.Namespace,
 				Labels: appsv2beta1.CloneAndAddLabel(
 					instance.Labels,
-					appsv2beta1.PodTemplateHashLabelKey,
+					appsv2beta1.LabelsPodTemplateHashKey,
 					"update",
 				),
 			},
@@ -155,7 +155,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Selector: &metav1.LabelSelector{
 					MatchLabels: appsv2beta1.CloneAndAddLabel(
 						instance.Labels,
-						appsv2beta1.PodTemplateHashLabelKey,
+						appsv2beta1.LabelsPodTemplateHashKey,
 						"update",
 					),
 				},
@@ -163,7 +163,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: appsv2beta1.CloneAndAddLabel(
 							instance.Labels,
-							appsv2beta1.PodTemplateHashLabelKey,
+							appsv2beta1.LabelsPodTemplateHashKey,
 							"update",
 						),
 					},
@@ -177,9 +177,9 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		}
 
 		currentRs = updateRs.DeepCopy()
-		currentRs.Labels[appsv2beta1.PodTemplateHashLabelKey] = "current"
-		currentRs.Spec.Selector.MatchLabels[appsv2beta1.PodTemplateHashLabelKey] = "current"
-		currentRs.Spec.Template.Labels[appsv2beta1.PodTemplateHashLabelKey] = "current"
+		currentRs.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
+		currentRs.Spec.Selector.MatchLabels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
+		currentRs.Spec.Template.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
 
 		Expect(k8sClient.Create(context.Background(), updateRs)).Should(Succeed())
 		updateRs.Status.Replicas = 1

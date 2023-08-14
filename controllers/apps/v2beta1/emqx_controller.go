@@ -174,7 +174,7 @@ func newRequester(k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq
 		if instance.Status.CoreNodesStatus.UpdateRevision != "" {
 			labels = appsv2beta1.CloneAndAddLabel(
 				labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.UpdateRevision,
 			)
 		}
@@ -182,7 +182,7 @@ func newRequester(k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq
 		if instance.Status.CoreNodesStatus.CurrentRevision != "" {
 			labels = appsv2beta1.CloneAndAddLabel(
 				labels,
-				appsv2beta1.PodTemplateHashLabelKey,
+				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			)
 

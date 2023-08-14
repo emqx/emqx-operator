@@ -33,7 +33,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2beta1.EMQX
 		} else {
 			currentRs = updateRs
 		}
-		instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2beta1.PodTemplateHashLabelKey]
+		instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 		if err := u.Client.Status().Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update status")}
 		}
@@ -47,7 +47,7 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2beta1.EMQX
 		} else {
 			currentSts = updateSts
 		}
-		instance.Status.CoreNodesStatus.CurrentRevision = currentSts.Labels[appsv2beta1.PodTemplateHashLabelKey]
+		instance.Status.CoreNodesStatus.CurrentRevision = currentSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 
 		if err := u.Client.Status().Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update status")}
