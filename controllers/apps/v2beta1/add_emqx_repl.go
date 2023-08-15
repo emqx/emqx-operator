@@ -3,6 +3,7 @@ package v2beta1
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -117,6 +118,22 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EM
 }
 
 func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
+	var containerPort corev1.ContainerPort
+	svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
+	if err != nil {
+		containerPort = corev1.ContainerPort{
+			Name:          "dashboard",
+			Protocol:      corev1.ProtocolTCP,
+			ContainerPort: 18083,
+		}
+	} else {
+		containerPort = corev1.ContainerPort{
+			Name:          "dashboard",
+			Protocol:      corev1.ProtocolTCP,
+			ContainerPort: svcPort.Port,
+		}
+	}
+
 	return &appsv1.ReplicaSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ReplicaSet",
@@ -158,8 +175,15 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
 							Command:         instance.Spec.ReplicantTemplate.Spec.Command,
 							Args:            instance.Spec.ReplicantTemplate.Spec.Args,
-							Ports:           instance.Spec.ReplicantTemplate.Spec.Ports,
+							Ports: appsv2beta1.MergeContainerPorts(
+								instance.Spec.ReplicantTemplate.Spec.Ports,
+								[]corev1.ContainerPort{containerPort},
+							),
 							Env: append([]corev1.EnvVar{
+								{
+									Name:  "EMQX_DASHBOARD__LISTENERS__HTTP__BIND",
+									Value: strconv.Itoa(int(containerPort.ContainerPort)),
+								},
 								{
 									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
 									Value: "dns",
