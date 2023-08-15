@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -111,6 +112,22 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2beta1.E
 }
 
 func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
+	var containerPort corev1.ContainerPort
+	svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
+	if err != nil {
+		containerPort = corev1.ContainerPort{
+			Name:          "dashboard",
+			Protocol:      corev1.ProtocolTCP,
+			ContainerPort: 18083,
+		}
+	} else {
+		containerPort = corev1.ContainerPort{
+			Name:          "dashboard",
+			Protocol:      corev1.ProtocolTCP,
+			ContainerPort: svcPort.Port,
+		}
+	}
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -154,7 +171,10 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 							ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
 							Command:         instance.Spec.CoreTemplate.Spec.Command,
 							Args:            instance.Spec.CoreTemplate.Spec.Args,
-							Ports:           instance.Spec.CoreTemplate.Spec.Ports,
+							Ports: appsv2beta1.MergeContainerPorts(
+								instance.Spec.CoreTemplate.Spec.Ports,
+								[]corev1.ContainerPort{containerPort},
+							),
 							Env: append([]corev1.EnvVar{
 								{
 									Name: "POD_NAME",
@@ -163,6 +183,10 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 											FieldPath: "metadata.name",
 										},
 									},
+								},
+								{
+									Name:  "EMQX_DASHBOARD__LISTENERS__HTTP__BIND",
+									Value: strconv.Itoa(int(containerPort.ContainerPort)),
 								},
 								{
 									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",

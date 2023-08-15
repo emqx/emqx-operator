@@ -52,10 +52,8 @@ func (r *EMQX) Default() {
 	r.defaultNames()
 	r.defaultLabels()
 	r.defaultAnnotations()
-	r.defaultConfiguration()
 	r.defaultListenersServiceTemplate()
 	r.defaultDashboardServiceTemplate()
-	r.defaultContainerPort()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -195,13 +193,6 @@ func (r *EMQX) defaultAnnotations() {
 	}
 }
 
-func (r *EMQX) defaultConfiguration() {
-	configuration, _ := hocon.ParseString(r.Spec.Config.Data)
-	if configuration.GetString("dashboard.listeners.http.bind") == "" {
-		r.Spec.Config.Data = "dashboard.listeners.http.bind = 18083\n" + r.Spec.Config.Data
-	}
-}
-
 func (r *EMQX) defaultListenersServiceTemplate() {
 	r.Spec.ListenersServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
 	if IsExistReplicant(r) {
@@ -228,34 +219,4 @@ func (r *EMQX) defaultDashboardServiceTemplate() {
 			*dashboardPort,
 		},
 	)
-}
-
-func (r *EMQX) defaultContainerPort() {
-	var containerPort = corev1.ContainerPort{
-		Name:          "dashboard",
-		Protocol:      corev1.ProtocolTCP,
-		ContainerPort: 18083,
-	}
-
-	svcPort, err := GetDashboardServicePort(r.Spec.Config.Data)
-	if err != nil {
-		emqxlog.Info("failed to get dashboard service port in config, use 18083", "error", err)
-	} else {
-		containerPort.ContainerPort = svcPort.Port
-	}
-
-	r.Spec.CoreTemplate.Spec.Ports = MergeContainerPorts(
-		r.Spec.CoreTemplate.Spec.Ports,
-		[]corev1.ContainerPort{
-			containerPort,
-		},
-	)
-	if r.Spec.ReplicantTemplate != nil {
-		r.Spec.ReplicantTemplate.Spec.Ports = MergeContainerPorts(
-			r.Spec.ReplicantTemplate.Spec.Ports,
-			[]corev1.ContainerPort{
-				containerPort,
-			},
-		)
-	}
 }

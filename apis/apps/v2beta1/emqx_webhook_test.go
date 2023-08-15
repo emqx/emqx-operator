@@ -19,8 +19,6 @@ package v2beta1
 import (
 	"testing"
 
-	"github.com/rory-z/go-hocon"
-
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -168,80 +166,6 @@ func TestDefaultLabels(t *testing.T) {
 	}, instance.Spec.ReplicantTemplate.Labels)
 }
 
-func TestDefaultConfiguration(t *testing.T) {
-	t.Run("empty configuration", func(t *testing.T) {
-		instance := &EMQX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "webhook-test",
-				Namespace: "default",
-			},
-			Spec: EMQXSpec{
-				Config: Config{
-					Data: "",
-				},
-			},
-		}
-		instance.defaultConfiguration()
-
-		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
-		assert.Nil(t, err)
-		assert.Equal(t, "18083", configuration.GetString("dashboard.listeners.http.bind"))
-	})
-
-	t.Run("already set dashboard listeners", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				Config: Config{
-					Data: `dashboard.listeners.http.bind = "28083"`,
-				},
-			},
-		}
-		instance.defaultConfiguration()
-
-		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
-		assert.Nil(t, err)
-		assert.Equal(t, `"28083"`, configuration.GetString("dashboard.listeners.http.bind"))
-	})
-
-	t.Run("already set listener", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				Config: Config{
-					Data: `listeners.tcp.default.bind = "0.0.0.0:11883"`,
-				},
-			},
-		}
-		instance.defaultConfiguration()
-
-		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
-		assert.Nil(t, err)
-		assert.Equal(t, "\"0.0.0.0:11883\"", configuration.GetString("listeners.tcp.default.bind"))
-	})
-
-	t.Run("other style set listener", func(t *testing.T) {
-		instance := &EMQX{
-			Spec: EMQXSpec{
-				Config: Config{
-					Data: `
-						listeners {
-							tcp {
-								default {
-									bind = "0.0.0.0:11883"
-								}
-							}
-						}
-					`,
-				},
-			},
-		}
-		instance.defaultConfiguration()
-
-		configuration, err := hocon.ParseString(instance.Spec.Config.Data)
-		assert.Nil(t, err)
-		assert.Equal(t, "\"0.0.0.0:11883\"", configuration.GetString("listeners.tcp.default.bind"))
-	})
-}
-
 func TestDefaultListeneresServiceTemplate(t *testing.T) {
 	t.Run("check selector", func(t *testing.T) {
 		instance := &EMQX{
@@ -313,68 +237,6 @@ func TestDefaultDashboardServiceTemplate(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			"foo": "bar",
 		}, instance.Spec.DashboardServiceTemplate.Spec.Selector)
-	})
-}
-
-func TestDefaultContainerPort(t *testing.T) {
-	instance := &EMQX{}
-	t.Run("set default container port to core template", func(t *testing.T) {
-		instance.defaultContainerPort()
-		assert.Equal(t, len(instance.Spec.CoreTemplate.Spec.Ports), 1)
-		defaultPort := instance.Spec.CoreTemplate.Spec.Ports[0]
-		assert.Equal(t, int32(18083), defaultPort.ContainerPort)
-		assert.Equal(t, "dashboard", defaultPort.Name)
-		assert.Equal(t, corev1.ProtocolTCP, defaultPort.Protocol)
-	})
-
-	t.Run("set default container port to replica template", func(t *testing.T) {
-		instance.Spec.ReplicantTemplate = &EMQXReplicantTemplate{}
-		instance.defaultContainerPort()
-
-		assert.Equal(t, len(instance.Spec.ReplicantTemplate.Spec.Ports), 1)
-		defaultPort := instance.Spec.ReplicantTemplate.Spec.Ports[0]
-		assert.Equal(t, int32(18083), defaultPort.ContainerPort)
-		assert.Equal(t, "dashboard", defaultPort.Name)
-		assert.Equal(t, corev1.ProtocolTCP, defaultPort.Protocol)
-	})
-
-	t.Run("merge container port by same name", func(t *testing.T) {
-		instance.Spec.CoreTemplate.Spec.Ports = []corev1.ContainerPort{
-			{
-				Name:          "dashboard",
-				ContainerPort: 18084,
-			},
-			{
-				Name:          "other-port",
-				ContainerPort: 1883,
-			},
-		}
-		instance.defaultContainerPort()
-		assert.Equal(t, len(instance.Spec.CoreTemplate.Spec.Ports), 2)
-		index := -1
-		ports := instance.Spec.CoreTemplate.Spec.Ports
-		for index = range ports {
-			if ports[index].Name == "dashboard" {
-				break
-			}
-		}
-		assert.NotEqual(t, index, -1, "missing container port named as dashboard")
-		assert.NotEqual(t, index, len(ports), "missing container port named as dashboard")
-		assert.Equal(t, ports[index].ContainerPort, int32(18084))
-	})
-
-	t.Run("merge container port by same port", func(t *testing.T) {
-		instance.Spec.CoreTemplate.Spec.Ports = []corev1.ContainerPort{
-			{
-				Name:          "user-defined-dashboard",
-				ContainerPort: 18083,
-			},
-		}
-		instance.defaultContainerPort()
-		assert.Equal(t, len(instance.Spec.CoreTemplate.Spec.Ports), 1)
-		port := instance.Spec.CoreTemplate.Spec.Ports[0]
-		assert.Equal(t, port.Name, "user-defined-dashboard")
-		assert.Equal(t, port.ContainerPort, int32(18083))
 	})
 }
 
