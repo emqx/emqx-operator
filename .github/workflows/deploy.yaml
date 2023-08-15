@@ -64,6 +64,9 @@ jobs:
             --set image.tag=${{ github.sha }} \
             --namespace emqx-operator-system \
             --create-namespace
+          kubectl patch -n emqx-operator-system deployment emqx-operator-controller-manager \
+            --type=json \
+            -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--zap-devel=true"}]'
       - name: Check operator
         timeout-minutes: 5
         run: kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
