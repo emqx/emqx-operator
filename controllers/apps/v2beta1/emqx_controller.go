@@ -112,6 +112,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	for _, subReconciler := range []subReconciler{
 		&addBootstrap{r},
+		&updateStatus{r},
 		&addCore{r},
 		&addRepl{r},
 		&syncConfig{r},
