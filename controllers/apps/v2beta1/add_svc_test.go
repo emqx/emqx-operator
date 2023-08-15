@@ -125,5 +125,5 @@ func TestGenerateDashboardService(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expect, generateDashboardService(instance))
+	assert.Equal(t, expect, generateDashboardService(instance, ""))
 }

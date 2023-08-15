@@ -24,9 +24,7 @@ import (
 	// "github.com/gurkankaymak/hocon"
 
 	hocon "github.com/rory-z/go-hocon"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -52,8 +50,6 @@ func (r *EMQX) Default() {
 	r.defaultNames()
 	r.defaultLabels()
 	r.defaultAnnotations()
-	r.defaultListenersServiceTemplate()
-	r.defaultDashboardServiceTemplate()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -191,32 +187,4 @@ func (r *EMQX) defaultAnnotations() {
 	if r.Spec.ReplicantTemplate != nil {
 		r.Spec.ReplicantTemplate.Annotations = mergeMap(r.Spec.ReplicantTemplate.Annotations, annotations)
 	}
-}
-
-func (r *EMQX) defaultListenersServiceTemplate() {
-	r.Spec.ListenersServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
-	if IsExistReplicant(r) {
-		r.Spec.ListenersServiceTemplate.Spec.Selector = r.Spec.ReplicantTemplate.Labels
-	}
-}
-
-func (r *EMQX) defaultDashboardServiceTemplate() {
-	r.Spec.DashboardServiceTemplate.Spec.Selector = r.Spec.CoreTemplate.Labels
-	dashboardPort, err := GetDashboardServicePort(r.Spec.Config.Data)
-	if err != nil {
-		emqxlog.Info("failed to get dashboard service port in config, use 18083", "error", err)
-		dashboardPort = &corev1.ServicePort{
-			Name:       "dashboard",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       18083,
-			TargetPort: intstr.Parse("18083"),
-		}
-	}
-
-	r.Spec.DashboardServiceTemplate.Spec.Ports = MergeServicePorts(
-		r.Spec.DashboardServiceTemplate.Spec.Ports,
-		[]corev1.ServicePort{
-			*dashboardPort,
-		},
-	)
 }

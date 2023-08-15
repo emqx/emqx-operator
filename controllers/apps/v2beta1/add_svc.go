@@ -18,11 +18,6 @@ type addSvc struct {
 }
 
 func (a *addSvc) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
-	resources := []client.Object{
-		generateHeadlessService(instance),
-		generateDashboardService(instance),
-	}
-
 	configMap := &corev1.ConfigMap{}
 	if err := a.Client.Get(ctx, types.NamespacedName{
 		Name:      instance.ConfigsNamespacedName().Name,
@@ -31,14 +26,11 @@ func (a *addSvc) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ in
 		return subResult{err: emperror.Wrap(err, "failed to get configmap")}
 	}
 
-	ports, err := appsv2beta1.GetListenersServicePorts(configMap.Data["emqx.conf"])
-	if err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to get listeners service ports")}
-	}
-
-	listeners := generateListenerService(instance, ports)
-	if listeners != nil {
-		resources = append(resources, listeners)
+	configStr := configMap.Data["emqx.conf"]
+	resources := []client.Object{
+		generateHeadlessService(instance),
+		generateDashboardService(instance, configStr),
+		generateListenerService(instance, configStr),
 	}
 
 	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
@@ -84,7 +76,25 @@ func generateHeadlessService(instance *appsv2beta1.EMQX) *corev1.Service {
 	return headlessSvc
 }
 
-func generateDashboardService(instance *appsv2beta1.EMQX) *corev1.Service {
+func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
+	port, err := appsv2beta1.GetDashboardServicePort(configStr)
+	if err != nil {
+		port = &corev1.ServicePort{
+			Name:       "dashboard",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       18083,
+			TargetPort: intstr.Parse("18083"),
+		}
+	}
+
+	svc := instance.Spec.DashboardServiceTemplate.DeepCopy()
+	svc.Spec.Ports = appsv2beta1.MergeServicePorts(
+		svc.Spec.Ports,
+		[]corev1.ServicePort{
+			*port,
+		},
+	)
+
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -92,22 +102,53 @@ func generateDashboardService(instance *appsv2beta1.EMQX) *corev1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
-			Name:        instance.Spec.DashboardServiceTemplate.Name,
-			Labels:      instance.Spec.DashboardServiceTemplate.Labels,
-			Annotations: instance.Spec.DashboardServiceTemplate.Annotations,
+			Name:        svc.Name,
+			Labels:      svc.Labels,
+			Annotations: svc.Annotations,
 		},
-		Spec: instance.Spec.DashboardServiceTemplate.Spec,
+		Spec: svc.Spec,
 	}
 }
 
-func generateListenerService(instance *appsv2beta1.EMQX, ports []corev1.ServicePort) *corev1.Service {
-	listener := instance.Spec.ListenersServiceTemplate.DeepCopy()
-	listener.Spec.Ports = appsv2beta1.MergeServicePorts(
-		listener.Spec.Ports,
+func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
+	ports, err := appsv2beta1.GetListenersServicePorts(configStr)
+	if err != nil {
+		ports = append(ports, []corev1.ServicePort{
+			{
+				Name:       "tcp-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       1883,
+				TargetPort: intstr.FromInt(1883),
+			},
+			{
+				Name:       "ssl-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8883,
+				TargetPort: intstr.FromInt(8883),
+			},
+			{
+				Name:       "ws-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8083,
+				TargetPort: intstr.FromInt(8083),
+			},
+			{
+				Name:       "wss-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8084,
+				TargetPort: intstr.FromInt(8084),
+			},
+		}...)
+	}
+
+	svc := instance.Spec.ListenersServiceTemplate.DeepCopy()
+	svc.Spec.Ports = appsv2beta1.MergeServicePorts(
+		svc.Spec.Ports,
 		ports,
 	)
-	if len(listener.Spec.Ports) == 0 {
-		return nil
+	svc.Spec.Selector = instance.Spec.CoreTemplate.Labels
+	if appsv2beta1.IsExistReplicant(instance) {
+		svc.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
 	}
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -116,10 +157,10 @@ func generateListenerService(instance *appsv2beta1.EMQX, ports []corev1.ServiceP
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
-			Name:        listener.Name,
-			Labels:      listener.Labels,
-			Annotations: listener.Annotations,
+			Name:        svc.Name,
+			Labels:      svc.Labels,
+			Annotations: svc.Annotations,
 		},
-		Spec: listener.Spec,
+		Spec: svc.Spec,
 	}
 }
