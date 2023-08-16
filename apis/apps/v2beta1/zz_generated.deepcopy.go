@@ -344,12 +344,20 @@ func (in *EMQXSpec) DeepCopyInto(out *EMQXSpec) {
 	}
 	out.Config = in.Config
 	out.UpdateStrategy = in.UpdateStrategy
-	in.DashboardServiceTemplate.DeepCopyInto(&out.DashboardServiceTemplate)
-	in.ListenersServiceTemplate.DeepCopyInto(&out.ListenersServiceTemplate)
 	in.CoreTemplate.DeepCopyInto(&out.CoreTemplate)
 	if in.ReplicantTemplate != nil {
 		in, out := &in.ReplicantTemplate, &out.ReplicantTemplate
 		*out = new(EMQXReplicantTemplate)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DashboardServiceTemplate != nil {
+		in, out := &in.DashboardServiceTemplate, &out.DashboardServiceTemplate
+		*out = new(v1.Service)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ListenersServiceTemplate != nil {
+		in, out := &in.ListenersServiceTemplate, &out.ListenersServiceTemplate
+		*out = new(v1.Service)
 		(*in).DeepCopyInto(*out)
 	}
 }
