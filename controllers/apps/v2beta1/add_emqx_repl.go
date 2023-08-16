@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +32,10 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		return subResult{}
 	}
 
-	preRs := a.getNewReplicaSet(ctx, instance)
+	preRs, err := a.getNewReplicaSet(ctx, instance)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to get new replicaSet")}
+	}
 	if preRs.UID == "" {
 		_ = ctrl.SetControllerReference(instance, preRs, a.Scheme)
 		if err := a.Handler.Create(preRs); err != nil {
@@ -87,40 +91,17 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 	return subResult{}
 }
 
-func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
-	preRs := generateReplicaSet(instance)
-	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
-	preRs.Name = preRs.Name + "-" + podTemplateSpecHash
-	preRs.Labels = appsv2beta1.CloneAndAddLabel(preRs.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
-	preRs.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
-	preRs.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
-
-	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
-	if updateRs == nil {
-		return preRs
+func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EMQX) (*appsv1.ReplicaSet, error) {
+	configMap := &corev1.ConfigMap{}
+	if err := a.Client.Get(ctx, types.NamespacedName{
+		Name:      instance.ConfigsNamespacedName().Name,
+		Namespace: instance.Namespace,
+	}, configMap); err != nil {
+		return nil, emperror.Wrap(err, "failed to get configMap")
 	}
 
-	patchResult, _ := a.Patcher.Calculate(
-		updateRs.DeepCopy(),
-		preRs.DeepCopy(),
-		justCheckPodTemplate(),
-	)
-	if patchResult.IsEmpty() {
-		preRs.ObjectMeta = updateRs.DeepCopy().ObjectMeta
-		preRs.Spec.Template.ObjectMeta = updateRs.DeepCopy().Spec.Template.ObjectMeta
-		preRs.Spec.Selector = updateRs.DeepCopy().Spec.Selector
-		return preRs
-	}
-	logger := log.FromContext(ctx)
-	logger.V(1).Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
-
-	return preRs
-}
-
-func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 	var containerPort corev1.ContainerPort
-	svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
-	if err != nil {
+	if svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data); err != nil {
 		containerPort = corev1.ContainerPort{
 			Name:          "dashboard",
 			Protocol:      corev1.ProtocolTCP,
@@ -134,6 +115,48 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 		}
 	}
 
+	preRs := generateReplicaSet(instance)
+	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
+	preRs.Name = preRs.Name + "-" + podTemplateSpecHash
+	preRs.Labels = appsv2beta1.CloneAndAddLabel(preRs.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preRs.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preRs.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preRs.Spec.Template.Spec.Containers[0].Ports = appsv2beta1.MergeContainerPorts(
+		preRs.Spec.Template.Spec.Containers[0].Ports,
+		[]corev1.ContainerPort{
+			containerPort,
+		},
+	)
+	preRs.Spec.Template.Spec.Containers[0].Env = append([]corev1.EnvVar{
+		{Name: "EMQX_DASHBOARD__LISTENERS__HTTP__BIND", Value: strconv.Itoa(int(containerPort.ContainerPort))},
+	}, preRs.Spec.Template.Spec.Containers[0].Env...)
+
+	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
+	if updateRs == nil {
+		return preRs, nil
+	}
+
+	patchResult, err := a.Patcher.Calculate(
+		updateRs.DeepCopy(),
+		preRs.DeepCopy(),
+		justCheckPodTemplate(),
+	)
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to calculate patch result")
+	}
+	if patchResult.IsEmpty() {
+		preRs.ObjectMeta = updateRs.DeepCopy().ObjectMeta
+		preRs.Spec.Template.ObjectMeta = updateRs.DeepCopy().Spec.Template.ObjectMeta
+		preRs.Spec.Selector = updateRs.DeepCopy().Spec.Selector
+		return preRs, nil
+	}
+	logger := log.FromContext(ctx)
+	logger.V(1).Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
+
+	return preRs, nil
+}
+
+func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 	return &appsv1.ReplicaSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ReplicaSet",
@@ -175,15 +198,8 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
 							Command:         instance.Spec.ReplicantTemplate.Spec.Command,
 							Args:            instance.Spec.ReplicantTemplate.Spec.Args,
-							Ports: appsv2beta1.MergeContainerPorts(
-								instance.Spec.ReplicantTemplate.Spec.Ports,
-								[]corev1.ContainerPort{containerPort},
-							),
+							Ports:           instance.Spec.ReplicantTemplate.Spec.Ports,
 							Env: append([]corev1.EnvVar{
-								{
-									Name:  "EMQX_DASHBOARD__LISTENERS__HTTP__BIND",
-									Value: strconv.Itoa(int(containerPort.ContainerPort)),
-								},
 								{
 									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
 									Value: "dns",

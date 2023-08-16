@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,7 +26,10 @@ type addCore struct {
 }
 
 func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
-	preSts := a.getNewStatefulSet(ctx, instance)
+	preSts, err := a.getNewStatefulSet(ctx, instance)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to get new statefulSet")}
+	}
 	if preSts.UID == "" {
 		_ = ctrl.SetControllerReference(instance, preSts, a.Scheme)
 		if err := a.Handler.Create(preSts); err != nil {
@@ -81,40 +85,17 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 	return subResult{}
 }
 
-func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
-	preSts := generateStatefulSet(instance)
-	podTemplateSpecHash := computeHash(preSts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
-	preSts.Name = preSts.Name + "-" + podTemplateSpecHash
-	preSts.Labels = appsv2beta1.CloneAndAddLabel(preSts.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
-	preSts.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
-	preSts.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preSts.Spec.Selector, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
-
-	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
-	if updateSts == nil {
-		return preSts
+func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2beta1.EMQX) (*appsv1.StatefulSet, error) {
+	configMap := &corev1.ConfigMap{}
+	if err := a.Client.Get(ctx, types.NamespacedName{
+		Name:      instance.ConfigsNamespacedName().Name,
+		Namespace: instance.Namespace,
+	}, configMap); err != nil {
+		return nil, emperror.Wrap(err, "failed to get configMap")
 	}
 
-	patchResult, _ := a.Patcher.Calculate(
-		updateSts.DeepCopy(),
-		preSts.DeepCopy(),
-		justCheckPodTemplate(),
-	)
-	if patchResult.IsEmpty() {
-		preSts.ObjectMeta = updateSts.DeepCopy().ObjectMeta
-		preSts.Spec.Template.ObjectMeta = updateSts.DeepCopy().Spec.Template.ObjectMeta
-		preSts.Spec.Selector = updateSts.DeepCopy().Spec.Selector
-		return preSts
-	}
-
-	logger := log.FromContext(ctx)
-	logger.V(1).Info("got different pod template for EMQX core nodes, will create new statefulSet", "patch", string(patchResult.Patch))
-	return preSts
-}
-
-func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 	var containerPort corev1.ContainerPort
-	svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
-	if err != nil {
+	if svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data); err != nil {
 		containerPort = corev1.ContainerPort{
 			Name:          "dashboard",
 			Protocol:      corev1.ProtocolTCP,
@@ -128,6 +109,48 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 		}
 	}
 
+	preSts := generateStatefulSet(instance)
+	podTemplateSpecHash := computeHash(preSts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
+	preSts.Name = preSts.Name + "-" + podTemplateSpecHash
+	preSts.Labels = appsv2beta1.CloneAndAddLabel(preSts.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preSts.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preSts.Spec.Selector, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preSts.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
+	preSts.Spec.Template.Spec.Containers[0].Ports = appsv2beta1.MergeContainerPorts(
+		preSts.Spec.Template.Spec.Containers[0].Ports,
+		[]corev1.ContainerPort{
+			containerPort,
+		},
+	)
+	preSts.Spec.Template.Spec.Containers[0].Env = append([]corev1.EnvVar{
+		{Name: "EMQX_DASHBOARD__LISTENERS__HTTP__BIND", Value: strconv.Itoa(int(containerPort.ContainerPort))},
+	}, preSts.Spec.Template.Spec.Containers[0].Env...)
+
+	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
+	if updateSts == nil {
+		return preSts, nil
+	}
+
+	patchResult, err := a.Patcher.Calculate(
+		updateSts.DeepCopy(),
+		preSts.DeepCopy(),
+		justCheckPodTemplate(),
+	)
+	if err != nil {
+		return nil, emperror.Wrap(err, "failed to calculate patch")
+	}
+	if patchResult.IsEmpty() {
+		preSts.ObjectMeta = updateSts.DeepCopy().ObjectMeta
+		preSts.Spec.Template.ObjectMeta = updateSts.DeepCopy().Spec.Template.ObjectMeta
+		preSts.Spec.Selector = updateSts.DeepCopy().Spec.Selector
+		return preSts, nil
+	}
+
+	logger := log.FromContext(ctx)
+	logger.V(1).Info("got different pod template for EMQX core nodes, will create new statefulSet", "patch", string(patchResult.Patch))
+	return preSts, nil
+}
+
+func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -171,10 +194,7 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 							ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
 							Command:         instance.Spec.CoreTemplate.Spec.Command,
 							Args:            instance.Spec.CoreTemplate.Spec.Args,
-							Ports: appsv2beta1.MergeContainerPorts(
-								instance.Spec.CoreTemplate.Spec.Ports,
-								[]corev1.ContainerPort{containerPort},
-							),
+							Ports:           instance.Spec.CoreTemplate.Spec.Ports,
 							Env: append([]corev1.EnvVar{
 								{
 									Name: "POD_NAME",
@@ -183,10 +203,6 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 											FieldPath: "metadata.name",
 										},
 									},
-								},
-								{
-									Name:  "EMQX_DASHBOARD__LISTENERS__HTTP__BIND",
-									Value: strconv.Itoa(int(containerPort.ContainerPort)),
 								},
 								{
 									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",

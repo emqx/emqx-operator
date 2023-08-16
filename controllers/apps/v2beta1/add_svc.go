@@ -111,8 +111,8 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 }
 
 func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
-	ports, err := appsv2beta1.GetListenersServicePorts(configStr)
-	if err != nil {
+	ports, _ := appsv2beta1.GetListenersServicePorts(configStr)
+	if len(ports) == 0 {
 		ports = append(ports, []corev1.ServicePort{
 			{
 				Name:       "tcp-default",
