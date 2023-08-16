@@ -63,7 +63,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			list := &appsv1.StatefulSetList{}
 			_ = k8sClient.List(ctx, list,
 				client.InNamespace(instance.Namespace),
-				client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+				client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
 			)
 			return list.Items
 		}).Should(ConsistOf(
@@ -77,7 +77,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			Eventually(func() []appsv1.StatefulSet {
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
 				)
 				return list.Items
 			}).Should(HaveLen(1))
@@ -101,7 +101,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
 				)
 				return list.Items
 			}).Should(ConsistOf(
@@ -132,7 +132,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
 				)
 				return list.Items
 			}).WithTimeout(timeout).WithPolling(interval).Should(ConsistOf(

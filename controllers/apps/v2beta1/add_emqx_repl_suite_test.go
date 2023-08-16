@@ -78,7 +78,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 				)
 				return list.Items
 			}).Should(HaveLen(0))
@@ -96,7 +96,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 				)
 				return list.Items
 			}).Should(HaveLen(0))
@@ -110,7 +110,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 				)
 				return list.Items
 			}).Should(ConsistOf(
@@ -125,7 +125,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			Eventually(func() []appsv1.ReplicaSet {
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 				)
 				return list.Items
 			}).Should(HaveLen(1))
@@ -149,7 +149,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 				)
 				return list.Items
 			}).Should(ConsistOf(
@@ -164,7 +164,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			Eventually(func() []appsv1.ReplicaSet {
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 				)
 				return list.Items
 			}).Should(HaveLen(1))
@@ -179,7 +179,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 				)
 				return list.Items
 			}).Should(ConsistOf(
@@ -212,7 +212,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 				)
 				return list.Items
 			}).Should(ConsistOf(

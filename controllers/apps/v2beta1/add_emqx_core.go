@@ -151,6 +151,11 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2beta1.E
 }
 
 func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
+	labels := appsv2beta1.CloneAndMergeMap(
+		appsv2beta1.DefaultCoreLabels(instance),
+		instance.Spec.CoreTemplate.Labels,
+	)
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -158,20 +163,20 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
-			Name:        instance.Spec.CoreTemplate.Name,
-			Labels:      instance.Spec.CoreTemplate.Labels,
+			Name:        instance.CoreNamespacedName().Name,
 			Annotations: instance.Spec.CoreTemplate.Annotations,
+			Labels:      labels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: instance.HeadlessServiceNamespacedName().Name,
 			Replicas:    instance.Spec.CoreTemplate.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: instance.Spec.CoreTemplate.Labels,
+				MatchLabels: labels,
 			},
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: instance.Spec.CoreTemplate.Labels,
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					ReadinessGates: []corev1.PodReadinessGate{
@@ -180,12 +185,12 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 						},
 					},
 					ImagePullSecrets:   instance.Spec.ImagePullSecrets,
+					ServiceAccountName: instance.Spec.ServiceAccountName,
 					SecurityContext:    instance.Spec.CoreTemplate.Spec.PodSecurityContext,
 					Affinity:           instance.Spec.CoreTemplate.Spec.Affinity,
 					Tolerations:        instance.Spec.CoreTemplate.Spec.ToleRations,
 					NodeName:           instance.Spec.CoreTemplate.Spec.NodeName,
 					NodeSelector:       instance.Spec.CoreTemplate.Spec.NodeSelector,
-					ServiceAccountName: instance.Spec.ServiceAccountName,
 					InitContainers:     instance.Spec.CoreTemplate.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
@@ -265,11 +270,11 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 									ReadOnly:  true,
 								},
 								{
-									Name:      instance.Spec.CoreTemplate.Name + "-log",
+									Name:      instance.CoreNamespacedName().Name + "-log",
 									MountPath: "/opt/emqx/log",
 								},
 								{
-									Name:      instance.Spec.CoreTemplate.Name + "-data",
+									Name:      instance.CoreNamespacedName().Name + "-data",
 									MountPath: "/opt/emqx/data",
 								},
 							}, instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts...),
@@ -295,7 +300,7 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 							},
 						},
 						{
-							Name: instance.Spec.CoreTemplate.Name + "-log",
+							Name: instance.CoreNamespacedName().Name + "-log",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
@@ -316,9 +321,9 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      instance.Spec.CoreTemplate.Name + "-data",
+					Name:      instance.CoreNamespacedName().Name + "-data",
 					Namespace: instance.Namespace,
-					Labels:    instance.Spec.CoreTemplate.Labels,
+					Labels:    labels,
 				},
 				Spec: *volumeClaimTemplates,
 			},
@@ -326,7 +331,7 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 	} else {
 		sts.Spec.Template.Spec.Volumes = append([]corev1.Volume{
 			{
-				Name: instance.Spec.CoreTemplate.Name + "-data",
+				Name: instance.CoreNamespacedName().Name + "-data",
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},

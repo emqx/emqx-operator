@@ -134,7 +134,7 @@ func (u *updateStatus) getEMQXNodes(ctx context.Context, instance *appsv2beta1.E
 	list := &corev1.PodList{}
 	_ = u.Client.List(ctx, list,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Labels),
+		client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 	)
 	for _, node := range emqxNodes {
 		for _, p := range list.Items {

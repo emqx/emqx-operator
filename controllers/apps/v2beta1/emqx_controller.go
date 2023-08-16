@@ -170,7 +170,7 @@ func newRequester(k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq
 		port = dashboardPort.TargetPort.String()
 	}
 
-	labels := instance.Spec.CoreTemplate.Labels
+	labels := appsv2beta1.DefaultCoreLabels(instance)
 	if instance.Status.IsConditionTrue(appsv2beta1.Available) {
 		if instance.Status.CoreNodesStatus.UpdateRevision != "" {
 			labels = appsv2beta1.CloneAndAddLabel(

@@ -92,7 +92,7 @@ func generateConfigMap(instance *appsv2beta1.EMQX, data string) *corev1.ConfigMa
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.ConfigsNamespacedName().Name,
 			Namespace: instance.Namespace,
-			Labels:    instance.Labels,
+			Labels:    appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), instance.Labels),
 		},
 		Data: map[string]string{
 			"emqx.conf": data,
