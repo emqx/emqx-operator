@@ -25,18 +25,20 @@ import (
 )
 
 func getRsPodMap(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) map[types.UID][]*corev1.Pod {
+	labels := appsv2beta1.DefaultReplicantLabels(instance)
+
 	podList := &corev1.PodList{}
 	_ = k8sClient.List(ctx, podList,
 		client.InNamespace(instance.Namespace),
 		// Maybe current EMQX replicant template is nil
-		client.MatchingLabels(instance.Labels),
+		client.MatchingLabels(labels),
 	)
 
 	replicaSetList := &appsv1.ReplicaSetList{}
 	_ = k8sClient.List(ctx, replicaSetList,
 		client.InNamespace(instance.Namespace),
 		// Maybe current EMQX replicant template is nil
-		client.MatchingLabels(instance.Labels),
+		client.MatchingLabels(labels),
 	)
 	// Create a map from ReplicaSet UID to ReplicaSet.
 	rsMap := make(map[types.UID][]*corev1.Pod, len(replicaSetList.Items))
@@ -63,7 +65,7 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 	list := &appsv1.StatefulSetList{}
 	_ = k8sClient.List(ctx, list,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Spec.CoreTemplate.Labels),
+		client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
 	)
 	for _, sts := range list.Items {
 		if hash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
@@ -87,11 +89,13 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 }
 
 func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) (updateRs, currentRs *appsv1.ReplicaSet, oldRsList []*appsv1.ReplicaSet) {
+	labels := appsv2beta1.DefaultReplicantLabels(instance)
+
 	if instance.Spec.ReplicantTemplate == nil {
 		list := &appsv1.ReplicaSetList{}
 		_ = k8sClient.List(ctx, list,
 			client.InNamespace(instance.Namespace),
-			client.MatchingLabels(instance.Labels),
+			client.MatchingLabels(labels),
 		)
 		for _, rs := range list.Items {
 			oldRsList = append(oldRsList, rs.DeepCopy())
@@ -103,7 +107,7 @@ func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *a
 	list := &appsv1.ReplicaSetList{}
 	_ = k8sClient.List(ctx, list,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Spec.ReplicantTemplate.Labels),
+		client.MatchingLabels(labels),
 	)
 	for _, rs := range list.Items {
 		if hash, ok := rs.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {

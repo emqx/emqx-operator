@@ -46,10 +46,6 @@ var _ webhook.Defaulter = &EMQX{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *EMQX) Default() {
 	emqxlog.Info("default", "name", r.Name)
-
-	r.defaultNames()
-	r.defaultLabels()
-	r.defaultAnnotations()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -121,70 +117,4 @@ func (r *EMQX) ValidateDelete() error {
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
-}
-
-func (r *EMQX) defaultNames() {
-	if r.Name == "" {
-		r.Name = "emqx"
-	}
-
-	if r.Spec.DashboardServiceTemplate.Name == "" {
-		r.Spec.DashboardServiceTemplate.Name = r.Name + "-dashboard"
-	}
-
-	if r.Spec.ListenersServiceTemplate.Name == "" {
-		r.Spec.ListenersServiceTemplate.Name = r.Name + "-listeners"
-	}
-
-	if r.Spec.CoreTemplate.Name == "" {
-		r.Spec.CoreTemplate.Name = r.Name + "-core"
-	}
-
-	if r.Spec.ReplicantTemplate != nil {
-		if r.Spec.ReplicantTemplate.Name == "" {
-			r.Spec.ReplicantTemplate.Name = r.Name + "-replicant"
-		}
-	}
-
-}
-
-func (r *EMQX) defaultLabels() {
-	r.Labels = AddLabel(r.Labels, LabelsManagedByKey, "emqx-operator")
-	r.Labels = AddLabel(r.Labels, LabelsInstanceKey, r.GetName())
-
-	// Dashboard service
-	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, LabelsManagedByKey, "emqx-operator")
-	r.Spec.DashboardServiceTemplate.Labels = AddLabel(r.Spec.DashboardServiceTemplate.Labels, LabelsInstanceKey, r.GetName())
-
-	// Listeners service
-	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, LabelsManagedByKey, "emqx-operator")
-	r.Spec.ListenersServiceTemplate.Labels = AddLabel(r.Spec.ListenersServiceTemplate.Labels, LabelsInstanceKey, r.GetName())
-
-	// Core
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, LabelsManagedByKey, "emqx-operator")
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, LabelsInstanceKey, r.GetName())
-	r.Spec.CoreTemplate.Labels = AddLabel(r.Spec.CoreTemplate.Labels, LabelsComponentKey, "core")
-
-	// Replicant
-	if r.Spec.ReplicantTemplate != nil {
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, LabelsManagedByKey, "emqx-operator")
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, LabelsInstanceKey, r.GetName())
-		r.Spec.ReplicantTemplate.Labels = AddLabel(r.Spec.ReplicantTemplate.Labels, LabelsComponentKey, "replicant")
-	}
-}
-
-func (r *EMQX) defaultAnnotations() {
-	annotations := r.DeepCopy().Annotations
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	delete(annotations, "kubectl.kubernetes.io/last-applied-config")
-	delete(annotations, AnnotationsLastEMQXConfigKey)
-
-	r.Spec.DashboardServiceTemplate.Annotations = mergeMap(r.Spec.DashboardServiceTemplate.Annotations, annotations)
-	r.Spec.ListenersServiceTemplate.Annotations = mergeMap(r.Spec.ListenersServiceTemplate.Annotations, annotations)
-	r.Spec.CoreTemplate.Annotations = mergeMap(r.Spec.CoreTemplate.Annotations, annotations)
-	if r.Spec.ReplicantTemplate != nil {
-		r.Spec.ReplicantTemplate.Annotations = mergeMap(r.Spec.ReplicantTemplate.Annotations, annotations)
-	}
 }

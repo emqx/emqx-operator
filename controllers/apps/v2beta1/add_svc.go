@@ -8,7 +8,6 @@ import (
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -19,10 +18,7 @@ type addSvc struct {
 
 func (a *addSvc) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
 	configMap := &corev1.ConfigMap{}
-	if err := a.Client.Get(ctx, types.NamespacedName{
-		Name:      instance.ConfigsNamespacedName().Name,
-		Namespace: instance.Namespace,
-	}, configMap); err != nil {
+	if err := a.Client.Get(ctx, instance.ConfigsNamespacedName(), configMap); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get configmap")}
 	}
 
@@ -47,15 +43,16 @@ func generateHeadlessService(instance *appsv2beta1.EMQX) *corev1.Service {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.HeadlessServiceNamespacedName().Name,
 			Namespace: instance.Namespace,
-			Labels:    instance.Labels,
+			Name:      instance.HeadlessServiceNamespacedName().Name,
+			Labels:    appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), instance.Labels),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:                     corev1.ServiceTypeClusterIP,
 			ClusterIP:                corev1.ClusterIPNone,
 			SessionAffinity:          corev1.ServiceAffinityNone,
 			PublishNotReadyAddresses: true,
+			Selector:                 appsv2beta1.DefaultCoreLabels(instance),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "erlang-dist",
@@ -70,7 +67,6 @@ func generateHeadlessService(instance *appsv2beta1.EMQX) *corev1.Service {
 					TargetPort: intstr.FromInt(5369),
 				},
 			},
-			Selector: instance.Spec.CoreTemplate.Labels,
 		},
 	}
 	return headlessSvc
@@ -94,6 +90,7 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 			*port,
 		},
 	)
+	svc.Spec.Selector = appsv2beta1.DefaultCoreLabels(instance)
 
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -102,8 +99,8 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
-			Name:        svc.Name,
-			Labels:      svc.Labels,
+			Name:        instance.DashboardServiceNamespacedName().Name,
+			Labels:      appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), svc.Labels),
 			Annotations: svc.Annotations,
 		},
 		Spec: svc.Spec,
@@ -146,9 +143,9 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 		svc.Spec.Ports,
 		ports,
 	)
-	svc.Spec.Selector = instance.Spec.CoreTemplate.Labels
+	svc.Spec.Selector = appsv2beta1.DefaultCoreLabels(instance)
 	if appsv2beta1.IsExistReplicant(instance) {
-		svc.Spec.Selector = instance.Spec.ReplicantTemplate.Labels
+		svc.Spec.Selector = appsv2beta1.DefaultReplicantLabels(instance)
 	}
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -157,8 +154,8 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
-			Name:        svc.Name,
-			Labels:      svc.Labels,
+			Name:        instance.ListenersServiceNamespacedName().Name,
+			Labels:      appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), svc.Labels),
 			Annotations: svc.Annotations,
 		},
 		Spec: svc.Spec,

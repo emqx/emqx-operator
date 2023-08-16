@@ -33,6 +33,47 @@ func IsExistReplicant(instance *EMQX) bool {
 	return instance.Spec.ReplicantTemplate != nil && instance.Spec.ReplicantTemplate.Spec.Replicas != nil && *instance.Spec.ReplicantTemplate.Spec.Replicas > 0
 }
 
+func DefaultLabels(instance *EMQX) map[string]string {
+	labels := map[string]string{}
+	labels[LabelsInstanceKey] = instance.Name
+	labels[LabelsManagedByKey] = "emqx-operator"
+	return labels
+}
+
+func DefaultCoreLabels(instance *EMQX) map[string]string {
+	return CloneAndAddLabel(
+		DefaultLabels(instance),
+		LabelsDBRoleKey,
+		"core",
+	)
+}
+
+func DefaultReplicantLabels(instance *EMQX) map[string]string {
+	return CloneAndAddLabel(
+		DefaultLabels(instance),
+		LabelsDBRoleKey,
+		"replicant",
+	)
+}
+
+func CloneAndMergeMap(dst map[string]string, src ...map[string]string) map[string]string {
+	new := map[string]string{}
+
+	for key, value := range dst {
+		new[key] = value
+	}
+
+	for _, m := range src {
+		for key, value := range m {
+			if _, ok := new[key]; !ok {
+				new[key] = value
+			}
+		}
+	}
+
+	return new
+}
+
 // Clones the given selector and returns a new selector with the given key and value added.
 // Returns the given selector, if labelKey is empty.
 func CloneSelectorAndAddLabel(selector *metav1.LabelSelector, labelKey, labelValue string) *metav1.LabelSelector {

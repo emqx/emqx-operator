@@ -8,11 +8,9 @@ const DefaultBootstrapAPIKey string = "emqx-operator-controller"
 
 const (
 	// labels
-	LabelsNameKey            string = "apps.emqx.io/name"       // emqx
 	LabelsInstanceKey        string = "apps.emqx.io/instance"   // my-emqx
-	LabelsComponentKey       string = "apps.emqx.io/component"  // core, replicant, dashboard, listeners, config
-	LabelsPartOfKey          string = "apps.emqx.io/part-of"    // emqx
 	LabelsManagedByKey       string = "apps.emqx.io/managed-by" // emqx-operator
+	LabelsDBRoleKey          string = "apps.emqx.io/db-role"    // core, replicant
 	LabelsPodTemplateHashKey string = "apps.emqx.io/pod-template-hash"
 )
 

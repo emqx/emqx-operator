@@ -26,7 +26,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -93,7 +92,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkServices(instance)
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
-				instance.Spec.CoreTemplate.Labels,
+				appsv2beta1.DefaultCoreLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
@@ -138,7 +137,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkServices(instance)
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
-				instance.Spec.CoreTemplate.Labels,
+				appsv2beta1.DefaultCoreLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
@@ -183,7 +182,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkServices(instance)
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
-				instance.Spec.CoreTemplate.Labels,
+				appsv2beta1.DefaultCoreLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
@@ -218,7 +217,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkServices(instance)
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
-				instance.Spec.CoreTemplate.Labels,
+				appsv2beta1.DefaultCoreLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
@@ -230,7 +229,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(context.TODO(), list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 				)
 				for i, sts := range list.Items {
 					if podTemplateHash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
@@ -254,10 +253,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 
 			Eventually(func() []corev1.ServicePort {
 				svc := &corev1.Service{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKey{
-					Namespace: instance.Namespace,
-					Name:      instance.Spec.ListenersServiceTemplate.Name,
-				}, svc)
+				_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), svc)
 				return svc.Spec.Ports
 			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
 				WithTransform(func(port corev1.ServicePort) int32 {
@@ -267,10 +263,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 
 			Eventually(func() []corev1.EndpointPort {
 				ep := &corev1.Endpoints{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKey{
-					Namespace: instance.Namespace,
-					Name:      instance.Spec.ListenersServiceTemplate.Name,
-				}, ep)
+				_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), ep)
 				return ep.Subsets[0].Ports
 			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
 				WithTransform(func(port corev1.EndpointPort) int32 {
@@ -332,7 +325,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkServices(instance)
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
-				instance.Spec.ReplicantTemplate.Labels,
+				appsv2beta1.DefaultReplicantLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
 			))
@@ -384,7 +377,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkServices(instance)
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
-				instance.Spec.ReplicantTemplate.Labels,
+				appsv2beta1.DefaultReplicantLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
 			))
@@ -422,7 +415,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			checkServices(instance)
 			checkPods(instance)
 			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
-				instance.Spec.ReplicantTemplate.Labels,
+				appsv2beta1.DefaultReplicantLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
 			))
@@ -434,7 +427,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(context.TODO(), list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 				)
 				for i, sts := range list.Items {
 					if podTemplateHash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
@@ -457,7 +450,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				list := &appsv1.StatefulSetList{}
 				_ = k8sClient.List(context.TODO(), list,
 					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(instance.Labels),
+					client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 				)
 				for i, sts := range list.Items {
 					if podTemplateHash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
@@ -481,10 +474,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 
 			Eventually(func() []corev1.ServicePort {
 				svc := &corev1.Service{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKey{
-					Namespace: instance.Namespace,
-					Name:      instance.Spec.ListenersServiceTemplate.Name,
-				}, svc)
+				_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), svc)
 				return svc.Spec.Ports
 			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
 				WithTransform(func(port corev1.ServicePort) int32 {
@@ -494,10 +484,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 
 			Eventually(func() []corev1.EndpointPort {
 				ep := &corev1.Endpoints{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKey{
-					Namespace: instance.Namespace,
-					Name:      instance.Spec.ListenersServiceTemplate.Name,
-				}, ep)
+				_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), ep)
 				return ep.Subsets[0].Ports
 			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
 				WithTransform(func(port corev1.EndpointPort) int32 {
@@ -523,7 +510,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 func checkServices(instance *appsv2beta1.EMQX) {
 	Eventually(func() []corev1.ServicePort {
 		svc := &corev1.Service{}
-		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, svc)
+		_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), svc)
 		return svc.Spec.Ports
 	}).WithTimeout(timeout).WithPolling(interval).Should(
 		ConsistOf([]corev1.ServicePort{
@@ -566,7 +553,7 @@ func checkPods(instance *appsv2beta1.EMQX) {
 	Eventually(func() []corev1.Pod {
 		_ = k8sClient.List(context.TODO(), podList,
 			client.InNamespace(instance.Namespace),
-			client.MatchingLabels(instance.Labels),
+			client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 		)
 		return podList.Items
 	}).WithTimeout(timeout).WithPolling(interval).Should(
@@ -608,7 +595,7 @@ func checkEndpoints(instance *appsv2beta1.EMQX, labels map[string]string) {
 
 	Eventually(func() *corev1.Endpoints {
 		ep := &corev1.Endpoints{}
-		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: instance.Spec.ListenersServiceTemplate.Name, Namespace: instance.Namespace}, ep)
+		_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), ep)
 		return ep
 	}, timeout, interval).Should(HaveField("Subsets",
 		And(

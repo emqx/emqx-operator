@@ -25,7 +25,7 @@ func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2bet
 	pods := &corev1.PodList{}
 	_ = u.Client.List(ctx, pods,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.Labels),
+		client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 	)
 
 	for _, p := range pods.Items {

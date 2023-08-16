@@ -53,9 +53,9 @@ func generateNodeCookieSecret(instance *appsv2beta1.EMQX) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.NodeCookieNamespacedName().Name,
 			Namespace: instance.Namespace,
-			Labels:    instance.Labels,
+			Name:      instance.NodeCookieNamespacedName().Name,
+			Labels:    appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), instance.Labels),
 		},
 		StringData: map[string]string{
 			"node_cookie": cookie,
@@ -78,9 +78,9 @@ func generateBootstrapAPIKeySecret(instance *appsv2beta1.EMQX) *corev1.Secret {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
 			Namespace: instance.Namespace,
-			Labels:    instance.Labels,
+			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
+			Labels:    appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), instance.Labels),
 		},
 		StringData: map[string]string{
 			"bootstrap_api_key": bootstrapAPIKeys,

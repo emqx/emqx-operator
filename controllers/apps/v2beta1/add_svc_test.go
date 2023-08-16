@@ -19,7 +19,7 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 		Spec: appsv2beta1.EMQXSpec{
 			CoreTemplate: appsv2beta1.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: coreLabels,
+					Labels: appsv2beta1.DefaultCoreLabels(emqx),
 				},
 			},
 		},
@@ -30,8 +30,9 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx-headless",
 			Namespace: "emqx",
+			Name:      "emqx-headless",
+			Labels:    appsv2beta1.DefaultLabels(emqx),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:                     corev1.ServiceTypeClusterIP,
@@ -54,7 +55,7 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 					TargetPort: intstr.FromInt(5369),
 				},
 			},
-			Selector: coreLabels,
+			Selector: appsv2beta1.DefaultCoreLabels(emqx),
 		},
 	}
 	assert.Equal(t, expect, generateHeadlessService(instance))
@@ -69,7 +70,7 @@ func TestGenerateDashboardService(t *testing.T) {
 		Spec: appsv2beta1.EMQXSpec{
 			CoreTemplate: appsv2beta1.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: coreLabels,
+					Labels: appsv2beta1.DefaultCoreLabels(emqx),
 				},
 			},
 			DashboardServiceTemplate: corev1.Service{
@@ -83,7 +84,7 @@ func TestGenerateDashboardService(t *testing.T) {
 					},
 				},
 				Spec: corev1.ServiceSpec{
-					Selector: coreLabels,
+					Selector: appsv2beta1.DefaultCoreLabels(emqx),
 					Ports: []corev1.ServicePort{
 						{
 							Name:       "dashboard",
@@ -105,15 +106,13 @@ func TestGenerateDashboardService(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx-dashboard",
 			Namespace: "emqx",
-			Labels: map[string]string{
-				appsv2beta1.LabelsInstanceKey: "emqx",
-			},
+			Labels:    appsv2beta1.DefaultLabels(emqx),
 			Annotations: map[string]string{
 				"foo": "bar",
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: coreLabels,
+			Selector: appsv2beta1.DefaultCoreLabels(emqx),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "dashboard",

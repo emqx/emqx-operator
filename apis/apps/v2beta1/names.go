@@ -22,6 +22,20 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+func (instance *EMQX) CoreNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-core", instance.Name),
+	}
+}
+
+func (instance *EMQX) ReplicantNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-replicant", instance.Name),
+	}
+}
+
 func (instance *EMQX) HeadlessServiceNamespacedName() types.NamespacedName {
 	return types.NamespacedName{
 		Namespace: instance.Namespace,
@@ -29,10 +43,17 @@ func (instance *EMQX) HeadlessServiceNamespacedName() types.NamespacedName {
 	}
 }
 
-func (instance *EMQX) NodeCookieNamespacedName() types.NamespacedName {
+func (instance *EMQX) DashboardServiceNamespacedName() types.NamespacedName {
 	return types.NamespacedName{
 		Namespace: instance.Namespace,
-		Name:      fmt.Sprintf("%s-node-cookie", instance.Name),
+		Name:      fmt.Sprintf("%s-dashboard", instance.Name),
+	}
+}
+
+func (instance *EMQX) ListenersServiceNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-listeners", instance.Name),
 	}
 }
 
@@ -40,6 +61,13 @@ func (instance *EMQX) BootstrapAPIKeyNamespacedName() types.NamespacedName {
 	return types.NamespacedName{
 		Namespace: instance.Namespace,
 		Name:      fmt.Sprintf("%s-bootstrap-api-key", instance.Name),
+	}
+}
+
+func (instance *EMQX) NodeCookieNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      fmt.Sprintf("%s-node-cookie", instance.Name),
 	}
 }
 

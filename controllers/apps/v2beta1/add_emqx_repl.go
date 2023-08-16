@@ -157,6 +157,11 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EM
 }
 
 func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
+	labels := appsv2beta1.CloneAndMergeMap(
+		appsv2beta1.DefaultReplicantLabels(instance),
+		instance.Spec.ReplicantTemplate.Labels,
+	)
+
 	return &appsv1.ReplicaSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ReplicaSet",
@@ -164,18 +169,18 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
-			Name:        instance.Spec.ReplicantTemplate.Name,
+			Name:        instance.ReplicantNamespacedName().Name,
 			Annotations: instance.Spec.ReplicantTemplate.Annotations,
-			Labels:      instance.Spec.ReplicantTemplate.Labels,
+			Labels:      labels,
 		},
 		Spec: appsv1.ReplicaSetSpec{
 			Replicas: instance.Spec.ReplicantTemplate.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: instance.Spec.ReplicantTemplate.Labels,
+				MatchLabels: labels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: instance.Spec.ReplicantTemplate.Labels,
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					ReadinessGates: []corev1.PodReadinessGate{
@@ -184,12 +189,12 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 						},
 					},
 					ImagePullSecrets:   instance.Spec.ImagePullSecrets,
+					ServiceAccountName: instance.Spec.ServiceAccountName,
 					SecurityContext:    instance.Spec.ReplicantTemplate.Spec.PodSecurityContext,
 					Affinity:           instance.Spec.ReplicantTemplate.Spec.Affinity,
 					Tolerations:        instance.Spec.ReplicantTemplate.Spec.ToleRations,
 					NodeName:           instance.Spec.ReplicantTemplate.Spec.NodeName,
 					NodeSelector:       instance.Spec.ReplicantTemplate.Spec.NodeSelector,
-					ServiceAccountName: instance.Spec.ServiceAccountName,
 					InitContainers:     instance.Spec.ReplicantTemplate.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
@@ -265,11 +270,11 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 									ReadOnly:  true,
 								},
 								{
-									Name:      instance.Spec.ReplicantTemplate.Name + "-log",
+									Name:      instance.ReplicantNamespacedName().Name + "-log",
 									MountPath: "/opt/emqx/log",
 								},
 								{
-									Name:      instance.Spec.ReplicantTemplate.Name + "-data",
+									Name:      instance.ReplicantNamespacedName().Name + "-data",
 									MountPath: "/opt/emqx/data",
 								},
 							}, instance.Spec.ReplicantTemplate.Spec.ExtraVolumeMounts...),
@@ -295,13 +300,13 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 							},
 						},
 						{
-							Name: instance.Spec.ReplicantTemplate.Name + "-log",
+							Name: instance.ReplicantNamespacedName().Name + "-log",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 						{
-							Name: instance.Spec.ReplicantTemplate.Name + "-data",
+							Name: instance.ReplicantNamespacedName().Name + "-data",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},

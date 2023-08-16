@@ -52,11 +52,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		}
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-		instance.Spec.CoreTemplate.Labels = instance.Labels
 		instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: instance.Labels,
-			},
 			Spec: appsv2beta1.EMQXReplicantTemplateSpec{
 				Replicas: pointer.Int32Ptr(1),
 			},
@@ -94,7 +90,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				GenerateName: instance.Name + "-",
 				Namespace:    instance.Namespace,
 				Labels: appsv2beta1.CloneAndAddLabel(
-					instance.Labels,
+					appsv2beta1.DefaultCoreLabels(instance),
 					appsv2beta1.LabelsPodTemplateHashKey,
 					"update",
 				),
@@ -103,7 +99,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Replicas: pointer.Int32Ptr(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: appsv2beta1.CloneAndAddLabel(
-						instance.Labels,
+						appsv2beta1.DefaultCoreLabels(instance),
 						appsv2beta1.LabelsPodTemplateHashKey,
 						"update",
 					),
@@ -111,7 +107,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: appsv2beta1.CloneAndAddLabel(
-							instance.Labels,
+							appsv2beta1.DefaultCoreLabels(instance),
 							appsv2beta1.LabelsPodTemplateHashKey,
 							"update",
 						),
@@ -145,7 +141,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				GenerateName: instance.Name + "-",
 				Namespace:    instance.Namespace,
 				Labels: appsv2beta1.CloneAndAddLabel(
-					instance.Labels,
+					appsv2beta1.DefaultReplicantLabels(instance),
 					appsv2beta1.LabelsPodTemplateHashKey,
 					"update",
 				),
@@ -154,7 +150,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Replicas: pointer.Int32Ptr(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: appsv2beta1.CloneAndAddLabel(
-						instance.Labels,
+						appsv2beta1.DefaultReplicantLabels(instance),
 						appsv2beta1.LabelsPodTemplateHashKey,
 						"update",
 					),
@@ -162,7 +158,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: appsv2beta1.CloneAndAddLabel(
-							instance.Labels,
+							appsv2beta1.DefaultReplicantLabels(instance),
 							appsv2beta1.LabelsPodTemplateHashKey,
 							"update",
 						),
@@ -396,16 +392,16 @@ var _ = Describe("check can be scale down", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: instance.Name + "-",
 					Namespace:    instance.Namespace,
-					Labels:       instance.Labels,
+					Labels:       appsv2beta1.DefaultReplicantLabels(instance),
 				},
 				Spec: appsv1.ReplicaSetSpec{
 					Replicas: pointer.Int32Ptr(1),
 					Selector: &metav1.LabelSelector{
-						MatchLabels: instance.Labels,
+						MatchLabels: appsv2beta1.DefaultReplicantLabels(instance),
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
-							Labels: instance.Labels,
+							Labels: appsv2beta1.DefaultReplicantLabels(instance),
 						},
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{

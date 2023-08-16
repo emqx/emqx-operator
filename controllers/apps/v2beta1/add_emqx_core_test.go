@@ -13,12 +13,6 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var coreLabels = map[string]string{
-	appsv2beta1.LabelsInstanceKey:  "emqx",
-	appsv2beta1.LabelsManagedByKey: "emqx-operator",
-	appsv2beta1.LabelsComponentKey: "core",
-}
-
 func TestGenerateStatefulSet(t *testing.T) {
 	instance := &appsv2beta1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
@@ -41,7 +35,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 		}
 
 		got := generateStatefulSet(emqx)
-		assert.Equal(t, coreLabels, got.Labels)
+		assert.Equal(t, appsv2beta1.DefaultCoreLabels(emqx), got.Labels)
 		assert.NotContains(t, "kubectl.kubernetes.io/last-applied-config", got.Annotations)
 	})
 
@@ -51,7 +45,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 		got := generateStatefulSet(emqx)
 		assert.Equal(t, int32(3), *got.Spec.Replicas)
 		assert.Equal(t, "emqx-headless", got.Spec.ServiceName)
-		assert.Equal(t, coreLabels, got.Spec.Selector.MatchLabels)
+		assert.Equal(t, appsv2beta1.DefaultCoreLabels(emqx), got.Spec.Selector.MatchLabels)
 		assert.Equal(t, appsv1.ParallelPodManagement, got.Spec.PodManagementPolicy)
 	})
 
@@ -295,7 +289,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "emqx-core-data",
 					Namespace: "emqx",
-					Labels:    coreLabels,
+					Labels:    appsv2beta1.DefaultCoreLabels(emqx),
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{
