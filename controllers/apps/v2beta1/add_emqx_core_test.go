@@ -147,10 +147,7 @@ func TestGenerateStatefulSet(t *testing.T) {
 		assert.Equal(t, emqx.Spec.ImagePullPolicy, got.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Command, got.Spec.Template.Spec.Containers[0].Command)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Args, got.Spec.Template.Spec.Containers[0].Args)
-		assert.ElementsMatch(t, []corev1.ContainerPort{
-			{Name: "fake", HostPort: 0, ContainerPort: 0, Protocol: "", HostIP: ""},
-			{Name: "dashboard", HostPort: 0, ContainerPort: 18083, Protocol: "TCP", HostIP: ""},
-		}, got.Spec.Template.Spec.Containers[0].Ports)
+		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Ports, got.Spec.Template.Spec.Containers[0].Ports)
 		assert.ElementsMatch(t, []corev1.EnvVar{
 			{
 				Name: "POD_NAME",
@@ -159,10 +156,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 						FieldPath: "metadata.name",
 					},
 				},
-			},
-			{
-				Name:  "EMQX_DASHBOARD__LISTENERS__HTTP__BIND",
-				Value: "18083",
 			},
 			{
 				Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
