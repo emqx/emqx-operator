@@ -76,18 +76,18 @@ type EMQXSpec struct {
 	//+kubebuilder:default={type:Recreate,initialDelaySeconds:10,evacuationStrategy:{waitTakeover:10,connEvictRate:1000,sessEvictRate:1000}}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
-	DashboardServiceTemplate corev1.Service `json:"dashboardServiceTemplate,omitempty"`
-	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
-	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
-	// Else this service will selector EMQX core node
-	ListenersServiceTemplate corev1.Service `json:"listenersServiceTemplate,omitempty"`
-
 	// CoreTemplate is the object that describes the EMQX core node that will be created
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
 	ReplicantTemplate *EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
+
 	// DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
 	// This service always selector the EMQX core node
+	DashboardServiceTemplate *corev1.Service `json:"dashboardServiceTemplate,omitempty"`
+	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
+	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
+	// Else this service will selector EMQX core node
+	ListenersServiceTemplate *corev1.Service `json:"listenersServiceTemplate,omitempty"`
 }
 
 type BootstrapAPIKey struct {

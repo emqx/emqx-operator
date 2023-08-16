@@ -73,7 +73,7 @@ func TestGenerateDashboardService(t *testing.T) {
 					Labels: appsv2beta1.DefaultCoreLabels(emqx),
 				},
 			},
-			DashboardServiceTemplate: corev1.Service{
+			DashboardServiceTemplate: &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "emqx-dashboard",
 					Labels: map[string]string{
