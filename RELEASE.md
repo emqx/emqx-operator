@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.1-rc.5 is released.
+EMQX Operator 2.2.1 is released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -33,7 +33,7 @@ EMQX Operator 2.2.1-rc.5 is released.
 
   + Fix the issue where EMQX customer resource status is still `Ready` when deleting a Pod.
 
-  + Fix the issue where the Pod cannot be ready when the EMQX custom resource has the labelsync_pods_suite_test.go:230s from third-party settings.
+  + Fix the issue where the Pod cannot be ready when the EMQX custom resource has the labels from third-party settings.
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -45,7 +45,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.1-rc.5
+  --version 2.2.1
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
