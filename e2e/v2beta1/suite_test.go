@@ -178,6 +178,5 @@ func genEMQX() *appsv2beta1.EMQX {
 			},
 		},
 	}
-	emqx.Default()
 	return emqx
 }

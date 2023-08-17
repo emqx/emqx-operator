@@ -47,7 +47,6 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 	BeforeEach(func() {
 		instance = genEMQX().DeepCopy()
 		instance.Spec.Image = "emqx/emqx-enterprise:5.1"
-		instance.Default()
 	})
 
 	Context("EMQX is not found", func() {
@@ -135,8 +134,6 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 				// create EMQX CR
 				instance.Spec.ReplicantTemplate = nil
 				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
-				instance.Default()
-				Expect(instance.ValidateCreate()).Should(Succeed())
 				Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully
@@ -209,8 +206,6 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 				// create EMQX CR
 				instance.Spec.ReplicantTemplate = nil
 				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
-				instance.Default()
-				Expect(instance.ValidateCreate()).Should(Succeed())
 				Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully

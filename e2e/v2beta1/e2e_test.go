@@ -42,8 +42,6 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		JustBeforeEach(func() {
 			instance.Spec.ReplicantTemplate = nil
 			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
-			instance.Default()
-			Expect(instance.ValidateCreate()).Should(Succeed())
 		})
 
 		It("should create namespace and EMQX CR", func() {
@@ -286,7 +284,6 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					Replicas: pointer.Int32Ptr(2),
 				},
 			}
-			instance.Default()
 			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
 		})
 

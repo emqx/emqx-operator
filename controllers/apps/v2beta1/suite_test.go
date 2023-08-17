@@ -79,7 +79,6 @@ var _ = BeforeSuite(func() {
 	timeout = time.Second * 5
 	interval = time.Millisecond * 500
 	ctx = context.TODO()
-	emqx.Default()
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "false")).To(Succeed())
 

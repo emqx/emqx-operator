@@ -83,7 +83,7 @@ func TestRebalanceValidateUpdate(t *testing.T) {
 		assert.NoError(t, rebalance.ValidateUpdate(old))
 
 		old = rebalance.DeepCopy()
-		old.Spec.InstanceName = "test-0"
+		old.SetGeneration(1)
 		assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance spec don't allow update")
 	})
 
