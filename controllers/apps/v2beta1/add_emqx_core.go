@@ -63,7 +63,7 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		)
 		if !patchResult.IsEmpty() {
 			logger := log.FromContext(ctx)
-			logger.V(1).Info("got different statefulSet for EMQX core nodes, will update statefulSet", "patch", string(patchResult.Patch))
+			logger.Info("got different statefulSet for EMQX core nodes, will update statefulSet", "patch", string(patchResult.Patch))
 
 			if err := a.Handler.Update(preSts); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
@@ -146,7 +146,7 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2beta1.E
 	}
 
 	logger := log.FromContext(ctx)
-	logger.V(1).Info("got different pod template for EMQX core nodes, will create new statefulSet", "patch", string(patchResult.Patch))
+	logger.Info("got different pod template for EMQX core nodes, will create new statefulSet", "patch", string(patchResult.Patch))
 	return preSts, nil
 }
 

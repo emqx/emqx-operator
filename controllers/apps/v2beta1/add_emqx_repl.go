@@ -69,7 +69,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		)
 		if !patchResult.IsEmpty() {
 			logger := log.FromContext(ctx)
-			logger.V(1).Info("got different replicaSet for EMQX replicant nodes, will update replicaSet", "patch", string(patchResult.Patch))
+			logger.Info("got different replicaSet for EMQX replicant nodes, will update replicaSet", "patch", string(patchResult.Patch))
 
 			if err := a.Handler.Update(preRs); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
@@ -151,7 +151,7 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EM
 		return preRs, nil
 	}
 	logger := log.FromContext(ctx)
-	logger.V(1).Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
+	logger.Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
 
 	return preRs, nil
 }
