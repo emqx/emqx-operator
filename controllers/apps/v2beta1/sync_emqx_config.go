@@ -18,6 +18,12 @@ type syncConfig struct {
 }
 
 func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
+	hoconConfig, err := hocon.ParseString(instance.Spec.Config.Data)
+	if err != nil {
+		s.EventRecorder.Event(instance, corev1.EventTypeWarning, "InvalidConfig", err.Error())
+		return subResult{err: emperror.Wrap(err, "failed to parse config")}
+	}
+
 	// If core nodes is nil, the EMQX is in the process of being created
 	if len(instance.Status.CoreNodes) == 0 {
 		configMap := generateConfigMap(instance, instance.Spec.Config.Data)
@@ -32,13 +38,12 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 		// If it is the first time to start and Mode = Replace, update the EMQX configuration once.
 		if instance.Spec.Config.Mode == "Replace" {
 			// Delete readonly configs
-			config, _ := hocon.ParseString(instance.Spec.Config.Data)
-			configObj := config.GetRoot().(hocon.Object)
-			delete(configObj, "node")
-			delete(configObj, "cluster")
-			delete(configObj, "dashboard")
+			hoconConfigObj := hoconConfig.GetRoot().(hocon.Object)
+			delete(hoconConfigObj, "node")
+			delete(hoconConfigObj, "cluster")
+			delete(hoconConfigObj, "dashboard")
 
-			if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, configObj.String()); err != nil {
+			if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, hoconConfigObj.String()); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
 			}
 		}
@@ -53,13 +58,12 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 	}
 	if ok && instance.Spec.Config.Data != lastConfig {
 		// Delete readonly configs
-		config, _ := hocon.ParseString(instance.Spec.Config.Data)
-		configObj := config.GetRoot().(hocon.Object)
-		delete(configObj, "node")
-		delete(configObj, "cluster")
-		delete(configObj, "dashboard")
+		hoconConfigObj := hoconConfig.GetRoot().(hocon.Object)
+		delete(hoconConfigObj, "node")
+		delete(hoconConfigObj, "cluster")
+		delete(hoconConfigObj, "dashboard")
 
-		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, configObj.String()); err != nil {
+		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, hoconConfigObj.String()); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
 		}
 

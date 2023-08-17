@@ -17,13 +17,9 @@ limitations under the License.
 package v2beta1
 
 import (
-	"reflect"
-
-	emperror "emperror.dev/errors"
 
 	// "github.com/gurkankaymak/hocon"
 
-	hocon "github.com/rory-z/go-hocon"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -55,58 +51,12 @@ var _ webhook.Validator = &EMQX{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *EMQX) ValidateCreate() error {
-	emqxlog.Info("validate create", "name", r.Name)
-
-	if *r.Spec.CoreTemplate.Spec.Replicas <= 1 {
-		err := emperror.New("the number of EMQX core nodes must be greater than 1")
-		emqxlog.Error(err, "validate create failed")
-		return err
-	}
-
-	if *r.Spec.CoreTemplate.Spec.Replicas > 4 {
-		err := emperror.New("the number of EMQX core nodes must be less than or equal to 4")
-		emqxlog.Error(err, "validate create failed")
-		return err
-	}
-
-	if _, err := hocon.ParseString(r.Spec.Config.Data); err != nil {
-		err = emperror.Wrap(err, "failed to parse config")
-		emqxlog.Error(err, "validate create failed")
-		return err
-	}
-
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *EMQX) ValidateUpdate(old runtime.Object) error {
 	emqxlog.Info("validate update", "name", r.Name)
-
-	if *r.Spec.CoreTemplate.Spec.Replicas <= 1 {
-		err := emperror.New("the number of EMQX core nodes must be greater than 1")
-		emqxlog.Error(err, "validate update failed")
-		return err
-	}
-
-	if *r.Spec.CoreTemplate.Spec.Replicas > 4 {
-		err := emperror.New("the number of EMQX core nodes must be less than or equal to 4")
-		emqxlog.Error(err, "validate create failed")
-		return err
-	}
-
-	oldEMQX := old.(*EMQX)
-	if !reflect.DeepEqual(oldEMQX.Spec.BootstrapAPIKeys, r.Spec.BootstrapAPIKeys) {
-		err := emperror.Errorf("bootstrap APIKey cannot be updated")
-		emqxlog.Error(err, "validate update failed")
-		return err
-	}
-
-	_, err := hocon.ParseString(r.Spec.Config.Data)
-	if err != nil {
-		err = emperror.Wrap(err, "failed to parse config")
-		emqxlog.Error(err, "validate update failed")
-		return err
-	}
 
 	return nil
 }
