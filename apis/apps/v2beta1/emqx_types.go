@@ -84,11 +84,11 @@ type EMQXSpec struct {
 
 	// DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
 	// This service always selector the EMQX core node
-	DashboardServiceTemplate *corev1.Service `json:"dashboardServiceTemplate,omitempty"`
+	DashboardServiceTemplate *ServiceTemplate `json:"dashboardServiceTemplate,omitempty"`
 	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
 	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
 	// Else this service will selector EMQX core node
-	ListenersServiceTemplate *corev1.Service `json:"listenersServiceTemplate,omitempty"`
+	ListenersServiceTemplate *ServiceTemplate `json:"listenersServiceTemplate,omitempty"`
 }
 
 type BootstrapAPIKey struct {

@@ -352,12 +352,12 @@ func (in *EMQXSpec) DeepCopyInto(out *EMQXSpec) {
 	}
 	if in.DashboardServiceTemplate != nil {
 		in, out := &in.DashboardServiceTemplate, &out.DashboardServiceTemplate
-		*out = new(v1.Service)
+		*out = new(ServiceTemplate)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.ListenersServiceTemplate != nil {
 		in, out := &in.ListenersServiceTemplate, &out.ListenersServiceTemplate
-		*out = new(v1.Service)
+		*out = new(ServiceTemplate)
 		(*in).DeepCopyInto(*out)
 	}
 }

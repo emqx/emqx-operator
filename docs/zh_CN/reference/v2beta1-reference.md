@@ -245,8 +245,8 @@ _Appears in:_
 | `updateStrategy` _[UpdateStrategy](#updatestrategy)_ | UpdateStrategy is the object that describes the EMQX blue-green update strategy |
 | `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | CoreTemplate is the object that describes the EMQX core node that will be created |
 | `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | ReplicantTemplate is the object that describes the EMQX replicant node that will be created |
-| `dashboardServiceTemplate` _[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#service-v1-core)_ | DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created This service always selector the EMQX core node |
-| `listenersServiceTemplate` _[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#service-v1-core)_ | ListenersServiceTemplate is the object that describes the EMQX listener service that will be created If the EMQX replicant node exist, this service will selector the EMQX replicant node Else this service will selector EMQX core node |
+| `dashboardServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created This service always selector the EMQX core node |
+| `listenersServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | ListenersServiceTemplate is the object that describes the EMQX listener service that will be created If the EMQX replicant node exist, this service will selector the EMQX replicant node Else this service will selector EMQX core node |
 
 
 #### EMQXStatus
@@ -472,6 +472,19 @@ _Appears in:_
 | `relSessThreshold` _string_ | RelSessThreshold represents the relative threshold for checking session connection balance. same to rel-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelSessThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
 
 
+#### ServiceTemplate
+
+
+
+
+
+_Appears in:_
+- [EMQXSpec](#emqxspec)
+
+| Field | Description |
+| --- | --- |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[ServiceSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicespec-v1-core)_ | Spec defines the behavior of a service. https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status |
 
 
 #### UpdateStrategy

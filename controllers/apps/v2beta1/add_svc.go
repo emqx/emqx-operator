@@ -83,10 +83,12 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 		}
 	}
 
-	svc := instance.Spec.DashboardServiceTemplate.DeepCopy()
-	if svc == nil {
-		svc = &corev1.Service{}
+	svc := &corev1.Service{}
+	if instance.Spec.DashboardServiceTemplate != nil {
+		svc.ObjectMeta = *instance.Spec.DashboardServiceTemplate.ObjectMeta.DeepCopy()
+		svc.Spec = *instance.Spec.DashboardServiceTemplate.Spec.DeepCopy()
 	}
+
 	svc.Spec.Ports = appsv2beta1.MergeServicePorts(
 		svc.Spec.Ports,
 		[]corev1.ServicePort{
@@ -141,9 +143,10 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 		}...)
 	}
 
-	svc := instance.Spec.ListenersServiceTemplate.DeepCopy()
-	if svc == nil {
-		svc = &corev1.Service{}
+	svc := &corev1.Service{}
+	if instance.Spec.ListenersServiceTemplate != nil {
+		svc.ObjectMeta = *instance.Spec.ListenersServiceTemplate.ObjectMeta.DeepCopy()
+		svc.Spec = *instance.Spec.ListenersServiceTemplate.Spec.DeepCopy()
 	}
 
 	svc.Spec.Ports = appsv2beta1.MergeServicePorts(
