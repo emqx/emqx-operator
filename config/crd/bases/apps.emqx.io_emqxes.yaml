@@ -9556,10 +9556,6 @@ spec:
                 type: object
               dashboardServiceTemplate:
                 properties:
-                  apiVersion:
-                    type: string
-                  kind:
-                    type: string
                   metadata:
                     properties:
                       annotations:
@@ -9667,79 +9663,6 @@ spec:
                         type: object
                       type:
                         type: string
-                    type: object
-                  status:
-                    properties:
-                      conditions:
-                        items:
-                          properties:
-                            lastTransitionTime:
-                              format: date-time
-                              type: string
-                            message:
-                              maxLength: 32768
-                              type: string
-                            observedGeneration:
-                              format: int64
-                              minimum: 0
-                              type: integer
-                            reason:
-                              maxLength: 1024
-                              minLength: 1
-                              pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                              type: string
-                            status:
-                              enum:
-                              - "True"
-                              - "False"
-                              - Unknown
-                              type: string
-                            type:
-                              maxLength: 316
-                              pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                              type: string
-                          required:
-                          - lastTransitionTime
-                          - message
-                          - reason
-                          - status
-                          - type
-                          type: object
-                        type: array
-                        x-kubernetes-list-map-keys:
-                        - type
-                        x-kubernetes-list-type: map
-                      loadBalancer:
-                        properties:
-                          ingress:
-                            items:
-                              properties:
-                                hostname:
-                                  type: string
-                                ip:
-                                  type: string
-                                ports:
-                                  items:
-                                    properties:
-                                      error:
-                                        maxLength: 316
-                                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                                        type: string
-                                      port:
-                                        format: int32
-                                        type: integer
-                                      protocol:
-                                        default: TCP
-                                        type: string
-                                    required:
-                                    - port
-                                    - protocol
-                                    type: object
-                                  type: array
-                                  x-kubernetes-list-type: atomic
-                              type: object
-                            type: array
-                        type: object
                     type: object
                 type: object
               image:
@@ -9756,10 +9679,6 @@ spec:
                 type: array
               listenersServiceTemplate:
                 properties:
-                  apiVersion:
-                    type: string
-                  kind:
-                    type: string
                   metadata:
                     properties:
                       annotations:
@@ -9867,79 +9786,6 @@ spec:
                         type: object
                       type:
                         type: string
-                    type: object
-                  status:
-                    properties:
-                      conditions:
-                        items:
-                          properties:
-                            lastTransitionTime:
-                              format: date-time
-                              type: string
-                            message:
-                              maxLength: 32768
-                              type: string
-                            observedGeneration:
-                              format: int64
-                              minimum: 0
-                              type: integer
-                            reason:
-                              maxLength: 1024
-                              minLength: 1
-                              pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                              type: string
-                            status:
-                              enum:
-                              - "True"
-                              - "False"
-                              - Unknown
-                              type: string
-                            type:
-                              maxLength: 316
-                              pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                              type: string
-                          required:
-                          - lastTransitionTime
-                          - message
-                          - reason
-                          - status
-                          - type
-                          type: object
-                        type: array
-                        x-kubernetes-list-map-keys:
-                        - type
-                        x-kubernetes-list-type: map
-                      loadBalancer:
-                        properties:
-                          ingress:
-                            items:
-                              properties:
-                                hostname:
-                                  type: string
-                                ip:
-                                  type: string
-                                ports:
-                                  items:
-                                    properties:
-                                      error:
-                                        maxLength: 316
-                                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                                        type: string
-                                      port:
-                                        format: int32
-                                        type: integer
-                                      protocol:
-                                        default: TCP
-                                        type: string
-                                    required:
-                                    - port
-                                    - protocol
-                                    type: object
-                                  type: array
-                                  x-kubernetes-list-type: atomic
-                              type: object
-                            type: array
-                        type: object
                     type: object
                 type: object
               replicantTemplate:
