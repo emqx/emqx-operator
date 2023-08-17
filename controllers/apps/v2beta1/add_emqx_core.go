@@ -164,7 +164,7 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
 			Name:        instance.CoreNamespacedName().Name,
-			Annotations: instance.Spec.CoreTemplate.Annotations,
+			Annotations: instance.Spec.CoreTemplate.DeepCopy().Annotations,
 			Labels:      labels,
 		},
 		Spec: appsv1.StatefulSetSpec{
@@ -176,7 +176,8 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Annotations: instance.Spec.CoreTemplate.DeepCopy().Annotations,
+					Labels:      labels,
 				},
 				Spec: corev1.PodSpec{
 					ReadinessGates: []corev1.PodReadinessGate{

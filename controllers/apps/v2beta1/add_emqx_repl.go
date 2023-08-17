@@ -170,7 +170,7 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
 			Name:        instance.ReplicantNamespacedName().Name,
-			Annotations: instance.Spec.ReplicantTemplate.Annotations,
+			Annotations: instance.Spec.ReplicantTemplate.DeepCopy().Annotations,
 			Labels:      labels,
 		},
 		Spec: appsv1.ReplicaSetSpec{
@@ -180,7 +180,8 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Annotations: instance.Spec.ReplicantTemplate.DeepCopy().Annotations,
+					Labels:      labels,
 				},
 				Spec: corev1.PodSpec{
 					ReadinessGates: []corev1.PodReadinessGate{
