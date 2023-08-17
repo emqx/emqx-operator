@@ -56,7 +56,6 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				},
 			},
 		}
-		instance.Default()
 	})
 
 	It("create namespace", func() {

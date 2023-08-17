@@ -6512,6 +6512,9 @@ spec:
                     type: string
                 type: object
               coreTemplate:
+                default:
+                  spec:
+                    replicas: 2
                 properties:
                   metadata:
                     properties:
@@ -6533,8 +6536,6 @@ spec:
                         type: string
                     type: object
                   spec:
-                    default:
-                      replicas: 2
                     properties:
                       affinity:
                         properties:

@@ -25,8 +25,6 @@ func TestGenerateStatefulSet(t *testing.T) {
 		},
 	}
 	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(3)
-	instance.Default()
-	assert.Nil(t, instance.ValidateCreate())
 
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()

@@ -126,8 +126,6 @@ resources:
   version: v2beta1
   webhooks:
     conversion: true
-    defaulting: true
-    validation: true
     webhookVersion: v1
 - api:
     crdVersion: v1

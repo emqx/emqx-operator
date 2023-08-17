@@ -99,9 +99,6 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&EMQX{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
-
 	err = (&Rebalance{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 

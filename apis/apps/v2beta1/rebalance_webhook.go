@@ -18,7 +18,6 @@ package v2beta1
 
 import (
 	"errors"
-	"reflect"
 	"strconv"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,12 +65,10 @@ func (r *Rebalance) ValidateUpdate(old runtime.Object) error {
 	rebalancelog.Info("validate update", "name", r.Name)
 	oldRebalance := old.(*Rebalance)
 
-	newCopyRebalance := r.DeepCopy()
-	oldCopyRebalance := oldRebalance.DeepCopy()
-
-	if !reflect.DeepEqual(oldCopyRebalance.Spec, newCopyRebalance.Spec) {
-		return errors.New("the Rebalance spec don't allow update, you can delete this and create new one")
+	if r.GetGeneration() != oldRebalance.GetGeneration() {
+		return errors.New("the Rebalance spec don't allow update")
 	}
+
 	return nil
 }
 

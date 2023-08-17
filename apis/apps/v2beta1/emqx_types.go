@@ -77,6 +77,7 @@ type EMQXSpec struct {
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// CoreTemplate is the object that describes the EMQX core node that will be created
+	//+kubebuilder:default={spec:{replicas:2}}
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
 	ReplicantTemplate *EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
@@ -148,7 +149,6 @@ type EMQXReplicantTemplate struct {
 }
 
 type EMQXCoreTemplateSpec struct {
-	//+kubebuilder:default={replicas:2}
 	EMQXReplicantTemplateSpec `json:",inline"`
 
 	// VolumeClaimTemplates is a list of claims that pods are allowed to reference.
