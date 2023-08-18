@@ -215,33 +215,49 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 	})
 
 	It("running update emqx node controller", func() {
-		Eventually(s.reconcile(ctx, instance, fakeR)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+		Eventually(func() *appsv2beta1.EMQX {
+			_ = s.reconcile(ctx, instance, fakeR)
+			return instance
+		}).WithTimeout(timeout).WithPolling(interval).Should(And(
+			WithTransform(
+				// should add pod deletion cost
+				func(instance *appsv2beta1.EMQX) map[string]string {
+					_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentRsPod), currentRsPod)
+					return currentRsPod.Annotations
+				},
+				HaveKeyWithValue("controller.kubernetes.io/pod-deletion-cost", "-99999"),
+			),
+			WithTransform(
+				// should scale down rs
+				func(instance *appsv2beta1.EMQX) int32 {
+					_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentRs), currentRs)
+					return *currentRs.Spec.Replicas
+				},
+				Equal(int32(0)),
+			),
+			WithTransform(
+				// before rs not ready, do nothing for sts
+				func(instance *appsv2beta1.EMQX) int32 {
+					_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
+					return *currentSts.Spec.Replicas
+				},
+				Equal(int32(1)),
+			),
+		))
 
-		By("should add pod deletion cost annotation")
-		Eventually(func() map[string]string {
-			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentRsPod), currentRsPod)
-			return currentRsPod.Annotations
-		}).WithTimeout(timeout).WithPolling(interval).Should(HaveKeyWithValue("controller.kubernetes.io/pod-deletion-cost", "-99999"))
-
-		By("should scale down rs")
-		Eventually(func() int32 {
-			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentRs), currentRs)
-			return *currentRs.Spec.Replicas
-		}).WithTimeout(timeout).WithPolling(interval).Should(Equal(int32(0)))
-
-		By("before scale down rs, do nothing for sts")
-		Eventually(func() int32 {
-			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
-			return *currentSts.Spec.Replicas
-		}).WithTimeout(timeout).WithPolling(interval).Should(Equal(int32(1)))
-
+		By("mock rs ready, should scale down sts")
 		instance.Status.ReplicantNodesStatus.CurrentRevision = instance.Status.ReplicantNodesStatus.UpdateRevision
-		Eventually(s.reconcile(ctx, instance, fakeR)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
-		By("should scale down sts")
-		Eventually(func() int32 {
-			_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
-			return *currentSts.Spec.Replicas
-		}).WithTimeout(timeout).WithPolling(interval).Should(Equal(int32(0)))
+		Eventually(func() *appsv2beta1.EMQX {
+			_ = s.reconcile(ctx, instance, fakeR)
+			return instance
+		}).WithTimeout(timeout).WithPolling(interval).Should(
+			WithTransform(
+				func(instance *appsv2beta1.EMQX) int32 {
+					_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
+					return *currentSts.Spec.Replicas
+				}, Equal(int32(0)),
+			),
+		)
 	})
 
 })
