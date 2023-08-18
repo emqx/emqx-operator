@@ -33,6 +33,9 @@ runs:
         --set image.tag=$tag \
         --namespace emqx-operator-system \
         --create-namespace
+      kubectl patch -n emqx-operator-system deployment emqx-operator-controller-manager \
+        --type=json \
+        -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--zap-devel=true"}]'
   - name: Check operator
     shell: bash
     run: kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
