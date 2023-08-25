@@ -123,7 +123,7 @@ metadata:
   name: emqx
 spec:
   image: emqx:5.1
-	updateStrategy:
+  updateStrategy:
     evacuationStrategy:
       connEvictRate: 1000
       sessEvictRate: 1000
@@ -296,14 +296,14 @@ Output is similar to:
 
 ## Grafana Monitoring
 
-The monitoring graph of the number of connections during the upgrade process is shown below (using 100,000 connections as an example).
+The monitoring graph of the number of connections during the upgrade process is shown below (using 10,000 connections as an example).
 
 ![](./assets/configure-emqx-blueGreenUpdate/grafana.png)
 
-sum: Total number of connections, represented by the top line in the graph.
+Total: Total number of connections, represented by the top line in the graph.
 
-emqx-ee-86d7758868: Three EMQX nodes before the upgrade.
+emqx-ee-86f864f975： This prefix represents the 3 EMQX nodes before the upgrade.
 
-emqx-ee-745858464d: Three EMQX nodes after the upgrade.
+emqx-ee-648c45c747： This prefix represents the 3 EMQX nodes after the upgrade.
 
 As shown in the figure above, we have implemented graceful upgrade in Kubernetes through EMQX Kubernetes Operator's blue-green deployment. Through this solution, the total number of connections did not have a significant shake (depending on migration rate, server reception rate, client reconnection policy, etc.) during the upgrade process, which can greatly ensure the smoothness of the upgrade process, effectively prevent server overload, reduce business perception, and improve the stability of the service.
