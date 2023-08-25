@@ -131,7 +131,7 @@ spec:
 
 `waitTakeover`: 删除 Pod 时的间隔时间（单位: second）。
 
-  * [ ] `connEvictRate`: MQTT  客户端疏散速率，仅支持 EMQX 企业版（单位: count/second）。
+`connEvictRate`: MQTT  客户端疏散速率，仅支持 EMQX 企业版（单位: count/second）。
 
 `sessEvictRate`: MQTT Session 疏散速率，仅支持 EMQX 企业版（单位：count/second）。
 
@@ -290,7 +290,7 @@ mqttx bench conn -h ${IP} -p ${PORT} -c 3000
 
 ## Grafana 监控
 
-升级过程中连接数监控图如下（10万连接为例）
+升级过程中连接数监控图如下（1万连接为例）
 
 ![](./assets/configure-emqx-blueGreenUpdate/grafana.png)
 
