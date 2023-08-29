@@ -3,6 +3,7 @@ package v2beta1
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
@@ -120,7 +121,7 @@ func getEMQXConfigsByAPI(r innerReq.RequesterInterface) (string, error) {
 }
 
 func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) error {
-	url := r.GetURL("api/v5/configs", "mode="+mode)
+	url := r.GetURL("api/v5/configs", "mode="+strings.ToLower(mode))
 
 	resp, body, err := r.Request("PUT", url, []byte(config), http.Header{
 		"Content-Type": []string{"text/plain"},
