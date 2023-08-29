@@ -100,8 +100,8 @@ type BootstrapAPIKey struct {
 }
 
 type Config struct {
-	//+kubebuilder:validation:Enum=merge;replace
-	//+kubebuilder:default=merge
+	//+kubebuilder:validation:Enum=Merge;Replace
+	//+kubebuilder:default=Merge
 	Mode string `json:"mode,omitempty"`
 	// EMQX config, HOCON format, like etc/emqx.conf file
 	Data string `json:"data,omitempty"`

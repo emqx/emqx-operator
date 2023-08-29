@@ -6505,10 +6505,10 @@ spec:
                   data:
                     type: string
                   mode:
-                    default: merge
+                    default: Merge
                     enum:
-                    - merge
-                    - replace
+                    - Merge
+                    - Replace
                     type: string
                 type: object
               coreTemplate:
