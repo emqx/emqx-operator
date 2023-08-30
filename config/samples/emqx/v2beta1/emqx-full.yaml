@@ -8,6 +8,7 @@ metadata:
 spec:
   image: "emqx:5.1"
   imagePullPolicy: Always
+  revisionHistoryLimit: 3
   config:
     data: |
       dashboard.listeners.http.bind = 18083

@@ -14,6 +14,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,7 +70,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		)
 		if !patchResult.IsEmpty() {
 			logger := log.FromContext(ctx)
-			logger.Info("got different replicaSet for EMQX replicant nodes, will update replicaSet", "patch", string(patchResult.Patch))
+			logger.Info("got different replicaSet for EMQX replicant nodes, will update replicaSet", "replicaSet", klog.KObj(preRs), "patch", string(patchResult.Patch))
 
 			if err := a.Handler.Update(preRs); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
@@ -150,8 +151,9 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EM
 		preRs.Spec.Selector = updateRs.DeepCopy().Spec.Selector
 		return preRs, nil
 	}
+
 	logger := log.FromContext(ctx)
-	logger.Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "patch", string(patchResult.Patch))
+	logger.Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "replicaSet", klog.KObj(preRs), "patch", string(patchResult.Patch))
 
 	return preRs, nil
 }
