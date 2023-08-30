@@ -12746,6 +12746,10 @@ spec:
                         type: array
                     type: object
                 type: object
+              revisionHistoryLimit:
+                default: 3
+                format: int32
+                type: integer
               serviceAccountName:
                 type: string
               updateStrategy:

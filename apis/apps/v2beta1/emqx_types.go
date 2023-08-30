@@ -72,6 +72,12 @@ type EMQXSpec struct {
 	//+kubebuilder:default:="cluster.local"
 	ClusterDomain string `json:"clusterDomain,omitempty"`
 
+	// The number of old ReplicaSets, old StatefulSet and old PersistentVolumeClaim to retain to allow rollback.
+	// This is a pointer to distinguish between explicit zero and not specified.
+	// Defaults to 3.
+	// +kubebuilder:default:=3
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
+
 	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
 	//+kubebuilder:default={type:Recreate,initialDelaySeconds:10,evacuationStrategy:{waitTakeover:10,connEvictRate:1000,sessEvictRate:1000}}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
@@ -79,6 +85,7 @@ type EMQXSpec struct {
 	// CoreTemplate is the object that describes the EMQX core node that will be created
 	//+kubebuilder:default={spec:{replicas:2}}
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
+
 	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
 	ReplicantTemplate *EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
 

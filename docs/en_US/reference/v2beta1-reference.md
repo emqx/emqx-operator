@@ -242,6 +242,7 @@ _Appears in:_
 | `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
 | `config` _[Config](#config)_ | EMQX config |
 | `clusterDomain` _string_ |  |
+| `revisionHistoryLimit` _integer_ | The number of old ReplicaSets, old StatefulSet and old PersistentVolumeClaim to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified. Defaults to 3. |
 | `updateStrategy` _[UpdateStrategy](#updatestrategy)_ | UpdateStrategy is the object that describes the EMQX blue-green update strategy |
 | `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | CoreTemplate is the object that describes the EMQX core node that will be created |
 | `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | ReplicantTemplate is the object that describes the EMQX replicant node that will be created |

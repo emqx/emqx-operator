@@ -72,13 +72,10 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 			if hash == instance.Status.CoreNodesStatus.UpdateRevision {
 				updateSts = sts.DeepCopy()
 			}
-			if sts.Status.Replicas != 0 &&
-				hash == instance.Status.CoreNodesStatus.CurrentRevision {
+			if hash == instance.Status.CoreNodesStatus.CurrentRevision {
 				currentSts = sts.DeepCopy()
 			}
-			if sts.Status.Replicas != 0 &&
-				hash != instance.Status.CoreNodesStatus.UpdateRevision &&
-				hash != instance.Status.CoreNodesStatus.CurrentRevision {
+			if hash != instance.Status.CoreNodesStatus.UpdateRevision && hash != instance.Status.CoreNodesStatus.CurrentRevision {
 				oldStsList = append(oldStsList, sts.DeepCopy())
 			}
 		}
@@ -91,12 +88,12 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) (updateRs, currentRs *appsv1.ReplicaSet, oldRsList []*appsv1.ReplicaSet) {
 	labels := appsv2beta1.DefaultReplicantLabels(instance)
 
+	list := &appsv1.ReplicaSetList{}
+	_ = k8sClient.List(ctx, list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(labels),
+	)
 	if instance.Spec.ReplicantTemplate == nil {
-		list := &appsv1.ReplicaSetList{}
-		_ = k8sClient.List(ctx, list,
-			client.InNamespace(instance.Namespace),
-			client.MatchingLabels(labels),
-		)
 		for _, rs := range list.Items {
 			oldRsList = append(oldRsList, rs.DeepCopy())
 		}
@@ -104,23 +101,15 @@ func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *a
 		return
 	}
 
-	list := &appsv1.ReplicaSetList{}
-	_ = k8sClient.List(ctx, list,
-		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(labels),
-	)
 	for _, rs := range list.Items {
 		if hash, ok := rs.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
 			if hash == instance.Status.ReplicantNodesStatus.UpdateRevision {
 				updateRs = rs.DeepCopy()
 			}
-			if rs.Status.Replicas != 0 &&
-				hash == instance.Status.ReplicantNodesStatus.CurrentRevision {
+			if hash == instance.Status.ReplicantNodesStatus.CurrentRevision {
 				currentRs = rs.DeepCopy()
 			}
-			if rs.Status.Replicas != 0 &&
-				hash != instance.Status.ReplicantNodesStatus.UpdateRevision &&
-				hash != instance.Status.ReplicantNodesStatus.CurrentRevision {
+			if hash != instance.Status.ReplicantNodesStatus.UpdateRevision && hash != instance.Status.ReplicantNodesStatus.CurrentRevision {
 				oldRsList = append(oldRsList, rs.DeepCopy())
 			}
 		}

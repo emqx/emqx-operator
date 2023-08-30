@@ -27,32 +27,45 @@ func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2beta1.EMQX
 	}
 
 	updateRs, currentRs, oldRsList := getReplicaSetList(ctx, u.Client, instance)
-	if updateRs != nil && currentRs == nil {
-		if len(oldRsList) > 0 {
-			currentRs = oldRsList[0]
-		} else {
-			currentRs = updateRs
+	if updateRs != nil {
+		if currentRs == nil || currentRs.Status.Replicas == 0 {
+			var i int
+			for i = 0; i < len(oldRsList); i++ {
+				if oldRsList[i].Status.Replicas > 0 {
+					currentRs = oldRsList[i]
+					break
+				}
+			}
+			if i == len(oldRsList) {
+				currentRs = updateRs
+			}
+			instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
+			if err := u.Client.Status().Update(ctx, instance); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to update status")}
+			}
+			return subResult{}
 		}
-		instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-		if err := u.Client.Status().Update(ctx, instance); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update status")}
-		}
-		return subResult{}
 	}
 
 	updateSts, currentSts, oldStsList := getStateFulSetList(ctx, u.Client, instance)
-	if updateSts != nil && currentSts == nil {
-		if len(oldStsList) > 0 {
-			currentSts = oldStsList[0]
-		} else {
-			currentSts = updateSts
+	if updateSts != nil {
+		if currentSts == nil || currentSts.Status.Replicas == 0 {
+			var i int
+			for i = 0; i < len(oldStsList); i++ {
+				if oldStsList[i].Status.Replicas > 0 {
+					currentSts = oldStsList[i]
+					break
+				}
+			}
+			if i == len(oldStsList) {
+				currentSts = updateSts
+			}
+			instance.Status.CoreNodesStatus.CurrentRevision = currentSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
+			if err := u.Client.Status().Update(ctx, instance); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to update status")}
+			}
+			return subResult{}
 		}
-		instance.Status.CoreNodesStatus.CurrentRevision = currentSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-
-		if err := u.Client.Status().Update(ctx, instance); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update status")}
-		}
-		return subResult{}
 	}
 
 	if r == nil {
