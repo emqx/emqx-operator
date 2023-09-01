@@ -41,7 +41,7 @@ func (s *syncSets) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r 
 	_, _, oldStsList := getStateFulSetList(ctx, s.Client, instance)
 	stsDiff := int32(len(oldStsList)) - *instance.Spec.RevisionHistoryLimit
 	if stsDiff > 0 {
-		for i := 0; i < int(rsDiff); i++ {
+		for i := 0; i < int(stsDiff); i++ {
 			sts := oldStsList[i].DeepCopy()
 			// Avoid delete stateful set with non-zero replica counts
 			if sts.Status.Replicas != 0 || *(sts.Spec.Replicas) != 0 || sts.Generation > sts.Status.ObservedGeneration || sts.DeletionTimestamp != nil {

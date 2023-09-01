@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Check sync rs", func() {
+var _ = Describe("Check sync sts and pvc", func() {
 	var s *syncSets
 
 	var instance *appsv2beta1.EMQX = new(appsv2beta1.EMQX)
