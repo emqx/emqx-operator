@@ -4,6 +4,11 @@
 
 skipCRDs: false
 
+# Development configures the logger to use a Zap development config
+# (stacktraces on warnings, no sampling), otherwise a Zap production
+# config will be used (stacktraces on errors, sampling).
+development: false
+
 replicaCount: 1
 
 image:
