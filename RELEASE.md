@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.2-rc.1 is released.
+EMQX Operator 2.2.2-rc.2 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -29,7 +29,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.2-rc.1
+  --version 2.2.2-rc.2
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
