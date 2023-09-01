@@ -70,6 +70,7 @@ jobs:
             --namespace emqx-operator-system \
             --create-namespace \
             --set image.tag=${{ github.sha }} \
+            --set development=true \
             --debug
       - name: Check operator
         env:

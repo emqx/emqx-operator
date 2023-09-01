@@ -27,6 +27,7 @@ spec:
         - --leader-elect
         - --metrics-bind-address=:8080
         - --health-probe-bind-address=:8081
+        - --zap-devel={{ .Values.development }}
         command:
         - /manager
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
