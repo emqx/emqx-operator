@@ -14,7 +14,7 @@ case $(sed --help 2>&1) in
     *) SED_REPLACE="sed -i () ";;
 esac
 
-${SED_REPLACE} -r "s|^EMQX Operator (.*) is released$|EMQX Operator ${tag} is released|g" RELEASE.md
+${SED_REPLACE} -r "s|^EMQX Operator .* has been released\.$|EMQX Operator ${tag} has been released.|g" RELEASE.md
 ${SED_REPLACE} -r "s|--version (.*)$|--version ${tag}|g" RELEASE.md
 ${SED_REPLACE} -r "s|^version:.*|version: ${tag}|g" deploy/charts/emqx-operator/Chart.yaml
 ${SED_REPLACE} -r "s|^appVersion:.*|appVersion: ${tag}|g" deploy/charts/emqx-operator/Chart.yaml
