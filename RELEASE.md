@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.7-ecp.2 is released.
+EMQX Operator 1.2.7-ecp.3 is released.
 
 ### Supported EMQX version
 
