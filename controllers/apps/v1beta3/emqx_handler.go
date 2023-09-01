@@ -62,8 +62,26 @@ type EmqxReconciler struct {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
-	var resources []client.Object
 	var err error
+	var emqxNodes []appsv1beta3.EmqxNode
+	emqxNodes, err = r.getNodeStatusesByAPI(instance)
+	if err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
+		condition := appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionFalse,
+			"FailedToGetNodeStatues",
+			err.Error(),
+		)
+		instance.SetCondition(*condition)
+		_ = r.Status().Update(ctx, instance)
+	}
+	instance = updateEmqxStatus(instance, emqxNodes)
+	if err = r.Status().Update(ctx, instance); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var resources []client.Object
 	postFn := func(client.Object) error { return nil }
 
 	sts := generateStatefulSetDef(instance)
@@ -180,7 +198,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		return ctrl.Result{RequeueAfter: time.Duration(5) * time.Second}, err
 	}
 
-	emqxNodes, err := r.getNodeStatusesByAPI(instance)
+	emqxNodes, err = r.getNodeStatusesByAPI(instance)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeStatues", err.Error())
 		condition := appsv1beta3.NewCondition(
