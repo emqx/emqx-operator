@@ -42,7 +42,6 @@ rules:
   - create
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -53,7 +52,6 @@ rules:
   - create
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -62,9 +60,9 @@ rules:
   - persistentvolumeclaims
   verbs:
   - create
+  - delete
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -75,7 +73,6 @@ rules:
   - create
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -83,33 +80,8 @@ rules:
   resources:
   - pods
   verbs:
-  - create
   - get
   - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods/exec
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods/portforward
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - ""
@@ -125,7 +97,6 @@ rules:
   - create
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -136,7 +107,6 @@ rules:
   - create
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -145,9 +115,9 @@ rules:
   - replicasets
   verbs:
   - create
+  - delete
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -156,9 +126,9 @@ rules:
   - statefulsets
   verbs:
   - create
+  - delete
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -167,6 +137,7 @@ rules:
   - emqxbrokers
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -192,6 +163,7 @@ rules:
   - emqxenterprises
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -202,14 +174,6 @@ rules:
   resources:
   - emqxenterprises/finalizers
   verbs:
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxenterprises/status
-  verbs:
-  - get
-  - patch
   - update
 - apiGroups:
   - apps.emqx.io
@@ -305,16 +269,6 @@ rules:
   - create
   - get
   - list
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - endpoints
-  verbs:
-  - create
-  - get
-  - list
-  - patch
   - update
   - watch
 {{- end }}
