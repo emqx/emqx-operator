@@ -31,7 +31,7 @@ func (s *syncSets) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r 
 			if rs.Status.Replicas != 0 || *(rs.Spec.Replicas) != 0 || rs.Generation > rs.Status.ObservedGeneration || rs.DeletionTimestamp != nil {
 				continue
 			}
-			logger.Info("trying to cleanup replica set for EMQX", "replicaSet", klog.KObj(rs), "EMQX", klog.KObj(instance))
+			logger.Info("trying to cleanup replicaSet for EMQX", "replicaSet", klog.KObj(rs), "EMQX", klog.KObj(instance))
 			if err := s.Client.Delete(ctx, rs); err != nil && !k8sErrors.IsNotFound(err) {
 				return subResult{err: err}
 			}
@@ -47,7 +47,7 @@ func (s *syncSets) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r 
 			if sts.Status.Replicas != 0 || *(sts.Spec.Replicas) != 0 || sts.Generation > sts.Status.ObservedGeneration || sts.DeletionTimestamp != nil {
 				continue
 			}
-			logger.Info("trying to cleanup stateful set for EMQX", "statefulSet", klog.KObj(sts), "EMQX", klog.KObj(instance))
+			logger.Info("trying to cleanup statefulSet for EMQX", "statefulSet", klog.KObj(sts), "EMQX", klog.KObj(instance))
 			if err := s.Client.Delete(ctx, sts); err != nil && !k8sErrors.IsNotFound(err) {
 				return subResult{err: err}
 			}
@@ -64,7 +64,7 @@ func (s *syncSets) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r 
 				if pvc.DeletionTimestamp != nil {
 					continue
 				}
-				logger.Info("trying to cleanup pvc for EMQX", "pvc", klog.KObj(pvc), "EMQX", klog.KObj(instance))
+				logger.Info("trying to cleanup persistentVolumeClaim for EMQX", "persistentVolumeClaim", klog.KObj(pvc), "EMQX", klog.KObj(instance))
 				if err := s.Client.Delete(ctx, pvc); err != nil && !k8sErrors.IsNotFound(err) {
 					return subResult{err: err}
 				}
