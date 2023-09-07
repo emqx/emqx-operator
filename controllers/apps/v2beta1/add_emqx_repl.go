@@ -195,10 +195,14 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 					ServiceAccountName: instance.Spec.ServiceAccountName,
 					SecurityContext:    instance.Spec.ReplicantTemplate.Spec.PodSecurityContext,
 					Affinity:           instance.Spec.ReplicantTemplate.Spec.Affinity,
-					Tolerations:        instance.Spec.ReplicantTemplate.Spec.ToleRations,
-					NodeName:           instance.Spec.ReplicantTemplate.Spec.NodeName,
-					NodeSelector:       instance.Spec.ReplicantTemplate.Spec.NodeSelector,
-					InitContainers:     instance.Spec.ReplicantTemplate.Spec.InitContainers,
+					Tolerations: append(
+						instance.Spec.ReplicantTemplate.Spec.Tolerations,
+						// TODO: just for compatible with old version, will remove in future
+						instance.Spec.ReplicantTemplate.Spec.ToleRations...,
+					),
+					NodeName:       instance.Spec.ReplicantTemplate.Spec.NodeName,
+					NodeSelector:   instance.Spec.ReplicantTemplate.Spec.NodeSelector,
+					InitContainers: instance.Spec.ReplicantTemplate.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
 							Name:            appsv2beta1.DefaultContainerName,

@@ -51,12 +51,12 @@ func TestGenerateStatefulSet(t *testing.T) {
 		emqx := instance.DeepCopy()
 
 		emqx.Spec.CoreTemplate.Spec.Affinity = &corev1.Affinity{}
-		emqx.Spec.CoreTemplate.Spec.ToleRations = []corev1.Toleration{{Key: "fake"}}
+		emqx.Spec.CoreTemplate.Spec.Tolerations = []corev1.Toleration{{Key: "fake"}}
 		emqx.Spec.CoreTemplate.Spec.NodeSelector = map[string]string{"fake": "fake"}
 		emqx.Spec.CoreTemplate.Spec.NodeName = "fake"
 		got := generateStatefulSet(emqx)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Affinity, got.Spec.Template.Spec.Affinity)
-		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.ToleRations, got.Spec.Template.Spec.Tolerations)
+		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.Tolerations, got.Spec.Template.Spec.Tolerations)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.NodeSelector, got.Spec.Template.Spec.NodeSelector)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.NodeName, got.Spec.Template.Spec.NodeName)
 
