@@ -53,11 +53,6 @@ jobs:
       - run: telepresence helm install
       - run: telepresence connect
       - run: make test
-      - uses: codecov/codecov-action@v3
-        with:
-          files: ./cover.out # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
 
   build-image:
     runs-on: ubuntu-latest
