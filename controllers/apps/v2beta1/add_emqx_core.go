@@ -190,10 +190,14 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 					ServiceAccountName: instance.Spec.ServiceAccountName,
 					SecurityContext:    instance.Spec.CoreTemplate.Spec.PodSecurityContext,
 					Affinity:           instance.Spec.CoreTemplate.Spec.Affinity,
-					Tolerations:        instance.Spec.CoreTemplate.Spec.ToleRations,
-					NodeName:           instance.Spec.CoreTemplate.Spec.NodeName,
-					NodeSelector:       instance.Spec.CoreTemplate.Spec.NodeSelector,
-					InitContainers:     instance.Spec.CoreTemplate.Spec.InitContainers,
+					Tolerations: append(
+						instance.Spec.CoreTemplate.Spec.Tolerations,
+						// TODO: just for compatible with old version, will remove in future
+						instance.Spec.CoreTemplate.Spec.ToleRations...,
+					),
+					NodeName:       instance.Spec.CoreTemplate.Spec.NodeName,
+					NodeSelector:   instance.Spec.CoreTemplate.Spec.NodeSelector,
+					InitContainers: instance.Spec.CoreTemplate.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
 							Name:            appsv2beta1.DefaultContainerName,

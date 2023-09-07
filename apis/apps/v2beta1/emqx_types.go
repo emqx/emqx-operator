@@ -179,7 +179,11 @@ type EMQXReplicantTemplateSpec struct {
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// If specified, the pod's tolerations.
 	// The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
+	// TODO: should use `tolerations` instead, this field just for compatible with old version, will delete in future.
 	ToleRations []corev1.Toleration `json:"toleRations,omitempty"`
+	// If specified, the pod's tolerations.
+	// The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// Replicas is the desired number of replicas of the given Template.
 	// These are replicas in the sense that they are instantiations of the
 	// same Template, but individual replicas also have a consistent identity.
