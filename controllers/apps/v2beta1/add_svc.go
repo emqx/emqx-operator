@@ -23,16 +23,17 @@ func (a *addSvc) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ in
 	}
 
 	configStr := configMap.Data["emqx.conf"]
-	resources := []client.Object{
-		generateHeadlessService(instance),
-		generateDashboardService(instance, configStr),
-		generateListenerService(instance, configStr),
+	resources := []client.Object{generateHeadlessService(instance)}
+	if dashboard := generateDashboardService(instance, configStr); dashboard != nil {
+		resources = append(resources, dashboard)
+	}
+	if listeners := generateListenerService(instance, configStr); listeners != nil {
+		resources = append(resources, listeners)
 	}
 
 	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update services")}
 	}
-
 	return subResult{}
 }
 
@@ -73,6 +74,15 @@ func generateHeadlessService(instance *appsv2beta1.EMQX) *corev1.Service {
 }
 
 func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
+	svc := &corev1.Service{}
+	if instance.Spec.DashboardServiceTemplate != nil {
+		if !instance.Spec.DashboardServiceTemplate.Enabled {
+			return nil
+		}
+		svc.ObjectMeta = *instance.Spec.DashboardServiceTemplate.ObjectMeta.DeepCopy()
+		svc.Spec = *instance.Spec.DashboardServiceTemplate.Spec.DeepCopy()
+	}
+
 	port, err := appsv2beta1.GetDashboardServicePort(configStr)
 	if err != nil {
 		port = &corev1.ServicePort{
@@ -81,12 +91,6 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 			Port:       18083,
 			TargetPort: intstr.Parse("18083"),
 		}
-	}
-
-	svc := &corev1.Service{}
-	if instance.Spec.DashboardServiceTemplate != nil {
-		svc.ObjectMeta = *instance.Spec.DashboardServiceTemplate.ObjectMeta.DeepCopy()
-		svc.Spec = *instance.Spec.DashboardServiceTemplate.Spec.DeepCopy()
 	}
 
 	svc.Spec.Ports = appsv2beta1.MergeServicePorts(
@@ -105,14 +109,23 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
 			Name:        instance.DashboardServiceNamespacedName().Name,
-			Labels:      appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), svc.Labels),
-			Annotations: svc.Annotations,
+			Labels:      appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), svc.ObjectMeta.Labels),
+			Annotations: svc.ObjectMeta.Annotations,
 		},
 		Spec: svc.Spec,
 	}
 }
 
 func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
+	svc := &corev1.Service{}
+	if instance.Spec.ListenersServiceTemplate != nil {
+		if !instance.Spec.ListenersServiceTemplate.Enabled {
+			return nil
+		}
+		svc.ObjectMeta = *instance.Spec.ListenersServiceTemplate.ObjectMeta.DeepCopy()
+		svc.Spec = *instance.Spec.ListenersServiceTemplate.Spec.DeepCopy()
+	}
+
 	ports, _ := appsv2beta1.GetListenersServicePorts(configStr)
 	if len(ports) == 0 {
 		ports = append(ports, []corev1.ServicePort{
@@ -143,12 +156,6 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 		}...)
 	}
 
-	svc := &corev1.Service{}
-	if instance.Spec.ListenersServiceTemplate != nil {
-		svc.ObjectMeta = *instance.Spec.ListenersServiceTemplate.ObjectMeta.DeepCopy()
-		svc.Spec = *instance.Spec.ListenersServiceTemplate.Spec.DeepCopy()
-	}
-
 	svc.Spec.Ports = appsv2beta1.MergeServicePorts(
 		svc.Spec.Ports,
 		ports,
@@ -165,8 +172,8 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
 			Name:        instance.ListenersServiceNamespacedName().Name,
-			Labels:      appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), svc.Labels),
-			Annotations: svc.Annotations,
+			Labels:      appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), svc.ObjectMeta.Labels),
+			Annotations: svc.ObjectMeta.Annotations,
 		},
 		Spec: svc.Spec,
 	}

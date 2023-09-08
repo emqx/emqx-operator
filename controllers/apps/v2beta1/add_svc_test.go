@@ -74,6 +74,7 @@ func TestGenerateDashboardService(t *testing.T) {
 				},
 			},
 			DashboardServiceTemplate: &appsv2beta1.ServiceTemplate{
+				Enabled: true,
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "emqx-dashboard",
 					Labels: map[string]string{

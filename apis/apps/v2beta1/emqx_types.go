@@ -286,6 +286,9 @@ type EMQXReplicantTemplateSpec struct {
 }
 
 type ServiceTemplate struct {
+	// EMQX Operator will create a service for EMQX nodes.
+	//+kubebuilder:default:=true
+	Enabled bool `json:"enabled,omitempty"`
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
