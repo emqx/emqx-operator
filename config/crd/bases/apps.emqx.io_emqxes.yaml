@@ -9572,6 +9572,9 @@ spec:
                 type: object
               dashboardServiceTemplate:
                 properties:
+                  enabled:
+                    default: true
+                    type: boolean
                   metadata:
                     properties:
                       annotations:
@@ -9695,6 +9698,9 @@ spec:
                 type: array
               listenersServiceTemplate:
                 properties:
+                  enabled:
+                    default: true
+                    type: boolean
                   metadata:
                     properties:
                       annotations:
