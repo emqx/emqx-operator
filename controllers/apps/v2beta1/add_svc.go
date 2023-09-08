@@ -76,7 +76,7 @@ func generateHeadlessService(instance *appsv2beta1.EMQX) *corev1.Service {
 func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
 	svc := &corev1.Service{}
 	if instance.Spec.DashboardServiceTemplate != nil {
-		if !instance.Spec.DashboardServiceTemplate.Enabled {
+		if !*instance.Spec.DashboardServiceTemplate.Enabled {
 			return nil
 		}
 		svc.ObjectMeta = *instance.Spec.DashboardServiceTemplate.ObjectMeta.DeepCopy()
@@ -119,7 +119,7 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
 	svc := &corev1.Service{}
 	if instance.Spec.ListenersServiceTemplate != nil {
-		if !instance.Spec.ListenersServiceTemplate.Enabled {
+		if !*instance.Spec.ListenersServiceTemplate.Enabled {
 			return nil
 		}
 		svc.ObjectMeta = *instance.Spec.ListenersServiceTemplate.ObjectMeta.DeepCopy()
