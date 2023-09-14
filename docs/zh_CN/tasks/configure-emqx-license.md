@@ -47,9 +47,9 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
 + 等待 EMQX 集群就绪，可以通过 `kubectl get` 命令查看 EMQX 集群的状态，请确保 `STATUS` 为 `Running`，这个可能需要一些时间
 
   ```bash
-  $ kubectl get emqx emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   10m
+  $ kubectl get emqx emqx-ee
+  NAME   IMAGE                        STATUS    AGE
+  emqx   emqx/emqx-enterprise:5.1.0   Running   10m
   ```
 
 + 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台
@@ -57,7 +57,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
   EMQX Operator 会创建两个 EMQX Service 资源，一个是 emqx-dashboard，一个是 emqx-listeners，分别对应 EMQX 控制台和 EMQX 监听端口。
 
   ```bash
-  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+  $ kubectl get svc emqx-ee-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
   192.168.1.200
   ```
@@ -131,7 +131,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
 + 查看 License 信息
 
   ```bash
-  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
+  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx-ee,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
   $ kubectl exec -it ${pod_name} -c emqx -- emqx_ctl license info
   ```
 
@@ -165,7 +165,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
   + 查看 EMQX 集群 License 是否被更新
 
   ```bash
-  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
+  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx-ee,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
   $ kubectl exec -it ${pod_name} -c emqx -- emqx_ctl license info
   ```
   可以获取到类似如下的信息，从获取到 `max_connections` 字段可以看出 License 的内容已经更新，则说明 EMQX 企业版 License 更新成功。若证书信息没有更新，可以等待一会，License 的更新会有些时延。

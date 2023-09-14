@@ -44,9 +44,9 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 + Wait for the EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
   ```bash
-  $ kubectl get emqx emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   10m
+  $ kubectl get emqx emqx-ee
+  NAME   IMAGE                        STATUS    AGE
+  emqx   emqx/emqx-enterprise:5.1.0   Running   10m
   ```
 
 + Obtain the Dashboard External IP of EMQX cluster and access EMQX console
@@ -54,7 +54,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
 
   ```bash
-  $ kubectl get svc emqx-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
+  $ kubectl get svc emqx-ee-dashboard -o json | jq '.status.loadBalancer.ingress[0].ip'
 
   192.168.1.200
   ```
@@ -128,7 +128,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
 + View License information
   ```bash
-  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
+  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx-ee,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
   $ kubectl exec -it ${pod_name} -c emqx -- emqx_ctl license info
   ```
 
@@ -161,7 +161,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
   + Check if the EMQX cluster license has been updated.
   ```bash
-  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
+  $ pod_name="$(kubectl get pods -l 'apps.emqx.io/instance=emqx-ee,apps.emqx.io/db-role=core' -o json | jq --raw-output '.items[0].metadata.name')"
   $ kubectl exec -it ${pod_name} -c emqx -- emqx_ctl license info
   ```
 
