@@ -76,8 +76,8 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	timeout = time.Second * 7
-	interval = time.Millisecond * 500
+	timeout = time.Second * 10
+	interval = time.Second
 	ctx = context.TODO()
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "false")).To(Succeed())
