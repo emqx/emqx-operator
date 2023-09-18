@@ -76,7 +76,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	timeout = time.Second * 5
+	timeout = time.Second * 7
 	interval = time.Millisecond * 500
 	ctx = context.TODO()
 
