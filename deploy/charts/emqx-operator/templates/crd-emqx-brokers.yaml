@@ -6341,9 +6341,7 @@ spec:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status
                         to another.
-                      type: string
-                    lastUpdateTime:
-                      description: The last time this condition was updated.
+                      format: date-time
                       type: string
                     message:
                       description: A human readable message indicating details about

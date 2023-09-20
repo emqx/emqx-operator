@@ -2,7 +2,6 @@ package v1beta3
 
 import (
 	"sort"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,11 +16,8 @@ type Condition struct {
 	Type ConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`
-	// The last time this condition was updated.
-	LastUpdateTime string      `json:"lastUpdateTime,omitempty"`
-	LastUpdateAt   metav1.Time `json:"-"`
 	// Last time the condition transitioned from one status to another.
-	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 	// The reason for the condition's last transition.
 	Reason string `json:"reason,omitempty"`
 	// A human readable message indicating details about the transition.
@@ -36,7 +32,7 @@ const (
 	ConditionRunning           ConditionType = "Running"
 )
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type EmqxStatus interface {
 	IsRunning() bool
 	IsPluginInitialized() bool
@@ -69,14 +65,10 @@ type Status struct {
 }
 
 func NewCondition(condType ConditionType, status corev1.ConditionStatus, reason, message string) *Condition {
-	now := metav1.Now()
-	nowString := now.Format(time.RFC3339)
 	return &Condition{
 		Type:               condType,
 		Status:             status,
-		LastUpdateTime:     nowString,
-		LastUpdateAt:       now,
-		LastTransitionTime: nowString,
+		LastTransitionTime: metav1.Now(),
 		Reason:             reason,
 		Message:            message,
 	}
@@ -109,17 +101,11 @@ func (s *Status) GetConditions() []Condition {
 
 func (s *Status) SetCondition(c Condition) {
 	pos, cp := getCondition(s, c.Type)
-	if cp != nil &&
-		cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
-		now := metav1.Now()
-		nowString := now.Format(time.RFC3339)
-		s.Conditions[pos].LastUpdateAt = now
-		s.Conditions[pos].LastUpdateTime = nowString
-		s.sortConditions(s.Conditions)
-		return
-	}
 
 	if cp != nil {
+		if cp.Status == c.Status && cp.Reason == c.Reason && cp.Message == c.Message {
+			return
+		}
 		s.Conditions[pos] = c
 	} else {
 		s.Conditions = append(s.Conditions, c)
@@ -138,7 +124,7 @@ func (s *Status) ClearCondition(t ConditionType) {
 
 func (s *Status) sortConditions(conditions []Condition) {
 	sort.Slice(conditions, func(i, j int) bool {
-		return s.Conditions[j].LastUpdateAt.Before(&s.Conditions[i].LastUpdateAt)
+		return s.Conditions[j].LastTransitionTime.Before(&s.Conditions[i].LastTransitionTime)
 	})
 }
 

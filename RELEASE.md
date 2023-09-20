@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.7-ecp.3 is released.
+EMQX Operator 1.2.7-ecp.4 is released.
 
 ### Supported EMQX version
 
@@ -10,4 +10,4 @@ EMQX Operator 1.2.7-ecp.3 is released.
 
 ### Fixes 🛠
 
-- Fixed the bug where the service port disappears when a node in the EMQX cluster crashes.
+- Fixed the bug where the `resourceVersion` of the EMQX customer resource always changes.
