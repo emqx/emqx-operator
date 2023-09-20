@@ -300,6 +300,9 @@ func (r *EmqxReconciler) getNodeStatusesByAPI(instance appsv1beta3.Emqx) ([]apps
 	if err := json.Unmarshal([]byte(data.Raw), &emqxNodes); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal node statuses: %v", err)
 	}
+	sort.Slice(emqxNodes, func(i, j int) bool {
+		return emqxNodes[i].Node < emqxNodes[j].Node
+	})
 	return emqxNodes, nil
 }
 
