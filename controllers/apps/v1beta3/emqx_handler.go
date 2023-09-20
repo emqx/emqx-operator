@@ -29,15 +29,18 @@ import (
 	"strings"
 	"time"
 
+	emperror "emperror.dev/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -76,9 +79,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		instance.SetCondition(*condition)
 		_ = r.Status().Update(ctx, instance)
 	}
-	instance = updateEmqxStatus(instance, emqxNodes)
-	if err = r.Status().Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		_ = r.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+		instance = updateEmqxStatus(instance, emqxNodes)
+		return r.Status().Update(ctx, instance)
+	}); err != nil {
+		return ctrl.Result{}, emperror.Wrap(err, "failed to update status")
 	}
 
 	var resources []client.Object
@@ -212,8 +218,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	}
 
 	instance = updateEmqxStatus(instance, emqxNodes)
-	if err = r.Status().Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		_ = r.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+		instance = updateEmqxStatus(instance, emqxNodes)
+		return r.Status().Update(ctx, instance)
+	}); err != nil {
+		return ctrl.Result{}, emperror.Wrap(err, "failed to update status")
 	}
 
 	if status := instance.GetStatus(); !status.IsRunning() {
