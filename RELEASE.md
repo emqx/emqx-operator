@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.7-ecp.4 is released.
+EMQX Operator 1.2.7-ecp.5 is released.
 
 ### Supported EMQX version
 
@@ -10,4 +10,4 @@ EMQX Operator 1.2.7-ecp.4 is released.
 
 ### Fixes 🛠
 
-- Fixed the bug where the `resourceVersion` of the EMQX customer resource always changes.
+- Fixed the unnecessary updates of EMQX customer resource caused by the sequence of emqx nodes
