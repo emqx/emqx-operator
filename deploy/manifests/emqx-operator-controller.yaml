@@ -6344,9 +6344,7 @@ spec:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status
                         to another.
-                      type: string
-                    lastUpdateTime:
-                      description: The last time this condition was updated.
+                      format: date-time
                       type: string
                     message:
                       description: A human readable message indicating details about
@@ -12775,9 +12773,7 @@ spec:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status
                         to another.
-                      type: string
-                    lastUpdateTime:
-                      description: The last time this condition was updated.
+                      format: date-time
                       type: string
                     message:
                       description: A human readable message indicating details about
@@ -13252,7 +13248,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: emqx/emqx-operator-controller:1.2.7-ecp.3
+        image: emqx/emqx-operator-controller:1.2.7-ecp.4
         livenessProbe:
           httpGet:
             path: /healthz
