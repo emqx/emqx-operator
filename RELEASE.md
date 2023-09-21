@@ -10,4 +10,4 @@ EMQX Operator 1.2.7-ecp.5 is released.
 
 ### Fixes 🛠
 
-- Fixed the unnecessary updates of EMQX customer resource caused by the sequence of emqx nodes
+- Fixed the unnecessary updates of EMQX customer resource when replicas = 0
