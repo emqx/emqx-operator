@@ -65,6 +65,20 @@ type EmqxReconciler struct {
 }
 
 func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctrl.Result, error) {
+	if instance.GetDeletionTimestamp() != nil {
+		return ctrl.Result{}, nil
+	}
+	if instance.GetReplicas() == nil || *instance.GetReplicas() == 0 {
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			_ = r.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+			instance = updateEmqxStatus(instance, []appsv1beta3.EmqxNode{})
+			return r.Status().Update(ctx, instance)
+		}); err != nil {
+			return ctrl.Result{}, emperror.Wrap(err, "failed to update status")
+		}
+		return ctrl.Result{}, nil
+	}
+
 	var err error
 	var emqxNodes []appsv1beta3.EmqxNode
 	emqxNodes, err = r.getNodeStatusesByAPI(instance)
@@ -217,7 +231,6 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 		_ = r.Status().Update(ctx, instance)
 	}
 
-	instance = updateEmqxStatus(instance, emqxNodes)
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		_ = r.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 		instance = updateEmqxStatus(instance, emqxNodes)
