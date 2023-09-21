@@ -70,6 +70,20 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta3.Emqx) (ctr
 	}
 	if instance.GetReplicas() == nil || *instance.GetReplicas() == 0 {
 		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			storageSts := &appsv1.StatefulSet{}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(generateStatefulSetDef(instance)), storageSts); err != nil {
+				if k8sErrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+			storageSts.Spec.Replicas = instance.GetReplicas()
+			return r.Handler.Update(storageSts, func(o client.Object) error { return nil })
+		}); err != nil {
+			return ctrl.Result{}, emperror.Wrap(err, "failed to update statefulSet")
+		}
+
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			_ = r.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 			instance = updateEmqxStatus(instance, []appsv1beta3.EmqxNode{})
 			return r.Status().Update(ctx, instance)
@@ -885,19 +899,26 @@ func updateEmqxStatus(instance appsv1beta3.Emqx, emqxNodes []appsv1beta3.EmqxNod
 	}
 
 	var cond *appsv1beta3.Condition
-	if status.Replicas == status.ReadyReplicas {
+	if status.Replicas == 0 {
 		cond = appsv1beta3.NewCondition(
 			appsv1beta3.ConditionRunning,
-			corev1.ConditionTrue,
-			"ClusterReady",
-			"All resources are ready",
+			corev1.ConditionFalse,
+			"ClusterNotReady",
+			"Replicas is 0",
 		)
-	} else {
+	} else if status.Replicas != status.ReadyReplicas {
 		cond = appsv1beta3.NewCondition(
 			appsv1beta3.ConditionRunning,
 			corev1.ConditionFalse,
 			"ClusterNotReady",
 			"Some nodes are not ready",
+		)
+	} else {
+		cond = appsv1beta3.NewCondition(
+			appsv1beta3.ConditionRunning,
+			corev1.ConditionTrue,
+			"ClusterReady",
+			"All resources are ready",
 		)
 	}
 	status.SetCondition(*cond)
