@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,11 +27,25 @@ type addCore struct {
 }
 
 func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
-	preSts, err := a.getNewStatefulSet(ctx, instance)
-	if err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to get new statefulSet")}
+	logger := log.FromContext(ctx)
+	preSts := getNewStatefulSet(instance)
+	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
+
+	patchCalculateFunc := func(storage, new *appsv1.StatefulSet) *patch.PatchResult {
+		if storage == nil {
+			return &patch.PatchResult{Patch: []byte("{should create new StatefulSet}")}
+		}
+		patchResult, _ := a.Patcher.Calculate(
+			storage.DeepCopy(),
+			new.DeepCopy(),
+			justCheckPodTemplate(),
+		)
+		return patchResult
 	}
-	if preSts.UID == "" {
+	if patchResult := patchCalculateFunc(updateSts, preSts); !patchResult.IsEmpty() {
+		// Create new statefulSet
+		logger.Info("got different pod template for EMQX core nodes, will create new statefulSet", "statefulSet", klog.KObj(preSts), "patch", string(patchResult.Patch))
+
 		_ = ctrl.SetControllerReference(instance, preSts, a.Scheme)
 		if err := a.Handler.Create(preSts); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
@@ -44,32 +58,9 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 			}
 			return subResult{err: emperror.Wrap(err, "failed to create statefulSet")}
 		}
-		instance.Status.SetCondition(metav1.Condition{
-			Type:    appsv2beta1.CoreNodesProgressing,
-			Status:  metav1.ConditionTrue,
-			Reason:  "CreateNewStatefulSet",
-			Message: "Create new statefulSet",
-		})
-		instance.Status.RemoveCondition(appsv2beta1.Ready)
-		instance.Status.RemoveCondition(appsv2beta1.Available)
-		instance.Status.RemoveCondition(appsv2beta1.CoreNodesReady)
-		instance.Status.CoreNodesStatus.UpdateRevision = preSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-		_ = a.Client.Status().Update(ctx, instance)
-	} else {
-		storageSts := &appsv1.StatefulSet{}
-		_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preSts), storageSts)
-		patchResult, _ := a.Patcher.Calculate(storageSts, preSts,
-			patch.IgnoreStatusFields(),
-			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
-		)
-		if !patchResult.IsEmpty() {
-			logger := log.FromContext(ctx)
-			logger.Info("got different statefulSet for EMQX core nodes, will update statefulSet", "statefulSet", klog.KObj(preSts), "patch", string(patchResult.Patch))
-
-			if err := a.Handler.Update(preSts); err != nil {
-				return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
-			}
-
+		// Update EMQX status
+		_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 			instance.Status.SetCondition(metav1.Condition{
 				Type:    appsv2beta1.CoreNodesProgressing,
 				Status:  metav1.ConditionTrue,
@@ -79,22 +70,50 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 			instance.Status.RemoveCondition(appsv2beta1.Ready)
 			instance.Status.RemoveCondition(appsv2beta1.Available)
 			instance.Status.RemoveCondition(appsv2beta1.CoreNodesReady)
-			_ = a.Client.Status().Update(ctx, instance)
-		}
+			instance.Status.CoreNodesStatus.UpdateRevision = preSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
+			return a.Client.Status().Update(ctx, instance)
+		})
+		return subResult{}
 	}
 
+	preSts.ObjectMeta = updateSts.DeepCopy().ObjectMeta
+	preSts.Spec.Template.ObjectMeta = updateSts.DeepCopy().Spec.Template.ObjectMeta
+	preSts.Spec.Selector = updateSts.DeepCopy().Spec.Selector
+	if patchResult, _ := a.Patcher.Calculate(
+		updateSts.DeepCopy(),
+		preSts.DeepCopy(),
+		patch.IgnoreStatusFields(),
+		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
+	); !patchResult.IsEmpty() {
+		// Update statefulSet
+		logger.Info("got different statefulSet for EMQX core nodes, will update statefulSet", "statefulSet", klog.KObj(preSts), "patch", string(patchResult.Patch))
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			storage := &appsv1.StatefulSet{}
+			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preSts), storage)
+			preSts.ResourceVersion = storage.ResourceVersion
+			return a.Handler.Update(preSts)
+		}); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
+		}
+		// Update EMQX status
+		_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+			instance.Status.SetCondition(metav1.Condition{
+				Type:    appsv2beta1.CoreNodesProgressing,
+				Status:  metav1.ConditionTrue,
+				Reason:  "CreateNewStatefulSet",
+				Message: "Create new statefulSet",
+			})
+			instance.Status.RemoveCondition(appsv2beta1.Ready)
+			instance.Status.RemoveCondition(appsv2beta1.Available)
+			instance.Status.RemoveCondition(appsv2beta1.CoreNodesReady)
+			return a.Client.Status().Update(ctx, instance)
+		})
+	}
 	return subResult{}
 }
 
-func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2beta1.EMQX) (*appsv1.StatefulSet, error) {
-	configMap := &corev1.ConfigMap{}
-	if err := a.Client.Get(ctx, types.NamespacedName{
-		Name:      instance.ConfigsNamespacedName().Name,
-		Namespace: instance.Namespace,
-	}, configMap); err != nil {
-		return nil, emperror.Wrap(err, "failed to get configMap")
-	}
-
+func getNewStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 	var containerPort corev1.ContainerPort
 	if svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data); err != nil {
 		containerPort = corev1.ContainerPort{
@@ -126,29 +145,7 @@ func (a *addCore) getNewStatefulSet(ctx context.Context, instance *appsv2beta1.E
 		{Name: "EMQX_DASHBOARD__LISTENERS__HTTP__BIND", Value: strconv.Itoa(int(containerPort.ContainerPort))},
 	}, preSts.Spec.Template.Spec.Containers[0].Env...)
 
-	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
-	if updateSts == nil {
-		return preSts, nil
-	}
-
-	patchResult, err := a.Patcher.Calculate(
-		updateSts.DeepCopy(),
-		preSts.DeepCopy(),
-		justCheckPodTemplate(),
-	)
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to calculate patch")
-	}
-	if patchResult.IsEmpty() {
-		preSts.ObjectMeta = updateSts.DeepCopy().ObjectMeta
-		preSts.Spec.Template.ObjectMeta = updateSts.DeepCopy().Spec.Template.ObjectMeta
-		preSts.Spec.Selector = updateSts.DeepCopy().Spec.Selector
-		return preSts, nil
-	}
-
-	logger := log.FromContext(ctx)
-	logger.Info("got different pod template for EMQX core nodes, will create new statefulSet", "statefulSet", klog.KObj(preSts), "patch", string(patchResult.Patch))
-	return preSts, nil
+	return preSts
 }
 
 func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
