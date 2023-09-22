@@ -62,10 +62,6 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 		Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
 	})
 
-	It("create configMap", func() {
-		Expect((&syncConfig{emqxReconciler}).reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
-	})
-
 	Context("replicant template is nil", func() {
 		JustBeforeEach(func() {
 			instance.Spec.ReplicantTemplate = nil

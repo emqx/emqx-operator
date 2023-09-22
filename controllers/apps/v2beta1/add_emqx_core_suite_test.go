@@ -53,10 +53,6 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
 	})
 
-	It("create configMap", func() {
-		Expect((&syncConfig{emqxReconciler}).reconcile(ctx, instance, nil)).Should(Equal(subResult{}))
-	})
-
 	It("should create statefulSet", func() {
 		Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 		Eventually(func() []appsv1.StatefulSet {

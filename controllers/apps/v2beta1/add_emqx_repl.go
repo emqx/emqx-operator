@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,11 +33,26 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		return subResult{}
 	}
 
-	preRs, err := a.getNewReplicaSet(ctx, instance)
-	if err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to get new replicaSet")}
+	logger := log.FromContext(ctx)
+	preRs := getNewReplicaSet(instance)
+	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
+
+	patchCalculateFunc := func(storage, new *appsv1.ReplicaSet) *patch.PatchResult {
+		if storage == nil {
+			return &patch.PatchResult{Patch: []byte("{should create new ReplicaSet}")}
+		}
+		patchResult, _ := a.Patcher.Calculate(
+			storage.DeepCopy(),
+			new.DeepCopy(),
+			justCheckPodTemplate(),
+		)
+		return patchResult
 	}
-	if preRs.UID == "" {
+
+	if patchResult := patchCalculateFunc(updateRs, preRs); !patchResult.IsEmpty() {
+		//Crete Rs
+		logger.Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "replicaSet", klog.KObj(preRs), "patch", string(patchResult.Patch))
+
 		_ = ctrl.SetControllerReference(instance, preRs, a.Scheme)
 		if err := a.Handler.Create(preRs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
@@ -50,32 +65,10 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 			}
 			return subResult{err: emperror.Wrap(err, "failed to create replicaSet")}
 		}
-		instance.Status.SetCondition(metav1.Condition{
-			Type:    appsv2beta1.ReplicantNodesProgressing,
-			Status:  metav1.ConditionTrue,
-			Reason:  "CreateNewReplicaSet",
-			Message: "Create new replicaSet",
-		})
-		instance.Status.RemoveCondition(appsv2beta1.Ready)
-		instance.Status.RemoveCondition(appsv2beta1.Available)
-		instance.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
-		instance.Status.ReplicantNodesStatus.UpdateRevision = preRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-		_ = a.Client.Status().Update(ctx, instance)
-	} else {
-		storageRs := &appsv1.ReplicaSet{}
-		_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preRs), storageRs)
-		patchResult, _ := a.Patcher.Calculate(storageRs, preRs,
-			patch.IgnoreStatusFields(),
-			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
-		)
-		if !patchResult.IsEmpty() {
-			logger := log.FromContext(ctx)
-			logger.Info("got different replicaSet for EMQX replicant nodes, will update replicaSet", "replicaSet", klog.KObj(preRs), "patch", string(patchResult.Patch))
 
-			if err := a.Handler.Update(preRs); err != nil {
-				return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
-			}
-
+		// Update EMQX status
+		_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 			instance.Status.SetCondition(metav1.Condition{
 				Type:    appsv2beta1.ReplicantNodesProgressing,
 				Status:  metav1.ConditionTrue,
@@ -85,22 +78,50 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 			instance.Status.RemoveCondition(appsv2beta1.Ready)
 			instance.Status.RemoveCondition(appsv2beta1.Available)
 			instance.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
-			_ = a.Client.Status().Update(ctx, instance)
-		}
+			instance.Status.ReplicantNodesStatus.UpdateRevision = preRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
+			return a.Client.Status().Update(ctx, instance)
+		})
+		return subResult{}
 	}
 
+	preRs.ObjectMeta = updateRs.DeepCopy().ObjectMeta
+	preRs.Spec.Template.ObjectMeta = updateRs.DeepCopy().Spec.Template.ObjectMeta
+	preRs.Spec.Selector = updateRs.DeepCopy().Spec.Selector
+	if patchResult, _ := a.Patcher.Calculate(
+		updateRs.DeepCopy(),
+		preRs.DeepCopy(),
+		patch.IgnoreStatusFields(),
+		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
+	); !patchResult.IsEmpty() {
+		// Update replicaSet
+		logger.Info("got different replicaSet for EMQX replicant nodes, will update replicaSet", "replicaSet", klog.KObj(preRs), "patch", string(patchResult.Patch))
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			storage := &appsv1.ReplicaSet{}
+			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preRs), storage)
+			preRs.ResourceVersion = storage.ResourceVersion
+			return a.Handler.Update(preRs)
+		}); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
+		}
+		// Update EMQX status
+		_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+			instance.Status.SetCondition(metav1.Condition{
+				Type:    appsv2beta1.ReplicantNodesProgressing,
+				Status:  metav1.ConditionTrue,
+				Reason:  "CreateNewReplicaSet",
+				Message: "Create new replicaSet",
+			})
+			instance.Status.RemoveCondition(appsv2beta1.Ready)
+			instance.Status.RemoveCondition(appsv2beta1.Available)
+			instance.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
+			return a.Client.Status().Update(ctx, instance)
+		})
+	}
 	return subResult{}
 }
 
-func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EMQX) (*appsv1.ReplicaSet, error) {
-	configMap := &corev1.ConfigMap{}
-	if err := a.Client.Get(ctx, types.NamespacedName{
-		Name:      instance.ConfigsNamespacedName().Name,
-		Namespace: instance.Namespace,
-	}, configMap); err != nil {
-		return nil, emperror.Wrap(err, "failed to get configMap")
-	}
-
+func getNewReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 	var containerPort corev1.ContainerPort
 	if svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data); err != nil {
 		containerPort = corev1.ContainerPort{
@@ -132,30 +153,7 @@ func (a *addRepl) getNewReplicaSet(ctx context.Context, instance *appsv2beta1.EM
 		{Name: "EMQX_DASHBOARD__LISTENERS__HTTP__BIND", Value: strconv.Itoa(int(containerPort.ContainerPort))},
 	}, preRs.Spec.Template.Spec.Containers[0].Env...)
 
-	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
-	if updateRs == nil {
-		return preRs, nil
-	}
-
-	patchResult, err := a.Patcher.Calculate(
-		updateRs.DeepCopy(),
-		preRs.DeepCopy(),
-		justCheckPodTemplate(),
-	)
-	if err != nil {
-		return nil, emperror.Wrap(err, "failed to calculate patch result")
-	}
-	if patchResult.IsEmpty() {
-		preRs.ObjectMeta = updateRs.DeepCopy().ObjectMeta
-		preRs.Spec.Template.ObjectMeta = updateRs.DeepCopy().Spec.Template.ObjectMeta
-		preRs.Spec.Selector = updateRs.DeepCopy().Spec.Selector
-		return preRs, nil
-	}
-
-	logger := log.FromContext(ctx)
-	logger.Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "replicaSet", klog.KObj(preRs), "patch", string(patchResult.Patch))
-
-	return preRs, nil
+	return preRs
 }
 
 func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
