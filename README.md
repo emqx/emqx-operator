@@ -1,17 +1,22 @@
-# EMQX Operator
+<h1 align="center" style="border-bottom: none">
+    EMQX Operator
+</h1>
+
+<p align="center">Visit <a href="//www.emqx.com/en/emqx-kubernetes-operator" target="_blank">emqx.io</a> for the full documentation, examples and guides.</p>
+
+<div align="center">
 
 [![GitHub Release](https://img.shields.io/github/release/emqx/emqx-operator?color=brightgreen)](https://github.com/emqx/emqx-operator/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/emqx/emqx-operator-controller)](https://hub.docker.com/r/emqx/emqx-operator-controller)
 [![codecov](https://codecov.io/gh/emqx/emqx-operator/branch/main/graph/badge.svg?token=RNMH7K52JZ)](https://codecov.io/gh/emqx/emqx-operator)
 
-A Kubernetes Operator for [EMQX](https://www.emqx.io)
+</div>
 
 ## Overview
 
 The EMQX Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [EMQX](https://www.emqx.io/), including EMQX Broker and EMQX Enterprise. The purpose of this project is to simplify and automate the configuration of the EMQX cluster.
 
 The EMQX Operator includes, but is not limited to, the following features:
-
 
 * **Simplified Deployment EMQX**: Declare EMQX clusters with EMQX custom resources and deploy them quickly. For more details, please check [Getting Started](./docs/en_US/getting-started/getting-started.md).
 
