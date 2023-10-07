@@ -10,7 +10,7 @@ This feature only supports `apps.emqx.io/v1beta4 EmqxEnterprise` and `apps.emqx.
 
 :::
 
-## Background
+## 背景
 
 1. In traditional EMQX cluster deployment, the default rolling upgrade strategy of StatefulSet is usually used to update EMQX Pods. However, this approach has the following two problems:
 
@@ -18,10 +18,6 @@ This feature only supports `apps.emqx.io/v1beta4 EmqxEnterprise` and `apps.emqx.
 
    2. During the rolling update process, only N - 1 Pods can provide services because it takes some time for new Pods to start up and become ready. This may lead to a decrease in service availability.
 
-![rolling update](./assets/configure-emqx-blueGreenUpdate/roll-update.png)
-
-<!--
-wait emqx.io support mermaid
 ```mermaid
 timeline
 				section Update start
@@ -46,7 +42,6 @@ timeline
 						: pod-1
 						: pod-2
 ```
--->
 
 ## Solution
 
@@ -66,9 +61,6 @@ The entire upgrade process can be roughly divided into the following steps:
 
 5. Complete the upgrade.
 
-![blue green deploy](./assets/configure-emqx-blueGreenUpdate/blue-green-deploy.png)
-
-<!--
 ```mermaid
 timeline
 				section Update start
@@ -105,7 +97,6 @@ timeline
 						: pod-1
 						: pod-2
 ```
--->
 
 ## How to update the EMQX cluster through blue-green deployment.
 
