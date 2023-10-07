@@ -10,7 +10,7 @@ This feature only supports `apps.emqx.io/v1beta4 EmqxEnterprise` and `apps.emqx.
 
 :::
 
-## 背景
+## Background
 
 1. In traditional EMQX cluster deployment, the default rolling upgrade strategy of StatefulSet is usually used to update EMQX Pods. However, this approach has the following two problems:
 
