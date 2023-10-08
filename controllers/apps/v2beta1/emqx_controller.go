@@ -172,23 +172,12 @@ func newRequester(k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq
 	}
 
 	labels := appsv2beta1.DefaultCoreLabels(instance)
-	if instance.Status.IsConditionTrue(appsv2beta1.Available) {
-		if instance.Status.CoreNodesStatus.UpdateRevision != "" {
-			labels = appsv2beta1.CloneAndAddLabel(
-				labels,
-				appsv2beta1.LabelsPodTemplateHashKey,
-				instance.Status.CoreNodesStatus.UpdateRevision,
-			)
-		}
-	} else {
-		if instance.Status.CoreNodesStatus.CurrentRevision != "" {
-			labels = appsv2beta1.CloneAndAddLabel(
-				labels,
-				appsv2beta1.LabelsPodTemplateHashKey,
-				instance.Status.CoreNodesStatus.CurrentRevision,
-			)
-
-		}
+	if instance.Status.CoreNodesStatus.CurrentRevision != "" {
+		labels = appsv2beta1.CloneAndAddLabel(
+			labels,
+			appsv2beta1.LabelsPodTemplateHashKey,
+			instance.Status.CoreNodesStatus.CurrentRevision,
+		)
 	}
 
 	podList := &corev1.PodList{}
