@@ -374,6 +374,6 @@ Switch to the **Status** -> **Targets** page, the following figure is displayed,
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-target.png)
 
 ## Import Grafana Templates
-Import all dashboard [templates](https://github.com/emqx/emqx-exporter/tree/main/config/grafana-template). Open the main dashboard **EMQX** and enjoy yourself!
+Import all dashboard [templates](https://github.com/emqx/emqx-exporter/tree/main/grafana-dashboard/template). Open the main dashboard **EMQX** and enjoy yourself!
 
 ![](./assets/configure-emqx-prometheus/emqx-grafana-dashboard.png)

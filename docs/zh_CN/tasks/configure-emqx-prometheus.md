@@ -385,7 +385,7 @@ kubectl apply -f monitor.yaml
 ![](./assets/configure-emqx-prometheus/emqx-prometheus-target.png)
 
 ## 导入 Grafana 模板
-导入所有 dashboard [模板](https://github.com/emqx/emqx-exporter/tree/main/config/grafana-template)。
+导入所有 dashboard [模板](https://github.com/emqx/emqx-exporter/tree/main/grafana-dashboard/template)。
 
 集群的整体监控状态位于 **EMQX** 看板中。
 
