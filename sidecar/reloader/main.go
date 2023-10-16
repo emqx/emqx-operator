@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -116,7 +115,7 @@ func generateWatchedFileList(pluginConfigDir, licenseFilePath string) []string {
 	if licenseFilePath != "" {
 		fileList = append(fileList, licenseFilePath)
 	}
-	pluginConfigs, err := ioutil.ReadDir(pluginConfigDir)
+	pluginConfigs, err := os.ReadDir(pluginConfigDir)
 	if err != nil {
 		log.Printf("read dir err: %v", err)
 		return fileList
@@ -215,9 +214,10 @@ func requestWebhook(url url.URL, method string, bodys []byte, username, password
 		return
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("ioutil read error:", err)
+		log.Println("read resp body error:", err)
 		return
 	}
 	log.Println("http response url:", url.String())
