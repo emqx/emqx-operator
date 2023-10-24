@@ -142,8 +142,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `controllerUID` _UID_ |  |
-| `podUID` _UID_ |  |
+| `controllerUID` _[UID](#uid)_ |  |
+| `podUID` _[UID](#uid)_ |  |
 | `node` _string_ | EMQX node name, example: emqx@127.0.0.1 |
 | `node_status` _string_ | EMQX node status, example: Running |
 | `otp_release` _string_ | Erlang/OTP version used by EMQX, example: 24.2/12.2 |
@@ -364,7 +364,7 @@ _Appears in:_
 
 #### RebalanceConditionType
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 
 
@@ -391,7 +391,7 @@ RebalanceList contains a list of Rebalance
 
 #### RebalancePhase
 
-_Underlying type:_ `string`
+_Underlying type:_ _string_
 
 
 
