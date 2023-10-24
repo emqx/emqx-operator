@@ -23,6 +23,7 @@ type RequesterInterface interface {
 }
 
 type Requester struct {
+	Schema   string
 	Host     string
 	Username string
 	Password string
@@ -40,9 +41,16 @@ func (requester *Requester) GetHost() string {
 	return requester.Host
 }
 
+func (requester *Requester) GetSchema() string {
+	if requester.Schema == "" {
+		return "http"
+	}
+	return requester.Schema
+}
+
 func (requester *Requester) GetURL(path string, query ...string) url.URL {
 	url := url.URL{
-		Scheme: "http",
+		Scheme: requester.GetSchema(),
 		Host:   requester.GetHost(),
 		Path:   path,
 	}
@@ -58,10 +66,10 @@ func (requester *Requester) GetURL(path string, query ...string) url.URL {
 
 func (requester *Requester) Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 	if url.Scheme == "" {
-		url.Scheme = "http"
+		url.Scheme = requester.GetSchema()
 	}
 	if url.Host == "" {
-		url.Host = requester.Host
+		url.Host = requester.GetHost()
 	}
 
 	req, err := http.NewRequest(method, url.String(), bytes.NewReader(body))
@@ -83,7 +91,9 @@ func (requester *Requester) Request(method string, url url.URL, body []byte, hea
 	}
 	req.Close = true
 
-	httpClient := http.Client{}
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.TLSClientConfig.InsecureSkipVerify = true
+	httpClient := http.Client{Transport: tr}
 	resp, err = httpClient.Do(req)
 	if err != nil {
 		return nil, nil, emperror.Wrap(err, "failed to request API")
@@ -103,6 +113,7 @@ type FakeRequester struct {
 }
 
 func (f *FakeRequester) GetURL(path string, query ...string) url.URL { return url.URL{Path: path} }
+func (f *FakeRequester) GetSchema() string                           { return "http" }
 func (f *FakeRequester) GetHost() string                             { return "" }
 func (f *FakeRequester) GetUsername() string                         { return "" }
 func (f *FakeRequester) GetPassword() string                         { return "" }

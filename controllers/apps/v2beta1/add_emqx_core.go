@@ -114,20 +114,7 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 }
 
 func getNewStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
-	var containerPort corev1.ContainerPort
-	if svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data); err != nil {
-		containerPort = corev1.ContainerPort{
-			Name:          "dashboard",
-			Protocol:      corev1.ProtocolTCP,
-			ContainerPort: 18083,
-		}
-	} else {
-		containerPort = corev1.ContainerPort{
-			Name:          "dashboard",
-			Protocol:      corev1.ProtocolTCP,
-			ContainerPort: svcPort.Port,
-		}
-	}
+	svcPorts, _ := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
 
 	preSts := generateStatefulSet(instance)
 	podTemplateSpecHash := computeHash(preSts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
@@ -137,14 +124,20 @@ func getNewStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 	preSts.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preSts.Spec.Template.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
 	preSts.Spec.Template.Spec.Containers[0].Ports = appsv2beta1.MergeContainerPorts(
 		preSts.Spec.Template.Spec.Containers[0].Ports,
-		[]corev1.ContainerPort{
-			containerPort,
-		},
+		appsv2beta1.TransServicePortsToContainerPorts(svcPorts),
 	)
-	preSts.Spec.Template.Spec.Containers[0].Env = append([]corev1.EnvVar{
-		{Name: "EMQX_DASHBOARD__LISTENERS__HTTP__BIND", Value: strconv.Itoa(int(containerPort.ContainerPort))},
-	}, preSts.Spec.Template.Spec.Containers[0].Env...)
-
+	for _, p := range preSts.Spec.Template.Spec.Containers[0].Ports {
+		if p.Name == "dashboard" {
+			preSts.Spec.Template.Spec.Containers[0].Env = append([]corev1.EnvVar{
+				{Name: "EMQX_DASHBOARD__LISTENERS__HTTP__BIND", Value: strconv.Itoa(int(p.ContainerPort))},
+			}, preSts.Spec.Template.Spec.Containers[0].Env...)
+		}
+		if p.Name == "dashboard-https" {
+			preSts.Spec.Template.Spec.Containers[0].Env = append([]corev1.EnvVar{
+				{Name: "EMQX_DASHBOARD__LISTENERS__HTTPS__BIND", Value: strconv.Itoa(int(p.ContainerPort))},
+			}, preSts.Spec.Template.Spec.Containers[0].Env...)
+		}
+	}
 	return preSts
 }
 

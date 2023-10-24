@@ -63,68 +63,120 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 }
 
 func TestGenerateDashboardService(t *testing.T) {
-	instance := &appsv2beta1.EMQX{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "emqx",
-			Namespace: "emqx",
-		},
-		Spec: appsv2beta1.EMQXSpec{
-			CoreTemplate: appsv2beta1.EMQXCoreTemplate{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: appsv2beta1.DefaultCoreLabels(emqx),
+	t.Run("check metadata", func(t *testing.T) {
+		emqx := &appsv2beta1.EMQX{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "emqx",
+				Namespace: "emqx",
+				Labels: map[string]string{
+					"emqx-label-key": "emqx",
+				},
+				Annotations: map[string]string{
+					"emqx-annotation-key": "emqx",
 				},
 			},
-			DashboardServiceTemplate: &appsv2beta1.ServiceTemplate{
-				Enabled: pointer.Bool(true),
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "emqx-dashboard",
-					Labels: map[string]string{
-						appsv2beta1.LabelsInstanceKey: "emqx",
-					},
-					Annotations: map[string]string{
-						"foo": "bar",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Selector: appsv2beta1.DefaultCoreLabels(emqx),
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "dashboard",
-							Protocol:   corev1.ProtocolTCP,
-							Port:       18083,
-							TargetPort: intstr.FromInt(18083),
+			Spec: appsv2beta1.EMQXSpec{
+				DashboardServiceTemplate: &appsv2beta1.ServiceTemplate{
+					Enabled: pointer.Bool(true),
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"dashboard-label-key": "dashboard",
+						},
+						Annotations: map[string]string{
+							"dashboard-annotation-key": "dashboard",
 						},
 					},
 				},
 			},
-		},
-	}
-
-	expect := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
+		}
+		got := generateDashboardService(emqx, "")
+		assert.Equal(t, metav1.ObjectMeta{
 			Name:      "emqx-dashboard",
 			Namespace: "emqx",
-			Labels:    appsv2beta1.DefaultLabels(emqx),
+			Labels: map[string]string{
+				"apps.emqx.io/instance":   "emqx",
+				"apps.emqx.io/managed-by": "emqx-operator",
+				"dashboard-label-key":     "dashboard",
+				// "emqx-label-key":          "emqx",
+			},
 			Annotations: map[string]string{
-				"foo": "bar",
+				"dashboard-annotation-key": "dashboard",
+				// "emqx-annotation-key":      "emqx",
 			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: appsv2beta1.DefaultCoreLabels(emqx),
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "dashboard",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       18083,
-					TargetPort: intstr.FromInt(18083),
-				},
-			},
-		},
-	}
+		}, got.ObjectMeta)
+	})
 
-	assert.Equal(t, expect, generateDashboardService(instance, ""))
+	t.Run("check disabled", func(t *testing.T) {
+		emqx := &appsv2beta1.EMQX{}
+		emqx.Spec.DashboardServiceTemplate = &appsv2beta1.ServiceTemplate{
+			Enabled: pointer.Bool(false),
+		}
+		got := generateDashboardService(emqx, "")
+		assert.Nil(t, got)
+	})
+
+	t.Run("check selector", func(t *testing.T) {
+		emqx := &appsv2beta1.EMQX{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "emqx",
+			},
+		}
+		got := generateDashboardService(emqx, "")
+		assert.Equal(t, map[string]string{
+			appsv2beta1.LabelsInstanceKey:  "emqx",
+			appsv2beta1.LabelsManagedByKey: "emqx-operator",
+			appsv2beta1.LabelsDBRoleKey:    "core",
+		}, got.Spec.Selector)
+	})
+
+	t.Run("check http ports", func(t *testing.T) {
+		emqx := &appsv2beta1.EMQX{}
+		got := generateDashboardService(emqx, "dashboard.listeners.http.bind = 18083")
+		assert.Equal(t, []corev1.ServicePort{
+			{
+				Name:       "dashboard",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       18083,
+				TargetPort: intstr.FromInt(18083),
+			},
+		}, got.Spec.Ports)
+	})
+
+	t.Run("check https ports", func(t *testing.T) {
+		emqx := &appsv2beta1.EMQX{}
+		got := generateDashboardService(emqx, "dashboard.listeners.http.bind = 0\ndashboard.listeners.https.bind= 18084")
+		assert.Equal(t, []corev1.ServicePort{
+			{
+				Name:       "dashboard-https",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       18084,
+				TargetPort: intstr.FromInt(18084),
+			},
+		}, got.Spec.Ports)
+	})
+
+	t.Run("check http and https ports", func(t *testing.T) {
+		emqx := &appsv2beta1.EMQX{}
+		got := generateDashboardService(emqx, "dashboard.listeners.http.bind = 18083\ndashboard.listeners.https.bind= 18084")
+		assert.ElementsMatch(t, []corev1.ServicePort{
+			{
+				Name:       "dashboard",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       18083,
+				TargetPort: intstr.FromInt(18083),
+			},
+			{
+				Name:       "dashboard-https",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       18084,
+				TargetPort: intstr.FromInt(18084),
+			},
+		}, got.Spec.Ports)
+	})
+
+	t.Run("check empty ports", func(t *testing.T) {
+		emqx := &appsv2beta1.EMQX{}
+		got := generateDashboardService(emqx, "dashboard.listeners.http.bind = 0\ndashboard.listeners.https.bind= 0")
+		assert.Nil(t, got)
+	})
 }
