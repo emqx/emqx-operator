@@ -122,20 +122,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 }
 
 func getNewReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
-	var containerPort corev1.ContainerPort
-	if svcPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data); err != nil {
-		containerPort = corev1.ContainerPort{
-			Name:          "dashboard",
-			Protocol:      corev1.ProtocolTCP,
-			ContainerPort: 18083,
-		}
-	} else {
-		containerPort = corev1.ContainerPort{
-			Name:          "dashboard",
-			Protocol:      corev1.ProtocolTCP,
-			ContainerPort: svcPort.Port,
-		}
-	}
+	svcPorts, _ := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
 
 	preRs := generateReplicaSet(instance)
 	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
@@ -145,13 +132,20 @@ func getNewReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 	preRs.Spec.Template.Labels = appsv2beta1.CloneAndAddLabel(preRs.Spec.Template.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
 	preRs.Spec.Template.Spec.Containers[0].Ports = appsv2beta1.MergeContainerPorts(
 		preRs.Spec.Template.Spec.Containers[0].Ports,
-		[]corev1.ContainerPort{
-			containerPort,
-		},
+		appsv2beta1.TransServicePortsToContainerPorts(svcPorts),
 	)
-	preRs.Spec.Template.Spec.Containers[0].Env = append([]corev1.EnvVar{
-		{Name: "EMQX_DASHBOARD__LISTENERS__HTTP__BIND", Value: strconv.Itoa(int(containerPort.ContainerPort))},
-	}, preRs.Spec.Template.Spec.Containers[0].Env...)
+	for _, p := range preRs.Spec.Template.Spec.Containers[0].Ports {
+		if p.Name == "dashboard" {
+			preRs.Spec.Template.Spec.Containers[0].Env = append([]corev1.EnvVar{
+				{Name: "EMQX_DASHBOARD__LISTENERS__HTTP__BIND", Value: strconv.Itoa(int(p.ContainerPort))},
+			}, preRs.Spec.Template.Spec.Containers[0].Env...)
+		}
+		if p.Name == "dashboard-https" {
+			preRs.Spec.Template.Spec.Containers[0].Env = append([]corev1.EnvVar{
+				{Name: "EMQX_DASHBOARD__LISTENERS__HTTPS__BIND", Value: strconv.Itoa(int(p.ContainerPort))},
+			}, preRs.Spec.Template.Spec.Containers[0].Env...)
+		}
+	}
 
 	return preRs
 }

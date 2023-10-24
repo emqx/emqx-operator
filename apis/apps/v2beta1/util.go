@@ -19,6 +19,7 @@ package v2beta1
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 
 	emperror "emperror.dev/errors"
@@ -172,31 +173,65 @@ func AddLabel(labels map[string]string, labelKey, labelValue string) map[string]
 	return labels
 }
 
-func GetDashboardServicePort(hoconString string) (*corev1.ServicePort, error) {
+func GetDashboardPortMap(hoconString string) (map[string]int32, error) {
+	portMap := make(map[string]int32)
+	portMap["dashboard"] = 18083 // default port
+
 	hoconConfig, err := hocon.ParseString(hoconString)
 	if err != nil {
 		return nil, emperror.Wrapf(err, "failed to parse %s", hoconString)
 	}
-	dashboardPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.http.bind"), `"`)
-	if dashboardPort == "" {
-		return nil, emperror.Errorf("failed to get dashboard.listeners.http.bind in %s", hoconConfig.String())
-	}
-	if !strings.Contains(dashboardPort, ":") {
-		// example: ":18083"
-		dashboardPort = fmt.Sprintf(":%s", dashboardPort)
-	}
-	_, strPort, err := net.SplitHostPort(dashboardPort)
-	if err != nil {
-		return nil, emperror.Wrapf(err, "failed to split %s", dashboardPort)
-	}
-	intStrValue := intstr.Parse(strPort)
 
-	return &corev1.ServicePort{
-		Name:       "dashboard",
-		Protocol:   corev1.ProtocolTCP,
-		Port:       int32(intStrValue.IntValue()),
-		TargetPort: intStrValue,
-	}, nil
+	if dashboardPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.http.bind"), `"`); dashboardPort != "" {
+		if !strings.Contains(dashboardPort, ":") {
+			// example: ":18083"
+			dashboardPort = fmt.Sprintf(":%s", dashboardPort)
+		}
+		_, strPort, _ := net.SplitHostPort(dashboardPort)
+		if port, _ := strconv.Atoi(strPort); port != 0 {
+			portMap["dashboard"] = int32(port)
+		} else {
+			// port = 0 means disable dashboard
+			// delete default port
+			delete(portMap, "dashboard")
+		}
+	}
+
+	if dashboardHttpsPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.https.bind"), `"`); dashboardHttpsPort != "" {
+		if !strings.Contains(dashboardHttpsPort, ":") {
+			// example: ":18084"
+			dashboardHttpsPort = fmt.Sprintf(":%s", dashboardHttpsPort)
+		}
+		_, strPort, _ := net.SplitHostPort(dashboardHttpsPort)
+		if port, _ := strconv.Atoi(strPort); port != 0 {
+			portMap["dashboard-https"] = int32(port)
+		} else {
+			// port = 0 means disable dashboard
+			// delete default port
+			delete(portMap, "dashboard-https")
+		}
+	}
+
+	return portMap, nil
+}
+
+func GetDashboardServicePort(hoconString string) ([]corev1.ServicePort, error) {
+	dashboardSvcPortList := []corev1.ServicePort{}
+	portMap, err := GetDashboardPortMap(hoconString)
+	if err != nil {
+		return nil, emperror.Wrapf(err, "failed to get dashboard port map")
+	}
+
+	for name, port := range portMap {
+		dashboardSvcPortList = append(dashboardSvcPortList, corev1.ServicePort{
+			Name:       name,
+			Protocol:   corev1.ProtocolTCP,
+			Port:       port,
+			TargetPort: intstr.FromInt(int(port)),
+		})
+	}
+
+	return dashboardSvcPortList, nil
 }
 
 func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) {
@@ -362,6 +397,18 @@ func MergeContainerPorts(ports1, ports2 []corev1.ContainerPort) []corev1.Contain
 		}
 	}
 
+	return result
+}
+
+func TransServicePortsToContainerPorts(ports []corev1.ServicePort) []corev1.ContainerPort {
+	result := make([]corev1.ContainerPort, 0, len(ports))
+	for _, item := range ports {
+		result = append(result, corev1.ContainerPort{
+			Name:          item.Name,
+			ContainerPort: item.Port,
+			Protocol:      item.Protocol,
+		})
+	}
 	return result
 }
 

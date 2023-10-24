@@ -144,4 +144,6 @@ jobs:
       - if: failure()
         run: kubectl get events --sort-by='.lastTimestamp'
       - if: failure()
+        run: kubectl get pods -l "apps.emqx.io/managed-by=emqx-operator" -o json
+      - if: failure()
         run: kubectl logs -l "apps.emqx.io/managed-by=emqx-operator" -c emqx

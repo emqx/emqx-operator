@@ -18,8 +18,9 @@ package v2beta1
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -161,14 +162,19 @@ func newRequester(k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq
 		return nil, err
 	}
 
-	var port string
-	dashboardPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
-	if err != nil || dashboardPort == nil {
-		port = "18083"
+	portMap, err := appsv2beta1.GetDashboardPortMap(instance.Spec.Config.Data)
+	if err != nil {
+		return nil, err
 	}
 
-	if dashboardPort != nil {
-		port = dashboardPort.TargetPort.String()
+	var schema, port string
+	if dashboardHttps, ok := portMap["dashboard-https"]; ok {
+		schema = "https"
+		port = strconv.FormatInt(int64(dashboardHttps), 10)
+	}
+	if dashboard, ok := portMap["dashboard"]; ok {
+		schema = "http"
+		port = strconv.FormatInt(int64(dashboard), 10)
 	}
 
 	podList := &corev1.PodList{}
@@ -185,7 +191,8 @@ func newRequester(k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq
 	for _, pod := range podList.Items {
 		if pod.Status.Phase == corev1.PodRunning && pod.Status.PodIP != "" {
 			return &innerReq.Requester{
-				Host:     fmt.Sprintf("%s:%s", pod.Status.PodIP, port),
+				Schema:   schema,
+				Host:     net.JoinHostPort(pod.Status.PodIP, port),
 				Username: username,
 				Password: password,
 			}, nil

@@ -24,12 +24,98 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+func TestGetDashboardPortMap(t *testing.T) {
+	t.Run("empty config", func(t *testing.T) {
+		instance := &EMQX{}
+		got, err := GetDashboardPortMap(instance.Spec.Config.Data)
+		assert.Nil(t, err)
+		assert.Equal(t, map[string]int32{
+			"dashboard": 18083,
+		}, got)
+	})
+
+	t.Run("wrong config", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.Config.Data = `hello world`
+		got, err := GetDashboardPortMap(instance.Spec.Config.Data)
+		assert.ErrorContains(t, err, "failed to parse")
+		assert.Nil(t, got)
+	})
+
+	t.Run("a single http port", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.Config.Data = `dashboard.listeners.http.bind = 18083`
+		got, err := GetDashboardPortMap(instance.Spec.Config.Data)
+		assert.Nil(t, err)
+		assert.Equal(t, map[string]int32{
+			"dashboard": 18083,
+		}, got)
+	})
+
+	t.Run("a single IPV4 http port", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.Config.Data = `dashboard.listeners.http.bind = "0.0.0.0:18083"`
+		got, err := GetDashboardPortMap(instance.Spec.Config.Data)
+		assert.Nil(t, err)
+		assert.Equal(t, map[string]int32{
+			"dashboard": 18083,
+		}, got)
+	})
+
+	t.Run("a single IPV6 http port", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.Config.Data = `dashboard.listeners.http.bind = "[::]:18083"`
+		got, err := GetDashboardPortMap(instance.Spec.Config.Data)
+		assert.Nil(t, err)
+		assert.Equal(t, map[string]int32{
+			"dashboard": 18083,
+		}, got)
+	})
+
+	t.Run("a single https port", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.Config.Data = `dashboard.listeners.https.bind = 18084`
+		got, err := GetDashboardPortMap(instance.Spec.Config.Data)
+		assert.Nil(t, err)
+		assert.Equal(t, map[string]int32{
+			"dashboard":       18083, // default http port
+			"dashboard-https": 18084,
+		}, got)
+	})
+
+	t.Run("disable http port and a single https port", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.Config.Data = `
+			dashboard.listeners.http.bind = 0
+			dashboard.listeners.https.bind = 18084
+		`
+		got, err := GetDashboardPortMap(instance.Spec.Config.Data)
+		assert.Nil(t, err)
+		assert.Equal(t, map[string]int32{
+			"dashboard-https": 18084,
+		}, got)
+	})
+
+	t.Run("disable all port", func(t *testing.T) {
+		instance := &EMQX{}
+		instance.Spec.Config.Data = `
+			dashboard.listeners.http.bind = 0
+			dashboard.listeners.https.bind = 0
+		`
+		got, err := GetDashboardPortMap(instance.Spec.Config.Data)
+		assert.Nil(t, err)
+		assert.Empty(t, got)
+	})
+}
+
 func TestGetDashboardServicePort(t *testing.T) {
-	expect := &corev1.ServicePort{
-		Name:       "dashboard",
-		Protocol:   corev1.ProtocolTCP,
-		Port:       int32(18083),
-		TargetPort: intstr.Parse("18083"),
+	expect := []corev1.ServicePort{
+		{
+			Name:       "dashboard",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       int32(18083),
+			TargetPort: intstr.Parse("18083"),
+		},
 	}
 
 	t.Run("a single port", func(t *testing.T) {
@@ -56,26 +142,18 @@ func TestGetDashboardServicePort(t *testing.T) {
 		assert.Equal(t, expect, got)
 	})
 
+	t.Run("empty config", func(t *testing.T) {
+		instance := &EMQX{}
+		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
+		assert.Nil(t, err)
+		assert.Equal(t, expect, got)
+	})
+
 	t.Run("wrong config", func(t *testing.T) {
 		instance := &EMQX{}
 		instance.Spec.Config.Data = `hello world`
 		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
 		assert.ErrorContains(t, err, "failed to parse")
-		assert.Nil(t, got)
-	})
-
-	t.Run("empty config", func(t *testing.T) {
-		instance := &EMQX{}
-		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
-		assert.ErrorContains(t, err, "failed to get dashboard.listeners.http.bind")
-		assert.Nil(t, got)
-	})
-
-	t.Run("empty dashboard listeners config", func(t *testing.T) {
-		instance := &EMQX{}
-		instance.Spec.Config.Data = `foo = bar`
-		got, err := GetDashboardServicePort(instance.Spec.Config.Data)
-		assert.ErrorContains(t, err, "failed to get dashboard.listeners.http.bind")
 		assert.Nil(t, got)
 	})
 }

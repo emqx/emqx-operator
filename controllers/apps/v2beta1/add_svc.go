@@ -83,22 +83,12 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 		svc.Spec = *instance.Spec.DashboardServiceTemplate.Spec.DeepCopy()
 	}
 
-	port, err := appsv2beta1.GetDashboardServicePort(configStr)
-	if err != nil {
-		port = &corev1.ServicePort{
-			Name:       "dashboard",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       18083,
-			TargetPort: intstr.Parse("18083"),
-		}
+	ports, _ := appsv2beta1.GetDashboardServicePort(configStr)
+	if len(ports) == 0 {
+		return nil
 	}
 
-	svc.Spec.Ports = appsv2beta1.MergeServicePorts(
-		svc.Spec.Ports,
-		[]corev1.ServicePort{
-			*port,
-		},
-	)
+	svc.Spec.Ports = appsv2beta1.MergeServicePorts(svc.Spec.Ports, ports)
 	svc.Spec.Selector = appsv2beta1.DefaultCoreLabels(instance)
 
 	return &corev1.Service{

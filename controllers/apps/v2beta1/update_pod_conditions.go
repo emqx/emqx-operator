@@ -3,7 +3,8 @@ package v2beta1
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"net"
+	"strconv"
 
 	semver "github.com/Masterminds/semver/v3"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
@@ -99,20 +100,24 @@ func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2beta1.EMQX, r
 	if r == nil {
 		return corev1.ConditionFalse
 	}
-	var port string
-	dashboardPort, err := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
-	if err != nil || dashboardPort == nil {
-		port = "18083"
-	}
 
-	if dashboardPort != nil {
-		port = dashboardPort.TargetPort.String()
+	portMap, _ := appsv2beta1.GetDashboardPortMap(instance.Spec.Config.Data)
+
+	var schema, port string
+	if dashboardHttps, ok := portMap["dashboard-https"]; ok {
+		schema = "https"
+		port = strconv.FormatInt(int64(dashboardHttps), 10)
+	}
+	if dashboard, ok := portMap["dashboard"]; ok {
+		schema = "http"
+		port = strconv.FormatInt(int64(dashboard), 10)
 	}
 
 	requester := &innerReq.Requester{
+		Schema:   schema,
+		Host:     net.JoinHostPort(pod.Status.PodIP, port),
 		Username: r.GetUsername(),
 		Password: r.GetPassword(),
-		Host:     fmt.Sprintf("%s:%s", pod.Status.PodIP, port),
 	}
 
 	url := requester.GetURL("api/v5/load_rebalance/availability_check")

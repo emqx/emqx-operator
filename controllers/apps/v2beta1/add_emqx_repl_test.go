@@ -6,12 +6,11 @@ import (
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
-func TestGetNewStatefulSet(t *testing.T) {
+func TestGetNewReplicaSet(t *testing.T) {
 	instance := &appsv2beta1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
@@ -28,57 +27,61 @@ func TestGetNewStatefulSet(t *testing.T) {
 			ClusterDomain: "cluster.local",
 		},
 	}
-	instance.Spec.CoreTemplate.ObjectMeta = metav1.ObjectMeta{
-		Labels: map[string]string{
-			"core-label-key": "core-label-value",
+	instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"repl-label-key": "repl-label-value",
+			},
+			Annotations: map[string]string{
+				"repl-annotation-key": "repl-annotation-value",
+			},
 		},
-		Annotations: map[string]string{
-			"core-annotation-key": "core-annotation-value",
+		Spec: appsv2beta1.EMQXReplicantTemplateSpec{
+			Replicas: pointer.Int32(3),
 		},
 	}
-	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(3)
-	instance.Status.CoreNodesStatus = appsv2beta1.EMQXNodesStatus{
+	instance.Status.ReplicantNodesStatus = &appsv2beta1.EMQXNodesStatus{
 		CollisionCount: pointer.Int32(0),
 	}
 
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		got := getNewStatefulSet(emqx)
+		got := getNewReplicaSet(emqx)
 
-		assert.Equal(t, emqx.Spec.CoreTemplate.Annotations, got.Annotations)
-		assert.Equal(t, "core-label-value", got.Labels["core-label-key"])
+		assert.Equal(t, emqx.Spec.ReplicantTemplate.Annotations, got.Annotations)
+		assert.Equal(t, "repl-label-value", got.Labels["repl-label-key"])
 		assert.Equal(t, "emqx", got.Labels[appsv2beta1.LabelsInstanceKey])
 		assert.Equal(t, "emqx-operator", got.Labels[appsv2beta1.LabelsManagedByKey])
-		assert.Equal(t, "core", got.Labels[appsv2beta1.LabelsDBRoleKey])
-		assert.Equal(t, "emqx-core-"+got.Labels[appsv2beta1.LabelsPodTemplateHashKey], got.Name)
+		assert.Equal(t, "replicant", got.Labels[appsv2beta1.LabelsDBRoleKey])
+		assert.Equal(t, "emqx-replicant-"+got.Labels[appsv2beta1.LabelsPodTemplateHashKey], got.Name)
 		assert.Equal(t, emqx.Namespace, got.Namespace)
 	})
 
 	t.Run("check selector and pod metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		got := getNewStatefulSet(emqx)
-		assert.Equal(t, emqx.Spec.CoreTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
+		got := getNewReplicaSet(emqx)
+		assert.Equal(t, emqx.Spec.ReplicantTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
 			appsv2beta1.LabelsInstanceKey:        "emqx",
 			appsv2beta1.LabelsManagedByKey:       "emqx-operator",
-			appsv2beta1.LabelsDBRoleKey:          "core",
+			appsv2beta1.LabelsDBRoleKey:          "replicant",
 			appsv2beta1.LabelsPodTemplateHashKey: got.Labels[appsv2beta1.LabelsPodTemplateHashKey],
-			"core-label-key":                     "core-label-value",
+			"repl-label-key":                     "repl-label-value",
 		}, got.Spec.Template.Labels)
 
 		assert.EqualValues(t, map[string]string{
 			appsv2beta1.LabelsInstanceKey:        "emqx",
 			appsv2beta1.LabelsManagedByKey:       "emqx-operator",
-			appsv2beta1.LabelsDBRoleKey:          "core",
+			appsv2beta1.LabelsDBRoleKey:          "replicant",
 			appsv2beta1.LabelsPodTemplateHashKey: got.Labels[appsv2beta1.LabelsPodTemplateHashKey],
-			"core-label-key":                     "core-label-value",
+			"repl-label-key":                     "repl-label-value",
 		}, got.Spec.Selector.MatchLabels)
 	})
 
 	t.Run("check http port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
 		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 18083"
-		got := getNewStatefulSet(emqx)
+		got := getNewReplicaSet(emqx)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
@@ -99,7 +102,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 	t.Run("check https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
 		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 0 \n dashboard.listeners.https.bind = 18084"
-		got := getNewStatefulSet(emqx)
+		got := getNewReplicaSet(emqx)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
@@ -120,7 +123,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 	t.Run("check http and https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
 		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 18083 \n dashboard.listeners.https.bind = 18084"
-		got := getNewStatefulSet(emqx)
+		got := getNewReplicaSet(emqx)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
@@ -151,53 +154,5 @@ func TestGetNewStatefulSet(t *testing.T) {
 				Value: "18084",
 			},
 		)
-	})
-
-	t.Run("check sts volume claim templates", func(t *testing.T) {
-		emqx := instance.DeepCopy()
-		emqx.Spec.CoreTemplate.Spec.VolumeClaimTemplates = corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteOnce,
-			},
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse("20Mi"),
-				},
-			},
-		}
-
-		fs := corev1.PersistentVolumeFilesystem
-		got := generateStatefulSet(emqx)
-		assert.Equal(t, []corev1.PersistentVolumeClaim{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "emqx-core-data",
-					Namespace: "emqx",
-					Labels: map[string]string{
-						appsv2beta1.LabelsDBRoleKey:    "core",
-						appsv2beta1.LabelsInstanceKey:  "emqx",
-						appsv2beta1.LabelsManagedByKey: "emqx-operator",
-						"core-label-key":               "core-label-value",
-					},
-				},
-				Spec: corev1.PersistentVolumeClaimSpec{
-					AccessModes: []corev1.PersistentVolumeAccessMode{
-						corev1.ReadWriteOnce,
-					},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("20Mi"),
-						},
-					},
-					VolumeMode: &fs,
-				},
-			},
-		}, got.Spec.VolumeClaimTemplates)
-		assert.NotContains(t, got.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "emqx-core-data",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
 	})
 }
