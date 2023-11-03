@@ -50,7 +50,7 @@ _Appears in:_
 
 #### ConditionType
 
-_Underlying type:_ _string_
+_Underlying type:_ `string`
 
 
 

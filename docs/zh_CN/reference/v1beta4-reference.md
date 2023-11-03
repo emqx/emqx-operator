@@ -54,7 +54,7 @@ _Appears in:_
 
 #### ConditionType
 
-_Underlying type:_ _string_
+_Underlying type:_ `string`
 
 ConditionType defines the condition that the RF can have
 
@@ -432,8 +432,6 @@ _Appears in:_
 
 
 
-
-
 #### Rebalance
 
 
@@ -473,7 +471,7 @@ _Appears in:_
 
 #### RebalanceConditionType
 
-_Underlying type:_ _string_
+_Underlying type:_ `string`
 
 
 
@@ -500,7 +498,7 @@ RebalanceList contains a list of Rebalance
 
 #### RebalancePhase
 
-_Underlying type:_ _string_
+_Underlying type:_ `string`
 
 
 

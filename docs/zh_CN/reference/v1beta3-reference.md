@@ -36,7 +36,7 @@ _Appears in:_
 
 #### ConditionType
 
-_Underlying type:_ _string_
+_Underlying type:_ `string`
 
 ConditionType defines the condition that the RF can have
 
@@ -124,7 +124,7 @@ _Appears in:_
 | `password` _string_ | Password for EMQX Dashboard and API |
 | `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
 | `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
-| `config` _[EmqxConfig](#emqxconfig)_ | Config represents the configurations of EMQX More info: https://www.emqx.io/docs/en/v4.4/configuration/configuration.html |
+| `config` _object (keys:string, values:string)_ | Config represents the configurations of EMQX More info: https://www.emqx.io/docs/en/v4.4/configuration/configuration.html |
 | `args` _string array_ | Arguments to the entrypoint. The container image's CMD is used if this is not provided. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podsecuritycontext-v1-core)_ | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ | Compute Resources required by EMQX container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
@@ -135,16 +135,6 @@ _Appears in:_
 | `acl` _string array_ | ACL defines ACL rules More info: https://www.emqx.io/docs/en/v4.4/advanced/acl.html |
 | `modules` _[EmqxBrokerModule](#emqxbrokermodule) array_ | Modules define functional modules for EMQX broker |
 
-
-#### EmqxConfig
-
-_Underlying type:_ _object_
-
-
-
-_Appears in:_
-- [EmqxBrokerTemplate](#emqxbrokertemplate)
-- [EmqxEnterpriseTemplate](#emqxenterprisetemplate)
 
 
 
@@ -226,7 +216,7 @@ _Appears in:_
 | `password` _string_ | Password for EMQX Dashboard and API |
 | `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
 | `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ | See https://github.com/emqx/emqx-operator/pull/72 |
-| `config` _[EmqxConfig](#emqxconfig)_ | Config represents the configurations of EMQX More info: https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html |
+| `config` _object (keys:string, values:string)_ | Config represents the configurations of EMQX More info: https://docs.emqx.com/en/enterprise/v4.4/configuration/configuration.html |
 | `args` _string array_ | Arguments to the entrypoint. The container image's CMD is used if this is not provided. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podsecuritycontext-v1-core)_ | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ | Compute Resources required by EMQX container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
@@ -321,8 +311,6 @@ _Appears in:_
 | `data` _integer array_ | Data contains the secret data. Each key must consist of alphanumeric characters, '-', '_' or '.'. The serialized form of the secret data is a base64 encoded string, representing the arbitrary (possibly non-string) data value here. Described in https://tools.ietf.org/html/rfc4648#section-4 |
 | `stringData` _string_ | StringData allows specifying non-binary secret data in string form. It is provided as a write-only input field for convenience. All keys and values are merged into the data field on write, overwriting any existing values. |
 | `secretName` _string_ | SecretName is the name of the secret in the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret |
-
-
 
 
 

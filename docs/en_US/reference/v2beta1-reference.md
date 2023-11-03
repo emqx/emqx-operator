@@ -29,6 +29,7 @@ _Appears in:_
 | --- | --- |
 | `key` _string_ |  |
 | `secret` _string_ |  |
+| `secretRef` _[SecretRef](#secretref)_ |  |
 
 
 #### Config
@@ -142,8 +143,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `controllerUID` _[UID](#uid)_ |  |
-| `podUID` _[UID](#uid)_ |  |
+| `controllerUID` _UID_ |  |
+| `podUID` _UID_ |  |
 | `node` _string_ | EMQX node name, example: emqx@127.0.0.1 |
 | `node_status` _string_ | EMQX node status, example: Running |
 | `otp_release` _string_ | Erlang/OTP version used by EMQX, example: 24.2/12.2 |
@@ -287,6 +288,17 @@ _Appears in:_
 | `sessEvictRate` _integer_ | Just work in EMQX Enterprise. |
 
 
+#### KeyRef
+
+
+
+
+
+_Appears in:_
+- [SecretRef](#secretref)
+
+
+
 #### NodeEvacuationStats
 
 
@@ -364,7 +376,7 @@ _Appears in:_
 
 #### RebalanceConditionType
 
-_Underlying type:_ _string_
+_Underlying type:_ `string`
 
 
 
@@ -391,7 +403,7 @@ RebalanceList contains a list of Rebalance
 
 #### RebalancePhase
 
-_Underlying type:_ _string_
+_Underlying type:_ `string`
 
 
 
@@ -473,6 +485,21 @@ _Appears in:_
 | `relConnThreshold` _string_ | RelConnThreshold represents the relative threshold for checkin connection balance. same to rel-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelConnThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
 | `absSessThreshold` _integer_ | AbsSessThreshold represents the absolute threshold for checking session connection balance. same to abs-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Default to 1000. |
 | `relSessThreshold` _string_ | RelSessThreshold represents the relative threshold for checking session connection balance. same to rel-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelSessThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
+
+
+#### SecretRef
+
+
+
+
+
+_Appears in:_
+- [BootstrapAPIKey](#bootstrapapikey)
+
+| Field | Description |
+| --- | --- |
+| `key` _[KeyRef](#keyref)_ |  |
+| `secret` _[KeyRef](#keyref)_ |  |
 
 
 #### ServiceTemplate

@@ -6492,9 +6492,38 @@ spec:
                       maxLength: 32
                       minLength: 3
                       type: string
+                    secretRef:
+                      properties:
+                        key:
+                          properties:
+                            secretKey:
+                              pattern: ^[a-zA-Z\d-_]+$
+                              type: string
+                            secretName:
+                              type: string
+                          required:
+                          - secretKey
+                          - secretName
+                          type: object
+                        secret:
+                          properties:
+                            secretKey:
+                              pattern: ^[a-zA-Z\d-_]+$
+                              type: string
+                            secretName:
+                              type: string
+                          required:
+                          - secretKey
+                          - secretName
+                          type: object
+                      required:
+                      - key
+                      - secret
+                      type: object
                   required:
                   - key
                   - secret
+                  - secretRef
                   type: object
                 type: array
               clusterDomain:
