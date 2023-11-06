@@ -6489,7 +6489,7 @@ spec:
                       pattern: ^[a-zA-Z\d-_]+$
                       type: string
                     secret:
-                      maxLength: 32
+                      maxLength: 128
                       minLength: 3
                       type: string
                     secretRef:
@@ -6520,10 +6520,6 @@ spec:
                       - key
                       - secret
                       type: object
-                  required:
-                  - key
-                  - secret
-                  - secretRef
                   type: object
                 type: array
               clusterDomain:

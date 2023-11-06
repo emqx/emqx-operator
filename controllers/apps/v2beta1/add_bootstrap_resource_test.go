@@ -60,7 +60,7 @@ func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 			BootstrapAPIKeys: []appsv2beta1.BootstrapAPIKey{
 				{
 					Key:    "test_key",
-					Secret: "secret",
+					Secret: "test_secret",
 				},
 			},
 		},
@@ -73,10 +73,94 @@ func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 
 	users := strings.Split(data, "\n")
 	var usernames []string
+	var secrets []string
 	for _, user := range users {
 		usernames = append(usernames, user[:strings.Index(user, ":")])
+		secrets = append(secrets, user[strings.Index(user, ":")+1:])
 	}
 	assert.ElementsMatch(t, usernames, []string{appsv2beta1.DefaultBootstrapAPIKey, "test_key"})
+	assert.Contains(t, secrets, "test_secret")
+}
+
+func TestGenerateBootstrapAPIKeySecretWithSecretRef(t *testing.T) {
+	// Create a fake client
+	scheme := runtime.NewScheme()
+	err := corev1.AddToScheme(scheme)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keySecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-key-secret",
+			Namespace: "emqx",
+		},
+		Data: map[string][]byte{
+			"key": []byte("test_key"),
+		},
+	}
+	valueSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-value-secret",
+			Namespace: "emqx",
+		},
+		Data: map[string][]byte{
+			"secret": []byte("test_secret"),
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	// Create a context
+	ctx := context.Background()
+
+	// Add secrets to the fake client
+	err = fakeClient.Create(ctx, keySecret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = fakeClient.Create(ctx, valueSecret)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	instance := &appsv2beta1.EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+		Spec: appsv2beta1.EMQXSpec{
+			BootstrapAPIKeys: []appsv2beta1.BootstrapAPIKey{
+				{
+					SecretRef: &appsv2beta1.SecretRef{
+						Key: &appsv2beta1.KeyRef{
+							SecretName: "test-key-secret",
+							SecretKey:  "key",
+						},
+						Secret: &appsv2beta1.KeyRef{
+							SecretName: "test-value-secret",
+							SecretKey:  "secret",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := generateBootstrapAPIKeySecret(fakeClient, ctx, instance)
+	assert.Equal(t, "emqx-bootstrap-api-key", got.Name)
+	data, ok := got.StringData["bootstrap_api_key"]
+	assert.True(t, ok)
+
+	users := strings.Split(data, "\n")
+	var usernames []string
+	var secrets []string
+	for _, user := range users {
+		usernames = append(usernames, user[:strings.Index(user, ":")])
+		secrets = append(secrets, user[strings.Index(user, ":")+1:])
+	}
+	assert.ElementsMatch(t, usernames, []string{appsv2beta1.DefaultBootstrapAPIKey, "test_key"})
+	assert.Contains(t, secrets, "test_secret")
 }
 
 func TestReadSecret(t *testing.T) {

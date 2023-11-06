@@ -90,7 +90,6 @@ func generateBootstrapAPIKeySecret(k8sClient client.Client, ctx context.Context,
 	bootstrapAPIKeys := ""
 
 	for _, apiKey := range instance.Spec.BootstrapAPIKeys {
-		bootstrapAPIKeys += apiKey.Key + ":" + apiKey.Secret + "\n"
 		if apiKey.SecretRef != nil {
 			// Read key and secret values from the refenced secrets
 			keyValue, err := ReadSecret(k8sClient, ctx, instance.Namespace, apiKey.SecretRef.Key.SecretName, apiKey.SecretRef.Key.SecretKey)
@@ -102,6 +101,8 @@ func generateBootstrapAPIKeySecret(k8sClient client.Client, ctx context.Context,
 				continue
 			}
 			bootstrapAPIKeys += keyValue + ":" + secretValue + "\n"
+		} else {
+			bootstrapAPIKeys += apiKey.Key + ":" + apiKey.Secret + "\n"
 		}
 	}
 	defPassword, _ := password.Generate(64, 10, 0, true, true)
