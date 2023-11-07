@@ -108,8 +108,8 @@ type BootstrapAPIKey struct {
 }
 
 type SecretRef struct {
-	Key    *KeyRef `json:"key"`
-	Secret *KeyRef `json:"secret"`
+	Key    KeyRef `json:"key"`
+	Secret KeyRef `json:"secret"`
 }
 
 type KeyRef struct {

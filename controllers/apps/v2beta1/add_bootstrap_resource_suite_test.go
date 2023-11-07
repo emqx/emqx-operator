@@ -113,12 +113,12 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 		instance.Spec.BootstrapAPIKeys = []appsv2beta1.BootstrapAPIKey{
 			{
 				SecretRef: &appsv2beta1.SecretRef{
-					Key: &appsv2beta1.KeyRef{
+					Key: appsv2beta1.KeyRef{
 						// Note: a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters
 						SecretName: "test-key-secret",
 						SecretKey:  "key",
 					},
-					Secret: &appsv2beta1.KeyRef{
+					Secret: appsv2beta1.KeyRef{
 						SecretName: "test-value-secret",
 						SecretKey:  "secret",
 					},

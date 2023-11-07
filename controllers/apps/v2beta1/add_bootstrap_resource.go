@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
@@ -87,17 +88,22 @@ func ReadSecret(k8sClient client.Client, ctx context.Context, namespace string, 
 }
 
 func generateBootstrapAPIKeySecret(k8sClient client.Client, ctx context.Context, instance *appsv2beta1.EMQX) *corev1.Secret {
+	logger := log.FromContext(ctx)
 	bootstrapAPIKeys := ""
 
 	for _, apiKey := range instance.Spec.BootstrapAPIKeys {
 		if apiKey.SecretRef != nil {
+			logger.V(1).Info("Read SecretRef")
+
 			// Read key and secret values from the refenced secrets
 			keyValue, err := ReadSecret(k8sClient, ctx, instance.Namespace, apiKey.SecretRef.Key.SecretName, apiKey.SecretRef.Key.SecretKey)
 			if err != nil {
+				logger.V(1).Error(err, "read secretRef", "key")
 				continue
 			}
 			secretValue, err := ReadSecret(k8sClient, ctx, instance.Namespace, apiKey.SecretRef.Secret.SecretName, apiKey.SecretRef.Secret.SecretKey)
 			if err != nil {
+				logger.V(1).Error(err, "read secretRef", "secret")
 				continue
 			}
 			bootstrapAPIKeys += keyValue + ":" + secretValue + "\n"

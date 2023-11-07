@@ -297,6 +297,10 @@ _Appears in:_
 _Appears in:_
 - [SecretRef](#secretref)
 
+| Field | Description |
+| --- | --- |
+| `secretName` _string_ |  |
+| `secretKey` _string_ |  |
 
 
 #### NodeEvacuationStats

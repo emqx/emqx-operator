@@ -133,11 +133,11 @@ func TestGenerateBootstrapAPIKeySecretWithSecretRef(t *testing.T) {
 			BootstrapAPIKeys: []appsv2beta1.BootstrapAPIKey{
 				{
 					SecretRef: &appsv2beta1.SecretRef{
-						Key: &appsv2beta1.KeyRef{
+						Key: appsv2beta1.KeyRef{
 							SecretName: "test-key-secret",
 							SecretKey:  "key",
 						},
-						Secret: &appsv2beta1.KeyRef{
+						Secret: appsv2beta1.KeyRef{
 							SecretName: "test-value-secret",
 							SecretKey:  "secret",
 						},
