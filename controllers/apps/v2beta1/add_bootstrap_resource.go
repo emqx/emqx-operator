@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
@@ -23,9 +22,14 @@ type addBootstrap struct {
 }
 
 func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
+	bootstrapAPIKeys, err := a.getAPIKeyString(ctx, instance)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to get bootstrap api keys")}
+	}
+
 	for _, resource := range []client.Object{
 		generateNodeCookieSecret(instance),
-		generateBootstrapAPIKeySecret(a.Client, ctx, instance),
+		generateBootstrapAPIKeySecret(instance, bootstrapAPIKeys),
 	} {
 		if err := ctrl.SetControllerReference(instance, resource, a.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
@@ -38,6 +42,65 @@ func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2beta1.EMQX
 	}
 
 	return subResult{}
+}
+
+func (a *addBootstrap) getAPIKeyString(ctx context.Context, instance *appsv2beta1.EMQX) (string, error) {
+	var bootstrapAPIKeys string
+
+	for _, apiKey := range instance.Spec.BootstrapAPIKeys {
+		if apiKey.SecretRef != nil {
+			keyValue, err := a.readSecret(ctx, instance.Namespace, apiKey.SecretRef.Key.SecretName, apiKey.SecretRef.Key.SecretKey)
+			if err != nil {
+				a.EventRecorder.Event(instance, corev1.EventTypeWarning, "GetBootStrapSecretRef", err.Error())
+				return "", err
+			}
+			secretValue, err := a.readSecret(ctx, instance.Namespace, apiKey.SecretRef.Secret.SecretName, apiKey.SecretRef.Secret.SecretKey)
+			if err != nil {
+				a.EventRecorder.Event(instance, corev1.EventTypeWarning, "GetBootStrapSecretRef", err.Error())
+				return "", err
+			}
+			bootstrapAPIKeys += keyValue + ":" + secretValue + "\n"
+		} else {
+			bootstrapAPIKeys += apiKey.Key + ":" + apiKey.Secret + "\n"
+		}
+	}
+
+	return bootstrapAPIKeys, nil
+}
+
+func (a *addBootstrap) readSecret(ctx context.Context, namespace string, name string, key string) (string, error) {
+	secret := &corev1.Secret{}
+	if err := a.Client.Get(ctx, types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}, secret); err != nil {
+		return "", emperror.Wrap(err, "failed to get secret")
+	}
+
+	if _, ok := secret.Data[key]; !ok {
+		return "", emperror.NewWithDetails("secret does not contain the key", "secret", secret.Name, "key", key)
+	}
+
+	return string(secret.Data[key]), nil
+}
+
+func generateBootstrapAPIKeySecret(instance *appsv2beta1.EMQX, bootstrapAPIKeys string) *corev1.Secret {
+	defPassword, _ := password.Generate(64, 10, 0, true, true)
+	bootstrapAPIKeys += appsv2beta1.DefaultBootstrapAPIKey + ":" + defPassword
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: instance.Namespace,
+			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
+			Labels:    appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), instance.Labels),
+		},
+		StringData: map[string]string{
+			"bootstrap_api_key": bootstrapAPIKeys,
+		},
+	}
 }
 
 func generateNodeCookieSecret(instance *appsv2beta1.EMQX) *corev1.Secret {
@@ -61,71 +124,6 @@ func generateNodeCookieSecret(instance *appsv2beta1.EMQX) *corev1.Secret {
 		},
 		StringData: map[string]string{
 			"node_cookie": cookie,
-		},
-	}
-}
-
-// ReadSecret reads a secret from the Kubernetes cluster.
-func ReadSecret(k8sClient client.Client, ctx context.Context, namespace string, name string, key string) (string, error) {
-	// Define a new Secret object
-	secret := &corev1.Secret{}
-
-	// Define the Secret Name and Namespace
-	secretName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}
-
-	// Use the client to fetch the Secret
-	if err := k8sClient.Get(ctx, secretName, secret); err != nil {
-		return "", err
-	}
-
-	// secret.Data is a map[string][]byte
-	secretValue := string(secret.Data[key])
-
-	return secretValue, nil
-}
-
-func generateBootstrapAPIKeySecret(k8sClient client.Client, ctx context.Context, instance *appsv2beta1.EMQX) *corev1.Secret {
-	logger := log.FromContext(ctx)
-	bootstrapAPIKeys := ""
-
-	for _, apiKey := range instance.Spec.BootstrapAPIKeys {
-		if apiKey.SecretRef != nil {
-			logger.V(1).Info("Read SecretRef")
-
-			// Read key and secret values from the refenced secrets
-			keyValue, err := ReadSecret(k8sClient, ctx, instance.Namespace, apiKey.SecretRef.Key.SecretName, apiKey.SecretRef.Key.SecretKey)
-			if err != nil {
-				logger.V(1).Error(err, "read secretRef", "key")
-				continue
-			}
-			secretValue, err := ReadSecret(k8sClient, ctx, instance.Namespace, apiKey.SecretRef.Secret.SecretName, apiKey.SecretRef.Secret.SecretKey)
-			if err != nil {
-				logger.V(1).Error(err, "read secretRef", "secret")
-				continue
-			}
-			bootstrapAPIKeys += keyValue + ":" + secretValue + "\n"
-		} else {
-			bootstrapAPIKeys += apiKey.Key + ":" + apiKey.Secret + "\n"
-		}
-	}
-	defPassword, _ := password.Generate(64, 10, 0, true, true)
-	bootstrapAPIKeys += appsv2beta1.DefaultBootstrapAPIKey + ":" + defPassword
-
-	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: instance.Namespace,
-			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
-			Labels:    appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), instance.Labels),
-		},
-		StringData: map[string]string{
-			"bootstrap_api_key": bootstrapAPIKeys,
 		},
 	}
 }
