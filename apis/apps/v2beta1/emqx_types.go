@@ -100,10 +100,22 @@ type EMQXSpec struct {
 
 type BootstrapAPIKey struct {
 	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d-_]+$`
-	Key string `json:"key"`
+	Key string `json:"key,omitempty"`
 	// +kubebuilder:validation:MinLength:=3
-	// +kubebuilder:validation:MaxLength:=32
-	Secret string `json:"secret"`
+	// +kubebuilder:validation:MaxLength:=128
+	Secret    string     `json:"secret,omitempty"`
+	SecretRef *SecretRef `json:"secretRef,omitempty"`
+}
+
+type SecretRef struct {
+	Key    KeyRef `json:"key"`
+	Secret KeyRef `json:"secret"`
+}
+
+type KeyRef struct {
+	SecretName string `json:"secretName"`
+	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d-_]+$`
+	SecretKey string `json:"secretKey"`
 }
 
 type Config struct {

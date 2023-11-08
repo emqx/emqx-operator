@@ -1,12 +1,16 @@
 package v2beta1
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestGenerateNodeCookieSecret(t *testing.T) {
@@ -35,6 +39,18 @@ func TestGenerateNodeCookieSecret(t *testing.T) {
 }
 
 func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
+	// Create a fake client
+	scheme := runtime.NewScheme()
+	err := corev1.AddToScheme(scheme)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	// Create a context
+	ctx := context.Background()
+
 	instance := &appsv2beta1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
@@ -44,21 +60,141 @@ func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 			BootstrapAPIKeys: []appsv2beta1.BootstrapAPIKey{
 				{
 					Key:    "test_key",
-					Secret: "secret",
+					Secret: "test_secret",
 				},
 			},
 		},
 	}
 
-	got := generateBootstrapAPIKeySecret(instance)
+	got := generateBootstrapAPIKeySecret(fakeClient, ctx, instance)
 	assert.Equal(t, "emqx-bootstrap-api-key", got.Name)
 	data, ok := got.StringData["bootstrap_api_key"]
 	assert.True(t, ok)
 
 	users := strings.Split(data, "\n")
 	var usernames []string
+	var secrets []string
 	for _, user := range users {
 		usernames = append(usernames, user[:strings.Index(user, ":")])
+		secrets = append(secrets, user[strings.Index(user, ":")+1:])
 	}
 	assert.ElementsMatch(t, usernames, []string{appsv2beta1.DefaultBootstrapAPIKey, "test_key"})
+	assert.Contains(t, secrets, "test_secret")
+}
+
+func TestGenerateBootstrapAPIKeySecretWithSecretRef(t *testing.T) {
+	// Create a fake client
+	scheme := runtime.NewScheme()
+	err := corev1.AddToScheme(scheme)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keySecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-key-secret",
+			Namespace: "emqx",
+		},
+		Data: map[string][]byte{
+			"key": []byte("test_key"),
+		},
+	}
+	valueSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-value-secret",
+			Namespace: "emqx",
+		},
+		Data: map[string][]byte{
+			"secret": []byte("test_secret"),
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	// Create a context
+	ctx := context.Background()
+
+	// Add secrets to the fake client
+	err = fakeClient.Create(ctx, keySecret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = fakeClient.Create(ctx, valueSecret)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	instance := &appsv2beta1.EMQX{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "emqx",
+			Namespace: "emqx",
+		},
+		Spec: appsv2beta1.EMQXSpec{
+			BootstrapAPIKeys: []appsv2beta1.BootstrapAPIKey{
+				{
+					SecretRef: &appsv2beta1.SecretRef{
+						Key: appsv2beta1.KeyRef{
+							SecretName: "test-key-secret",
+							SecretKey:  "key",
+						},
+						Secret: appsv2beta1.KeyRef{
+							SecretName: "test-value-secret",
+							SecretKey:  "secret",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := generateBootstrapAPIKeySecret(fakeClient, ctx, instance)
+	assert.Equal(t, "emqx-bootstrap-api-key", got.Name)
+	data, ok := got.StringData["bootstrap_api_key"]
+	assert.True(t, ok)
+
+	users := strings.Split(data, "\n")
+	var usernames []string
+	var secrets []string
+	for _, user := range users {
+		usernames = append(usernames, user[:strings.Index(user, ":")])
+		secrets = append(secrets, user[strings.Index(user, ":")+1:])
+	}
+	assert.ElementsMatch(t, usernames, []string{appsv2beta1.DefaultBootstrapAPIKey, "test_key"})
+	assert.Contains(t, secrets, "test_secret")
+}
+
+func TestReadSecret(t *testing.T) {
+	// Create a fake client
+	scheme := runtime.NewScheme()
+	err := corev1.AddToScheme(scheme)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Define the secret data
+	secretData := map[string][]byte{
+		"key": []byte("value"),
+	}
+
+	// Create a secret
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: "default",
+		},
+		Data: secretData,
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+
+	// Create a context
+	ctx := context.Background()
+
+	val, err := ReadSecret(fakeClient, ctx, "default", "test-secret", "key")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the secret value
+	assert.Equal(t, "value", val)
 }

@@ -29,6 +29,7 @@ _Appears in:_
 | --- | --- |
 | `key` _string_ |  |
 | `secret` _string_ |  |
+| `secretRef` _[SecretRef](#secretref)_ |  |
 
 
 #### Config
@@ -287,6 +288,17 @@ _Appears in:_
 | `sessEvictRate` _integer_ | Just work in EMQX Enterprise. |
 
 
+#### KeyRef
+
+_Underlying type:_ _[struct{SecretName string "json:\"secretName\""; SecretKey string "json:\"secretKey\""}](#struct{secretname-string-"json:\"secretname\"";-secretkey-string-"json:\"secretkey\""})_
+
+
+
+_Appears in:_
+- [SecretRef](#secretref)
+
+
+
 #### NodeEvacuationStats
 
 
@@ -473,6 +485,21 @@ _Appears in:_
 | `relConnThreshold` _string_ | RelConnThreshold represents the relative threshold for checkin connection balance. same to rel-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelConnThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
 | `absSessThreshold` _integer_ | AbsSessThreshold represents the absolute threshold for checking session connection balance. same to abs-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Default to 1000. |
 | `relSessThreshold` _string_ | RelSessThreshold represents the relative threshold for checking session connection balance. same to rel-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelSessThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
+
+
+#### SecretRef
+
+
+
+
+
+_Appears in:_
+- [BootstrapAPIKey](#bootstrapapikey)
+
+| Field | Description |
+| --- | --- |
+| `key` _[KeyRef](#keyref)_ |  |
+| `secret` _[KeyRef](#keyref)_ |  |
 
 
 #### ServiceTemplate
