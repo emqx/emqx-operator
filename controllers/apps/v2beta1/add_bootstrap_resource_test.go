@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	"github.com/emqx/emqx-operator/internal/handler"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +47,13 @@ func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	a := &addBootstrap{
+		EMQXReconciler: &EMQXReconciler{
+			Handler: &handler.Handler{
+				Client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			},
+		},
+	}
 
 	// Create a context
 	ctx := context.Background()
@@ -66,7 +73,12 @@ func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 		},
 	}
 
-	got := generateBootstrapAPIKeySecret(fakeClient, ctx, instance)
+	str, err := a.getAPIKeyString(ctx, instance)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := generateBootstrapAPIKeySecret(instance, str)
 	assert.Equal(t, "emqx-bootstrap-api-key", got.Name)
 	data, ok := got.StringData["bootstrap_api_key"]
 	assert.True(t, ok)
@@ -109,17 +121,23 @@ func TestGenerateBootstrapAPIKeySecretWithSecretRef(t *testing.T) {
 		},
 	}
 
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	a := &addBootstrap{
+		EMQXReconciler: &EMQXReconciler{
+			Handler: &handler.Handler{
+				Client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			},
+		},
+	}
 
 	// Create a context
 	ctx := context.Background()
 
 	// Add secrets to the fake client
-	err = fakeClient.Create(ctx, keySecret)
+	err = a.Client.Create(ctx, keySecret)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = fakeClient.Create(ctx, valueSecret)
+	err = a.Client.Create(ctx, valueSecret)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +165,12 @@ func TestGenerateBootstrapAPIKeySecretWithSecretRef(t *testing.T) {
 		},
 	}
 
-	got := generateBootstrapAPIKeySecret(fakeClient, ctx, instance)
+	str, err := a.getAPIKeyString(ctx, instance)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := generateBootstrapAPIKeySecret(instance, str)
 	assert.Equal(t, "emqx-bootstrap-api-key", got.Name)
 	data, ok := got.StringData["bootstrap_api_key"]
 	assert.True(t, ok)
@@ -185,12 +208,18 @@ func TestReadSecret(t *testing.T) {
 		Data: secretData,
 	}
 
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+	a := &addBootstrap{
+		EMQXReconciler: &EMQXReconciler{
+			Handler: &handler.Handler{
+				Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build(),
+			},
+		},
+	}
 
 	// Create a context
 	ctx := context.Background()
 
-	val, err := ReadSecret(fakeClient, ctx, "default", "test-secret", "key")
+	val, err := a.readSecret(ctx, "default", "test-secret", "key")
 	if err != nil {
 		t.Fatal(err)
 	}
