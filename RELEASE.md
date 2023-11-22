@@ -1,6 +1,6 @@
 ## Release Note 🍻
 
-EMQX Operator 1.2.7-ecp.7 is released.
+EMQX Operator 1.2.7-ecp.8 is released.
 
 ### Supported EMQX version
 
@@ -10,4 +10,4 @@ EMQX Operator 1.2.7-ecp.7 is released.
 
 ### Fixes 🛠
 
-- Fixed the pod will not be deleted when scale down the replicas = 0 of EMQX customer resource
+- Fixed the imagePullSecrets not work in Helm chart
