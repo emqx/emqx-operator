@@ -22,6 +22,10 @@ spec:
         control-plane: controller-manager
         {{- include "emqx-operator.labels" . | nindent 8 }}
     spec:
+      {{- with .Values.global.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - args:
         - --leader-elect
