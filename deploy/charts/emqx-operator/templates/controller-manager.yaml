@@ -22,7 +22,7 @@ spec:
         control-plane: controller-manager
         {{- include "emqx-operator.labels" . | nindent 8 }}
     spec:
-      {{- with .Values.global.image.pullSecrets }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
