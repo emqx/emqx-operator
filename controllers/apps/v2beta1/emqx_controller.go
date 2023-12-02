@@ -27,6 +27,7 @@ import (
 	emperror "emperror.dev/errors"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -100,6 +101,12 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	if instance.GetDeletionTimestamp() != nil {
 		return ctrl.Result{}, nil
+	}
+
+	_, err := hocon.ParseString(instance.Spec.Config.Data)
+	if err != nil {
+		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "InvalidConfig", "the .spec.config.data is not a valid HOCON config")
+		return ctrl.Result{}, emperror.Wrap(err, "failed to parse config")
 	}
 
 	requester, err := newRequester(r.Client, instance)
