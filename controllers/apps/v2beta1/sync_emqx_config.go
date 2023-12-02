@@ -19,11 +19,7 @@ type syncConfig struct {
 }
 
 func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
-	hoconConfig, err := hocon.ParseString(instance.Spec.Config.Data)
-	if err != nil {
-		s.EventRecorder.Event(instance, corev1.EventTypeWarning, "InvalidConfig", err.Error())
-		return subResult{err: emperror.Wrap(err, "failed to parse config")}
-	}
+	hoconConfig, _ := hocon.ParseString(instance.Spec.Config.Data)
 
 	// If core nodes is nil, the EMQX is in the process of being created
 	if len(instance.Status.CoreNodes) == 0 {
