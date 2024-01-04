@@ -2,6 +2,7 @@ package v2beta1
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -19,41 +21,37 @@ type syncConfig struct {
 }
 
 func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
-	hoconConfig, _ := hocon.ParseString(instance.Spec.Config.Data)
+	defaultListenerConfig := ""
+	defaultListenerConfig += fmt.Sprintln("listeners.tcp.default.bind = 1883")
+	defaultListenerConfig += fmt.Sprintln("listeners.ssl.default.bind = 8883")
+	defaultListenerConfig += fmt.Sprintln("listeners.ws.default.bind  = 8083")
+	defaultListenerConfig += fmt.Sprintln("listeners.wss.default.bind = 8084")
 
-	// If core nodes is nil, the EMQX is in the process of being created
-	if len(instance.Status.CoreNodes) == 0 {
-		configMap := generateConfigMap(instance, instance.Spec.Config.Data)
-		if err := s.Handler.CreateOrUpdateList(instance, s.Scheme, []client.Object{configMap}); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to create or update configMap")}
-		}
-		return subResult{}
-	}
+	hoconConfig, _ := hocon.ParseString(defaultListenerConfig + instance.Spec.Config.Data)
+	configMap := generateConfigMap(instance, hoconConfig.String())
 
-	lastConfig, ok := instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey]
-	if !ok {
-		// If it is the first time to start and Mode = Replace, update the EMQX configuration once.
-		if instance.Spec.Config.Mode == "Replace" {
-			// Delete readonly configs
-			hoconConfigObj := hoconConfig.GetRoot().(hocon.Object)
-			delete(hoconConfigObj, "node")
-			delete(hoconConfigObj, "cluster")
-			delete(hoconConfigObj, "dashboard")
-
-			if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, hoconConfigObj.String()); err != nil {
-				return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
+	storageConfigMap := &corev1.ConfigMap{}
+	if err := s.Client.Get(ctx, client.ObjectKeyFromObject(configMap), storageConfigMap); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			if err := s.Handler.Create(configMap); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to create configMap")}
 			}
+			return subResult{}
 		}
-		if instance.Annotations == nil {
-			instance.Annotations = map[string]string{}
-		}
-		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = instance.Spec.Config.Data
-		if err := s.Client.Update(ctx, instance); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update emqx instance")}
-		}
-		return subResult{}
+		return subResult{err: emperror.Wrap(err, "failed to get configMap")}
 	}
-	if ok && instance.Spec.Config.Data != lastConfig {
+
+	patchResult, _ := s.Patcher.Calculate(
+		storageConfigMap.DeepCopy(),
+		configMap.DeepCopy(),
+	)
+
+	if !patchResult.IsEmpty() && r != nil {
+		_, coreReady := instance.Status.GetCondition(appsv2beta1.CoreNodesReady)
+		if coreReady == nil || !instance.Status.IsConditionTrue(appsv2beta1.CoreNodesReady) {
+			return subResult{}
+		}
+
 		// Delete readonly configs
 		hoconConfigObj := hoconConfig.GetRoot().(hocon.Object)
 		delete(hoconConfigObj, "node")
@@ -64,21 +62,9 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
 		}
 
-		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = instance.Spec.Config.Data
-		if err := s.Client.Update(ctx, instance); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update emqx instance")}
+		if err := s.Client.Update(ctx, configMap); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update configMap")}
 		}
-		return subResult{}
-	}
-
-	config, err := getEMQXConfigsByAPI(r)
-	if err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to get emqx config")}
-	}
-
-	configMap := generateConfigMap(instance, config)
-	if err := s.Handler.CreateOrUpdateList(instance, s.Scheme, []client.Object{configMap}); err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to create or update configMap")}
 	}
 
 	return subResult{}
@@ -99,21 +85,6 @@ func generateConfigMap(instance *appsv2beta1.EMQX, data string) *corev1.ConfigMa
 			"emqx.conf": data,
 		},
 	}
-}
-
-func getEMQXConfigsByAPI(r innerReq.RequesterInterface) (string, error) {
-	url := r.GetURL("api/v5/configs")
-
-	resp, body, err := r.Request("GET", url, nil, http.Header{
-		"Accept": []string{"text/plain"},
-	})
-	if err != nil {
-		return "", emperror.Wrapf(err, "failed to get API %s", url.String())
-	}
-	if resp.StatusCode != 200 {
-		return "", emperror.Errorf("failed to get API %s, status : %s, body: %s", url.String(), resp.Status, body)
-	}
-	return string(body), nil
 }
 
 func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) error {
