@@ -278,7 +278,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 	Context("replicant template is not nil", func() {
 		JustBeforeEach(func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-
+			instance.Spec = *emqx.Spec.DeepCopy()
 			instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
 				Spec: appsv2beta1.EMQXReplicantTemplateSpec{
 					Replicas: pointer.Int32Ptr(2),
