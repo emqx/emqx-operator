@@ -1,7 +1,6 @@
 package v2beta1
 
 import (
-	"context"
 	"fmt"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
@@ -59,7 +58,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			By("Creating namespace", func() {
 				// create namespace
 				Eventually(func() bool {
-					err := k8sClient.Create(context.TODO(), &corev1.Namespace{
+					err := k8sClient.Create(ctx, &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: instance.GetNamespace(),
 							Labels: map[string]string{
@@ -72,24 +71,24 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			})
 
 			By("Creating Rebalance CR", func() {
-				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Create(ctx, r)).Should(Succeed())
 			})
 		})
 
 		AfterEach(func() {
 			By("Deleting Rebalance CR, can be successful", func() {
 				Eventually(func() error {
-					return k8sClient.Delete(context.TODO(), r)
+					return k8sClient.Delete(ctx, r)
 				}, timeout, interval).Should(Succeed())
 				Eventually(func() bool {
-					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+					return k8sErrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r))
 				}).Should(BeTrue())
 			})
 		})
 
 		It("Rebalance will failed, because the EMQX is not found", func() {
 			Eventually(func() appsv2beta1.RebalanceStatus {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 				return r.Status
 			}, timeout, interval).Should(And(
 				HaveField("Phase", appsv2beta1.RebalancePhaseFailed),
@@ -118,7 +117,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			By("Creating namespace", func() {
 				// create namespace
 				Eventually(func() bool {
-					err := k8sClient.Create(context.TODO(), &corev1.Namespace{
+					err := k8sClient.Create(ctx, &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: instance.GetNamespace(),
 							Labels: map[string]string{
@@ -134,11 +133,11 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 				// create EMQX CR
 				instance.Spec.ReplicantTemplate = nil
 				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
-				Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
+				Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully
 				Eventually(func() *appsv2beta1.EMQX {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 					return instance
 				}).WithTimeout(timeout).WithPolling(interval).Should(
 					WithTransform(func(instance *appsv2beta1.EMQX) bool {
@@ -148,24 +147,24 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			})
 
 			By("Creating Rebalance CR", func() {
-				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Create(ctx, r)).Should(Succeed())
 			})
 		})
 
 		AfterEach(func() {
 			By("Deleting Rebalance CR, can be successful", func() {
 				Eventually(func() error {
-					return k8sClient.Delete(context.TODO(), r)
+					return k8sClient.Delete(ctx, r)
 				}, timeout, interval).Should(Succeed())
 				Eventually(func() bool {
-					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+					return k8sErrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r))
 				}).Should(BeTrue())
 			})
 		})
 
 		It("Rebalance will failed, because the EMQX is not enterprise", func() {
 			Eventually(func() appsv2beta1.RebalanceStatus {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 				return r.Status
 			}, timeout, interval).Should(And(
 				HaveField("Phase", appsv2beta1.RebalancePhaseFailed),
@@ -190,7 +189,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			By("Creating namespace", func() {
 				// create namespace
 				Eventually(func() bool {
-					err := k8sClient.Create(context.TODO(), &corev1.Namespace{
+					err := k8sClient.Create(ctx, &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: instance.GetNamespace(),
 							Labels: map[string]string{
@@ -206,11 +205,11 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 				// create EMQX CR
 				instance.Spec.ReplicantTemplate = nil
 				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
-				Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
+				Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully
 				Eventually(func() *appsv2beta1.EMQX {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 					return instance
 				}).WithTimeout(timeout).WithPolling(interval).Should(
 					WithTransform(func(instance *appsv2beta1.EMQX) bool {
@@ -224,20 +223,20 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			By("Deleting EMQX CR", func() {
 				// delete emqx cr
 				Eventually(func() error {
-					return k8sClient.Delete(context.TODO(), instance)
+					return k8sClient.Delete(ctx, instance)
 				}, timeout, interval).Should(Succeed())
 				Eventually(func() bool {
-					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance))
+					return k8sErrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance))
 				}).Should(BeTrue())
 			})
 
 			// delete rebalance cr
 			By("Deleting Rebalance CR", func() {
 				Eventually(func() error {
-					return k8sClient.Delete(context.TODO(), r)
+					return k8sClient.Delete(ctx, r)
 				}, timeout, interval).Should(Succeed())
 				Eventually(func() bool {
-					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+					return k8sErrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r))
 				}).Should(BeTrue())
 			})
 		})
@@ -248,19 +247,19 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 				r.Spec.InstanceName = instance.GetName()
 				r.Spec.InstanceKind = instance.GroupVersionKind().Kind
 
-				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Create(ctx, r)).Should(Succeed())
 			})
 
 			By("Rebalance should have finalizer", func() {
 				Eventually(func() []string {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 					return r.GetFinalizers()
 				}, timeout, interval).Should(ContainElements("apps.emqx.io/finalizer"))
 			})
 
 			By("Rebalance will failed, because the EMQX is nothing to balance", func() {
 				Eventually(func() appsv2beta1.RebalanceStatus {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 					return r.Status
 				}, timeout, interval).Should(And(
 					HaveField("Phase", appsv2beta1.RebalancePhaseFailed),
@@ -279,17 +278,17 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 				// mock rebalance processing
 				r.Status.Phase = appsv2beta1.RebalancePhaseProcessing
 				r.Status.Conditions = []appsv2beta1.RebalanceCondition{}
-				Expect(k8sClient.Status().Update(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Status().Update(ctx, r)).Should(Succeed())
 
 				// update annotations for target reconciler
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)).Should(Succeed())
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)).Should(Succeed())
 				r.Annotations = map[string]string{"test": "e2e"}
-				Expect(k8sClient.Update(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Update(ctx, r)).Should(Succeed())
 			})
 
 			By("Rebalance should completed", func() {
 				Eventually(func() appsv2beta1.RebalanceStatus {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 					return r.Status
 				}, timeout, interval).Should(And(
 					HaveField("Phase", appsv2beta1.RebalancePhaseCompleted),
@@ -350,7 +349,7 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 			By("Creating namespace", func() {
 				// create namespace
 				Eventually(func() bool {
-					err := k8sClient.Create(context.TODO(), &corev1.Namespace{
+					err := k8sClient.Create(ctx, &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: instance.GetNamespace(),
 							Labels: map[string]string{
@@ -363,24 +362,24 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 			})
 
 			By("Creating Rebalance CR", func() {
-				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Create(ctx, r)).Should(Succeed())
 			})
 		})
 
 		AfterEach(func() {
 			By("Deleting Rebalance CR, can be successful", func() {
 				Eventually(func() error {
-					return k8sClient.Delete(context.TODO(), r)
+					return k8sClient.Delete(ctx, r)
 				}, timeout, interval).Should(Succeed())
 				Eventually(func() bool {
-					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+					return k8sErrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r))
 				}).Should(BeTrue())
 			})
 		})
 
 		It("Rebalance will failed, because the EMQX is not found", func() {
 			Eventually(func() appsv2beta1.RebalanceStatus {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 				return r.Status
 			}, timeout, interval).Should(And(
 				HaveField("Phase", appsv2beta1.RebalancePhaseFailed),
@@ -405,7 +404,7 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 			By("Creating namespace", func() {
 				// create namespace
 				Eventually(func() bool {
-					err := k8sClient.Create(context.TODO(), &corev1.Namespace{
+					err := k8sClient.Create(ctx, &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: instance.GetNamespace(),
 							Labels: map[string]string{
@@ -420,11 +419,11 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 			By("Creating EMQX CR", func() {
 				// create EMQX CR
 				Expect(instance.ValidateCreate()).Should(Succeed())
-				Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
+				Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully
 				Eventually(func() *appsv1beta4.EmqxEnterprise {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 					return instance
 				}).WithTimeout(timeout).WithPolling(interval).Should(
 					WithTransform(func(instance *appsv1beta4.EmqxEnterprise) bool {
@@ -438,20 +437,20 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 			By("Deleting EMQX CR", func() {
 				// delete emqx cr
 				Eventually(func() error {
-					return k8sClient.Delete(context.TODO(), instance)
+					return k8sClient.Delete(ctx, instance)
 				}, timeout, interval).Should(Succeed())
 				Eventually(func() bool {
-					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance))
+					return k8sErrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance))
 				}).Should(BeTrue())
 			})
 
 			// delete rebalance cr
 			By("Deleting Rebalance CR", func() {
 				Eventually(func() error {
-					return k8sClient.Delete(context.TODO(), r)
+					return k8sClient.Delete(ctx, r)
 				}, timeout, interval).Should(Succeed())
 				Eventually(func() bool {
-					return k8sErrors.IsNotFound(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r))
+					return k8sErrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r))
 				}).Should(BeTrue())
 			})
 		})
@@ -462,19 +461,19 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 				r.Spec.InstanceName = instance.GetName()
 				r.Spec.InstanceKind = "EmqxEnterprise"
 
-				Expect(k8sClient.Create(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Create(ctx, r)).Should(Succeed())
 			})
 
 			By("Rebalance should have finalizer", func() {
 				Eventually(func() []string {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 					return r.GetFinalizers()
 				}, timeout, interval).Should(ContainElements("apps.emqx.io/finalizer"))
 			})
 
 			By("Rebalance will failed, because the EMQX is nothing to balance", func() {
 				Eventually(func() appsv2beta1.RebalanceStatus {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 					return r.Status
 				}, timeout, interval).Should(And(
 					HaveField("Phase", appsv2beta1.RebalancePhaseFailed),
@@ -493,17 +492,17 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 				// mock rebalance processing
 				r.Status.Phase = appsv2beta1.RebalancePhaseProcessing
 				r.Status.Conditions = []appsv2beta1.RebalanceCondition{}
-				Expect(k8sClient.Status().Update(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Status().Update(ctx, r)).Should(Succeed())
 
 				// update annotations for target reconciler
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)).Should(Succeed())
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)).Should(Succeed())
 				r.Annotations = map[string]string{"test": "e2e"}
-				Expect(k8sClient.Update(context.TODO(), r)).Should(Succeed())
+				Expect(k8sClient.Update(ctx, r)).Should(Succeed())
 			})
 
 			By("Rebalance should completed", func() {
 				Eventually(func() appsv2beta1.RebalanceStatus {
-					_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(r), r)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(r), r)
 					return r.Status
 				}, timeout, interval).Should(And(
 					HaveField("Phase", appsv2beta1.RebalancePhaseCompleted),

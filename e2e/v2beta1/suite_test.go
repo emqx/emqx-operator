@@ -17,6 +17,7 @@ limitations under the License.
 package v2beta1
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -49,8 +50,9 @@ import (
 
 // var cfg *rest.Config
 var timeout, interval time.Duration
-var k8sClient client.Client
 var testEnv *envtest.Environment
+var ctx context.Context
+var k8sClient client.Client
 var emqx *appsv2beta1.EMQX
 
 func TestAPIs(t *testing.T) {
@@ -71,6 +73,7 @@ var _ = BeforeSuite(func() {
 	emqx = genEMQX()
 	timeout = time.Minute * 5
 	interval = time.Second * 1
+	ctx = context.Background()
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 

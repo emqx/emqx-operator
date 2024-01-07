@@ -17,8 +17,6 @@ limitations under the License.
 package v2beta1
 
 import (
-	"context"
-
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -26,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -45,7 +44,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("should create namespace and EMQX CR", func() {
-			Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
+			Expect(k8sClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: instance.GetNamespace(),
 					Labels: map[string]string{
@@ -53,12 +52,12 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					},
 				},
 			})).Should(Succeed())
-			Expect(k8sClient.Create(context.TODO(), instance)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 		})
 
 		It("should create EMQX CR successfully", func() {
 			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
 			}).WithTimeout(timeout).WithPolling(interval).Should(
 				And(
@@ -97,13 +96,18 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("scale up EMQX core nodes", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage := instance.DeepCopy()
-			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(3)
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			var storage *appsv2beta1.EMQX
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				storage = instance.DeepCopy()
+				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(3)
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 
 			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
 			}).WithTimeout(timeout).WithPolling(interval).Should(
 				And(
@@ -142,13 +146,18 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("scale down EMQX core nodes", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage := instance.DeepCopy()
-			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			var storage *appsv2beta1.EMQX
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				storage = instance.DeepCopy()
+				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 
 			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
 			}).WithTimeout(timeout).WithPolling(interval).Should(
 				And(
@@ -187,13 +196,18 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("change EMQX image", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage := instance.DeepCopy()
-			instance.Spec.Image = "emqx:5"
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			var storage *appsv2beta1.EMQX
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				storage = instance.DeepCopy()
+				instance.Spec.Image = "emqx:5"
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 
 			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
 			}).WithTimeout(timeout).WithPolling(interval).Should(
 				And(
@@ -222,10 +236,10 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("old sts should scale down to 0", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			Eventually(func() []appsv1.StatefulSet {
 				list := &appsv1.StatefulSetList{}
-				_ = k8sClient.List(context.TODO(), list,
+				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
 					client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 				)
@@ -245,13 +259,17 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("change EMQX listener port", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			instance.Spec.Config.Data = `listeners.tcp.default.bind = "11883"`
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				instance.Spec.Config.Data = `listeners.tcp.default.bind = "11883"`
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 
 			Eventually(func() []corev1.ServicePort {
 				svc := &corev1.Service{}
-				_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), svc)
+				_ = k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), svc)
 				return svc.Spec.Ports
 			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
 				WithTransform(func(port corev1.ServicePort) int32 {
@@ -261,7 +279,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 
 			Eventually(func() []corev1.EndpointPort {
 				ep := &corev1.Endpoints{}
-				_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), ep)
+				_ = k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), ep)
 				return ep.Subsets[0].Ports
 			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
 				WithTransform(func(port corev1.EndpointPort) int32 {
@@ -269,27 +287,35 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				}, Equal(int32(11883))),
 			))
 
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			instance.Spec.Config.Data = `listeners.tcp.default.bind = "1883"`
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				instance.Spec.Config.Data = `listeners.tcp.default.bind = "1883"`
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 		})
 	})
 
 	Context("replicant template is not nil", func() {
 		JustBeforeEach(func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			instance.Spec = *emqx.Spec.DeepCopy()
-			instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
-				Spec: appsv2beta1.EMQXReplicantTemplateSpec{
-					Replicas: pointer.Int32Ptr(2),
-				},
-			}
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				instance.Spec = *emqx.Spec.DeepCopy()
+				instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
+					Spec: appsv2beta1.EMQXReplicantTemplateSpec{
+						Replicas: pointer.Int32Ptr(2),
+					},
+				}
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 		})
 
 		It("should update EMQX CR successfully", func() {
 			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
 			}).WithTimeout(timeout).WithPolling(interval).Should(
 				And(
@@ -329,13 +355,18 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("scale up EMQX replicant nodes", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage := instance.DeepCopy()
-			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(3)
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			var storage *appsv2beta1.EMQX
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				storage = instance.DeepCopy()
+				instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(3)
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 
 			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
 			}).WithTimeout(timeout).WithPolling(interval).Should(
 				And(
@@ -381,13 +412,18 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("change EMQX image", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			storage := instance.DeepCopy()
-			instance.Spec.Image = "emqx/emqx:latest"
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			var storage *appsv2beta1.EMQX
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				storage = instance.DeepCopy()
+				instance.Spec.Image = "emqx/emqx:latest"
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 
 			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
 				return instance
 			}).WithTimeout(timeout).WithPolling(interval).Should(
 				And(
@@ -419,10 +455,10 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("old rs should scale down to 0", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
-				_ = k8sClient.List(context.TODO(), list,
+				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
 					client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 				)
@@ -442,10 +478,10 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("old sts should scale down to 0", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
 			Eventually(func() []appsv1.StatefulSet {
 				list := &appsv1.StatefulSetList{}
-				_ = k8sClient.List(context.TODO(), list,
+				_ = k8sClient.List(ctx, list,
 					client.InNamespace(instance.Namespace),
 					client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 				)
@@ -465,13 +501,17 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("change EMQX listener port", func() {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			instance.Spec.Config.Data = `listeners.tcp.default.bind = "11883"`
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				instance.Spec.Config.Data = `listeners.tcp.default.bind = "11883"`
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 
 			Eventually(func() []corev1.ServicePort {
 				svc := &corev1.Service{}
-				_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), svc)
+				_ = k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), svc)
 				return svc.Spec.Ports
 			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
 				WithTransform(func(port corev1.ServicePort) int32 {
@@ -481,7 +521,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 
 			Eventually(func() []corev1.EndpointPort {
 				ep := &corev1.Endpoints{}
-				_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), ep)
+				_ = k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), ep)
 				return ep.Subsets[0].Ports
 			}).WithTimeout(timeout).WithPolling(interval).Should(ContainElement(
 				WithTransform(func(port corev1.EndpointPort) int32 {
@@ -489,14 +529,18 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				}, Equal(int32(11883))),
 			))
 
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
-			instance.Spec.Config.Data = `listeners.tcp.default.bind = "1883"`
-			Expect(k8sClient.Update(context.TODO(), instance)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				instance.Spec.Config.Data = `listeners.tcp.default.bind = "1883"`
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
 		})
 	})
 
 	It("should delete namespace", func() {
-		Expect(k8sClient.Delete(context.Background(), &corev1.Namespace{
+		Expect(k8sClient.Delete(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: instance.Namespace,
 			},
@@ -507,7 +551,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 func checkServices(instance *appsv2beta1.EMQX) {
 	Eventually(func() []corev1.ServicePort {
 		svc := &corev1.Service{}
-		_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), svc)
+		_ = k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), svc)
 		return svc.Spec.Ports
 	}).WithTimeout(timeout).WithPolling(interval).Should(
 		ConsistOf([]corev1.ServicePort{
@@ -548,7 +592,7 @@ func checkServices(instance *appsv2beta1.EMQX) {
 func checkPods(instance *appsv2beta1.EMQX) {
 	podList := &corev1.PodList{}
 	Eventually(func() []corev1.Pod {
-		_ = k8sClient.List(context.TODO(), podList,
+		_ = k8sClient.List(ctx, podList,
 			client.InNamespace(instance.Namespace),
 			client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
 		)
@@ -569,7 +613,7 @@ func checkPods(instance *appsv2beta1.EMQX) {
 
 func checkEndpoints(instance *appsv2beta1.EMQX, labels map[string]string) {
 	podList := &corev1.PodList{}
-	_ = k8sClient.List(context.TODO(), podList,
+	_ = k8sClient.List(ctx, podList,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(labels),
 	)
@@ -592,7 +636,7 @@ func checkEndpoints(instance *appsv2beta1.EMQX, labels map[string]string) {
 
 	Eventually(func() *corev1.Endpoints {
 		ep := &corev1.Endpoints{}
-		_ = k8sClient.Get(context.TODO(), instance.ListenersServiceNamespacedName(), ep)
+		_ = k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), ep)
 		return ep
 	}, timeout, interval).Should(HaveField("Subsets",
 		And(

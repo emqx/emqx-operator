@@ -17,7 +17,6 @@ limitations under the License.
 package v1beta4
 
 import (
-	"context"
 	"fmt"
 	"sort"
 
@@ -57,7 +56,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			existedStsList = &appsv1.StatefulSetList{}
 			Eventually(func() []appsv1.StatefulSet {
 				_ = k8sClient.List(
-					context.TODO(),
+					ctx,
 					existedStsList,
 					client.InNamespace(emqx.GetNamespace()),
 					client.MatchingLabels(emqx.GetLabels()),
@@ -69,7 +68,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			Eventually(func() string {
 				// Wait sts ready
 				_ = k8sClient.Get(
-					context.TODO(),
+					ctx,
 					types.NamespacedName{
 						Name:      sts.GetName(),
 						Namespace: sts.GetNamespace(),
@@ -82,7 +81,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			By("check CR status before update")
 			Eventually(func() appsv1beta4.EmqxEnterpriseStatus {
 				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(emqx), ee)
 				return ee.Status
 			}, timeout, interval).Should(And(
 				HaveField("Conditions", HaveExactElements(
@@ -104,20 +103,20 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			})
 
 			By("update EMQX CR")
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), emqx)).Should(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(emqx), emqx)).Should(Succeed())
 			emqx.Spec.Template.Spec.Volumes = append(emqx.Spec.Template.Spec.Volumes, corev1.Volume{
 				Name: "test-blue-green-update",
 				VolumeSource: corev1.VolumeSource{
 					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			})
-			Expect(k8sClient.Update(context.Background(), emqx)).Should(Succeed())
+			Expect(k8sClient.Update(ctx, emqx)).Should(Succeed())
 
 			By("wait create new sts")
 			existedStsList = &appsv1.StatefulSetList{}
 			Eventually(func() []appsv1.StatefulSet {
 				_ = k8sClient.List(
-					context.TODO(),
+					ctx,
 					existedStsList,
 					client.InNamespace(emqx.GetNamespace()),
 					client.MatchingLabels(emqx.GetLabels()),
@@ -136,7 +135,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			Eventually(func() string {
 				// Wait sts ready
 				_ = k8sClient.Get(
-					context.TODO(),
+					ctx,
 					types.NamespacedName{
 						Name:      newSts.GetName(),
 						Namespace: newSts.GetNamespace(),
@@ -149,7 +148,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			By("check CR status in blue-green updating")
 			Eventually(func() appsv1beta4.EmqxEnterpriseStatus {
 				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(emqx), ee)
 				return ee.Status
 			}, timeout, interval).Should(And(
 				HaveField("Conditions", HaveExactElements(
@@ -178,7 +177,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			By("check CR status after update")
 			Eventually(func() appsv1beta4.EmqxEnterpriseStatus {
 				ee := &appsv1beta4.EmqxEnterprise{}
-				_ = k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), ee)
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(emqx), ee)
 				return ee.Status
 			}, timeout, interval).Should(And(
 				HaveField("Conditions", HaveExactElements(
@@ -203,7 +202,7 @@ var _ = Describe("Blue Green Update Test", Label("blue"), func() {
 			Eventually(func() []corev1.Pod {
 				podList := &corev1.PodList{}
 				_ = k8sClient.List(
-					context.TODO(),
+					ctx,
 					podList,
 					client.InNamespace(sts.GetNamespace()),
 					client.MatchingLabels(map[string]string{

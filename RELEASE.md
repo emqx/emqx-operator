@@ -17,7 +17,7 @@ EMQX Operator 2.2.7 has been released.
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Sometimes the updated statefulSet / replicaSet will not be ready, because the EMQX node can not be started. Then we will roll back EMQX CR spec, the EMQX operator controller will create a new statefulSet / replicaSet. But the new statefulSet / replicaSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status. 
+  + Sometimes the updated statefulSet / replicaSet will not be ready, because the EMQX node can not be started. Then we will roll back EMQX CR spec, the EMQX operator controller will create a new statefulSet / replicaSet. But the new statefulSet / replicaSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
 
 ## How to install/upgrade EMQX Operator 💡
 
