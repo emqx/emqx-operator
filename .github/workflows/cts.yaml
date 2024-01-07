@@ -25,6 +25,7 @@ jobs:
           - "v1.26.0"
           - "v1.27.0"
           - "v1.28.0"
+          - "v1.29.0"
     steps:
       - if: matrix.kubernetes-env == 'k3s'
         run: |
