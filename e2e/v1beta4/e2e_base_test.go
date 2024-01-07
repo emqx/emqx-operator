@@ -17,7 +17,6 @@ limitations under the License.
 package v1beta4
 
 import (
-	"context"
 	"fmt"
 
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
@@ -224,7 +223,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 			By("create EMQX Plugin")
 			plugin.Labels = emqx.GetLabels()
 			plugin.Namespace = emqx.GetNamespace()
-			Expect(k8sClient.Create(context.TODO(), plugin)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, plugin)).Should(Succeed())
 
 			By("check EMQX CR status")
 			Expect(emqx.GetStatus().GetReplicas()).Should(Equal(int32(1)))
@@ -235,7 +234,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 
 			By("check pod annotations")
 			sts := &appsv1.StatefulSet{}
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), sts)).Should(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(emqx), sts)).Should(Succeed())
 			Expect(sts.Spec.Template.Annotations).Should(HaveKey(handler.ManageContainersAnnotation))
 
 			By("checking the EMQX Custom Resource's EndpointSlice", func() {
@@ -246,7 +245,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 			Eventually(func() []string {
 				list := appsv1beta4.EmqxPluginList{}
 				_ = k8sClient.List(
-					context.Background(),
+					ctx,
 					&list,
 					client.InNamespace(emqx.GetNamespace()),
 					client.MatchingLabels(emqx.GetLabels()),
@@ -265,7 +264,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 			Eventually(func() map[string]string {
 				cm := &corev1.ConfigMap{}
 				_ = k8sClient.Get(
-					context.Background(),
+					ctx,
 					types.NamespacedName{
 						Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "plugins-config"),
 						Namespace: emqx.GetNamespace(),
@@ -278,7 +277,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 			Eventually(func() []corev1.ServicePort {
 				svc := &corev1.Service{}
 				_ = k8sClient.Get(
-					context.Background(),
+					ctx,
 					types.NamespacedName{
 						Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "headless"),
 						Namespace: emqx.GetNamespace(),
@@ -296,7 +295,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 			Eventually(func() error {
 				p := &appsv1beta4.EmqxPlugin{}
 				err := k8sClient.Get(
-					context.Background(),
+					ctx,
 					types.NamespacedName{
 						Name:      plugin.GetName(),
 						Namespace: plugin.GetNamespace(),
@@ -310,7 +309,7 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 				p.Spec.Config["lwm2m.bind.udp.2"] = "0.0.0.0:5696"
 				p.Spec.Config["lwm2m.bind.dtls.1"] = "0.0.0.0:5697"
 				p.Spec.Config["lwm2m.bind.dtls.2"] = "0.0.0.0:5698"
-				return k8sClient.Update(context.Background(), p)
+				return k8sClient.Update(ctx, p)
 			}, timeout, interval).Should(Succeed())
 
 			pluginPorts = []corev1.ServicePort{
@@ -356,7 +355,7 @@ func createEmqx(emqx appsv1beta4.Emqx) {
 	emqx.SetNamespace(emqx.GetNamespace() + "-" + rand.String(5))
 	emqx.Default()
 	Expect(emqx.ValidateCreate()).Should(Succeed())
-	Expect(k8sClient.Create(context.TODO(), &corev1.Namespace{
+	Expect(k8sClient.Create(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: emqx.GetNamespace(),
 			Labels: map[string]string{
@@ -364,10 +363,10 @@ func createEmqx(emqx appsv1beta4.Emqx) {
 			},
 		},
 	})).Should(Succeed())
-	Expect(k8sClient.Create(context.TODO(), emqx)).Should(Succeed())
+	Expect(k8sClient.Create(ctx, emqx)).Should(Succeed())
 	Eventually(func() bool {
 		_ = k8sClient.Get(
-			context.TODO(),
+			ctx,
 			types.NamespacedName{
 				Name:      emqx.GetName(),
 				Namespace: emqx.GetNamespace(),
@@ -382,25 +381,25 @@ func deleteEmqx(emqx appsv1beta4.Emqx) {
 	finalizer := "apps.emqx.io/finalizer"
 	plugins := &appsv1beta4.EmqxPluginList{}
 	_ = k8sClient.List(
-		context.Background(),
+		ctx,
 		plugins,
 		client.InNamespace("default"),
 	)
 	for _, plugin := range plugins.Items {
 		controllerutil.RemoveFinalizer(&plugin, finalizer)
-		Expect(k8sClient.Update(context.Background(), &plugin)).Should(Succeed())
-		Expect(k8sClient.Delete(context.Background(), &plugin)).Should(Succeed())
+		Expect(k8sClient.Update(ctx, &plugin)).Should(Succeed())
+		Expect(k8sClient.Delete(ctx, &plugin)).Should(Succeed())
 	}
-	Expect(k8sClient.Delete(context.TODO(), emqx)).Should(Succeed())
+	Expect(k8sClient.Delete(ctx, emqx)).Should(Succeed())
 
-	Expect(k8sClient.Delete(context.TODO(), &corev1.Namespace{
+	Expect(k8sClient.Delete(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: emqx.GetNamespace(),
 		},
 	})).Should(Succeed())
 
 	Eventually(func() bool {
-		err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetNamespace()}, &corev1.Namespace{})
+		err := k8sClient.Get(ctx, types.NamespacedName{Name: emqx.GetNamespace()}, &corev1.Namespace{})
 		return k8sErrors.IsNotFound(err)
 	}, timeout, interval).Should(BeTrue())
 }
@@ -409,7 +408,7 @@ func checkService(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1.ServicePort
 	Eventually(func() []corev1.ServicePort {
 		svc := &corev1.Service{}
 		_ = k8sClient.Get(
-			context.Background(),
+			ctx,
 			types.NamespacedName{
 				Name:      emqx.GetName(),
 				Namespace: emqx.GetNamespace(),
@@ -423,7 +422,7 @@ func checkService(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1.ServicePort
 func checkPodAndEndpointsAndEndpointSlices(emqx appsv1beta4.Emqx, ports, pluginPorts []corev1.ServicePort, headlessPort corev1.ServicePort, count int) {
 	podList := &corev1.PodList{}
 	Eventually(func() []corev1.Pod {
-		_ = k8sClient.List(context.TODO(), podList,
+		_ = k8sClient.List(ctx, podList,
 			client.InNamespace(emqx.GetNamespace()),
 			client.MatchingLabels(emqx.GetSpec().GetTemplate().Labels),
 		)
@@ -494,7 +493,7 @@ func checkPodAndEndpointsAndEndpointSlices(emqx appsv1beta4.Emqx, ports, pluginP
 
 	Eventually(func() *corev1.Endpoints {
 		ep := &corev1.Endpoints{}
-		_ = k8sClient.Get(context.TODO(), types.NamespacedName{Name: emqx.GetSpec().GetServiceTemplate().Name, Namespace: emqx.GetSpec().GetServiceTemplate().Namespace}, ep)
+		_ = k8sClient.Get(ctx, types.NamespacedName{Name: emqx.GetSpec().GetServiceTemplate().Name, Namespace: emqx.GetSpec().GetServiceTemplate().Namespace}, ep)
 		return ep
 	}, timeout, interval).Should(HaveField("Subsets",
 		And(
@@ -511,7 +510,7 @@ func checkPodAndEndpointsAndEndpointSlices(emqx appsv1beta4.Emqx, ports, pluginP
 	Eventually(func() []discoveryv1.EndpointSlice {
 		list := &discoveryv1.EndpointSliceList{}
 		_ = k8sClient.List(
-			context.TODO(), list,
+			ctx, list,
 			client.InNamespace(emqx.GetNamespace()),
 			client.MatchingLabels(
 				map[string]string{

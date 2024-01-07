@@ -17,8 +17,6 @@ limitations under the License.
 package v1beta4
 
 import (
-	"context"
-
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,7 +34,7 @@ var _ = Describe("Upgrade Test", Label("upgrade"), func() {
 			By("wait sts ready", func() {
 				Eventually(func() []appsv1.StatefulSet {
 					list := &appsv1.StatefulSetList{}
-					_ = k8sClient.List(context.TODO(), list,
+					_ = k8sClient.List(ctx, list,
 						client.InNamespace(emqx.GetNamespace()),
 						client.MatchingLabels(emqx.GetLabels()),
 					)
@@ -60,21 +58,21 @@ var _ = Describe("Upgrade Test", Label("upgrade"), func() {
 				switch emqx.(type) {
 				case *appsv1beta4.EmqxBroker:
 					obj := &appsv1beta4.EmqxBroker{}
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), obj)).Should(Succeed())
+					Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(emqx), obj)).Should(Succeed())
 					obj.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.17"
-					Expect(k8sClient.Update(context.TODO(), obj)).Should(Succeed())
+					Expect(k8sClient.Update(ctx, obj)).Should(Succeed())
 				case *appsv1beta4.EmqxEnterprise:
 					obj := &appsv1beta4.EmqxEnterprise{}
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(emqx), obj)).Should(Succeed())
+					Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(emqx), obj)).Should(Succeed())
 					obj.Spec.Template.Spec.EmqxContainer.Image.Version = "4.4.17"
-					Expect(k8sClient.Update(context.TODO(), obj)).Should(Succeed())
+					Expect(k8sClient.Update(ctx, obj)).Should(Succeed())
 				}
 			})
 
 			By("wait sts ready", func() {
 				Eventually(func() []appsv1.StatefulSet {
 					list := &appsv1.StatefulSetList{}
-					_ = k8sClient.List(context.TODO(), list,
+					_ = k8sClient.List(ctx, list,
 						client.InNamespace(emqx.GetNamespace()),
 						client.MatchingLabels(emqx.GetLabels()),
 					)

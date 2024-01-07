@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta4
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -42,8 +43,9 @@ import (
 
 // var cfg *rest.Config
 var timeout, interval time.Duration
-var k8sClient client.Client
 var testEnv *envtest.Environment
+var k8sClient client.Client
+var ctx context.Context
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -60,6 +62,7 @@ func TestAPIs(t *testing.T) {
 var _ = BeforeSuite(func() {
 	timeout = time.Minute * 3
 	interval = time.Millisecond * 250
+	ctx = context.Background()
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
