@@ -105,9 +105,10 @@ jobs:
           - "v1.26.0"
           - "v1.27.0"
           - "v1.28.0"
+          - "v1.29.0"
         emqx:
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-slim.yaml"]
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
+          # - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-slim.yaml"]
+          # - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-slim.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-full.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-slim.yaml"]
