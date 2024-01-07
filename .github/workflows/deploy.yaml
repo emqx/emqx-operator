@@ -17,13 +17,13 @@ jobs:
           - static
           - helm
         emqx:
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-slim.yaml"]
+          # - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-slim.yaml"]
           # - [EmqxBroker, emqx, "config/samples/emqx/v1beta3/emqxbroker-full.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-slim.yaml"]
           # - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta3/emqxenterprise-full.yaml"]
 
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-slim.yaml"]
-          - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
+          # - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-slim.yaml"]
+          # - [EmqxBroker, emqx, "config/samples/emqx/v1beta4/emqxbroker-full.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-slim.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-full.yaml"]
 

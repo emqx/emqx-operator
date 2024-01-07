@@ -37,41 +37,42 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-var emqxBroker = &appsv1beta4.EmqxBroker{
-	TypeMeta: metav1.TypeMeta{
-		Kind:       "EmqxBroker",
-		APIVersion: "apps.emqx.io/v1beta4",
-	},
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "emqx",
-		Namespace: "e2e-test-v1beta4",
-		Labels: map[string]string{
-			"test": "e2e",
-		},
-	},
-	Spec: appsv1beta4.EmqxBrokerSpec{
-		Replicas: pointer.Int32Ptr(1),
-		Template: appsv1beta4.EmqxTemplate{
-			Spec: appsv1beta4.EmqxTemplateSpec{
-				EmqxContainer: appsv1beta4.EmqxContainer{
-					Image: appsv1beta4.EmqxImage{
-						Repository: "emqx",
-						Version:    "4.4.15",
-					},
-					EmqxConfig: appsv1beta4.EmqxConfig{
-						"sysmon.long_schedule": "240h",
-					},
-					BootstrapAPIKeys: []appsv1beta4.BootstrapAPIKey{
-						{
-							Key:    "test_key",
-							Secret: "secret",
-						},
-					},
-				},
-			},
-		},
-	},
-}
+// EMQX 4 open source edition is no longer supported
+// var emqxBroker = &appsv1beta4.EmqxBroker{
+// 	TypeMeta: metav1.TypeMeta{
+// 		Kind:       "EmqxBroker",
+// 		APIVersion: "apps.emqx.io/v1beta4",
+// 	},
+// 	ObjectMeta: metav1.ObjectMeta{
+// 		Name:      "emqx",
+// 		Namespace: "e2e-test-v1beta4",
+// 		Labels: map[string]string{
+// 			"test": "e2e",
+// 		},
+// 	},
+// 	Spec: appsv1beta4.EmqxBrokerSpec{
+// 		Replicas: pointer.Int32Ptr(1),
+// 		Template: appsv1beta4.EmqxTemplate{
+// 			Spec: appsv1beta4.EmqxTemplateSpec{
+// 				EmqxContainer: appsv1beta4.EmqxContainer{
+// 					Image: appsv1beta4.EmqxImage{
+// 						Repository: "emqx",
+// 						Version:    "4.4.15",
+// 					},
+// 					EmqxConfig: appsv1beta4.EmqxConfig{
+// 						"sysmon.long_schedule": "240h",
+// 					},
+// 					BootstrapAPIKeys: []appsv1beta4.BootstrapAPIKey{
+// 						{
+// 							Key:    "test_key",
+// 							Secret: "secret",
+// 						},
+// 					},
+// 				},
+// 			},
+// 		},
+// 	},
+// }
 
 var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 	TypeMeta: metav1.TypeMeta{
@@ -346,7 +347,8 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 			By("delete EMQX CR and EMQX Plugin")
 			deleteEmqx(emqx)
 		},
-		Entry(nil, emqxBroker.DeepCopy(), lwm2m.DeepCopy()),
+		// EMQX 4 open source edition is no longer supported
+		// Entry(nil, emqxBroker.DeepCopy(), lwm2m.DeepCopy()),
 		Entry(nil, emqxEnterprise.DeepCopy(), lwm2m.DeepCopy()),
 	)
 })

@@ -96,7 +96,8 @@ var _ = Describe("Upgrade Test", Label("upgrade"), func() {
 				deleteEmqx(emqx)
 			})
 		},
-		Entry(nil, emqxBroker.DeepCopy()),
+		// EMQX 4 open source edition is no longer supported
+		// Entry(nil, emqxBroker.DeepCopy()),
 		Entry(nil, emqxEnterprise.DeepCopy()),
 	)
 })
