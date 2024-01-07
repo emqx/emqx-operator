@@ -35,6 +35,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 
 	logger := log.FromContext(ctx)
 	preRs := getNewReplicaSet(instance)
+	preRsHash := preRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
 
 	patchCalculateFunc := func(storage, new *appsv1.ReplicaSet) *patch.PatchResult {
@@ -56,6 +57,14 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		_ = ctrl.SetControllerReference(instance, preRs, a.Scheme)
 		if err := a.Handler.Create(preRs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
+				// Sometimes the updated replicaSet will not be ready, because the EMQX node can not be started.
+				// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new replicaSet.
+				// But the new replicaSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
+				if preRsHash == instance.Status.ReplicantNodesStatus.CurrentRevision {
+					_ = a.updateEMQXStatus(ctx, instance, "RevertReplicaSet", "Revert to current replicaSet", preRsHash)
+					return subResult{}
+				}
+
 				if instance.Status.ReplicantNodesStatus.CollisionCount == nil {
 					instance.Status.ReplicantNodesStatus.CollisionCount = pointer.Int32(0)
 				}
@@ -65,22 +74,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 			}
 			return subResult{err: emperror.Wrap(err, "failed to create replicaSet")}
 		}
-
-		// Update EMQX status
-		_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(instance), instance)
-			instance.Status.SetCondition(metav1.Condition{
-				Type:    appsv2beta1.ReplicantNodesProgressing,
-				Status:  metav1.ConditionTrue,
-				Reason:  "CreateNewReplicaSet",
-				Message: "Create new replicaSet",
-			})
-			instance.Status.RemoveCondition(appsv2beta1.Ready)
-			instance.Status.RemoveCondition(appsv2beta1.Available)
-			instance.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
-			instance.Status.ReplicantNodesStatus.UpdateRevision = preRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-			return a.Client.Status().Update(ctx, instance)
-		})
+		_ = a.updateEMQXStatus(ctx, instance, "CreateReplicaSet", "Create new replicaSet", preRsHash)
 		return subResult{}
 	}
 
@@ -103,22 +97,26 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		}); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
 		}
-		// Update EMQX status
-		_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(instance), instance)
-			instance.Status.SetCondition(metav1.Condition{
-				Type:    appsv2beta1.ReplicantNodesProgressing,
-				Status:  metav1.ConditionTrue,
-				Reason:  "CreateNewReplicaSet",
-				Message: "Create new replicaSet",
-			})
-			instance.Status.RemoveCondition(appsv2beta1.Ready)
-			instance.Status.RemoveCondition(appsv2beta1.Available)
-			instance.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
-			return a.Client.Status().Update(ctx, instance)
-		})
+		_ = a.updateEMQXStatus(ctx, instance, "UpdateReplicaSet", "Update exist replicaSet", preRsHash)
 	}
 	return subResult{}
+}
+
+func (a *addRepl) updateEMQXStatus(ctx context.Context, instance *appsv2beta1.EMQX, reason, message, podTemplateHash string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		_ = a.Client.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+		instance.Status.SetCondition(metav1.Condition{
+			Type:    appsv2beta1.ReplicantNodesProgressing,
+			Status:  metav1.ConditionTrue,
+			Reason:  reason,
+			Message: message,
+		})
+		instance.Status.RemoveCondition(appsv2beta1.Ready)
+		instance.Status.RemoveCondition(appsv2beta1.Available)
+		instance.Status.RemoveCondition(appsv2beta1.ReplicantNodesReady)
+		instance.Status.ReplicantNodesStatus.UpdateRevision = podTemplateHash
+		return a.Client.Status().Update(ctx, instance)
+	})
 }
 
 func getNewReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
