@@ -50,14 +50,16 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		_ = ctrl.SetControllerReference(instance, preSts, a.Scheme)
 		if err := a.Handler.Create(preSts); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
-				// Sometimes the updated statefulSet will not be ready, because the EMQX node can not be started.
-				// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new statefulSet.
-				// But the new statefulSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
-				if preStsHash == instance.Status.CoreNodesStatus.CurrentRevision {
-					_ = a.updateEMQXStatus(ctx, instance, "RevertStatefulSet", "Revert to current statefulSet", preStsHash)
-					return subResult{}
+				cond := instance.Status.GetLastTrueCondition()
+				if cond != nil && cond.Type != appsv2beta1.Available && cond.Type != appsv2beta1.Ready {
+					// Sometimes the updated statefulSet will not be ready, because the EMQX node can not be started.
+					// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new statefulSet.
+					// But the new statefulSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
+					if preStsHash == instance.Status.CoreNodesStatus.CurrentRevision {
+						_ = a.updateEMQXStatus(ctx, instance, "RevertStatefulSet", "Revert to current statefulSet", preStsHash)
+						return subResult{}
+					}
 				}
-
 				if instance.Status.CoreNodesStatus.CollisionCount == nil {
 					instance.Status.CoreNodesStatus.CollisionCount = pointer.Int32(0)
 				}

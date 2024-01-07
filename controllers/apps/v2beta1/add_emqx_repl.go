@@ -57,14 +57,16 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		_ = ctrl.SetControllerReference(instance, preRs, a.Scheme)
 		if err := a.Handler.Create(preRs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
-				// Sometimes the updated replicaSet will not be ready, because the EMQX node can not be started.
-				// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new replicaSet.
-				// But the new replicaSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
-				if preRsHash == instance.Status.ReplicantNodesStatus.CurrentRevision {
-					_ = a.updateEMQXStatus(ctx, instance, "RevertReplicaSet", "Revert to current replicaSet", preRsHash)
-					return subResult{}
+				cond := instance.Status.GetLastTrueCondition()
+				if cond != nil && cond.Type != appsv2beta1.Available && cond.Type != appsv2beta1.Ready {
+					// Sometimes the updated replicaSet will not be ready, because the EMQX node can not be started.
+					// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new replicaSet.
+					// But the new replicaSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
+					if preRsHash == instance.Status.ReplicantNodesStatus.CurrentRevision {
+						_ = a.updateEMQXStatus(ctx, instance, "RevertReplicaSet", "Revert to current replicaSet", preRsHash)
+						return subResult{}
+					}
 				}
-
 				if instance.Status.ReplicantNodesStatus.CollisionCount == nil {
 					instance.Status.ReplicantNodesStatus.CollisionCount = pointer.Int32(0)
 				}
