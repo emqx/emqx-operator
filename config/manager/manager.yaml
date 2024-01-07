@@ -46,6 +46,7 @@ spec:
         - --leader-elect
         - --metrics-bind-address=:8080
         - --health-probe-bind-address=:8081
+        - --zap-devel=true
         image: controller:latest
         name: manager
         securityContext:

@@ -56,11 +56,7 @@ jobs:
         if: matrix.install == 'static'
         env:
           IMG: "emqx/emqx-operator-controller:${{ github.sha }}"
-        run: |
-          make deploy
-          kubectl patch -n emqx-operator-system deployment emqx-operator-controller-manager \
-            --type=json \
-            -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--zap-devel=true"}]'
+        run: make deploy
       - name: Deploy controller
         if: matrix.install == 'helm'
         run: |
