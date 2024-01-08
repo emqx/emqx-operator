@@ -114,9 +114,26 @@ func (handler *Handler) CreateOrUpdate(ctx context.Context, scheme *runtime.Sche
 			return err
 		}
 		// Required fields when updating service in k8s 1.21
-		if storageResource.Spec.ClusterIP != "" {
-			resource.Spec.ClusterIP = storageResource.Spec.ClusterIP
+		if resource.Spec.Type == "" || resource.Spec.Type == corev1.ServiceTypeClusterIP {
+			if storageResource.Spec.ClusterIP != "" {
+				resource.Spec.ClusterIP = storageResource.Spec.ClusterIP
+			}
 		}
+		// If nodePort is not set, will always update service
+		if resource.Spec.Type == corev1.ServiceTypeNodePort || resource.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			nodePortMap := make(map[string]int32)
+			for _, port := range storageResource.Spec.Ports {
+				nodePortMap[port.Name] = port.NodePort
+			}
+			for i, port := range resource.Spec.Ports {
+				if port.NodePort == 0 {
+					if nodePort, ok := nodePortMap[port.Name]; ok {
+						resource.Spec.Ports[i].NodePort = nodePort
+					}
+				}
+			}
+		}
+
 		obj = resource
 	}
 
