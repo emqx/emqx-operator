@@ -125,7 +125,7 @@ func (handler *Handler) CreateOrUpdate(ctx context.Context, scheme *runtime.Sche
 		return emperror.Wrapf(err, "failed to calculate patch for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	if !patchResult.IsEmpty() {
-		logger.Info("Will update EMQX sub resource", "sub resource", obj.GetObjectKind().GroupVersionKind().GroupKind().String(), "name", obj.GetName(), "patch", string(patchResult.Patch))
+		logger.Info("Will update EMQX sub-resource", "sub-resource", obj.GetObjectKind().GroupVersionKind().GroupKind().String(), "name", obj.GetName(), "patch", string(patchResult.Patch))
 		return handler.Update(ctx, obj)
 	}
 	return nil
