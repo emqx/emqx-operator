@@ -1,7 +1,6 @@
 package v2beta1
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -9,7 +8,6 @@ import (
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
-	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,7 +82,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 			},
 		}
 
-		Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 		updateSts = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -127,15 +125,15 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		currentSts.Spec.Selector.MatchLabels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
 		currentSts.Spec.Template.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
 
-		Expect(k8sClient.Create(context.Background(), updateSts)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, updateSts)).Should(Succeed())
 		updateSts.Status.Replicas = 1
 		updateSts.Status.ReadyReplicas = 1
-		Expect(k8sClient.Status().Update(context.Background(), updateSts)).Should(Succeed())
+		Expect(k8sClient.Status().Update(ctx, updateSts)).Should(Succeed())
 
-		Expect(k8sClient.Create(context.Background(), currentSts)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, currentSts)).Should(Succeed())
 		currentSts.Status.Replicas = 1
 		currentSts.Status.ReadyReplicas = 1
-		Expect(k8sClient.Status().Update(context.Background(), currentSts)).Should(Succeed())
+		Expect(k8sClient.Status().Update(ctx, currentSts)).Should(Succeed())
 
 		updateRs = &appsv1.ReplicaSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -178,15 +176,15 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		currentRs.Spec.Selector.MatchLabels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
 		currentRs.Spec.Template.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
 
-		Expect(k8sClient.Create(context.Background(), updateRs)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, updateRs)).Should(Succeed())
 		updateRs.Status.Replicas = 1
 		updateRs.Status.ReadyReplicas = 1
-		Expect(k8sClient.Status().Update(context.Background(), updateRs)).Should(Succeed())
+		Expect(k8sClient.Status().Update(ctx, updateRs)).Should(Succeed())
 
-		Expect(k8sClient.Create(context.Background(), currentRs)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, currentRs)).Should(Succeed())
 		currentRs.Status.Replicas = 1
 		currentRs.Status.ReadyReplicas = 1
-		Expect(k8sClient.Status().Update(context.Background(), currentRs)).Should(Succeed())
+		Expect(k8sClient.Status().Update(ctx, currentRs)).Should(Succeed())
 
 		currentRsPod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
@@ -205,25 +203,25 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 			},
 			Spec: currentRs.Spec.Template.Spec,
 		}
-		Expect(k8sClient.Create(context.Background(), currentRsPod)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, currentRsPod)).Should(Succeed())
 	})
 
 	AfterEach(func() {
-		Expect(k8sClient.DeleteAllOf(context.Background(), &appsv1.ReplicaSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(context.Background(), &appsv1.StatefulSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(context.Background(), &appsv2beta1.EMQX{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.Delete(context.Background(), ns)).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.ReplicaSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.StatefulSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv2beta1.EMQX{}, client.InNamespace(instance.Namespace))).Should(Succeed())
+		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
 	})
 
 	It("running update emqx node controller", func() {
 		Eventually(func() *appsv2beta1.EMQX {
-			_ = s.reconcile(ctx, logr.Logger{}, instance, fakeR)
+			_ = s.reconcile(ctx, logger, instance, fakeR)
 			return instance
 		}).WithTimeout(timeout).WithPolling(interval).Should(And(
 			WithTransform(
 				// should add pod deletion cost
 				func(instance *appsv2beta1.EMQX) map[string]string {
-					_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentRsPod), currentRsPod)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(currentRsPod), currentRsPod)
 					return currentRsPod.Annotations
 				},
 				HaveKeyWithValue("controller.kubernetes.io/pod-deletion-cost", "-99999"),
@@ -231,7 +229,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 			WithTransform(
 				// should scale down rs
 				func(instance *appsv2beta1.EMQX) int32 {
-					_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentRs), currentRs)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(currentRs), currentRs)
 					return *currentRs.Spec.Replicas
 				},
 				Equal(int32(0)),
@@ -239,7 +237,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 			WithTransform(
 				// before rs not ready, do nothing for sts
 				func(instance *appsv2beta1.EMQX) int32 {
-					_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(currentSts), currentSts)
 					return *currentSts.Spec.Replicas
 				},
 				Equal(int32(1)),
@@ -249,12 +247,12 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		By("mock rs ready, should scale down sts")
 		instance.Status.ReplicantNodesStatus.CurrentRevision = instance.Status.ReplicantNodesStatus.UpdateRevision
 		Eventually(func() *appsv2beta1.EMQX {
-			_ = s.reconcile(ctx, logr.Logger{}, instance, fakeR)
+			_ = s.reconcile(ctx, logger, instance, fakeR)
 			return instance
 		}).WithTimeout(timeout).WithPolling(interval).Should(
 			WithTransform(
 				func(instance *appsv2beta1.EMQX) int32 {
-					_ = k8sClient.Get(context.Background(), client.ObjectKeyFromObject(currentSts), currentSts)
+					_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(currentSts), currentSts)
 					return *currentSts.Spec.Replicas
 				}, Equal(int32(0)),
 			),
@@ -289,16 +287,16 @@ var _ = Describe("check can be scale down", func() {
 			},
 		}
 
-		Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 	})
 
 	AfterEach(func() {
-		Expect(k8sClient.DeleteAllOf(context.Background(), &corev1.Pod{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(context.Background(), &appsv1.ReplicaSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(context.Background(), &appsv1.StatefulSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(context.Background(), &appsv2beta1.EMQX{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.Delete(context.Background(), ns)).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(instance.Namespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.ReplicaSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.StatefulSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
+		Expect(k8sClient.DeleteAllOf(ctx, &appsv2beta1.EMQX{}, client.InNamespace(instance.Namespace))).Should(Succeed())
+		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
 	})
 
 	Context("check can be scale down sts", func() {
@@ -344,7 +342,7 @@ var _ = Describe("check can be scale down", func() {
 			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
-			Eventually(s.reconcile(ctx, logr.Logger{}, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(s.reconcile(ctx, logger, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {

@@ -1,9 +1,6 @@
 package v2beta1
 
 import (
-	"context"
-
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -40,13 +37,13 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 	AfterEach(func() {
 		// Clean up bootstrap_api_key secret
 		bootstrapSecret := &corev1.Secret{}
-		err := k8sClient.Get(context.TODO(), client.ObjectKey{
+		err := k8sClient.Get(ctx, client.ObjectKey{
 			Namespace: ns.Name,
 			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
 		}, bootstrapSecret)
 		if err == nil {
 			// If the secret exists, delete it
-			Expect(k8sClient.Delete(context.TODO(), bootstrapSecret)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, bootstrapSecret)).Should(Succeed())
 		} else if !errors.IsNotFound(err) {
 			// If the error is not a NotFound error, fail the test
 			Expect(err).NotTo(HaveOccurred())
@@ -54,19 +51,19 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 	})
 
 	It("create namespace", func() {
-		Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 	})
 
 	It("should create bootstrap secrets", func() {
 		// Wait until the bootstrap secrets are created
 		// Call the reconciler.
-		result := a.reconcile(ctx, logr.Logger{}, instance, nil)
+		result := a.reconcile(ctx, logger, instance, nil)
 
 		// Make sure there were no errors.
 		Expect(result.err).NotTo(HaveOccurred())
 		// Check the created secrets.
 		cookieSecret := &corev1.Secret{}
-		err := k8sClient.Get(context.Background(), client.ObjectKey{
+		err := k8sClient.Get(ctx, client.ObjectKey{
 			Namespace: ns.Name,
 			Name:      instance.NodeCookieNamespacedName().Name,
 		}, cookieSecret)
@@ -74,7 +71,7 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 		Expect(cookieSecret.Data["node_cookie"]).ShouldNot(BeEmpty())
 
 		bootstrapSecret := &corev1.Secret{}
-		err = k8sClient.Get(context.Background(), client.ObjectKey{
+		err = k8sClient.Get(ctx, client.ObjectKey{
 			Namespace: ns.Name,
 			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
 		}, bootstrapSecret)
@@ -92,14 +89,14 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 		}
 
 		// Call the reconciler.
-		result := a.reconcile(ctx, logr.Logger{}, instance, nil)
+		result := a.reconcile(ctx, logger, instance, nil)
 
 		// Make sure there were no errors.
 		Expect(result.err).NotTo(HaveOccurred())
 
 		// Check the created secrets.
 		bootstrapSecret := &corev1.Secret{}
-		err := k8sClient.Get(context.Background(), client.ObjectKey{
+		err := k8sClient.Get(ctx, client.ObjectKey{
 			Namespace: ns.Name,
 			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
 		}, bootstrapSecret)
@@ -137,7 +134,7 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 				"key": "test_key",
 			},
 		}
-		Expect(k8sClient.Create(context.TODO(), keySecret)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, keySecret)).Should(Succeed())
 
 		secretSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -148,17 +145,17 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 				"secret": "test_secret",
 			},
 		}
-		Expect(k8sClient.Create(context.TODO(), secretSecret)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, secretSecret)).Should(Succeed())
 
 		// Call the reconciler.
-		result := a.reconcile(ctx, logr.Logger{}, instance, nil)
+		result := a.reconcile(ctx, logger, instance, nil)
 
 		// Make sure there were no errors.
 		Expect(result.err).NotTo(HaveOccurred())
 
 		// Check the created secrets.
 		bootstrapSecret := &corev1.Secret{}
-		err := k8sClient.Get(context.Background(), client.ObjectKey{
+		err := k8sClient.Get(ctx, client.ObjectKey{
 			Namespace: ns.Name,
 			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
 		}, bootstrapSecret)

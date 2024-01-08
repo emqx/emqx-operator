@@ -131,7 +131,7 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 	}
 
 	// update status condition
-	newEMQXStatusMachine(u.Client, instance).NextStatus()
+	newEMQXStatusMachine(u.Client, instance).NextStatus(ctx)
 
 	if err := u.Client.Status().Update(ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}
