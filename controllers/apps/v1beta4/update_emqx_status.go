@@ -22,7 +22,7 @@ func (s updateEmqxStatus) reconcile(ctx context.Context, logger logr.Logger, ins
 	if err := s.updateReadyReplicas(instance); err != nil {
 		return subResult{cont: true, err: emperror.Wrap(err, "failed to update ready replicas")}
 	}
-	if err := s.updateCondition(instance); err != nil {
+	if err := s.updateCondition(ctx, instance); err != nil {
 		return subResult{cont: true, err: emperror.Wrap(err, "failed to update condition")}
 	}
 	if err := s.Client.Status().Update(ctx, instance); err != nil {
@@ -50,8 +50,8 @@ func (s updateEmqxStatus) updateReadyReplicas(instance appsv1beta4.Emqx) error {
 	return nil
 }
 
-func (s updateEmqxStatus) updateCondition(instance appsv1beta4.Emqx) error {
-	inClusterStss, err := getInClusterStatefulSets(s.Client, instance)
+func (s updateEmqxStatus) updateCondition(ctx context.Context, instance appsv1beta4.Emqx) error {
+	inClusterStss, err := getInClusterStatefulSets(ctx, s.Client, instance)
 	if err != nil {
 		return emperror.Wrap(err, "failed to get in cluster statefulsets")
 	}

@@ -128,7 +128,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 		}
 
-		requester, err = controllerv1beta4.NewRequesterByPod(r.Client, emqx)
+		requester, err = controllerv1beta4.NewRequesterByPod(ctx, r.Client, emqx)
 		if err != nil {
 			return ctrl.Result{}, emperror.New("failed to get create emqx http API")
 		}
@@ -175,7 +175,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 		}
 
-		requester, err = newRequester(r.Client, emqx)
+		requester, err = newRequester(ctx, r.Client, emqx)
 		if err != nil {
 			return ctrl.Result{}, emperror.New("failed to get create emqx http API")
 		}

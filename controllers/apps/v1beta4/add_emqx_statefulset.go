@@ -28,7 +28,7 @@ type addEmqxStatefulSet struct {
 
 func (a addEmqxStatefulSet) reconcile(ctx context.Context, logger logr.Logger, instance appsv1beta4.Emqx, args ...any) subResult {
 	sts := args[0].(*appsv1.StatefulSet)
-	newSts, err := a.getNewStatefulSet(instance, sts)
+	newSts, err := a.getNewStatefulSet(ctx, instance, sts)
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get new statefulset")}
 	}
@@ -37,7 +37,7 @@ func (a addEmqxStatefulSet) reconcile(ctx context.Context, logger logr.Logger, i
 	}
 
 	if isEnterprise, enterprise := a.isEmqxEnterprise(instance); isEnterprise {
-		return a.handleBlueGreenUpdate(enterprise)
+		return a.handleBlueGreenUpdate(ctx, enterprise)
 	}
 
 	return subResult{}
@@ -50,7 +50,7 @@ func (a *addEmqxStatefulSet) isEmqxEnterprise(instance appsv1beta4.Emqx) (bool, 
 }
 
 // Handle Emqx BlueGreen Update
-func (a *addEmqxStatefulSet) handleBlueGreenUpdate(enterprise *appsv1beta4.EmqxEnterprise) subResult {
+func (a *addEmqxStatefulSet) handleBlueGreenUpdate(ctx context.Context, enterprise *appsv1beta4.EmqxEnterprise) subResult {
 	if enterprise.Status.EmqxBlueGreenUpdateStatus == nil {
 		return subResult{}
 	}
@@ -65,18 +65,18 @@ func (a *addEmqxStatefulSet) handleBlueGreenUpdate(enterprise *appsv1beta4.EmqxE
 		return subResult{result: ctrl.Result{RequeueAfter: time.Duration(delay) * time.Second}}
 	}
 
-	if err := a.syncStatefulSet(enterprise); err != nil {
+	if err := a.syncStatefulSet(ctx, enterprise); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to sync statefulset")}
 	}
 	return subResult{}
 }
 
-func (a addEmqxStatefulSet) getNewStatefulSet(instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
+func (a addEmqxStatefulSet) getNewStatefulSet(ctx context.Context, instance appsv1beta4.Emqx, sts *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
 	if isEnterprise, enterprise := a.isEmqxEnterprise(instance); !isEnterprise || enterprise.Spec.EmqxBlueGreenUpdate == nil {
 		return sts, nil
 	}
 
-	allSts, _ := getAllStatefulSet(a.Client, instance)
+	allSts, _ := getAllStatefulSet(ctx, a.Client, instance)
 
 	patchOpts := []patch.CalculateOption{
 		justCheckPodTemplate(),
@@ -99,7 +99,7 @@ func (a addEmqxStatefulSet) getNewStatefulSet(instance appsv1beta4.Emqx, sts *ap
 	for {
 		podTemplateSpecHash := computeHash(&sts.Spec.Template, collisionCount)
 		name := sts.Name + "-" + podTemplateSpecHash
-		err := a.Client.Get(context.TODO(), types.NamespacedName{
+		err := a.Client.Get(ctx, types.NamespacedName{
 			Namespace: sts.Namespace,
 			Name:      name,
 		}, &appsv1.StatefulSet{})
@@ -115,23 +115,23 @@ func (a addEmqxStatefulSet) getNewStatefulSet(instance appsv1beta4.Emqx, sts *ap
 	}
 }
 
-func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterprise) error {
+func (a addEmqxStatefulSet) syncStatefulSet(ctx context.Context, enterprise *appsv1beta4.EmqxEnterprise) error {
 	if enterprise.Status.EmqxBlueGreenUpdateStatus == nil {
 		return nil
 	}
 
-	inClusterStss, err := getInClusterStatefulSets(a.Client, enterprise)
+	inClusterStss, err := getInClusterStatefulSets(ctx, a.Client, enterprise)
 	if err != nil {
 		return err
 	}
 
-	podMap, err := getPodMap(a.Client, enterprise, inClusterStss)
+	podMap, err := getPodMap(ctx, a.Client, enterprise, inClusterStss)
 	if err != nil {
 		return err
 	}
 
 	currentSts := &appsv1.StatefulSet{}
-	if err := a.Client.Get(context.TODO(), types.NamespacedName{
+	if err := a.Client.Get(ctx, types.NamespacedName{
 		Namespace: enterprise.Namespace,
 		Name:      enterprise.Status.EmqxBlueGreenUpdateStatus.CurrentStatefulSet,
 	}, currentSts); err != nil {
@@ -139,7 +139,7 @@ func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterpri
 	}
 
 	originSts := &appsv1.StatefulSet{}
-	if err := a.Client.Get(context.TODO(), types.NamespacedName{
+	if err := a.Client.Get(ctx, types.NamespacedName{
 		Namespace: enterprise.Namespace,
 		Name:      enterprise.Status.EmqxBlueGreenUpdateStatus.OriginStatefulSet,
 	}, originSts); err != nil {
@@ -149,7 +149,7 @@ func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterpri
 	if a.canBeScaledDown(enterprise, originSts, podMap) {
 		scaleDown := *originSts.Spec.Replicas - 1
 		stsCopy := originSts.DeepCopy()
-		if err := a.Client.Get(context.TODO(), client.ObjectKeyFromObject(stsCopy), stsCopy); err != nil {
+		if err := a.Client.Get(ctx, client.ObjectKeyFromObject(stsCopy), stsCopy); err != nil {
 			if !k8sErrors.IsNotFound(err) {
 				return err
 			}
@@ -157,7 +157,7 @@ func (a addEmqxStatefulSet) syncStatefulSet(enterprise *appsv1beta4.EmqxEnterpri
 		stsCopy.Spec.Replicas = &scaleDown
 
 		a.EventRecorder.Event(enterprise, corev1.EventTypeNormal, "Evacuate", fmt.Sprintf("Scale down StatefulSet %s to %d", originSts.Name, scaleDown))
-		if err := a.Client.Update(context.TODO(), stsCopy); err != nil {
+		if err := a.Client.Update(ctx, stsCopy); err != nil {
 			return err
 		}
 	}

@@ -98,7 +98,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	emqxList, err := r.getEmqxList(instance.Namespace, instance.Spec.Selector)
+	emqxList, err := r.getEmqxList(ctx, instance.Namespace, instance.Spec.Selector)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -107,7 +107,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(instance, finalizer) {
 			for _, emqx := range emqxList {
-				requester, err := newRequesterBySvc(r.Client, emqx)
+				requester, err := newRequesterBySvc(ctx, r.Client, emqx)
 				if err != nil {
 					return ctrl.Result{}, err
 				}
@@ -147,7 +147,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			continue
 		}
 
-		equalPluginConfig, err := r.checkPluginConfig(instance, emqx)
+		equalPluginConfig, err := r.checkPluginConfig(ctx, instance, emqx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -160,7 +160,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
-		requester, err := newRequesterBySvc(r.Client, emqx)
+		requester, err := newRequesterBySvc(ctx, r.Client, emqx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -258,10 +258,10 @@ func (r *EmqxPluginReconciler) getPluginsByAPI(requester innerReq.RequesterInter
 	return data, nil
 }
 
-func (r *EmqxPluginReconciler) checkPluginConfig(plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) (bool, error) {
+func (r *EmqxPluginReconciler) checkPluginConfig(ctx context.Context, plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) (bool, error) {
 	pluginConfigStr := generateConfigStr(plugin)
 
-	pluginsConfig, err := r.getPluginsConfig(emqx)
+	pluginsConfig, err := r.getPluginsConfig(ctx, emqx)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return false, nil
@@ -287,7 +287,7 @@ func (r *EmqxPluginReconciler) checkPluginConfig(plugin *appsv1beta4.EmqxPlugin,
 func (r *EmqxPluginReconciler) loadPluginConfig(ctx context.Context, plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) error {
 	pluginConfigStr := generateConfigStr(plugin)
 
-	pluginsConfig, err := r.getPluginsConfig(emqx)
+	pluginsConfig, err := r.getPluginsConfig(ctx, emqx)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return nil
@@ -320,11 +320,11 @@ func (r *EmqxPluginReconciler) loadPluginConfig(ctx context.Context, plugin *app
 	return nil
 }
 
-func (r *EmqxPluginReconciler) getEmqxList(namespace string, labels map[string]string) ([]appsv1beta4.Emqx, error) {
+func (r *EmqxPluginReconciler) getEmqxList(ctx context.Context, namespace string, labels map[string]string) ([]appsv1beta4.Emqx, error) {
 	var emqxList []appsv1beta4.Emqx
 
 	emqxBrokerList := &appsv1beta4.EmqxBrokerList{}
-	if err := r.Client.List(context.Background(), emqxBrokerList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+	if err := r.Client.List(ctx, emqxBrokerList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -334,7 +334,7 @@ func (r *EmqxPluginReconciler) getEmqxList(namespace string, labels map[string]s
 	}
 
 	emqxEnterpriseList := &appsv1beta4.EmqxEnterpriseList{}
-	if err := r.Client.List(context.Background(), emqxEnterpriseList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+	if err := r.Client.List(ctx, emqxEnterpriseList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -346,10 +346,10 @@ func (r *EmqxPluginReconciler) getEmqxList(namespace string, labels map[string]s
 	return emqxList, nil
 }
 
-func (r *EmqxPluginReconciler) getPluginsConfig(emqx appsv1beta4.Emqx) (*corev1.ConfigMap, error) {
+func (r *EmqxPluginReconciler) getPluginsConfig(ctx context.Context, emqx appsv1beta4.Emqx) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{}
 	if err := r.Client.Get(
-		context.TODO(),
+		ctx,
 		client.ObjectKey{
 			Name:      fmt.Sprintf("%s-%s", emqx.GetName(), "plugins-config"),
 			Namespace: emqx.GetNamespace(),

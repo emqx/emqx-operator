@@ -85,7 +85,7 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 
 	logger := log.FromContext(ctx)
 
-	requester, err := newRequesterBySvc(r.Client, instance)
+	requester, err := newRequesterBySvc(ctx, r.Client, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
 			_ = addEmqxBootstrapUser{EmqxReconciler: r}.reconcile(ctx, logger, instance)
@@ -137,14 +137,14 @@ func (r *EmqxReconciler) processResult(subResult subResult, instance appsv1beta4
 	return subResult.result, subResult.err
 }
 
-func NewRequesterByPod(k8sClient client.Client, instance appsv1beta4.Emqx) (innerReq.RequesterInterface, error) {
-	username, password, err := getBootstrapUser(context.Background(), k8sClient, instance)
+func NewRequesterByPod(ctx context.Context, k8sClient client.Client, instance appsv1beta4.Emqx) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapUser(ctx, k8sClient, instance)
 	if err != nil {
 		return nil, err
 	}
 
 	podList := &corev1.PodList{}
-	_ = k8sClient.List(context.Background(), podList,
+	_ = k8sClient.List(ctx, podList,
 		client.InNamespace(instance.GetNamespace()),
 		client.MatchingLabels(instance.GetSpec().GetTemplate().Labels),
 	)
@@ -162,8 +162,8 @@ func NewRequesterByPod(k8sClient client.Client, instance appsv1beta4.Emqx) (inne
 	return nil, emperror.New("failed to get ready pod")
 }
 
-func newRequesterBySvc(client client.Client, instance appsv1beta4.Emqx) (innerReq.RequesterInterface, error) {
-	username, password, err := getBootstrapUser(context.Background(), client, instance)
+func newRequesterBySvc(ctx context.Context, client client.Client, instance appsv1beta4.Emqx) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapUser(ctx, client, instance)
 	if err != nil {
 		return nil, err
 	}

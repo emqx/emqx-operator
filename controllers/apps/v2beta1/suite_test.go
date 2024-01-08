@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
@@ -31,6 +32,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -46,6 +48,7 @@ var timeout, interval time.Duration
 var testEnv *envtest.Environment
 
 var k8sClient client.Client
+var logger logr.Logger
 var ctx context.Context
 
 var emqxReconciler *EMQXReconciler
@@ -79,6 +82,7 @@ var _ = BeforeSuite(func() {
 	timeout = time.Second * 10
 	interval = time.Second
 	ctx = context.TODO()
+	logger = log.FromContext(ctx)
 
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "false")).To(Succeed())
 

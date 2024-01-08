@@ -1,7 +1,6 @@
 package v2beta1
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -56,7 +55,7 @@ func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 	}
 
 	// Create a context
-	ctx := context.Background()
+	ctx := ctx
 
 	instance := &appsv2beta1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
@@ -130,7 +129,7 @@ func TestGenerateBootstrapAPIKeySecretWithSecretRef(t *testing.T) {
 	}
 
 	// Create a context
-	ctx := context.Background()
+	ctx := ctx
 
 	// Add secrets to the fake client
 	err = a.Client.Create(ctx, keySecret)
@@ -217,7 +216,7 @@ func TestReadSecret(t *testing.T) {
 	}
 
 	// Create a context
-	ctx := context.Background()
+	ctx := ctx
 
 	val, err := a.readSecret(ctx, "default", "test-secret", "key")
 	if err != nil {
