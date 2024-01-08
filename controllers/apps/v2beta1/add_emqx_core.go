@@ -10,6 +10,7 @@ import (
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,15 +20,13 @@ import (
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type addCore struct {
 	*EMQXReconciler
 }
 
-func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
-	logger := log.FromContext(ctx)
+func (a *addCore) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
 	preSts := getNewStatefulSet(instance)
 	preStsHash := preSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
@@ -48,7 +47,7 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		logger.Info("got different pod template for EMQX core nodes, will create new statefulSet", "statefulSet", klog.KObj(preSts), "patch", string(patchResult.Patch))
 
 		_ = ctrl.SetControllerReference(instance, preSts, a.Scheme)
-		if err := a.Handler.Create(preSts); err != nil {
+		if err := a.Handler.Create(ctx, preSts); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				cond := instance.Status.GetLastTrueCondition()
 				if cond != nil && cond.Type != appsv2beta1.Available && cond.Type != appsv2beta1.Ready {
@@ -88,7 +87,7 @@ func (a *addCore) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 			storage := &appsv1.StatefulSet{}
 			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preSts), storage)
 			preSts.ResourceVersion = storage.ResourceVersion
-			return a.Handler.Update(preSts)
+			return a.Handler.Update(ctx, preSts)
 		}); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
 		}

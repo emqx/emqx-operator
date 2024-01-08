@@ -10,23 +10,23 @@ import (
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type syncConfig struct {
 	*EMQXReconciler
 }
 
-func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
+func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
 	hoconConfig := mergeDefaultConfig(instance.Spec.Config.Data)
 	confStr := hoconConfig.String()
 
 	lastConfigStr, ok := instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey]
 	if !ok {
-		if err := s.update(ctx, instance, confStr); err != nil {
+		if err := s.update(ctx, logger, instance, confStr); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx config")}
 		}
 		return subResult{}
@@ -49,7 +49,7 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
 		}
 
-		if err := s.update(ctx, instance, confStr); err != nil {
+		if err := s.update(ctx, logger, instance, confStr); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx config")}
 		}
 
@@ -59,9 +59,9 @@ func (s *syncConfig) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, 
 	return subResult{}
 }
 
-func (s *syncConfig) update(ctx context.Context, instance *appsv2beta1.EMQX, confStr string) error {
+func (s *syncConfig) update(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, confStr string) error {
 	configMap := generateConfigMap(instance, confStr)
-	if err := s.Handler.CreateOrUpdateList(instance, s.Scheme, []client.Object{configMap}); err != nil {
+	if err := s.Handler.CreateOrUpdate(ctx, s.Scheme, logger, instance, configMap); err != nil {
 		return emperror.Wrap(err, "failed to create or update configMap")
 	}
 

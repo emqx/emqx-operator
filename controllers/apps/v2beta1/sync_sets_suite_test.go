@@ -6,6 +6,7 @@ import (
 	"time"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -150,7 +151,7 @@ var _ = Describe("Check sync sts and pvc", func() {
 	})
 
 	It("should delete rs sts and pvc", func() {
-		Expect(s.reconcile(context.Background(), instance, nil)).Should(Equal(subResult{}))
+		Expect(s.reconcile(context.Background(), logr.Logger{}, instance, nil)).Should(Equal(subResult{}))
 
 		Eventually(func() int {
 			list := &appsv1.ReplicaSetList{}

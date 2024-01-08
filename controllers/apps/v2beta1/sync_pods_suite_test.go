@@ -9,6 +9,7 @@ import (
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -216,7 +217,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 
 	It("running update emqx node controller", func() {
 		Eventually(func() *appsv2beta1.EMQX {
-			_ = s.reconcile(ctx, instance, fakeR)
+			_ = s.reconcile(ctx, logr.Logger{}, instance, fakeR)
 			return instance
 		}).WithTimeout(timeout).WithPolling(interval).Should(And(
 			WithTransform(
@@ -248,7 +249,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		By("mock rs ready, should scale down sts")
 		instance.Status.ReplicantNodesStatus.CurrentRevision = instance.Status.ReplicantNodesStatus.UpdateRevision
 		Eventually(func() *appsv2beta1.EMQX {
-			_ = s.reconcile(ctx, instance, fakeR)
+			_ = s.reconcile(ctx, logr.Logger{}, instance, fakeR)
 			return instance
 		}).WithTimeout(timeout).WithPolling(interval).Should(
 			WithTransform(
@@ -343,7 +344,7 @@ var _ = Describe("check can be scale down", func() {
 			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
-			Eventually(s.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(s.reconcile(ctx, logr.Logger{}, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {

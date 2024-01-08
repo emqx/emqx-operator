@@ -12,6 +12,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	"github.com/tidwall/gjson"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +26,7 @@ type addListener struct {
 	Requester innerReq.RequesterInterface
 }
 
-func (a addListener) reconcile(ctx context.Context, instance v1beta4.Emqx, _ ...any) subResult {
+func (a addListener) reconcile(ctx context.Context, logger logr.Logger, instance v1beta4.Emqx, _ ...any) subResult {
 	podList := &corev1.PodList{}
 	_ = a.Client.List(ctx, podList,
 		client.InNamespace(instance.GetNamespace()),
@@ -57,7 +58,7 @@ func (a addListener) reconcile(ctx context.Context, instance v1beta4.Emqx, _ ...
 		svc,
 	)
 
-	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
+	if err := a.CreateOrUpdateList(ctx, a.Scheme, logger, instance, resources); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update listener service and endpoints")}
 	}
 

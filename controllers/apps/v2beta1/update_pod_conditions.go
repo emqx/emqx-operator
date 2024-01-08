@@ -9,6 +9,7 @@ import (
 	semver "github.com/Masterminds/semver/v3"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,7 +20,7 @@ type updatePodConditions struct {
 	*EMQXReconciler
 }
 
-func (u *updatePodConditions) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
+func (u *updatePodConditions) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
 	updateRs, currentRs, _ := getReplicaSetList(ctx, u.Client, instance)
 	updateSts, currentSts, _ := getStateFulSetList(ctx, u.Client, instance)
 

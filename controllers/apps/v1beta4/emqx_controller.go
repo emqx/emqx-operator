@@ -36,8 +36,10 @@ import (
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	"github.com/emqx/emqx-operator/internal/handler"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -53,7 +55,7 @@ type subResult struct {
 }
 
 type emqxSubReconciler interface {
-	reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult
+	reconcile(ctx context.Context, logger logr.Logger, instance appsv1beta4.Emqx, args ...any) subResult
 }
 
 var _ reconcile.Reconciler = &EmqxBrokerReconciler{}
@@ -81,10 +83,12 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 		return ctrl.Result{}, nil
 	}
 
+	logger := log.FromContext(ctx)
+
 	requester, err := newRequesterBySvc(r.Client, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
-			_ = addEmqxBootstrapUser{EmqxReconciler: r}.reconcile(ctx, instance)
+			_ = addEmqxBootstrapUser{EmqxReconciler: r}.reconcile(ctx, logger, instance)
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 		if !innerErr.IsCommonError(err) {
@@ -105,9 +109,9 @@ func (r *EmqxReconciler) Do(ctx context.Context, instance appsv1beta4.Emqx) (ctr
 	}
 	for i := range subReconcilers {
 		if reflect.ValueOf(subResult).FieldByName("args").IsValid() {
-			subResult = subReconcilers[i].reconcile(ctx, instance, subResult.args)
+			subResult = subReconcilers[i].reconcile(ctx, logger, instance, subResult.args)
 		} else {
-			subResult = subReconcilers[i].reconcile(ctx, instance)
+			subResult = subReconcilers[i].reconcile(ctx, logger, instance)
 		}
 		subResult, err := r.processResult(subResult, instance)
 		if err != nil || !subResult.IsZero() {

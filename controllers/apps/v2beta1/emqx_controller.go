@@ -27,6 +27,7 @@ import (
 	emperror "emperror.dev/errors"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,7 +54,7 @@ type subResult struct {
 }
 
 type subReconciler interface {
-	reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult
+	reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult
 }
 
 // EMQXReconciler reconciles a EMQX object
@@ -112,7 +113,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	requester, err := newRequester(r.Client, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
-			_ = (&addBootstrap{r}).reconcile(ctx, instance, nil)
+			_ = (&addBootstrap{r}).reconcile(ctx, logger, instance, nil)
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 		return ctrl.Result{}, emperror.Wrap(err, "failed to get bootstrap user")
@@ -130,7 +131,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&syncPods{r},
 		&syncSets{r},
 	} {
-		subResult := subReconciler.reconcile(ctx, instance, requester)
+		subResult := subReconciler.reconcile(ctx, logger, instance, requester)
 		if !subResult.result.IsZero() {
 			return subResult.result, nil
 		}

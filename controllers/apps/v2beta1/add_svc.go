@@ -6,6 +6,7 @@ import (
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -16,7 +17,7 @@ type addSvc struct {
 	*EMQXReconciler
 }
 
-func (a *addSvc) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
+func (a *addSvc) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
 	configMap := &corev1.ConfigMap{}
 	if err := a.Client.Get(ctx, instance.ConfigsNamespacedName(), configMap); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get configmap")}
@@ -31,7 +32,7 @@ func (a *addSvc) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ in
 		resources = append(resources, listeners)
 	}
 
-	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
+	if err := a.CreateOrUpdateList(ctx, a.Scheme, logger, instance, resources); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update services")}
 	}
 	return subResult{}
