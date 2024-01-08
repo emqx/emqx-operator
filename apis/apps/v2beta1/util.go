@@ -19,6 +19,7 @@ package v2beta1
 import (
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -231,6 +232,10 @@ func GetDashboardServicePort(hoconString string) ([]corev1.ServicePort, error) {
 		})
 	}
 
+	sort.Slice(dashboardSvcPortList, func(i, j int) bool {
+		return dashboardSvcPortList[i].Name < dashboardSvcPortList[j].Name
+	})
+
 	return dashboardSvcPortList, nil
 }
 
@@ -354,6 +359,10 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 			}
 		}
 	}
+
+	sort.Slice(svcPorts, func(i, j int) bool {
+		return svcPorts[i].Name < svcPorts[j].Name
+	})
 
 	return svcPorts, nil
 }
