@@ -68,7 +68,7 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       with:
         prerelease: ${{ steps.prerelease.outputs.prerelease }}
-        generate_release_notes: ${{ steps.prerelease.outputs.prerelease }}
+        generate_release_notes: true
         ## When you use the repository's GITHUB_TOKEN to perform tasks,
         ## events triggered by the GITHUB_TOKEN, with the exception of workflow_dispatch and repository_dispatch,
         ## will not create a new workflow run.

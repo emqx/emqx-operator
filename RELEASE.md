@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.7 has been released.
+EMQX Operator 2.2.8 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -13,11 +13,13 @@ EMQX Operator 2.2.7 has been released.
   + EMQX at 4.4.14 and later
   + EMQX Enterprise at 4.4.14 and later
 
-## Enhancements ✨
+## Fixes 🛠
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Sometimes the updated statefulSet / replicaSet will not be ready, because the EMQX node can not be started. Then we will roll back EMQX CR spec, the EMQX operator controller will create a new statefulSet / replicaSet. But the new statefulSet / replicaSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
+  + Fix sometimes the EMQX operator controller will update K8s service, even the service is not changed
+
+  + Fix sometimes the EMQX operator controller will access the reload config API of EMQX, even if the config is not changed
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -29,7 +31,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.7
+  --version 2.2.8
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
