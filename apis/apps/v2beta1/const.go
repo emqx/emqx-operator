@@ -15,6 +15,11 @@ const (
 )
 
 const (
+	// annotations
+	AnnotationsLastEMQXConfigKey string = "apps.emqx.io/last-emqx-configuration"
+)
+
+const (
 	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
 	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
 )
