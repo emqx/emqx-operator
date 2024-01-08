@@ -9,6 +9,7 @@ import (
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	"github.com/tidwall/gjson"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,7 @@ type updateStatus struct {
 	*EMQXReconciler
 }
 
-func (u *updateStatus) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
+func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
 	if instance.Spec.ReplicantTemplate != nil && instance.Status.ReplicantNodesStatus == nil {
 		instance.Status.ReplicantNodesStatus = &appsv2beta1.EMQXNodesStatus{
 			Replicas: *instance.Spec.ReplicantTemplate.Spec.Replicas,

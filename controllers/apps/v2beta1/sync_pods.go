@@ -10,6 +10,7 @@ import (
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +23,7 @@ type syncPods struct {
 	*EMQXReconciler
 }
 
-func (s *syncPods) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
+func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
 	if r == nil {
 		return subResult{}
 	}

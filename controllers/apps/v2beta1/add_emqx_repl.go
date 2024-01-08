@@ -9,6 +9,7 @@ import (
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,14 +19,13 @@ import (
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type addRepl struct {
 	*EMQXReconciler
 }
 
-func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
+func (a *addRepl) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
 	if instance.Spec.ReplicantTemplate == nil {
 		return subResult{}
 	}
@@ -33,7 +33,6 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		return subResult{}
 	}
 
-	logger := log.FromContext(ctx)
 	preRs := getNewReplicaSet(instance)
 	preRsHash := preRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
@@ -55,7 +54,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 		logger.Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "replicaSet", klog.KObj(preRs), "patch", string(patchResult.Patch))
 
 		_ = ctrl.SetControllerReference(instance, preRs, a.Scheme)
-		if err := a.Handler.Create(preRs); err != nil {
+		if err := a.Handler.Create(ctx, preRs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				cond := instance.Status.GetLastTrueCondition()
 				if cond != nil && cond.Type != appsv2beta1.Available && cond.Type != appsv2beta1.Ready {
@@ -95,7 +94,7 @@ func (a *addRepl) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ i
 			storage := &appsv1.ReplicaSet{}
 			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preRs), storage)
 			preRs.ResourceVersion = storage.ResourceVersion
-			return a.Handler.Update(preRs)
+			return a.Handler.Update(ctx, preRs)
 		}); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
 		}

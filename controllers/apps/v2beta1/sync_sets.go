@@ -5,22 +5,21 @@ import (
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type syncSets struct {
 	*EMQXReconciler
 }
 
-func (s *syncSets) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
+func (s *syncSets) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
 	if !instance.Status.IsConditionTrue(appsv2beta1.Ready) {
 		return subResult{}
 	}
-	logger := log.FromContext(ctx)
 
 	_, _, oldRsList := getReplicaSetList(ctx, s.Client, instance)
 	rsDiff := int32(len(oldRsList)) - *instance.Spec.RevisionHistoryLimit

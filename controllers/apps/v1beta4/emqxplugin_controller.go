@@ -152,7 +152,7 @@ func (r *EmqxPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 		if !equalPluginConfig {
-			if err = r.loadPluginConfig(instance, emqx); err != nil {
+			if err = r.loadPluginConfig(ctx, instance, emqx); err != nil {
 				if !k8sErrors.IsConflict(err) {
 					return ctrl.Result{}, err
 				}
@@ -284,7 +284,7 @@ func (r *EmqxPluginReconciler) checkPluginConfig(plugin *appsv1beta4.EmqxPlugin,
 	return false, nil
 }
 
-func (r *EmqxPluginReconciler) loadPluginConfig(plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) error {
+func (r *EmqxPluginReconciler) loadPluginConfig(ctx context.Context, plugin *appsv1beta4.EmqxPlugin, emqx appsv1beta4.Emqx) error {
 	pluginConfigStr := generateConfigStr(plugin)
 
 	pluginsConfig, err := r.getPluginsConfig(emqx)
@@ -314,7 +314,7 @@ func (r *EmqxPluginReconciler) loadPluginConfig(plugin *appsv1beta4.EmqxPlugin, 
 	pluginsConfig.Data = configData
 
 	// Update plugin config
-	if err := r.Handler.Update(pluginsConfig); err != nil {
+	if err := r.Handler.Update(ctx, pluginsConfig); err != nil {
 		return err
 	}
 	return nil

@@ -6,6 +6,7 @@ import (
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,7 +17,7 @@ type addEmqxResources struct {
 	Requester innerReq.RequesterInterface
 }
 
-func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
+func (a addEmqxResources) reconcile(ctx context.Context, logger logr.Logger, instance appsv1beta4.Emqx, args ...any) subResult {
 	initResources, ok := args[0].([]client.Object)
 	if !ok {
 		panic("args[0] is not []client.Object")
@@ -38,7 +39,7 @@ func (a addEmqxResources) reconcile(ctx context.Context, instance appsv1beta4.Em
 	headlessSvc := generateHeadlessService(instance)
 	resources = append(resources, headlessSvc)
 
-	if err := a.CreateOrUpdateList(instance, a.Scheme, resources); err != nil {
+	if err := a.CreateOrUpdateList(ctx, a.Scheme, logger, instance, resources); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update resource")}
 	}
 

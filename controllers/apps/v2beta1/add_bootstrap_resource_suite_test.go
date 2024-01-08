@@ -3,6 +3,7 @@ package v2beta1
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -59,7 +60,7 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 	It("should create bootstrap secrets", func() {
 		// Wait until the bootstrap secrets are created
 		// Call the reconciler.
-		result := a.reconcile(ctx, instance, nil)
+		result := a.reconcile(ctx, logr.Logger{}, instance, nil)
 
 		// Make sure there were no errors.
 		Expect(result.err).NotTo(HaveOccurred())
@@ -91,7 +92,7 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 		}
 
 		// Call the reconciler.
-		result := a.reconcile(ctx, instance, nil)
+		result := a.reconcile(ctx, logr.Logger{}, instance, nil)
 
 		// Make sure there were no errors.
 		Expect(result.err).NotTo(HaveOccurred())
@@ -150,7 +151,7 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 		Expect(k8sClient.Create(context.TODO(), secretSecret)).Should(Succeed())
 
 		// Call the reconciler.
-		result := a.reconcile(ctx, instance, nil)
+		result := a.reconcile(ctx, logr.Logger{}, instance, nil)
 
 		// Make sure there were no errors.
 		Expect(result.err).NotTo(HaveOccurred())

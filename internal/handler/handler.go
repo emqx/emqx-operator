@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/go-logr/logr"
 	json "github.com/json-iterator/go"
 
 	emperror "emperror.dev/errors"
@@ -52,12 +53,9 @@ func NewHandler(mgr manager.Manager) *Handler {
 	}
 }
 
-func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runtime.Scheme, resources []client.Object) error {
+func (handler *Handler) CreateOrUpdateList(ctx context.Context, scheme *runtime.Scheme, logger logr.Logger, instance client.Object, resources []client.Object) error {
 	for _, resource := range resources {
-		if err := ctrl.SetControllerReference(instance, resource, scheme); err != nil {
-			return err
-		}
-		err := handler.CreateOrUpdate(resource)
+		err := handler.CreateOrUpdate(ctx, scheme, logger, instance, resource)
 		if err != nil {
 			return err
 		}
@@ -65,13 +63,17 @@ func (handler *Handler) CreateOrUpdateList(instance client.Object, scheme *runti
 	return nil
 }
 
-func (handler *Handler) CreateOrUpdate(obj client.Object) error {
+func (handler *Handler) CreateOrUpdate(ctx context.Context, scheme *runtime.Scheme, logger logr.Logger, instance client.Object, obj client.Object) error {
+	if err := ctrl.SetControllerReference(instance, obj, scheme); err != nil {
+		return err
+	}
+
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-	err := handler.Client.Get(context.TODO(), client.ObjectKeyFromObject(obj), u)
+	err := handler.Client.Get(ctx, client.ObjectKeyFromObject(obj), u)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return handler.Create(obj)
+			return handler.Create(ctx, obj)
 		}
 		return emperror.Wrapf(err, "failed to get %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
@@ -90,12 +92,13 @@ func (handler *Handler) CreateOrUpdate(obj client.Object) error {
 	}
 	obj.SetAnnotations(annotations)
 
-	opts := []patch.CalculateOption{}
+	opts := []patch.CalculateOption{
+		patch.IgnoreStatusFields(),
+	}
 	switch resource := obj.(type) {
 	case *appsv1.StatefulSet:
 		opts = append(
 			opts,
-			patch.IgnoreStatusFields(),
 			patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
 			IgnoreOtherContainers(),
 		)
@@ -122,27 +125,28 @@ func (handler *Handler) CreateOrUpdate(obj client.Object) error {
 		return emperror.Wrapf(err, "failed to calculate patch for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	if !patchResult.IsEmpty() {
-		return handler.Update(obj)
+		logger.Info("Will update EMQX sub resource", "sub resource", obj.GetObjectKind().GroupVersionKind().GroupKind().String(), "name", obj.GetName(), "patch", string(patchResult.Patch))
+		return handler.Update(ctx, obj)
 	}
 	return nil
 }
 
-func (handler *Handler) Create(obj client.Object) error {
+func (handler *Handler) Create(ctx context.Context, obj client.Object) error {
 	if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
 		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
-	if err := handler.Client.Create(context.TODO(), obj); err != nil {
+	if err := handler.Client.Create(ctx, obj); err != nil {
 		return emperror.Wrapf(err, "failed to create %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	return nil
 }
 
-func (handler *Handler) Update(obj client.Object) error {
+func (handler *Handler) Update(ctx context.Context, obj client.Object) error {
 	if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
 		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 
-	if err := handler.Client.Update(context.TODO(), obj); err != nil {
+	if err := handler.Client.Update(ctx, obj); err != nil {
 		return emperror.Wrapf(err, "failed to update %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
 	}
 	return nil

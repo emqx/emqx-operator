@@ -8,6 +8,7 @@ import (
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,7 +20,7 @@ type updatePodConditions struct {
 	Requester innerReq.RequesterInterface
 }
 
-func (u updatePodConditions) reconcile(ctx context.Context, instance appsv1beta4.Emqx, _ ...any) subResult {
+func (u updatePodConditions) reconcile(ctx context.Context, logger logr.Logger, instance appsv1beta4.Emqx, _ ...any) subResult {
 	pods := &corev1.PodList{}
 	_ = u.Client.List(ctx, pods,
 		client.InNamespace(instance.GetNamespace()),

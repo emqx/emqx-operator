@@ -12,6 +12,7 @@ import (
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,13 +26,13 @@ type addEmqxStatefulSet struct {
 	Requester innerReq.RequesterInterface
 }
 
-func (a addEmqxStatefulSet) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
+func (a addEmqxStatefulSet) reconcile(ctx context.Context, logger logr.Logger, instance appsv1beta4.Emqx, args ...any) subResult {
 	sts := args[0].(*appsv1.StatefulSet)
 	newSts, err := a.getNewStatefulSet(instance, sts)
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get new statefulset")}
 	}
-	if err := a.CreateOrUpdateList(instance, a.Scheme, []client.Object{newSts}); err != nil {
+	if err := a.CreateOrUpdate(ctx, a.Scheme, logger, instance, newSts); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update statefulset")}
 	}
 

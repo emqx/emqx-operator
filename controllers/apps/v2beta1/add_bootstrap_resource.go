@@ -13,6 +13,7 @@ import (
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/go-logr/logr"
 	"github.com/rory-z/go-hocon"
 	"github.com/sethvargo/go-password/password"
 )
@@ -21,7 +22,7 @@ type addBootstrap struct {
 	*EMQXReconciler
 }
 
-func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
+func (a *addBootstrap) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
 	bootstrapAPIKeys, err := a.getAPIKeyString(ctx, instance)
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get bootstrap api keys")}
@@ -34,7 +35,7 @@ func (a *addBootstrap) reconcile(ctx context.Context, instance *appsv2beta1.EMQX
 		if err := ctrl.SetControllerReference(instance, resource, a.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
 		}
-		if err := a.Create(resource); err != nil {
+		if err := a.Create(ctx, resource); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return subResult{err: emperror.Wrap(err, "failed to create bootstrap configMap")}
 			}

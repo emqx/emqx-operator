@@ -5,6 +5,7 @@ import (
 	"time"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,7 +69,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 		})
 
 		It("should do nothing", func() {
-			Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, logr.Logger{}, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -86,7 +87,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 		})
 
 		It("should do nothing", func() {
-			Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, logr.Logger{}, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -100,7 +101,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 
 	Context("replicant template is not nil, and core code is ready", func() {
 		It("should create replicaSet", func() {
-			Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, logr.Logger{}, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -139,7 +140,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 		})
 
 		It("should update replicaSet", func() {
-			Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, logr.Logger{}, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -169,7 +170,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 		})
 
 		It("should update replicaSet", func() {
-			Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, logr.Logger{}, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,
@@ -202,7 +203,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 		})
 
 		It("should create new replicaSet", func() {
-			Eventually(a.reconcile(ctx, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(a.reconcile(ctx, logr.Logger{}, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 			Eventually(func() []appsv1.ReplicaSet {
 				list := &appsv1.ReplicaSetList{}
 				_ = k8sClient.List(ctx, list,

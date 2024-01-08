@@ -5,6 +5,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv1beta4 "github.com/emqx/emqx-operator/apis/apps/v1beta4"
+	"github.com/go-logr/logr"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,7 +15,7 @@ type addEmqxPlugins struct {
 	*EmqxReconciler
 }
 
-func (a addEmqxPlugins) reconcile(ctx context.Context, instance appsv1beta4.Emqx, args ...any) subResult {
+func (a addEmqxPlugins) reconcile(ctx context.Context, logger logr.Logger, instance appsv1beta4.Emqx, args ...any) subResult {
 	other, ok := args[0].(client.Object)
 	if !ok {
 		panic("args[0] is not client.Object")
@@ -36,7 +37,7 @@ func (a addEmqxPlugins) reconcile(ctx context.Context, instance appsv1beta4.Emqx
 				if err := ctrl.SetControllerReference(instance, resource, a.Scheme); err != nil {
 					return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
 				}
-				if err := a.Handler.Create(resource); err != nil {
+				if err := a.Handler.Create(ctx, resource); err != nil {
 					return subResult{err: emperror.Wrap(err, "failed to create resource")}
 				}
 			}
