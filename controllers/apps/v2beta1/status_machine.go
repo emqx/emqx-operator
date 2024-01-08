@@ -25,7 +25,7 @@ import (
 )
 
 type status interface {
-	nextStatus()
+	nextStatus(ctx context.Context)
 }
 
 type emqxStatusMachine struct {
@@ -100,8 +100,8 @@ func (s *emqxStatusMachine) setCurrentStatus(emqx *appsv2beta1.EMQX) {
 	}
 }
 
-func (s *emqxStatusMachine) NextStatus() {
-	s.currentStatus.nextStatus()
+func (s *emqxStatusMachine) NextStatus(ctx context.Context) {
+	s.currentStatus.nextStatus(ctx)
 }
 
 func (s *emqxStatusMachine) GetEMQX() *appsv2beta1.EMQX {
@@ -112,7 +112,7 @@ type initializedStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *initializedStatus) nextStatus() {
+func (s *initializedStatus) nextStatus(ctx context.Context) {
 	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Ready)
 	s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Available)
 
@@ -135,10 +135,10 @@ type coreNodesProgressingStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *coreNodesProgressingStatus) nextStatus() {
+func (s *coreNodesProgressingStatus) nextStatus(ctx context.Context) {
 	emqx := s.emqxStatusMachine.GetEMQX()
 
-	updateSts, _, _ := getStateFulSetList(context.Background(), s.emqxStatusMachine.client, emqx)
+	updateSts, _, _ := getStateFulSetList(ctx, s.emqxStatusMachine.client, emqx)
 	if updateSts != nil && updateSts.Status.ReadyReplicas == emqx.Status.CoreNodesStatus.Replicas {
 		emqx.Status.SetCondition(metav1.Condition{
 			Type:    appsv2beta1.CoreNodesReady,
@@ -155,7 +155,7 @@ type codeNodesReadyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *codeNodesReadyStatus) nextStatus() {
+func (s *codeNodesReadyStatus) nextStatus(ctx context.Context) {
 	emqx := s.emqxStatusMachine.GetEMQX()
 
 	if appsv2beta1.IsExistReplicant(emqx) {
@@ -182,15 +182,15 @@ type replicantNodesProgressingStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *replicantNodesProgressingStatus) nextStatus() {
+func (s *replicantNodesProgressingStatus) nextStatus(ctx context.Context) {
 	emqx := s.emqxStatusMachine.GetEMQX()
 
 	if !appsv2beta1.IsExistReplicant(emqx) {
-		s.emqxStatusMachine.initialized.nextStatus()
+		s.emqxStatusMachine.initialized.nextStatus(ctx)
 		return
 	}
 
-	updateRs, _, _ := getReplicaSetList(context.Background(), s.emqxStatusMachine.client, emqx)
+	updateRs, _, _ := getReplicaSetList(ctx, s.emqxStatusMachine.client, emqx)
 	if updateRs != nil && updateRs.Status.ReadyReplicas == emqx.Status.ReplicantNodesStatus.Replicas {
 		emqx.Status.SetCondition(metav1.Condition{
 			Type:    appsv2beta1.ReplicantNodesReady,
@@ -207,9 +207,9 @@ type replicantNodesReadyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *replicantNodesReadyStatus) nextStatus() {
+func (s *replicantNodesReadyStatus) nextStatus(ctx context.Context) {
 	if !appsv2beta1.IsExistReplicant(s.emqxStatusMachine.emqx) {
-		s.emqxStatusMachine.initialized.nextStatus()
+		s.emqxStatusMachine.initialized.nextStatus(ctx)
 		return
 	}
 
@@ -226,7 +226,7 @@ type availableStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *availableStatus) nextStatus() {
+func (s *availableStatus) nextStatus(ctx context.Context) {
 	emqx := s.emqxStatusMachine.GetEMQX()
 
 	if emqx.Status.CoreNodesStatus.ReadyReplicas != emqx.Status.CoreNodesStatus.Replicas ||
@@ -254,16 +254,16 @@ type readyStatus struct {
 	emqxStatusMachine *emqxStatusMachine
 }
 
-func (s *readyStatus) nextStatus() {
+func (s *readyStatus) nextStatus(ctx context.Context) {
 	emqx := s.emqxStatusMachine.GetEMQX()
-	updateSts, _, _ := getStateFulSetList(context.Background(), s.emqxStatusMachine.client, emqx)
+	updateSts, _, _ := getStateFulSetList(ctx, s.emqxStatusMachine.client, emqx)
 	if updateSts != nil && updateSts.Status.ReadyReplicas != emqx.Status.CoreNodesStatus.Replicas {
-		s.emqxStatusMachine.initialized.nextStatus()
+		s.emqxStatusMachine.initialized.nextStatus(ctx)
 		return
 	}
 
 	if appsv2beta1.IsExistReplicant(emqx) {
-		updateRs, _, _ := getReplicaSetList(context.Background(), s.emqxStatusMachine.client, emqx)
+		updateRs, _, _ := getReplicaSetList(ctx, s.emqxStatusMachine.client, emqx)
 		if updateRs != nil && updateRs.Status.ReadyReplicas != emqx.Status.ReplicantNodesStatus.Replicas {
 			s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Ready)
 			s.emqxStatusMachine.emqx.Status.RemoveCondition(appsv2beta1.Available)

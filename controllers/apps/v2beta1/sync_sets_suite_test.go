@@ -1,12 +1,10 @@
 package v2beta1
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -47,7 +45,7 @@ var _ = Describe("Check sync sts and pvc", func() {
 			},
 		}
 
-		Expect(k8sClient.Create(context.Background(), ns)).To(Succeed())
+		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("%s-%d", instance.Name, i)
 
@@ -86,10 +84,10 @@ var _ = Describe("Check sync sts and pvc", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(context.Background(), rs.DeepCopy())).Should(Succeed())
+			Expect(k8sClient.Create(ctx, rs.DeepCopy())).Should(Succeed())
 			rs.Status.Replicas = 0
 			rs.Status.ObservedGeneration = 1
-			Expect(k8sClient.Status().Patch(context.Background(), rs.DeepCopy(), client.Merge)).Should(Succeed())
+			Expect(k8sClient.Status().Patch(ctx, rs.DeepCopy(), client.Merge)).Should(Succeed())
 
 			sts := &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
@@ -126,10 +124,10 @@ var _ = Describe("Check sync sts and pvc", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(context.Background(), sts.DeepCopy())).Should(Succeed())
+			Expect(k8sClient.Create(ctx, sts.DeepCopy())).Should(Succeed())
 			sts.Status.Replicas = 0
 			sts.Status.ObservedGeneration = 1
-			Expect(k8sClient.Status().Patch(context.Background(), sts.DeepCopy(), client.Merge)).Should(Succeed())
+			Expect(k8sClient.Status().Patch(ctx, sts.DeepCopy(), client.Merge)).Should(Succeed())
 
 			pvc := &corev1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{
@@ -146,16 +144,16 @@ var _ = Describe("Check sync sts and pvc", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(context.Background(), pvc.DeepCopy())).Should(Succeed())
+			Expect(k8sClient.Create(ctx, pvc.DeepCopy())).Should(Succeed())
 		}
 	})
 
 	It("should delete rs sts and pvc", func() {
-		Expect(s.reconcile(context.Background(), logr.Logger{}, instance, nil)).Should(Equal(subResult{}))
+		Expect(s.reconcile(ctx, logger, instance, nil)).Should(Equal(subResult{}))
 
 		Eventually(func() int {
 			list := &appsv1.ReplicaSetList{}
-			_ = k8sClient.List(context.Background(), list,
+			_ = k8sClient.List(ctx, list,
 				client.InNamespace(instance.Namespace),
 				client.MatchingLabels(appsv2beta1.DefaultReplicantLabels(instance)),
 			)
@@ -171,7 +169,7 @@ var _ = Describe("Check sync sts and pvc", func() {
 
 		Eventually(func() int {
 			list := &appsv1.StatefulSetList{}
-			_ = k8sClient.List(context.Background(), list,
+			_ = k8sClient.List(ctx, list,
 				client.InNamespace(instance.Namespace),
 				client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
 			)
@@ -187,7 +185,7 @@ var _ = Describe("Check sync sts and pvc", func() {
 
 		Eventually(func() int {
 			list := &corev1.PersistentVolumeClaimList{}
-			_ = k8sClient.List(context.Background(), list,
+			_ = k8sClient.List(ctx, list,
 				client.InNamespace(instance.Namespace),
 				client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
 			)

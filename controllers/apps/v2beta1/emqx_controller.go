@@ -110,7 +110,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, emperror.Wrap(err, "failed to parse config")
 	}
 
-	requester, err := newRequester(r.Client, instance)
+	requester, err := newRequester(ctx, r.Client, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
 			_ = (&addBootstrap{r}).reconcile(ctx, logger, instance, nil)
@@ -164,8 +164,8 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func newRequester(k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq.RequesterInterface, error) {
-	username, password, err := getBootstrapAPIKey(context.Background(), k8sClient, instance)
+func newRequester(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq.RequesterInterface, error) {
+	username, password, err := getBootstrapAPIKey(ctx, k8sClient, instance)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func newRequester(k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq
 	}
 
 	podList := &corev1.PodList{}
-	_ = k8sClient.List(context.Background(), podList,
+	_ = k8sClient.List(ctx, podList,
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(
 			appsv2beta1.DefaultCoreLabels(instance),

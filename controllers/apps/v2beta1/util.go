@@ -120,7 +120,7 @@ func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *a
 
 func getEventList(ctx context.Context, clientSet *kubernetes.Clientset, obj client.Object) []*corev1.Event {
 	// https://github.com/kubernetes-sigs/kubebuilder/issues/547#issuecomment-450772300
-	eventList, _ := clientSet.CoreV1().Events(obj.GetNamespace()).List(context.Background(), metav1.ListOptions{
+	eventList, _ := clientSet.CoreV1().Events(obj.GetNamespace()).List(ctx, metav1.ListOptions{
 		FieldSelector: "involvedObject.name=" + obj.GetName(),
 	})
 	return handlerEventList(eventList)

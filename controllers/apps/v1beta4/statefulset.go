@@ -29,13 +29,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func getPodMap(k8sClient client.Client, instance appsv1beta4.Emqx, allSts []*appsv1.StatefulSet) (map[types.UID][]*corev1.Pod, error) {
+func getPodMap(ctx context.Context, k8sClient client.Client, instance appsv1beta4.Emqx, allSts []*appsv1.StatefulSet) (map[types.UID][]*corev1.Pod, error) {
 	podList := &corev1.PodList{}
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: instance.GetLabels(),
 	})
 	err := k8sClient.List(
-		context.TODO(),
+		ctx,
 		podList,
 		&client.ListOptions{
 			Namespace:     instance.GetNamespace(),
@@ -71,13 +71,13 @@ func getPodMap(k8sClient client.Client, instance appsv1beta4.Emqx, allSts []*app
 	return podMap, nil
 }
 
-func getAllStatefulSet(k8sClient client.Client, instance appsv1beta4.Emqx) ([]*appsv1.StatefulSet, error) {
+func getAllStatefulSet(ctx context.Context, k8sClient client.Client, instance appsv1beta4.Emqx) ([]*appsv1.StatefulSet, error) {
 	existedStsList := &appsv1.StatefulSetList{}
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: instance.GetLabels(),
 	})
 	err := k8sClient.List(
-		context.TODO(),
+		ctx,
 		existedStsList,
 		&client.ListOptions{
 			Namespace:     instance.GetNamespace(),
@@ -102,13 +102,13 @@ func getAllStatefulSet(k8sClient client.Client, instance appsv1beta4.Emqx) ([]*a
 	return allSts, nil
 }
 
-func getInClusterStatefulSets(k8sClient client.Client, instance appsv1beta4.Emqx) ([]*appsv1.StatefulSet, error) {
-	allSts, err := getAllStatefulSet(k8sClient, instance)
+func getInClusterStatefulSets(ctx context.Context, k8sClient client.Client, instance appsv1beta4.Emqx) ([]*appsv1.StatefulSet, error) {
+	allSts, err := getAllStatefulSet(ctx, k8sClient, instance)
 	if err != nil {
 		return nil, err
 	}
 
-	podMap, err := getPodMap(k8sClient, instance, allSts)
+	podMap, err := getPodMap(ctx, k8sClient, instance, allSts)
 	if err != nil {
 		return nil, err
 	}
