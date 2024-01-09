@@ -11,6 +11,9 @@ development: false
 
 replicaCount: 1
 
+# The number of old history to retain to allow rollback
+revisionHistoryLimit: 10
+
 image:
   repository: emqx/emqx-operator-controller
   pullPolicy: IfNotPresent
