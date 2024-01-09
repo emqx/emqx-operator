@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.10 has been released.
+EMQX Operator 2.2.11 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -17,7 +17,13 @@ EMQX Operator 2.2.10 has been released.
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Fix when the `spec.type` is `LoadBalancer` or `NodePort`. the Kubernetes service of the EMQX CR always updates.
+  + Fix the issue that the EMQX operator can't tell whether the EMQX config has been changed
+
+  + Fix the issue that the `.metadata.resourceVersion` of the EMQX pod always be updated
+
+## Enhancements ✨
+
+  + Make the `revisionHistoryLimit` available in the helm chart
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -29,7 +35,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.10
+  --version 2.2.11
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
