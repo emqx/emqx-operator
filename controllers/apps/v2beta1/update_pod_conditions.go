@@ -40,7 +40,6 @@ func (u *updatePodConditions) reconcile(ctx context.Context, logger logr.Logger,
 		onServingCondition := corev1.PodCondition{
 			Type:               appsv2beta1.PodOnServing,
 			Status:             corev1.ConditionFalse,
-			LastProbeTime:      metav1.Now(),
 			LastTransitionTime: metav1.Now(),
 		}
 
@@ -68,6 +67,11 @@ func (u *updatePodConditions) reconcile(ctx context.Context, logger logr.Logger,
 			}
 		}
 
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == appsv2beta1.PodOnServing && condition.Status == onServingCondition.Status {
+				onServingCondition.LastTransitionTime = condition.LastTransitionTime
+			}
+		}
 		patchBytes, _ := json.Marshal(corev1.Pod{
 			Status: corev1.PodStatus{
 				Conditions: []corev1.PodCondition{onServingCondition},
