@@ -41,7 +41,8 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `imagePullSecrets` | Image pull secrets| `[]` |
 | `nameOverride` | Override chart name | `""` |
 | `fullnameOverride` | Default fully qualified app name. | `""` |
-| `replicaCount`  | Number of cert-manager replicas  | `1` |
+| `replicaCount`  | Number of EMQX operator replicas  | `1` |
+| `revisionHistoryLimit`  | The number of old history to retain to allow rollback  | `1` |
 | `serviceAccount.create` | If `true`, create a new service account | `true` |
 | `serviceAccount.name` | Service account to be used. If not set and `serviceAccount.create` is `true`, a name is generated using the fullname template |  |
 | `serviceAccount.annotations` | Annotations to add to the service account |  |
