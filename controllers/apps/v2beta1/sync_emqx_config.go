@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 
 	emperror "emperror.dev/errors"
@@ -13,7 +12,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type syncConfig struct {
@@ -24,6 +25,21 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 	hoconConfig := mergeDefaultConfig(instance.Spec.Config.Data)
 	confStr := hoconConfig.String()
 
+	// Make sure the config map exists
+	configMap := &corev1.ConfigMap{}
+	if err := s.Client.Get(ctx, types.NamespacedName{
+		Name:      instance.ConfigsNamespacedName().Name,
+		Namespace: instance.Namespace,
+	}, configMap); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			if err := s.update(ctx, logger, instance, confStr); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to update emqx config")}
+			}
+			return subResult{}
+		}
+		return subResult{err: emperror.Wrap(err, "failed to get configMap")}
+	}
+
 	lastConfigStr, ok := instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey]
 	if !ok {
 		if err := s.update(ctx, logger, instance, confStr); err != nil {
@@ -33,7 +49,7 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 	}
 
 	lastHoconConfig, _ := hocon.ParseString(lastConfigStr)
-	if !reflect.DeepEqual(hoconConfig, lastHoconConfig) {
+	if !deepEqualHoconValue(hoconConfig.GetRoot(), lastHoconConfig.GetRoot()) {
 		_, coreReady := instance.Status.GetCondition(appsv2beta1.CoreNodesReady)
 		if coreReady == nil || !instance.Status.IsConditionTrue(appsv2beta1.CoreNodesReady) {
 			return subResult{}
@@ -76,17 +92,6 @@ func (s *syncConfig) update(ctx context.Context, logger logr.Logger, instance *a
 	return nil
 }
 
-func mergeDefaultConfig(config string) *hocon.Config {
-	defaultListenerConfig := ""
-	defaultListenerConfig += fmt.Sprintln("listeners.tcp.default.bind = 1883")
-	defaultListenerConfig += fmt.Sprintln("listeners.ssl.default.bind = 8883")
-	defaultListenerConfig += fmt.Sprintln("listeners.ws.default.bind  = 8083")
-	defaultListenerConfig += fmt.Sprintln("listeners.wss.default.bind = 8084")
-
-	hoconConfig, _ := hocon.ParseString(defaultListenerConfig + config)
-	return hoconConfig
-}
-
 func generateConfigMap(instance *appsv2beta1.EMQX, data string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -117,4 +122,46 @@ func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) err
 		return emperror.Errorf("failed to put API %s, status : %s, body: %s", url.String(), resp.Status, body)
 	}
 	return nil
+}
+
+func mergeDefaultConfig(config string) *hocon.Config {
+	defaultListenerConfig := ""
+	defaultListenerConfig += fmt.Sprintln("listeners.tcp.default.bind = 1883")
+	defaultListenerConfig += fmt.Sprintln("listeners.ssl.default.bind = 8883")
+	defaultListenerConfig += fmt.Sprintln("listeners.ws.default.bind  = 8083")
+	defaultListenerConfig += fmt.Sprintln("listeners.wss.default.bind = 8084")
+
+	hoconConfig, _ := hocon.ParseString(defaultListenerConfig + config)
+	return hoconConfig
+}
+
+func deepEqualHoconValue(val1, val2 hocon.Value) bool {
+	switch val1.Type() {
+	case hocon.ObjectType:
+		if len(val1.(hocon.Object)) != len(val2.(hocon.Object)) {
+			return false
+		}
+		for key := range val1.(hocon.Object) {
+			if _, ok := val2.(hocon.Object)[key]; !ok {
+				return false
+			}
+			if !deepEqualHoconValue(val1.(hocon.Object)[key], val2.(hocon.Object)[key]) {
+				return false
+			}
+		}
+	case hocon.ArrayType:
+		if len(val1.(hocon.Array)) != len(val2.(hocon.Array)) {
+			return false
+		}
+		for i := range val1.(hocon.Array) {
+			if !deepEqualHoconValue(val1.(hocon.Array)[i], val2.(hocon.Array)[i]) {
+				return false
+			}
+		}
+	case hocon.StringType, hocon.NumberType, hocon.BooleanType, hocon.NullType:
+		return val1.String() == val2.String()
+	default:
+		return false
+	}
+	return true
 }
