@@ -152,7 +152,7 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 		ports,
 	)
 	svc.Spec.Selector = appsv2beta1.DefaultCoreLabels(instance)
-	if appsv2beta1.IsExistReplicant(instance) {
+	if appsv2beta1.IsExistReplicant(instance) && instance.Status.ReplicantNodesStatus.ReadyReplicas > 0 {
 		svc.Spec.Selector = appsv2beta1.DefaultReplicantLabels(instance)
 	}
 	return &corev1.Service{
