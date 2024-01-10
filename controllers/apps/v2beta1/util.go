@@ -93,13 +93,6 @@ func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *a
 		client.InNamespace(instance.Namespace),
 		client.MatchingLabels(labels),
 	)
-	if instance.Spec.ReplicantTemplate == nil {
-		for _, rs := range list.Items {
-			oldRsList = append(oldRsList, rs.DeepCopy())
-		}
-		sort.Sort(ReplicaSetsByCreationTimestamp(oldRsList))
-		return
-	}
 
 	for _, rs := range list.Items {
 		if hash, ok := rs.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {

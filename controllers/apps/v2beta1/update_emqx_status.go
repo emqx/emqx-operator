@@ -21,36 +21,21 @@ type updateStatus struct {
 }
 
 func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
-	if instance.Spec.ReplicantTemplate != nil && instance.Status.ReplicantNodesStatus == nil {
-		instance.Status.ReplicantNodesStatus = &appsv2beta1.EMQXNodesStatus{
-			Replicas: *instance.Spec.ReplicantTemplate.Spec.Replicas,
-		}
+	instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
+	if instance.Spec.ReplicantTemplate != nil {
+		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 	}
 
-	updateRs, currentRs, oldRsList := getReplicaSetList(ctx, u.Client, instance)
-	if updateRs != nil {
-		if currentRs == nil || currentRs.Status.Replicas == 0 {
-			var i int
-			for i = 0; i < len(oldRsList); i++ {
-				if oldRsList[i].Status.Replicas > 0 {
-					currentRs = oldRsList[i]
-					break
-				}
-			}
-			if i == len(oldRsList) {
-				currentRs = updateRs
-			}
-			instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-			if err := u.Client.Status().Update(ctx, instance); err != nil {
-				return subResult{err: emperror.Wrap(err, "failed to update status")}
-			}
-			return subResult{}
-		}
+	if instance.Status.CoreNodesStatus.UpdateRevision != "" && instance.Status.CoreNodesStatus.CurrentRevision == "" {
+		instance.Status.CoreNodesStatus.CurrentRevision = instance.Status.CoreNodesStatus.UpdateRevision
+	}
+	if instance.Status.ReplicantNodesStatus.UpdateRevision != "" && instance.Status.ReplicantNodesStatus.CurrentRevision == "" {
+		instance.Status.ReplicantNodesStatus.CurrentRevision = instance.Status.ReplicantNodesStatus.UpdateRevision
 	}
 
 	updateSts, currentSts, oldStsList := getStateFulSetList(ctx, u.Client, instance)
-	if updateSts != nil {
-		if currentSts == nil || currentSts.Status.Replicas == 0 {
+	if updateSts != nil && updateSts.UID != currentSts.UID {
+		if currentSts.Status.Replicas == 0 {
 			var i int
 			for i = 0; i < len(oldStsList); i++ {
 				if oldStsList[i].Status.Replicas > 0 {
@@ -69,6 +54,27 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 		}
 	}
 
+	updateRs, currentRs, oldRsList := getReplicaSetList(ctx, u.Client, instance)
+	if updateRs != nil && updateRs.UID != currentRs.UID {
+		if currentRs.Status.Replicas == 0 {
+			var i int
+			for i = 0; i < len(oldRsList); i++ {
+				if oldRsList[i].Status.Replicas > 0 {
+					currentRs = oldRsList[i]
+					break
+				}
+			}
+			if i == len(oldRsList) {
+				currentRs = updateRs
+			}
+			instance.Status.ReplicantNodesStatus.CurrentRevision = currentRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
+			if err := u.Client.Status().Update(ctx, instance); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to update status")}
+			}
+			return subResult{}
+		}
+	}
+
 	if r == nil {
 		return subResult{}
 	}
@@ -80,7 +86,6 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 	}
 
 	instance.Status.CoreNodes = coreNodes
-	instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	instance.Status.CoreNodesStatus.ReadyReplicas = 0
 	instance.Status.CoreNodesStatus.CurrentReplicas = 0
 	instance.Status.CoreNodesStatus.UpdateReplicas = 0
@@ -96,22 +101,19 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 		}
 	}
 
-	if len(replNodes) > 0 {
-		instance.Status.ReplicantNodes = replNodes
-		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
-		instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
-		instance.Status.ReplicantNodesStatus.CurrentReplicas = 0
-		instance.Status.ReplicantNodesStatus.UpdateReplicas = 0
-		for _, node := range replNodes {
-			if node.NodeStatus == "running" {
-				instance.Status.ReplicantNodesStatus.ReadyReplicas++
-			}
-			if currentRs != nil && node.ControllerUID == currentRs.UID {
-				instance.Status.ReplicantNodesStatus.CurrentReplicas++
-			}
-			if updateRs != nil && node.ControllerUID == updateRs.UID {
-				instance.Status.ReplicantNodesStatus.UpdateReplicas++
-			}
+	instance.Status.ReplicantNodes = replNodes
+	instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
+	instance.Status.ReplicantNodesStatus.CurrentReplicas = 0
+	instance.Status.ReplicantNodesStatus.UpdateReplicas = 0
+	for _, node := range replNodes {
+		if node.NodeStatus == "running" {
+			instance.Status.ReplicantNodesStatus.ReadyReplicas++
+		}
+		if currentRs != nil && node.ControllerUID == currentRs.UID {
+			instance.Status.ReplicantNodesStatus.CurrentReplicas++
+		}
+		if updateRs != nil && node.ControllerUID == updateRs.UID {
+			instance.Status.ReplicantNodesStatus.UpdateReplicas++
 		}
 	}
 

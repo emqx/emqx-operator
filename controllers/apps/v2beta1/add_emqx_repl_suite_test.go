@@ -39,7 +39,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			},
 		}
 		instance.Status = appsv2beta1.EMQXStatus{
-			ReplicantNodesStatus: &appsv2beta1.EMQXNodesStatus{
+			ReplicantNodesStatus: appsv2beta1.EMQXNodesStatus{
 				Replicas: 3,
 			},
 			Conditions: []metav1.Condition{
