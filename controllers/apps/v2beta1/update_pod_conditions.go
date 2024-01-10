@@ -21,8 +21,21 @@ type updatePodConditions struct {
 }
 
 func (u *updatePodConditions) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
+	var updateStsUID, currentStsUID, updateRsUID, currentRsUID types.UID
 	updateRs, currentRs, _ := getReplicaSetList(ctx, u.Client, instance)
+	if updateRs != nil {
+		updateRsUID = updateRs.UID
+	}
+	if currentRs != nil {
+		currentRsUID = currentRs.UID
+	}
 	updateSts, currentSts, _ := getStateFulSetList(ctx, u.Client, instance)
+	if updateSts != nil {
+		updateStsUID = updateSts.UID
+	}
+	if currentSts != nil {
+		currentStsUID = currentSts.UID
+	}
 
 	pods := &corev1.PodList{}
 	_ = u.Client.List(ctx, pods,
@@ -38,40 +51,43 @@ func (u *updatePodConditions) reconcile(ctx context.Context, logger logr.Logger,
 		}
 
 		onServingCondition := corev1.PodCondition{
-			Type:               appsv2beta1.PodOnServing,
-			Status:             corev1.ConditionFalse,
-			LastTransitionTime: metav1.Now(),
+			Type: appsv2beta1.PodOnServing,
 		}
-
-		if instance.Status.IsConditionTrue(appsv2beta1.Available) {
-			if (updateSts != nil && controllerRef.UID == updateSts.UID) ||
-				(updateRs != nil && controllerRef.UID == updateRs.UID) {
-				for _, condition := range pod.Status.Conditions {
-					if condition.Type == corev1.ContainersReady && condition.Status == corev1.ConditionTrue {
-						onServingCondition.Status = u.checkInCluster(instance, r, pod)
-						break
-					}
-				}
-			}
-		} else {
-			if (currentSts != nil && controllerRef.UID == currentSts.UID) ||
-				(currentRs != nil && controllerRef.UID == currentRs.UID) ||
-				(updateSts != nil && controllerRef.UID == updateSts.UID) ||
-				(updateRs != nil && controllerRef.UID == updateRs.UID) {
-				for _, condition := range pod.Status.Conditions {
-					if condition.Type == corev1.ContainersReady && condition.Status == corev1.ConditionTrue {
-						onServingCondition.Status = u.checkInCluster(instance, r, pod)
-						break
-					}
-				}
-			}
-		}
-
 		for _, condition := range pod.Status.Conditions {
-			if condition.Type == appsv2beta1.PodOnServing && condition.Status == onServingCondition.Status {
+			if condition.Type == appsv2beta1.PodOnServing {
+				onServingCondition.Status = condition.Status
 				onServingCondition.LastTransitionTime = condition.LastTransitionTime
 			}
 		}
+
+		switch controllerRef.UID {
+		case updateStsUID, updateRsUID:
+			for _, condition := range pod.Status.Conditions {
+				if condition.Type == corev1.ContainersReady && condition.Status == corev1.ConditionTrue {
+					status := u.checkInCluster(instance, r, pod)
+					if status != onServingCondition.Status {
+						onServingCondition.Status = status
+						onServingCondition.LastTransitionTime = metav1.Now()
+					}
+					break
+				}
+			}
+		case currentStsUID, currentRsUID:
+			// When available condition is true, need clean currentSts / currentRs pod
+			if instance.Status.IsConditionTrue(appsv2beta1.Available) {
+				for _, condition := range pod.Status.Conditions {
+					if condition.Type == corev1.ContainersReady && condition.Status == corev1.ConditionTrue {
+						status := corev1.ConditionFalse
+						if status != onServingCondition.Status {
+							onServingCondition.Status = status
+							onServingCondition.LastTransitionTime = metav1.Now()
+						}
+						break
+					}
+				}
+			}
+		}
+
 		patchBytes, _ := json.Marshal(corev1.Pod{
 			Status: corev1.PodStatus{
 				Conditions: []corev1.PodCondition{onServingCondition},

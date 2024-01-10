@@ -72,7 +72,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				ReadyReplicas:   2,
 				Replicas:        1,
 			},
-			ReplicantNodesStatus: &appsv2beta1.EMQXNodesStatus{
+			ReplicantNodesStatus: appsv2beta1.EMQXNodesStatus{
 				UpdateRevision:  "update",
 				UpdateReplicas:  1,
 				CurrentRevision: "current",
@@ -334,7 +334,7 @@ var _ = Describe("check can be scale down", func() {
 					Replicas: pointer.Int32Ptr(3),
 				},
 			}
-			instance.Status.ReplicantNodesStatus = &appsv2beta1.EMQXNodesStatus{
+			instance.Status.ReplicantNodesStatus = appsv2beta1.EMQXNodesStatus{
 				UpdateRevision:  "update",
 				CurrentRevision: "current",
 			}

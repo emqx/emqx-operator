@@ -72,17 +72,24 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
-						HaveField("CurrentRevision", Not(BeEmpty())),
+						HaveField("CurrentRevision", Not(Equal(""))),
 						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
-						HaveField("UpdateRevision", Not(BeEmpty())),
+						HaveField("UpdateRevision", Not(Equal(""))),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
 						return instance.Status.ReplicantNodes
 					}, BeNil()),
-					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
-					}, BeNil()),
+					}, And(
+						HaveField("Replicas", Equal(int32(0))),
+						HaveField("ReadyReplicas", Equal(int32(0))),
+						HaveField("CurrentRevision", Equal("")),
+						HaveField("CurrentReplicas", Equal(int32(0))),
+						HaveField("UpdateRevision", Equal("")),
+						HaveField("UpdateReplicas", Equal(int32(0))),
+					)),
 				),
 			)
 
@@ -124,15 +131,22 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
 						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
-						HaveField("UpdateRevision", Not(BeEmpty())),
+						HaveField("UpdateRevision", Not(Equal(""))),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
 						return instance.Status.ReplicantNodes
 					}, BeNil()),
-					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
-					}, BeNil()),
+					}, And(
+						HaveField("Replicas", Equal(int32(0))),
+						HaveField("ReadyReplicas", Equal(int32(0))),
+						HaveField("CurrentRevision", Equal("")),
+						HaveField("CurrentReplicas", Equal(int32(0))),
+						HaveField("UpdateRevision", Equal("")),
+						HaveField("UpdateReplicas", Equal(int32(0))),
+					)),
 				),
 			)
 
@@ -180,9 +194,16 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
 						return instance.Status.ReplicantNodes
 					}, BeNil()),
-					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
-					}, BeNil()),
+					}, And(
+						HaveField("Replicas", Equal(int32(0))),
+						HaveField("ReadyReplicas", Equal(int32(0))),
+						HaveField("CurrentRevision", Equal("")),
+						HaveField("CurrentReplicas", Equal(int32(0))),
+						HaveField("UpdateRevision", Equal("")),
+						HaveField("UpdateReplicas", Equal(int32(0))),
+					)),
 				),
 			)
 
@@ -220,9 +241,16 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						HaveField("CurrentRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
 						HaveField("UpdateRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
 					)),
-					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
-					}, BeNil()),
+					}, And(
+						HaveField("Replicas", Equal(int32(0))),
+						HaveField("ReadyReplicas", Equal(int32(0))),
+						HaveField("CurrentRevision", Equal("")),
+						HaveField("CurrentReplicas", Equal(int32(0))),
+						HaveField("UpdateRevision", Equal("")),
+						HaveField("UpdateReplicas", Equal(int32(0))),
+					)),
 				),
 			)
 
@@ -327,19 +355,19 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
-						HaveField("CurrentRevision", Not(BeEmpty())),
+						HaveField("CurrentRevision", Not(Equal(""))),
 						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
-						HaveField("UpdateRevision", Not(BeEmpty())),
+						HaveField("UpdateRevision", Not(Equal(""))),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
-					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
-						HaveField("CurrentRevision", Not(BeEmpty())),
+						HaveField("CurrentRevision", Not(Equal(""))),
 						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
-						HaveField("UpdateRevision", Not(BeEmpty())),
+						HaveField("UpdateRevision", Not(Equal(""))),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 					)),
 				),
@@ -389,7 +417,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
 						return instance.Status.ReplicantNodes
 					}, HaveLen(int(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
-					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
@@ -408,6 +436,63 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				appsv2beta1.DefaultReplicantLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
+			))
+		})
+
+		It("scale down EMQX replicant nodes to 0", func() {
+			var storage *appsv2beta1.EMQX
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				storage = instance.DeepCopy()
+				instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(0)
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
+
+			Eventually(func() *appsv2beta1.EMQX {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+				return instance
+			}).WithTimeout(timeout).WithPolling(interval).Should(
+				And(
+					WithTransform(func(instance *appsv2beta1.EMQX) bool {
+						return instance.Status.IsConditionTrue(appsv2beta1.Ready)
+					}, BeTrue()),
+					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
+						return instance.Status.CoreNodes
+					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
+						return instance.Status.CoreNodesStatus
+					}, And(
+						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("CurrentRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Equal(storage.Status.CoreNodesStatus.CurrentRevision)),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+					)),
+					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
+						return instance.Status.ReplicantNodes
+					}, HaveLen(int(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
+						return instance.Status.ReplicantNodesStatus
+					}, And(
+						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("CurrentRevision", Equal(storage.Status.ReplicantNodesStatus.CurrentRevision)),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Equal(storage.Status.ReplicantNodesStatus.CurrentRevision)),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+					)),
+				),
+			)
+
+			checkServices(instance)
+			checkPods(instance)
+			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
+				appsv2beta1.DefaultCoreLabels(instance),
+				appsv2beta1.LabelsPodTemplateHashKey,
+				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
 		})
 
@@ -436,7 +521,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						HaveField("CurrentRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
 						HaveField("UpdateRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
 					)),
-					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("CurrentRevision", Not(Equal(storage.Status.ReplicantNodesStatus.CurrentRevision))),

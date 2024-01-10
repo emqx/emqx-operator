@@ -44,7 +44,6 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 				}
 			}
 		}
-
 	} else {
 		if updateSts != nil {
 			for _, node := range instance.Status.CoreNodes {
