@@ -103,12 +103,13 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("scale up EMQX core nodes", func() {
-			var storage *appsv2beta1.EMQX
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+
 			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				storage = instance.DeepCopy()
 				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(3)
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
@@ -160,12 +161,13 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("scale down EMQX core nodes", func() {
-			var storage *appsv2beta1.EMQX
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+
 			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				storage = instance.DeepCopy()
 				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
@@ -217,12 +219,13 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("change EMQX image", func() {
-			var storage *appsv2beta1.EMQX
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+
 			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				storage = instance.DeepCopy()
 				instance.Spec.Image = "emqx:5"
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
@@ -238,8 +241,12 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.CoreNodesStatus
 					}, And(
+						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("UpdateRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
@@ -383,12 +390,13 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("scale up EMQX replicant nodes", func() {
-			var storage *appsv2beta1.EMQX
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+
 			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				storage = instance.DeepCopy()
 				instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(3)
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
@@ -440,12 +448,13 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("scale down EMQX replicant nodes to 0", func() {
-			var storage *appsv2beta1.EMQX
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+
 			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				storage = instance.DeepCopy()
 				instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(0)
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
@@ -477,12 +486,12 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, And(
-						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
-						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("Replicas", Equal(int32(0))),
+						HaveField("ReadyReplicas", Equal(int32(0))),
 						HaveField("CurrentRevision", Equal(storage.Status.ReplicantNodesStatus.CurrentRevision)),
-						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("CurrentReplicas", Equal(int32(0))),
 						HaveField("UpdateRevision", Equal(storage.Status.ReplicantNodesStatus.CurrentRevision)),
-						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("UpdateReplicas", Equal(int32(0))),
 					)),
 				),
 			)
@@ -497,12 +506,13 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("change EMQX image", func() {
-			var storage *appsv2beta1.EMQX
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+
 			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				storage = instance.DeepCopy()
 				instance.Spec.Image = "emqx/emqx:latest"
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
@@ -518,14 +528,22 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.CoreNodesStatus
 					}, And(
+						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("UpdateRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
 					}, And(
+						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
+						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("CurrentRevision", Not(Equal(storage.Status.ReplicantNodesStatus.CurrentRevision))),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("UpdateRevision", Not(Equal(storage.Status.ReplicantNodesStatus.CurrentRevision))),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 					)),
 				),
 			)
@@ -536,6 +554,59 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				appsv2beta1.DefaultReplicantLabels(instance),
 				appsv2beta1.LabelsPodTemplateHashKey,
 				instance.Status.ReplicantNodesStatus.CurrentRevision,
+			))
+		})
+
+		It("change EMQX image and scale down EMQX replicant nodes to 0", func() {
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).Should(Succeed())
+			storage := instance.DeepCopy()
+
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
+					return err
+				}
+				instance.Spec.Image = "emqx:5"
+				instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(0)
+				return k8sClient.Update(ctx, instance)
+			})).Should(Succeed())
+
+			Eventually(func() *appsv2beta1.EMQX {
+				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+				return instance
+			}).WithTimeout(timeout).WithPolling(interval).Should(
+				And(
+					WithTransform(func(instance *appsv2beta1.EMQX) bool {
+						return instance.Status.IsConditionTrue(appsv2beta1.Ready)
+					}, BeTrue()),
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
+						return instance.Status.CoreNodesStatus
+					}, And(
+						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("CurrentRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
+						HaveField("CurrentReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+						HaveField("UpdateRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
+						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
+					)),
+					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
+						return instance.Status.ReplicantNodesStatus
+					}, And(
+						HaveField("Replicas", Equal(int32(0))),
+						HaveField("ReadyReplicas", Equal(int32(0))),
+						HaveField("CurrentRevision", Not(Equal(storage.Status.ReplicantNodesStatus.CurrentRevision))),
+						HaveField("CurrentReplicas", Equal(int32(0))),
+						HaveField("UpdateRevision", Not(Equal(storage.Status.ReplicantNodesStatus.CurrentRevision))),
+						HaveField("UpdateReplicas", Equal(int32(0))),
+					)),
+				),
+			)
+
+			checkServices(instance)
+			checkPods(instance)
+			checkEndpoints(instance, appsv2beta1.CloneAndAddLabel(
+				appsv2beta1.DefaultCoreLabels(instance),
+				appsv2beta1.LabelsPodTemplateHashKey,
+				instance.Status.CoreNodesStatus.CurrentRevision,
 			))
 		})
 
