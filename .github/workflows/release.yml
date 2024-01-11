@@ -59,7 +59,7 @@ jobs:
         short-description: "EMQX Operator creates and manages EMQX clusters running in Kubernetes."
     - id: prerelease
       run: |
-        if echo "${{ github.ref_name }}" |egrep -q "^[0-9].[0-9].[0-9]$"; then
+        if echo "${{ github.ref_name }}" |egrep -q "^[0-9]+.[0-9]+.[0-9]+$"; then
           echo "::set-output name=prerelease::false"
         else
           echo "::set-output name=prerelease::true"
