@@ -92,6 +92,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-image
     strategy:
+      ## Set max parallel to 8 to avoid hitting the GitHub Actions concurrency limit
+      max-parallel: 8
       fail-fast: false
       matrix:
         kubernetes-env:
