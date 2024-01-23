@@ -57,9 +57,22 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 
 		// Delete readonly configs
 		hoconConfigObj := hoconConfig.GetRoot().(hocon.Object)
-		delete(hoconConfigObj, "node")
-		delete(hoconConfigObj, "cluster")
-		delete(hoconConfigObj, "dashboard")
+		if _, ok := hoconConfigObj["node"]; ok {
+			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `node` config, because it's readonly config")
+			delete(hoconConfigObj, "node")
+		}
+		if _, ok := hoconConfigObj["cluster"]; ok {
+			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `cluster` config, because it's readonly config")
+			delete(hoconConfigObj, "cluster")
+		}
+		if _, ok := hoconConfigObj["dashboard"]; ok {
+			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `dashboard` config, because it's readonly config")
+			delete(hoconConfigObj, "dashboard")
+		}
+		if _, ok := hoconConfigObj["rpc"]; ok {
+			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `rpc` config, because it's readonly config")
+			delete(hoconConfigObj, "rpc")
+		}
 
 		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, hoconConfigObj.String()); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
