@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.12 has been released.
+EMQX Operator 2.2.13 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -17,7 +17,7 @@ EMQX Operator 2.2.12 has been released.
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Fix after the blue-green update, the new core nodes never become ready when replicant replicas set to 0
+  + Fixed the issue where the EMQX operator would update read-only configurations through EMQX API.
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -29,7 +29,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.12
+  --version 2.2.13
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
