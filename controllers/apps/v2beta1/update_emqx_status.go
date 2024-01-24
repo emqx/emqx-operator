@@ -34,8 +34,8 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 	}
 
 	updateSts, currentSts, oldStsList := getStateFulSetList(ctx, u.Client, instance)
-	if updateSts != nil && updateSts.UID != currentSts.UID {
-		if currentSts.Status.Replicas == 0 {
+	if updateSts != nil {
+		if currentSts == nil || (updateSts.UID != currentSts.UID && currentSts.Status.Replicas == 0) {
 			var i int
 			for i = 0; i < len(oldStsList); i++ {
 				if oldStsList[i].Status.Replicas > 0 {
@@ -55,8 +55,8 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 	}
 
 	updateRs, currentRs, oldRsList := getReplicaSetList(ctx, u.Client, instance)
-	if updateRs != nil && updateRs.UID != currentRs.UID {
-		if currentRs.Status.Replicas == 0 {
+	if updateRs != nil {
+		if currentRs == nil || (updateRs.UID != currentRs.UID && currentRs.Status.Replicas == 0) {
 			var i int
 			for i = 0; i < len(oldRsList); i++ {
 				if oldRsList[i].Status.Replicas > 0 {
