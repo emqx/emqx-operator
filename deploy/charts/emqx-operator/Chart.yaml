@@ -21,3 +21,7 @@ version: 2.2.14
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 appVersion: 2.2.14
+
+sources:
+  - https://github.com/emqx/emqx-operator/tree/main/deploy/charts/emqx-operator
+  - https://github.com/emqx/emqx
