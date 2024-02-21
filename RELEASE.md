@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.14 has been released.
+EMQX Operator 2.2.15 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -17,7 +17,7 @@ EMQX Operator 2.2.14 has been released.
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Fixed the nil pointer error, when the EMQX resource is in `coreNodesProgressing/replicantNodesProgressing` state, and the user manually deletes old statefulSet or old replicaSet, will get this error
+  + Fixed the issue that the configMap of the EMQX configs always be updated, even if the user does not change the EMQX configs.
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -29,7 +29,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.14
+  --version 2.2.15
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
