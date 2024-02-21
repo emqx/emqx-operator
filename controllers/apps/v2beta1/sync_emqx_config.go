@@ -15,6 +15,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type syncConfig struct {
@@ -32,8 +33,12 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 		Namespace: instance.Namespace,
 	}, configMap); err != nil {
 		if k8sErrors.IsNotFound(err) {
-			if err := s.update(ctx, logger, instance, confStr); err != nil {
-				return subResult{err: emperror.Wrap(err, "failed to update emqx config")}
+			configMap = generateConfigMap(instance, confStr)
+			if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
+			}
+			if err := s.Client.Create(ctx, configMap); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to create configMap")}
 			}
 			return subResult{}
 		}
@@ -42,8 +47,12 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 
 	lastConfigStr, ok := instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey]
 	if !ok {
-		if err := s.update(ctx, logger, instance, confStr); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update emqx config")}
+		if instance.Annotations == nil {
+			instance.Annotations = map[string]string{}
+		}
+		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = confStr
+		if err := s.Client.Update(ctx, instance); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update emqx instance annotation")}
 		}
 		return subResult{}
 	}
@@ -78,31 +87,19 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
 		}
 
-		if err := s.update(ctx, logger, instance, confStr); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update emqx config")}
+		if err := s.Client.Update(ctx, generateConfigMap(instance, confStr)); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update configMap")}
+		}
+
+		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = confStr
+		if err := s.Client.Update(ctx, instance); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update emqx instance annotation")}
 		}
 
 		return subResult{}
 	}
 
 	return subResult{}
-}
-
-func (s *syncConfig) update(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, confStr string) error {
-	configMap := generateConfigMap(instance, confStr)
-	if err := s.Handler.CreateOrUpdate(ctx, s.Scheme, logger, instance, configMap); err != nil {
-		return emperror.Wrap(err, "failed to create or update configMap")
-	}
-
-	if instance.Annotations == nil {
-		instance.Annotations = map[string]string{}
-	}
-	instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = confStr
-	if err := s.Client.Update(ctx, instance); err != nil {
-		return emperror.Wrap(err, "failed to update emqx instance annotation")
-	}
-
-	return nil
 }
 
 func generateConfigMap(instance *appsv2beta1.EMQX, data string) *corev1.ConfigMap {
