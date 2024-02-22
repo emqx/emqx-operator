@@ -57,8 +57,7 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 		return subResult{}
 	}
 
-	lastHoconConfig, _ := hocon.ParseString(lastConfigStr)
-	if !deepEqualHoconValue(hoconConfig.GetRoot(), lastHoconConfig.GetRoot()) {
+	if lastConfigStr != instance.Spec.Config.Data {
 		_, coreReady := instance.Status.GetCondition(appsv2beta1.CoreNodesReady)
 		if coreReady == nil || !instance.Status.IsConditionTrue(appsv2beta1.CoreNodesReady) {
 			return subResult{}
@@ -143,35 +142,4 @@ func mergeDefaultConfig(config string) *hocon.Config {
 
 	hoconConfig, _ := hocon.ParseString(defaultListenerConfig + config)
 	return hoconConfig
-}
-
-func deepEqualHoconValue(val1, val2 hocon.Value) bool {
-	switch val1.Type() {
-	case hocon.ObjectType:
-		if len(val1.(hocon.Object)) != len(val2.(hocon.Object)) {
-			return false
-		}
-		for key := range val1.(hocon.Object) {
-			if _, ok := val2.(hocon.Object)[key]; !ok {
-				return false
-			}
-			if !deepEqualHoconValue(val1.(hocon.Object)[key], val2.(hocon.Object)[key]) {
-				return false
-			}
-		}
-	case hocon.ArrayType:
-		if len(val1.(hocon.Array)) != len(val2.(hocon.Array)) {
-			return false
-		}
-		for i := range val1.(hocon.Array) {
-			if !deepEqualHoconValue(val1.(hocon.Array)[i], val2.(hocon.Array)[i]) {
-				return false
-			}
-		}
-	case hocon.StringType, hocon.NumberType, hocon.BooleanType, hocon.NullType:
-		return val1.String() == val2.String()
-	default:
-		return false
-	}
-	return true
 }
