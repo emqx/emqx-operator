@@ -50,7 +50,7 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 		if instance.Annotations == nil {
 			instance.Annotations = map[string]string{}
 		}
-		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = confStr
+		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = instance.Spec.Config.Data
 		if err := s.Client.Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx instance annotation")}
 		}
@@ -91,7 +91,7 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 			return subResult{err: emperror.Wrap(err, "failed to update configMap")}
 		}
 
-		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = confStr
+		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = instance.Spec.Config.Data
 		if err := s.Client.Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx instance annotation")}
 		}
