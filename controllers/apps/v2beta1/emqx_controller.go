@@ -197,7 +197,7 @@ func newRequester(ctx context.Context, k8sClient client.Client, instance *appsv2
 	})
 
 	for _, pod := range podList.Items {
-		if pod.Status.Phase == corev1.PodRunning && pod.Status.PodIP != "" {
+		if pod.GetDeletionTimestamp() == nil && pod.Status.Phase == corev1.PodRunning && pod.Status.PodIP != "" {
 			return &innerReq.Requester{
 				Schema:   schema,
 				Host:     net.JoinHostPort(pod.Status.PodIP, port),
