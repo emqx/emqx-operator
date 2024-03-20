@@ -141,6 +141,10 @@ jobs:
           kind: ${{ matrix.emqx[0] }}
           name: ${{ matrix.emqx[1] }}
           file: ${{ matrix.emqx[2] }}
+      - name: Make sure all of pods can be deleted
+        run: |
+          kubectl delete ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }}
+          kubectl wait --for=delete pods -l "apps.emqx.io/instance=${{ matrix.emqx[1] }}"
       - if: failure()
         run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
       - if: failure()
