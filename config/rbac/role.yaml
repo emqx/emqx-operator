@@ -253,3 +253,14 @@ rules:
   - list
   - update
   - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
