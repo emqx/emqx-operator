@@ -23,13 +23,15 @@ Package v1beta4 contains API Schema definitions for the apps v1beta4 API group
 
 
 
+
+
 _Appears in:_
 - [EmqxContainer](#emqxcontainer)
 
-| Field | Description |
-| --- | --- |
-| `key` _string_ |  |
-| `secret` _string_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `key` _string_ |  |  | Pattern: `^[a-zA-Z\d_]+$` <br /> |
+| `secret` _string_ |  |  | MaxLength: 32 <br />MinLength: 3 <br /> |
 
 
 #### Condition
@@ -38,18 +40,20 @@ _Appears in:_
 
 Condition saves the state information of the EMQX cluster
 
+
+
 _Appears in:_
 - [EmqxBrokerStatus](#emqxbrokerstatus)
 - [EmqxEnterpriseStatus](#emqxenterprisestatus)
 
-| Field | Description |
-| --- | --- |
-| `type` _[ConditionType](#conditiontype)_ | Status of cluster condition. |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |
-| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | The last time this condition was updated. |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |
-| `reason` _string_ | The reason for the condition's last transition. |
-| `message` _string_ | A human readable message indicating details about the transition. |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[ConditionType](#conditiontype)_ | Status of cluster condition. |  |  |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |  |  |
+| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | The last time this condition was updated. |  |  |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
+| `reason` _string_ | The reason for the condition's last transition. |  |  |
+| `message` _string_ | A human readable message indicating details about the transition. |  |  |
 
 
 #### ConditionType
@@ -57,6 +61,8 @@ _Appears in:_
 _Underlying type:_ _string_
 
 ConditionType defines the condition that the RF can have
+
+
 
 _Appears in:_
 - [Condition](#condition)
@@ -71,13 +77,15 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxEnterpriseSpec](#emqxenterprisespec)
 
-| Field | Description |
-| --- | --- |
-| `initialDelaySeconds` _integer_ | Number of seconds before evacuation connection start. |
-| `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `initialDelaySeconds` _integer_ | Number of seconds before evacuation connection start. |  |  |
+| `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ |  |  |  |
 
 
 #### EmqxBlueGreenUpdateStatus
@@ -86,15 +94,17 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxEnterpriseStatus](#emqxenterprisestatus)
 
-| Field | Description |
-| --- | --- |
-| `originStatefulSet` _string_ |  |
-| `currentStatefulSet` _string_ |  |
-| `startedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ |  |
-| `evacuationsStatus` _[EmqxEvacuationStatus](#emqxevacuationstatus) array_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `originStatefulSet` _string_ |  |  |  |
+| `currentStatefulSet` _string_ |  |  |  |
+| `startedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ |  |  |  |
+| `evacuationsStatus` _[EmqxEvacuationStatus](#emqxevacuationstatus) array_ |  |  |  |
 
 
 #### EmqxBroker
@@ -105,13 +115,15 @@ EmqxBroker is the Schema for the emqxbrokers API
 
 
 
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
-| `kind` _string_ | `EmqxBroker`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[EmqxBrokerSpec](#emqxbrokerspec)_ |  |
-| `status` _[EmqxBrokerStatus](#emqxbrokerstatus)_ |  |
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4` | | |
+| `kind` _string_ | `EmqxBroker` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[EmqxBrokerSpec](#emqxbrokerspec)_ |  |  |  |
+| `status` _[EmqxBrokerStatus](#emqxbrokerstatus)_ |  |  |  |
 
 
 #### EmqxBrokerSpec
@@ -120,16 +132,18 @@ EmqxBroker is the Schema for the emqxbrokers API
 
 EmqxBrokerSpec defines the desired state of EmqxBroker
 
+
+
 _Appears in:_
 - [EmqxBroker](#emqxbroker)
 
-| Field | Description |
-| --- | --- |
-| `replicas` _integer_ |  |
-| `clusterDomain` _string_ |  |
-| `persistent` _[PersistentVolumeClaimTemplate](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimtemplate-v1-core)_ | Persistent describes the common attributes of storage devices |
-| `template` _[EmqxTemplate](#emqxtemplate)_ |  |
-| `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ | ServiceTemplate defines a logical set of ports and a policy by which to access them |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ |  | 3 |  |
+| `clusterDomain` _string_ |  | cluster.local |  |
+| `persistent` _[PersistentVolumeClaimTemplate](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimtemplate-v1-core)_ | Persistent describes the common attributes of storage devices |  |  |
+| `template` _[EmqxTemplate](#emqxtemplate)_ |  |  |  |
+| `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ | ServiceTemplate defines a logical set of ports and a policy by which to access them |  |  |
 
 
 #### EmqxBrokerStatus
@@ -138,16 +152,18 @@ _Appears in:_
 
 EmqxBrokerStatus defines the observed state of EmqxBroker
 
+
+
 _Appears in:_
 - [EmqxBroker](#emqxbroker)
 
-| Field | Description |
-| --- | --- |
-| `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX current state. |
-| `emqxNodes` _[EmqxNode](#emqxnode) array_ | Nodes of the EMQX cluster |
-| `replicas` _integer_ | replicas is the number of Pods created by the EMQX Custom Resource controller. |
-| `readyReplicas` _integer_ | readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready. |
-| `currentStatefulSetVersion` _string_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX current state. |  |  |
+| `emqxNodes` _[EmqxNode](#emqxnode) array_ | Nodes of the EMQX cluster |  |  |
+| `replicas` _integer_ | replicas is the number of Pods created by the EMQX Custom Resource controller. |  |  |
+| `readyReplicas` _integer_ | readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready. |  |  |
+| `currentStatefulSetVersion` _string_ |  |  |  |
 
 
 
@@ -158,34 +174,36 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxTemplateSpec](#emqxtemplatespec)
 
-| Field | Description |
-| --- | --- |
-| `image` _[EmqxImage](#emqximage)_ | Container image. The image is generated by "${Registry}/${Repository}:${Prefix}${Version}${Suffix}". |
-| `command` _string array_ | Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |
-| `args` _string array_ | Arguments to the entrypoint. The container image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |
-| `workingDir` _string_ | Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated. |
-| `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#containerport-v1-core) array_ | List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. |
-| `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envfromsource-v1-core) array_ | List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated. |
-| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core) array_ | List of environment variables to set in the container. Cannot be updated. |
-| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ | Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
-| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ | Pod volumes to mount into the container's filesystem. Cannot be updated. |
-| `volumeDevices` _[VolumeDevice](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumedevice-v1-core) array_ | volumeDevices is the list of block devices to be used by the container. |
-| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ | Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |
-| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ | Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |
-| `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ | StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |
-| `lifecycle` _[Lifecycle](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#lifecycle-v1-core)_ | Actions that the management system should take in response to container lifecycle events. Cannot be updated. |
-| `terminationMessagePath` _string_ | Optional: Path at which the file to which the container's termination message will be written is mounted into the container's filesystem. Message written is intended to be brief final status, such as an assertion failure message. Will be truncated by the node if greater than 4096 bytes. The total message length across all containers will be limited to 12kb. Defaults to /dev/termination-log. Cannot be updated. |
-| `terminationMessagePolicy` _[TerminationMessagePolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#terminationmessagepolicy-v1-core)_ | Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated. |
-| `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#securitycontext-v1-core)_ | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
-| `stdin` _boolean_ | Whether this container should allocate a buffer for stdin in the container runtime. If this is not set, reads from stdin in the container will always result in EOF. Default is false. |
-| `stdinOnce` _boolean_ | Whether the container runtime should close the stdin channel after it has been opened by a single attach. When stdin is true the stdin stream will remain open across multiple attach sessions. If stdinOnce is set to true, stdin is opened on container start, is empty until the first client attaches to stdin, and then remains open and accepts data until the client disconnects, at which time stdin is closed and remains closed until the container is restarted. If this flag is false, a container processes that reads from stdin will never receive an EOF. Default is false |
-| `tty` _boolean_ | Whether this container should allocate a TTY for itself, also requires 'stdin' to be true. Default is false. |
-| `emqxConfig` _object (keys:string, values:string)_ |  |
-| `emqxACL` _string array_ |  |
-| `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user Cannot be updated. |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `image` _[EmqxImage](#emqximage)_ | Container image.<br />The image is generated by "${Registry}/${Repository}:${Prefix}${Version}${Suffix}". |  |  |
+| `command` _string array_ | Entrypoint array. Not executed within a shell.<br />The container image's ENTRYPOINT is used if this is not provided.<br />Variable references $(VAR_NAME) are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced<br />to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will<br />produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless<br />of whether the variable exists or not. Cannot be updated.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  |  |
+| `args` _string array_ | Arguments to the entrypoint.<br />The container image's CMD is used if this is not provided.<br />Variable references $(VAR_NAME) are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced<br />to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will<br />produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless<br />of whether the variable exists or not. Cannot be updated.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  |  |
+| `workingDir` _string_ | Container's working directory.<br />If not specified, the container runtime's default will be used, which<br />might be configured in the container image.<br />Cannot be updated. |  |  |
+| `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#containerport-v1-core) array_ | List of ports to expose from the container. Exposing a port here gives<br />the system additional information about the network connections a<br />container uses, but is primarily informational. Not specifying a port here<br />DOES NOT prevent that port from being exposed. Any port which is<br />listening on the default "0.0.0.0" address inside a container will be<br />accessible from the network.<br />Cannot be updated. |  |  |
+| `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envfromsource-v1-core) array_ | List of sources to populate environment variables in the container.<br />The keys defined within a source must be a C_IDENTIFIER. All invalid keys<br />will be reported as an event when the container is starting. When a key exists in multiple<br />sources, the value associated with the last source will take precedence.<br />Values defined by an Env with a duplicate key will take precedence.<br />Cannot be updated. |  |  |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#envvar-v1-core) array_ | List of environment variables to set in the container.<br />Cannot be updated. |  |  |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcerequirements-v1-core)_ | Compute Resources required by this container.<br />Cannot be updated.<br />More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |  |  |
+| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumemount-v1-core) array_ | Pod volumes to mount into the container's filesystem.<br />Cannot be updated. |  |  |
+| `volumeDevices` _[VolumeDevice](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volumedevice-v1-core) array_ | volumeDevices is the list of block devices to be used by the container. |  |  |
+| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ | Periodic probe of container liveness.<br />Container will be restarted if the probe fails.<br />Cannot be updated.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |  |  |
+| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ | Periodic probe of container service readiness.<br />Container will be removed from service endpoints if the probe fails.<br />Cannot be updated.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |  |  |
+| `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#probe-v1-core)_ | StartupProbe indicates that the Pod has successfully initialized.<br />If specified, no other probes are executed until this completes successfully.<br />If this probe fails, the Pod will be restarted, just as if the livenessProbe failed.<br />This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,<br />when it might take a long time to load data or warm a cache, than during steady-state operation.<br />This cannot be updated.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |  |  |
+| `lifecycle` _[Lifecycle](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#lifecycle-v1-core)_ | Actions that the management system should take in response to container lifecycle events.<br />Cannot be updated. |  |  |
+| `terminationMessagePath` _string_ | Optional: Path at which the file to which the container's termination message<br />will be written is mounted into the container's filesystem.<br />Message written is intended to be brief final status, such as an assertion failure message.<br />Will be truncated by the node if greater than 4096 bytes. The total message length across<br />all containers will be limited to 12kb.<br />Defaults to /dev/termination-log.<br />Cannot be updated. |  |  |
+| `terminationMessagePolicy` _[TerminationMessagePolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#terminationmessagepolicy-v1-core)_ | Indicate how the termination message should be populated. File will use the contents of<br />terminationMessagePath to populate the container status message on both success and failure.<br />FallbackToLogsOnError will use the last chunk of container log output if the termination<br />message file is empty and the container exited with an error.<br />The log output is limited to 2048 bytes or 80 lines, whichever is smaller.<br />Defaults to File.<br />Cannot be updated. |  |  |
+| `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#securitycontext-v1-core)_ | SecurityContext defines the security options the container should be run with.<br />If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ | \{ runAsGroup:1000 runAsNonRoot:true runAsUser:1000 \} |  |
+| `stdin` _boolean_ | Whether this container should allocate a buffer for stdin in the container runtime. If this<br />is not set, reads from stdin in the container will always result in EOF.<br />Default is false. |  |  |
+| `stdinOnce` _boolean_ | Whether the container runtime should close the stdin channel after it has been opened by<br />a single attach. When stdin is true the stdin stream will remain open across multiple attach<br />sessions. If stdinOnce is set to true, stdin is opened on container start, is empty until the<br />first client attaches to stdin, and then remains open and accepts data until the client disconnects,<br />at which time stdin is closed and remains closed until the container is restarted. If this<br />flag is false, a container processes that reads from stdin will never receive an EOF.<br />Default is false |  |  |
+| `tty` _boolean_ | Whether this container should allocate a TTY for itself, also requires 'stdin' to be true.<br />Default is false. |  |  |
+| `emqxConfig` _object (keys:string, values:string)_ |  |  |  |
+| `emqxACL` _string array_ |  |  |  |
+| `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | EMQX bootstrap user<br />Cannot be updated. |  |  |
 
 
 #### EmqxEnterprise
@@ -196,13 +214,15 @@ EmqxEnterprise is the Schema for the emqxenterprises API
 
 
 
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
-| `kind` _string_ | `EmqxEnterprise`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[EmqxEnterpriseSpec](#emqxenterprisespec)_ |  |
-| `status` _[EmqxEnterpriseStatus](#emqxenterprisestatus)_ |  |
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4` | | |
+| `kind` _string_ | `EmqxEnterprise` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[EmqxEnterpriseSpec](#emqxenterprisespec)_ |  |  |  |
+| `status` _[EmqxEnterpriseStatus](#emqxenterprisestatus)_ |  |  |  |
 
 
 #### EmqxEnterpriseSpec
@@ -211,18 +231,20 @@ EmqxEnterprise is the Schema for the emqxenterprises API
 
 EmqxEnterpriseSpec defines the desired state of EmqxEnterprise
 
+
+
 _Appears in:_
 - [EmqxEnterprise](#emqxenterprise)
 
-| Field | Description |
-| --- | --- |
-| `replicas` _integer_ |  |
-| `clusterDomain` _string_ |  |
-| `license` _[EmqxLicense](#emqxlicense)_ |  |
-| `persistent` _[PersistentVolumeClaimTemplate](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimtemplate-v1-core)_ | Persistent describes the common attributes of storage devices |
-| `blueGreenUpdate` _[EmqxBlueGreenUpdate](#emqxbluegreenupdate)_ |  |
-| `template` _[EmqxTemplate](#emqxtemplate)_ |  |
-| `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ | ServiceTemplate defines a logical set of ports and a policy by which to access them |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ |  | 3 |  |
+| `clusterDomain` _string_ |  | cluster.local |  |
+| `license` _[EmqxLicense](#emqxlicense)_ |  |  |  |
+| `persistent` _[PersistentVolumeClaimTemplate](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#persistentvolumeclaimtemplate-v1-core)_ | Persistent describes the common attributes of storage devices |  |  |
+| `blueGreenUpdate` _[EmqxBlueGreenUpdate](#emqxbluegreenupdate)_ |  |  |  |
+| `template` _[EmqxTemplate](#emqxtemplate)_ |  |  |  |
+| `serviceTemplate` _[ServiceTemplate](#servicetemplate)_ | ServiceTemplate defines a logical set of ports and a policy by which to access them |  |  |
 
 
 #### EmqxEnterpriseStatus
@@ -231,17 +253,19 @@ _Appears in:_
 
 EmqxEnterpriseStatus defines the observed state of EmqxEnterprise
 
+
+
 _Appears in:_
 - [EmqxEnterprise](#emqxenterprise)
 
-| Field | Description |
-| --- | --- |
-| `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX current state. |
-| `emqxNodes` _[EmqxNode](#emqxnode) array_ | Nodes of the EMQX cluster |
-| `replicas` _integer_ | replicas is the number of Pods created by the EMQX Custom Resource controller. |
-| `readyReplicas` _integer_ | readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready. |
-| `currentStatefulSetVersion` _string_ |  |
-| `blueGreenUpdateStatus` _[EmqxBlueGreenUpdateStatus](#emqxbluegreenupdatestatus)_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](#condition) array_ | Represents the latest available observations of a EMQX current state. |  |  |
+| `emqxNodes` _[EmqxNode](#emqxnode) array_ | Nodes of the EMQX cluster |  |  |
+| `replicas` _integer_ | replicas is the number of Pods created by the EMQX Custom Resource controller. |  |  |
+| `readyReplicas` _integer_ | readyReplicas is the number of pods created for this EMQX Custom Resource with a EMQX Ready. |  |  |
+| `currentStatefulSetVersion` _string_ |  |  |  |
+| `blueGreenUpdateStatus` _[EmqxBlueGreenUpdateStatus](#emqxbluegreenupdatestatus)_ |  |  |  |
 
 
 #### EmqxEvacuationStats
@@ -250,15 +274,17 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxEvacuationStatus](#emqxevacuationstatus)
 
-| Field | Description |
-| --- | --- |
-| `initial_sessions` _integer_ |  |
-| `initial_connected` _integer_ |  |
-| `current_sessions` _integer_ |  |
-| `current_connected` _integer_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `initial_sessions` _integer_ |  |  |  |
+| `initial_connected` _integer_ |  |  |  |
+| `current_sessions` _integer_ |  |  |  |
+| `current_connected` _integer_ |  |  |  |
 
 
 #### EmqxEvacuationStatus
@@ -267,19 +293,21 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxBlueGreenUpdateStatus](#emqxbluegreenupdatestatus)
 
-| Field | Description |
-| --- | --- |
-| `node` _string_ |  |
-| `stats` _[EmqxEvacuationStats](#emqxevacuationstats)_ |  |
-| `state` _string_ |  |
-| `session_recipients` _string array_ |  |
-| `session_goal` _integer_ |  |
-| `session_eviction_rate` _integer_ |  |
-| `connection_goal` _integer_ |  |
-| `connection_eviction_rate` _integer_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `node` _string_ |  |  |  |
+| `stats` _[EmqxEvacuationStats](#emqxevacuationstats)_ |  |  |  |
+| `state` _string_ |  |  |  |
+| `session_recipients` _string array_ |  |  |  |
+| `session_goal` _integer_ |  |  |  |
+| `session_eviction_rate` _integer_ |  |  |  |
+| `connection_goal` _integer_ |  |  |  |
+| `connection_eviction_rate` _integer_ |  |  |  |
 
 
 #### EmqxImage
@@ -288,17 +316,19 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxContainer](#emqxcontainer)
 
-| Field | Description |
-| --- | --- |
-| `registry` _string_ | Container image registry |
-| `repository` _string_ | Container image repository Defaults to "emqx/emqx" if kind is EmqxBroker, or "emqx/emqx-ee" if kind is EmqxEnterprise |
-| `version` _string_ | Container image tag version, must semver format or "latest" |
-| `prefix` _string_ | Container image tag prefix, like "v" |
-| `suffix` _string_ | Container image tag suffix, like "-alpine" |
-| `pullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Container image pull policy. One of Always, Never, IfNotPresent. Defaults to IfNotPresent. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `registry` _string_ | Container image registry |  |  |
+| `repository` _string_ | Container image repository<br />Defaults to "emqx/emqx" if kind is EmqxBroker, or "emqx/emqx-ee" if kind is EmqxEnterprise |  |  |
+| `version` _string_ | Container image tag version, must semver format or "latest" |  | Required: {} <br /> |
+| `prefix` _string_ | Container image tag prefix, like "v" |  |  |
+| `suffix` _string_ | Container image tag suffix, like "-alpine" |  |  |
+| `pullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#pullpolicy-v1-core)_ | Container image pull policy.<br />One of Always, Never, IfNotPresent.<br />Defaults to IfNotPresent.<br />Cannot be updated.<br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images | IfNotPresent | Enum: [Always Never IfNotPresent] <br /> |
 
 
 #### EmqxLicense
@@ -307,17 +337,21 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxEnterpriseSpec](#emqxenterprisespec)
 
-| Field | Description |
-| --- | --- |
-| `data` _integer array_ | Data contains the secret data. Each key must consist of alphanumeric characters, '-', '_' or '.'. The serialized form of the secret data is a base64 encoded string, representing the arbitrary (possibly non-string) data value here. Described in https://tools.ietf.org/html/rfc4648#section-4 |
-| `stringData` _string_ | StringData allows specifying non-binary secret data in string form. It is provided as a write-only input field for convenience. All keys and values are merged into the data field on write, overwriting any existing values. |
-| `secretName` _string_ | SecretName is the name of the secret in the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `data` _integer array_ | Data contains the secret data. Each key must consist of alphanumeric<br />characters, '-', '_' or '.'. The serialized form of the secret data is a<br />base64 encoded string, representing the arbitrary (possibly non-string)<br />data value here. Described in https://tools.ietf.org/html/rfc4648#section-4 |  |  |
+| `stringData` _string_ | StringData allows specifying non-binary secret data in string form.<br />It is provided as a write-only input field for convenience.<br />All keys and values are merged into the data field on write, overwriting any existing values. |  |  |
+| `secretName` _string_ | SecretName is the name of the secret in the pod's namespace to use.<br />More info: https://kubernetes.io/docs/concepts/storage/volumes#secret |  |  |
 
 
 #### EmqxNode
+
+
 
 
 
@@ -327,13 +361,13 @@ _Appears in:_
 - [EmqxBrokerStatus](#emqxbrokerstatus)
 - [EmqxEnterpriseStatus](#emqxenterprisestatus)
 
-| Field | Description |
-| --- | --- |
-| `node` _string_ | EMQX node name |
-| `node_status` _string_ | EMQX node status |
-| `otp_release` _string_ | Erlang/OTP version used by EMQX |
-| `version` _string_ | EMQX version |
-| `connections` _integer_ | MQTT connection count |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `node` _string_ | EMQX node name |  |  |
+| `node_status` _string_ | EMQX node status |  |  |
+| `otp_release` _string_ | Erlang/OTP version used by EMQX |  |  |
+| `version` _string_ | EMQX version |  |  |
+| `connections` _integer_ | MQTT connection count |  |  |
 
 
 #### EmqxPlugin
@@ -344,12 +378,14 @@ EmqxPlugin is the Schema for the emqxplugins API
 
 
 
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
-| `kind` _string_ | `EmqxPlugin`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[EmqxPluginSpec](#emqxpluginspec)_ |  |
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4` | | |
+| `kind` _string_ | `EmqxPlugin` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[EmqxPluginSpec](#emqxpluginspec)_ |  |  |  |
 
 
 #### EmqxPluginSpec
@@ -358,14 +394,16 @@ EmqxPlugin is the Schema for the emqxplugins API
 
 EmqxPluginSpec defines the desired state of EmqxPlugin
 
+
+
 _Appears in:_
 - [EmqxPlugin](#emqxplugin)
 
-| Field | Description |
-| --- | --- |
-| `pluginName` _string_ | More info: https://www.emqx.io/docs/en/v4.4/advanced/plugins.html#list-of-plugins |
-| `selector` _object (keys:string, values:string)_ | Selector matches the labels of the EMQX |
-| `config` _object (keys:string, values:string)_ | Config defines the configurations of the EMQX plugins |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `pluginName` _string_ | More info: https://www.emqx.io/docs/en/v4.4/advanced/plugins.html#list-of-plugins |  | Required: {} <br /> |
+| `selector` _object (keys:string, values:string)_ | Selector matches the labels of the EMQX |  | Required: {} <br /> |
+| `config` _object (keys:string, values:string)_ | Config defines the configurations of the EMQX plugins |  |  |
 
 
 
@@ -378,14 +416,16 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxBrokerSpec](#emqxbrokerspec)
 - [EmqxEnterpriseSpec](#emqxenterprisespec)
 
-| Field | Description |
-| --- | --- |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[EmqxTemplateSpec](#emqxtemplatespec)_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[EmqxTemplateSpec](#emqxtemplatespec)_ |  |  |  |
 
 
 #### EmqxTemplateSpec
@@ -394,24 +434,26 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxTemplate](#emqxtemplate)
 
-| Field | Description |
-| --- | --- |
-| `serviceAccountName` _string_ | Service Account Name This associates the ReplicaSet or StatefulSet with the specified Service Account for authentication purposes. More info: https://kubernetes.io/docs/concepts/security/service-accounts |
-| `reloaderImage` _string_ |  |
-| `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ |  |
-| `emqxContainer` _[EmqxContainer](#emqxcontainer)_ |  |
-| `extraContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ |  |
-| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ |  |
-| `ephemeralContainers` _[EphemeralContainer](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#ephemeralcontainer-v1-core) array_ |  |
-| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ |  |
-| `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podsecuritycontext-v1-core)_ |  |
-| `nodeSelector` _object (keys:string, values:string)_ |  |
-| `nodeName` _string_ |  |
-| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#affinity-v1-core)_ |  |
-| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#toleration-v1-core) array_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `serviceAccountName` _string_ | Service Account Name<br />This associates the ReplicaSet or StatefulSet with the specified Service Account for authentication purposes.<br />More info: https://kubernetes.io/docs/concepts/security/service-accounts |  |  |
+| `reloaderImage` _string_ |  | emqx/emqx-operator-reloader:0.0.2 |  |
+| `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#localobjectreference-v1-core) array_ |  |  |  |
+| `emqxContainer` _[EmqxContainer](#emqxcontainer)_ |  |  |  |
+| `extraContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ |  |  |  |
+| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#container-v1-core) array_ |  |  |  |
+| `ephemeralContainers` _[EphemeralContainer](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#ephemeralcontainer-v1-core) array_ |  |  |  |
+| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#volume-v1-core) array_ |  |  |  |
+| `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#podsecuritycontext-v1-core)_ |  | \{ fsGroup:1000 fsGroupChangePolicy:Always runAsGroup:1000 runAsUser:1000 supplementalGroups:[1000] \} |  |
+| `nodeSelector` _object (keys:string, values:string)_ |  |  |  |
+| `nodeName` _string_ |  |  |  |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#affinity-v1-core)_ |  |  |  |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#toleration-v1-core) array_ |  |  |  |
 
 
 #### EvacuationStrategy
@@ -420,14 +462,16 @@ _Appears in:_
 
 
 
+
+
 _Appears in:_
 - [EmqxBlueGreenUpdate](#emqxbluegreenupdate)
 
-| Field | Description |
-| --- | --- |
-| `waitTakeover` _integer_ |  |
-| `connEvictRate` _integer_ |  |
-| `sessEvictRate` _integer_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `waitTakeover` _integer_ |  |  | Minimum: 0 <br /> |
+| `connEvictRate` _integer_ |  |  | Minimum: 1 <br /> |
+| `sessEvictRate` _integer_ |  |  | Minimum: 1 <br /> |
 
 
 
@@ -440,16 +484,18 @@ _Appears in:_
 
 Rebalance is the Schema for the rebalances API
 
+
+
 _Appears in:_
 - [RebalanceList](#rebalancelist)
 
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
-| `kind` _string_ | `Rebalance`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[RebalanceSpec](#rebalancespec)_ |  |
-| `status` _[RebalanceStatus](#rebalancestatus)_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4` | | |
+| `kind` _string_ | `Rebalance` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[RebalanceSpec](#rebalancespec)_ |  |  |  |
+| `status` _[RebalanceStatus](#rebalancestatus)_ |  |  |  |
 
 
 #### RebalanceCondition
@@ -458,22 +504,26 @@ _Appears in:_
 
 RebalanceCondition describes current state of a EMQX rebalancing job.
 
+
+
 _Appears in:_
 - [RebalanceStatus](#rebalancestatus)
 
-| Field | Description |
-| --- | --- |
-| `type` _[RebalanceConditionType](#rebalanceconditiontype)_ | Status of rebalance condition type. one of Processing, Complete, Failed. |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |
-| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | The last time this condition was updated. |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |
-| `reason` _string_ | The reason for the condition's last transition. |
-| `message` _string_ | A human readable message indicating details about the transition. |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[RebalanceConditionType](#rebalanceconditiontype)_ | Status of rebalance condition type. one of Processing, Complete, Failed. |  |  |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#conditionstatus-v1-core)_ | Status of the condition, one of True, False, Unknown. |  |  |
+| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | The last time this condition was updated. |  |  |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
+| `reason` _string_ | The reason for the condition's last transition. |  |  |
+| `message` _string_ | A human readable message indicating details about the transition. |  |  |
 
 
 #### RebalanceConditionType
 
 _Underlying type:_ _string_
+
+
 
 
 
@@ -490,17 +540,21 @@ RebalanceList contains a list of Rebalance
 
 
 
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `apps.emqx.io/v1beta4`
-| `kind` _string_ | `RebalanceList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `items` _[Rebalance](#rebalance) array_ |  |
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `apps.emqx.io/v1beta4` | | |
+| `kind` _string_ | `RebalanceList` | | |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[Rebalance](#rebalance) array_ |  |  |  |
 
 
 #### RebalancePhase
 
 _Underlying type:_ _string_
+
+
 
 
 
@@ -515,13 +569,15 @@ _Appears in:_
 
 RebalanceSpec represents the desired spec of Rebalance
 
+
+
 _Appears in:_
 - [Rebalance](#rebalance)
 
-| Field | Description |
-| --- | --- |
-| `instanceName` _string_ | InstanceName represents the name of EmqxEnterprise CR |
-| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `instanceName` _string_ | InstanceName represents the name of EmqxEnterprise CR |  | Required: {} <br /> |
+| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing<br />More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |  | Required: {} <br /> |
 
 
 #### RebalanceState
@@ -530,18 +586,20 @@ _Appears in:_
 
 Rebalance defines the observed Rebalancing state of EMQX
 
+
+
 _Appears in:_
 - [RebalanceStatus](#rebalancestatus)
 
-| Field | Description |
-| --- | --- |
-| `state` _string_ | State represents the state of emqx cluster rebalancing. |
-| `session_eviction_rate` _integer_ | SessionEvictionRate represents the node session evacuation rate per second. |
-| `recipients` _string array_ | Recipients represent the target node for rebalancing. |
-| `node` _string_ | Node represents the rebalancing scheduling node. |
-| `donors` _string array_ | Donors represent the source nodes for rebalancing. |
-| `coordinator_node` _string_ | CoordinatorNode represents the node currently undergoing rebalancing. |
-| `connection_eviction_rate` _integer_ | ConnectionEvictionRate represents the node session evacuation rate per second. |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `state` _string_ | State represents the state of emqx cluster rebalancing. |  |  |
+| `session_eviction_rate` _integer_ | SessionEvictionRate represents the node session evacuation rate per second. |  |  |
+| `recipients` _string array_ | Recipients represent the target node for rebalancing. |  |  |
+| `node` _string_ | Node represents the rebalancing scheduling node. |  |  |
+| `donors` _string array_ | Donors represent the source nodes for rebalancing. |  |  |
+| `coordinator_node` _string_ | CoordinatorNode represents the node currently undergoing rebalancing. |  |  |
+| `connection_eviction_rate` _integer_ | ConnectionEvictionRate represents the node session evacuation rate per second. |  |  |
 
 
 #### RebalanceStatus
@@ -550,16 +608,18 @@ _Appears in:_
 
 RebalanceStatus represents the current state of Rebalance
 
+
+
 _Appears in:_
 - [Rebalance](#rebalance)
 
-| Field | Description |
-| --- | --- |
-| `conditions` _[RebalanceCondition](#rebalancecondition) array_ | The latest available observations of an object's current state. When Rebalance fails, the condition will have type "Failed" and status false. When Rebalance is in processing, the condition will have a type "Processing" and status true. When Rebalance is completed, the condition will have a type "Complete" and status true. |
-| `phase` _[RebalancePhase](#rebalancephase)_ | Phase represents the phase of Rebalance. |
-| `rebalanceStates` _[RebalanceState](#rebalancestate) array_ |  |
-| `startedTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | StartedTime Represents the time when rebalance job start. |
-| `completedTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | CompletedTime Represents the time when the rebalance job was completed. |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[RebalanceCondition](#rebalancecondition) array_ | The latest available observations of an object's current state.<br />When Rebalance fails, the condition will have type "Failed" and status false.<br />When Rebalance is in processing, the condition will have a type "Processing" and status true.<br />When Rebalance is completed, the condition will have a type "Complete" and status true. |  |  |
+| `phase` _[RebalancePhase](#rebalancephase)_ | Phase represents the phase of Rebalance. |  |  |
+| `rebalanceStates` _[RebalanceState](#rebalancestate) array_ |  |  |  |
+| `startedTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | StartedTime Represents the time when rebalance job start. |  |  |
+| `completedTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#time-v1-meta)_ | CompletedTime Represents the time when the rebalance job was completed. |  |  |
 
 
 #### RebalanceStrategy
@@ -568,22 +628,26 @@ _Appears in:_
 
 RebalanceStrategy represents the strategy of EMQX rebalancing
 
+
+
 _Appears in:_
 - [RebalanceSpec](#rebalancespec)
 
-| Field | Description |
-| --- | --- |
-| `connEvictRate` _integer_ | ConnEvictRate represents the source node client disconnect rate per second. same to conn-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 |
-| `sessEvictRate` _integer_ | SessEvictRate represents the source node session evacuation rate per second. same to sess-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Defaults to 500. |
-| `waitTakeover` _integer_ | WaitTakeover represents the time in seconds to wait for a client to reconnect to take over the session after all connections are disconnected. same to wait-takeover in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Defaults to 60 seconds. |
-| `waitHealthCheck` _integer_ | WaitHealthCheck represents the time (in seconds) to wait for the LB to remove the source node from the list of active backend nodes. After the specified waiting time is exceeded,the rebalancing task will start. same to wait-health-check in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Defaults to 60 seconds. |
-| `absConnThreshold` _integer_ | AbsConnThreshold represents the absolute threshold for checking connection balance. same to abs-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Defaults to 1000. |
-| `relConnThreshold` _string_ | RelConnThreshold represents the relative threshold for checkin connection balance. same to rel-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelConnThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
-| `absSessThreshold` _integer_ | AbsSessThreshold represents the absolute threshold for checking session connection balance. same to abs-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) The value must be greater than 0 Default to 1000. |
-| `relSessThreshold` _string_ | RelSessThreshold represents the relative threshold for checking session connection balance. same to rel-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing) the usage of float highly discouraged, as support for them varies across languages. So we define the RelSessThreshold field as string type and you not float type The value must be greater than "1.0" Defaults to "1.1". |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `connEvictRate` _integer_ | ConnEvictRate represents the source node client disconnect rate per second.<br />same to conn-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0 |  | Minimum: 1 <br />Required: {} <br /> |
+| `sessEvictRate` _integer_ | SessEvictRate represents the source node session evacuation rate per second.<br />same to sess-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0<br />Defaults to 500. | 500 |  |
+| `waitTakeover` _integer_ | WaitTakeover represents the time in seconds to wait for a client to<br />reconnect to take over the session after all connections are disconnected.<br />same to wait-takeover in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0<br />Defaults to 60 seconds. | 60 |  |
+| `waitHealthCheck` _integer_ | WaitHealthCheck represents the time (in seconds) to wait for the LB to<br />remove the source node from the list of active backend nodes. After the<br />specified waiting time is exceeded,the rebalancing task will start.<br />same to wait-health-check in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0<br />Defaults to 60 seconds. | 60 |  |
+| `absConnThreshold` _integer_ | AbsConnThreshold represents the absolute threshold for checking connection balance.<br />same to abs-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0<br />Defaults to 1000. | 1000 |  |
+| `relConnThreshold` _string_ | RelConnThreshold represents the relative threshold for checkin connection balance.<br />same to rel-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />the usage of float highly discouraged, as support for them varies across languages.<br />So we define the RelConnThreshold field as string type and you not float type<br />The value must be greater than "1.0"<br />Defaults to "1.1". | 1.1 |  |
+| `absSessThreshold` _integer_ | AbsSessThreshold represents the absolute threshold for checking session connection balance.<br />same to abs-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0<br />Default to 1000. | 1000 |  |
+| `relSessThreshold` _string_ | RelSessThreshold represents the relative threshold for checking session connection balance.<br />same to rel-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />the usage of float highly discouraged, as support for them varies across languages.<br />So we define the RelSessThreshold field as string type and you not float type<br />The value must be greater than "1.0"<br />Defaults to "1.1". | 1.1 |  |
 
 
 #### ServiceTemplate
+
+
 
 
 
@@ -593,9 +657,9 @@ _Appears in:_
 - [EmqxBrokerSpec](#emqxbrokerspec)
 - [EmqxEnterpriseSpec](#emqxenterprisespec)
 
-| Field | Description |
-| --- | --- |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[ServiceSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicespec-v1-core)_ |  |
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[ServiceSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#servicespec-v1-core)_ |  |  |  |
 
 
