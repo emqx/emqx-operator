@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.17 has been released.
+EMQX Operator 2.2.18 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -13,11 +13,11 @@ EMQX Operator 2.2.17 has been released.
   + EMQX at 4.4.14 and later
   + EMQX Enterprise at 4.4.14 and later
 
-## Fixes 🛠
+## Enhancements ✨
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Fixed sometimes EMQX operator controller can not request EMQX API, because it cannot find the correct EMQX pod.
+  + Add podDisruptionBudget for EMQX customer resource.
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -29,7 +29,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.17
+  --version 2.2.18
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
