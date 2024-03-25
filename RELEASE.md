@@ -10,4 +10,4 @@ EMQX Operator 1.2.7-ecp.8 is released.
 
 ### Fixes 🛠
 
-- Fixed the imagePullSecrets not work in Helm chart
+- Fixed error of service selector in Helm chart.
