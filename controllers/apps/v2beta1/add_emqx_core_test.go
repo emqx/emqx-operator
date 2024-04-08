@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestGetNewStatefulSet(t *testing.T) {
@@ -36,9 +36,9 @@ func TestGetNewStatefulSet(t *testing.T) {
 			"core-annotation-key": "core-annotation-value",
 		},
 	}
-	instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(3)
+	instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(3))
 	instance.Status.CoreNodesStatus = appsv2beta1.EMQXNodesStatus{
-		CollisionCount: pointer.Int32(0),
+		CollisionCount: ptr.To(int32(0)),
 	}
 
 	t.Run("check metadata", func(t *testing.T) {
@@ -159,7 +159,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				corev1.ReadWriteOnce,
 			},
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceStorage: resource.MustParse("20Mi"),
 				},
@@ -184,7 +184,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 					AccessModes: []corev1.PersistentVolumeAccessMode{
 						corev1.ReadWriteOnce,
 					},
-					Resources: corev1.ResourceRequirements{
+					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceStorage: resource.MustParse("20Mi"),
 						},

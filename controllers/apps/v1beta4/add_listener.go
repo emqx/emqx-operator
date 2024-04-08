@@ -17,7 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -106,7 +106,7 @@ func generateEndpoints(svc *corev1.Service, pods []*corev1.Pod) *corev1.Endpoint
 		pod := p.DeepCopy()
 		subSet.Addresses = append(subSet.Addresses, corev1.EndpointAddress{
 			IP:       pod.Status.PodIP,
-			NodeName: pointer.String(pod.Spec.NodeName),
+			NodeName: ptr.To(pod.Spec.NodeName),
 			TargetRef: &corev1.ObjectReference{
 				Kind:      "Pod",
 				Namespace: pod.Namespace,

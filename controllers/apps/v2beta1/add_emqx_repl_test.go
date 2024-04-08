@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestGetNewReplicaSet(t *testing.T) {
@@ -37,11 +37,11 @@ func TestGetNewReplicaSet(t *testing.T) {
 			},
 		},
 		Spec: appsv2beta1.EMQXReplicantTemplateSpec{
-			Replicas: pointer.Int32(3),
+			Replicas: ptr.To(int32(3)),
 		},
 	}
 	instance.Status.ReplicantNodesStatus = appsv2beta1.EMQXNodesStatus{
-		CollisionCount: pointer.Int32(0),
+		CollisionCount: ptr.To(int32(0)),
 	}
 
 	t.Run("check metadata", func(t *testing.T) {

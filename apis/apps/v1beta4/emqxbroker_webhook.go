@@ -31,6 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -64,19 +65,19 @@ func (r *EmqxBroker) Default() {
 var _ webhook.Validator = &EmqxBroker{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxBroker) ValidateCreate() error {
+func (r *EmqxBroker) ValidateCreate() (admission.Warnings, error) {
 	emqxbrokerlog.Info("validate create", "name", r.Name)
 
 	if err := validateImageVersion(r, nil); err != nil {
 		emqxbrokerlog.Error(err, "validate create failed")
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
+func (r *EmqxBroker) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	emqxbrokerlog.Info("validate update", "name", r.Name)
 
 	callbacks := []func(new, old Emqx) error{
@@ -88,17 +89,17 @@ func (r *EmqxBroker) ValidateUpdate(old runtime.Object) error {
 	for _, cb := range callbacks {
 		if err := cb(r, old.(*EmqxBroker)); err != nil {
 			emqxbrokerlog.Error(err, "validate create failed")
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxBroker) ValidateDelete() error {
+func (r *EmqxBroker) ValidateDelete() (admission.Warnings, error) {
 	emqxbrokerlog.Info("validate delete", "name", r.Name)
 
-	return nil
+	return nil, nil
 }
 
 func defaultLabelsAndAnnotations(r Emqx) {

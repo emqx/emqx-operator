@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestGenerateHeadlessSVC(t *testing.T) {
@@ -77,7 +77,7 @@ func TestGenerateDashboardService(t *testing.T) {
 			},
 			Spec: appsv2beta1.EMQXSpec{
 				DashboardServiceTemplate: &appsv2beta1.ServiceTemplate{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							"dashboard-label-key": "dashboard",
@@ -109,7 +109,7 @@ func TestGenerateDashboardService(t *testing.T) {
 	t.Run("check disabled", func(t *testing.T) {
 		emqx := &appsv2beta1.EMQX{}
 		emqx.Spec.DashboardServiceTemplate = &appsv2beta1.ServiceTemplate{
-			Enabled: pointer.Bool(false),
+			Enabled: ptr.To(false),
 		}
 		got := generateDashboardService(emqx, "")
 		assert.Nil(t, got)

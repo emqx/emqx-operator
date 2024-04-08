@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -40,7 +40,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 	Context("replicant template is nil", func() {
 		JustBeforeEach(func() {
 			instance.Spec.ReplicantTemplate = nil
-			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
+			instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
 		})
 
 		It("should create namespace and EMQX CR", func() {
@@ -110,7 +110,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(3)
+				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(3))
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
 
@@ -168,7 +168,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(1)
+				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
 
@@ -341,7 +341,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				instance.Spec = *emqx.Spec.DeepCopy()
 				instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
 					Spec: appsv2beta1.EMQXReplicantTemplateSpec{
-						Replicas: pointer.Int32Ptr(2),
+						Replicas: ptr.To(int32(2)),
 					},
 				}
 				return k8sClient.Update(ctx, instance)
@@ -397,7 +397,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(3)
+				instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
 
@@ -455,7 +455,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(0)
+				instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
 
@@ -566,7 +566,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					return err
 				}
 				instance.Spec.Image = "emqx:5"
-				instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32Ptr(0)
+				instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
 

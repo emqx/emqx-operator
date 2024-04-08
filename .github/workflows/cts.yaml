@@ -34,10 +34,10 @@ jobs:
           echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
       - if: matrix.kubernetes-env == 'minikube'
         run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
+          go-version: '1.21'
       - name: install kubebuilder
         run: |
           OS=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -58,7 +58,7 @@ jobs:
   build-image:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: docker/setup-buildx-action@v2
     - uses: docker/setup-qemu-action@v2
       with:
@@ -124,10 +124,10 @@ jobs:
           echo "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> $GITHUB_ENV
       - if: matrix.kubernetes-env == 'minikube'
         run: minikube start --kubernetes-version="${{ matrix.kubernetes-version }}"
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
+          go-version: '1.21'
       - name: Deploy operator
         timeout-minutes: 5
         uses: ./.github/actions/deploy-operator

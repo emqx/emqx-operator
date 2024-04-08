@@ -23,6 +23,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -53,29 +54,29 @@ func (r *EmqxPlugin) Default() {
 var _ webhook.Validator = &EmqxPlugin{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxPlugin) ValidateCreate() error {
+func (r *EmqxPlugin) ValidateCreate() (admission.Warnings, error) {
 	emqxpluginlog.Info("validate create", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object creation.
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxPlugin) ValidateUpdate(old runtime.Object) error {
+func (r *EmqxPlugin) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	emqxpluginlog.Info("validate update", "name", r.Name)
 
 	oldEmqxPlugin := old.(*EmqxPlugin)
 	if oldEmqxPlugin.Spec.PluginName != r.Spec.PluginName {
-		return errors.New("refuse to update pluginName")
+		return nil, errors.New("refuse to update pluginName")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *EmqxPlugin) ValidateDelete() error {
+func (r *EmqxPlugin) ValidateDelete() (admission.Warnings, error) {
 	emqxpluginlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }

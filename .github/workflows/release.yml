@@ -13,7 +13,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Check helm
       run: |
         version=$(grep -E "^version" deploy/charts/emqx-operator/Chart.yaml | grep -oE "[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9])?")
