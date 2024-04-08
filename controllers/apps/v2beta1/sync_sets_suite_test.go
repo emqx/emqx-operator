@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,7 +34,7 @@ var _ = Describe("Check sync sts and pvc", func() {
 		}
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-		instance.Spec.RevisionHistoryLimit = pointer.Int32(3)
+		instance.Spec.RevisionHistoryLimit = ptr.To(int32(3))
 		instance.Status = appsv2beta1.EMQXStatus{
 			Conditions: []metav1.Condition{
 				{
@@ -60,7 +60,7 @@ var _ = Describe("Check sync sts and pvc", func() {
 					),
 				},
 				Spec: appsv1.ReplicaSetSpec{
-					Replicas: pointer.Int32Ptr(0),
+					Replicas: ptr.To(int32(0)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: appsv2beta1.CloneAndAddLabel(
 							appsv2beta1.DefaultReplicantLabels(instance),
@@ -100,7 +100,7 @@ var _ = Describe("Check sync sts and pvc", func() {
 					),
 				},
 				Spec: appsv1.StatefulSetSpec{
-					Replicas: pointer.Int32Ptr(0),
+					Replicas: ptr.To(int32(0)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: appsv2beta1.CloneAndAddLabel(
 							appsv2beta1.DefaultCoreLabels(instance),
@@ -137,7 +137,7 @@ var _ = Describe("Check sync sts and pvc", func() {
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-					Resources: corev1.ResourceRequirements{
+					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceStorage: resource.MustParse("1Gi"),
 						},

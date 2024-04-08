@@ -30,41 +30,52 @@ func TestRebalanceValidateCreate(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, rebalance.ValidateCreate())
+	_, err := rebalance.ValidateCreate()
+	assert.NoError(t, err)
 
 	t.Run("valid RelConnThreshold must be float", func(t *testing.T) {
+		var err error
 		r := rebalance.DeepCopy()
 		r.Spec.RebalanceStrategy.RelConnThreshold = "test"
-		assert.ErrorContains(t, r.ValidateCreate(), "must be float64")
+		_, err = r.ValidateCreate()
+		assert.ErrorContains(t, err, "must be float64")
 
 		r = rebalance.DeepCopy()
 		r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
-		assert.NoError(t, r.ValidateCreate())
+		_, err = r.ValidateCreate()
+		assert.NoError(t, err)
 	})
 
 	t.Run("valid RelSessThreshold must be float", func(t *testing.T) {
+		var err error
 		r := rebalance.DeepCopy()
 		r.Spec.RebalanceStrategy.RelSessThreshold = "test-0"
-		assert.ErrorContains(t, r.ValidateCreate(), "must be float64")
+		_, err = r.ValidateCreate()
+		assert.ErrorContains(t, err, "must be float64")
 
 		r = rebalance.DeepCopy()
 		r.Spec.RebalanceStrategy.RelSessThreshold = "1.2"
-		assert.NoError(t, r.ValidateCreate())
+		_, err = r.ValidateCreate()
+		assert.NoError(t, err)
 	})
 
 	t.Run("valid RelSessThreshold and RelConnThreshold must be float64", func(t *testing.T) {
+		var err error
 		r := rebalance.DeepCopy()
 		r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
 		r.Spec.RebalanceStrategy.RelSessThreshold = "test"
-		assert.ErrorContains(t, r.ValidateCreate(), "must be float64")
+		_, err = r.ValidateCreate()
+		assert.ErrorContains(t, err, "must be float64")
 
 		r.Spec.RebalanceStrategy.RelConnThreshold = "test"
 		r.Spec.RebalanceStrategy.RelSessThreshold = "1.2"
-		assert.ErrorContains(t, r.ValidateCreate(), "must be float64")
+		_, err = r.ValidateCreate()
+		assert.ErrorContains(t, err, "must be float64")
 
 		r.Spec.RebalanceStrategy.RelConnThreshold = "1.2"
 		r.Spec.RebalanceStrategy.RelSessThreshold = "1.2"
-		assert.NoError(t, r.ValidateCreate())
+		_, err = r.ValidateCreate()
+		assert.NoError(t, err)
 	})
 }
 
@@ -79,21 +90,27 @@ func TestRebalanceValidateUpdate(t *testing.T) {
 	}
 
 	t.Run("valid update instanceName ", func(t *testing.T) {
+		var err error
 		old := rebalance.DeepCopy()
-		assert.NoError(t, rebalance.ValidateUpdate(old))
+		_, err = rebalance.ValidateUpdate(old)
+		assert.NoError(t, err)
 
 		old = rebalance.DeepCopy()
 		old.SetGeneration(1)
-		assert.ErrorContains(t, rebalance.ValidateUpdate(old), "the Rebalance spec don't allow update")
+		_, err = rebalance.ValidateUpdate(old)
+		assert.ErrorContains(t, err, "the Rebalance spec don't allow update")
 	})
 
 	t.Run("valid other field instead of spec ", func(t *testing.T) {
+		var err error
 		old := rebalance.DeepCopy()
 		old.Finalizers = []string{"test", "test-0"}
-		assert.NoError(t, rebalance.ValidateUpdate(old))
+		_, err = rebalance.ValidateUpdate(old)
+		assert.NoError(t, err)
 
 		old = rebalance.DeepCopy()
 		old.DeletionTimestamp = &v1.Time{Time: time.Now()}
-		assert.NoError(t, rebalance.ValidateUpdate(old))
+		_, err = rebalance.ValidateUpdate(old)
+		assert.NoError(t, err)
 	})
 }

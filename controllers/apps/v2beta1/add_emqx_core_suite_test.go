@@ -7,7 +7,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -87,7 +87,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			)
 
 			instance.Status.CoreNodesStatus.UpdateRevision = sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-			instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32(4)
+			instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(4))
 		})
 
 		It("should update statefulSet", func() {

@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -76,7 +76,7 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 				}
 			}
 			if _, ok := pod.Annotations["controller.kubernetes.io/pod-deletion-cost"]; ok {
-				currentRs.Spec.Replicas = pointer.Int32(instance.Status.ReplicantNodesStatus.CurrentReplicas - 1)
+				currentRs.Spec.Replicas = ptr.To(int32(instance.Status.ReplicantNodesStatus.CurrentReplicas - 1))
 				if err := s.Client.Update(ctx, currentRs); err != nil {
 					return subResult{err: emperror.Wrap(err, "failed to scale down old replicaSet")}
 				}
@@ -92,7 +92,7 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 			return subResult{err: emperror.Wrap(err, "failed to check if sts can be scale down")}
 		}
 		if canBeScaledDown {
-			currentSts.Spec.Replicas = pointer.Int32(instance.Status.CoreNodesStatus.CurrentReplicas - 1)
+			currentSts.Spec.Replicas = ptr.To(int32(instance.Status.CoreNodesStatus.CurrentReplicas - 1))
 			if err := s.Client.Update(ctx, currentSts); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to scale down old statefulSet")}
 			}

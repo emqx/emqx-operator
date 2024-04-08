@@ -11,7 +11,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	// "k8s.io/apimachinery/pkg/types"
 
@@ -132,7 +132,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			By("Creating EMQX CR", func() {
 				// create EMQX CR
 				instance.Spec.ReplicantTemplate = nil
-				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
+				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
 				Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully
@@ -204,7 +204,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			By("Creating EMQX CR", func() {
 				// create EMQX CR
 				instance.Spec.ReplicantTemplate = nil
-				instance.Spec.CoreTemplate.Spec.Replicas = pointer.Int32Ptr(2)
+				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
 				Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully
@@ -322,7 +322,7 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 				},
 			},
 			Spec: appsv1beta4.EmqxEnterpriseSpec{
-				Replicas:      pointer.Int32(1),
+				Replicas:      ptr.To(int32(1)),
 				ClusterDomain: "cluster.local",
 				Template: appsv1beta4.EmqxTemplate{
 					Spec: appsv1beta4.EmqxTemplateSpec{
@@ -418,7 +418,6 @@ var _ = Describe("EMQX 4 Rebalance Test", func() {
 
 			By("Creating EMQX CR", func() {
 				// create EMQX CR
-				Expect(instance.ValidateCreate()).Should(Succeed())
 				Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully

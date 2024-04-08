@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -51,7 +51,7 @@ import (
 // 		},
 // 	},
 // 	Spec: appsv1beta4.EmqxBrokerSpec{
-// 		Replicas: pointer.Int32Ptr(1),
+// 		Replicas: ptr.To(int32(1)),
 // 		Template: appsv1beta4.EmqxTemplate{
 // 			Spec: appsv1beta4.EmqxTemplateSpec{
 // 				EmqxContainer: appsv1beta4.EmqxContainer{
@@ -87,7 +87,7 @@ var emqxEnterprise = &appsv1beta4.EmqxEnterprise{
 		},
 	},
 	Spec: appsv1beta4.EmqxEnterpriseSpec{
-		Replicas:      pointer.Int32(1),
+		Replicas:      ptr.To(int32(1)),
 		ClusterDomain: "cluster.local",
 		Template: appsv1beta4.EmqxTemplate{
 			Spec: appsv1beta4.EmqxTemplateSpec{
@@ -356,7 +356,6 @@ var _ = Describe("Base E2E Test", Label("base"), func() {
 func createEmqx(emqx appsv1beta4.Emqx) {
 	emqx.SetNamespace(emqx.GetNamespace() + "-" + rand.String(5))
 	emqx.Default()
-	Expect(emqx.ValidateCreate()).Should(Succeed())
 	Expect(k8sClient.Create(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: emqx.GetNamespace(),
@@ -487,8 +486,8 @@ func checkPodAndEndpointsAndEndpointSlices(emqx appsv1beta4.Emqx, ports, pluginP
 			Protocol: port.Protocol,
 		})
 		endpointSlicePorts = append(endpointSlicePorts, discoveryv1.EndpointPort{
-			Name:     pointer.String(port.Name),
-			Port:     pointer.Int32(port.Port),
+			Name:     ptr.To(port.Name),
+			Port:     ptr.To(int32(port.Port)),
 			Protocol: &[]corev1.Protocol{port.Protocol}[0],
 		})
 	}

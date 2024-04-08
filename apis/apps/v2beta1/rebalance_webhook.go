@@ -24,6 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -41,41 +42,41 @@ func (r *Rebalance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &Rebalance{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *Rebalance) ValidateCreate() error {
+func (r *Rebalance) ValidateCreate() (admission.Warnings, error) {
 	rebalancelog.Info("validate create", "name", r.Name)
 
 	if len(r.Spec.RebalanceStrategy.RelConnThreshold) > 0 {
 		_, err := strconv.ParseFloat(r.Spec.RebalanceStrategy.RelConnThreshold, 64)
 		if err != nil {
-			return errors.New(`the field ".spec.rebalanceStrategy.relConnThreshold" must be float64`)
+			return nil, errors.New(`the field ".spec.rebalanceStrategy.relConnThreshold" must be float64`)
 		}
 	}
 
 	if len(r.Spec.RebalanceStrategy.RelSessThreshold) > 0 {
 		_, err := strconv.ParseFloat(r.Spec.RebalanceStrategy.RelSessThreshold, 64)
 		if err != nil {
-			return errors.New(`the field ".spec.rebalanceStrategy.relSessThreshold" must be float64`)
+			return nil, errors.New(`the field ".spec.rebalanceStrategy.relSessThreshold" must be float64`)
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *Rebalance) ValidateUpdate(old runtime.Object) error {
+func (r *Rebalance) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	rebalancelog.Info("validate update", "name", r.Name)
 	oldRebalance := old.(*Rebalance)
 
 	if r.GetGeneration() != oldRebalance.GetGeneration() {
-		return errors.New("the Rebalance spec don't allow update")
+		return nil, errors.New("the Rebalance spec don't allow update")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *Rebalance) ValidateDelete() error {
+func (r *Rebalance) ValidateDelete() (admission.Warnings, error) {
 	rebalancelog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }

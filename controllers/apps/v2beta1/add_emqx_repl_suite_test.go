@@ -7,7 +7,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -35,7 +35,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 		instance.Namespace = ns.Name
 		instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
 			Spec: appsv2beta1.EMQXReplicantTemplateSpec{
-				Replicas: pointer.Int32(3),
+				Replicas: ptr.To(int32(3)),
 			},
 		}
 		instance.Status = appsv2beta1.EMQXStatus{
@@ -134,7 +134,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			)
 
 			instance.Status.ReplicantNodesStatus.UpdateRevision = rs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(0)
+			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 		})
 
 		It("should update replicaSet", func() {
@@ -164,7 +164,7 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 			}).Should(HaveLen(1))
 			instance.Status.ReplicantNodesStatus.UpdateRevision = list.Items[0].Labels[appsv2beta1.LabelsPodTemplateHashKey]
 
-			instance.Spec.ReplicantTemplate.Spec.Replicas = pointer.Int32(4)
+			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(4))
 		})
 
 		It("should update replicaSet", func() {

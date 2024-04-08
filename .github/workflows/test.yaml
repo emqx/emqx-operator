@@ -18,14 +18,14 @@ jobs:
       e2e: ${{ steps.e2e.outputs.e2e }}
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
-      - uses: golangci/golangci-lint-action@v3
+          go-version: '1.21'
+      - uses: golangci/golangci-lint-action@v4
         with:
-          ## TODO: https://github.com/golangci/golangci-lint-action/issues/759
-          version: v1.52.2
+          ##https://github.com/golangci/golangci-lint-action/issues/807
+          skip-pkg-cache: true
           args: --timeout=5m
       - run: go install github.com/google/go-licenses@latest
       - run: $(go env GOPATH)/bin/go-licenses check . --disallowed_types forbidden,restricted,unknown
@@ -77,10 +77,10 @@ jobs:
 
     steps:
       - run: minikube start
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
+          go-version: '1.21'
       - run: go install github.com/onsi/ginkgo/v2/ginkgo@latest
       - name: Install Telepresence
         env:
@@ -91,6 +91,7 @@ jobs:
       - run: telepresence helm install
       - run: telepresence connect
       - name: Run e2e test cases
+        id: e2e_test
         env:
           FILE: ${{ matrix.file }}
         run: |
@@ -98,23 +99,24 @@ jobs:
           filename="$(basename $FILE)"
           filename="${filename%.*}"
           $(go env GOPATH)/bin/ginkgo -v --cover -covermode=atomic -coverpkg=./... -coverprofile=${filename}.out --focus-file=${filename} $(dirname $FILE)
-      - uses: actions/upload-artifact@v3
+          echo "filename=${filename}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
         with:
-          name: coverprofile
+          name: coverprofile-${{ steps.e2e_test.outputs.filename }}
           path: |
             *.out
 
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
+          go-version: '1.21'
       - run: make test
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: coverprofile
+          name: coverprofile-unit-test
           path: |
             *.out
 
@@ -124,19 +126,20 @@ jobs:
       - e2e-test
       - unit-test
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: coverprofile
+          pattern: coverprofile-*
       - name: Get cover files
         id: files
         run: |
-          files="$(find -maxdepth 1 -name '*.out' -exec readlink -f '{}' ';' | tr '\n' ',' | sed 's/,$//g')"
+          files="$(find . -type f -name '*.out' -exec readlink -f '{}' ';' | tr '\n' ',' | sed 's/,$//g')"
           echo "files=$files" >> $GITHUB_OUTPUT
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         with:
           files: ${{ steps.files.outputs.files }} # optional
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
-      - uses: geekyeggo/delete-artifact@v2
+          token: ${{ secrets.CODECOV_TOKEN }} # required
+      - uses: geekyeggo/delete-artifact@v5
         with:
-          name: coverprofile
+          name: coverprofile-*

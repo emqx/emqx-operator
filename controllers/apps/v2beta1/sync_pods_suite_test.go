@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -53,7 +53,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		instance.Namespace = ns.Name
 		instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
 			Spec: appsv2beta1.EMQXReplicantTemplateSpec{
-				Replicas: pointer.Int32Ptr(1),
+				Replicas: ptr.To(int32(1)),
 			},
 		}
 		instance.Status = appsv2beta1.EMQXStatus{
@@ -95,7 +95,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				),
 			},
 			Spec: appsv1.StatefulSetSpec{
-				Replicas: pointer.Int32Ptr(1),
+				Replicas: ptr.To(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: appsv2beta1.CloneAndAddLabel(
 						appsv2beta1.DefaultCoreLabels(instance),
@@ -146,7 +146,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				),
 			},
 			Spec: appsv1.ReplicaSetSpec{
-				Replicas: pointer.Int32Ptr(1),
+				Replicas: ptr.To(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: appsv2beta1.CloneAndAddLabel(
 						appsv2beta1.DefaultReplicantLabels(instance),
@@ -197,7 +197,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 						Kind:       "ReplicaSet",
 						Name:       currentRs.Name,
 						UID:        currentRs.UID,
-						Controller: pointer.BoolPtr(true),
+						Controller: ptr.To(true),
 					},
 				},
 			},
@@ -309,7 +309,7 @@ var _ = Describe("check can be scale down", func() {
 				},
 				Spec: appsv1.StatefulSetSpec{
 					ServiceName: instance.Name + "-fake",
-					Replicas:    pointer.Int32Ptr(1),
+					Replicas:    ptr.To(int32(1)),
 				},
 			}
 
@@ -331,7 +331,7 @@ var _ = Describe("check can be scale down", func() {
 		It("the replicaSet didn't ready", func() {
 			instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
 				Spec: appsv2beta1.EMQXReplicantTemplateSpec{
-					Replicas: pointer.Int32Ptr(3),
+					Replicas: ptr.To(int32(3)),
 				},
 			}
 			instance.Status.ReplicantNodesStatus = appsv2beta1.EMQXNodesStatus{
@@ -410,7 +410,7 @@ var _ = Describe("check can be scale down", func() {
 					Labels:       appsv2beta1.DefaultReplicantLabels(instance),
 				},
 				Spec: appsv1.ReplicaSetSpec{
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: ptr.To(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: appsv2beta1.DefaultReplicantLabels(instance),
 					},
@@ -440,7 +440,7 @@ var _ = Describe("check can be scale down", func() {
 							Kind:       "ReplicaSet",
 							Name:       oldRs.Name,
 							UID:        oldRs.UID,
-							Controller: pointer.BoolPtr(true),
+							Controller: ptr.To(true),
 						},
 					},
 				},

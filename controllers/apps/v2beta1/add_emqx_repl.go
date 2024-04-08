@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -67,7 +67,7 @@ func (a *addRepl) reconcile(ctx context.Context, logger logr.Logger, instance *a
 					}
 				}
 				if instance.Status.ReplicantNodesStatus.CollisionCount == nil {
-					instance.Status.ReplicantNodesStatus.CollisionCount = pointer.Int32(0)
+					instance.Status.ReplicantNodesStatus.CollisionCount = ptr.To(int32(0))
 				}
 				*instance.Status.ReplicantNodesStatus.CollisionCount++
 				_ = a.Client.Status().Update(ctx, instance)
