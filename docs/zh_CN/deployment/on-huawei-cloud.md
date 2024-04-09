@@ -40,7 +40,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     coreTemplate:
       spec:
         ## EMQX 自定义资源不支持在运行时更新这个字段

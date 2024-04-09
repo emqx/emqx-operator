@@ -29,7 +29,7 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     coreTemplate:
       spec:
         replicas: 2

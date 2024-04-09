@@ -52,7 +52,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     config:
       data: |
         listeners.ssl.default {

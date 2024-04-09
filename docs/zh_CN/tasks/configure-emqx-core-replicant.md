@@ -29,7 +29,7 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     coreTemplate:
       spec:
         replicas: 2

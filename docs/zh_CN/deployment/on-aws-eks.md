@@ -29,7 +29,7 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     coreTemplate:
       spec:
         ## 若开启了持久化，您需要配置 podSecurityContext，

@@ -18,7 +18,7 @@ The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5
    metadata:
       name: emqx
    spec:
-      image: emqx:5.1
+      image: emqx:5
       imagePullPolicy: IfNotPresent
       config:
          data: |

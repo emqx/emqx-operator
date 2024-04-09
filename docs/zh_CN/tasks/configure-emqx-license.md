@@ -33,7 +33,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
         license {
           key = "${your_license_key}"
         }
-    image: emqx/emqx-enterprise:5.1.0
+    image: emqx/emqx-enterprise:5.6
     listenersServiceTemplate:
       spec:
         type: LoadBalancer
@@ -153,7 +153,7 @@ EMQX 企业版 License 可以在 EMQ 官网免费申请：[申请 EMQX 企业版
   $ kubectl edit emqx emqx-ee
   ...
   spec:
-    image: emqx/emqx-enterprise:5.1.0
+    image: emqx/emqx-enterprise:5.6
     config:
       data: |
         license {

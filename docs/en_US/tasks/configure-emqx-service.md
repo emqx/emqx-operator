@@ -21,7 +21,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     listenersServiceTemplate:
       spec:
         type: LoadBalancer

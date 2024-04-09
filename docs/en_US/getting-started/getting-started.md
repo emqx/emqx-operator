@@ -74,7 +74,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
    metadata:
       name: emqx-ee
    spec:
-      image: emqx/emqx-enterprise:5.1.0
+      image: emqx/emqx-enterprise:5.6
    ```
 
    For more details about the EMQX CRD, please check the [reference document](../reference/v2beta1-reference.md).
@@ -101,7 +101,7 @@ Alternatively, if you are interested in learning how to upgrade or uninstall EMQ
    metadata:
       name: emqx
    spec:
-      image: emqx:5.1
+      image: emqx:5
    ```
 
    For more details about the EMQX CRD, please check the [reference document](../reference/v2beta1-reference.md).

@@ -71,7 +71,7 @@
    metadata:
       name: emqx-ee
    spec:
-      image: emqx/emqx-enterprise:5.1.0
+      image: emqx/emqx-enterprise:5.6
    ```
 
    并使用 `kubectl apply` 命令来部署 EMQX。
@@ -102,7 +102,7 @@
    metadata:
       name: emqx
    spec:
-      image: emqx:5.1
+      image: emqx:5
    ```
 
    并使用 `kubectl apply` 命令来部署 EMQX。

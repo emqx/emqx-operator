@@ -23,7 +23,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx:5.1
+  image: emqx:5
 ```
 
 Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:

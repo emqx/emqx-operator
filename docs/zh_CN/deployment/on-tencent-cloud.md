@@ -30,7 +30,7 @@ EMQX Operator 支持在腾讯云容器服务（Tencent Kubernetes Engine，TKE�
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     coreTemplate:
       spec:
         ## EMQX 自定义资源不支持在运行时更新这个字段

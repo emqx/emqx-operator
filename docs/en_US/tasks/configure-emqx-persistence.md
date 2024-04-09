@@ -24,7 +24,7 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     coreTemplate:
       spec:
         volumeClaimTemplates:

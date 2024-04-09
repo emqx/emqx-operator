@@ -113,7 +113,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx:5.1
+  image: emqx:5
   updateStrategy:
     evacuationStrategy:
       connEvictRate: 1000

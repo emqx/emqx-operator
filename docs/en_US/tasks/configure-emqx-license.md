@@ -33,7 +33,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
         license {
           key = "..."
         }
-    image: emqx/emqx-enterprise:5.1.0
+    image: emqx/emqx-enterprise:5.6
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
@@ -150,7 +150,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   $ kubectl edit emqx emqx-ee
   ...
   spec:
-    image: emqx/emqx-enterprise:5.1.0
+    image: emqx/emqx-enterprise:5.6
     config:
       data: |
         license {

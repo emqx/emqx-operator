@@ -52,7 +52,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     config:
       data: |
         listeners.ssl.default {

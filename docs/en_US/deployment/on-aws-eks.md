@@ -29,7 +29,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
   metadata:
     name: emqx
   spec:
-    image: emqx:5.1
+    image: emqx:5
     coreTemplate:
       spec:
         ## EMQX custom resources do not support updating this field at runtime
