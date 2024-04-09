@@ -69,7 +69,7 @@ jobs:
         timeout-minutes: 5
         run: kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
       - name: Deployment emqx
-        timeout-minutes: 5
+        timeout-minutes: 10
         uses: ./.github/actions/deploy-emqx
         with:
           kind: ${{ matrix.emqx[0] }}

@@ -2,6 +2,7 @@ package v2beta1
 
 import (
 	"context"
+	"net/http"
 
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
@@ -17,13 +18,20 @@ type addSvc struct {
 	*EMQXReconciler
 }
 
-func (a *addSvc) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
-	configMap := &corev1.ConfigMap{}
-	if err := a.Client.Get(ctx, instance.ConfigsNamespacedName(), configMap); err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to get configmap")}
+func (a *addSvc) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
+	if r == nil {
+		return subResult{}
 	}
 
-	configStr := configMap.Data["emqx.conf"]
+	if !instance.Status.IsConditionTrue(appsv2beta1.CoreNodesReady) {
+		return subResult{}
+	}
+
+	configStr, err := a.getEMQXConfigsByAPI(r)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to get emqx configs by api")}
+	}
+
 	resources := []client.Object{generateHeadlessService(instance)}
 	if dashboard := generateDashboardService(instance, configStr); dashboard != nil {
 		resources = append(resources, dashboard)
@@ -36,6 +44,21 @@ func (a *addSvc) reconcile(ctx context.Context, logger logr.Logger, instance *ap
 		return subResult{err: emperror.Wrap(err, "failed to create or update services")}
 	}
 	return subResult{}
+}
+
+func (a *addSvc) getEMQXConfigsByAPI(r innerReq.RequesterInterface) (string, error) {
+	url := r.GetURL("api/v5/configs")
+
+	resp, body, err := r.Request("GET", url, nil, http.Header{
+		"Accept": []string{"text/plain"},
+	})
+	if err != nil {
+		return "", emperror.Wrapf(err, "failed to get API %s", url.String())
+	}
+	if resp.StatusCode != 200 {
+		return "", emperror.Errorf("failed to get API %s, status : %s, body: %s", url.String(), resp.Status, body)
+	}
+	return string(body), nil
 }
 
 func generateHeadlessService(instance *appsv2beta1.EMQX) *corev1.Service {
