@@ -121,6 +121,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	for _, subReconciler := range []subReconciler{
 		&addBootstrap{r},
+		&updatePodConditions{r},
 		&updateStatus{r},
 		&addCore{r},
 		&addRepl{r},
@@ -198,13 +199,17 @@ func newRequester(ctx context.Context, k8sClient client.Client, instance *appsv2
 	})
 
 	for _, pod := range podList.Items {
-		if pod.GetDeletionTimestamp() == nil && pod.Status.Phase == corev1.PodRunning && pod.Status.PodIP != "" {
-			return &innerReq.Requester{
-				Schema:   schema,
-				Host:     net.JoinHostPort(pod.Status.PodIP, port),
-				Username: username,
-				Password: password,
-			}, nil
+		if pod.GetDeletionTimestamp() == nil && pod.Status.PodIP != "" {
+			for _, cond := range pod.Status.Conditions {
+				if cond.Type == corev1.ContainersReady && cond.Status == corev1.ConditionTrue {
+					return &innerReq.Requester{
+						Schema:   schema,
+						Host:     net.JoinHostPort(pod.Status.PodIP, port),
+						Username: username,
+						Password: password,
+					}, nil
+				}
+			}
 		}
 	}
 

@@ -135,7 +135,7 @@ jobs:
           repository: ghcr.io/${{ github.repository }}
           tag: ${{ github.ref_name }}
       - name: Deploy emqx
-        timeout-minutes: 5
+        timeout-minutes: 10
         uses: ./.github/actions/deploy-emqx
         with:
           kind: ${{ matrix.emqx[0] }}
