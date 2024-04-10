@@ -32,7 +32,7 @@ func (a *addSvc) reconcile(ctx context.Context, logger logr.Logger, instance *ap
 		return subResult{err: emperror.Wrap(err, "failed to get emqx configs by api")}
 	}
 
-	resources := []client.Object{generateHeadlessService(instance)}
+	resources := []client.Object{}
 	if dashboard := generateDashboardService(instance, configStr); dashboard != nil {
 		resources = append(resources, dashboard)
 	}
@@ -59,42 +59,6 @@ func (a *addSvc) getEMQXConfigsByAPI(r innerReq.RequesterInterface) (string, err
 		return "", emperror.Errorf("failed to get API %s, status : %s, body: %s", url.String(), resp.Status, body)
 	}
 	return string(body), nil
-}
-
-func generateHeadlessService(instance *appsv2beta1.EMQX) *corev1.Service {
-	headlessSvc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: instance.Namespace,
-			Name:      instance.HeadlessServiceNamespacedName().Name,
-			Labels:    appsv2beta1.CloneAndMergeMap(appsv2beta1.DefaultLabels(instance), instance.Labels),
-		},
-		Spec: corev1.ServiceSpec{
-			Type:                     corev1.ServiceTypeClusterIP,
-			ClusterIP:                corev1.ClusterIPNone,
-			SessionAffinity:          corev1.ServiceAffinityNone,
-			PublishNotReadyAddresses: true,
-			Selector:                 appsv2beta1.DefaultCoreLabels(instance),
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "erlang-dist",
-					Port:       4370,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(4370),
-				},
-				{
-					Name:       "gen-rpc",
-					Port:       5369,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(5369),
-				},
-			},
-		},
-	}
-	return headlessSvc
 }
 
 func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
