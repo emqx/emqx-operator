@@ -11,6 +11,7 @@ spec:
   revisionHistoryLimit: 3
   config:
     data: |
+      log.console.level = debug
       dashboard.listeners.http.bind = 18083
       sysmon.vm.long_schedule = disabled
   coreTemplate:
@@ -22,6 +23,12 @@ spec:
         apps.emqx.io/db-role: core
       annotations:
     spec:
+      args:
+        - bash
+        - -c
+        - |
+          printenv |grep EMQX_
+          /opt/emqx/bin/emqx foreground
       replicas: 2
       volumeClaimTemplates:
         resources:
