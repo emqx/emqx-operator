@@ -73,13 +73,38 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
 
 ## 检查 EMQX 集群
 
+  可以通过检查 EMQX 自定义资源的状态来获取所有集群中节点的信息。
+
   ```bash
-  $ kubectl get emqx emqx -o json | jq .status.emqxNodes
+  $ kubectl get emqx emqx -o json | jq .status.coreNodes
+  [
+    {
+      "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    },
+     {
+      "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    }
+  ]
   ```
 
-  可以通过检查 EMQX 自定义资源的状态来获取所有集群中节点的信息，节点的 `role` 字段表示它们在集群中的角色，在上文中部署了一个由两个 Core 节点与三个 Replicant 节点组成的集群。
 
   ```bash
+  $ kubectl get emqx emqx -o json | jq .status.replicantNodes
   [
     {
       "node": "emqx@10.244.4.56",
@@ -100,27 +125,6 @@ EMQX 集群中至少要有一个 Core 节点，出于高可用的目的，EMQX O
       "node_status": "running",
       "otp_release": "24.3.4.2-2/12.3.2.2",
       "role": "replicant",
-      "version": "5.0.20"
-    },
-    {
-      "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-      "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
-      "role": "core",
-      "version": "5.0.20"
-    },
-    {
-      "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-      "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
-      "role": "core",
-      "version": "5.0.20"
-    },
-     {
-      "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-      "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
-      "role": "core",
       "version": "5.0.20"
     }
   ]
