@@ -196,6 +196,8 @@ type EMQXReplicantTemplateSpec struct {
 	// If specified, the pod's tolerations.
 	// The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	//// TopologySpreadConstraint specifies how to spread matching pods among the given topology.
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	// Replicas is the desired number of replicas of the given Template.
 	// These are replicas in the sense that they are instantiations of the
 	// same Template, but individual replicas also have a consistent identity.
