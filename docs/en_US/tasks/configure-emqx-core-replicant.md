@@ -71,15 +71,40 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
 
   Access `http://192.168.1.200:18083` through a browser, and use the default username and password `admin/public` to login EMQX console.
 
-## Verify EMQX Cluster  <!--not sure what this verify is-->
+## Verify EMQX Cluster
+
+  Information about all the nodes in the cluster can be obtained by checking the `.status` of the EMQX custom resources.
 
   ```bash
-  $ kubectl get emqx emqx -o json | jq .status.emqxNodes
+  $ kubectl get emqx emqx -o json | jq .status.coreNodes
+  [
+    {
+      "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    },
+    {
+      "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    },
+     {
+      "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
+      "node_status": "running",
+      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "role": "core",
+      "version": "5.0.20"
+    }
+  ]
   ```
 
-  Information about all the nodes in the cluster can be obtained by checking the `.status.emqxNodes` of the EMQX custom resources. The `role` field of the `node` indicates its role in the cluster, in the above case a cluster consisting of two Core nodes and three Replicant nodes is deployed.
 
   ```bash
+  $ kubectl get emqx emqx -o json | jq .status.replicantNodes
   [
     {
       "node": "emqx@10.244.4.56",
@@ -100,27 +125,6 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
       "node_status": "running",
       "otp_release": "24.3.4.2-2/12.3.2.2",
       "role": "replicant",
-      "version": "5.0.20"
-    },
-    {
-      "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
-      "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
-      "role": "core",
-      "version": "5.0.20"
-    },
-    {
-      "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
-      "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
-      "role": "core",
-      "version": "5.0.20"
-    },
-    {
-      "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
-      "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
-      "role": "core",
       "version": "5.0.20"
     }
   ]
