@@ -185,9 +185,10 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 						// TODO: just for compatible with old version, will remove in future
 						instance.Spec.CoreTemplate.Spec.ToleRations...,
 					),
-					NodeName:       instance.Spec.CoreTemplate.Spec.NodeName,
-					NodeSelector:   instance.Spec.CoreTemplate.Spec.NodeSelector,
-					InitContainers: instance.Spec.CoreTemplate.Spec.InitContainers,
+					TopologySpreadConstraints: instance.Spec.CoreTemplate.Spec.TopologySpreadConstraints,
+					NodeName:                  instance.Spec.CoreTemplate.Spec.NodeName,
+					NodeSelector:              instance.Spec.CoreTemplate.Spec.NodeSelector,
+					InitContainers:            instance.Spec.CoreTemplate.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
 							Name:            appsv2beta1.DefaultContainerName,
