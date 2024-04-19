@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
+	"reflect"
 	"sort"
 	"time"
 
@@ -23,6 +24,28 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// structAssign copy the value of struct from src to dist.
+func structAssign(dist, src interface{}) {
+	distVal := reflect.ValueOf(dist).Elem()
+	srcVal := reflect.ValueOf(src).Elem()
+	srcType := srcVal.Type()
+
+	for i := 0; i < srcVal.NumField(); i++ {
+		if srcVal.Field(i).IsZero() {
+			continue
+		}
+
+		// Check if the dist has the same field.
+		name := srcType.Field(i).Name
+		distValField := distVal.FieldByName(name)
+		if ok := distValField.IsValid(); !ok {
+			continue
+		}
+
+		distValField.Set(srcVal.Field(i))
+	}
+}
 
 func getRsPodMap(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) map[types.UID][]*corev1.Pod {
 	labels := appsv2beta1.DefaultReplicantLabels(instance)

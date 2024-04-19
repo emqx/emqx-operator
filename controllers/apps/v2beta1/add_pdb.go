@@ -4,14 +4,19 @@ import (
 	"context"
 
 	emperror "emperror.dev/errors"
+	semver "github.com/Masterminds/semver/v3"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
 	policyv1 "k8s.io/api/policy/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	kubeConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 type addPdb struct {
@@ -19,7 +24,22 @@ type addPdb struct {
 }
 
 func (a *addPdb) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
-	pdbList := generatePodDisruptionBudget(instance)
+	cfg := kubeConfig.GetConfigOrDie()
+	discoveryClient, _ := discovery.NewDiscoveryClientForConfig(cfg)
+	kubeVersion, _ := discoveryClient.ServerVersion()
+	v, _ := semver.NewVersion(kubeVersion.String())
+
+	pdbList := []client.Object{}
+	for _, p := range generatePodDisruptionBudget(instance) {
+		if v.LessThan(semver.MustParse("1.20")) {
+			beta := policyv1beta1.PodDisruptionBudget{}
+			structAssign(&beta, p.DeepCopy())
+			pdbList = append(pdbList, &beta)
+			continue
+		}
+		pdbList = append(pdbList, p)
+	}
+
 	for _, pdb := range pdbList {
 		if err := ctrl.SetControllerReference(instance, pdb, a.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
