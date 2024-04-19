@@ -18,6 +18,8 @@ jobs:
           - minikube
           - k3s
         kubernetes-version:
+          - "v1.20.0"
+          - "v1.21.0"
           - "v1.22.0"
           - "v1.23.0"
           - "v1.24.0"
@@ -59,17 +61,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: docker/setup-buildx-action@v2
-    - uses: docker/setup-qemu-action@v2
+    - uses: docker/setup-buildx-action@v3
+    - uses: docker/setup-qemu-action@v3
       with:
         image: tonistiigi/binfmt:latest
         platforms: all
-    - uses: docker/login-action@v2
+    - uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ github.token }}
-    - uses: docker/metadata-action@v4
+    - uses: docker/metadata-action@v5
       id: meta
       with:
         images: ghcr.io/${{ github.repository }}
@@ -79,7 +81,7 @@ jobs:
           type=ref,event=branch
           type=ref,event=tag
           type=semver,pattern={{version}}
-    - uses: docker/build-push-action@v3
+    - uses: docker/build-push-action@v5
       with:
         push: true
         pull: true
@@ -100,6 +102,8 @@ jobs:
           - minikube
           - k3s
         kubernetes-version:
+          - "v1.20.0"
+          - "v1.21.0"
           - "v1.22.0"
           - "v1.23.0"
           - "v1.24.0"
@@ -144,7 +148,7 @@ jobs:
       - name: Make sure all of pods can be deleted
         run: |
           kubectl delete ${{ matrix.emqx[0] }} ${{ matrix.emqx[1] }}
-          kubectl wait --for=delete pods -l "apps.emqx.io/instance=${{ matrix.emqx[1] }}"
+          kubectl wait --for=delete pods -l "apps.emqx.io/instance=${{ matrix.emqx[1] }}" --timeout=300s
       - if: failure()
         run: kubectl logs -l "control-plane=controller-manager" -n emqx-operator-system -c manager --tail=1000
       - if: failure()

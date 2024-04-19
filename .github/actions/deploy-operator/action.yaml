@@ -16,13 +16,39 @@ runs:
   - name: Install cert-manager
     shell: bash
     run: |
+      cert_manager_version=""
+      kube_min_version=$(kubectl version --output=yaml | yq '.serverVersion.minor')
+      if [ ${kube_min_version} -le 21 ]; then
+        cert_manager_version="v1.11.5"
+      fi
+      if [ ${kube_min_version} -le 20 ]; then
+        cert_manager_version="v1.10.2"
+      fi
+      if [ ${kube_min_version} -le 19 ]; then
+        cert_manager_version="v1.8.2"
+      fi
+      if [ ${kube_min_version} -le 18 ]; then
+        cert_manager_version="v1.7.3"
+      fi
+      if [ ${kube_min_version} -le 17 ]; then
+        cert_manager_version="v1.6.3"
+      fi
+      if [ ${kube_min_version} -le 16 ]; then
+        cert_manager_version="v1.5.5"
+      fi
+      if [ ${kube_min_version} -le 15 ]; then
+        echo "Kubernetes version is too low, please upgrade to 1.15+"
+        exit 1
+      fi
+
       helm repo add jetstack https://charts.jetstack.io
       helm repo update
       helm install \
         cert-manager jetstack/cert-manager \
         --namespace cert-manager \
         --create-namespace \
-        --set installCRDs=true
+        --set installCRDs=true \
+        --version "$cert_manager_version"
   - name: Deploy operator by helm
     shell: bash
     run: |
