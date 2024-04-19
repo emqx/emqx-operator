@@ -20,7 +20,6 @@ spec:
         apps.emqx.io/instance: emqx
         apps.emqx.io/managed-by: emqx-operator
         apps.emqx.io/db-role: core
-      annotations:
     spec:
       replicas: 2
       volumeClaimTemplates:
