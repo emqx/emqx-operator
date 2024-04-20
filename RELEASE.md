@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.21 has been released.
+EMQX Operator 2.2.22 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -13,11 +13,11 @@ EMQX Operator 2.2.21 has been released.
   + EMQX at 4.4.14 and later
   + EMQX Enterprise at 4.4.14 and later
 
-## Enhancements 🚀
+## Fixes 🛠
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Support for topologySpreadConstraints
+  + Fix EMQX Operator compatibility issue with Kubernetes 1.20
 
 ## Other Changes ✨
 
@@ -33,7 +33,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.21
+  --version 2.2.22
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
