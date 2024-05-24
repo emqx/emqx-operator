@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.22 has been released.
+EMQX Operator 2.2.23 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -13,15 +13,11 @@ EMQX Operator 2.2.22 has been released.
   + EMQX at 4.4.14 and later
   + EMQX Enterprise at 4.4.14 and later
 
-## Fixes 🛠
+## Other Changes ✨
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Fix EMQX Operator compatibility issue with Kubernetes 1.20
-
-## Other Changes ✨
-
-+ Update `sigs.k8s.io/controller-runtime` version to 0.17
+  + Delete `apps.emqx.io/v2beta1/EMQX/status.coreNodes[*].uptime` and `apps.emqx.io/v2beta1/EMQX/status.replicantNodes[*].uptime`, because EMQX operator will constantly updating them. This is unnecessary wear and tear.
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -33,7 +29,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.22
+  --version 2.2.23
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
