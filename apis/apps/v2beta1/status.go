@@ -83,13 +83,13 @@ type EMQXNode struct {
 	Role string `json:"role,omitempty"`
 	// EMQX cluster node edition, enum: "Opensource" "Enterprise"
 	Edition string `json:"edition,omitempty"`
-	// EMQX node uptime, milliseconds
-	Uptime int64 `json:"uptime,omitempty"`
 	// In EMQX's API of `/api/v5/nodes`, the `connections` field means the number of MQTT session count,
 	Session int64 `json:"connections,omitempty"`
 	// In EMQX's API of `/api/v5/nodes`, the `live_connections` field means the number of connected MQTT clients.
 	// THe `live_connections` just work in EMQX 5.1 or later.
 	Connections int64 `json:"live_connections,omitempty"`
+	// EMQX node uptime, milliseconds
+	Uptime int64 `json:"-"`
 }
 
 const (
