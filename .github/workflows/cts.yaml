@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 */6 * * *'
-  push:
-    tags:
-      - "*"
 
 jobs:
   test:
@@ -74,7 +71,7 @@ jobs:
     - uses: docker/metadata-action@v5
       id: meta
       with:
-        images: ghcr.io/${{ github.repository }}
+        images: ghcr.io/${{ github.repository_owner }}/emqx-operator-controller
         flavor: |
           latest=true
         tags: |
@@ -136,7 +133,7 @@ jobs:
         timeout-minutes: 5
         uses: ./.github/actions/deploy-operator
         with:
-          repository: ghcr.io/${{ github.repository }}
+          repository: ghcr.io/${{ github.repository_owner }}/emqx-operator-controller
           tag: ${{ github.ref_name }}
       - name: Deploy emqx
         timeout-minutes: 5
