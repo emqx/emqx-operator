@@ -2,33 +2,17 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
   - ""
   resources:
   - configmaps
-  verbs:
-  - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - endpoints
-  verbs:
-  - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - events
+  - persistentvolumes
+  - secrets
+  - services
   verbs:
   - create
   - get
@@ -49,16 +33,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - persistentvolumes
-  verbs:
-  - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - pods
   verbs:
   - get
@@ -72,39 +46,9 @@ rules:
   verbs:
   - patch
 - apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
   - apps
   resources:
   - replicasets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
   - statefulsets
   verbs:
   - create
@@ -117,109 +61,9 @@ rules:
   - apps.emqx.io
   resources:
   - emqxbrokers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxbrokers/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxbrokers/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
   - emqxenterprises
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxenterprises/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxenterprises/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
   - emqxes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
   - emqxplugins
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxplugins/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
-  - emqxplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps.emqx.io
-  resources:
   - rebalances
   verbs:
   - create
@@ -232,12 +76,20 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
+  - emqxbrokers/finalizers
+  - emqxenterprises/finalizers
+  - emqxes/finalizers
+  - emqxplugins/finalizers
   - rebalances/finalizers
   verbs:
   - update
 - apiGroups:
   - apps.emqx.io
   resources:
+  - emqxbrokers/status
+  - emqxenterprises/status
+  - emqxes/status
+  - emqxplugins/status
   - rebalances/status
   verbs:
   - get

@@ -47,6 +47,10 @@ ConditionType defines the condition that the RF can have
 _Appears in:_
 - [Condition](#condition)
 
+| Field | Description |
+| --- | --- |
+| `PluginInitialized` |  |
+| `Running` |  |
 
 
 
@@ -129,8 +133,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `registry` _string_ | Registry will used for EMQX owner image,<br />like ${registry}/emqx/emqx and ${registry}/emqx/emqx-operator-reloader,<br />but it will not be used by other images, like sidecar container or else. |  |  |
-| `image` _string_ |  |  | Required: {} <br /> |
+| `registry` _string_ | Registry will used for EMQX owner image,<br />like $\{registry\}/emqx/emqx and $\{registry\}/emqx/emqx-operator-reloader,<br />but it will not be used by other images, like sidecar container or else. |  |  |
+| `image` _string_ |  |  | Required: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#pullpolicy-v1-core)_ | Image pull policy.<br />One of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.<br />Cannot be updated.<br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  |  |
 | `username` _string_ | Username for EMQX Dashboard and API | admin |  |
 | `password` _string_ | Password for EMQX Dashboard and API | public |  |
@@ -197,7 +201,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `name` _string_ |  |  |  |
 | `enable` _boolean_ |  |  |  |
-| `configs` _[RawExtension](#rawextension)_ |  |  |  |
+| `configs` _[RawExtension](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#rawextension-runtime-pkg)_ |  |  |  |
 
 
 
@@ -241,8 +245,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `registry` _string_ | Registry will used for EMQX owner image,<br />like ${registry}/emqx/emqx-ee and ${registry}/emqx/emqx-operator-reloader,<br />but it will not be used by other images, like sidecar container or else. |  |  |
-| `image` _string_ |  |  | Required: {} <br /> |
+| `registry` _string_ | Registry will used for EMQX owner image,<br />like $\{registry\}/emqx/emqx-ee and $\{registry\}/emqx/emqx-operator-reloader,<br />but it will not be used by other images, like sidecar container or else. |  |  |
+| `image` _string_ |  |  | Required: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#pullpolicy-v1-core)_ | Image pull policy.<br />One of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.<br />Cannot be updated.<br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  |  |
 | `username` _string_ | Username for EMQX Dashboard and API | admin |  |
 | `password` _string_ | Password for EMQX Dashboard and API | public |  |
@@ -312,8 +316,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `pluginName` _string_ | More info: https://www.emqx.io/docs/en/v4.4/advanced/plugins.html#list-of-plugins |  | Required: {} <br /> |
-| `selector` _object (keys:string, values:string)_ | Selector matches the labels of the EMQX |  | Required: {} <br /> |
+| `pluginName` _string_ | More info: https://www.emqx.io/docs/en/v4.4/advanced/plugins.html#list-of-plugins |  | Required: \{\} <br /> |
+| `selector` _object (keys:string, values:string)_ | Selector matches the labels of the EMQX |  | Required: \{\} <br /> |
 | `config` _object (keys:string, values:string)_ | Config defines the configurations of the EMQX plugins |  |  |
 
 
