@@ -2,7 +2,6 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -33,27 +32,6 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-apps-emqx-io-v1beta4-emqxenterprise
-  failurePolicy: Fail
-  name: mutating.enterprise.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta4
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxenterprises
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
       path: /mutate-apps-emqx-io-v1beta4-emqxplugin
   failurePolicy: Fail
   name: mutating.emqxplugin.emqx.io
@@ -68,11 +46,31 @@ webhooks:
     resources:
     - emqxplugins
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-apps-emqx-io-v1beta4-emqxenterprise
+  failurePolicy: Fail
+  name: mutating.enterprise.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta4
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxenterprises
+  sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: validating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -124,27 +122,6 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-apps-emqx-io-v1beta4-emqxenterprise
-  failurePolicy: Fail
-  name: validator.enterprise.emqx.io
-  rules:
-  - apiGroups:
-    - apps.emqx.io
-    apiVersions:
-    - v1beta4
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - emqxenterprises
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
       path: /validate-apps-emqx-io-v1beta4-emqxplugin
   failurePolicy: Fail
   name: validator.emqxplugin.emqx.io
@@ -158,4 +135,25 @@ webhooks:
     - UPDATE
     resources:
     - emqxplugins
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-apps-emqx-io-v1beta4-emqxenterprise
+  failurePolicy: Fail
+  name: validator.enterprise.emqx.io
+  rules:
+  - apiGroups:
+    - apps.emqx.io
+    apiVersions:
+    - v1beta4
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - emqxenterprises
   sideEffects: None

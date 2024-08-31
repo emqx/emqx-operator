@@ -158,8 +158,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `controllerUID` _[UID](#uid)_ |  |  |  |
-| `podUID` _[UID](#uid)_ |  |  |  |
+| `controllerUID` _[UID](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#uid-types-pkg)_ |  |  |  |
+| `podUID` _[UID](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#uid-types-pkg)_ |  |  |  |
 | `node` _string_ | EMQX node name, example: emqx@127.0.0.1 |  |  |
 | `node_status` _string_ | EMQX node status, example: Running |  |  |
 | `otp_release` _string_ | Erlang/OTP version used by EMQX, example: 24.2/12.2 |  |  |
@@ -426,6 +426,11 @@ _Underlying type:_ _string_
 _Appears in:_
 - [RebalanceCondition](#rebalancecondition)
 
+| Field | Description |
+| --- | --- |
+| `Processing` |  |
+| `Completed` |  |
+| `Failed` |  |
 
 
 #### RebalanceList
@@ -457,6 +462,11 @@ _Underlying type:_ _string_
 _Appears in:_
 - [RebalanceStatus](#rebalancestatus)
 
+| Field | Description |
+| --- | --- |
+| `Processing` |  |
+| `Completed` |  |
+| `Failed` |  |
 
 
 #### RebalanceSpec
@@ -473,8 +483,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `instanceKind` _string_ | InstanceKind is used to distinguish between EMQX and EMQXEnterprise.<br />When it is set to "EMQX", it means that the EMQX CR is v2beta1,<br />and when it is set to "EmqxEnterprise", it means that the EmqxEnterprise CR is v1beta4. | EMQX |  |
-| `instanceName` _string_ | InstanceName represents the name of EMQX CR, just work for EMQX Enterprise |  | Required: {} <br /> |
-| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing<br />More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |  | Required: {} <br /> |
+| `instanceName` _string_ | InstanceName represents the name of EMQX CR, just work for EMQX Enterprise |  | Required: \{\} <br /> |
+| `rebalanceStrategy` _[RebalanceStrategy](#rebalancestrategy)_ | RebalanceStrategy represents the strategy of EMQX rebalancing<br />More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing |  | Required: \{\} <br /> |
 
 
 #### RebalanceState
@@ -532,7 +542,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `connEvictRate` _integer_ | ConnEvictRate represents the source node client disconnect rate per second.<br />same to conn-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0 |  | Minimum: 1 <br />Required: {} <br /> |
+| `connEvictRate` _integer_ | ConnEvictRate represents the source node client disconnect rate per second.<br />same to conn-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0 |  | Minimum: 1 <br />Required: \{\} <br /> |
 | `sessEvictRate` _integer_ | SessEvictRate represents the source node session evacuation rate per second.<br />same to sess-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0<br />Defaults to 500. | 500 |  |
 | `waitTakeover` _integer_ | WaitTakeover represents the time in seconds to wait for a client to<br />reconnect to take over the session after all connections are disconnected.<br />same to wait-takeover in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0<br />Defaults to 60 seconds. | 60 |  |
 | `waitHealthCheck` _integer_ | WaitHealthCheck represents the time (in seconds) to wait for the LB to<br />remove the source node from the list of active backend nodes. After the<br />specified waiting time is exceeded,the rebalancing task will start.<br />same to wait-health-check in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)<br />The value must be greater than 0<br />Defaults to 60 seconds. | 60 |  |

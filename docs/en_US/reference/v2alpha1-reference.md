@@ -63,6 +63,12 @@ _Underlying type:_ _string_
 _Appears in:_
 - [Condition](#condition)
 
+| Field | Description |
+| --- | --- |
+| `Creating` |  |
+| `CoreNodesUpdating` |  |
+| `CoreNodesReady` |  |
+| `Running` |  |
 
 
 #### EMQX

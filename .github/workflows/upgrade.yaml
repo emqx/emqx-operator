@@ -37,7 +37,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version-file: 'go.mod'
       - name: Get pre stable version
         ## Just get the last stable version, ignore the pre-release version
         run: |
