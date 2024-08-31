@@ -117,19 +117,21 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 		}
 	}
 
-	isEnterpriser := false
-	for _, node := range coreNodes {
-		if node.ControllerUID == currentSts.UID && node.Edition == "Enterprise" {
-			isEnterpriser = true
-			break
+	if currentSts != nil {
+		isEnterpriser := false
+		for _, node := range coreNodes {
+			if node.ControllerUID == currentSts.UID && node.Edition == "Enterprise" {
+				isEnterpriser = true
+				break
+			}
 		}
-	}
-	if isEnterpriser {
-		nodeEvacuationsStatus, err := getNodeEvacuationStatusByAPI(r)
-		if err != nil {
-			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeEvacuationStatuses", err.Error())
+		if isEnterpriser {
+			nodeEvacuationsStatus, err := getNodeEvacuationStatusByAPI(r)
+			if err != nil {
+				u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeEvacuationStatuses", err.Error())
+			}
+			instance.Status.NodeEvacuationsStatus = nodeEvacuationsStatus
 		}
-		instance.Status.NodeEvacuationsStatus = nodeEvacuationsStatus
 	}
 
 	// update status condition
