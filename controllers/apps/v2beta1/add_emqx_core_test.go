@@ -37,7 +37,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 		},
 	}
 	instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(3))
-	instance.Status.CoreNodesStatus = appsv2beta1.EMQXNodesStatus{
+	instance.Status.CoreNodesStatus = &appsv2beta1.EMQXNodesStatus{
 		CollisionCount: ptr.To(int32(0)),
 	}
 

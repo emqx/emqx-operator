@@ -40,7 +40,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 			Replicas: ptr.To(int32(3)),
 		},
 	}
-	instance.Status.ReplicantNodesStatus = appsv2beta1.EMQXNodesStatus{
+	instance.Status.ReplicantNodesStatus = &appsv2beta1.EMQXNodesStatus{
 		CollisionCount: ptr.To(int32(0)),
 	}
 

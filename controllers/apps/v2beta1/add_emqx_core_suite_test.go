@@ -46,6 +46,7 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 			},
 		}
+		instance.Status.CoreNodesStatus = &appsv2beta1.EMQXNodesStatus{}
 	})
 
 	It("create namespace", func() {

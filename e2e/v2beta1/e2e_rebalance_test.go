@@ -45,7 +45,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 	var r *appsv2beta1.Rebalance
 	BeforeEach(func() {
 		instance = genEMQX().DeepCopy()
-		instance.Spec.Image = "emqx/emqx-enterprise:5.1"
+		instance.Spec.Image = "emqx/emqx-enterprise:latest"
 	})
 
 	Context("EMQX is not found", func() {

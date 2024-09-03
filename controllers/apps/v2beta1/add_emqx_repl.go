@@ -124,7 +124,10 @@ func getNewReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 	svcPorts, _ := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
 
 	preRs := generateReplicaSet(instance)
-	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
+	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), nil)
+	if instance.Status.ReplicantNodesStatus != nil {
+		podTemplateSpecHash = computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
+	}
 	preRs.Name = preRs.Name + "-" + podTemplateSpecHash
 	preRs.Labels = appsv2beta1.CloneAndAddLabel(preRs.Labels, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)
 	preRs.Spec.Selector = appsv2beta1.CloneSelectorAndAddLabel(preRs.Spec.Selector, appsv2beta1.LabelsPodTemplateHashKey, podTemplateSpecHash)

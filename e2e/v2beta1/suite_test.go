@@ -149,7 +149,7 @@ func genEMQX() *appsv2beta1.EMQX {
 			Namespace: "e2e-test-v2beta1" + "-" + rand.String(5),
 		},
 		Spec: appsv2beta1.EMQXSpec{
-			Image:           "emqx:latest",
+			Image:           "emqx/emqx-enterprise:5.8",
 			ImagePullPolicy: corev1.PullAlways,
 			ClusterDomain:   "cluster.local",
 			Config: appsv2beta1.Config{

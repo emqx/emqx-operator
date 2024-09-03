@@ -412,13 +412,21 @@ func (in *EMQXStatus) DeepCopyInto(out *EMQXStatus) {
 		*out = make([]EMQXNode, len(*in))
 		copy(*out, *in)
 	}
-	in.CoreNodesStatus.DeepCopyInto(&out.CoreNodesStatus)
+	if in.CoreNodesStatus != nil {
+		in, out := &in.CoreNodesStatus, &out.CoreNodesStatus
+		*out = new(EMQXNodesStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ReplicantNodes != nil {
 		in, out := &in.ReplicantNodes, &out.ReplicantNodes
 		*out = make([]EMQXNode, len(*in))
 		copy(*out, *in)
 	}
-	in.ReplicantNodesStatus.DeepCopyInto(&out.ReplicantNodesStatus)
+	if in.ReplicantNodesStatus != nil {
+		in, out := &in.ReplicantNodesStatus, &out.ReplicantNodesStatus
+		*out = new(EMQXNodesStatus)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.NodeEvacuationsStatus != nil {
 		in, out := &in.NodeEvacuationsStatus, &out.NodeEvacuationsStatus
 		*out = make([]NodeEvacuationStatus, len(*in))

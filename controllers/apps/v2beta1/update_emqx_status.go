@@ -21,16 +21,28 @@ type updateStatus struct {
 }
 
 func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
-	instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
-	if instance.Spec.ReplicantTemplate != nil {
-		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
+	if instance.Status.CoreNodesStatus == nil {
+		instance.Status.CoreNodesStatus = &appsv2beta1.EMQXNodesStatus{}
+		if err := u.Client.Status().Update(ctx, instance); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update status")}
+		}
 	}
-
+	instance.Status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
 	if instance.Status.CoreNodesStatus.UpdateRevision != "" && instance.Status.CoreNodesStatus.CurrentRevision == "" {
 		instance.Status.CoreNodesStatus.CurrentRevision = instance.Status.CoreNodesStatus.UpdateRevision
 	}
-	if instance.Status.ReplicantNodesStatus.UpdateRevision != "" && instance.Status.ReplicantNodesStatus.CurrentRevision == "" {
-		instance.Status.ReplicantNodesStatus.CurrentRevision = instance.Status.ReplicantNodesStatus.UpdateRevision
+
+	if instance.Spec.ReplicantTemplate != nil {
+		if instance.Status.ReplicantNodesStatus == nil {
+			instance.Status.ReplicantNodesStatus = &appsv2beta1.EMQXNodesStatus{}
+			if err := u.Client.Status().Update(ctx, instance); err != nil {
+				return subResult{err: emperror.Wrap(err, "failed to update status")}
+			}
+		}
+		instance.Status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
+		if instance.Status.ReplicantNodesStatus.UpdateRevision != "" && instance.Status.ReplicantNodesStatus.CurrentRevision == "" {
+			instance.Status.ReplicantNodesStatus.CurrentRevision = instance.Status.ReplicantNodesStatus.UpdateRevision
+		}
 	}
 
 	updateSts, currentSts, oldStsList := getStateFulSetList(ctx, u.Client, instance)
@@ -102,18 +114,20 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 	}
 
 	instance.Status.ReplicantNodes = replNodes
-	instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
-	instance.Status.ReplicantNodesStatus.CurrentReplicas = 0
-	instance.Status.ReplicantNodesStatus.UpdateReplicas = 0
-	for _, node := range replNodes {
-		if node.NodeStatus == "running" {
-			instance.Status.ReplicantNodesStatus.ReadyReplicas++
-		}
-		if currentRs != nil && node.ControllerUID == currentRs.UID {
-			instance.Status.ReplicantNodesStatus.CurrentReplicas++
-		}
-		if updateRs != nil && node.ControllerUID == updateRs.UID {
-			instance.Status.ReplicantNodesStatus.UpdateReplicas++
+	if instance.Status.ReplicantNodesStatus != nil {
+		instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
+		instance.Status.ReplicantNodesStatus.CurrentReplicas = 0
+		instance.Status.ReplicantNodesStatus.UpdateReplicas = 0
+		for _, node := range replNodes {
+			if node.NodeStatus == "running" {
+				instance.Status.ReplicantNodesStatus.ReadyReplicas++
+			}
+			if currentRs != nil && node.ControllerUID == currentRs.UID {
+				instance.Status.ReplicantNodesStatus.CurrentReplicas++
+			}
+			if updateRs != nil && node.ControllerUID == updateRs.UID {
+				instance.Status.ReplicantNodesStatus.UpdateReplicas++
+			}
 		}
 	}
 

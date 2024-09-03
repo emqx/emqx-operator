@@ -68,7 +68,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.CoreNodes
 					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -80,16 +80,9 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
 						return instance.Status.ReplicantNodes
 					}, BeNil()),
-					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
-					}, And(
-						HaveField("Replicas", Equal(int32(0))),
-						HaveField("ReadyReplicas", Equal(int32(0))),
-						HaveField("CurrentRevision", Equal("")),
-						HaveField("CurrentReplicas", Equal(int32(0))),
-						HaveField("UpdateRevision", Equal("")),
-						HaveField("UpdateReplicas", Equal(int32(0))),
-					)),
+					}, BeNil()),
 				),
 			)
 
@@ -126,7 +119,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.CoreNodes
 					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -138,16 +131,9 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
 						return instance.Status.ReplicantNodes
 					}, BeNil()),
-					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
-					}, And(
-						HaveField("Replicas", Equal(int32(0))),
-						HaveField("ReadyReplicas", Equal(int32(0))),
-						HaveField("CurrentRevision", Equal("")),
-						HaveField("CurrentReplicas", Equal(int32(0))),
-						HaveField("UpdateRevision", Equal("")),
-						HaveField("UpdateReplicas", Equal(int32(0))),
-					)),
+					}, BeNil()),
 				),
 			)
 
@@ -184,7 +170,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.CoreNodes
 					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -196,16 +182,9 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					WithTransform(func(instance *appsv2beta1.EMQX) []appsv2beta1.EMQXNode {
 						return instance.Status.ReplicantNodes
 					}, BeNil()),
-					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
-					}, And(
-						HaveField("Replicas", Equal(int32(0))),
-						HaveField("ReadyReplicas", Equal(int32(0))),
-						HaveField("CurrentRevision", Equal("")),
-						HaveField("CurrentReplicas", Equal(int32(0))),
-						HaveField("UpdateRevision", Equal("")),
-						HaveField("UpdateReplicas", Equal(int32(0))),
-					)),
+					}, BeNil()),
 				),
 			)
 
@@ -239,7 +218,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.IsConditionTrue(appsv2beta1.Ready)
 					}, BeTrue()),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -248,16 +227,9 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						HaveField("UpdateRevision", Not(Equal(storage.Status.CoreNodesStatus.CurrentRevision))),
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
-					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
+					WithTransform(func(instance *appsv2beta1.EMQX) *appsv2beta1.EMQXNodesStatus {
 						return instance.Status.ReplicantNodesStatus
-					}, And(
-						HaveField("Replicas", Equal(int32(0))),
-						HaveField("ReadyReplicas", Equal(int32(0))),
-						HaveField("CurrentRevision", Equal("")),
-						HaveField("CurrentReplicas", Equal(int32(0))),
-						HaveField("UpdateRevision", Equal("")),
-						HaveField("UpdateReplicas", Equal(int32(0))),
-					)),
+					}, BeNil()),
 				),
 			)
 
@@ -358,7 +330,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.IsConditionTrue(appsv2beta1.Ready)
 					}, BeTrue()),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -368,7 +340,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.ReplicantNodesStatus
+						return *instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
@@ -413,7 +385,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.CoreNodes
 					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -426,7 +398,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.ReplicantNodes
 					}, HaveLen(int(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.ReplicantNodesStatus
+						return *instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
@@ -471,7 +443,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.CoreNodes
 					}, HaveLen(int(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -484,7 +456,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.ReplicantNodes
 					}, HaveLen(int(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.ReplicantNodesStatus
+						return *instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(0))),
 						HaveField("ReadyReplicas", Equal(int32(0))),
@@ -526,7 +498,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.IsConditionTrue(appsv2beta1.Ready)
 					}, BeTrue()),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -536,7 +508,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.ReplicantNodesStatus
+						return *instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.ReplicantTemplate.Spec.Replicas))),
@@ -579,7 +551,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						return instance.Status.IsConditionTrue(appsv2beta1.Ready)
 					}, BeTrue()),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.CoreNodesStatus
+						return *instance.Status.CoreNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 						HaveField("ReadyReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
@@ -589,7 +561,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 						HaveField("UpdateReplicas", Equal(int32(*instance.Spec.CoreTemplate.Spec.Replicas))),
 					)),
 					WithTransform(func(instance *appsv2beta1.EMQX) appsv2beta1.EMQXNodesStatus {
-						return instance.Status.ReplicantNodesStatus
+						return *instance.Status.ReplicantNodesStatus
 					}, And(
 						HaveField("Replicas", Equal(int32(0))),
 						HaveField("ReadyReplicas", Equal(int32(0))),

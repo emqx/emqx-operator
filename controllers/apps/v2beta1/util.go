@@ -69,13 +69,13 @@ func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *
 	)
 	for _, sts := range list.Items {
 		if hash, ok := sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
-			if hash == instance.Status.CoreNodesStatus.UpdateRevision {
+			if instance.Status.CoreNodesStatus != nil && hash == instance.Status.CoreNodesStatus.UpdateRevision {
 				updateSts = sts.DeepCopy()
 			}
-			if hash == instance.Status.CoreNodesStatus.CurrentRevision {
+			if instance.Status.CoreNodesStatus != nil && hash == instance.Status.CoreNodesStatus.CurrentRevision {
 				currentSts = sts.DeepCopy()
 			}
-			if hash != instance.Status.CoreNodesStatus.UpdateRevision && hash != instance.Status.CoreNodesStatus.CurrentRevision {
+			if instance.Status.CoreNodesStatus == nil || (hash != instance.Status.CoreNodesStatus.UpdateRevision && hash != instance.Status.CoreNodesStatus.CurrentRevision) {
 				oldStsList = append(oldStsList, sts.DeepCopy())
 			}
 		}
@@ -96,13 +96,13 @@ func getReplicaSetList(ctx context.Context, k8sClient client.Client, instance *a
 
 	for _, rs := range list.Items {
 		if hash, ok := rs.Labels[appsv2beta1.LabelsPodTemplateHashKey]; ok {
-			if hash == instance.Status.ReplicantNodesStatus.UpdateRevision {
+			if instance.Status.ReplicantNodesStatus != nil && hash == instance.Status.ReplicantNodesStatus.UpdateRevision {
 				updateRs = rs.DeepCopy()
 			}
-			if hash == instance.Status.ReplicantNodesStatus.CurrentRevision {
+			if instance.Status.ReplicantNodesStatus != nil && hash == instance.Status.ReplicantNodesStatus.CurrentRevision {
 				currentRs = rs.DeepCopy()
 			}
-			if hash != instance.Status.ReplicantNodesStatus.UpdateRevision && hash != instance.Status.ReplicantNodesStatus.CurrentRevision {
+			if instance.Status.ReplicantNodesStatus == nil || (hash != instance.Status.ReplicantNodesStatus.UpdateRevision && hash != instance.Status.ReplicantNodesStatus.CurrentRevision) {
 				oldRsList = append(oldRsList, rs.DeepCopy())
 			}
 		}
