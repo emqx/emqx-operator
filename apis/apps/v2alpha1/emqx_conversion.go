@@ -39,6 +39,10 @@ func (src *EMQX) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ClusterDomain = "cluster.local"
 	dst.Spec.Config.Data = src.Spec.BootstrapConfig
 
+	if src.Spec.ReplicantTemplate.Spec.Replicas == nil {
+		dst.Spec.ReplicantTemplate = nil
+	}
+
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil
 }

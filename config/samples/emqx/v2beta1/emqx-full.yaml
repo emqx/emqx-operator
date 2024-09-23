@@ -6,7 +6,7 @@ metadata:
     apps.emqx.io/instance: emqx
     apps.emqx.io/managed-by: emqx-operator
 spec:
-  image: "emqx:5"
+  image: "emqx/emqx-enterprise:latest"
   imagePullPolicy: Always
   revisionHistoryLimit: 3
   config:
