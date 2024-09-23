@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
+	semver "github.com/Masterminds/semver/v3"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
@@ -23,8 +24,7 @@ type syncConfig struct {
 }
 
 func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
-	hoconConfig := mergeDefaultConfig(instance.Spec.Config.Data)
-	confStr := hoconConfig.String()
+	confStr := mergeDefaultConfig(instance.Spec.Config.Data)
 
 	// Make sure the config map exists
 	configMap := &corev1.ConfigMap{}
@@ -63,26 +63,31 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 			return subResult{}
 		}
 
-		// Delete readonly configs
-		hoconConfigObj := hoconConfig.GetRoot().(hocon.Object)
-		if _, ok := hoconConfigObj["node"]; ok {
-			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `node` config, because it's readonly config")
-			delete(hoconConfigObj, "node")
-		}
-		if _, ok := hoconConfigObj["cluster"]; ok {
-			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `cluster` config, because it's readonly config")
-			delete(hoconConfigObj, "cluster")
-		}
-		if _, ok := hoconConfigObj["dashboard"]; ok {
-			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `dashboard` config, because it's readonly config")
-			delete(hoconConfigObj, "dashboard")
-		}
-		if _, ok := hoconConfigObj["rpc"]; ok {
-			s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `rpc` config, because it's readonly config")
-			delete(hoconConfigObj, "rpc")
+		v, _ := semver.NewVersion(instance.Status.CoreNodes[0].Version)
+		if v.LessThan(semver.MustParse("5.7.0")) {
+			// Delete readonly configs
+			hoconConfig, _ := hocon.ParseString(confStr)
+			hoconConfigObj := hoconConfig.GetRoot().(hocon.Object)
+			if _, ok := hoconConfigObj["node"]; ok {
+				s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `node` config, because it's readonly config")
+				delete(hoconConfigObj, "node")
+			}
+			if _, ok := hoconConfigObj["cluster"]; ok {
+				s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `cluster` config, because it's readonly config")
+				delete(hoconConfigObj, "cluster")
+			}
+			if _, ok := hoconConfigObj["dashboard"]; ok {
+				s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `dashboard` config, because it's readonly config")
+				delete(hoconConfigObj, "dashboard")
+			}
+			if _, ok := hoconConfigObj["rpc"]; ok {
+				s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `rpc` config, because it's readonly config")
+				delete(hoconConfigObj, "rpc")
+			}
+			confStr = hoconConfig.String()
 		}
 
-		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, hoconConfigObj.String()); err != nil {
+		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, confStr); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
 		}
 
@@ -119,7 +124,7 @@ func generateConfigMap(instance *appsv2beta1.EMQX, data string) *corev1.ConfigMa
 }
 
 func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) error {
-	url := r.GetURL("api/v5/configs", "mode="+strings.ToLower(mode))
+	url := r.GetURL("api/v5/configs", "mode="+strings.ToLower(mode), "ignore_readonly=true")
 
 	resp, body, err := r.Request("PUT", url, []byte(config), http.Header{
 		"Content-Type": []string{"text/plain"},
@@ -133,13 +138,12 @@ func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) err
 	return nil
 }
 
-func mergeDefaultConfig(config string) *hocon.Config {
+func mergeDefaultConfig(config string) string {
 	defaultListenerConfig := ""
 	defaultListenerConfig += fmt.Sprintln("listeners.tcp.default.bind = 1883")
 	defaultListenerConfig += fmt.Sprintln("listeners.ssl.default.bind = 8883")
 	defaultListenerConfig += fmt.Sprintln("listeners.ws.default.bind  = 8083")
 	defaultListenerConfig += fmt.Sprintln("listeners.wss.default.bind = 8084")
 
-	hoconConfig, _ := hocon.ParseString(defaultListenerConfig + config)
-	return hoconConfig
+	return fmt.Sprintf("%s\n%s", defaultListenerConfig, config)
 }
