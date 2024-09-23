@@ -513,7 +513,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				instance.Spec.Image = "emqx/emqx-enterprise:latest" // EMQX Community Edition is not supported core + replicant cluster after 5.7
+				instance.Spec.Image = "emqx/emqx-enterprise:latest-elixir" // EMQX Community Edition is not supported core + replicant cluster after 5.7
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
 
