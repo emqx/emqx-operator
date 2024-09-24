@@ -7,6 +7,10 @@
 
 ## Core Nodes And Replicant Nodes
 
+:::tip
+Just EMQX Enterprise Edition supports Core + Replicant cluster.
+:::
+
 In EMQX 5.0, the nodes in the EMQX cluster can be divided into two roles: core (Core) node and replication (Replicant) node. The Core node is responsible for all write operations in the cluster, which is consistent with the behavior of the nodes in the EMQX 4.x cluster, and serves as the real data source of the EMQX database [Mria](https://github.com/emqx/mria) to store the routing table, Data such as sessions, configurations, alarms, and Dashboard user information. The Replicant node is designed to be stateless and does not participate in the writing of data. Adding or deleting Replicant nodes will not change the redundancy of the cluster data. For more information about the EMQX 5.0 architecture, please refer to the document: [EMQX 5.0 Architecture](https://docs.emqx.com/en/enterprise/v5.0/deploy/cluster/mria-introduction.html), the topological structure of the Core node and the Replicant node is shown in the following figure:
 
   <div style="text-align:center">

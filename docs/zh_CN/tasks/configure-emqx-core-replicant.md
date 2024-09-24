@@ -7,6 +7,10 @@
 
 ## Core 节点与 Replicant 节点
 
+::: tip
+仅有 EMQX 企业版支持 Core + Replicant 节点集群。
+:::
+
 在 EMQX 5.0 中，EMQX 集群中的节点可以分成两个角色：核心（Core）节点和 复制（Replicant）节点。Core 节点负责集群中所有的写操作，与 EMQX 4.x 集群中的节点行为一致，作为 EMQX 数据库 [Mria](https://github.com/emqx/mria) 的真实数据源来存储路由表、会话、配置、报警以及 Dashboard 用户信息等数据。而 Replicant 节点被设计成无状态的，不参与数据的写入，添加或者删除 Replicant 节点不会改变集群数据的冗余。更多关于 EMQX 5.0 架构的信息请参考文档：[EMQX 5.0 架构](https://docs.emqx.com/zh/enterprise/v5.0/deploy/cluster/mria-introduction.html#mria-%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D)，Core 节点与 Replicant 节点的拓扑结构如下图所示：
 
   <div style="text-align:center">
