@@ -71,7 +71,7 @@ jobs:
     - uses: docker/metadata-action@v5
       id: meta
       with:
-        images: ghcr.io/${{ github.repository_owner }}/emqx-operator-controller
+        images: ghcr.io/${{ github.repository_owner }}/emqx-operator
         flavor: |
           latest=true
         tags: |
@@ -133,7 +133,7 @@ jobs:
         timeout-minutes: 5
         uses: ./.github/actions/deploy-operator
         with:
-          repository: ghcr.io/${{ github.repository_owner }}/emqx-operator-controller
+          repository: ghcr.io/${{ github.repository_owner }}/emqx-operator
           tag: ${{ github.ref_name }}
       - name: Deploy emqx
         timeout-minutes: 5
