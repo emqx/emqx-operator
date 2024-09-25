@@ -15,13 +15,16 @@ on:
         required: true
         default: HEAD
 
+env:
+  GIT_TAG: ${{ github.event_name == 'push' && github.ref || inputs.tag }}
+
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: ${{ github.event_name == 'push' && github.ref || inputs.tag }}
+        ref: ${{ env.GIT_TAG }}
     - name: Check helm
       if: github.event_name == 'push'
       run: |
@@ -56,8 +59,8 @@ jobs:
           type=ref,event=branch
           type=ref,event=pr
           type=ref,event=tag
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{version}},value=${{ env.GIT_TAG }}
+          type=semver,pattern={{major}}.{{minor}},value=${{ env.GIT_TAG }}
     - uses: docker/build-push-action@v5
       with:
         platforms: linux/amd64,linux/arm64,linux/arm/v7
@@ -81,6 +84,7 @@ jobs:
         fi
     - uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ env.GIT_TAG }}
         prerelease: ${{ steps.prerelease.outputs.prerelease }}
         generate_release_notes: true
         ## When you use the repository's GITHUB_TOKEN to perform tasks,
