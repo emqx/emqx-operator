@@ -8,13 +8,22 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Ref to release'
+        required: true
+        default: HEAD
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event_name == 'push' && github.ref || inputs.tag }}
     - name: Check helm
+      if: github.event_name == 'push'
       run: |
         version=$(grep -E "^version" deploy/charts/emqx-operator/Chart.yaml | grep -oE "[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9])?")
         if [ "$version" != "${GITHUB_REF##*/}" ]; then
@@ -42,7 +51,7 @@ jobs:
       with:
         images: |
           ${{ github.repository_owner }}/emqx-operator-controller
-          ghcr.io/${{ github.repository_owner }}/emqx-operator-controller
+          ghcr.io/${{ github.repository_owner }}/emqx-operator
         tags: |
           type=ref,event=branch
           type=ref,event=pr
