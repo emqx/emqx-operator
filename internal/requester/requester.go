@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	emperror "emperror.dev/errors"
 )
@@ -64,6 +65,14 @@ func (requester *Requester) GetURL(path string, query ...string) url.URL {
 	return url
 }
 
+var httpClient = &http.Client{
+	Transport: &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+	},
+}
+
 func (requester *Requester) Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 	if url.Scheme == "" {
 		url.Scheme = requester.GetSchema()
@@ -89,11 +98,7 @@ func (requester *Requester) Request(method string, url url.URL, body []byte, hea
 	if req.Header.Get("Accept") == "" {
 		req.Header.Set("Accept", "application/json")
 	}
-	req.Close = true
 
-	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.TLSClientConfig.InsecureSkipVerify = true
-	httpClient := http.Client{Transport: tr}
 	resp, err = httpClient.Do(req)
 	if err != nil {
 		return nil, nil, emperror.Wrap(err, "failed to request API")
