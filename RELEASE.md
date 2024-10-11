@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.24 has been released.
+EMQX Operator 2.2.25-rc.1 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -17,7 +17,7 @@ EMQX Operator 2.2.24 has been released.
 
 + `apps.emqx.io/v2beta1 EMQX`.
 
-  + Fix sometimes cannot update EMQX's configuration when EMQX is running.
+  + Fix sometimes got `EOF` error when request EMQX API
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -29,7 +29,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.24
+  --version 2.2.25-rc.1
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
