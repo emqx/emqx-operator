@@ -43,7 +43,7 @@ jobs:
             cert-manager jetstack/cert-manager \
             --namespace cert-manager \
             --create-namespace \
-            --set installCRDs=true
+            --set crds.enabled=true
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
