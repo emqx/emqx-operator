@@ -234,7 +234,7 @@ Output is similar to:
 - Check status.
 
   ```bash
-  $ kubectl get emqx emqx-ee -o json | jq ".status.nodEvacuationsStatus"
+  $ kubectl get emqx emqx-ee -o json | jq ".status.nodeEvacuationsStatus"
 
   [
     {

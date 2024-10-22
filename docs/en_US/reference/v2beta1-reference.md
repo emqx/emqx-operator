@@ -294,7 +294,7 @@ _Appears in:_
 | `coreNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |  |  |
 | `replicantNodes` _[EMQXNode](#emqxnode) array_ |  |  |  |
 | `replicantNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |  |  |
-| `nodEvacuationsStatus` _[NodeEvacuationStatus](#nodeevacuationstatus) array_ |  |  |  |
+| `nodeEvacuationsStatus` _[NodeEvacuationStatus](#nodeevacuationstatus) array_ |  |  |  |
 
 
 #### EvacuationStrategy

@@ -13865,7 +13865,7 @@ spec:
                   updateRevision:
                     type: string
                 type: object
-              nodEvacuationsStatus:
+              nodeEvacuationsStatus:
                 items:
                   properties:
                     connection_eviction_rate:
