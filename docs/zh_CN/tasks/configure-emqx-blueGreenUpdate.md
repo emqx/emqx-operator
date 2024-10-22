@@ -229,7 +229,7 @@ mqttx bench conn -h ${IP} -p ${PORT} -c 3000
 - 检查蓝绿升级的状态
 
   ```bash
-  $ kubectl get emqx emqx-ee -o json | jq ".status.nodEvacuationsStatus"
+  $ kubectl get emqx emqx-ee -o json | jq ".status.nodeEvacuationsStatus"
 
   [
     {

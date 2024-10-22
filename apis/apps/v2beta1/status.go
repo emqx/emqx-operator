@@ -34,7 +34,7 @@ type EMQXStatus struct {
 	ReplicantNodes       []EMQXNode      `json:"replicantNodes,omitempty"`
 	ReplicantNodesStatus EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
 
-	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodEvacuationsStatus,omitempty"`
+	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodeEvacuationsStatus,omitempty"`
 }
 
 type NodeEvacuationStatus struct {
