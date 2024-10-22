@@ -47,7 +47,7 @@ runs:
         cert-manager jetstack/cert-manager \
         --namespace cert-manager \
         --create-namespace \
-        --set installCRDs=true \
+        --set crds.enabled=true \
         --version "$cert_manager_version"
   - name: Deploy operator by helm
     shell: bash
