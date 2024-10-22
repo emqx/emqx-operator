@@ -28,7 +28,7 @@ Before deploying EMQX Operator, please confirm that the following components hav
    $ helm upgrade --install cert-manager jetstack/cert-manager \
      --namespace cert-manager \
      --create-namespace \
-     --set installCRDs=true
+     --set crds.enabled=true
    ```
 
    Or you can follow the [cert-manager installation guide](https://cert-manager.io/docs/installation/) to install it.

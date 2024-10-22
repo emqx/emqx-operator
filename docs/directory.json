@@ -5,6 +5,10 @@
       "path": "./"
     },
     {
+      "title": "Hello EMQX Operator",
+      "path": "getting-started/hello-emqx-operator"
+    },
+    {
       "title": "Getting Started",
       "path": "getting-started/getting-started"
     },
@@ -50,7 +54,7 @@
           "title": "Enable Persistence In EMQX Cluster",
           "path": "tasks/configure-emqx-persistence"
         },
-       {
+        {
           "title": "Access EMQX Cluster By LoadBalancer",
           "path": "tasks/configure-emqx-service"
         },
