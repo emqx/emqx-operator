@@ -8,7 +8,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
 
 在开始之前，你需要准备以下内容：
 
-- 开通华为云容器服务，并创建一个 CCE 集群。具体请参考：[创建 CCE 集群](https://support.huaweicloud.com/usermanual-cce/cce_01_0028.html)
+- 开通华为云容器服务，并创建一个 CCE 集群。具体请参考：[购买集群](https://support.huaweicloud.com/usermanual-cce/cce_10_0298.html)
 
     ::: tip
     Kubernetes 集群节点必须可以访问外网（可以通过加 NAT 网关解决），否则无法拉取除容器镜像服务（SoftWare Repository）外的第三方镜像
@@ -55,7 +55,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
     dashboardServiceTemplate:
       metadata:
         annotations:
-          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html#cce_10_0014__table939522754617
+          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0385.html
           kubernetes.io/elb.autocreate: |
             {
               "type": "public",
@@ -69,7 +69,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
     listenersServiceTemplate:
       metadata:
         annotations:
-          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html#cce_10_0014__table939522754617
+          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0385.html
           kubernetes.io/elb.autocreate: |
             {
               "type": "public",
@@ -134,7 +134,7 @@ EMQX Operator 支持在华为云容器引擎（Cloud Container Engine，简称 C
     serviceTemplate:
       metadata:
         annotations:
-          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0014.html#cce_10_0014__table939522754617
+          ## 自动创建关联的 ELB，详细字段说明请参考：https://support.huaweicloud.com/usermanual-cce/cce_10_0385.html
           kubernetes.io/elb.autocreate: |
             {
               "type": "public",
