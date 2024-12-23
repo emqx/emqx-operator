@@ -34,6 +34,7 @@ The following table lists the configurable parameters of the cert-manager chart 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `skipCRDs` | If `true`, skips installing CRDs | `false` |
+| `singleNamespace` | If true, the operator will watch only the namespace where it is deployed. If false, the operator will watch all namespaces. | `false` |
 | `development` | Development configures the logger to use a Zap development config  (stacktraces on warnings, no sampling), otherwise a Zap production config will be used (stacktraces on errors, sampling). | `false` |
 | `image.repository` | Image repository | `emqx/emqx-operator-controller` |
 | `image.tag` | Image tag | `{{RELEASE_VERSION}}` |

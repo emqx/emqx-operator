@@ -32,6 +32,12 @@ jobs:
 
           - [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-slim.yaml"]
           - [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-full.yaml"]
+        single_namespace:
+          - false
+          - true
+        exclude:
+          - install: static
+            single_namespace: true
 
     steps:
       - run: minikube start
@@ -63,11 +69,15 @@ jobs:
           helm install emqx-operator deploy/charts/emqx-operator \
             --set image.tag=${{ github.sha }} \
             --set development=true \
-            --namespace emqx-operator-system \
+            --set singleNamespace=${{ matrix.single_namespace }} \
+            --namespace ${{ matrix.single_namespace && 'default' || 'emqx-operator-system' }} \
             --create-namespace
       - name: Check operator
         timeout-minutes: 5
-        run: kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
+        run: |
+          kubectl wait --for=condition=Ready pods \
+            -l "control-plane=controller-manager" \
+            -n ${{ matrix.single_namespace && 'default' || 'emqx-operator-system' }}
       - name: Deployment emqx
         timeout-minutes: 5
         uses: ./.github/actions/deploy-emqx

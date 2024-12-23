@@ -51,6 +51,13 @@ spec:
         - containerPort: 9443
           name: webhook-server
           protocol: TCP
+        {{- if .Values.singleNamespace }}
+        env:
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        {{- end }}
         readinessProbe:
           httpGet:
             path: /readyz
