@@ -4,6 +4,9 @@
 
 skipCRDs: false
 
+## If true, the operator will watch only the namespace where it is deployed. If false, the operator will watch all namespaces.
+singleNamespace: false
+
 # Development configures the logger to use a Zap development config
 # (stacktraces on warnings, no sampling), otherwise a Zap production
 # config will be used (stacktraces on errors, sampling).

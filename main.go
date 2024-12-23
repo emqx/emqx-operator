@@ -34,6 +34,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -102,6 +103,9 @@ func main() {
 		LeaderElectionID:       "19fd6fcc.emqx.io",
 		LeaseDuration:          ptr.To(time.Second * 30),
 		RenewDeadline:          ptr.To(time.Second * 20),
+		Cache: cache.Options{
+			DefaultNamespaces: getWatchNamespace(),
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -172,4 +176,17 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// getWatchNamespace returns the Namespace the operator should be watching for changes
+func getWatchNamespace() map[string]cache.Config {
+	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
+
+	ns, found := os.LookupEnv(watchNamespaceEnvVar)
+	if found {
+		return map[string]cache.Config{
+			ns: {},
+		}
+	}
+	return nil
 }
