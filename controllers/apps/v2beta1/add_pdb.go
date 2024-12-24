@@ -10,11 +10,8 @@ import (
 	"github.com/go-logr/logr"
 	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/discovery"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kubeConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
@@ -43,15 +40,8 @@ func (a *addPdb) reconcile(ctx context.Context, logger logr.Logger, instance *ap
 		}
 	}
 
-	for _, pdb := range pdbList {
-		if err := ctrl.SetControllerReference(instance, pdb, a.Scheme); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to set controller reference")}
-		}
-		if err := a.Client.Create(ctx, pdb); err != nil {
-			if !k8sErrors.IsAlreadyExists(err) {
-				return subResult{err: emperror.Wrap(err, "failed to create PDB")}
-			}
-		}
+	if err := a.CreateOrUpdateList(ctx, a.Scheme, logger, instance, pdbList); err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to create or update PDBs")}
 	}
 	return subResult{}
 }
@@ -111,10 +101,8 @@ func generatePodDisruptionBudgetV1beta1(instance *appsv2beta1.EMQX) (*policyv1be
 					instance.Spec.CoreTemplate.Labels,
 				),
 			},
-			MinAvailable: &intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: 1,
-			},
+			MinAvailable:   instance.Spec.CoreTemplate.Spec.MinAvailable,
+			MaxUnavailable: instance.Spec.CoreTemplate.Spec.MaxUnavailable,
 		},
 	}
 	if appsv2beta1.IsExistReplicant(instance) {
@@ -124,6 +112,8 @@ func generatePodDisruptionBudgetV1beta1(instance *appsv2beta1.EMQX) (*policyv1be
 			appsv2beta1.DefaultReplicantLabels(instance),
 			instance.Spec.ReplicantTemplate.Labels,
 		)
+		replPdb.Spec.MinAvailable = instance.Spec.ReplicantTemplate.Spec.MinAvailable
+		replPdb.Spec.MaxUnavailable = instance.Spec.ReplicantTemplate.Spec.MaxUnavailable
 		return corePdb, replPdb
 	}
 	return corePdb, nil
