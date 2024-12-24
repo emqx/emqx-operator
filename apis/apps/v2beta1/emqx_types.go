@@ -214,7 +214,6 @@ type EMQXReplicantTemplateSpec struct {
 	// "selector" will still be available after the eviction, i.e. even in the
 	// absence of the evicted pod.  So for example you can prevent all voluntary
 	// evictions by specifying "100%".
-	// +kubebuilder:default:=1
 	// +kubebuilder:validation:XIntOrString
 	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
 	// An eviction is allowed if at most "maxUnavailable" pods selected by
