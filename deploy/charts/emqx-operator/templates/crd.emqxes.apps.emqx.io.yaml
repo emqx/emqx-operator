@@ -9810,6 +9810,17 @@ spec:
                               format: int32
                               type: integer
                           type: object
+                        maxUnavailable:
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
+                        minAvailable:
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          default: 1
+                          x-kubernetes-int-or-string: true
                         nodeName:
                           type: string
                         nodeSelector:
@@ -10277,6 +10288,9 @@ spec:
                               type: string
                           type: object
                       type: object
+                      x-kubernetes-validations:
+                        - message: minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget.
+                          rule: 'has(self.minAvailable) && has(self.maxUnavailable) ? false : true'
                   type: object
                 dashboardServiceTemplate:
                   properties:
@@ -13364,6 +13378,17 @@ spec:
                               format: int32
                               type: integer
                           type: object
+                        maxUnavailable:
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
+                        minAvailable:
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          default: 1
+                          x-kubernetes-int-or-string: true
                         nodeName:
                           type: string
                         nodeSelector:
@@ -13746,6 +13771,9 @@ spec:
                             type: object
                           type: array
                       type: object
+                      x-kubernetes-validations:
+                        - message: minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget.
+                          rule: 'has(self.minAvailable) && has(self.maxUnavailable) ? false : true'
                   type: object
                 revisionHistoryLimit:
                   default: 3

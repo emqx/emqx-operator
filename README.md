@@ -30,25 +30,27 @@ The EMQX Operator includes, but is not limited to, the following features:
 
 |  EMQX Enterprise Version   |              EMQX Operator Version              |                          APIVersion                          |      Kind      |
 | :------------------------: | :---------------------------------------------: | :----------------------------------------------------------: | :------------: |
-|  4.3.x (included) ～ 4.4   |               1.2.1, 1.2.2, 1.2.3               | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
-| 4.4.6 (included) ～ 4.4.8  |                      1.2.5                      | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
-| 4.4.8 (included) ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3 | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
+| 5.6.0 (included) ~ latest | 2.2.24 ~ latest | [apps.emqx.io/v2beta1](./docs/en_US/reference/v2beta1-reference.md) | EMQX |
+| 5.1.1 (included) ~ latest      |    2.2.0 ~ latest                      | [apps.emqx.io/v2beta1](./docs/en_US/reference/v2beta1-reference.md) |      EMQX      |
+| 5.0.0 (included) ~ 5.0.23        |    2.0.0, 2.0.1, 2.0.2, 2.0.3, 2.1.0, 2.1.1     | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md) |      EMQX      |
 | 4.4.14 (included) or higher 4.4.x   |                  2.1.0, 2.1.1                   | [apps.emqx.io/v1beta4](./docs/en_US/reference/v1beta4-reference.md) | EmqxEnterprise |
-|      5.0.0 (included) ~ 5.0.23        |    2.0.0, 2.0.1, 2.0.2, 2.0.3, 2.1.0, 2.1.1     | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md) |      EMQX      |
-|      5.1.1 or higher       |    2.2.0                                        | [apps.emqx.io/v2beta1](./docs/en_US/reference/v2beta1-reference.md) |      EMQX      |
+| 4.4.8 (included) ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3 | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
+| 4.4.6 (included) ～ 4.4.8  |                      1.2.5                      | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
+|  4.3.x (included) ～ 4.4   |               1.2.1, 1.2.2, 1.2.3               | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md) | EmqxEnterprise |
 
 ### EMQX Open Source
 
 |      EMQX Open Source Version      |     EMQX Operator Version                            |     APIVersion    |    Kind    |
 |:----------------------:|:-----------------:|-------------------|:-----------------:|
-| 4.3.x (included) ～ 4.4 | 1.2.1, 1.2.2, 1.2.3                                 |  [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md)          |  EmqxBroker  |
+| 5.6.0 (included) ~ latest | 2.2.24 ~ latest | [apps.emqx.io/v2beta1](./docs/en_US/reference/v2beta1-reference.md) | EMQX |
+| 5.1.1 (included) ~ latest  |                 2.2.0 ~ latest                  | [apps.emqx.io/v2beta1](./docs/en_US/reference/v2beta1-reference.md) |    EMQX    |
+| 5.0.14 (included)  ~ 5.0.23 | 2.1.0, 2.1.1                                                | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         | EMQX     |
+| 5.0.8 (included) ～  5.0.14 | 2.0.2                                            |  [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         |  EMQX     |
+| 5.0.6 (included) ～ 5.0.8 | 2.0.0, 2.0.1, 2.0.3                                |  [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         |  EMQX     |
+| 4.4.14 or higher 4.4.x | 2.1.0, 2.1.1                                                 |  [apps.emqx.io/v1beta4](./docs/en_US/reference/v1beta4-reference.md)          | EmqxBroker |
 | 4.4.6 (included) ～ 4.4.8 | 1.2.5                                                 | [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md)          | EmqxBroker |
 | 4.4.8 (included) ～ 4.4.14 | 1.2.6, 1.2.7, 1.2.8, 2.0.0, 2.0.1, 2.0.2, 2.0.3   |  [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md)          | EmqxBroker |
-| 4.4.14 or higher 4.4.x | 2.1.0, 2.1.1                                                 |  [apps.emqx.io/v1beta4](./docs/en_US/reference/v1beta4-reference.md)          | EmqxBroker |
-| 5.0.6 (included) ～ 5.0.8 | 2.0.0, 2.0.1, 2.0.3                                |  [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         |  EMQX     |
-| 5.0.8 (included) ～  5.0.14 | 2.0.2                                            |  [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         |  EMQX     |
-| 5.0.14 (included)  ~ 5.0.23 | 2.1.0, 2.1.1                                                | [apps.emqx.io/v2alpha1](./docs/en_US/reference/v2alpha1-reference.md)         | EMQX     |
-|      5.1.1 or higher       |    2.2.0                                        | [apps.emqx.io/v2beta1](./docs/en_US/reference/v2beta1-reference.md) |      EMQX      |
+| 4.3.x (included) ～ 4.4 | 1.2.1, 1.2.2, 1.2.3                                 |  [apps.emqx.io/v1beta3](./docs/en_US/reference/v1beta3-reference.md)          |  EmqxBroker  |
 
 ## How to selector Kubernetes version
 
@@ -56,7 +58,9 @@ The EMQX Operator requires a Kubernetes cluster of version `>=1.24`.
 
 | Kubernetes Versions     | EMQX Operator Compatibility                                  | Notes                                                        |
 | ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 1.24 or higher          | All functions supported                                      |                                                              |
+| 1.29 (included) ~ latest  | All functions supported                                      | https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules |
+| 1.25 (included) ~  1.29 | Supported, but [CustomResourceDefinition Validation Rules](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules) is in beta | https://kubernetes.io/blog/2022/09/23/crd-validation-rules-beta/ |
+| 1.23 (included) ~  1.25 | Supported, except [CustomResourceDefinition Validation Rules](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules) | some CRD validation rules might not worked                   |
 | 1.22 (included) ～ 1.23 | Supported, except [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) | EMQX cluster can only use one protocol in `LoadBalancer` type of Service, for example TCP or UDP. |
 | 1.21 (included) ～ 1.22 | Supported, except  [pod-deletion-cost](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#pod-deletion-cost) | When using EMQX Core + Replicant mode cluster, updating the EMQX cluster cannot accurately delete Pods. |
 | 1.20 (included) ～ 1.21 | Supported, manual `.spec.ports[].nodePort` assignment required if using `NodePort` type of Service | For more details, please refer to [Kubernetes changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.20.md#bug-or-regression-4). |

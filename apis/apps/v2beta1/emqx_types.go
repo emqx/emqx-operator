@@ -19,6 +19,7 @@ package v2beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // +kubebuilder:object:root=true
@@ -164,10 +165,14 @@ type EMQXReplicantTemplate struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired behavior of the EMQX replicant node.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	// Controller tools does not support more complex validations (oneOf/anyOf/allOf/etc), so use validation rule instead. https://github.com/kubernetes-sigs/controller-tools/issues/461#issuecomment-1982741599
+	// +kubebuilder:validation:XValidation:rule="has(self.minAvailable) && has(self.maxUnavailable) ? false : true",message="minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget."
 	Spec EMQXReplicantTemplateSpec `json:"spec,omitempty"`
 }
 
 type EMQXCoreTemplateSpec struct {
+	// Controller tools does not support more complex validations (oneOf/anyOf/allOf/etc), so use validation rule instead. https://github.com/kubernetes-sigs/controller-tools/issues/461#issuecomment-1982741599
+	// +kubebuilder:validation:XValidation:rule="has(self.minAvailable) && has(self.maxUnavailable) ? false : true",message="minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget."
 	EMQXReplicantTemplateSpec `json:",inline"`
 
 	// VolumeClaimTemplates is a list of claims that pods are allowed to reference.
@@ -198,12 +203,27 @@ type EMQXReplicantTemplateSpec struct {
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	//// TopologySpreadConstraint specifies how to spread matching pods among the given topology.
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
 	// Replicas is the desired number of replicas of the given Template.
 	// These are replicas in the sense that they are instantiations of the
 	// same Template, but individual replicas also have a consistent identity.
 	// Defaults to 2.
 	//+kubebuilder:default:=2
 	Replicas *int32 `json:"replicas,omitempty"`
+	// An eviction is allowed if at least "minAvailable" pods selected by
+	// "selector" will still be available after the eviction, i.e. even in the
+	// absence of the evicted pod.  So for example you can prevent all voluntary
+	// evictions by specifying "100%".
+	// +kubebuilder:default:=1
+	// +kubebuilder:validation:XIntOrString
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
+	// An eviction is allowed if at most "maxUnavailable" pods selected by
+	// "selector" are unavailable after the eviction, i.e. even in absence of
+	// the evicted pod. For example, one can prevent all voluntary evictions
+	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
+	// +kubebuilder:validation:XIntOrString
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+
 	// Entrypoint array. Not executed within a shell.
 	// The container image's ENTRYPOINT is used if this is not provided.
 	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable

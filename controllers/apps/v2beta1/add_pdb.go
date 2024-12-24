@@ -74,12 +74,11 @@ func generatePodDisruptionBudget(instance *appsv2beta1.EMQX) (*policyv1.PodDisru
 					instance.Spec.CoreTemplate.Labels,
 				),
 			},
-			MinAvailable: &intstr.IntOrString{
-				Type:   intstr.Int,
-				IntVal: 1,
-			},
+			MinAvailable:   instance.Spec.CoreTemplate.Spec.MinAvailable,
+			MaxUnavailable: instance.Spec.CoreTemplate.Spec.MaxUnavailable,
 		},
 	}
+
 	if appsv2beta1.IsExistReplicant(instance) {
 		replPdb := corePdb.DeepCopy()
 		replPdb.Name = instance.ReplicantNamespacedName().Name
@@ -87,6 +86,8 @@ func generatePodDisruptionBudget(instance *appsv2beta1.EMQX) (*policyv1.PodDisru
 			appsv2beta1.DefaultReplicantLabels(instance),
 			instance.Spec.ReplicantTemplate.Labels,
 		)
+		replPdb.Spec.MinAvailable = instance.Spec.ReplicantTemplate.Spec.MinAvailable
+		replPdb.Spec.MaxUnavailable = instance.Spec.ReplicantTemplate.Spec.MaxUnavailable
 		return corePdb, replPdb
 	}
 	return corePdb, nil
