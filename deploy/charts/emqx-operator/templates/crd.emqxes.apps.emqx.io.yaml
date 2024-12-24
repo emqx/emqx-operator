@@ -9819,7 +9819,6 @@ spec:
                           anyOf:
                             - type: integer
                             - type: string
-                          default: 1
                           x-kubernetes-int-or-string: true
                         nodeName:
                           type: string
@@ -13387,7 +13386,6 @@ spec:
                           anyOf:
                             - type: integer
                             - type: string
-                          default: 1
                           x-kubernetes-int-or-string: true
                         nodeName:
                           type: string
