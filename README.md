@@ -58,14 +58,9 @@ The EMQX Operator requires a Kubernetes cluster of version `>=1.24`.
 
 | Kubernetes Versions     | EMQX Operator Compatibility                                  | Notes                                                        |
 | ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 1.29 (included) ~ latest  | All functions supported                                      | https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules |
-| 1.25 (included) ~  1.29 | Supported, but [CustomResourceDefinition Validation Rules](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules) is in beta | https://kubernetes.io/blog/2022/09/23/crd-validation-rules-beta/ |
-| 1.23 (included) ~  1.25 | Supported, except [CustomResourceDefinition Validation Rules](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules) | some CRD validation rules might not worked                   |
+| 1.24 (included) ~ latest | All functions supported                                      |  |
 | 1.22 (included) ～ 1.23 | Supported, except [MixedProtocolLBService](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/) | EMQX cluster can only use one protocol in `LoadBalancer` type of Service, for example TCP or UDP. |
-| 1.21 (included) ～ 1.22 | Supported, except  [pod-deletion-cost](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#pod-deletion-cost) | When using EMQX Core + Replicant mode cluster, updating the EMQX cluster cannot accurately delete Pods. |
-| 1.20 (included) ～ 1.21 | Supported, manual `.spec.ports[].nodePort` assignment required if using `NodePort` type of Service | For more details, please refer to [Kubernetes changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.20.md#bug-or-regression-4). |
-| 1.16 (included) ～ 1.20 | Supported, not recommended due to lack of testing            |                                                              |
-| Lower than 1.16         | Not supported                                                | `apiextensions/v1` APIVersion is not supported.              |
+| Lower than 1.22       | Not supported                                                | `unknown field "x-kubernetes-validations" in io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps]` |
 
 ## CustomResourceDefinitions
 
