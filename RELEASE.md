@@ -1,6 +1,6 @@
 # Release Note 🍻
 
-EMQX Operator 2.2.26 has been released.
+EMQX Operator 2.2.27 has been released.
 
 ## Supported version
 + apps.emqx.io/v2beta1
@@ -15,11 +15,9 @@ EMQX Operator 2.2.26 has been released.
 
 ## Enhancements 🚀
 
-+ `apps.emqx.io/v2beta1 EMQX`.
++ EMQX operator helm chart can support the `podSecurityContext` and `containerSecurityContext` configuration, which can be used to configure the security context of the operator pod.
 
-  + Users can now configure the Pod Disruption Budget (PDB) for the EMQX cluster by setting `minAvailable` or `maxUnavailable` in `spec.coreTemplate.spec` or `spec.replicantTemplate.spec` within the EMQX CRD. The default setting is {"minAvailable": 1}.
-
-+ EMQX operator can now be deployed in a single namespace scope, where it will only manage resources within that namespace. Just set `singleNamespace: true` in the `values.yaml` file of Helm chart, and then the operator will only manage resources in the namespace where it is deployed.
++ EMQX operator helm chart can disable web hooks by `webhook.enabled: false` in the `values.yaml` file, it will disable the web hooks of the operator, if you have any `apps.emqx.io/v2alpha1` or `apps.emqx.io/v1beta3` resources, please make sure the web hooks are enabled, otherwise the resources can not convert to the `apps.emqx.io/v2beta1` and `apps.emqx.io/v1beta4` resources.
 
 ## How to install/upgrade EMQX Operator 💡
 
@@ -31,7 +29,7 @@ helm repo update
 helm upgrade --install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.2.26
+  --version 2.2.27
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" -n emqx-operator-system
 ```
 
