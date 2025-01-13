@@ -35,9 +35,20 @@ jobs:
         single_namespace:
           - false
           - true
+        enable_webhook:
+          - true
         exclude:
           - install: static
             single_namespace: true
+        include:
+          - enable_webhook: false
+            install: helm
+            single_namespace: true
+            emqx: [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-slim.yaml"]
+          - enable_webhook: false
+            install: helm
+            single_namespace: true
+            emqx: [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-full.yaml"]
 
     steps:
       - run: minikube start
