@@ -1,3 +1,4 @@
+{{- if .Values.webhook.enabled -}}
 ---
 apiVersion: v1
 kind: Service
@@ -11,3 +12,4 @@ spec:
   selector:
     control-plane: controller-manager
     {{- include "emqx-operator.selectorLabels" . | nindent 4 }}
+{{- end }}
