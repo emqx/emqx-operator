@@ -47,6 +47,9 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `serviceAccount.create` | If `true`, create a new service account | `true` |
 | `serviceAccount.name` | Service account to be used. If not set and `serviceAccount.create` is `true`, a name is generated using the fullname template |  |
 | `serviceAccount.annotations` | Annotations to add to the service account |  |
+| `podAnnotations` | Annotations to add to the pod | `{}` |
+| `podSecurityContext` | Security context for the pod | `{runAsNonRoot: true}` |
+| `containerSecurityContext` | Security context for the container | `{allowPrivilegeEscalation: false}` |
 | `resources` | CPU/memory resource requests/limits | `{}` |
 | `nodeSelector` | Node labels for pod assignment | `{}` |
 | `affinity` | Node affinity for pod assignment | `{}` |

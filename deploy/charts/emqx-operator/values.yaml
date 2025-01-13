@@ -38,6 +38,12 @@ serviceAccount:
 
 podAnnotations: {}
 
+podSecurityContext:
+  runAsNonRoot: true
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+
 resources:
   limits:
     cpu: 500m
