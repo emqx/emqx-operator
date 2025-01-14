@@ -27,9 +27,6 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      env:
-      - name: ENABLE_WEBHOOKS
-        value: {{ .Values.webhook.enabled | quote }}
       containers:
       - args:
         - --leader-elect
@@ -56,8 +53,10 @@ spec:
           name: webhook-server
           protocol: TCP
         {{- end }}
-        {{- if .Values.singleNamespace }}
         env:
+        - name: ENABLE_WEBHOOKS
+          value: {{ .Values.webhook.enabled | quote }}
+        {{- if .Values.singleNamespace }}
         - name: WATCH_NAMESPACE
           valueFrom:
             fieldRef:
