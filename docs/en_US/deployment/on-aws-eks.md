@@ -12,6 +12,8 @@ Before you begin, you must have the following:
 
 - Deploy an AWS Load Balancer Controller on a cluster, for details, please refer to: [Create a Network Load Balancer](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html)
 
+- Install the Amazon EBS CSI driver on the cluster, for details, please refer to: [Amazon EBS CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html)
+
 - Install EMQX Operator: For details, please refer to: [Install EMQX Operator](../getting-started/getting-started.md)
 
 ## Quickly Deploy An EMQX Cluster
@@ -24,20 +26,26 @@ The following is the relevant configuration of EMQX custom resources. You can se
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
+  # Configure EBS StorageClass with WaitForFirstConsumer binding mode
+  # This ensures volumes are created in the same AZ as the pods that will use them
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    name: ebs-sc
+  provisioner: ebs.csi.aws.com
+  volumeBindingMode: WaitForFirstConsumer
+  ---
   apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
     name: emqx
   spec:
-    image: emqx:5
+    image: emqx/emqx-enterprise:5
     coreTemplate:
       spec:
         ## EMQX custom resources do not support updating this field at runtime
         volumeClaimTemplates:
-          ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
-          ## Please manage the Amazon EBS CSI driver as an Amazon EKS add-on.
-          ## For more documentation please refer to: https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-          storageClassName: gp2
+          storageClassName: ebs-sc
           resources:
             requests:
               storage: 10Gi
@@ -48,9 +56,8 @@ The following is the relevant configuration of EMQX custom resources. You can se
         ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
         annotations:
           ## Specifies whether the NLB is Internet-facing or internal. If not specified, defaults to internal.
+          service.beta.kubernetes.io/aws-load-balancer-type: external
           service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-          ## Specify the availability zone to which the NLB will route traffic. Specify at least one subnet, either subnetID or subnetName (subnet name label) can be used.
-          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
       spec:
         type: LoadBalancer
         ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
@@ -60,9 +67,8 @@ The following is the relevant configuration of EMQX custom resources. You can se
         ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
         annotations:
           ## Specifies whether the NLB is Internet-facing or internal. If not specified, defaults to internal.
+          service.beta.kubernetes.io/aws-load-balancer-type: external
           service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-          ## Specify the availability zone to which the NLB will route traffic. Specify at least one subnet, either subnetID or subnetName (subnet name label) can be used.
-          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
       spec:
         type: LoadBalancer
         ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
@@ -95,6 +101,15 @@ The following is the relevant configuration of EMQX custom resources. You can se
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
   ```yaml
+  # Configure EBS StorageClass with WaitForFirstConsumer binding mode
+  # This ensures volumes are created in the same AZ as the pods that will use them
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+    name: ebs-sc
+  provisioner: ebs.csi.aws.com
+  volumeBindingMode: WaitForFirstConsumer
+  ---
   apiVersion: apps.emqx.io/v1beta4
   kind: EmqxEnterprise
   metadata:
@@ -105,10 +120,7 @@ The following is the relevant configuration of EMQX custom resources. You can se
       metadata:
         name: emqx-ee
       spec:
-        ## More content: https://docs.aws.amazon.com/eks/latest/userguide/storage-classes.html
-        ## Please manage the Amazon EBS CSI driver as an Amazon EKS add-on.
-        ## For more documentation please refer to: https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/managing-ebs-csi.html
-        storageClassName: gp2
+        storageClassName: ebs-sc
         resources:
           requests:
             storage: 10Gi
@@ -134,9 +146,8 @@ The following is the relevant configuration of EMQX custom resources. You can se
         ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/
         annotations:
           ## Specifies whether the NLB is Internet-facing or internal. If not specified, defaults to internal.
+          service.beta.kubernetes.io/aws-load-balancer-type: external
           service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-          ## Specify the availability zone to which the NLB will route traffic. Specify at least one subnet, either subnetID or subnetName (subnet name label) can be used.
-          service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-xxx1,subnet-xxx2
       spec:
         type: LoadBalancer
         ## More content: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/nlb/
@@ -164,9 +175,9 @@ The following is the relevant configuration of EMQX custom resources. You can se
 :::
 ::::
 
-## Use MQTT X CLI To Publish/Subscribe Messages
+## Use MQTTX application To Publish/Subscribe Messages
 
-[MQTT X CLI](https://mqttx.app/cli) is an open source MQTT 5.0 command line client tool, designed to help developers to more Quickly develop and debug MQTT services and applications.
+[MQTTX CLI](https://mqttx.app/cli) is an open source MQTT 5.0 command line client tool, designed to help developers to more Quickly develop and debug MQTT services and applications.
 
 + Obtain External IP of EMQX cluster
 
