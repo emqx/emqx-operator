@@ -77,6 +77,10 @@
         {
           "title": "Cluster Load Rebalancing (EMQX Enterprise)",
           "path": "tasks/configure-emqx-rebalance"
+        },
+        {
+          "title": "Deploy EMQX Cluster in k8s with restricted access",
+          "path": "tasks/configure-emqx-restricted-k8s"
         }
       ]
     },
@@ -193,6 +197,10 @@
         {
           "title": "集群负载重平衡（EMQX 企业版）",
           "path": "tasks/configure-emqx-rebalance"
+        },
+        {
+          "title": "在受限制的 k8s 环境中部署 EMQX 集群",
+          "path": "tasks/configure-emqx-restricted-k8s"
         }
       ]
     },
