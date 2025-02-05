@@ -175,12 +175,9 @@ type EMQXCoreTemplateSpec struct {
 	// +kubebuilder:validation:XValidation:rule="has(self.minAvailable) && has(self.maxUnavailable) ? false : true",message="minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget."
 	EMQXReplicantTemplateSpec `json:",inline"`
 
-	// VolumeClaimTemplates is a list of claims that pods are allowed to reference.
-	// The StatefulSet controller is responsible for mapping network identities to
-	// claims in a way that maintains the identity of a pod. Every claim in
-	// this list must have at least one matching (by name) volumeMount in one
-	// container in the template. A claim in this list takes precedence over
-	// any volumes in the template, with the same name.
+	// This field is named VolumeClaimTemplates but actually it is PersistentVolumeClaimSpec. I'm sorry for the bad naming.
+	// PersistentVolumeClaimSpec describes the common attributes of storage devices
+	// and allows a Source for provider-specific attributes
 	// More than EMQXReplicantTemplateSpec
 	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
 }
