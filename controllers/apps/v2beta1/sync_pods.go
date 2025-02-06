@@ -76,7 +76,8 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 				}
 			}
 			if _, ok := pod.Annotations["controller.kubernetes.io/pod-deletion-cost"]; ok {
-				currentRs.Spec.Replicas = ptr.To(int32(instance.Status.ReplicantNodesStatus.CurrentReplicas - 1))
+				// https://github.com/emqx/emqx-operator/issues/1105
+				currentRs.Spec.Replicas = ptr.To(int32(*currentRs.Spec.Replicas - 1))
 				if err := s.Client.Update(ctx, currentRs); err != nil {
 					return subResult{err: emperror.Wrap(err, "failed to scale down old replicaSet")}
 				}
@@ -92,7 +93,8 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 			return subResult{err: emperror.Wrap(err, "failed to check if sts can be scale down")}
 		}
 		if canBeScaledDown {
-			currentSts.Spec.Replicas = ptr.To(int32(instance.Status.CoreNodesStatus.CurrentReplicas - 1))
+			// https://github.com/emqx/emqx-operator/issues/1105
+			currentSts.Spec.Replicas = ptr.To(int32(*currentSts.Spec.Replicas - 1))
 			if err := s.Client.Update(ctx, currentSts); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to scale down old statefulSet")}
 			}
