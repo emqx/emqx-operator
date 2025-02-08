@@ -1,0 +1,9 @@
+apiVersion: apps.emqx.io/v2beta1
+kind: Rebalance
+metadata:
+  labels:
+    app.kubernetes.io/name: emqx-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: rebalance-sample
+spec:
+  # TODO(user): Add fields here

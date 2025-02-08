@@ -1,0 +1,23 @@
+# permissions for end users to view rebalances.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: emqx-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: rebalance-viewer-role
+rules:
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - rebalances
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - rebalances/status
+  verbs:
+  - get

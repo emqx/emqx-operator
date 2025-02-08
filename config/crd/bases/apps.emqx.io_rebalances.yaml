@@ -1,0 +1,240 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.4
+  name: rebalances.apps.emqx.io
+spec:
+  group: apps.emqx.io
+  names:
+    kind: Rebalance
+    listKind: RebalanceList
+    plural: rebalances
+    singular: rebalance
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v2beta1
+    schema:
+      openAPIV3Schema:
+        description: Rebalance is the Schema for the rebalances API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              instanceKind:
+                default: EMQX
+                description: |-
+                  InstanceKind is used to distinguish between EMQX and EMQXEnterprise.
+                  When it is set to "EMQX", it means that the EMQX CR is v2beta1,
+                  and when it is set to "EmqxEnterprise", it means that the EmqxEnterprise CR is v1beta4.
+                type: string
+              instanceName:
+                description: InstanceName represents the name of EMQX CR, just work
+                  for EMQX Enterprise
+                type: string
+              rebalanceStrategy:
+                description: |-
+                  RebalanceStrategy represents the strategy of EMQX rebalancing
+                  More info: https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing
+                properties:
+                  absConnThreshold:
+                    default: 1000
+                    description: |-
+                      AbsConnThreshold represents the absolute threshold for checking connection balance.
+                      same to abs-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+                      The value must be greater than 0
+                      Defaults to 1000.
+                    format: int32
+                    type: integer
+                  absSessThreshold:
+                    default: 1000
+                    description: |-
+                      AbsSessThreshold represents the absolute threshold for checking session connection balance.
+                      same to abs-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+                      The value must be greater than 0
+                      Default to 1000.
+                    format: int32
+                    type: integer
+                  connEvictRate:
+                    description: |-
+                      ConnEvictRate represents the source node client disconnect rate per second.
+                      same to conn-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+                      The value must be greater than 0
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  relConnThreshold:
+                    default: "1.1"
+                    description: |-
+                      RelConnThreshold represents the relative threshold for checkin connection balance.
+                      same to rel-conn-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+                      the usage of float highly discouraged, as support for them varies across languages.
+                      So we define the RelConnThreshold field as string type and you not float type
+                      The value must be greater than "1.0"
+                      Defaults to "1.1".
+                    type: string
+                  relSessThreshold:
+                    default: "1.1"
+                    description: |-
+                      RelSessThreshold represents the relative threshold for checking session connection balance.
+                      same to rel-sess-threshold in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+                      the usage of float highly discouraged, as support for them varies across languages.
+                      So we define the RelSessThreshold field as string type and you not float type
+                      The value must be greater than "1.0"
+                      Defaults to "1.1".
+                    type: string
+                  sessEvictRate:
+                    default: 500
+                    description: |-
+                      SessEvictRate represents the source node session evacuation rate per second.
+                      same to sess-evict-rate in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+                      The value must be greater than 0
+                      Defaults to 500.
+                    format: int32
+                    type: integer
+                  waitHealthCheck:
+                    default: 60
+                    description: |-
+                      WaitHealthCheck represents the time (in seconds) to wait for the LB to
+                      remove the source node from the list of active backend nodes. After the
+                      specified waiting time is exceeded,the rebalancing task will start.
+                      same to wait-health-check in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+                      The value must be greater than 0
+                      Defaults to 60 seconds.
+                    format: int32
+                    type: integer
+                  waitTakeover:
+                    default: 60
+                    description: |-
+                      WaitTakeover represents the time in seconds to wait for a client to
+                      reconnect to take over the session after all connections are disconnected.
+                      same to wait-takeover in [EMQX Rebalancing](https://docs.emqx.com/en/enterprise/v4.4/advanced/rebalancing.html#rebalancing)
+                      The value must be greater than 0
+                      Defaults to 60 seconds.
+                    format: int32
+                    type: integer
+                required:
+                - connEvictRate
+                type: object
+            required:
+            - instanceKind
+            - instanceName
+            - rebalanceStrategy
+            type: object
+          status:
+            properties:
+              completedTime:
+                description: CompletedTime Represents the time when the rebalance
+                  job was completed.
+                format: date-time
+                type: string
+              conditions:
+                description: |-
+                  The latest available observations of an object's current state.
+                  When Rebalance fails, the condition will have type "Failed" and status false.
+                  When Rebalance is in processing, the condition will have a type "Processing" and status true.
+                  When Rebalance is completed, the condition will have a type "Complete" and status true.
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Status of rebalance condition type. one of Processing,
+                        Complete, Failed.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              phase:
+                description: Phase represents the phase of Rebalance.
+                type: string
+              rebalanceStates:
+                items:
+                  description: Rebalance defines the observed Rebalancing state of
+                    EMQX
+                  properties:
+                    connection_eviction_rate:
+                      description: ConnectionEvictionRate represents the node session
+                        evacuation rate per second.
+                      format: int32
+                      type: integer
+                    coordinator_node:
+                      description: CoordinatorNode represents the node currently undergoing
+                        rebalancing.
+                      type: string
+                    donors:
+                      description: Donors represent the source nodes for rebalancing.
+                      items:
+                        type: string
+                      type: array
+                    node:
+                      description: Node represents the rebalancing scheduling node.
+                      type: string
+                    recipients:
+                      description: Recipients represent the target node for rebalancing.
+                      items:
+                        type: string
+                      type: array
+                    session_eviction_rate:
+                      description: SessionEvictionRate represents the node session
+                        evacuation rate per second.
+                      format: int32
+                      type: integer
+                    state:
+                      description: State represents the state of emqx cluster rebalancing.
+                      type: string
+                  type: object
+                type: array
+              startedTime:
+                description: StartedTime Represents the time when rebalance job start.
+                format: date-time
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
