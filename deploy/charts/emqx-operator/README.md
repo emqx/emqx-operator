@@ -29,7 +29,7 @@ $ helm delete emqx-operator -n emqx-operator-system
 
 ## Configuration
 
-The following table lists the configurable parameters of the cert-manager chart and their default values.
+The following table lists the configurable parameters of the emqx-operator chart and their default values.
 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
