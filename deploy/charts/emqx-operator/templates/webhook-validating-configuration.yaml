@@ -5,7 +5,11 @@ kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "emqx-operator.fullname" . }}-serving-cert
+  {{- if .Values.singleNamespace }}
+  name: {{ .Release.Namespace }}-{{ include "emqx-operator.fullname" . }}-validating-webhook-configuration
+  {{- else }}
   name: {{ include "emqx-operator.fullname" . }}-validating-webhook-configuration
+  {{- end }}
 webhooks:
 - admissionReviewVersions:
   - v1
@@ -27,6 +31,11 @@ webhooks:
     - UPDATE
     resources:
     - rebalances
+  {{- if .Values.singleNamespace }}
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: {{ .Release.Namespace }}
+  {{- end }}
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -48,6 +57,11 @@ webhooks:
     - UPDATE
     resources:
     - emqxbrokers
+  {{- if .Values.singleNamespace }}
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: {{ .Release.Namespace }}
+  {{- end }}
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -69,6 +83,11 @@ webhooks:
     - UPDATE
     resources:
     - emqxenterprises
+  {{- if .Values.singleNamespace }}
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: {{ .Release.Namespace }}
+  {{- end }}
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -90,5 +109,10 @@ webhooks:
     - UPDATE
     resources:
     - emqxplugins
+  {{- if .Values.singleNamespace }}
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: {{ .Release.Namespace }}
+  {{- end }}
   sideEffects: None
 {{- end -}}
