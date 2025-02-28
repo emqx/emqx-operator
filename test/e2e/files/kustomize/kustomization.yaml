@@ -1,0 +1,8 @@
+# Adds namespace to all resources.
+namespace: emqx-operator-system
+
+resources:
+- ../../../../config/default
+
+patches:
+- path: patch.yaml
