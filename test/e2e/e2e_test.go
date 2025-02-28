@@ -59,10 +59,11 @@ var _ = Describe("Manager", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to install CRDs")
 
 		By("deploying the controller-manager")
-		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage))
+		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage), fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/kustomize"))
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
 
+		By("waiting for controller-manager deployment")
 		cmd = exec.Command("kubectl", "wait", "deployment", "emqx-operator-controller-manager", "--for=condition=Available", "-n", namespace, "--timeout=5m")
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to wait for controller-manager deployment")

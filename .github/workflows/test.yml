@@ -1,23 +1,66 @@
 name: Tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
   pull_request:
 
 jobs:
   test:
-    name: Run on Ubuntu
+    strategy:
+      matrix:
+        case:
+          - unit
+          - e2e
+
     runs-on: ubuntu-latest
     steps:
-      - name: Clone the code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '~1.22'
 
-      - name: Running Tests
+      - uses: helm/kind-action@v1
+        if: matrix.case == 'e2e'
+        with:
+          config: test/e2e/files/kind-with-mounts.yaml
+
+      - run: go mod tidy
+      - run: make ${{ matrix.case == 'e2e' && 'test-e2e' || 'test' }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverprofile-${{ matrix.case }}
+          path: |
+            ${{ github.workspace }}/cover.out
+            /tmp/kind/data/emqx-operator-system/test-e2e-coverage/**
+          if-no-files-found: ignore
+          retention-days: 1
+
+  codecov:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverprofile-*
+          path: /tmp/coverprofile
+      - name: Get cover files
+        id: files
         run: |
-          go mod tidy
-          make test
+          files="$(find /tmp/coverprofile -type f -exec readlink -f '{}' ';' | tr '\n' ',' | sed 's/,$//g')"
+          echo "files=$files" >> $GITHUB_OUTPUT
+      - uses: codecov/codecov-action@v4
+        with:
+          files: ${{ steps.files.outputs.files }} # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+          token: ${{ secrets.CODECOV_TOKEN }} # required
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: coverprofile-*
+

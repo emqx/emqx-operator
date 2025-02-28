@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        env:
+        - name: GOCOVERDIR
+          value: /tmp/go-coverage
+        volumeMounts:
+        - mountPath: /tmp/go-coverage
+          name: coverage
+      volumes:
+      - name: coverage
+        hostPath:
+          path: /tmp/kind/data/emqx-operator-system/test-e2e-coverage
