@@ -105,7 +105,7 @@ func (u *updatePodConditions) checkInCluster(instance *appsv2beta1.EMQX, r inner
 	}
 	for _, node := range nodes {
 		if pod.UID == node.PodUID {
-			if node.Edition == "Enterprise" {
+			if node.Edition == appsv2beta1.EnterpriseEdition {
 				v, _ := semver.NewVersion(node.Version)
 				if v.Compare(semver.MustParse("5.0.3")) >= 0 {
 					return u.checkRebalanceStatus(instance, r, pod)

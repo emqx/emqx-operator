@@ -83,8 +83,8 @@ func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 	assert.True(t, ok)
 
 	users := strings.Split(data, "\n")
-	var usernames []string
-	var secrets []string
+	usernames := make([]string, 0, len(users))
+	secrets := make([]string, 0, len(users))
 	for _, user := range users {
 		usernames = append(usernames, user[:strings.Index(user, ":")])
 		secrets = append(secrets, user[strings.Index(user, ":")+1:])
@@ -175,8 +175,8 @@ func TestGenerateBootstrapAPIKeySecretWithSecretRef(t *testing.T) {
 	assert.True(t, ok)
 
 	users := strings.Split(data, "\n")
-	var usernames []string
-	var secrets []string
+	usernames := make([]string, 0, len(users))
+	secrets := make([]string, 0, len(users))
 	for _, user := range users {
 		usernames = append(usernames, user[:strings.Index(user, ":")])
 		secrets = append(secrets, user[strings.Index(user, ":")+1:])

@@ -283,7 +283,7 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 			}
 			// Compatible with "enable" and "enabled"
 			// the default value of them both is true
-			if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
+			if c.GetString("enable") == strconv.FormatBool(false) || c.GetString("enabled") == strconv.FormatBool(false) {
 				continue
 			}
 			bind := strings.Trim(c.GetString("bind"), `"`)
@@ -313,7 +313,7 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 		c, _ := hocon.ParseString(gateway.String())
 		// Compatible with "enable" and "enabled"
 		// the default value of them both is true
-		if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
+		if c.GetString("enable") == strconv.FormatBool(false) || c.GetString("enabled") == strconv.FormatBool(false) {
 			continue
 		}
 		for t, listener := range c.GetObject("listeners") {
@@ -335,7 +335,7 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 				c, _ := hocon.ParseString(config.String())
 				// Compatible with "enable" and "enabled"
 				// the default value of them both is true
-				if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
+				if c.GetString("enable") == strconv.FormatBool(false) || c.GetString("enabled") == strconv.FormatBool(false) {
 					continue
 				}
 				bind := strings.Trim(c.GetString("bind"), `"`)

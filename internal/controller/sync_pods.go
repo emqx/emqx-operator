@@ -77,7 +77,7 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 			}
 			if _, ok := pod.Annotations["controller.kubernetes.io/pod-deletion-cost"]; ok {
 				// https://github.com/emqx/emqx-operator/issues/1105
-				currentRs.Spec.Replicas = ptr.To(int32(*currentRs.Spec.Replicas - 1))
+				currentRs.Spec.Replicas = ptr.To(*currentRs.Spec.Replicas - 1)
 				if err := s.Client.Update(ctx, currentRs); err != nil {
 					return subResult{err: emperror.Wrap(err, "failed to scale down old replicaSet")}
 				}
@@ -94,7 +94,7 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 		}
 		if canBeScaledDown {
 			// https://github.com/emqx/emqx-operator/issues/1105
-			currentSts.Spec.Replicas = ptr.To(int32(*currentSts.Spec.Replicas - 1))
+			currentSts.Spec.Replicas = ptr.To(*currentSts.Spec.Replicas - 1)
 			if err := s.Client.Update(ctx, currentSts); err != nil {
 				return subResult{err: emperror.Wrap(err, "failed to scale down old statefulSet")}
 			}
@@ -164,7 +164,7 @@ func (s *syncPods) canBeScaleDownRs(
 		}
 	}
 
-	if shouldDeletePodInfo.Edition == "Enterprise" && shouldDeletePodInfo.Session > 0 {
+	if shouldDeletePodInfo.Edition == appsv2beta1.EnterpriseEdition && shouldDeletePodInfo.Session > 0 {
 		if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
 			return nil, emperror.Wrap(err, "failed to start node evacuation")
 		}
@@ -225,7 +225,7 @@ func (s *syncPods) canBeScaleDownSts(
 		return true, nil
 	}
 
-	if shouldDeletePodInfo.Edition == "Enterprise" && shouldDeletePodInfo.Session > 0 {
+	if shouldDeletePodInfo.Edition == appsv2beta1.EnterpriseEdition && shouldDeletePodInfo.Session > 0 {
 		if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
 			return false, emperror.Wrap(err, "failed to start node evacuation")
 		}
@@ -283,7 +283,7 @@ func startEvacuationByAPI(r innerReq.RequesterInterface, instance *appsv2beta1.E
 	if err != nil {
 		return emperror.Wrap(err, "failed to request API api/v5/load_rebalance/"+nodeName+"/evacuation/start")
 	}
-	//TODO:
+	// TODO:
 	// the api/v5/load_rebalance/global_status have some bugs, so we need to ignore the 400 error
 	// wait for EMQX Dev Team fix it.
 	if resp.StatusCode == 400 && strings.Contains(string(respBody), "already_started") {

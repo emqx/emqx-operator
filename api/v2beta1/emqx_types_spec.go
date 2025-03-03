@@ -50,7 +50,7 @@ type EMQXSpec struct {
 	// EMQX config
 	Config Config `json:"config,omitempty"`
 
-	//+kubebuilder:default:="cluster.local"
+	// +kubebuilder:default:="cluster.local"
 	ClusterDomain string `json:"clusterDomain,omitempty"`
 
 	// The number of old ReplicaSets, old StatefulSet and old PersistentVolumeClaim to retain to allow rollback.
@@ -60,11 +60,11 @@ type EMQXSpec struct {
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
 
 	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
-	//+kubebuilder:default={type:Recreate,initialDelaySeconds:10,evacuationStrategy:{waitTakeover:10,connEvictRate:1000,sessEvictRate:1000}}
+	// +kubebuilder:default={type:Recreate,initialDelaySeconds:10,evacuationStrategy:{waitTakeover:10,connEvictRate:1000,sessEvictRate:1000}}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// CoreTemplate is the object that describes the EMQX core node that will be created
-	//+kubebuilder:default={spec:{replicas:2}}
+	// +kubebuilder:default={spec:{replicas:2}}
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 
 	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
@@ -100,16 +100,16 @@ type KeyRef struct {
 }
 
 type Config struct {
-	//+kubebuilder:validation:Enum=Merge;Replace
-	//+kubebuilder:default=Merge
+	// +kubebuilder:validation:Enum=Merge;Replace
+	// +kubebuilder:default=Merge
 	Mode string `json:"mode,omitempty"`
 	// EMQX config, HOCON format, like etc/emqx.conf file
 	Data string `json:"data,omitempty"`
 }
 
 type UpdateStrategy struct {
-	//+kubebuilder:validation:Enum=Recreate
-	//+kubebuilder:default=Recreate
+	// +kubebuilder:validation:Enum=Recreate
+	// +kubebuilder:default=Recreate
 	Type string `json:"type,omitempty"`
 	// Number of seconds before evacuation connection start.
 	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
@@ -118,15 +118,15 @@ type UpdateStrategy struct {
 }
 
 type EvacuationStrategy struct {
-	//+kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=0
 	WaitTakeover int32 `json:"waitTakeover,omitempty"`
 	// Just work in EMQX Enterprise.
-	//+kubebuilder:validation:Minimum=1
-	//+kubebuilder:default=1000
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=1000
 	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
 	// Just work in EMQX Enterprise.
-	//+kubebuilder:validation:Minimum=1
-	//+kubebuilder:default=1000
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=1000
 	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
 }
 
@@ -178,14 +178,14 @@ type EMQXReplicantTemplateSpec struct {
 	// If specified, the pod's tolerations.
 	// The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	//// TopologySpreadConstraint specifies how to spread matching pods among the given topology.
+	// TopologySpreadConstraint specifies how to spread matching pods among the given topology.
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 
 	// Replicas is the desired number of replicas of the given Template.
 	// These are replicas in the sense that they are instantiations of the
 	// same Template, but individual replicas also have a consistent identity.
 	// Defaults to 2.
-	//+kubebuilder:default:=2
+	// +kubebuilder:default:=2
 	Replicas *int32 `json:"replicas,omitempty"`
 	// An eviction is allowed if at least "minAvailable" pods selected by
 	// "selector" will still be available after the eviction, i.e. even in the
@@ -242,12 +242,12 @@ type EMQXReplicantTemplateSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/config/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings.
-	//+kubebuilder:default={runAsUser:1000,runAsGroup:1000,fsGroup:1000,fsGroupChangePolicy:Always,supplementalGroups: {1000}}
+	// +kubebuilder:default={runAsUser:1000,runAsGroup:1000,fsGroup:1000,fsGroupChangePolicy:Always,supplementalGroups: {1000}}
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
 	// SecurityContext defines the security options the container should be run with.
 	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
 	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
-	//+kubebuilder:default={runAsUser:1000,runAsGroup:1000,runAsNonRoot:true}
+	// +kubebuilder:default={runAsUser:1000,runAsGroup:1000,runAsNonRoot:true}
 	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 	// List of initialization containers belonging to the pod.
 	// Init containers are executed in order prior to containers being started. If any
@@ -274,13 +274,13 @@ type EMQXReplicantTemplateSpec struct {
 	// Container will be restarted if the probe fails.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	//+kubebuilder:default={initialDelaySeconds:60,periodSeconds:30,failureThreshold:3,httpGet: {path:/status, port:"dashboard"}}
+	// +kubebuilder:default={initialDelaySeconds:60,periodSeconds:30,failureThreshold:3,httpGet: {path:/status, port:"dashboard"}}
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 	// Periodic probe of container service readiness.
 	// Container will be removed from service endpoints if the probe fails.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	//+kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,failureThreshold:12,httpGet: {path:/status, port:"dashboard"}}
+	// +kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,failureThreshold:12,httpGet: {path:/status, port:"dashboard"}}
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	// StartupProbe indicates that the Pod has successfully initialized.
 	// If specified, no other probes are executed until this completes successfully.
@@ -298,7 +298,7 @@ type EMQXReplicantTemplateSpec struct {
 type ServiceTemplate struct {
 	// EMQX Operator will create a service for EMQX nodes.
 	// This is a pointer to distinguish between `false` and not specified.
-	//+kubebuilder:default:=true
+	// +kubebuilder:default:=true
 	Enabled *bool `json:"enabled,omitempty"`
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata

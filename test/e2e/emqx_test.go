@@ -28,12 +28,22 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to install CRDs")
 
 		By("deploying the controller-manager")
-		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage), fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/kustomize"))
+		cmd = exec.Command(
+			"make", "deploy",
+			fmt.Sprintf("IMG=%s", projectImage),
+			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/kustomize"),
+		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
 
 		By("waiting for controller-manager deployment")
-		cmd = exec.Command("kubectl", "wait", "deployment", "emqx-operator-controller-manager", "--for=condition=Available", "-n", namespace, "--timeout=5m")
+		cmd = exec.Command(
+			"kubectl", "wait",
+			"deployment", "emqx-operator-controller-manager",
+			"--for", "condition=Available",
+			"-n", namespace,
+			"--timeout", "5m",
+		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to wait for controller-manager deployment")
 	})
@@ -53,7 +63,11 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			By("scaling up EMQX cluster")
 			coreReplicas = 3
 			changingTime := metav1.Now()
-			cmd := exec.Command("kubectl", "patch", "emqx", "emqx", "--type", "json", "-p", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 3}]`)
+			cmd := exec.Command(
+				"kubectl", "patch", "emqx", "emqx",
+				"--type", "json",
+				"-p", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 3}]`,
+			)
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to scale emqx cluster")
 
@@ -76,7 +90,11 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 
 			By("changing EMQX image")
 			changingTime := metav1.Now()
-			cmd = exec.Command("kubectl", "patch", "emqx", "emqx", "--type", "json", "-p", `[{"op": "replace", "path": "/spec/image", "value": "emqx/emqx-enterprise:latest-elixir"}]`)
+			cmd = exec.Command(
+				"kubectl", "patch", "emqx", "emqx",
+				"--type", "json",
+				"-p", `[{"op": "replace", "path": "/spec/image", "value": "emqx/emqx-enterprise:latest-elixir"}]`,
+			)
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to patch emqx cluster")
 
@@ -111,7 +129,11 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply emqx.yaml")
 
-			cmd = exec.Command("kubectl", "patch", "emqx", "emqx", "--type", "json", "-p", `[{"op": "replace", "path": "/spec/replicantTemplate", "value": {"spec": {"replicas": 2}}}]`)
+			cmd = exec.Command(
+				"kubectl", "patch", "emqx", "emqx",
+				"--type", "json",
+				"-p", `[{"op": "replace", "path": "/spec/replicantTemplate", "value": {"spec": {"replicas": 2}}}]`,
+			)
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to patch emqx cluster")
 
@@ -123,11 +145,19 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			coreReplicas = 2
 			replicantReplicas = 3
 			changingTime := metav1.Now()
-			cmd := exec.Command("kubectl", "patch", "emqx", "emqx", "--type", "json", "-p", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 2}]`)
+			cmd := exec.Command(
+				"kubectl", "patch", "emqx", "emqx",
+				"--type", "json",
+				"-p", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 2}]`,
+			)
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to scale emqx cluster")
 
-			cmd = exec.Command("kubectl", "patch", "emqx", "emqx", "--type", "json", "-p", `[{"op": "replace", "path": "/spec/replicantTemplate/spec/replicas", "value": 3}]`)
+			cmd = exec.Command(
+				"kubectl", "patch", "emqx", "emqx",
+				"--type", "json",
+				"-p", `[{"op": "replace", "path": "/spec/replicantTemplate/spec/replicas", "value": 3}]`,
+			)
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to scale emqx cluster")
 
@@ -163,7 +193,11 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 
 			By("changing EMQX image")
 			changingTime := metav1.Now()
-			cmd = exec.Command("kubectl", "patch", "emqx", "emqx", "--type", "json", "-p", `[{"op": "replace", "path": "/spec/image", "value": "emqx/emqx-enterprise:latest-elixir"}]`)
+			cmd = exec.Command(
+				"kubectl", "patch", "emqx", "emqx",
+				"--type", "json",
+				"-p", `[{"op": "replace", "path": "/spec/image", "value": "emqx/emqx-enterprise:latest-elixir"}]`,
+			)
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to patch emqx cluster")
 
@@ -238,22 +272,34 @@ func verifyEMQXstatus(coreReplicas, replicantReplicas *int, afterTime *metav1.Ti
 		cmd := exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.replicas}")
 		out, err := utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
-		Expect(out).To(Equal(strconv.Itoa(*coreReplicas)), "EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes")
+		Expect(out).To(
+			Equal(strconv.Itoa(*coreReplicas)),
+			"EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes",
+		)
 
 		cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.readyReplicas}")
 		out, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
-		Expect(out).To(Equal(strconv.Itoa(*coreReplicas)), "EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes")
+		Expect(out).To(
+			Equal(strconv.Itoa(*coreReplicas)),
+			"EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes",
+		)
 
 		cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.currentReplicas}")
 		out, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
-		Expect(out).To(Equal(strconv.Itoa(*coreReplicas)), "EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes")
+		Expect(out).To(
+			Equal(strconv.Itoa(*coreReplicas)),
+			"EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes",
+		)
 
 		cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.updateReplicas}")
 		out, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
-		Expect(out).To(Equal(strconv.Itoa(*coreReplicas)), "EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes")
+		Expect(out).To(
+			Equal(strconv.Itoa(*coreReplicas)),
+			"EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes",
+		)
 	}
 	Eventually(verifyEMQXStatus).Should(Succeed())
 
@@ -271,7 +317,9 @@ func verifyEMQXstatus(coreReplicas, replicantReplicas *int, afterTime *metav1.Ti
 
 		Expect(currentRevision).To(Equal(updateRevision), "EMQX cluster current revision is not equal to update revision")
 
-		cmd = exec.Command("kubectl", "get", "pods", "-l", appsv2beta1.LabelsPodTemplateHashKey+"="+currentRevision, "-o", "json")
+		cmd = exec.Command(
+			"kubectl", "get", "pods", "-l", appsv2beta1.LabelsPodTemplateHashKey+"="+currentRevision, "-o", "json",
+		)
 		out, err := utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get pods")
 
@@ -301,22 +349,34 @@ func verifyEMQXstatus(coreReplicas, replicantReplicas *int, afterTime *metav1.Ti
 		cmd := exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus.replicas}")
 		out, err := utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
-		Expect(out).To(Equal(strconv.Itoa(*replicantReplicas)), "EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes")
+		Expect(out).To(
+			Equal(strconv.Itoa(*replicantReplicas)),
+			"EMQX cluster does not have "+strconv.Itoa(*replicantReplicas)+" replicant nodes",
+		)
 
 		cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus.readyReplicas}")
 		out, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
-		Expect(out).To(Equal(strconv.Itoa(*replicantReplicas)), "EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes")
+		Expect(out).To(
+			Equal(strconv.Itoa(*replicantReplicas)),
+			"EMQX cluster does not have "+strconv.Itoa(*replicantReplicas)+" replicant nodes",
+		)
 
 		cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus.currentReplicas}")
 		out, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
-		Expect(out).To(Equal(strconv.Itoa(*replicantReplicas)), "EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes")
+		Expect(out).To(
+			Equal(strconv.Itoa(*replicantReplicas)),
+			"EMQX cluster does not have "+strconv.Itoa(*replicantReplicas)+" replicant nodes",
+		)
 
 		cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus.updateReplicas}")
 		out, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
-		Expect(out).To(Equal(strconv.Itoa(*replicantReplicas)), "EMQX cluster does not have "+strconv.Itoa(*coreReplicas)+" core nodes")
+		Expect(out).To(
+			Equal(strconv.Itoa(*replicantReplicas)),
+			"EMQX cluster does not have "+strconv.Itoa(*replicantReplicas)+" replicant nodes",
+		)
 	}
 	Eventually(verifyEMQXStatus).Should(Succeed())
 
@@ -344,7 +404,10 @@ func verifyEMQXstatus(coreReplicas, replicantReplicas *int, afterTime *metav1.Ti
 
 		pods := &corev1.PodList{}
 		_ = json.Unmarshal([]byte(out), &pods)
-		Expect(pods.Items).To(HaveLen(*replicantReplicas), "EMQX cluster does not have "+strconv.Itoa(*replicantReplicas)+" pods with current revision")
+		Expect(pods.Items).To(
+			HaveLen(*replicantReplicas),
+			"EMQX cluster does not have "+strconv.Itoa(*replicantReplicas)+" pods with current revision",
+		)
 	}
 	Eventually(verifyEMQXStatus).Should(Succeed())
 }
