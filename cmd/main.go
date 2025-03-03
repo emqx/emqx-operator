@@ -54,18 +54,18 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update
-//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update
-//+kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update
-//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update
-//+kubebuilder:rbac:groups="",resources=pods/status,verbs=patch
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update
-//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update
+// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update
+// +kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update
+// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups="",resources=pods/status,verbs=patch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update
+// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update
 
 func main() {
 	var metricsAddr string

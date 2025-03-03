@@ -78,7 +78,11 @@ var _ = BeforeSuite(func() {
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to run make manifests")
 
 	By("building the manager(Operator) image")
-	cmd = exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectImage), fmt.Sprintf("COVERAGE_ENABLED=%t", true))
+	cmd = exec.Command(
+		"make", "docker-build",
+		fmt.Sprintf("IMG=%s", projectImage),
+		fmt.Sprintf("COVERAGE_ENABLED=%t", true),
+	)
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the manager(Operator) image")
 

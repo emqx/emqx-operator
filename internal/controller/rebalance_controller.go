@@ -124,7 +124,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// check if emqx is enterprise edition
-	if emqx.Status.CoreNodes[0].Edition != "Enterprise" {
+	if emqx.Status.CoreNodes[0].Edition != appsv2beta1.EnterpriseEdition {
 		_ = rebalance.Status.SetFailed(appsv2beta1.RebalanceCondition{
 			Type:    appsv2beta1.RebalanceConditionFailed,
 			Status:  corev1.ConditionTrue,

@@ -50,7 +50,7 @@ func (a *addRepl) reconcile(ctx context.Context, logger logr.Logger, instance *a
 	}
 
 	if patchResult := patchCalculateFunc(updateRs, preRs); !patchResult.IsEmpty() {
-		//Crete Rs
+		// Crete Rs
 		logger.Info("got different pod template for EMQX replicant nodes, will create new replicaSet", "replicaSet", klog.KObj(preRs), "patch", string(patchResult.Patch))
 
 		_ = ctrl.SetControllerReference(instance, preRs, a.Scheme)

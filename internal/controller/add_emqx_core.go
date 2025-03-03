@@ -193,7 +193,7 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 						{
 							Name:            appsv2beta1.DefaultContainerName,
 							Image:           instance.Spec.Image,
-							ImagePullPolicy: corev1.PullPolicy(instance.Spec.ImagePullPolicy),
+							ImagePullPolicy: instance.Spec.ImagePullPolicy,
 							Command:         instance.Spec.CoreTemplate.Spec.Command,
 							Args:            instance.Spec.CoreTemplate.Spec.Args,
 							Ports:           instance.Spec.CoreTemplate.Spec.Ports,

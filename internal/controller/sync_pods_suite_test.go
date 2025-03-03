@@ -19,6 +19,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const currentRevision string = "current"
+const updateRevision string = "update"
+
 var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 	var s *syncPods
 	var fakeR *innerReq.FakeRequester = &innerReq.FakeRequester{}
@@ -65,17 +68,17 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				},
 			},
 			CoreNodesStatus: appsv2beta1.EMQXNodesStatus{
-				UpdateRevision:  "update",
+				UpdateRevision:  updateRevision,
 				UpdateReplicas:  1,
-				CurrentRevision: "current",
+				CurrentRevision: currentRevision,
 				CurrentReplicas: 1,
 				ReadyReplicas:   2,
 				Replicas:        1,
 			},
 			ReplicantNodesStatus: appsv2beta1.EMQXNodesStatus{
-				UpdateRevision:  "update",
+				UpdateRevision:  updateRevision,
 				UpdateReplicas:  1,
-				CurrentRevision: "current",
+				CurrentRevision: currentRevision,
 				CurrentReplicas: 1,
 				ReadyReplicas:   2,
 				Replicas:        1,
@@ -91,7 +94,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Labels: appsv2beta1.CloneAndAddLabel(
 					appsv2beta1.DefaultCoreLabels(instance),
 					appsv2beta1.LabelsPodTemplateHashKey,
-					"update",
+					updateRevision,
 				),
 			},
 			Spec: appsv1.StatefulSetSpec{
@@ -100,7 +103,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 					MatchLabels: appsv2beta1.CloneAndAddLabel(
 						appsv2beta1.DefaultCoreLabels(instance),
 						appsv2beta1.LabelsPodTemplateHashKey,
-						"update",
+						updateRevision,
 					),
 				},
 				Template: corev1.PodTemplateSpec{
@@ -108,7 +111,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 						Labels: appsv2beta1.CloneAndAddLabel(
 							appsv2beta1.DefaultCoreLabels(instance),
 							appsv2beta1.LabelsPodTemplateHashKey,
-							"update",
+							updateRevision,
 						),
 					},
 					Spec: corev1.PodSpec{
@@ -121,9 +124,9 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		}
 
 		currentSts = updateSts.DeepCopy()
-		currentSts.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
-		currentSts.Spec.Selector.MatchLabels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
-		currentSts.Spec.Template.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
+		currentSts.Labels[appsv2beta1.LabelsPodTemplateHashKey] = currentRevision
+		currentSts.Spec.Selector.MatchLabels[appsv2beta1.LabelsPodTemplateHashKey] = currentRevision
+		currentSts.Spec.Template.Labels[appsv2beta1.LabelsPodTemplateHashKey] = currentRevision
 
 		Expect(k8sClient.Create(ctx, updateSts)).Should(Succeed())
 		updateSts.Status.Replicas = 1
@@ -142,7 +145,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 				Labels: appsv2beta1.CloneAndAddLabel(
 					appsv2beta1.DefaultReplicantLabels(instance),
 					appsv2beta1.LabelsPodTemplateHashKey,
-					"update",
+					updateRevision,
 				),
 			},
 			Spec: appsv1.ReplicaSetSpec{
@@ -151,7 +154,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 					MatchLabels: appsv2beta1.CloneAndAddLabel(
 						appsv2beta1.DefaultReplicantLabels(instance),
 						appsv2beta1.LabelsPodTemplateHashKey,
-						"update",
+						updateRevision,
 					),
 				},
 				Template: corev1.PodTemplateSpec{
@@ -159,7 +162,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 						Labels: appsv2beta1.CloneAndAddLabel(
 							appsv2beta1.DefaultReplicantLabels(instance),
 							appsv2beta1.LabelsPodTemplateHashKey,
-							"update",
+							updateRevision,
 						),
 					},
 					Spec: corev1.PodSpec{
@@ -172,9 +175,9 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		}
 
 		currentRs = updateRs.DeepCopy()
-		currentRs.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
-		currentRs.Spec.Selector.MatchLabels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
-		currentRs.Spec.Template.Labels[appsv2beta1.LabelsPodTemplateHashKey] = "current"
+		currentRs.Labels[appsv2beta1.LabelsPodTemplateHashKey] = currentRevision
+		currentRs.Spec.Selector.MatchLabels[appsv2beta1.LabelsPodTemplateHashKey] = currentRevision
+		currentRs.Spec.Template.Labels[appsv2beta1.LabelsPodTemplateHashKey] = currentRevision
 
 		Expect(k8sClient.Create(ctx, updateRs)).Should(Succeed())
 		updateRs.Status.Replicas = 1
@@ -335,14 +338,14 @@ var _ = Describe("check can be scale down", func() {
 				},
 			}
 			instance.Status.ReplicantNodesStatus = appsv2beta1.EMQXNodesStatus{
-				UpdateRevision:  "update",
-				CurrentRevision: "current",
+				UpdateRevision:  updateRevision,
+				CurrentRevision: currentRevision,
 			}
 
 			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
-			Eventually(s.reconcile(ctx, logger, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(ctx, logger, instance, fakeR).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
@@ -353,7 +356,7 @@ var _ = Describe("check can be scale down", func() {
 
 				if method == "GET" {
 					respBody, _ = json.Marshal(&appsv2beta1.EMQXNode{
-						Edition: "Enterprise",
+						Edition: appsv2beta1.EnterpriseEdition,
 						Session: 99999,
 					})
 				}
@@ -372,7 +375,7 @@ var _ = Describe("check can be scale down", func() {
 					StatusCode: 200,
 				}
 				respBody, _ = json.Marshal(&appsv2beta1.EMQXNode{
-					Edition: "Enterprise",
+					Edition: appsv2beta1.EnterpriseEdition,
 					Session: 0,
 				})
 				return resp, respBody, nil
@@ -485,7 +488,7 @@ var _ = Describe("check can be scale down", func() {
 
 				if method == "GET" {
 					respBody, _ = json.Marshal(&appsv2beta1.EMQXNode{
-						Edition: "Enterprise",
+						Edition: appsv2beta1.EnterpriseEdition,
 						Session: 99999,
 					})
 				}
@@ -504,7 +507,7 @@ var _ = Describe("check can be scale down", func() {
 					StatusCode: 200,
 				}
 				respBody, _ = json.Marshal(&appsv2beta1.EMQXNode{
-					Edition: "Enterprise",
+					Edition: appsv2beta1.EnterpriseEdition,
 					Session: 0,
 				})
 				return resp, respBody, nil

@@ -104,7 +104,10 @@ func (requester *Requester) Request(method string, url url.URL, body []byte, hea
 		return nil, nil, emperror.Wrap(err, "failed to request API")
 	}
 
-	defer resp.Body.Close()
+	// defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return resp, nil, emperror.Wrap(err, "failed to read response body")

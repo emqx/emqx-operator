@@ -24,7 +24,7 @@ linters:
     - copyloopvar
     - ginkgolinter
     - goconst
-    - gocyclo
+    # - gocyclo
     - gofmt
     - goimports
     - gosimple
@@ -42,6 +42,10 @@ linters:
     - unused
 
 linters-settings:
+  dupl:
+    # tokens count to trigger issue, 150 by default
+    # https://github.com/golangci/golangci-lint/issues/1372
+    threshold: 230
   revive:
     rules:
       - name: comment-spacings

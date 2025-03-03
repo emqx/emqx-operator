@@ -119,7 +119,7 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 
 	isEnterpriser := false
 	for _, node := range coreNodes {
-		if node.ControllerUID == currentSts.UID && node.Edition == "Enterprise" {
+		if node.ControllerUID == currentSts.UID && node.Edition == appsv2beta1.EnterpriseEdition {
 			isEnterpriser = true
 			break
 		}
@@ -184,7 +184,7 @@ func (u *updateStatus) getEMQXNodes(ctx context.Context, instance *appsv2beta1.E
 	sort.Slice(replicantNodes, func(i, j int) bool {
 		return replicantNodes[i].Uptime < replicantNodes[j].Uptime
 	})
-	return
+	return coreNodes, replicantNodes, nil
 }
 
 func getEMQXNodesByAPI(r innerReq.RequesterInterface) ([]appsv2beta1.EMQXNode, error) {

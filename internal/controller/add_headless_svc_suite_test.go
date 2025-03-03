@@ -2,6 +2,7 @@ package controller
 
 import (
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -11,6 +12,7 @@ import (
 
 var _ = Describe("Check add headless svc controller", Ordered, Label("headless_svc"), func() {
 	var a *addHeadlessSvc
+	var fakeR *innerReq.FakeRequester = &innerReq.FakeRequester{}
 	var instance *appsv2beta1.EMQX = new(appsv2beta1.EMQX)
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
@@ -40,7 +42,7 @@ var _ = Describe("Check add headless svc controller", Ordered, Label("headless_s
 	})
 
 	It("generate headless svc", func() {
-		Eventually(a.reconcile(ctx, logger, instance, nil)).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+		Eventually(a.reconcile).WithArguments(ctx, logger, instance, fakeR).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
 
 		Eventually(func() *corev1.Service {
 			svc := &corev1.Service{}

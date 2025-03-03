@@ -59,12 +59,22 @@ var _ = Describe("Manager", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to install CRDs")
 
 		By("deploying the controller-manager")
-		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage), fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/kustomize"))
+		cmd = exec.Command(
+			"make", "deploy",
+			fmt.Sprintf("IMG=%s", projectImage),
+			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/kustomize"),
+		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
 
 		By("waiting for controller-manager deployment")
-		cmd = exec.Command("kubectl", "wait", "deployment", "emqx-operator-controller-manager", "--for=condition=Available", "-n", namespace, "--timeout=5m")
+		cmd = exec.Command(
+			"kubectl", "wait",
+			"deployment", "emqx-operator-controller-manager",
+			"--for", "condition=Available",
+			"-n", namespace,
+			"--timeout", "5m",
+		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to wait for controller-manager deployment")
 	})
@@ -98,27 +108,27 @@ var _ = Describe("Manager", Ordered, func() {
 			cmd := exec.Command("kubectl", "logs", controllerPodName, "-n", namespace)
 			controllerLogs, err := utils.Run(cmd)
 			if err == nil {
-				_, _ = fmt.Fprintf(GinkgoWriter, fmt.Sprintf("Controller logs:\n %s", controllerLogs))
+				_, _ = fmt.Fprint(GinkgoWriter, "Controller logs:\n", controllerLogs)
 			} else {
-				_, _ = fmt.Fprintf(GinkgoWriter, fmt.Sprintf("Failed to get Controller logs: %s", err))
+				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
 			}
 
 			By("Fetching Kubernetes events")
 			cmd = exec.Command("kubectl", "get", "events", "-n", namespace, "--sort-by=.lastTimestamp")
 			eventsOutput, err := utils.Run(cmd)
 			if err == nil {
-				_, _ = fmt.Fprintf(GinkgoWriter, fmt.Sprintf("Kubernetes events:\n%s", eventsOutput))
+				_, _ = fmt.Fprint(GinkgoWriter, "Kubernetes events:\n", eventsOutput)
 			} else {
-				_, _ = fmt.Fprintf(GinkgoWriter, fmt.Sprintf("Failed to get Kubernetes events: %s", err))
+				_, _ = fmt.Fprint(GinkgoWriter, "Failed to get Kubernetes events: ", err)
 			}
 
 			By("Fetching curl-metrics logs")
 			cmd = exec.Command("kubectl", "logs", "curl-metrics", "-n", namespace)
 			metricsOutput, err := utils.Run(cmd)
 			if err == nil {
-				_, _ = fmt.Fprintf(GinkgoWriter, fmt.Sprintf("Metrics logs:\n %s", metricsOutput))
+				_, _ = fmt.Fprint(GinkgoWriter, "Metrics logs:\n", metricsOutput)
 			} else {
-				_, _ = fmt.Fprintf(GinkgoWriter, fmt.Sprintf("Failed to get curl-metrics logs: %s", err))
+				_, _ = fmt.Fprint(GinkgoWriter, "Failed to get curl-metrics logs: ", err)
 			}
 
 			By("Fetching controller manager pod description")
@@ -283,7 +293,7 @@ func serviceAccountToken() (string, error) {
 
 		// Parse the JSON output to extract the token
 		var token tokenRequest
-		err = json.Unmarshal([]byte(output), &token)
+		err = json.Unmarshal(output, &token)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		out = token.Status.Token
