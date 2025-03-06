@@ -31,7 +31,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		cmd = exec.Command(
 			"make", "deploy",
 			fmt.Sprintf("IMG=%s", projectImage),
-			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/kustomize"),
+			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/manager"),
 		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
@@ -66,7 +66,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		var coreReplicas int = 2
 		It("deploy EMQX cluster without replicant node", func() {
 			By("creating EMQX cluster")
-			cmd := exec.Command("kubectl", "apply", "-f", "config/samples/apps_v2beta1_emqx.yaml")
+			cmd := exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/emqx.yaml")
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply emqx.yaml")
 
@@ -139,7 +139,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		var replicantReplicas int = 2
 		It("deploy EMQX cluster with replicant node", func() {
 			By("creating EMQX cluster")
-			cmd := exec.Command("kubectl", "apply", "-f", "config/samples/apps_v2beta1_emqx.yaml")
+			cmd := exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/emqx.yaml")
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply emqx.yaml")
 
