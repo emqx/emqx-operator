@@ -62,7 +62,7 @@ var _ = Describe("Manager", Ordered, func() {
 		cmd = exec.Command(
 			"make", "deploy",
 			fmt.Sprintf("IMG=%s", projectImage),
-			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/kustomize"),
+			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/manager"),
 		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the controller-manager")
