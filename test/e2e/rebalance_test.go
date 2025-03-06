@@ -8,6 +8,7 @@ import (
 	"github.com/emqx/emqx-operator/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
@@ -59,15 +60,58 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 
 	Context("EMQX Rebalance", func() {
 		AfterEach(func() {
-			cmd := exec.Command("kubectl", "delete", "-f", "test/e2e/files/resources/emqx.yaml")
+			specReport := CurrentSpecReport()
+			if specReport.Failed() {
+				By("Fetching controller manager pod logs")
+				cmd := exec.Command(
+					"kubectl", "logs",
+					"-l", "control-plane=controller-manager",
+					"-n", namespace,
+				)
+				controllerLogs, err := utils.Run(cmd)
+				if err == nil {
+					_, _ = fmt.Fprint(GinkgoWriter, "Controller logs:\n", controllerLogs)
+				} else {
+					_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
+				}
+
+				By("Fetching Kubernetes events in default namespace")
+				cmd = exec.Command("kubectl", "get", "events", "--sort-by=.lastTimestamp")
+				eventsOutput, err := utils.Run(cmd)
+				if err == nil {
+					_, _ = fmt.Fprint(GinkgoWriter, "Kubernetes events:\n", eventsOutput)
+				} else {
+					_, _ = fmt.Fprint(GinkgoWriter, "Failed to get Kubernetes events: ", err)
+				}
+
+				By("Checking Rebalance CR")
+				cmd = exec.Command("kubectl", "get", "rebalance", "rebalance", "-o", "yaml")
+				describeOut, err := utils.Run(cmd)
+				if err == nil {
+					_, _ = fmt.Fprint(GinkgoWriter, "Rebalance describe:\n", describeOut)
+				} else {
+					_, _ = fmt.Fprint(GinkgoWriter, "Failed to describe Rebalance: ", err)
+				}
+
+				By("Checking EMQX Pod logs")
+				cmd = exec.Command("kubectl", "logs", "-l", "apps.emqx.io/instance=emqx")
+				emqxLogs, err := utils.Run(cmd)
+				if err == nil {
+					_, _ = fmt.Fprint(GinkgoWriter, "EMQX logs:\n", emqxLogs)
+				} else {
+					_, _ = fmt.Fprint(GinkgoWriter, "Failed to get EMQX logs: ", err)
+				}
+			}
+
+			cmd := exec.Command("kubectl", "delete", "emqx", "emqx")
 			_, _ = utils.Run(cmd)
-			cmd = exec.Command("kubectl", "delete", "-f", "config/samples/apps_v2beta1_rebalance.yaml")
+			cmd = exec.Command("kubectl", "delete", "-f", "test/e2e/files/resources/rebalance.yaml")
 			_, _ = utils.Run(cmd)
 		})
 
 		It("EMQX is not found", func() {
 			By("creating Rebalance CR")
-			cmd := exec.Command("kubectl", "apply", "-f", "config/samples/apps_v2beta1_rebalance.yaml")
+			cmd := exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/rebalance.yaml")
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply rebalance.yaml")
 
@@ -92,7 +136,7 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 			)
 			out, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to get rebalance conditions")
-			Expect(out).To(Equal("True"), "Rebalance condition should be true")
+			Expect(out).To(BeEquivalentTo(metav1.ConditionTrue), "Rebalance condition should be true")
 		})
 
 		It("EMQX is not enterprise", func() {
@@ -102,7 +146,7 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply emqx.yaml")
 
 			By("creating Rebalance CR")
-			cmd = exec.Command("kubectl", "apply", "-f", "config/samples/apps_v2beta1_rebalance.yaml")
+			cmd = exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/rebalance.yaml")
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply rebalance.yaml")
 
@@ -130,17 +174,25 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 			)
 			out, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to get rebalance conditions")
-			Expect(out).To(Equal("True"), "Rebalance condition should be true")
+			Expect(out).To(BeEquivalentTo(metav1.ConditionTrue), "Rebalance condition should be true")
 		})
 
-		It("EMQX is exist", func() {
+		It("EMQX is exist, but no connection should be rebalance", func() {
 			By("creating EMQX CR")
 			cmd := exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/emqx.yaml")
 			_, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply emqx.yaml")
+			Eventually(func() string {
+				cmd := exec.Command(
+					"kubectl", "get", "emqx", "emqx",
+					"-o", "jsonpath={.status.conditions[?(@.type==\"Ready\")].status}",
+				)
+				out, _ := utils.Run(cmd)
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo(metav1.ConditionTrue))
 
 			By("creating Rebalance CR")
-			cmd = exec.Command("kubectl", "apply", "-f", "config/samples/apps_v2beta1_rebalance.yaml")
+			cmd = exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/rebalance.yaml")
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to apply rebalance.yaml")
 
@@ -159,11 +211,107 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 			By("checking Rebalance CR conditions")
 			cmd = exec.Command(
 				"kubectl", "get", "rebalance", "rebalance",
-				"-o", fmt.Sprintf("jsonpath={.status.conditions[?(@.type==\"%s\")].status}", appsv2beta1.RebalanceConditionFailed),
+				"-o", fmt.Sprintf(
+					"jsonpath={.status.conditions[?(@.type==\"%s\")].status}",
+					appsv2beta1.RebalanceConditionFailed,
+				),
 			)
 			out, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to get rebalance conditions")
-			Expect(out).To(Equal("True"), "Rebalance condition should be true")
+			Expect(out).To(BeEquivalentTo(metav1.ConditionTrue), "Rebalance condition should be true")
+		})
+
+		It("EMQX is exist, and connection should be rebalance", func() {
+			By("creating EMQX CR")
+			cmd := exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/emqx.yaml")
+			_, err := utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to apply emqx.yaml")
+
+			Eventually(func() string {
+				cmd := exec.Command(
+					"kubectl", "get", "emqx", "emqx",
+					"-o", "jsonpath={.status.conditions[?(@.type==\"Ready\")].status}",
+				)
+				out, _ := utils.Run(cmd)
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo(metav1.ConditionTrue))
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for emqx pods")
+
+			By("creating MQTTX client")
+			cmd = exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/mqttx.yaml")
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to apply mqttx.yaml")
+			cmd = exec.Command(
+				"kubectl", "wait", "pod",
+				"--selector=app=mqttx",
+				"--for=condition=Ready",
+				"--timeout=5m",
+			)
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for mqttx pods")
+
+			By("scaling EMQX replicas for create unbalance case")
+			cmd = exec.Command(
+				"kubectl", "patch", "emqx", "emqx",
+				"--type", "json",
+				"-p", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 3}]`,
+			)
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to scale emqx replicas")
+			Eventually(func() string {
+				cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.readyReplicas}")
+				out, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo("3"))
+			Eventually(func() string {
+				cmd := exec.Command(
+					"kubectl", "get", "emqx", "emqx",
+					"-o", "jsonpath={.status.conditions[?(@.type==\"Ready\")].status}",
+				)
+				out, _ := utils.Run(cmd)
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo(metav1.ConditionTrue))
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for emqx pods")
+
+			By("creating Rebalance CR")
+			cmd = exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/rebalance.yaml")
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to apply rebalance.yaml")
+
+			By("checking Rebalance CR state")
+			Eventually(func() string {
+				cmd = exec.Command("kubectl", "get", "rebalance", "rebalance", "-o", "jsonpath={.status.rebalanceStates}")
+				out, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred(), "Failed to get rebalance states")
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).ShouldNot(BeEmpty())
+
+			By("checking Rebalance CR phase")
+			Eventually(func() string {
+				cmd = exec.Command("kubectl", "get", "rebalance", "rebalance", "-o", "jsonpath={.status.phase}")
+				out, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred(), "Failed to get rebalance status")
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo(appsv2beta1.RebalancePhaseProcessing))
+			Eventually(func() string {
+				cmd = exec.Command("kubectl", "get", "rebalance", "rebalance", "-o", "jsonpath={.status.phase}")
+				out, err := utils.Run(cmd)
+				Expect(err).NotTo(HaveOccurred(), "Failed to get rebalance status")
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo(appsv2beta1.RebalancePhaseCompleted))
+
+			By("checking Rebalance CR conditions")
+			cmd = exec.Command(
+				"kubectl", "get", "rebalance", "rebalance",
+				"-o", fmt.Sprintf(
+					"jsonpath={.status.conditions[?(@.type==\"%s\")].status}",
+					appsv2beta1.RebalanceConditionCompleted,
+				),
+			)
+			out, err := utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to get rebalance conditions")
+			Expect(out).To(BeEquivalentTo(metav1.ConditionTrue), "Rebalance condition should be true")
 		})
 	})
 })

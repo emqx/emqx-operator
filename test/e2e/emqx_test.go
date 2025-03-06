@@ -62,6 +62,54 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		_, _ = utils.Run(cmd)
 	})
 
+	AfterEach(func() {
+		specReport := CurrentSpecReport()
+		if specReport.Failed() {
+			By("Fetching controller manager pod logs")
+			cmd := exec.Command(
+				"kubectl", "logs",
+				"-l", "control-plane=controller-manager",
+				"-n", namespace,
+			)
+			controllerLogs, err := utils.Run(cmd)
+			if err == nil {
+				_, _ = fmt.Fprint(GinkgoWriter, "Controller logs:\n", controllerLogs)
+			} else {
+				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get Controller logs: %s", err)
+			}
+
+			By("Checking EMQX CR")
+			cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "yaml")
+			emqxCR, err := utils.Run(cmd)
+			if err == nil {
+				_, _ = fmt.Fprint(GinkgoWriter, "EMQX CR:\n", emqxCR)
+			} else {
+				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get EMQX CR: %s", err)
+			}
+
+			By("Fetching EMQX pod logs")
+			cmd = exec.Command(
+				"kubectl", "logs",
+				"-l", "apps.emqx.io/instance=emqx,apps.emqx.io/managed-by=emqx-operator",
+			)
+			emqxLogs, err := utils.Run(cmd)
+			if err == nil {
+				_, _ = fmt.Fprint(GinkgoWriter, "EMQX logs:\n", emqxLogs)
+			} else {
+				_, _ = fmt.Fprintf(GinkgoWriter, "Failed to get EMQX logs: %s", err)
+			}
+
+			By("Fetching Kubernetes events in default namespace")
+			cmd = exec.Command("kubectl", "get", "events", "--sort-by=.lastTimestamp")
+			eventsOutput, err := utils.Run(cmd)
+			if err == nil {
+				_, _ = fmt.Fprint(GinkgoWriter, "Kubernetes events:\n", eventsOutput)
+			} else {
+				_, _ = fmt.Fprint(GinkgoWriter, "Failed to get Kubernetes events: ", err)
+			}
+		}
+	})
+
 	Context("EMQX Cluster", func() {
 		var coreReplicas int = 2
 		It("deploy EMQX cluster without replicant node", func() {
@@ -89,8 +137,21 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("change EMQX image for target blue-green update", func() {
+			By("creating MQTTX client")
+			cmd := exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/mqttx.yaml")
+			_, err := utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to apply mqttx.yaml")
+			cmd = exec.Command(
+				"kubectl", "wait", "pod",
+				"--selector=app=mqttx",
+				"--for=condition=Ready",
+				"--timeout=5m",
+			)
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for mqttx pods")
+
 			By("getting storage StatefulSet")
-			cmd := exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.currentRevision}")
+			cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.currentRevision}")
 			out, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
 
@@ -111,6 +172,24 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			)
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to patch emqx cluster")
+
+			By("checking the EMQX cluster node evacuations status")
+			Eventually(func() string {
+				cmd := exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.nodeEvacuationsStatus}")
+				out, _ := utils.Run(cmd)
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).ShouldNot(ContainSubstring("connection_eviction_rate"))
+
+			By(("deleting old storage statefulSet pods by hands, so that can be running faster"))
+			cmd = exec.Command("kubectl", "get", "sts", storageSts.Name, "-o", "jsonpath={.status.currentRevision}")
+			storageStsCurrentRevision, err := utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to get statefulset currentRevision")
+			cmd = exec.Command(
+				"kubectl", "delete", "pod",
+				"-l", "controller-revision-hash="+storageStsCurrentRevision,
+			)
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to delete storage pods")
 
 			verifyEMQXstatus(&coreReplicas, nil, &changingTime)
 
@@ -179,8 +258,21 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		})
 
 		It("change EMQX image for target blue-green update", func() {
+			By("creating MQTTX client")
+			cmd := exec.Command("kubectl", "apply", "-f", "test/e2e/files/resources/mqttx.yaml")
+			_, err := utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to apply mqttx.yaml")
+			cmd = exec.Command(
+				"kubectl", "wait", "pod",
+				"--selector=app=mqttx",
+				"--for=condition=Ready",
+				"--timeout=5m",
+			)
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to wait for mqttx pods")
+
 			By("getting storage StatefulSet")
-			cmd := exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.currentRevision}")
+			cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.currentRevision}")
 			out, err := utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to get emqx status")
 
@@ -215,6 +307,13 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to patch emqx cluster")
 
+			By("checking the EMQX cluster node evacuations status")
+			Eventually(func() string {
+				cmd := exec.Command("kubectl", "get", "emqx", "emqx", "-o", "jsonpath={.status.nodeEvacuationsStatus}")
+				out, _ := utils.Run(cmd)
+				return out
+			}).WithTimeout(timeout).WithPolling(interval).ShouldNot(ContainSubstring("connection_eviction_rate"))
+
 			verifyEMQXstatus(&coreReplicas, &replicantReplicas, &changingTime)
 
 			By("checking the storage StatefulSet has been scaled down to 0")
@@ -228,6 +327,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			out, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to get replicaset replicas")
 			Expect(out).To(Equal("0"), "storage ReplicaSet replicas is not 0")
+
 		})
 
 		It("delete EMQX cluster with replicant node", func() {
@@ -254,16 +354,18 @@ func verifyEMQXstatus(coreReplicas, replicantReplicas *int, afterTime *metav1.Ti
 		_ = json.Unmarshal([]byte(out), &cond)
 
 		if afterTime == nil {
-			return cond.Status == "True"
+			return cond.Status == metav1.ConditionTrue
 		}
-		return cond.Status == "True" && cond.LastTransitionTime.After(afterTime.Time)
+		return cond.Status == metav1.ConditionTrue && cond.LastTransitionTime.After(afterTime.Time)
 	}).WithTimeout(timeout).WithPolling(interval).Should(BeTrue())
 
 	By("checking all of the EMQX pods being ready")
-	cmd := exec.Command("kubectl", "wait", "pod",
+	cmd := exec.Command(
+		"kubectl", "wait", "pod",
 		"--selector=apps.emqx.io/instance=emqx,apps.emqx.io/managed-by=emqx-operator",
 		"--for=condition=Ready",
-		"--timeout=5m")
+		"--timeout=5m",
+	)
 	_, err := utils.Run(cmd)
 	Expect(err).NotTo(HaveOccurred(), "Failed to wait for emqx pods")
 
