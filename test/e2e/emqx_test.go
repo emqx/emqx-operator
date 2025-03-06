@@ -48,6 +48,20 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		Expect(err).NotTo(HaveOccurred(), "Failed to wait for controller-manager deployment")
 	})
 
+	AfterAll(func() {
+		By("undeploying the controller-manager")
+		cmd := exec.Command("make", "undeploy")
+		_, _ = utils.Run(cmd)
+
+		By("uninstalling CRDs")
+		cmd = exec.Command("make", "uninstall")
+		_, _ = utils.Run(cmd)
+
+		By("removing manager namespace")
+		cmd = exec.Command("kubectl", "delete", "ns", namespace)
+		_, _ = utils.Run(cmd)
+	})
+
 	Context("EMQX Cluster", func() {
 		var coreReplicas int = 2
 		It("deploy EMQX cluster without replicant node", func() {
@@ -227,20 +241,6 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 			_, err = utils.Run(cmd)
 			Expect(err).To(HaveOccurred(), "EMQX cluster is not deleted")
 		})
-	})
-
-	AfterAll(func() {
-		By("undeploying the controller-manager")
-		cmd := exec.Command("make", "undeploy")
-		_, _ = utils.Run(cmd)
-
-		By("uninstalling CRDs")
-		cmd = exec.Command("make", "uninstall")
-		_, _ = utils.Run(cmd)
-
-		By("removing manager namespace")
-		cmd = exec.Command("kubectl", "delete", "ns", namespace)
-		_, _ = utils.Run(cmd)
 	})
 })
 
