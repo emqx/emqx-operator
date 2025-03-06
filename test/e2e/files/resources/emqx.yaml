@@ -4,3 +4,6 @@ metadata:
   name: emqx
 spec:
   image: emqx/emqx-enterprise:latest
+  updateStrategy:
+    evacuationStrategy:
+      waitTakeover: 1

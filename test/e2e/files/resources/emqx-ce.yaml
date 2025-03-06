@@ -3,4 +3,4 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx-enterprise:latest
+  image: emqx:latest

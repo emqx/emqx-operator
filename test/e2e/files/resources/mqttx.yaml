@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqttx
+  labels:
+    app: mqttx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqttx
+  template:
+    metadata:
+      labels:
+        app: mqttx
+    spec:
+      containers:
+      - name: conn
+        image: emqx/mqttx-cli
+        command:
+        - /bin/sh 
+        - -c
+        - mqttx bench conn -h emqx-listeners.default.svc -c 25

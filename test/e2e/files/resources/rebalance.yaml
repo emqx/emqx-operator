@@ -6,6 +6,13 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: rebalance
 spec:
-  instanceName: emqx-ee
+  instanceName: emqx
   rebalanceStrategy:
-    connEvictRate: 5
+    connEvictRate: 1000
+    sessEvictRate: 1000
+    waitTakeover: 1
+    waitHealthCheck: 1
+    absConnThreshold: 1
+    relConnThreshold: "1.1"
+    absSessThreshold: 1
+    relSessThreshold: "1.1"
