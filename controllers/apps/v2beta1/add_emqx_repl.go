@@ -191,7 +191,7 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 						// TODO: just for compatible with old version, will remove in future
 						instance.Spec.ReplicantTemplate.Spec.ToleRations...,
 					),
-					TopologySpreadConstraints: instance.Spec.CoreTemplate.Spec.TopologySpreadConstraints,
+					TopologySpreadConstraints: instance.Spec.ReplicantTemplate.Spec.TopologySpreadConstraints,
 					NodeName:                  instance.Spec.ReplicantTemplate.Spec.NodeName,
 					NodeSelector:              instance.Spec.ReplicantTemplate.Spec.NodeSelector,
 					InitContainers:            instance.Spec.ReplicantTemplate.Spec.InitContainers,
