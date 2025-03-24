@@ -18,7 +18,7 @@ package v2beta1
 
 import (
 	"context"
-		"time"
+	"time"
 
 	emperror "emperror.dev/errors"
 	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
@@ -27,10 +27,10 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-		"k8s.io/client-go/kubernetes"
-		"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
-		"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -116,15 +116,15 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addBootstrap{r},
 		&updatePodConditions{r},
 		&updateStatus{r},
-&syncConfig{r},
+		&syncConfig{r},
 		&addHeadlessSvc{r},
 		&addCore{r},
 		&addRepl{r},
 		&addPdb{r},
-				&addSvc{r},
+		&addSvc{r},
 		&updatePodConditions{r},
 		&updateStatus{r},
-&dsUpdateReplicaSets{r},
+		&dsUpdateReplicaSets{r},
 		&dsReflectPodCondition{r},
 		&syncPods{r},
 		&syncSets{r},
