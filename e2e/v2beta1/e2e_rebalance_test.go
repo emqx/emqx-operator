@@ -43,8 +43,9 @@ var rebalance = appsv2beta1.Rebalance{
 var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 	var instance *appsv2beta1.EMQX
 	var r *appsv2beta1.Rebalance
+
 	BeforeEach(func() {
-		instance = genEMQX().DeepCopy()
+		instance = emqx.coresOnly.DeepCopy()
 		instance.Spec.Image = "emqx/emqx-enterprise:5.1"
 	})
 
