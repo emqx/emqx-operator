@@ -263,7 +263,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 
 var _ = Describe("check can be scale down", func() {
 	var s *syncPods
-	var fakeR *innerReq.FakeRequester = &innerReq.FakeRequester{}
+	var fakeReq *innerReq.FakeRequester = &innerReq.FakeRequester{}
 	var instance *appsv2beta1.EMQX = new(appsv2beta1.EMQX)
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
@@ -316,14 +316,16 @@ var _ = Describe("check can be scale down", func() {
 		})
 		It("emqx is not available", func() {
 			instance.Status.Conditions = []metav1.Condition{}
-			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
+			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
 		})
 
 		It("emqx is available, but is not initial delay seconds", func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
-			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
+			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
 		})
@@ -338,15 +340,18 @@ var _ = Describe("check can be scale down", func() {
 				UpdateRevision:  "update",
 				CurrentRevision: "current",
 			}
-
-			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, nil, oldSts, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
+			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
-			Eventually(s.reconcile(ctx, logger, instance, nil)).WithTimeout(timeout).WithPolling(interval).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+			Eventually(s.reconcile(ctx, logger, instance, nil)).
+				WithTimeout(timeout).
+				WithPolling(interval).
+				Should(Equal(subResult{}))
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
-			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+			fakeReq.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -360,14 +365,14 @@ var _ = Describe("check can be scale down", func() {
 
 				return resp, respBody, nil
 			}
-
-			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
+			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeFalse())
 		})
 
 		It("emqx is enterprise, and node session is 0", func() {
-			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+			fakeReq.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -377,14 +382,14 @@ var _ = Describe("check can be scale down", func() {
 				})
 				return resp, respBody, nil
 			}
-
-			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
+			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeTrue())
 		})
 
 		It("emqx is open source", func() {
-			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+			fakeReq.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -393,8 +398,8 @@ var _ = Describe("check can be scale down", func() {
 				})
 				return resp, respBody, nil
 			}
-
-			canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, fakeR, oldSts, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
+			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeTrue())
 		})
@@ -454,14 +459,16 @@ var _ = Describe("check can be scale down", func() {
 		})
 		It("emqx is not available", func() {
 			instance.Status.Conditions = []metav1.Condition{}
-			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, nil, oldRs, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
+			canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
 
 		It("emqx is available, but is not initial delay seconds", func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
-			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, nil, oldRs, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
+			canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
@@ -472,13 +479,14 @@ var _ = Describe("check can be scale down", func() {
 					State: "fake",
 				},
 			}
-			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
+			canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
-			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+			fakeReq.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -493,13 +501,14 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 
-			canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
+			canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(canBeScaledDown).Should(BeNil())
 		})
 
 		It("emqx is enterprise, and node session is 0", func() {
-			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+			fakeReq.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -510,8 +519,9 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 
+			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
 			Eventually(func() *corev1.Pod {
-				canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+				canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 				if err != nil {
 					return nil
 				}
@@ -520,7 +530,7 @@ var _ = Describe("check can be scale down", func() {
 		})
 
 		It("emqx is open source", func() {
-			fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+			fakeReq.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 				resp = &http.Response{
 					StatusCode: 200,
 				}
@@ -529,8 +539,9 @@ var _ = Describe("check can be scale down", func() {
 				})
 				return resp, respBody, nil
 			}
+			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
 			Eventually(func() *corev1.Pod {
-				canBeScaledDown, err := s.canBeScaleDownRs(ctx, instance, fakeR, oldRs, []string{})
+				canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 				if err != nil {
 					return nil
 				}

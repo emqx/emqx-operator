@@ -2,10 +2,10 @@ package v2beta1
 
 import (
 	"context"
-	"encoding/json"
 	"net"
 	"strconv"
 
+	emperror "emperror.dev/errors"
 	semver "github.com/Masterminds/semver/v3"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
@@ -46,7 +46,7 @@ func (u *updatePodConditions) reconcile(ctx context.Context, logger logr.Logger,
 	for _, p := range pods.Items {
 		pod := p.DeepCopy()
 		controllerRef := metav1.GetControllerOf(pod)
-		if controllerRef == nil {
+		if controllerRef == nil || pod.DeletionTimestamp != nil {
 			continue
 		}
 
@@ -88,13 +88,12 @@ func (u *updatePodConditions) reconcile(ctx context.Context, logger logr.Logger,
 			}
 		}
 
-		patchBytes, _ := json.Marshal(corev1.Pod{
-			Status: corev1.PodStatus{
-				Conditions: []corev1.PodCondition{onServingCondition},
-			},
-		})
-		_ = u.Client.Status().Patch(ctx, pod.DeepCopy(), client.RawPatch(types.StrategicMergePatchType, patchBytes))
+		err := updatePodCondition(ctx, u.Client, pod, onServingCondition)
+		if err != nil {
+			return subResult{err: emperror.Wrapf(err, "failed to update pod %s status", pod.Name)}
+		}
 	}
+
 	return subResult{}
 }
 

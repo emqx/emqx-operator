@@ -9,6 +9,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,25 +28,31 @@ type addCore struct {
 }
 
 func (a *addCore) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
-	preSts := getNewStatefulSet(instance)
+	preSts := getNewStatefulSet(instance, a.conf)
 	preStsHash := preSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
 
-	patchCalculateFunc := func(storage, new *appsv1.StatefulSet) *patch.PatchResult {
-		if storage == nil {
-			return &patch.PatchResult{Patch: []byte("{should create new StatefulSet}")}
-		}
-		patchResult, _ := a.Patcher.Calculate(
-			storage.DeepCopy(),
-			new.DeepCopy(),
-			justCheckPodTemplate(),
+	needCreate := false
+	if updateSts == nil {
+		logger.Info("going to create new statefulSet",
+			"statefulSet", klog.KObj(preSts),
+			"reason", "no existing statefulSet",
 		)
-		return patchResult
+		needCreate = true
+	} else {
+		patchResult, _ := a.Patcher.Calculate(updateSts, preSts, justCheckPodTemplate())
+		if !patchResult.IsEmpty() {
+			logger.Info("going to create new statefulSet",
+				"statefulSet", klog.KObj(preSts),
+				"reason", "pod template has changed",
+				"patch", string(patchResult.Patch),
+			)
+			needCreate = true
+		}
 	}
-	if patchResult := patchCalculateFunc(updateSts, preSts); !patchResult.IsEmpty() {
-		// Create new statefulSet
-		logger.Info("got different pod template for EMQX core nodes, will create new statefulSet", "statefulSet", klog.KObj(preSts), "patch", string(patchResult.Patch))
 
+	if needCreate {
+		// Create new statefulSet
 		_ = ctrl.SetControllerReference(instance, preSts, a.Scheme)
 		if err := a.Handler.Create(ctx, preSts); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
@@ -68,21 +75,30 @@ func (a *addCore) reconcile(ctx context.Context, logger logr.Logger, instance *a
 			}
 			return subResult{err: emperror.Wrap(err, "failed to create statefulSet")}
 		}
-		_ = a.updateEMQXStatus(ctx, instance, "CreateNewStatefulSet", "Create new statefulSet", preStsHash)
-		return subResult{}
+		updateResult := a.updateEMQXStatus(ctx, instance, "CreateNewStatefulSet", "Create new statefulSet", preStsHash)
+		return subResult{err: updateResult}
 	}
 
-	preSts.ObjectMeta = updateSts.DeepCopy().ObjectMeta
-	preSts.Spec.Template.ObjectMeta = updateSts.DeepCopy().Spec.Template.ObjectMeta
-	preSts.Spec.Selector = updateSts.DeepCopy().Spec.Selector
-	if patchResult, _ := a.Patcher.Calculate(
-		updateSts.DeepCopy(),
-		preSts.DeepCopy(),
+	preSts.ObjectMeta = updateSts.ObjectMeta
+	preSts.Spec.Template.ObjectMeta = updateSts.Spec.Template.ObjectMeta
+	preSts.Spec.Selector = updateSts.Spec.Selector
+	patchResult, _ := a.Patcher.Calculate(
+		updateSts,
+		preSts,
+		// Ignore Status fields and VolumeClaimTemplate stuff.
 		patch.IgnoreStatusFields(),
 		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
-	); !patchResult.IsEmpty() {
+		// Ignore if number of replicas has changed.
+		// SyncPods reconciler will handle scaling up and down of the existing statefulSet.
+		ignoreStatefulSetReplicas(),
+	)
+	if !patchResult.IsEmpty() {
 		// Update statefulSet
-		logger.Info("got different statefulSet for EMQX core nodes, will update statefulSet", "statefulSet", klog.KObj(preSts), "patch", string(patchResult.Patch))
+		logger.Info("going to update statefulSet",
+			"statefulSet", klog.KObj(preSts),
+			"reason", "statefulSet has changed",
+			"patch", string(patchResult.Patch),
+		)
 		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			storage := &appsv1.StatefulSet{}
 			_ = a.Client.Get(ctx, client.ObjectKeyFromObject(preSts), storage)
@@ -91,8 +107,10 @@ func (a *addCore) reconcile(ctx context.Context, logger logr.Logger, instance *a
 		}); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
 		}
-		_ = a.updateEMQXStatus(ctx, instance, "UpdateStatefulSet", "Update exist statefulSet", preStsHash)
+		updateResult := a.updateEMQXStatus(ctx, instance, "UpdateStatefulSet", "Update exist statefulSet", preStsHash)
+		return subResult{err: updateResult}
 	}
+
 	return subResult{}
 }
 
@@ -113,9 +131,8 @@ func (a *addCore) updateEMQXStatus(ctx context.Context, instance *appsv2beta1.EM
 	})
 }
 
-func getNewStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
-	svcPorts, _ := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
-
+func getNewStatefulSet(instance *appsv2beta1.EMQX, conf *config.Conf) *appsv1.StatefulSet {
+	svcPorts := conf.GetDashboardServicePort()
 	preSts := generateStatefulSet(instance)
 	podTemplateSpecHash := computeHash(preSts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
 	preSts.Name = preSts.Name + "-" + podTemplateSpecHash
