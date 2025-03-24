@@ -25,10 +25,10 @@ import (
 	"time"
 
 	emperror "emperror.dev/errors"
+	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
-	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -60,8 +60,8 @@ type subReconciler interface {
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
 	*handler.Handler
+	conf          *config.Conf
 	Clientset     *kubernetes.Clientset
-	Config        *rest.Config
 	Scheme        *runtime.Scheme
 	EventRecorder record.EventRecorder
 }
@@ -70,7 +70,6 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 	return &EMQXReconciler{
 		Handler:       handler.NewHandler(mgr),
 		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-		Config:        mgr.GetConfig(),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}
@@ -90,6 +89,7 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var err error
 	logger := log.FromContext(ctx)
 
 	instance := &appsv2beta1.EMQX{}
@@ -104,7 +104,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	_, err := hocon.ParseString(instance.Spec.Config.Data)
+	r.conf, err = config.EMQXConf(config.MergeDefaults(instance.Spec.Config.Data))
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "InvalidConfig", "the .spec.config.data is not a valid HOCON config")
 		return ctrl.Result{}, emperror.Wrap(err, "failed to parse config")

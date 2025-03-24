@@ -9,9 +9,9 @@ import (
 	emperror "emperror.dev/errors"
 	semver "github.com/Masterminds/semver/v3"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
-	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +24,12 @@ type syncConfig struct {
 }
 
 func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, r innerReq.RequesterInterface) subResult {
-	confStr := mergeDefaultConfig(instance.Spec.Config.Data)
+	// Merge default and attempt to load the config
+	confStr := config.MergeDefaults(instance.Spec.Config.Data)
+	conf, err := config.EMQXConf(confStr)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to parse emqx config")}
+	}
 
 	// Make sure the config map exists
 	configMap := &corev1.ConfigMap{}
@@ -45,7 +50,9 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 		return subResult{err: emperror.Wrap(err, "failed to get configMap")}
 	}
 
-	lastConfigStr, ok := instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey]
+	lastConfStr, ok := instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey]
+
+	// If the annotation is not set, set it to the current config and return.
 	if !ok {
 		if instance.Annotations == nil {
 			instance.Annotations = map[string]string{}
@@ -57,38 +64,26 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 		return subResult{}
 	}
 
-	if lastConfigStr != instance.Spec.Config.Data {
-		_, coreReady := instance.Status.GetCondition(appsv2beta1.CoreNodesReady)
-		if coreReady == nil || !instance.Status.IsConditionTrue(appsv2beta1.CoreNodesReady) {
+	// If the annotation is set, and the config is different, update the config.
+	if lastConfStr != instance.Spec.Config.Data {
+		if !instance.Status.IsConditionTrue(appsv2beta1.CoreNodesReady) {
 			return subResult{}
 		}
 
 		v, _ := semver.NewVersion(instance.Status.CoreNodes[0].Version)
 		if v.LessThan(semver.MustParse("5.7.0")) {
 			// Delete readonly configs
-			hoconConfig, _ := hocon.ParseString(confStr)
-			hoconConfigObj := hoconConfig.GetRoot().(hocon.Object)
-			if _, ok := hoconConfigObj["node"]; ok {
-				s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `node` config, because it's readonly config")
-				delete(hoconConfigObj, "node")
+			stripped := conf.StripReadOnlyConfig()
+			if len(stripped) > 0 {
+				s.EventRecorder.Event(
+					instance,
+					corev1.EventTypeNormal, "WontUpdateReadOnlyConfig",
+					fmt.Sprintf("Stripped readonly config entries, will not be updated: %v", stripped),
+				)
 			}
-			if _, ok := hoconConfigObj["cluster"]; ok {
-				s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `cluster` config, because it's readonly config")
-				delete(hoconConfigObj, "cluster")
-			}
-			if _, ok := hoconConfigObj["dashboard"]; ok {
-				s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `dashboard` config, because it's readonly config")
-				delete(hoconConfigObj, "dashboard")
-			}
-			if _, ok := hoconConfigObj["rpc"]; ok {
-				s.EventRecorder.Event(instance, corev1.EventTypeNormal, "WontUpdateReadOnlyConfig", "Won't update `rpc` config, because it's readonly config")
-				delete(hoconConfigObj, "rpc")
-			}
-			confStr = hoconConfig.String()
 		}
-
-		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, confStr); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to put emqx config")}
+		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, conf.Print()); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update emqx config through API")}
 		}
 
 		if err := s.Client.Update(ctx, generateConfigMap(instance, confStr)); err != nil {
@@ -99,8 +94,6 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 		if err := s.Client.Update(ctx, instance); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx instance annotation")}
 		}
-
-		return subResult{}
 	}
 
 	return subResult{}
@@ -136,14 +129,4 @@ func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) err
 		return emperror.Errorf("failed to put API %s, status : %s, body: %s", url.String(), resp.Status, body)
 	}
 	return nil
-}
-
-func mergeDefaultConfig(config string) string {
-	defaultListenerConfig := ""
-	defaultListenerConfig += fmt.Sprintln("listeners.tcp.default.bind = 1883")
-	defaultListenerConfig += fmt.Sprintln("listeners.ssl.default.bind = 8883")
-	defaultListenerConfig += fmt.Sprintln("listeners.ws.default.bind  = 8083")
-	defaultListenerConfig += fmt.Sprintln("listeners.wss.default.bind = 8084")
-
-	return fmt.Sprintf("%s\n%s", defaultListenerConfig, config)
 }
