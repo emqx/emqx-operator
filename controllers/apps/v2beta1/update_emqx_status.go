@@ -8,6 +8,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	ds "github.com/emqx/emqx-operator/controllers/apps/v2beta1/ds"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
 	"github.com/tidwall/gjson"
@@ -117,19 +118,52 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 		}
 	}
 
-	isEnterpriser := false
+	isEnterprise := false
 	for _, node := range coreNodes {
 		if node.ControllerUID == currentSts.UID && node.Edition == "Enterprise" {
-			isEnterpriser = true
+			isEnterprise = true
 			break
 		}
 	}
-	if isEnterpriser {
+
+	if isEnterprise {
 		nodeEvacuationsStatus, err := getNodeEvacuationStatusByAPI(r)
 		if err != nil {
 			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeEvacuationStatuses", err.Error())
 		}
 		instance.Status.NodeEvacuationsStatus = nodeEvacuationsStatus
+	}
+
+	if isEnterprise {
+		dsReplicationStatus, err := ds.GetReplicationStatus(r)
+		if err != nil {
+			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetDSReplicationStatus", err.Error())
+		}
+		status := appsv2beta1.DSReplicationStatus{
+			DBs: []appsv2beta1.DSDBReplicationStatus{},
+		}
+		for _, db := range dsReplicationStatus.DBs {
+			minReplicas := 0
+			maxReplicas := 0
+			numTransitions := 0
+			if len(db.Shards) > 0 {
+				minReplicas = len(db.Shards[0].Replicas)
+				maxReplicas = len(db.Shards[0].Replicas)
+			}
+			for _, shard := range db.Shards {
+				minReplicas = min(minReplicas, len(shard.Replicas))
+				maxReplicas = max(maxReplicas, len(shard.Replicas))
+				numTransitions += len(shard.Transitions)
+			}
+			status.DBs = append(status.DBs, appsv2beta1.DSDBReplicationStatus{
+				Name:           db.Name,
+				NumShards:      int32(len(db.Shards)),
+				NumTransitions: int32(numTransitions),
+				MinReplicas:    int32(minReplicas),
+				MaxReplicas:    int32(maxReplicas),
+			})
+		}
+		instance.Status.DSReplication = status
 	}
 
 	// update status condition
@@ -157,6 +191,7 @@ func (u *updateStatus) getEMQXNodes(ctx context.Context, instance *appsv2beta1.E
 			pod := p.DeepCopy()
 			host := strings.Split(node.Node[strings.Index(node.Node, "@")+1:], ":")[0]
 			if node.Role == "core" && strings.HasPrefix(host, pod.Name) {
+				node.PodName = pod.Name
 				node.PodUID = pod.UID
 				controllerRef := metav1.GetControllerOf(pod)
 				if controllerRef == nil {
@@ -165,8 +200,8 @@ func (u *updateStatus) getEMQXNodes(ctx context.Context, instance *appsv2beta1.E
 				node.ControllerUID = controllerRef.UID
 				coreNodes = append(coreNodes, node)
 			}
-
 			if node.Role == "replicant" && host == pod.Status.PodIP {
+				node.PodName = pod.Name
 				node.PodUID = pod.UID
 				controllerRef := metav1.GetControllerOf(pod)
 				if controllerRef == nil {

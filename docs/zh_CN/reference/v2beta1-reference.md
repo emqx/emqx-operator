@@ -51,6 +51,42 @@ _Appears in:_
 | `data` _string_ | EMQX config, HOCON format, like etc/emqx.conf file |  |  |
 
 
+#### DSDBReplicationStatus
+
+
+
+
+
+
+
+_Appears in:_
+- [DSReplicationStatus](#dsreplicationstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ |  |  |  |
+| `numShards` _integer_ |  |  |  |
+| `numTransitions` _integer_ |  |  |  |
+| `minReplicas` _integer_ |  |  |  |
+| `maxReplicas` _integer_ |  |  |  |
+
+
+#### DSReplicationStatus
+
+
+
+Summary of DS replication status per database.
+
+
+
+_Appears in:_
+- [EMQXStatus](#emqxstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `dbs` _[DSDBReplicationStatus](#dsdbreplicationstatus) array_ |  |  |  |
+
+
 #### EMQX
 
 
@@ -160,8 +196,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `controllerUID` _[UID](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#uid-types-pkg)_ |  |  |  |
+| `podName` _string_ |  |  |  |
 | `podUID` _[UID](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#uid-types-pkg)_ |  |  |  |
+| `controllerUID` _[UID](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#uid-types-pkg)_ |  |  |  |
 | `node` _string_ | EMQX node name, example: emqx@127.0.0.1 |  |  |
 | `node_status` _string_ | EMQX node status, example: Running |  |  |
 | `otp_release` _string_ | Erlang/OTP version used by EMQX, example: 24.2/12.2 |  |  |
@@ -299,6 +336,7 @@ _Appears in:_
 | `replicantNodes` _[EMQXNode](#emqxnode) array_ |  |  |  |
 | `replicantNodesStatus` _[EMQXNodesStatus](#emqxnodesstatus)_ |  |  |  |
 | `nodeEvacuationsStatus` _[NodeEvacuationStatus](#nodeevacuationstatus) array_ |  |  |  |
+| `dsReplication` _[DSReplicationStatus](#dsreplicationstatus)_ |  |  |  |
 
 
 #### EvacuationStrategy
