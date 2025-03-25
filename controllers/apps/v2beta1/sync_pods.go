@@ -306,7 +306,9 @@ func (r *syncPodsReconciliation) canScaleDownStatefulSet(ctx context.Context, re
 	}
 
 	// Disallow scaling down the pod that is still a DS replication site.
-	// Only if DS is enabled in the current (most recent) EMQX config.
+	// Only if DS is enabled in the current, most recent EMQX config.
+	// Otherwise, if the user has disabled DS, the data is apparently no longer
+	// needs to be preserved.
 	if r.conf.IsDSEnabled() {
 		dsCondition := appsv2beta1.FindPodCondition(scaleDownPod, appsv2beta1.DSReplicationSite)
 		if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
