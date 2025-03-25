@@ -55,6 +55,8 @@ var _ = Describe("Check add repl controller", Ordered, Label("repl"), func() {
 				},
 			},
 		}
+
+		a.LoadEMQXConf(instance)
 	})
 
 	It("create namespace", func() {

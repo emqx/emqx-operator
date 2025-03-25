@@ -82,7 +82,6 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var err error
 	logger := log.FromContext(ctx)
 
 	instance := &appsv2beta1.EMQX{}
@@ -97,10 +96,9 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	r.conf, err = config.EMQXConf(config.MergeDefaults(instance.Spec.Config.Data))
-	if err != nil {
+	if err := r.LoadEMQXConf(instance); err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "InvalidConfig", "the .spec.config.data is not a valid HOCON config")
-		return ctrl.Result{}, emperror.Wrap(err, "failed to parse config")
+		return ctrl.Result{}, err
 	}
 
 	requester, err := newRequester(ctx, r.Client, instance, r.conf)
@@ -148,6 +146,15 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
+}
+
+func (r *EMQXReconciler) LoadEMQXConf(instance *appsv2beta1.EMQX) error {
+	var err error
+	r.conf, err = config.EMQXConf(config.MergeDefaults(instance.Spec.Config.Data))
+	if err != nil {
+		return emperror.Wrap(err, "failed to parse config")
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

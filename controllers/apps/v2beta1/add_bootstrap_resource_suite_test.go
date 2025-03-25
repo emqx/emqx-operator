@@ -22,6 +22,7 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 
 	BeforeEach(func() {
 		a = &addBootstrap{emqxReconciler}
+		a.LoadEMQXConf(instance)
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "controller-v2beta1-add-emqx-bootstrap-test",
