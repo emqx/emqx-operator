@@ -27,19 +27,12 @@ func (u *dsReflectPodCondition) reconcile(
 		return subResult{}
 	}
 
-	// If DS is not enabled, skip this reconciliation step.
-	// Rely on EMQX API to check: in a mixed-release cluster actual configuration might not
-	// reflect the state of the cluster well enough. What really matters is if DS API is
-	// available for further operations.
-	enabled, err := ds.IsDSEnabled(r)
-	if err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to check if DS is enabled")}
-	}
-	if !enabled {
+	// If EMQX DS API is not available, skip this reconciliation step.
+	// We need this API to be available to ask it about replication status.
+	cluster, err := ds.GetCluster(r)
+	if err != nil && emperror.Is(err, ds.APIErrorUnavailable) {
 		return subResult{}
 	}
-
-	cluster, err := ds.GetCluster(r)
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to fetch DS cluster status")}
 	}

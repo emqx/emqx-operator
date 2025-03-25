@@ -29,15 +29,8 @@ func (u *dsUpdateReplicaSets) reconcile(
 		return subResult{}
 	}
 
-	// If DS is not enabled, skip this reconciliation step.
-	// Rely on EMQX API to check: in a mixed-release cluster actual configuration might not
-	// reflect the state of the cluster well enough. What really matters is if DS API is
-	// available for further operations.
-	enabled, err := ds.IsDSEnabled(r)
-	if err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to check if DS is enabled")}
-	}
-	if !enabled {
+	// If EMQX DS is not enabled, skip this reconciliation step.
+	if !u.conf.IsDSEnabled() {
 		return subResult{}
 	}
 
@@ -60,7 +53,11 @@ func (u *dsUpdateReplicaSets) reconcile(
 	}
 
 	// Fetch the DS replication status.
+	// If EMQX DS API is not available, skip this reconciliation step.
 	replication, err := ds.GetReplicationStatus(r)
+	if err != nil && emperror.Is(err, ds.APIErrorUnavailable) {
+		return subResult{}
+	}
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to fetch DS cluster status")}
 	}
