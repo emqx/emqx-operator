@@ -29,6 +29,8 @@ func (u *dsReflectPodCondition) reconcile(
 		return subResult{}
 	}
 
+	r = u.getSuitableRequester(ctx, instance, r)
+
 	// If EMQX DS API is not available, skip this reconciliation step.
 	// We need this API to be available to ask it about replication status.
 	cluster, err := ds.GetCluster(r)
@@ -104,4 +106,22 @@ func (u *dsReflectPodCondition) getPod(
 	key := types.NamespacedName{Namespace: instance.Namespace, Name: podName}
 	err := u.Client.Get(ctx, key, pod)
 	return pod.DeepCopy(), err
+}
+
+func (u *dsReflectPodCondition) getSuitableRequester(
+	ctx context.Context,
+	instance *appsv2beta1.EMQX,
+	r req.RequesterInterface,
+) req.RequesterInterface {
+	// Prefer Enterprise node which is part of "update" StatefulSet (if any).
+	for _, core := range instance.Status.CoreNodes {
+		if core.Edition == "Enterprise" && strings.Contains(core.PodName, instance.Status.CoreNodesStatus.UpdateRevision) {
+			pod, err := u.getPod(ctx, instance, core.PodName)
+			if err == nil && pod.DeletionTimestamp == nil && pod.Status.PodIP != "" {
+				return r.SwitchHost(pod.Status.PodIP)
+			}
+		}
+	}
+	// If no suitable pod found, return the original requester.
+	return r
 }

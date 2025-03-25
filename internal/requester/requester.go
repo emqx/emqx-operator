@@ -3,6 +3,7 @@ package requester
 import (
 	"bytes"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -17,10 +18,10 @@ type HeaderOpt struct {
 
 type RequesterInterface interface {
 	GetURL(path string, query ...string) url.URL
-	GetHost() string
 	GetUsername() string
 	GetPassword() string
 	Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error)
+	SwitchHost(host string) RequesterInterface
 }
 
 type Requester struct {
@@ -47,6 +48,17 @@ func (requester *Requester) GetSchema() string {
 		return "http"
 	}
 	return requester.Schema
+}
+
+func (r *Requester) SwitchHost(host string) RequesterInterface {
+	_, port, _ := net.SplitHostPort(r.GetHost())
+	requester := &Requester{
+		Schema:   r.GetSchema(),
+		Host:     net.JoinHostPort(host, port),
+		Username: r.GetUsername(),
+		Password: r.GetPassword(),
+	}
+	return requester
 }
 
 func (requester *Requester) GetURL(path string, query ...string) url.URL {
@@ -123,6 +135,7 @@ func (f *FakeRequester) GetSchema() string                           { return "h
 func (f *FakeRequester) GetHost() string                             { return "" }
 func (f *FakeRequester) GetUsername() string                         { return "" }
 func (f *FakeRequester) GetPassword() string                         { return "" }
+func (f *FakeRequester) SwitchHost(host string) RequesterInterface   { return f }
 func (f *FakeRequester) Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 	return f.ReqFunc(method, url, body, header)
 }
