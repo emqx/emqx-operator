@@ -27,7 +27,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 
 	var updateSts, currentSts *appsv1.StatefulSet
 	var updateRs, currentRs *appsv1.ReplicaSet
-	var currentRsPod *corev1.Pod
+	var currentStsPod, currentRsPod *corev1.Pod
 
 	BeforeEach(func() {
 		fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
@@ -82,34 +82,29 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 			},
 		}
 
+		s.LoadEMQXConf(instance)
+
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
+		updateStsLabels := appsv2beta1.CloneAndAddLabel(
+			appsv2beta1.DefaultCoreLabels(instance),
+			appsv2beta1.LabelsPodTemplateHashKey,
+			"update",
+		)
 		updateSts = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: instance.Name + "-",
 				Namespace:    instance.Namespace,
-				Labels: appsv2beta1.CloneAndAddLabel(
-					appsv2beta1.DefaultCoreLabels(instance),
-					appsv2beta1.LabelsPodTemplateHashKey,
-					"update",
-				),
+				Labels:       updateStsLabels,
 			},
 			Spec: appsv1.StatefulSetSpec{
 				Replicas: ptr.To(int32(1)),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: appsv2beta1.CloneAndAddLabel(
-						appsv2beta1.DefaultCoreLabels(instance),
-						appsv2beta1.LabelsPodTemplateHashKey,
-						"update",
-					),
+					MatchLabels: updateStsLabels,
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: appsv2beta1.CloneAndAddLabel(
-							appsv2beta1.DefaultCoreLabels(instance),
-							appsv2beta1.LabelsPodTemplateHashKey,
-							"update",
-						),
+						Labels: updateStsLabels,
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -135,32 +130,25 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		currentSts.Status.ReadyReplicas = 1
 		Expect(k8sClient.Status().Update(ctx, currentSts)).Should(Succeed())
 
+		updateRsLabels := appsv2beta1.CloneAndAddLabel(
+			appsv2beta1.DefaultReplicantLabels(instance),
+			appsv2beta1.LabelsPodTemplateHashKey,
+			"update",
+		)
 		updateRs = &appsv1.ReplicaSet{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: instance.Name + "-",
 				Namespace:    instance.Namespace,
-				Labels: appsv2beta1.CloneAndAddLabel(
-					appsv2beta1.DefaultReplicantLabels(instance),
-					appsv2beta1.LabelsPodTemplateHashKey,
-					"update",
-				),
+				Labels:       updateRsLabels,
 			},
 			Spec: appsv1.ReplicaSetSpec{
 				Replicas: ptr.To(int32(1)),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: appsv2beta1.CloneAndAddLabel(
-						appsv2beta1.DefaultReplicantLabels(instance),
-						appsv2beta1.LabelsPodTemplateHashKey,
-						"update",
-					),
+					MatchLabels: updateRsLabels,
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: appsv2beta1.CloneAndAddLabel(
-							appsv2beta1.DefaultReplicantLabels(instance),
-							appsv2beta1.LabelsPodTemplateHashKey,
-							"update",
-						),
+						Labels: updateRsLabels,
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -186,6 +174,25 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 		currentRs.Status.ReadyReplicas = 1
 		Expect(k8sClient.Status().Update(ctx, currentRs)).Should(Succeed())
 
+		currentStsPod = &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      currentSts.Name + "-0",
+				Namespace: currentSts.Namespace,
+				Labels:    currentSts.Spec.Template.Labels,
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "apps/v1",
+						Kind:       "StatefulSet",
+						Name:       currentSts.Name,
+						UID:        currentSts.UID,
+						Controller: ptr.To(true),
+					},
+				},
+			},
+			Spec: currentSts.Spec.Template.Spec,
+		}
+		Expect(k8sClient.Create(ctx, currentStsPod)).Should(Succeed())
+
 		currentRsPod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: currentRs.Name + "-",
@@ -207,9 +214,6 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 	})
 
 	AfterEach(func() {
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.ReplicaSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.StatefulSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv2beta1.EMQX{}, client.InNamespace(instance.Namespace))).Should(Succeed())
 		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
 	})
 
@@ -287,50 +291,98 @@ var _ = Describe("check can be scale down", func() {
 			},
 		}
 
+		s.LoadEMQXConf(instance)
+
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 	})
 
 	AfterEach(func() {
-		Expect(k8sClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.ReplicaSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv1.StatefulSet{}, client.InNamespace(instance.Namespace))).Should(Succeed())
-		Expect(k8sClient.DeleteAllOf(ctx, &appsv2beta1.EMQX{}, client.InNamespace(instance.Namespace))).Should(Succeed())
 		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
 	})
 
 	Context("check can be scale down sts", func() {
 		var oldSts *appsv1.StatefulSet
+		var oldStsPod *corev1.Pod
+
 		JustBeforeEach(func() {
+			oldStsLabels := appsv2beta1.CloneAndAddLabel(
+				appsv2beta1.DefaultCoreLabels(instance),
+				appsv2beta1.LabelsPodTemplateHashKey,
+				"fake",
+			)
 			oldSts = &appsv1.StatefulSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      instance.Name + "-fake",
 					Namespace: instance.Namespace,
+					Labels:    oldStsLabels,
 				},
 				Spec: appsv1.StatefulSetSpec{
 					ServiceName: instance.Name + "-fake",
 					Replicas:    ptr.To(int32(1)),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: oldStsLabels,
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: oldStsLabels,
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: "emqx", Image: "emqx"},
+							},
+						},
+					},
 				},
 			}
-
+			Expect(k8sClient.Create(ctx, oldSts)).Should(Succeed())
+			oldStsPod = &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      oldSts.Name + "-0",
+					Namespace: oldSts.Namespace,
+					Labels:    oldSts.Spec.Template.Labels,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "apps/v1",
+							Kind:       "StatefulSet",
+							Name:       oldSts.Name,
+							UID:        oldSts.UID,
+							Controller: ptr.To(true),
+						},
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "emqx", Image: "emqx"},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, oldStsPod)).Should(Succeed())
 		})
+
 		It("emqx is not available", func() {
 			instance.Status.Conditions = []metav1.Condition{}
 			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
-			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
+			admission, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeFalse())
+			Expect(admission).Should(And(
+				HaveField("Reason", Not(BeEmpty())),
+				HaveField("Pod", BeNil()),
+			))
 		})
 
 		It("emqx is available, but is not initial delay seconds", func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
 			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
-			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
+			admission, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeFalse())
+			Expect(admission).Should(And(
+				HaveField("Reason", Not(BeEmpty())),
+				HaveField("Pod", BeNil()),
+			))
 		})
 
-		It("the replicaSet didn't ready", func() {
+		It("replicants replicaSet is not ready", func() {
 			instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
 				Spec: appsv2beta1.EMQXReplicantTemplateSpec{
 					Replicas: ptr.To(int32(3)),
@@ -341,9 +393,12 @@ var _ = Describe("check can be scale down", func() {
 				CurrentRevision: "current",
 			}
 			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
-			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
+			admission, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeFalse())
+			Expect(admission).Should(And(
+				HaveField("Reason", Not(BeEmpty())),
+				HaveField("Pod", BeNil()),
+			))
 			Eventually(s.reconcile(ctx, logger, instance, nil)).
 				WithTimeout(timeout).
 				WithPolling(interval).
@@ -366,9 +421,12 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
-			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
+			admission, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeFalse())
+			Expect(admission).Should(And(
+				HaveField("Reason", Not(BeEmpty())),
+				HaveField("Pod", BeNil()),
+			))
 		})
 
 		It("emqx is enterprise, and node session is 0", func() {
@@ -383,9 +441,12 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
-			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
+			admission, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeTrue())
+			Expect(admission).Should(And(
+				HaveField("Reason", BeEmpty()),
+				HaveField("Pod", Not(BeNil())),
+			))
 		})
 
 		It("emqx is open source", func() {
@@ -399,9 +460,12 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 			r := &syncPodsReconciliation{s, instance, nil, oldSts, nil, nil}
-			canBeScaledDown, err := r.canScaleDownStatefulSet(ctx, fakeReq)
+			admission, err := r.canScaleDownStatefulSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeTrue())
+			Expect(admission).Should(And(
+				HaveField("Reason", BeEmpty()),
+				HaveField("Pod", Not(BeNil())),
+			))
 		})
 	})
 
@@ -460,17 +524,21 @@ var _ = Describe("check can be scale down", func() {
 		It("emqx is not available", func() {
 			instance.Status.Conditions = []metav1.Condition{}
 			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
-			canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
+			admission, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeNil())
+			Expect(admission).Should(
+				HaveField("Pod", BeNil()),
+			)
 		})
 
 		It("emqx is available, but is not initial delay seconds", func() {
 			instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
 			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
-			canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
+			admission, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeNil())
+			Expect(admission).Should(
+				HaveField("Pod", BeNil()),
+			)
 		})
 
 		It("emqx is in node evacuations", func() {
@@ -480,9 +548,11 @@ var _ = Describe("check can be scale down", func() {
 				},
 			}
 			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
-			canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
+			admission, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeNil())
+			Expect(admission).Should(
+				HaveField("Pod", BeNil()),
+			)
 		})
 
 		It("emqx is enterprise, and node session more than 0", func() {
@@ -502,9 +572,11 @@ var _ = Describe("check can be scale down", func() {
 			}
 
 			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
-			canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
+			admission, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(canBeScaledDown).Should(BeNil())
+			Expect(admission).Should(
+				HaveField("Pod", BeNil()),
+			)
 		})
 
 		It("emqx is enterprise, and node session is 0", func() {
@@ -520,13 +592,15 @@ var _ = Describe("check can be scale down", func() {
 			}
 
 			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
-			Eventually(func() *corev1.Pod {
-				canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
+			Eventually(func() *scaleDownAdmission {
+				admission, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 				if err != nil {
 					return nil
 				}
-				return canBeScaledDown
-			}).WithTimeout(timeout).WithPolling(interval).ShouldNot(BeNil())
+				return &admission
+			}).WithTimeout(timeout).WithPolling(interval).ShouldNot(
+				HaveField("Pod", BeNil()),
+			)
 		})
 
 		It("emqx is open source", func() {
@@ -540,13 +614,15 @@ var _ = Describe("check can be scale down", func() {
 				return resp, respBody, nil
 			}
 			r := &syncPodsReconciliation{s, instance, nil, nil, nil, oldRs}
-			Eventually(func() *corev1.Pod {
-				canBeScaledDown, err := r.canScaleDownReplicaSet(ctx, fakeReq)
+			Eventually(func() *scaleDownAdmission {
+				admission, err := r.canScaleDownReplicaSet(ctx, fakeReq)
 				if err != nil {
 					return nil
 				}
-				return canBeScaledDown
-			}).WithTimeout(timeout).WithPolling(interval).ShouldNot(BeNil())
+				return &admission
+			}).WithTimeout(timeout).WithPolling(interval).ShouldNot(
+				HaveField("Pod", BeNil()),
+			)
 		})
 	})
 })
