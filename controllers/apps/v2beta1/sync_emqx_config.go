@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	semver "github.com/Masterminds/semver/v3"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
 	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
@@ -70,18 +69,16 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 			return subResult{}
 		}
 
-		v, _ := semver.NewVersion(instance.Status.CoreNodes[0].Version)
-		if v.LessThan(semver.MustParse("5.7.0")) {
-			// Delete readonly configs
-			stripped := conf.StripReadOnlyConfig()
-			if len(stripped) > 0 {
-				s.EventRecorder.Event(
-					instance,
-					corev1.EventTypeNormal, "WontUpdateReadOnlyConfig",
-					fmt.Sprintf("Stripped readonly config entries, will not be updated: %v", stripped),
-				)
-			}
+		// Delete readonly configs
+		stripped := conf.StripReadOnlyConfig()
+		if len(stripped) > 0 {
+			s.EventRecorder.Event(
+				instance,
+				corev1.EventTypeNormal, "WontUpdateReadOnlyConfig",
+				fmt.Sprintf("Stripped readonly config entries, will not be updated: %v", stripped),
+			)
 		}
+
 		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, conf.Print()); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx config through API")}
 		}
