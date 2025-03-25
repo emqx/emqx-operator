@@ -2,6 +2,7 @@ package v2beta1
 
 import (
 	"context"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
@@ -11,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type dsReflectPodCondition struct {
@@ -37,21 +39,29 @@ func (u *dsReflectPodCondition) reconcile(
 		return subResult{err: emperror.Wrap(err, "failed to fetch DS cluster status")}
 	}
 
-	cores := instance.Status.CoreNodes
-	for _, core := range cores {
-		if core.Edition != "Enterprise" {
+	list := &corev1.PodList{}
+	err = u.Client.List(
+		ctx,
+		list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(appsv2beta1.DefaultLabels(instance)),
+	)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to list pods")}
+	}
+
+	for _, p := range list.Items {
+		pod := p.DeepCopy()
+		node := u.findNode(instance, pod)
+		if node == nil || node.Edition != "Enterprise" {
 			continue
-		}
-		pod, err := u.getPod(ctx, instance, core.PodName)
-		if err != nil {
-			return subResult{err: emperror.Wrapf(err, "failed to get pod %s", core.PodName)}
 		}
 		condition := corev1.PodCondition{
 			Type:               appsv2beta1.DSReplicationSite,
 			Status:             corev1.ConditionUnknown,
 			LastTransitionTime: metav1.Now(),
 		}
-		site := cluster.FindSite(core.Node)
+		site := cluster.FindSite(node.Node)
 		if site != nil {
 			if len(site.Shards) > 0 {
 				condition.Status = corev1.ConditionTrue
@@ -69,6 +79,20 @@ func (u *dsReflectPodCondition) reconcile(
 	}
 
 	return subResult{}
+}
+
+func (u *dsReflectPodCondition) findNode(instance *appsv2beta1.EMQX, pod *corev1.Pod) *appsv2beta1.EMQXNode {
+	for _, node := range instance.Status.CoreNodes {
+		if node.PodName == pod.Name {
+			return &node
+		}
+	}
+	for _, node := range instance.Status.ReplicantNodes {
+		if node.PodName == pod.Name {
+			return &node
+		}
+	}
+	return nil
 }
 
 func (u *dsReflectPodCondition) getPod(
