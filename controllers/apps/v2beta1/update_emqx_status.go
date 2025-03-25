@@ -134,35 +134,39 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 		instance.Status.NodeEvacuationsStatus = nodeEvacuationsStatus
 	}
 
+	// Reflect the status of the DS replication in the resource status.
+	status := appsv2beta1.DSReplicationStatus{
+		DBs: []appsv2beta1.DSDBReplicationStatus{},
+	}
 	if isEnterprise {
 		dsReplicationStatus, err := ds.GetReplicationStatus(r)
 		if err != nil {
 			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetDSReplicationStatus", err.Error())
-		}
-		status := appsv2beta1.DSReplicationStatus{
-			DBs: []appsv2beta1.DSDBReplicationStatus{},
-		}
-		for _, db := range dsReplicationStatus.DBs {
-			minReplicas := 0
-			maxReplicas := 0
-			numTransitions := 0
-			if len(db.Shards) > 0 {
-				minReplicas = len(db.Shards[0].Replicas)
-				maxReplicas = len(db.Shards[0].Replicas)
+		} else {
+			for _, db := range dsReplicationStatus.DBs {
+				minReplicas := 0
+				maxReplicas := 0
+				numTransitions := 0
+				if len(db.Shards) > 0 {
+					minReplicas = len(db.Shards[0].Replicas)
+					maxReplicas = len(db.Shards[0].Replicas)
+				}
+				for _, shard := range db.Shards {
+					minReplicas = min(minReplicas, len(shard.Replicas))
+					maxReplicas = max(maxReplicas, len(shard.Replicas))
+					numTransitions += len(shard.Transitions)
+				}
+				status.DBs = append(status.DBs, appsv2beta1.DSDBReplicationStatus{
+					Name:           db.Name,
+					NumShards:      int32(len(db.Shards)),
+					NumTransitions: int32(numTransitions),
+					MinReplicas:    int32(minReplicas),
+					MaxReplicas:    int32(maxReplicas),
+				})
 			}
-			for _, shard := range db.Shards {
-				minReplicas = min(minReplicas, len(shard.Replicas))
-				maxReplicas = max(maxReplicas, len(shard.Replicas))
-				numTransitions += len(shard.Transitions)
-			}
-			status.DBs = append(status.DBs, appsv2beta1.DSDBReplicationStatus{
-				Name:           db.Name,
-				NumShards:      int32(len(db.Shards)),
-				NumTransitions: int32(numTransitions),
-				MinReplicas:    int32(minReplicas),
-				MaxReplicas:    int32(maxReplicas),
-			})
+			instance.Status.DSReplication = status
 		}
+	} else {
 		instance.Status.DSReplication = status
 	}
 
