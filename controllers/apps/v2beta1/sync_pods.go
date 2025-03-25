@@ -251,6 +251,15 @@ func (r *syncPodsReconciliation) canScaleDownReplicaSet(ctx context.Context, req
 		}
 	}
 
+	// Disallow scaling down the pod that is still a DS replication site.
+	// While replicants are not supposed to be DS replication sites, check it for safety.
+	if r.conf.IsDSEnabled() {
+		dsCondition := appsv2beta1.FindPodCondition(scaleDownPod, appsv2beta1.DSReplicationSite)
+		if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
+			return scaleDownAdmission{Reason: "pod is still a DS replication site"}, nil
+		}
+	}
+
 	// If the pod runs Enterprise edition and has at least one session, start node evacuation.
 	if scaleDownPodInfo.Edition == "Enterprise" && scaleDownPodInfo.Session > 0 {
 		migrateTo := r.migrationTargetNodes()
