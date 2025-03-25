@@ -82,8 +82,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 			},
 		}
 
-		s.LoadEMQXConf(instance)
-
+		Expect(s.LoadEMQXConf(instance)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 		updateStsLabels := appsv2beta1.CloneAndAddLabel(
@@ -291,8 +290,7 @@ var _ = Describe("check can be scale down", func() {
 			},
 		}
 
-		s.LoadEMQXConf(instance)
-
+		Expect(s.LoadEMQXConf(instance)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 
 	})

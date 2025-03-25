@@ -21,7 +21,6 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 
 	BeforeEach(func() {
 		a = &addCore{emqxReconciler}
-		a.LoadEMQXConf(emqx)
 
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -46,6 +45,8 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 			},
 		}
+
+		Expect(a.LoadEMQXConf(instance)).Should(Succeed())
 	})
 
 	It("create namespace", func() {
