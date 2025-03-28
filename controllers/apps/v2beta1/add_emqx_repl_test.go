@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +47,8 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		got := getNewReplicaSet(emqx)
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewReplicaSet(emqx, conf)
 
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Annotations, got.Annotations)
 		assert.Equal(t, "repl-label-value", got.Labels["repl-label-key"])
@@ -59,7 +61,8 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check selector and pod metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		got := getNewReplicaSet(emqx)
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewReplicaSet(emqx, conf)
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
 			appsv2beta1.LabelsInstanceKey:        "emqx",
@@ -81,7 +84,8 @@ func TestGetNewReplicaSet(t *testing.T) {
 	t.Run("check http port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
 		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 18083"
-		got := getNewReplicaSet(emqx)
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewReplicaSet(emqx, conf)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
@@ -101,8 +105,12 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 0 \n dashboard.listeners.https.bind = 18084"
-		got := getNewReplicaSet(emqx)
+		emqx.Spec.Config.Data = `
+		dashboard.listeners.http.bind = 0
+		dashboard.listeners.https.bind = 18084
+		`
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewReplicaSet(emqx, conf)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
@@ -122,8 +130,12 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check http and https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 18083 \n dashboard.listeners.https.bind = 18084"
-		got := getNewReplicaSet(emqx)
+		emqx.Spec.Config.Data = `
+		dashboard.listeners.http.bind = 18083
+		dashboard.listeners.https.bind = 18084
+		`
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewReplicaSet(emqx, conf)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{

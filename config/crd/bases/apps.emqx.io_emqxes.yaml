@@ -13865,6 +13865,8 @@ spec:
                       type: string
                     otp_release:
                       type: string
+                    podName:
+                      type: string
                     podUID:
                       type: string
                     role:
@@ -13894,6 +13896,34 @@ spec:
                     type: integer
                   updateRevision:
                     type: string
+                type: object
+              dsReplication:
+                properties:
+                  dbs:
+                    items:
+                      properties:
+                        maxReplicas:
+                          format: int32
+                          type: integer
+                        minReplicas:
+                          format: int32
+                          type: integer
+                        name:
+                          type: string
+                        numShards:
+                          format: int32
+                          type: integer
+                        numTransitions:
+                          format: int32
+                          type: integer
+                      required:
+                      - maxReplicas
+                      - minReplicas
+                      - name
+                      - numShards
+                      - numTransitions
+                      type: object
+                    type: array
                 type: object
               nodeEvacuationsStatus:
                 items:
@@ -13953,6 +13983,8 @@ spec:
                     node_status:
                       type: string
                     otp_release:
+                      type: string
+                    podName:
                       type: string
                     podUID:
                       type: string

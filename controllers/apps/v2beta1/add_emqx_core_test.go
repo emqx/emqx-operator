@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -43,7 +44,8 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		got := getNewStatefulSet(emqx)
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewStatefulSet(emqx, conf)
 
 		assert.Equal(t, emqx.Spec.CoreTemplate.Annotations, got.Annotations)
 		assert.Equal(t, "core-label-value", got.Labels["core-label-key"])
@@ -56,7 +58,8 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check selector and pod metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		got := getNewStatefulSet(emqx)
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewStatefulSet(emqx, conf)
 		assert.Equal(t, emqx.Spec.CoreTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
 			appsv2beta1.LabelsInstanceKey:        "emqx",
@@ -78,7 +81,8 @@ func TestGetNewStatefulSet(t *testing.T) {
 	t.Run("check http port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
 		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 18083"
-		got := getNewStatefulSet(emqx)
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewStatefulSet(emqx, conf)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
@@ -98,8 +102,12 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 0 \n dashboard.listeners.https.bind = 18084"
-		got := getNewStatefulSet(emqx)
+		emqx.Spec.Config.Data = `
+		dashboard.listeners.http.bind = 0
+		dashboard.listeners.https.bind = 18084
+		`
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewStatefulSet(emqx, conf)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
@@ -119,8 +127,12 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check http and https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 18083 \n dashboard.listeners.https.bind = 18084"
-		got := getNewStatefulSet(emqx)
+		emqx.Spec.Config.Data = `
+		dashboard.listeners.http.bind = 18083
+		dashboard.listeners.https.bind = 18084
+		`
+		conf, _ := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+		got := getNewStatefulSet(emqx, conf)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{

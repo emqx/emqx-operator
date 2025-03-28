@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,6 +64,12 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 }
 
 func TestGenerateDashboardService(t *testing.T) {
+
+	loadConf := func(data string) *config.Conf {
+		conf, _ := config.EMQXConf(config.MergeDefaults(data))
+		return conf
+	}
+
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := &appsv2beta1.EMQX{
 			ObjectMeta: metav1.ObjectMeta{
@@ -89,7 +96,7 @@ func TestGenerateDashboardService(t *testing.T) {
 				},
 			},
 		}
-		got := generateDashboardService(emqx, "")
+		got := generateDashboardService(emqx, loadConf(""))
 		assert.Equal(t, metav1.ObjectMeta{
 			Name:      "emqx-dashboard",
 			Namespace: "emqx",
@@ -111,7 +118,7 @@ func TestGenerateDashboardService(t *testing.T) {
 		emqx.Spec.DashboardServiceTemplate = &appsv2beta1.ServiceTemplate{
 			Enabled: ptr.To(false),
 		}
-		got := generateDashboardService(emqx, "")
+		got := generateDashboardService(emqx, loadConf(""))
 		assert.Nil(t, got)
 	})
 
@@ -121,7 +128,7 @@ func TestGenerateDashboardService(t *testing.T) {
 				Name: "emqx",
 			},
 		}
-		got := generateDashboardService(emqx, "")
+		got := generateDashboardService(emqx, loadConf(""))
 		assert.Equal(t, map[string]string{
 			appsv2beta1.LabelsInstanceKey:  "emqx",
 			appsv2beta1.LabelsManagedByKey: "emqx-operator",
@@ -131,7 +138,9 @@ func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check http ports", func(t *testing.T) {
 		emqx := &appsv2beta1.EMQX{}
-		got := generateDashboardService(emqx, "dashboard.listeners.http.bind = 18083")
+		got := generateDashboardService(emqx, loadConf(`
+		dashboard.listeners.http.bind = 18083
+		`))
 		assert.Equal(t, []corev1.ServicePort{
 			{
 				Name:       "dashboard",
@@ -144,7 +153,10 @@ func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check https ports", func(t *testing.T) {
 		emqx := &appsv2beta1.EMQX{}
-		got := generateDashboardService(emqx, "dashboard.listeners.http.bind = 0\ndashboard.listeners.https.bind= 18084")
+		got := generateDashboardService(emqx, loadConf(`
+		dashboard.listeners.http.bind  = 0
+		dashboard.listeners.https.bind = 18084
+		`))
 		assert.Equal(t, []corev1.ServicePort{
 			{
 				Name:       "dashboard-https",
@@ -157,7 +169,10 @@ func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check http and https ports", func(t *testing.T) {
 		emqx := &appsv2beta1.EMQX{}
-		got := generateDashboardService(emqx, "dashboard.listeners.http.bind = 18083\ndashboard.listeners.https.bind= 18084")
+		got := generateDashboardService(emqx, loadConf(`
+		dashboard.listeners.http.bind  = 18083
+		dashboard.listeners.https.bind = 18084
+		`))
 		assert.ElementsMatch(t, []corev1.ServicePort{
 			{
 				Name:       "dashboard",
@@ -176,7 +191,10 @@ func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check empty ports", func(t *testing.T) {
 		emqx := &appsv2beta1.EMQX{}
-		got := generateDashboardService(emqx, "dashboard.listeners.http.bind = 0\ndashboard.listeners.https.bind= 0")
+		got := generateDashboardService(emqx, loadConf(`
+		dashboard.listeners.http.bind  = 0
+		dashboard.listeners.https.bind = 0
+		`))
 		assert.Nil(t, got)
 	})
 }

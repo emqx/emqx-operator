@@ -17,18 +17,8 @@ limitations under the License.
 package v2beta1
 
 import (
-	"fmt"
-	"net"
-	"sort"
-	"strconv"
-	"strings"
-
-	emperror "emperror.dev/errors"
-	// "github.com/gurkankaymak/hocon"
-	hocon "github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func IsExistReplicant(instance *EMQX) bool {
@@ -174,197 +164,13 @@ func AddLabel(labels map[string]string, labelKey, labelValue string) map[string]
 	return labels
 }
 
-func GetDashboardPortMap(hoconString string) (map[string]int32, error) {
-	portMap := make(map[string]int32)
-	portMap["dashboard"] = 18083 // default port
-
-	hoconConfig, err := hocon.ParseString(hoconString)
-	if err != nil {
-		return nil, emperror.Wrapf(err, "failed to parse %s", hoconString)
-	}
-
-	if dashboardPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.http.bind"), `"`); dashboardPort != "" {
-		if !strings.Contains(dashboardPort, ":") {
-			// example: ":18083"
-			dashboardPort = fmt.Sprintf(":%s", dashboardPort)
-		}
-		_, strPort, _ := net.SplitHostPort(dashboardPort)
-		if port, _ := strconv.Atoi(strPort); port != 0 {
-			portMap["dashboard"] = int32(port)
-		} else {
-			// port = 0 means disable dashboard
-			// delete default port
-			delete(portMap, "dashboard")
+func FindPodCondition(pod *corev1.Pod, conditionType corev1.PodConditionType) *corev1.PodCondition {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == conditionType {
+			return &condition
 		}
 	}
-
-	if dashboardHttpsPort := strings.Trim(hoconConfig.GetString("dashboard.listeners.https.bind"), `"`); dashboardHttpsPort != "" {
-		if !strings.Contains(dashboardHttpsPort, ":") {
-			// example: ":18084"
-			dashboardHttpsPort = fmt.Sprintf(":%s", dashboardHttpsPort)
-		}
-		_, strPort, _ := net.SplitHostPort(dashboardHttpsPort)
-		if port, _ := strconv.Atoi(strPort); port != 0 {
-			portMap["dashboard-https"] = int32(port)
-		} else {
-			// port = 0 means disable dashboard
-			// delete default port
-			delete(portMap, "dashboard-https")
-		}
-	}
-
-	return portMap, nil
-}
-
-func GetDashboardServicePort(hoconString string) ([]corev1.ServicePort, error) {
-	dashboardSvcPortList := []corev1.ServicePort{}
-	portMap, err := GetDashboardPortMap(hoconString)
-	if err != nil {
-		return nil, emperror.Wrapf(err, "failed to get dashboard port map")
-	}
-
-	for name, port := range portMap {
-		dashboardSvcPortList = append(dashboardSvcPortList, corev1.ServicePort{
-			Name:       name,
-			Protocol:   corev1.ProtocolTCP,
-			Port:       port,
-			TargetPort: intstr.FromInt(int(port)),
-		})
-	}
-
-	sort.Slice(dashboardSvcPortList, func(i, j int) bool {
-		return dashboardSvcPortList[i].Name < dashboardSvcPortList[j].Name
-	})
-
-	return dashboardSvcPortList, nil
-}
-
-func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) {
-	hoconConfig, err := hocon.ParseString(hoconString)
-	if err != nil {
-		return nil, emperror.Wrapf(err, "failed to parse %s", hoconString)
-	}
-	svcPorts := []corev1.ServicePort{}
-
-	// Get listeners.tcp.default.bind
-	for t, listener := range hoconConfig.GetObject("listeners") {
-		if listener.Type() != hocon.ObjectType {
-			continue
-		}
-
-		listenerConfig, err := hocon.ParseString(listener.String())
-		if err != nil {
-			continue
-		}
-
-		configs := listenerConfig.GetRoot()
-		if configs.Type() != hocon.ObjectType {
-			continue
-		}
-
-		for name, config := range configs.(hocon.Object) {
-			// Wait fix this issue: https://github.com/gurkankaymak/hocon/issues/39
-			// c, err := hocon.ParseString(config.String())
-			obj := config.(hocon.Object)
-			cutConfig := hocon.Object{}
-			if v, ok := obj["enable"]; ok {
-				cutConfig["enable"] = v
-			}
-			if v, ok := obj["enabled"]; ok {
-				cutConfig["enabled"] = v
-			}
-			if v, ok := obj["bind"]; ok {
-				cutConfig["bind"] = v
-			}
-			c, err := hocon.ParseString(cutConfig.String())
-			if err != nil {
-				return nil, emperror.Wrapf(err, "failed to parse %s", config.String())
-			}
-			// Compatible with "enable" and "enabled"
-			// the default value of them both is true
-			if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
-				continue
-			}
-			bind := strings.Trim(c.GetString("bind"), `"`)
-			if !strings.Contains(bind, ":") {
-				// example: ":1883"
-				bind = fmt.Sprintf(":%s", bind)
-			}
-			_, strPort, _ := net.SplitHostPort(bind)
-			intStrValue := intstr.Parse(strPort)
-
-			protocol := corev1.ProtocolTCP
-			if t == "quic" {
-				protocol = corev1.ProtocolUDP
-			}
-
-			svcPorts = append(svcPorts, corev1.ServicePort{
-				Name:       fmt.Sprintf("%s-%s", t, name),
-				Protocol:   protocol,
-				Port:       int32(intStrValue.IntValue()),
-				TargetPort: intStrValue,
-			})
-		}
-	}
-
-	// Get gateway.lwm2m.listeners.udp.default.bind
-	for proto, gateway := range hoconConfig.GetObject("gateway") {
-		c, _ := hocon.ParseString(gateway.String())
-		// Compatible with "enable" and "enabled"
-		// the default value of them both is true
-		if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
-			continue
-		}
-		for t, listener := range c.GetObject("listeners") {
-			if listener.Type() != hocon.ObjectType {
-				continue
-			}
-
-			listenerConfig, err := hocon.ParseString(listener.String())
-			if err != nil {
-				continue
-			}
-
-			configs := listenerConfig.GetRoot()
-			if configs.Type() != hocon.ObjectType {
-				continue
-			}
-
-			for name, config := range configs.(hocon.Object) {
-				c, _ := hocon.ParseString(config.String())
-				// Compatible with "enable" and "enabled"
-				// the default value of them both is true
-				if c.GetString("enable") == "false" || c.GetString("enabled") == "false" {
-					continue
-				}
-				bind := strings.Trim(c.GetString("bind"), `"`)
-				if !strings.Contains(bind, ":") {
-					// example: ":1883"
-					bind = fmt.Sprintf(":%s", bind)
-				}
-				_, strPort, _ := net.SplitHostPort(bind)
-				intStrValue := intstr.Parse(strPort)
-
-				protocol := corev1.ProtocolTCP
-				if t == "udp" || t == "dtls" {
-					protocol = corev1.ProtocolUDP
-				}
-
-				svcPorts = append(svcPorts, corev1.ServicePort{
-					Name:       fmt.Sprintf("%s-%s-%s", proto, t, name),
-					Protocol:   protocol,
-					Port:       int32(intStrValue.IntValue()),
-					TargetPort: intStrValue,
-				})
-			}
-		}
-	}
-
-	sort.Slice(svcPorts, func(i, j int) bool {
-		return svcPorts[i].Name < svcPorts[j].Name
-	})
-
-	return svcPorts, nil
+	return nil
 }
 
 func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {

@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	dedent "github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
@@ -31,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -55,7 +57,12 @@ var timeout, interval time.Duration
 var testEnv *envtest.Environment
 var ctx context.Context
 var k8sClient client.Client
-var emqx *appsv2beta1.EMQX
+var emqx emqxSpecs
+
+type emqxSpecs struct {
+	coresOnly       *appsv2beta1.EMQX
+	coresReplicants *appsv2beta1.EMQX
+}
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -72,8 +79,8 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	emqx = genEMQX()
-	timeout = time.Minute * 5
+	emqx.initSpecs()
+	timeout = time.Minute * 3
 	interval = time.Second * 1
 	ctx = context.Background()
 
@@ -142,8 +149,40 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-func genEMQX() *appsv2beta1.EMQX {
-	emqx := &appsv2beta1.EMQX{
+func (e *emqxSpecs) initSpecs() {
+	// Sample config.
+	config := dedent.Dedent(`
+	gateway.lwm2m {
+	  auto_observe = true
+	  enable_stats = true
+	  idle_timeout = "30s"
+	  lifetime_max = "86400s"
+	  lifetime_min = "1s"
+	  listeners {
+		udp {
+		  default {
+			bind = "5783"
+			max_conn_rate = 1000
+			max_connections = 1024000
+		  }
+		}
+	  }
+	  mountpoint = ""
+	  qmode_time_window = "22s"
+	  translators {
+		command {qos = 0, topic = "dn/#"}
+		notify {qos = 0, topic = "up/notify"}
+		register {qos = 0, topic = "up/resp"}
+		response {qos = 0, topic = "up/resp"}
+		update {qos = 0, topic = "up/update"}
+	  }
+	  update_msg_publish_condition = "contains_object_list"
+	  xml_dir = "etc/lwm2m_xml/"
+	}
+	`)
+
+	// Cores only cluster.
+	e.coresOnly = &appsv2beta1.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "e2e-test-v2beta1" + "-" + rand.String(5),
@@ -152,38 +191,13 @@ func genEMQX() *appsv2beta1.EMQX {
 			Image:           "emqx/emqx-enterprise:latest",
 			ImagePullPolicy: corev1.PullAlways,
 			ClusterDomain:   "cluster.local",
-			Config: appsv2beta1.Config{
-				Data: `
-					gateway.lwm2m {
-					  auto_observe = true
-					  enable_stats = true
-					  idle_timeout = "30s"
-					  lifetime_max = "86400s"
-					  lifetime_min = "1s"
-					  listeners {
-					    udp {
-					      default {
-					        bind = "5783"
-					        max_conn_rate = 1000
-					        max_connections = 1024000
-					      }
-					    }
-					  }
-					  mountpoint = ""
-					  qmode_time_window = "22s"
-					  translators {
-					    command {qos = 0, topic = "dn/#"}
-					    notify {qos = 0, topic = "up/notify"}
-					    register {qos = 0, topic = "up/resp"}
-					    response {qos = 0, topic = "up/resp"}
-					    update {qos = 0, topic = "up/update"}
-					  }
-					  update_msg_publish_condition = "contains_object_list"
-					  xml_dir = "etc/lwm2m_xml/"
-					}
-				`,
-			},
+			Config:          appsv2beta1.Config{Data: config},
 		},
 	}
-	return emqx
+	e.coresOnly.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
+
+	// Cores and replicants cluster.
+	e.coresReplicants = e.coresOnly.DeepCopy()
+	e.coresReplicants.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{}
+	e.coresReplicants.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(2))
 }

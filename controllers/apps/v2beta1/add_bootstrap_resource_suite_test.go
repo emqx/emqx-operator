@@ -32,6 +32,7 @@ var _ = Describe("AddBootstrap", Ordered, Label("bootstrap"), func() {
 		}
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
+		Expect(a.LoadEMQXConf(instance)).Should(Succeed())
 	})
 
 	AfterEach(func() {

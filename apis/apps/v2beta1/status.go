@@ -35,6 +35,7 @@ type EMQXStatus struct {
 	ReplicantNodesStatus EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
 
 	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodeEvacuationsStatus,omitempty"`
+	DSReplication         DSReplicationStatus    `json:"dsReplication,omitempty"`
 }
 
 type NodeEvacuationStatus struct {
@@ -55,6 +56,19 @@ type NodeEvacuationStats struct {
 	CurrentConnected *int32 `json:"current_connected,omitempty"`
 }
 
+// Summary of DS replication status per database.
+type DSReplicationStatus struct {
+	DBs []DSDBReplicationStatus `json:"dbs,omitempty"`
+}
+
+type DSDBReplicationStatus struct {
+	Name           string `json:"name"`
+	NumShards      int32  `json:"numShards"`
+	NumTransitions int32  `json:"numTransitions"`
+	MinReplicas    int32  `json:"minReplicas"`
+	MaxReplicas    int32  `json:"maxReplicas"`
+}
+
 type EMQXNodesStatus struct {
 	Replicas      int32 `json:"replicas,omitempty"`
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
@@ -69,8 +83,9 @@ type EMQXNodesStatus struct {
 }
 
 type EMQXNode struct {
-	ControllerUID types.UID `json:"controllerUID,omitempty"`
+	PodName       string    `json:"podName,omitempty"`
 	PodUID        types.UID `json:"podUID,omitempty"`
+	ControllerUID types.UID `json:"controllerUID,omitempty"`
 	// EMQX node name, example: emqx@127.0.0.1
 	Node string `json:"node,omitempty"`
 	// EMQX node status, example: Running
@@ -149,4 +164,16 @@ func (s *EMQXStatus) RemoveCondition(conditionType string) {
 		return
 	}
 	s.Conditions = append(s.Conditions[:pos], s.Conditions[pos+1:]...)
+}
+
+func (s *DSReplicationStatus) IsStable() bool {
+	for _, db := range s.DBs {
+		if db.NumTransitions > 0 {
+			return false
+		}
+		if db.MinReplicas != db.MaxReplicas {
+			return false
+		}
+	}
+	return true
 }

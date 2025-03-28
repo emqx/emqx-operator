@@ -22,4 +22,6 @@ const (
 const (
 	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
 	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
+	// Whether the pod is responsible for DS replication
+	DSReplicationSite corev1.PodConditionType = "apps.emqx.io/ds-replication-site"
 )

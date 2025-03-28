@@ -8,6 +8,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv2beta1 "github.com/emqx/emqx-operator/apis/apps/v2beta1"
+	config "github.com/emqx/emqx-operator/controllers/apps/v2beta1/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,7 +34,7 @@ func (a *addRepl) reconcile(ctx context.Context, logger logr.Logger, instance *a
 		return subResult{}
 	}
 
-	preRs := getNewReplicaSet(instance)
+	preRs := getNewReplicaSet(instance, a.conf)
 	preRsHash := preRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
 
@@ -120,9 +121,8 @@ func (a *addRepl) updateEMQXStatus(ctx context.Context, instance *appsv2beta1.EM
 	})
 }
 
-func getNewReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
-	svcPorts, _ := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
-
+func getNewReplicaSet(instance *appsv2beta1.EMQX, conf *config.Conf) *appsv1.ReplicaSet {
+	svcPorts := conf.GetDashboardServicePort()
 	preRs := generateReplicaSet(instance)
 	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
 	preRs.Name = preRs.Name + "-" + podTemplateSpecHash
@@ -154,6 +154,21 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 		appsv2beta1.DefaultReplicantLabels(instance),
 		instance.Spec.ReplicantTemplate.Labels,
 	)
+
+	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
+	// This is especially important when DS Raft is enabled, otherwise there will be a
+	// lot of leftover records in the DS cluster metadata.
+	lifecycle := instance.Spec.ReplicantTemplate.Spec.Lifecycle
+	if lifecycle == nil {
+		lifecycle = &corev1.Lifecycle{}
+	} else {
+		lifecycle = lifecycle.DeepCopy()
+	}
+	lifecycle.PreStop = &corev1.LifecycleHandler{
+		Exec: &corev1.ExecAction{
+			Command: []string{"/bin/sh", "-c", "emqx ctl cluster leave"},
+		},
+	}
 
 	return &appsv1.ReplicaSet{
 		TypeMeta: metav1.TypeMeta{
@@ -254,7 +269,7 @@ func generateReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
 							LivenessProbe:   instance.Spec.ReplicantTemplate.Spec.LivenessProbe,
 							ReadinessProbe:  instance.Spec.ReplicantTemplate.Spec.ReadinessProbe,
 							StartupProbe:    instance.Spec.ReplicantTemplate.Spec.StartupProbe,
-							Lifecycle:       instance.Spec.ReplicantTemplate.Spec.Lifecycle,
+							Lifecycle:       lifecycle,
 							VolumeMounts: append([]corev1.VolumeMount{
 								{
 									Name:      "bootstrap-api-key",
