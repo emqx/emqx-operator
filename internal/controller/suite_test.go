@@ -133,6 +133,7 @@ var _ = BeforeSuite(func() {
 	}()
 
 	emqxReconciler = NewEMQXReconciler(k8sManager)
+	Expect(emqxReconciler.LoadEMQXConf(emqx)).To(Succeed())
 })
 
 var _ = AfterSuite(func() {
