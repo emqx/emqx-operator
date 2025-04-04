@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +36,7 @@ import (
 
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
 
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/tidwall/gjson"
 )
@@ -49,7 +49,6 @@ const (
 type RebalanceReconciler struct {
 	Client        client.Client
 	Clientset     *kubernetes.Clientset
-	Config        *rest.Config
 	EventRecorder record.EventRecorder
 }
 
@@ -57,7 +56,6 @@ func NewRebalanceReconciler(mgr manager.Manager) *RebalanceReconciler {
 	return &RebalanceReconciler{
 		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
 		Client:        mgr.GetClient(),
-		Config:        mgr.GetConfig(),
 		EventRecorder: mgr.GetEventRecorderFor("rebalance-controller"),
 	}
 }
@@ -133,7 +131,12 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
 
-	requester, err = newRequester(ctx, r.Client, emqx)
+	conf, err := config.EMQXConf(config.MergeDefaults(emqx.Spec.Config.Data))
+	if err != nil {
+		return ctrl.Result{}, emperror.New("failed to parse config")
+	}
+
+	requester, err = newRequester(ctx, r.Client, emqx, conf)
 	if err != nil {
 		return ctrl.Result{}, emperror.New("failed to get create emqx http API")
 	}

@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
-	"github.com/rory-z/go-hocon"
 	"github.com/sethvargo/go-password/password"
 )
 
@@ -29,7 +29,7 @@ func (a *addBootstrap) reconcile(ctx context.Context, logger logr.Logger, instan
 	}
 
 	for _, resource := range []client.Object{
-		generateNodeCookieSecret(instance),
+		generateNodeCookieSecret(instance, a.conf),
 		generateBootstrapAPIKeySecret(instance, bootstrapAPIKeys),
 	} {
 		if err := ctrl.SetControllerReference(instance, resource, a.Scheme); err != nil {
@@ -104,15 +104,11 @@ func generateBootstrapAPIKeySecret(instance *appsv2beta1.EMQX, bootstrapAPIKeys 
 	}
 }
 
-func generateNodeCookieSecret(instance *appsv2beta1.EMQX) *corev1.Secret {
-	var cookie string
-
-	config, _ := hocon.ParseString(instance.Spec.Config.Data)
-	cookie = config.GetString("node.cookie")
+func generateNodeCookieSecret(instance *appsv2beta1.EMQX, conf *config.Conf) *corev1.Secret {
+	cookie := conf.GetNodeCookie()
 	if cookie == "" {
 		cookie, _ = password.Generate(64, 10, 0, true, true)
 	}
-
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",

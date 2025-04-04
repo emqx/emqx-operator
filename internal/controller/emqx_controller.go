@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,8 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/go-logr/logr"
-	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
@@ -59,8 +58,8 @@ type subReconciler interface {
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
 	*handler.Handler
+	conf          *config.Conf
 	Clientset     *kubernetes.Clientset
-	Config        *rest.Config
 	Scheme        *runtime.Scheme
 	EventRecorder record.EventRecorder
 }
@@ -69,7 +68,6 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 	return &EMQXReconciler{
 		Handler:       handler.NewHandler(mgr),
 		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-		Config:        mgr.GetConfig(),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}
@@ -89,6 +87,7 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var err error
 	logger := log.FromContext(ctx)
 
 	instance := &appsv2beta1.EMQX{}
@@ -103,13 +102,13 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	_, err := hocon.ParseString(instance.Spec.Config.Data)
+	err = r.LoadEMQXConf(instance)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "InvalidConfig", "the .spec.config.data is not a valid HOCON config")
-		return ctrl.Result{}, emperror.Wrap(err, "failed to parse config")
+		return ctrl.Result{}, err
 	}
 
-	requester, err := newRequester(ctx, r.Client, instance)
+	requester, err := newRequester(ctx, r.Client, instance, r.conf)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
 			_ = (&addBootstrap{r}).reconcile(ctx, logger, instance, nil)
@@ -153,6 +152,15 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
 }
 
+func (r *EMQXReconciler) LoadEMQXConf(instance *appsv2beta1.EMQX) error {
+	var err error
+	r.conf, err = config.EMQXConf(config.MergeDefaults(instance.Spec.Config.Data))
+	if err != nil {
+		return emperror.Wrap(err, "failed to parse config")
+	}
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -161,18 +169,19 @@ func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func newRequester(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq.RequesterInterface, error) {
+func newRequester(
+	ctx context.Context,
+	k8sClient client.Client,
+	instance *appsv2beta1.EMQX,
+	conf *config.Conf,
+) (innerReq.RequesterInterface, error) {
 	username, password, err := getBootstrapAPIKey(ctx, k8sClient, instance)
 	if err != nil {
 		return nil, err
 	}
 
-	portMap, err := appsv2beta1.GetDashboardPortMap(instance.Spec.Config.Data)
-	if err != nil {
-		return nil, err
-	}
-
 	var schema, port string
+	portMap := conf.GetDashboardPortMap()
 	if dashboardHttps, ok := portMap["dashboard-https"]; ok {
 		schema = "https"
 		port = strconv.FormatInt(int64(dashboardHttps), 10)

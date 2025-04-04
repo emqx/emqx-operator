@@ -9,6 +9,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,7 +28,7 @@ type addCore struct {
 }
 
 func (a *addCore) reconcile(ctx context.Context, logger logr.Logger, instance *appsv2beta1.EMQX, _ innerReq.RequesterInterface) subResult {
-	preSts := getNewStatefulSet(instance)
+	preSts := getNewStatefulSet(instance, a.conf)
 	preStsHash := preSts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 	updateSts, _, _ := getStateFulSetList(ctx, a.Client, instance)
 
@@ -113,9 +114,8 @@ func (a *addCore) updateEMQXStatus(ctx context.Context, instance *appsv2beta1.EM
 	})
 }
 
-func getNewStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
-	svcPorts, _ := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
-
+func getNewStatefulSet(instance *appsv2beta1.EMQX, conf *config.Conf) *appsv1.StatefulSet {
+	svcPorts := conf.GetDashboardServicePort()
 	preSts := generateStatefulSet(instance)
 	podTemplateSpecHash := computeHash(preSts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
 	preSts.Name = preSts.Name + "-" + podTemplateSpecHash

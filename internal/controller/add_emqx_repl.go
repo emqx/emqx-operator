@@ -8,6 +8,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,7 +34,7 @@ func (a *addRepl) reconcile(ctx context.Context, logger logr.Logger, instance *a
 		return subResult{}
 	}
 
-	preRs := getNewReplicaSet(instance)
+	preRs := getNewReplicaSet(instance, a.conf)
 	preRsHash := preRs.Labels[appsv2beta1.LabelsPodTemplateHashKey]
 	updateRs, _, _ := getReplicaSetList(ctx, a.Client, instance)
 
@@ -120,9 +121,8 @@ func (a *addRepl) updateEMQXStatus(ctx context.Context, instance *appsv2beta1.EM
 	})
 }
 
-func getNewReplicaSet(instance *appsv2beta1.EMQX) *appsv1.ReplicaSet {
-	svcPorts, _ := appsv2beta1.GetDashboardServicePort(instance.Spec.Config.Data)
-
+func getNewReplicaSet(instance *appsv2beta1.EMQX, conf *config.Conf) *appsv1.ReplicaSet {
+	svcPorts := conf.GetDashboardServicePort()
 	preRs := generateReplicaSet(instance)
 	podTemplateSpecHash := computeHash(preRs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
 	preRs.Name = preRs.Name + "-" + podTemplateSpecHash
