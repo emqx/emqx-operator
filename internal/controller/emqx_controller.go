@@ -18,27 +18,20 @@ package controller
 
 import (
 	"context"
-	"net"
-	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/go-logr/logr"
-	"github.com/rory-z/go-hocon"
 	corev1 "k8s.io/api/core/v1"
 
 	innerErr "github.com/emqx/emqx-operator/internal/errors"
@@ -59,8 +52,8 @@ type subReconciler interface {
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
 	*handler.Handler
+	conf          *config.Conf
 	Clientset     *kubernetes.Clientset
-	Config        *rest.Config
 	Scheme        *runtime.Scheme
 	EventRecorder record.EventRecorder
 }
@@ -69,7 +62,6 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 	return &EMQXReconciler{
 		Handler:       handler.NewHandler(mgr),
 		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-		Config:        mgr.GetConfig(),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}
@@ -89,6 +81,7 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var err error
 	logger := log.FromContext(ctx)
 
 	instance := &appsv2beta1.EMQX{}
@@ -103,13 +96,13 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	_, err := hocon.ParseString(instance.Spec.Config.Data)
+	err = r.LoadEMQXConf(instance)
 	if err != nil {
 		r.EventRecorder.Event(instance, corev1.EventTypeWarning, "InvalidConfig", "the .spec.config.data is not a valid HOCON config")
-		return ctrl.Result{}, emperror.Wrap(err, "failed to parse config")
+		return ctrl.Result{}, err
 	}
 
-	requester, err := newRequester(ctx, r.Client, instance)
+	requester, err := apiRequester(ctx, r.Client, instance, r.conf)
 	if err != nil {
 		if k8sErrors.IsNotFound(emperror.Cause(err)) {
 			_ = (&addBootstrap{r}).reconcile(ctx, logger, instance, nil)
@@ -153,86 +146,19 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
 }
 
+func (r *EMQXReconciler) LoadEMQXConf(instance *appsv2beta1.EMQX) error {
+	var err error
+	r.conf, err = config.EMQXConf(config.MergeDefaults(instance.Spec.Config.Data))
+	if err != nil {
+		return emperror.Wrap(err, "failed to parse config")
+	}
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv2beta1.EMQX{}).
 		Named("emqx").
 		Complete(r)
-}
-
-func newRequester(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) (innerReq.RequesterInterface, error) {
-	username, password, err := getBootstrapAPIKey(ctx, k8sClient, instance)
-	if err != nil {
-		return nil, err
-	}
-
-	portMap, err := appsv2beta1.GetDashboardPortMap(instance.Spec.Config.Data)
-	if err != nil {
-		return nil, err
-	}
-
-	var schema, port string
-	if dashboardHttps, ok := portMap["dashboard-https"]; ok {
-		schema = "https"
-		port = strconv.FormatInt(int64(dashboardHttps), 10)
-	}
-	if dashboard, ok := portMap["dashboard"]; ok {
-		schema = "http"
-		port = strconv.FormatInt(int64(dashboard), 10)
-	}
-
-	podList := &corev1.PodList{}
-	_ = k8sClient.List(ctx, podList,
-		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(
-			appsv2beta1.DefaultCoreLabels(instance),
-		),
-	)
-	sort.Slice(podList.Items, func(i, j int) bool {
-		return podList.Items[i].CreationTimestamp.Before(&podList.Items[j].CreationTimestamp)
-	})
-
-	for _, pod := range podList.Items {
-		if pod.GetDeletionTimestamp() == nil && pod.Status.PodIP != "" {
-			for _, cond := range pod.Status.Conditions {
-				if cond.Type == corev1.ContainersReady && cond.Status == corev1.ConditionTrue {
-					return &innerReq.Requester{
-						Schema:   schema,
-						Host:     net.JoinHostPort(pod.Status.PodIP, port),
-						Username: username,
-						Password: password,
-					}, nil
-				}
-			}
-		}
-	}
-
-	return nil, nil
-}
-
-func getBootstrapAPIKey(ctx context.Context, client client.Client, instance *appsv2beta1.EMQX) (username, password string, err error) {
-	bootstrapAPIKey := &corev1.Secret{}
-	if err = client.Get(ctx, types.NamespacedName{
-		Namespace: instance.GetNamespace(),
-		Name:      instance.GetName() + "-bootstrap-api-key",
-	}, bootstrapAPIKey); err != nil {
-		err = emperror.Wrap(err, "get secret failed")
-		return
-	}
-
-	if data, ok := bootstrapAPIKey.Data["bootstrap_api_key"]; ok {
-		users := strings.Split(string(data), "\n")
-		for _, user := range users {
-			index := strings.Index(user, ":")
-			if index > 0 && user[:index] == appsv2beta1.DefaultBootstrapAPIKey {
-				username = user[:index]
-				password = user[index+1:]
-				return
-			}
-		}
-	}
-
-	err = emperror.Errorf("the secret does not contain the bootstrap_api_key")
-	return
 }

@@ -6,6 +6,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -32,11 +33,16 @@ func (a *addSvc) reconcile(ctx context.Context, logger logr.Logger, instance *ap
 		return subResult{err: emperror.Wrap(err, "failed to get emqx configs by api")}
 	}
 
+	conf, err := config.EMQXConf(configStr)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to load emqx config")}
+	}
+
 	resources := []client.Object{}
-	if dashboard := generateDashboardService(instance, configStr); dashboard != nil {
+	if dashboard := generateDashboardService(instance, conf); dashboard != nil {
 		resources = append(resources, dashboard)
 	}
-	if listeners := generateListenerService(instance, configStr); listeners != nil {
+	if listeners := generateListenerService(instance, conf); listeners != nil {
 		resources = append(resources, listeners)
 	}
 
@@ -61,7 +67,7 @@ func (a *addSvc) getEMQXConfigsByAPI(r innerReq.RequesterInterface) (string, err
 	return string(body), nil
 }
 
-func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
+func generateDashboardService(instance *appsv2beta1.EMQX, conf *config.Conf) *corev1.Service {
 	svc := &corev1.Service{}
 	if instance.Spec.DashboardServiceTemplate != nil {
 		if !*instance.Spec.DashboardServiceTemplate.Enabled {
@@ -71,7 +77,7 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 		svc.Spec = *instance.Spec.DashboardServiceTemplate.Spec.DeepCopy()
 	}
 
-	ports, _ := appsv2beta1.GetDashboardServicePort(configStr)
+	ports := conf.GetDashboardServicePort()
 	if len(ports) == 0 {
 		return nil
 	}
@@ -94,7 +100,7 @@ func generateDashboardService(instance *appsv2beta1.EMQX, configStr string) *cor
 	}
 }
 
-func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *corev1.Service {
+func generateListenerService(instance *appsv2beta1.EMQX, conf *config.Conf) *corev1.Service {
 	svc := &corev1.Service{}
 	if instance.Spec.ListenersServiceTemplate != nil {
 		if !*instance.Spec.ListenersServiceTemplate.Enabled {
@@ -104,7 +110,7 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 		svc.Spec = *instance.Spec.ListenersServiceTemplate.Spec.DeepCopy()
 	}
 
-	ports, _ := appsv2beta1.GetListenersServicePorts(configStr)
+	ports := conf.GetListenersServicePorts()
 	if len(ports) == 0 {
 		ports = append(ports, []corev1.ServicePort{
 			{

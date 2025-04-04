@@ -108,7 +108,7 @@ func (u *updatePodConditions) checkInCluster(instance *appsv2beta1.EMQX, r inner
 			if node.Edition == appsv2beta1.EnterpriseEdition {
 				v, _ := semver.NewVersion(node.Version)
 				if v.Compare(semver.MustParse("5.0.3")) >= 0 {
-					return u.checkRebalanceStatus(instance, r, pod)
+					return u.checkRebalanceStatus(r, pod)
 				}
 			}
 			return corev1.ConditionTrue
@@ -117,12 +117,12 @@ func (u *updatePodConditions) checkInCluster(instance *appsv2beta1.EMQX, r inner
 	return corev1.ConditionFalse
 }
 
-func (u *updatePodConditions) checkRebalanceStatus(instance *appsv2beta1.EMQX, r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
+func (u *updatePodConditions) checkRebalanceStatus(r innerReq.RequesterInterface, pod *corev1.Pod) corev1.ConditionStatus {
 	if r == nil {
 		return corev1.ConditionFalse
 	}
 
-	portMap, _ := appsv2beta1.GetDashboardPortMap(instance.Spec.Config.Data)
+	portMap := u.conf.GetDashboardPortMap()
 
 	var schema, port string
 	if dashboardHttps, ok := portMap["dashboard-https"]; ok {
