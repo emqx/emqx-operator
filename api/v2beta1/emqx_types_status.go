@@ -35,6 +35,7 @@ type EMQXStatus struct {
 	ReplicantNodesStatus EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
 
 	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodeEvacuationsStatus,omitempty"`
+	DSReplication         DSReplicationStatus    `json:"dsReplication,omitempty"`
 }
 
 type NodeEvacuationStatus struct {
@@ -90,6 +91,21 @@ type EMQXNode struct {
 	Connections int64 `json:"live_connections,omitempty"`
 	// EMQX node uptime, milliseconds
 	Uptime int64 `json:"-"`
+}
+
+// Summary of DS replication status per database.
+type DSReplicationStatus struct {
+	DBs []DSDBReplicationStatus `json:"dbs,omitempty"`
+}
+
+type DSDBReplicationStatus struct {
+	Name              string `json:"name"`
+	NumShards         int32  `json:"numShards"`
+	NumShardReplicas  int32  `json:"numShardReplicas"`
+	LostShardReplicas int32  `json:"lostShardReplicas"`
+	NumTransitions    int32  `json:"numTransitions"`
+	MinReplicas       int32  `json:"minReplicas"`
+	MaxReplicas       int32  `json:"maxReplicas"`
 }
 
 const (

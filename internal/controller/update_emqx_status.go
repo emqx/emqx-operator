@@ -8,6 +8,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	"github.com/emqx/emqx-operator/internal/controller/ds"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
 	"github.com/tidwall/gjson"
@@ -117,19 +118,66 @@ func (u *updateStatus) reconcile(ctx context.Context, logger logr.Logger, instan
 		}
 	}
 
-	isEnterpriser := false
+	isEnterprise := false
 	for _, node := range coreNodes {
 		if node.ControllerUID == currentSts.UID && node.Edition == appsv2beta1.EnterpriseEdition {
-			isEnterpriser = true
+			isEnterprise = true
 			break
 		}
 	}
-	if isEnterpriser {
+
+	if isEnterprise {
 		nodeEvacuationsStatus, err := getNodeEvacuationStatusByAPI(r)
 		if err != nil {
 			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetNodeEvacuationStatuses", err.Error())
 		}
 		instance.Status.NodeEvacuationsStatus = nodeEvacuationsStatus
+	}
+
+	// Reflect the status of the DS replication in the resource status.
+	status := appsv2beta1.DSReplicationStatus{
+		DBs: []appsv2beta1.DSDBReplicationStatus{},
+	}
+	if isEnterprise {
+		dsReplicationStatus, err := ds.GetReplicationStatus(r)
+		if err != nil {
+			u.EventRecorder.Event(instance, corev1.EventTypeWarning, "FailedToGetDSReplicationStatus", err.Error())
+		} else {
+			for _, db := range dsReplicationStatus.DBs {
+				minReplicas := 0
+				maxReplicas := 0
+				numTransitions := 0
+				numShardReplicas := 0
+				lostShardReplicas := 0
+				if len(db.Shards) > 0 {
+					minReplicas = len(db.Shards[0].Replicas)
+					maxReplicas = len(db.Shards[0].Replicas)
+				}
+				for _, shard := range db.Shards {
+					minReplicas = min(minReplicas, len(shard.Replicas))
+					maxReplicas = max(maxReplicas, len(shard.Replicas))
+					numTransitions += len(shard.Transitions)
+					numShardReplicas += len(shard.Replicas)
+					for _, replica := range shard.Replicas {
+						if replica.Status == "lost" {
+							lostShardReplicas += 1
+						}
+					}
+				}
+				status.DBs = append(status.DBs, appsv2beta1.DSDBReplicationStatus{
+					Name:              db.Name,
+					NumShards:         int32(len(db.Shards)),
+					NumShardReplicas:  int32(numShardReplicas),
+					LostShardReplicas: int32(lostShardReplicas),
+					NumTransitions:    int32(numTransitions),
+					MinReplicas:       int32(minReplicas),
+					MaxReplicas:       int32(maxReplicas),
+				})
+			}
+			instance.Status.DSReplication = status
+		}
+	} else {
+		instance.Status.DSReplication = status
 	}
 
 	// update status condition
