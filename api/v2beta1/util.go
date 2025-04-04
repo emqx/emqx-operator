@@ -164,6 +164,15 @@ func AddLabel(labels map[string]string, labelKey, labelValue string) map[string]
 	return labels
 }
 
+func FindPodCondition(pod *corev1.Pod, conditionType corev1.PodConditionType) *corev1.PodCondition {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == conditionType {
+			return &condition
+		}
+	}
+	return nil
+}
+
 func MergeServicePorts(ports1, ports2 []corev1.ServicePort) []corev1.ServicePort {
 	ports := append(ports1, ports2...)
 
