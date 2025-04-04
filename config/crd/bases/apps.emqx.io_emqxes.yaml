@@ -16108,6 +16108,43 @@ spec:
                   updateRevision:
                     type: string
                 type: object
+              dsReplication:
+                description: Summary of DS replication status per database.
+                properties:
+                  dbs:
+                    items:
+                      properties:
+                        lostShardReplicas:
+                          format: int32
+                          type: integer
+                        maxReplicas:
+                          format: int32
+                          type: integer
+                        minReplicas:
+                          format: int32
+                          type: integer
+                        name:
+                          type: string
+                        numShardReplicas:
+                          format: int32
+                          type: integer
+                        numShards:
+                          format: int32
+                          type: integer
+                        numTransitions:
+                          format: int32
+                          type: integer
+                      required:
+                      - lostShardReplicas
+                      - maxReplicas
+                      - minReplicas
+                      - name
+                      - numShardReplicas
+                      - numShards
+                      - numTransitions
+                      type: object
+                    type: array
+                type: object
               nodeEvacuationsStatus:
                 items:
                   properties:
