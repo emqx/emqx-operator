@@ -56,12 +56,16 @@ type DSShardSiteStatus struct {
 	Transition string `json:"transition,omitempty"`
 }
 
-func IsDSEnabled(r req.RequesterInterface) (bool, error) {
+var (
+	APIErrorUnavailable = apiError{StatusCode: 404}
+)
+
+func IsDSAvailable(r req.RequesterInterface) (bool, error) {
 	_, err := apiGet(r, "api/v5/ds/sites")
 	if err == nil {
 		return true, nil
 	}
-	if emperror.Is(err, apiErrorNotFound) {
+	if emperror.Is(err, APIErrorUnavailable) {
 		return false, nil
 	}
 	return false, err
@@ -166,10 +170,6 @@ type apiError struct {
 	StatusCode int
 	Message    string
 }
-
-var (
-	apiErrorNotFound = apiError{StatusCode: 404}
-)
 
 func (e apiError) Error() string {
 	return fmt.Sprintf("HTTP %d, response: %s", e.StatusCode, e.Message)

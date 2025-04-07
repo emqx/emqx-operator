@@ -70,8 +70,9 @@ type EMQXNodesStatus struct {
 }
 
 type EMQXNode struct {
-	ControllerUID types.UID `json:"controllerUID,omitempty"`
+	PodName       string    `json:"podName,omitempty"`
 	PodUID        types.UID `json:"podUID,omitempty"`
+	ControllerUID types.UID `json:"controllerUID,omitempty"`
 	// EMQX node name, example: emqx@127.0.0.1
 	Node string `json:"node,omitempty"`
 	// EMQX node status, example: Running
@@ -165,4 +166,16 @@ func (s *EMQXStatus) RemoveCondition(conditionType string) {
 		return
 	}
 	s.Conditions = append(s.Conditions[:pos], s.Conditions[pos+1:]...)
+}
+
+func (s *DSReplicationStatus) IsStable() bool {
+	for _, db := range s.DBs {
+		if db.NumTransitions > 0 {
+			return false
+		}
+		if db.MinReplicas != db.MaxReplicas {
+			return false
+		}
+	}
+	return true
 }

@@ -16072,6 +16072,8 @@ spec:
                     otp_release:
                       description: 'Erlang/OTP version used by EMQX, example: 24.2/12.2'
                       type: string
+                    podName:
+                      type: string
                     podUID:
                       description: |-
                         UID is a type that holds unique ID values, including UUIDs.  Because we
@@ -16217,6 +16219,8 @@ spec:
                       type: string
                     otp_release:
                       description: 'Erlang/OTP version used by EMQX, example: 24.2/12.2'
+                      type: string
+                    podName:
                       type: string
                     podUID:
                       description: |-

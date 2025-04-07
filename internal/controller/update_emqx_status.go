@@ -205,6 +205,7 @@ func (u *updateStatus) getEMQXNodes(ctx context.Context, instance *appsv2beta1.E
 			pod := p.DeepCopy()
 			host := strings.Split(node.Node[strings.Index(node.Node, "@")+1:], ":")[0]
 			if node.Role == "core" && strings.HasPrefix(host, pod.Name) {
+				node.PodName = pod.Name
 				node.PodUID = pod.UID
 				controllerRef := metav1.GetControllerOf(pod)
 				if controllerRef == nil {
@@ -215,6 +216,7 @@ func (u *updateStatus) getEMQXNodes(ctx context.Context, instance *appsv2beta1.E
 			}
 
 			if node.Role == "replicant" && host == pod.Status.PodIP {
+				node.PodName = pod.Name
 				node.PodUID = pod.UID
 				controllerRef := metav1.GetControllerOf(pod)
 				if controllerRef == nil {
