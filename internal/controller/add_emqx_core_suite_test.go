@@ -5,10 +5,10 @@ import (
 
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
 	innerReq "github.com/emqx/emqx-operator/internal/requester"
+	. "github.com/emqx/emqx-operator/test/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,10 +17,9 @@ import (
 
 var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 	var a *addCore
-	var fakeR *innerReq.FakeRequester = &innerReq.FakeRequester{}
-	var ns *corev1.Namespace = &corev1.Namespace{}
-
-	var instance *appsv2beta1.EMQX = new(appsv2beta1.EMQX)
+	var fakeReq *innerReq.FakeRequester = &innerReq.FakeRequester{}
+	var ns *corev1.Namespace
+	var instance *appsv2beta1.EMQX
 
 	BeforeEach(func() {
 		a = &addCore{emqxReconciler}
@@ -54,8 +53,15 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
 	})
 
+	It("create EMQX CR", func() {
+		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+	})
+
 	It("should create statefulSet", func() {
-		Eventually(a.reconcile).WithArguments(ctx, logger, instance, fakeR).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
+		Eventually(a.reconcile).WithArguments(ctx, logger, instance, fakeReq).
+			WithTimeout(timeout).
+			WithPolling(interval).
+			Should(Equal(subResult{}))
 		Eventually(func() []appsv1.StatefulSet {
 			list := &appsv1.StatefulSetList{}
 			_ = k8sClient.List(ctx, list,
@@ -64,89 +70,39 @@ var _ = Describe("Check add core controller", Ordered, Label("core"), func() {
 			)
 			return list.Items
 		}).Should(ConsistOf(
-			WithTransform(func(s appsv1.StatefulSet) string { return s.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
+			HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal(instance.Spec.Image)))),
 		))
 	})
 
-	Context("change replicas count", func() {
-		JustBeforeEach(func() {
+	It("change image creates new statefulSet", func() {
+		instance.Spec.Image = "emqx/emqx"
+		instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(999999999)
+		Eventually(a.reconcile).WithArguments(ctx, logger, instance, fakeReq).
+			WithTimeout(timeout).
+			WithPolling(interval).
+			Should(Equal(subResult{}))
+
+		Eventually(func() []appsv1.StatefulSet {
 			list := &appsv1.StatefulSetList{}
-			Eventually(func() []appsv1.StatefulSet {
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
-				)
-				return list.Items
-			}).Should(HaveLen(1))
-			sts := list.Items[0].DeepCopy()
-			sts.Status.Replicas = 2
-			Expect(k8sClient.Status().Update(ctx, sts)).Should(Succeed())
-			Eventually(func() *appsv1.StatefulSet {
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(sts), sts)
-				return sts
-			}).WithTimeout(timeout).WithPolling(interval).Should(
-				WithTransform(func(s *appsv1.StatefulSet) int32 { return s.Status.Replicas }, Equal(int32(2))),
+			_ = k8sClient.List(ctx, list,
+				client.InNamespace(instance.Namespace),
+				client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
 			)
+			return list.Items
+		}).WithTimeout(timeout).WithPolling(interval).Should(ConsistOf(
+			HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal("emqx")))),
+			HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal("emqx/emqx")))),
+		))
 
-			instance.Status.CoreNodesStatus.UpdateRevision = sts.Labels[appsv2beta1.LabelsPodTemplateHashKey]
-			instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(4))
-		})
-
-		It("should update statefulSet", func() {
-			Eventually(a.reconcile).WithArguments(ctx, logger, instance, fakeR).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
-			Eventually(func() []appsv1.StatefulSet {
-				list := &appsv1.StatefulSetList{}
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
-				)
-				return list.Items
-			}).Should(ConsistOf(
-				WithTransform(func(s appsv1.StatefulSet) int32 { return *s.Spec.Replicas }, Equal(*instance.Spec.CoreTemplate.Spec.Replicas)),
-			))
-
-			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
-				return instance
-			}).Should(And(
-				WithTransform(func(emqx *appsv2beta1.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2beta1.CoreNodesProgressing)),
-				WithTransform(func(emqx *appsv2beta1.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2beta1.Ready) }, BeFalse()),
-				WithTransform(func(emqx *appsv2beta1.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2beta1.Available) }, BeFalse()),
-				WithTransform(func(emqx *appsv2beta1.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2beta1.CoreNodesReady) }, BeFalse()),
-			))
-		})
-	})
-
-	Context("change image", func() {
-		JustBeforeEach(func() {
-			instance.Spec.Image = "emqx/emqx"
-			instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(999999999)
-		})
-
-		It("should create new statefulSet", func() {
-			Eventually(a.reconcile).WithArguments(ctx, logger, instance, fakeR).WithTimeout(timeout).WithPolling(interval).Should(Equal(subResult{}))
-			Eventually(func() []appsv1.StatefulSet {
-				list := &appsv1.StatefulSetList{}
-				_ = k8sClient.List(ctx, list,
-					client.InNamespace(instance.Namespace),
-					client.MatchingLabels(appsv2beta1.DefaultCoreLabels(instance)),
-				)
-				return list.Items
-			}).WithTimeout(timeout).WithPolling(interval).Should(ConsistOf(
-				WithTransform(func(s appsv1.StatefulSet) string { return s.Spec.Template.Spec.Containers[0].Image }, Equal(emqx.Spec.Image)),
-				WithTransform(func(s appsv1.StatefulSet) string { return s.Spec.Template.Spec.Containers[0].Image }, Equal(instance.Spec.Image)),
-			))
-
-			Eventually(func() *appsv2beta1.EMQX {
-				_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
-				return instance
-			}).Should(And(
-				WithTransform(func(emqx *appsv2beta1.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2beta1.CoreNodesProgressing)),
-				WithTransform(func(emqx *appsv2beta1.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2beta1.Ready) }, BeFalse()),
-				WithTransform(func(emqx *appsv2beta1.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2beta1.Available) }, BeFalse()),
-				WithTransform(func(emqx *appsv2beta1.EMQX) bool { return emqx.Status.IsConditionTrue(appsv2beta1.CoreNodesReady) }, BeFalse()),
-			))
-		})
+		Eventually(func() *appsv2beta1.EMQX {
+			_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
+			return instance
+		}).Should(And(
+			WithTransform(func(emqx *appsv2beta1.EMQX) string { return emqx.Status.GetLastTrueCondition().Type }, Equal(appsv2beta1.CoreNodesProgressing)),
+			HaveCondition(appsv2beta1.Ready, BeNil()),
+			HaveCondition(appsv2beta1.Available, BeNil()),
+			HaveCondition(appsv2beta1.CoreNodesReady, BeNil()),
+		))
 	})
 
 	It("delete namespace", func() {

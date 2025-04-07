@@ -123,6 +123,8 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addSvc{r},
 		&updatePodConditions{r},
 		&updateStatus{r},
+		&dsUpdateReplicaSets{r},
+		&dsReflectPodCondition{r},
 		&syncPods{r},
 		&syncSets{r},
 	} {
@@ -140,7 +142,8 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
-	if !instance.Status.IsConditionTrue(appsv2beta1.Ready) {
+	isStable := instance.Status.IsConditionTrue(appsv2beta1.Ready) && instance.Status.DSReplication.IsStable()
+	if !isStable {
 		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil

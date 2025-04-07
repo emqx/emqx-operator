@@ -21,44 +21,25 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func getRsPodMap(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) map[types.UID][]*corev1.Pod {
-	labels := appsv2beta1.DefaultReplicantLabels(instance)
-
+func listPodsManagedBy(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX, uid types.UID) []*corev1.Pod {
+	result := []*corev1.Pod{}
 	podList := &corev1.PodList{}
+	labels := appsv2beta1.DefaultLabels(instance)
 	_ = k8sClient.List(ctx, podList,
 		client.InNamespace(instance.Namespace),
-		// Maybe current EMQX replicant template is nil
 		client.MatchingLabels(labels),
 	)
-
-	replicaSetList := &appsv1.ReplicaSetList{}
-	_ = k8sClient.List(ctx, replicaSetList,
-		client.InNamespace(instance.Namespace),
-		// Maybe current EMQX replicant template is nil
-		client.MatchingLabels(labels),
-	)
-	// Create a map from ReplicaSet UID to ReplicaSet.
-	rsMap := make(map[types.UID][]*corev1.Pod, len(replicaSetList.Items))
-	for _, rs := range replicaSetList.Items {
-		rsMap[rs.UID] = []*corev1.Pod{}
-	}
-	for _, p := range podList.Items {
-		// Do not ignore inactive Pods because Recreate replicaSets need to verify that no
-		// Pods from older versions are running before spinning up new Pods.
-		pod := p.DeepCopy()
-		controllerRef := metav1.GetControllerOf(pod)
-		if controllerRef == nil {
-			continue
-		}
-		// Only append if we care about this UID.
-		if _, ok := rsMap[controllerRef.UID]; ok {
-			rsMap[controllerRef.UID] = append(rsMap[controllerRef.UID], pod)
+	for _, pod := range podList.Items {
+		controllerRef := metav1.GetControllerOf(&pod)
+		if controllerRef != nil && controllerRef.UID == uid {
+			result = append(result, pod.DeepCopy())
 		}
 	}
-	return rsMap
+	return result
 }
 
 func getStateFulSetList(ctx context.Context, k8sClient client.Client, instance *appsv2beta1.EMQX) (updateSts, currentSts *appsv1.StatefulSet, oldStsList []*appsv1.StatefulSet) {
@@ -130,6 +111,21 @@ func handlerEventList(list *corev1.EventList) []*corev1.Event {
 	return eList
 }
 
+func updatePodCondition(
+	ctx context.Context,
+	k8sClient client.Client,
+	pod *corev1.Pod,
+	condition corev1.PodCondition,
+) error {
+	patchBytes, _ := json.Marshal(corev1.Pod{
+		Status: corev1.PodStatus{
+			Conditions: []corev1.PodCondition{condition},
+		},
+	})
+	patch := client.RawPatch(types.StrategicMergePatchType, patchBytes)
+	return k8sClient.Status().Patch(ctx, pod, patch)
+}
+
 func checkInitialDelaySecondsReady(instance *appsv2beta1.EMQX) bool {
 	_, condition := instance.Status.GetCondition(appsv2beta1.Available)
 	if condition == nil || condition.Type != appsv2beta1.Available {
@@ -179,6 +175,38 @@ func justCheckPodTemplate() patch.CalculateOption {
 
 		return current, modified, nil
 	}
+}
+
+// IgnoreStatefulSetReplicas will ignore the `Replicas` field of the statefulSet
+func ignoreStatefulSetReplicas() patch.CalculateOption {
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := filterStatefulSetReplicasField(current)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not filter replicas field from current byte sequence")
+		}
+
+		modified, err = filterStatefulSetReplicasField(modified)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not filter replicas field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+func filterStatefulSetReplicasField(obj []byte) ([]byte, error) {
+	sts := appsv1.StatefulSet{}
+	err := json.Unmarshal(obj, &sts)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
+	}
+	sts.Spec.Replicas = ptr.To(int32(1))
+	obj, err = json.Marshal(sts)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
+	}
+
+	return obj, nil
 }
 
 // StatefulSetsByCreationTimestamp sorts a list of StatefulSet by creation timestamp, using their names as a tie breaker.
