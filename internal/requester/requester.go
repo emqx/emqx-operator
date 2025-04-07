@@ -79,6 +79,7 @@ func (requester *Requester) GetURL(path string, query ...string) url.URL {
 }
 
 var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
 	Transport: &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
