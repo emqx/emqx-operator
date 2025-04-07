@@ -163,6 +163,21 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 		instance.Spec.CoreTemplate.Labels,
 	)
 
+	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
+	// This is especially important when DS Raft is enabled, otherwise there will be a
+	// lot of leftover records in the DS cluster metadata.
+	lifecycle := instance.Spec.CoreTemplate.Spec.Lifecycle
+	if lifecycle == nil {
+		lifecycle = &corev1.Lifecycle{}
+	} else {
+		lifecycle = lifecycle.DeepCopy()
+	}
+	lifecycle.PreStop = &corev1.LifecycleHandler{
+		Exec: &corev1.ExecAction{
+			Command: []string{"/bin/sh", "-c", "emqx ctl cluster leave"},
+		},
+	}
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -268,7 +283,7 @@ func generateStatefulSet(instance *appsv2beta1.EMQX) *appsv1.StatefulSet {
 							LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
 							ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
 							StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
-							Lifecycle:       instance.Spec.CoreTemplate.Spec.Lifecycle,
+							Lifecycle:       lifecycle,
 							VolumeMounts: append([]corev1.VolumeMount{
 								{
 									Name:      "bootstrap-api-key",
