@@ -79,8 +79,8 @@ The following is the relevant configuration of EMQX custom resources. You can se
 
   ```bash
   $ kubectl get emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   18m
+  NAME   IMAGE              STATUS    AGE
+  emqx   emqx/emqx:latest   Running   18m
   ```
 
 + Obtain Dashboard External IP of EMQX cluster and access EMQX console

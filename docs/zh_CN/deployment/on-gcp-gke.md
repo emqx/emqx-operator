@@ -37,7 +37,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: "emqx:5.1"
+  image: "emqx/emqx:latest"
   coreTemplate:
     spec:
       volumeClaimTemplates:
@@ -62,8 +62,8 @@ spec:
 
 ```shell
 $ kubectl get emqx
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.1   Running   118s
+NAME   IMAGE              STATUS    AGE
+emqx   emqx/emqx:latest   Running   118s
 ```
 
 获取 EMQX 集群的外部 IP 地址，并访问 EMQX 控制台。

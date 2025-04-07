@@ -23,7 +23,7 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx:5
+  image: emqx/emqx:latest
   coreTemplate:
     spec:
       ports:
@@ -50,8 +50,8 @@ emqx.apps.emqx.io/emqx created
 ```bash
 $ kubectl get emqx emqx
 
-NAME   IMAGE      STATUS    AGE
-emqx   emqx:5.1   Running   10m
+NAME   IMAGE              STATUS    AGE
+emqx   emqx/emqx:latest   Running   10m
 ```
 
 :::

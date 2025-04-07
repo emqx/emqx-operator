@@ -22,7 +22,7 @@ EMQX 主配置文件为 `etc/emqx.conf`，从 5.0 版本开始，EMQX 采用 [HO
   metadata:
     name: emqx
   spec:
-    image: emqx:5
+    image: emqx/emqx:latest
     config:
       data: |
         listeners.tcp.test {
@@ -43,8 +43,8 @@ EMQX 主配置文件为 `etc/emqx.conf`，从 5.0 版本开始，EMQX 采用 [HO
 
   ```
   $ kubectl get emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   2m55s
+  NAME   IMAGE              STATUS    AGE
+  emqx   emqx/emqx:latest   Running   2m55s
   ```
 
 + 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台

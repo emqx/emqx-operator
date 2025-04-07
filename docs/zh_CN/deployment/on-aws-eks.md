@@ -29,7 +29,7 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
   metadata:
     name: emqx
   spec:
-    image: emqx:5
+    image: emqx/emqx:latest
     coreTemplate:
       spec:
         ## 若开启了持久化，您需要配置 podSecurityContext，
@@ -82,8 +82,8 @@ EMQX Operator 支持在 Amazon 容器服务 EKS（Elastic Kubernetes Service）�
 
   ```bash
   $ kubectl get emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   18m
+  NAME   IMAGE              STATUS    AGE
+  emqx   emqx/emqx:latest   Running   18m
   ```
 
 + 获取 EMQX 集群的 Dashboard External IP, 访问 EMQX 控制台

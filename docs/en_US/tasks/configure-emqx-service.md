@@ -21,7 +21,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   metadata:
     name: emqx
   spec:
-    image: emqx:5
+    image: emqx/emqx:latest
     listenersServiceTemplate:
       spec:
         type: LoadBalancer
@@ -38,8 +38,8 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
   ```bash
   $ kubectl get emqx emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   10m
+  NAME   IMAGE              STATUS    AGE
+  emqx   emqx/emqx:latest   Running   10m
   ```
 + Obtain the Dashboard External IP of the EMQX cluster and access the EMQX console
 
