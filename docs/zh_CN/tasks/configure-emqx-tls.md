@@ -52,7 +52,7 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
   metadata:
     name: emqx
   spec:
-    image: emqx:5
+    image: emqx/emqx:latest
     config:
       data: |
         listeners.ssl.default {
@@ -101,8 +101,8 @@ Volumes 的类型有很多种，关于 Volumes 描述可以参考文档：[Volum
 
   ```bash
   $ kubectl get emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   10m
+  NAME   IMAGE              STATUS    AGE
+  emqx   emqx/emqx:latest   Running   10m
   ```
 
 + 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台

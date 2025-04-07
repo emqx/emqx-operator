@@ -52,7 +52,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
   metadata:
     name: emqx
   spec:
-    image: emqx:5
+    image: emqx/emqx:latest
     config:
       data: |
         listeners.ssl.default {
@@ -102,8 +102,8 @@ There are many types of Volumes. For the description of Volumes, please refer to
   ```bash
   $ kubectl get emqx
 
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   10m
+  NAME   IMAGE              STATUS    AGE
+  emqx   emqx/emqx:latest   Running   10m
   ```
 
 + Obtain the External IP of EMQX cluster and access EMQX console

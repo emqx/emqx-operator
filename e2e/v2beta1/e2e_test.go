@@ -226,7 +226,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				instance.Spec.Image = "emqx:5"
+				instance.Spec.Image = "emqx/emqx:latest"
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())
 
@@ -565,7 +565,7 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance); err != nil {
 					return err
 				}
-				instance.Spec.Image = "emqx:5"
+				instance.Spec.Image = "emqx/emqx:latest"
 				instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 				return k8sClient.Update(ctx, instance)
 			})).Should(Succeed())

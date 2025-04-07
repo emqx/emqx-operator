@@ -18,7 +18,7 @@ The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5
    metadata:
       name: emqx
    spec:
-      image: emqx:5
+      image: emqx/emqx:latest
       imagePullPolicy: IfNotPresent
       config:
          data: |
@@ -40,8 +40,8 @@ The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5
 
    ```bash
    $ kubectl get emqx emqx
-   NAME   IMAGE      STATUS    AGE
-   emqx   emqx:5.1   Running   10m
+   NAME   IMAGE              STATUS    AGE
+   emqx   emqx/emqx:latest   Running   10m
    ```
 
 + Obtain the Dashboard External IP of EMQX cluster and access EMQX console

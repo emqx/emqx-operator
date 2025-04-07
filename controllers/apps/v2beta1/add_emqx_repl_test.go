@@ -23,7 +23,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 			},
 		},
 		Spec: appsv2beta1.EMQXSpec{
-			Image:         "emqx/emqx:5.1",
+			Image:         "emqx/emqx:latest",
 			ClusterDomain: "cluster.local",
 		},
 	}

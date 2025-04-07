@@ -24,7 +24,7 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
   metadata:
     name: emqx
   spec:
-    image: emqx:5
+    image: emqx/emqx:latest
     coreTemplate:
       spec:
         volumeClaimTemplates:
@@ -49,8 +49,8 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
 
   ```bash
   $ kubectl get emqx emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   10m
+  NAME   IMAGE              STATUS    AGE
+  emqx   emqx/emqx:latest   Running   10m
   ```
 
 + Obtain the Dashboard External IP of the EMQX cluster and access the EMQX console

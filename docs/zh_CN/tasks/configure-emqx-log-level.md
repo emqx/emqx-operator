@@ -41,8 +41,8 @@
 
   ```bash
   $ kubectl get emqx
-  NAME   IMAGE      STATUS    AGE
-  emqx   emqx:5.1   Running   10m
+  NAME   IMAGE              STATUS    AGE
+  emqx   emqx/emqx:latest   Running   10m
   ```
 
 + 获取 EMQX 集群的 Dashboard External IP，访问 EMQX 控制台

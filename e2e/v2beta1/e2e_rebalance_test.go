@@ -108,7 +108,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 
 	Context("EMQX is not enterprise", func() {
 		BeforeEach(func() {
-			instance.Spec.Image = "emqx/emqx:5.1"
+			instance.Spec.Image = "emqx/emqx:latest"
 			r = rebalance.DeepCopy()
 			r.Namespace = instance.GetNamespace()
 			r.Spec.InstanceKind = instance.GroupVersionKind().Kind
