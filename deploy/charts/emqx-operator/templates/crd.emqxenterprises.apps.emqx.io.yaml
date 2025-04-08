@@ -6,7 +6,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "emqx-operator.fullname" . }}-serving-cert'
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: emqxenterprises.apps.emqx.io
 spec:
   conversion:
