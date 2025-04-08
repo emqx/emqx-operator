@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -29,21 +28,26 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 
 	// Make sure the config map exists
 	configMap := &corev1.ConfigMap{}
-	if err := s.Client.Get(ctx, types.NamespacedName{
-		Name:      instance.ConfigsNamespacedName().Name,
-		Namespace: instance.Namespace,
-	}, configMap); err != nil {
-		if k8sErrors.IsNotFound(err) {
-			configMap = generateConfigMap(instance, confStr)
-			if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
-				return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
-			}
-			if err := s.Client.Create(ctx, configMap); err != nil {
-				return subResult{err: emperror.Wrap(err, "failed to create configMap")}
-			}
-			return subResult{}
+	err := s.Client.Get(ctx, instance.ConfigsNamespacedName(), configMap)
+	if err != nil && k8sErrors.IsNotFound(err) {
+		configMap = generateConfigMap(instance, confStr)
+		if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
 		}
+		if err := s.Client.Create(ctx, configMap); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to create configMap")}
+		}
+		return subResult{}
+	}
+	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to get configMap")}
+	}
+
+	// If the config is different, update the config right away.
+	if configMap.Data["emqx.conf"] != confStr {
+		if err := s.Client.Update(ctx, generateConfigMap(instance, confStr)); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update configMap")}
+		}
 	}
 
 	lastConfStr, ok := instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey]
@@ -80,10 +84,6 @@ func (s *syncConfig) reconcile(ctx context.Context, logger logr.Logger, instance
 
 		if err := putEMQXConfigsByAPI(r, instance.Spec.Config.Mode, conf.Print()); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update emqx config through API")}
-		}
-
-		if err := s.Client.Update(ctx, generateConfigMap(instance, confStr)); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update configMap")}
 		}
 
 		instance.Annotations[appsv2beta1.AnnotationsLastEMQXConfigKey] = instance.Spec.Config.Data
