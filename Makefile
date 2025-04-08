@@ -77,7 +77,7 @@ test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated 
 	@kind get clusters | grep -q 'test-e2e' || { \
 		kind create cluster --config test/e2e/files/kind-with-mounts.yaml; \
 	}
-	go test ./test/e2e/ -v -ginkgo.v -timeout 15m
+	go test ./test/e2e/ -v -ginkgo.v -timeout 30m
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter

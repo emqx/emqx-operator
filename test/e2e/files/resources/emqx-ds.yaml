@@ -1,0 +1,24 @@
+apiVersion: apps.emqx.io/v2beta1
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: emqx/emqx-enterprise:latest
+  config:
+    data: |
+      durable_sessions { enable = true }
+      durable_storage { 
+        messages {
+          backend = builtin_raft
+          n_shards = 8
+        }
+      }
+  coreTemplate:
+    spec:
+      replicas: 2
+  replicantTemplate:
+    spec:
+      replicas: 2
+  updateStrategy:
+    evacuationStrategy:
+      waitTakeover: 1
