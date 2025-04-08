@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"encoding/json"
+
 	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -14,5 +16,14 @@ func HaveCondition(conditionType string, matcher types.GomegaMatcher) types.Gome
 			return condition
 		},
 		matcher,
+	)
+}
+
+func UnmarshalInto(v any) types.GomegaMatcher {
+	return gomega.WithTransform(
+		func(in string) error {
+			return json.Unmarshal([]byte(in), v)
+		},
+		gomega.Succeed(),
 	)
 }

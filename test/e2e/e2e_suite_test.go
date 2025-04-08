@@ -129,3 +129,7 @@ var _ = AfterSuite(func() {
 		utils.UninstallCertManager()
 	}
 })
+
+func EventuallySoon(actualOrCtx interface{}, args ...interface{}) AsyncAssertion {
+	return EventuallyWithOffset(1, actualOrCtx, args...).WithTimeout(timeout).WithPolling(interval)
+}
