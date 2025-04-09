@@ -15960,6 +15960,11 @@ spec:
                         format: int32
                         minimum: 1
                         type: integer
+                      waitHealthCheck:
+                        default: 60
+                        format: int32
+                        minimum: 0
+                        type: integer
                       waitTakeover:
                         format: int32
                         minimum: 0
