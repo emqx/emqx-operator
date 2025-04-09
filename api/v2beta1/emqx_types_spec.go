@@ -128,6 +128,9 @@ type EvacuationStrategy struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1000
 	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=60
+	WaitHealthCheck int32 `json:"waitHealthCheck,omitempty"`
 }
 
 type EMQXCoreTemplate struct {

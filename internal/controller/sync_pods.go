@@ -388,6 +388,10 @@ func startEvacuationByAPI(r req.RequesterInterface, instance *appsv2beta1.EMQX, 
 	if instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover > 0 {
 		body["wait_takeover"] = instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover
 	}
+	// Specify `wait_health_check` if different from the default.
+	if instance.Spec.UpdateStrategy.EvacuationStrategy.WaitHealthCheck != 60 {
+		body["wait_health_check"] = fmt.Sprintf("%ds", instance.Spec.UpdateStrategy.EvacuationStrategy.WaitHealthCheck)
+	}
 
 	b, err := json.Marshal(body)
 	if err != nil {

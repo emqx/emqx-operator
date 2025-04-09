@@ -7,3 +7,4 @@ spec:
   updateStrategy:
     evacuationStrategy:
       waitTakeover: 1
+      waitHealthCheck: 15 # seconds
