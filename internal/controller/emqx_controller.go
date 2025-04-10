@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	emperror "emperror.dev/errors"
@@ -137,7 +138,11 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				logger.V(1).Info("requeue reconcile", "reconciler", subReconciler, "reason", subResult.err)
 				return ctrl.Result{RequeueAfter: time.Second}, nil
 			}
-			r.EventRecorder.Event(instance, corev1.EventTypeWarning, "ReconcilerFailed", emperror.Cause(subResult.err).Error())
+			r.EventRecorder.Eventf(instance, corev1.EventTypeWarning,
+				"ReconcilerFailed", "reconcile failed at step %s, reason: %s",
+				reflect.TypeOf(subReconciler).Elem().Name(),
+				subResult.err.Error(),
+			)
 			return ctrl.Result{}, subResult.err
 		}
 	}
