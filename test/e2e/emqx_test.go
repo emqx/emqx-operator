@@ -78,6 +78,14 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 				GinkgoWriter.Printf("Failed to get Controller logs: %s", err)
 			}
 
+			By("Listing managed EMQX resources")
+			resources, err := kubectlOut("get", "all", "--selector", appsv2beta1.LabelsManagedByKey+"=emqx-operator")
+			if err == nil {
+				GinkgoWriter.Print("Managed EMQX resources:\n", resources)
+			} else {
+				GinkgoWriter.Printf("Failed to list managed resources: %s", err)
+			}
+
 			By("Checking EMQX CR")
 			cmd = exec.Command("kubectl", "get", "emqx", "emqx", "-o", "yaml")
 			emqxCR, err := utils.Run(cmd)
@@ -535,14 +543,17 @@ func verifyEMQXStatus(coreReplicas int, afterTime *metav1.Time) {
 	}).WithTimeout(timeout).WithPolling(interval).Should(BeTrue())
 
 	By("checking all of the EMQX pods being ready")
-	cmd := exec.Command(
-		"kubectl", "wait", "pod",
-		"--selector=apps.emqx.io/instance=emqx,apps.emqx.io/managed-by=emqx-operator",
-		"--for=condition=Ready",
-		"--timeout=5m",
-	)
-	_, err := utils.Run(cmd)
-	Expect(err).NotTo(HaveOccurred(), "Failed to wait for emqx pods")
+	EventuallySoon(func() (string, error) {
+		return kubectlOut("get", "pod",
+			"--selector", "apps.emqx.io/instance=emqx,apps.emqx.io/managed-by=emqx-operator",
+			"-o", "go-template="+
+				`{{ range $pod := .items }}{{ range .status.conditions }}`+
+				`{{ if (and (eq .type "Ready") (eq .status "False")) }}`+
+				`{{ $pod.metadata.name }}{{ "\n" }}`+
+				`{{ end }}`+
+				`{{ end }}{{ end }}`,
+		)
+	}).Should(Equal(""))
 
 	By("checking the EMQX cluster core node status has current replicas")
 	verifyEMQXStatus := func(g Gomega) {
