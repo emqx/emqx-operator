@@ -32,12 +32,15 @@ jobs:
       - run: go mod tidy
       - run: make ${{ matrix.case == 'e2e' && 'test-e2e' || 'test' }}
 
+      - if: matrix.case == 'e2e'
+        run: go tool covdata textfmt -i /tmp/kind/data/emqx-operator-system/test-e2e-coverage -o ${{ github.workspace }}/cover.e2e.out
+
       - uses: actions/upload-artifact@v4
         with:
           name: coverprofile-${{ matrix.case }}
           path: |
             ${{ github.workspace }}/cover.out
-            /tmp/kind/data/emqx-operator-system/test-e2e-coverage/**
+            ${{ github.workspace }}/cover.e2e.out
           if-no-files-found: ignore
           retention-days: 1
 
