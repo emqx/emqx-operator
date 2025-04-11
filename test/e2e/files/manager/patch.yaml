@@ -6,6 +6,16 @@ metadata:
 spec:
   template:
     spec:
+      initContainers:
+      - name: coverage-init
+        image: busybox:latest
+        securityContext:
+          runAsUser: 0
+          runAsNonRoot: false
+        command: ["sh", "-c", "mkdir -p /tmp/go-coverage && chmod 777 /tmp/go-coverage"]
+        volumeMounts:
+        - mountPath: /tmp/go-coverage
+          name: coverage
       containers:
       - name: manager
         env:
