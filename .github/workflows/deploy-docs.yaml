@@ -15,7 +15,7 @@ jobs:
     outputs:
       tags: ${{ steps.tags.outputs.tags}}
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: ${{ !github.event.release.prerelease }}
 
     steps:
@@ -52,7 +52,7 @@ jobs:
       matrix:
         tags: ${{ fromJSON(needs.prepare.outputs.tags) }}
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: github.repository_owner == 'emqx'
     steps:
     - name: clone docs
