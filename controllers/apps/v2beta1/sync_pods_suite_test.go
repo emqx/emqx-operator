@@ -28,6 +28,7 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 	var updateSts, currentSts *appsv1.StatefulSet
 	var updateRs, currentRs *appsv1.ReplicaSet
 	var currentRsPod *corev1.Pod
+	var currentStsPod *corev1.Pod
 
 	BeforeEach(func() {
 		fakeR.ReqFunc = func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
@@ -204,6 +205,25 @@ var _ = Describe("Check sync pods controller", Ordered, Label("node"), func() {
 			Spec: currentRs.Spec.Template.Spec,
 		}
 		Expect(k8sClient.Create(ctx, currentRsPod)).Should(Succeed())
+
+		currentStsPod = &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      currentSts.Name + "-0",
+				Namespace: currentSts.Namespace,
+				Labels:    currentSts.Spec.Template.Labels,
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "apps/v1",
+						Kind:       "StatefulSet",
+						Name:       currentSts.Name,
+						UID:        currentSts.UID,
+						Controller: ptr.To(true),
+					},
+				},
+			},
+			Spec: currentSts.Spec.Template.Spec,
+		}
+		Expect(k8sClient.Create(ctx, currentStsPod)).Should(Succeed())
 	})
 
 	AfterEach(func() {
@@ -310,8 +330,45 @@ var _ = Describe("check can be scale down", func() {
 				Spec: appsv1.StatefulSetSpec{
 					ServiceName: instance.Name + "-fake",
 					Replicas:    ptr.To(int32(1)),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: appsv2beta1.DefaultCoreLabels(instance),
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: appsv2beta1.DefaultCoreLabels(instance),
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: "emqx", Image: "emqx"},
+							},
+						},
+					},
 				},
 			}
+			Expect(k8sClient.Create(ctx, oldSts)).Should(Succeed())
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(oldSts), oldSts)).Should(Succeed())
+			oldSts.Status.Replicas = 1
+			oldSts.Status.ReadyReplicas = 1
+			Expect(k8sClient.Status().Update(ctx, oldSts)).Should(Succeed())
+
+			oldStsPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      oldSts.Name + "-0",
+					Namespace: oldSts.Namespace,
+					Labels:    oldSts.Spec.Template.Labels,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "apps/v1",
+							Kind:       "StatefulSet",
+							Name:       oldSts.Name,
+							UID:        oldSts.UID,
+							Controller: ptr.To(true),
+						},
+					},
+				},
+				Spec: oldSts.Spec.Template.Spec,
+			}
+			Expect(k8sClient.Create(ctx, oldStsPod)).Should(Succeed())
 
 		})
 		It("emqx is not available", func() {

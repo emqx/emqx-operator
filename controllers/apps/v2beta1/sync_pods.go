@@ -206,11 +206,21 @@ func (s *syncPods) canBeScaleDownSts(
 		}
 	}
 
+	if oldSts.Status.Replicas == 0 {
+		return false, nil
+	}
+
 	shouldDeletePod = &corev1.Pod{}
-	_ = s.Client.Get(ctx, types.NamespacedName{
+	err = s.Client.Get(ctx, types.NamespacedName{
 		Namespace: instance.Namespace,
 		Name:      fmt.Sprintf("%s-%d", oldSts.Name, *oldSts.Spec.Replicas-1),
 	}, shouldDeletePod)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, emperror.Wrap(err, "failed to get should delete pod")
+	}
 
 	if shouldDeletePod.DeletionTimestamp != nil {
 		return false, nil
