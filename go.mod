@@ -1,6 +1,6 @@
 module github.com/emqx/emqx-operator
 
-go 1.22
+go 1.24
 
 require (
 	emperror.dev/errors v0.8.1

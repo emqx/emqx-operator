@@ -63,7 +63,7 @@ func init() {
 }
 
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update
-//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update
+//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update

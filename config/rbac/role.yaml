@@ -9,7 +9,6 @@ rules:
   resources:
   - configmaps
   - endpoints
-  - events
   - persistentvolumes
   - secrets
   - services
@@ -17,6 +16,17 @@ rules:
   - create
   - get
   - list
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - patch
   - update
   - watch
 - apiGroups:
