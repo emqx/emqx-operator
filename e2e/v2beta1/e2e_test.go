@@ -41,6 +41,12 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 		JustBeforeEach(func() {
 			instance.Spec.ReplicantTemplate = nil
 			instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
+			instance.Spec.CoreTemplate.Spec.EMQXReplicantTemplateSpec.Env = []corev1.EnvVar{
+				{
+					Name:  "EMQX_LICENSE__KEY",
+					Value: "evaluation",
+				},
+			}
 		})
 
 		It("should create namespace and EMQX CR", func() {
@@ -339,9 +345,22 @@ var _ = Describe("E2E Test", Label("base"), Ordered, func() {
 					return err
 				}
 				instance.Spec = *emqx.Spec.DeepCopy()
+				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
+				instance.Spec.CoreTemplate.Spec.EMQXReplicantTemplateSpec.Env = []corev1.EnvVar{
+					{
+						Name:  "EMQX_LICENSE__KEY",
+						Value: "evaluation",
+					},
+				}
 				instance.Spec.ReplicantTemplate = &appsv2beta1.EMQXReplicantTemplate{
 					Spec: appsv2beta1.EMQXReplicantTemplateSpec{
 						Replicas: ptr.To(int32(2)),
+					},
+				}
+				instance.Spec.ReplicantTemplate.Spec.Env = []corev1.EnvVar{
+					{
+						Name:  "EMQX_LICENSE__KEY",
+						Value: "evaluation",
 					},
 				}
 				return k8sClient.Update(ctx, instance)

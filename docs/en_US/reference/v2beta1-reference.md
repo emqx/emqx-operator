@@ -274,7 +274,7 @@ _Appears in:_
 | `clusterDomain` _string_ |  | cluster.local |  |
 | `revisionHistoryLimit` _integer_ | The number of old ReplicaSets, old StatefulSet and old PersistentVolumeClaim to retain to allow rollback.<br />This is a pointer to distinguish between explicit zero and not specified.<br />Defaults to 3. | 3 |  |
 | `updateStrategy` _[UpdateStrategy](#updatestrategy)_ | UpdateStrategy is the object that describes the EMQX blue-green update strategy | \{ evacuationStrategy:map[connEvictRate:1000 sessEvictRate:1000 waitTakeover:10] initialDelaySeconds:10 type:Recreate \} |  |
-| `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | CoreTemplate is the object that describes the EMQX core node that will be created | \{ spec:map[replicas:2] \} |  |
+| `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | CoreTemplate is the object that describes the EMQX core node that will be created | \{ spec:map[replicas:1] \} |  |
 | `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | ReplicantTemplate is the object that describes the EMQX replicant node that will be created |  |  |
 | `dashboardServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created<br />This service always selector the EMQX core node |  |  |
 | `listenersServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | ListenersServiceTemplate is the object that describes the EMQX listener service that will be created<br />If the EMQX replicant node exist, this service will selector the EMQX replicant node<br />Else this service will selector EMQX core node |  |  |

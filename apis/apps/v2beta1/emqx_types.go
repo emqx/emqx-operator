@@ -84,7 +84,7 @@ type EMQXSpec struct {
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// CoreTemplate is the object that describes the EMQX core node that will be created
-	//+kubebuilder:default={spec:{replicas:2}}
+	//+kubebuilder:default={spec:{replicas:1}}
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 
 	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
