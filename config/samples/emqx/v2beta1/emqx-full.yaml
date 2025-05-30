@@ -21,7 +21,7 @@ spec:
         apps.emqx.io/managed-by: emqx-operator
         apps.emqx.io/db-role: core
     spec:
-      replicas: 2
+      replicas: 1
       volumeClaimTemplates:
         resources:
           requests:

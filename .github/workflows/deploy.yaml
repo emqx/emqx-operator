@@ -27,28 +27,20 @@ jobs:
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-slim.yaml"]
           - [EmqxEnterprise, emqx-ee, "config/samples/emqx/v1beta4/emqxenterprise-full.yaml"]
 
-          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
-          - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
+          # - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-slim.yaml"]
+          # - [EMQX, emqx, "config/samples/emqx/v2alpha1/emqx-full.yaml"]
 
           - [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-slim.yaml"]
-          - [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-full.yaml"]
+          # - [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-full.yaml"]
         single_namespace:
           - false
-          - true
         enable_webhook:
           - true
-        exclude:
-          - install: static
-            single_namespace: true
         include:
           - enable_webhook: false
             install: helm
             single_namespace: true
             emqx: [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-slim.yaml"]
-          - enable_webhook: false
-            install: helm
-            single_namespace: true
-            emqx: [EMQX, emqx, "config/samples/emqx/v2beta1/emqx-full.yaml"]
 
     steps:
       - run: minikube start

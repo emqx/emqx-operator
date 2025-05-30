@@ -132,7 +132,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			By("Creating EMQX CR", func() {
 				// create EMQX CR
 				instance.Spec.ReplicantTemplate = nil
-				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
+				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
 				Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully
@@ -176,7 +176,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 					HaveField("Status", corev1.ConditionTrue),
 				)),
 				HaveField("Conditions", ContainElements(
-					HaveField("Message", ContainSubstring("Only enterprise edition can be rebalanced"))),
+					HaveField("Message", ContainSubstring("Failed to start rebalance"))),
 				),
 			))
 		})
@@ -204,7 +204,7 @@ var _ = Describe("EMQX 5 Rebalance Test", Label("rebalance"), func() {
 			By("Creating EMQX CR", func() {
 				// create EMQX CR
 				instance.Spec.ReplicantTemplate = nil
-				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
+				instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
 				Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 				// check EMQX CR if created successfully

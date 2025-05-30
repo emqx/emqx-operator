@@ -6951,7 +6951,7 @@ spec:
               coreTemplate:
                 default:
                   spec:
-                    replicas: 2
+                    replicas: 1
                 properties:
                   metadata:
                     properties:
