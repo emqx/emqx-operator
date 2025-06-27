@@ -28,7 +28,12 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: "emqx/emqx:latest"
+  image: "emqx/emqx-enterprise:5.10"
+  config:
+    data: |
+      license {
+        key = "..."
+      }
   coreTemplate:
     spec:
       volumeClaimTemplates:
@@ -53,8 +58,8 @@ Wait for the EMQX cluster to be ready. You can check the status of the EMQX clus
 
 ```shell
 $ kubectl get emqx
-NAME   IMAGE              STATUS    AGE
-emqx   emqx/emqx:latest   Running   118s
+NAME   IMAGE                         STATUS    AGE
+emqx   emqx/emqx-enterprise:5.10.0   Running   118s
 ```
 
 Get the External IP of the EMQX cluster and access the EMQX console.

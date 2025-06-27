@@ -24,7 +24,12 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
   metadata:
     name: emqx
   spec:
-    image: emqx/emqx:latest
+    image: emqx/emqx-enterprise:5.10
+    config:
+      data: |
+        license {
+          key = "..."
+        }
     coreTemplate:
       spec:
         volumeClaimTemplates:
@@ -49,8 +54,8 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
 
   ```bash
   $ kubectl get emqx emqx
-  NAME   IMAGE              STATUS    AGE
-  emqx   emqx/emqx:latest   Running   10m
+  NAME   IMAGE                         STATUS    AGE
+  emqx   emqx/emqx-enterprise:5.10.0   Running   10m
   ```
 
 + Obtain the Dashboard External IP of the EMQX cluster and access the EMQX console
@@ -95,7 +100,7 @@ When the user configures the `.spec.persistent` field, EMQX Operator will mount 
         emqxContainer:
           image:
             repository: emqx/emqx-ee
-            version: 4.4.14
+            version: 4.4.30
     serviceTemplate:
       spec:
         type: LoadBalancer

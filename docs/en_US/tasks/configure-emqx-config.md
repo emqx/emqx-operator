@@ -18,13 +18,16 @@ The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5
    metadata:
       name: emqx
    spec:
-      image: emqx/emqx:latest
+      image: emqx/emqx-enterprise:5.10
       imagePullPolicy: IfNotPresent
       config:
          data: |
             listeners.tcp.test {
                bind = "0.0.0.0:1884"
                max_connections = 1024000
+            }
+            license {
+              key = "..."
             }
       listenersServiceTemplate:
          spec:
@@ -40,8 +43,8 @@ The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5
 
    ```bash
    $ kubectl get emqx emqx
-   NAME   IMAGE              STATUS    AGE
-   emqx   emqx/emqx:latest   Running   10m
+   NAME   IMAGE                         STATUS    AGE
+   emqx   emqx/emqx-enterprise:5.10.0   Running   10m
    ```
 
 + Obtain the Dashboard External IP of EMQX cluster and access EMQX console
@@ -61,7 +64,7 @@ The main configuration file of EMQX is `/etc/emqx.conf`. Starting from version 5
 + View EMQX cluster listener information
 
    ```bash
-   $ kubectl exec -it emqx-core-0 -c emqx -- emqx_ctl listeners
+   $ kubectl exec -it emqx-core-0 -c emqx -- emqx ctl listeners
    ```
 
    You can get a print similar to the following, which means that the listener named `test` configured by us has taken effect.

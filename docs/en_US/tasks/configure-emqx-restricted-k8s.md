@@ -19,7 +19,7 @@ Here we are assuming k8s cluster does not have access to the internet, and the u
 ```bash
 export CERT_MANAGER_VERSION='v1.16.2'
 export EMQX_OPERATOR_VERSION='2.2.26'
-export EMQX_VERSION='5.8.4'
+export EMQX_VERSION='5.10.0'
 export REGISTRY='my.private.registry'
 
 CERT_MANAGER_IMAGES=(
@@ -118,12 +118,17 @@ kubectl -n emqx wait --for=condition=Ready pods -l "control-plane=controller-man
     namespace: emqx
   spec:
     image: ${REGISTRY}/emqx/emqx-enterprise:${EMQX_VERSION}
+    config:
+      data: |
+        license {
+          key = "..."
+        }
   ```
 
 + Wait for the EMQX cluster to be ready, you can check the status of EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
   ```bash
   $ kubectl get emqx emqx
-  NAME   IMAGE                                            STATUS    AGE
-  emqx   my.private.registry/emqx/emqx-enterprise:5.8.4   Running   10m
+  NAME   IMAGE                                             STATUS    AGE
+  emqx   my.private.registry/emqx/emqx-enterprise:5.10.0   Running   10m
   ```

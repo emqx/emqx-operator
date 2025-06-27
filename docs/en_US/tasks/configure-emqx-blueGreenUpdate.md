@@ -111,9 +111,14 @@ Create `apps.emqx.io/v2beta1` EMQX and configure update strategy.
 apiVersion: apps.emqx.io/v2beta1
 kind: EMQX
 metadata:
-  name: emqx
+  name: emqx-ee
 spec:
-  image: emqx/emqx:latest
+  image: emqx/emqx-enterprise:5.10
+  config:
+    data: |
+      license {
+        key = "..."
+      }
   updateStrategy:
     evacuationStrategy:
       connEvictRate: 1000
@@ -170,7 +175,7 @@ spec:
       emqxContainer:
         image:
           repository: emqx/emqx-ee
-          version: 4.4.14
+          version: 4.4.30
 ```
 
 `initialDelaySeconds`: The waiting time before the start node is evacuated after all nodes are ready (unit: second).
@@ -201,7 +206,7 @@ emqx-ee   Running  8m33s
 :::
 ::::
 
-### Connect to EMQX cluster using MQTT X CLI.
+### Connect to EMQX cluster using MQTTX CLI.
 
 MQTT X CLI is an open-source MQTT 5.0 CLI Client that supports automatic reconnection. It is also a pure command-line mode MQTT X. It aims to help develop and debug MQTT services and applications faster without using a graphical interface. For documentation about MQTT X CLI, please refer to: [MQTTX CLI](https://mqttx.app/cli).
 

@@ -40,7 +40,12 @@ The following is the relevant configuration of EMQX custom resources. You can se
   metadata:
     name: emqx
   spec:
-    image: emqx/emqx-enterprise:5
+    image: emqx/emqx-enterprise:5.10
+    config:
+      data: |
+        license {
+          key = "..."
+        }
     coreTemplate:
       spec:
         ## EMQX custom resources do not support updating this field at runtime
@@ -79,8 +84,8 @@ The following is the relevant configuration of EMQX custom resources. You can se
 
   ```bash
   $ kubectl get emqx
-  NAME   IMAGE              STATUS    AGE
-  emqx   emqx/emqx:latest   Running   18m
+  NAME   IMAGE                         STATUS    AGE
+  emqx   emqx/emqx-enterprise:5.10.0   Running   18m
   ```
 
 + Obtain Dashboard External IP of EMQX cluster and access EMQX console

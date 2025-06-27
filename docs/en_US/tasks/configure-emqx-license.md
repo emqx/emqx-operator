@@ -33,7 +33,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
         license {
           key = "..."
         }
-    image: emqx/emqx-enterprise:5.6
+    image: emqx/emqx-enterprise:5.10
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
@@ -45,8 +45,8 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
   ```bash
   $ kubectl get emqx emqx-ee
-  NAME   IMAGE                        STATUS    AGE
-  emqx   emqx/emqx-enterprise:5.1.0   Running   10m
+  NAME   IMAGE                         STATUS    AGE
+  emqx   emqx/emqx-enterprise:5.10.0   Running   10m
   ```
 
 + Obtain the Dashboard External IP of EMQX cluster and access EMQX console
@@ -93,7 +93,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
         emqxContainer:
           image:
             repository: emqx/emqx-ee
-            version: 4.4.14
+            version: 4.4.30
     serviceTemplate:
       spec:
         type: LoadBalancer
