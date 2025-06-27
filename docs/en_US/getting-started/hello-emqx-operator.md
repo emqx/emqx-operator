@@ -92,10 +92,12 @@ kind: EMQX
 metadata:
   name: emqx-ee
 spec:
-  image: emqx/emqx-enterprise:5.8
+  image: emqx/emqx-enterprise:5.10
   config:
-    data:
-      log.console.level = debug
+    data: |
+      license {
+        key = "..."
+      }
   coreTemplate:
     spec:
       replicas: 2
@@ -104,7 +106,7 @@ spec:
       replicas: 3
 ```
 
-In the `emqx.yaml` file, you define the `image` field to specify the EMQX image to use. And also define the `config` field to specify the EMQX configuration, in this example, set the `log.console.level` to `debug`. You also define the `coreTemplate` and `replicantTemplate` to specify the number of replicas for the core and replicant nodes.
+In the `emqx.yaml` file, you define the `image` field to specify the EMQX image to use. And also define the `config` field to specify the EMQX configuration, in this example, set the `license.key` to license content. You also define the `coreTemplate` and `replicantTemplate` to specify the number of replicas for the core and replicant nodes.
 
 EMQX custom resource definition (CRD) also provides `dashboardServiceTemplate` and `listenersServiceTemplate` to configure the EMQX dashboard and listeners service. For
 more configuration options, you can refer to the [EMQX Operator documentation](https://docs.emqx.com/en/emqx-operator/latest/reference/v2beta1-reference.html).
@@ -180,7 +182,7 @@ You can check the EMQX cluster status by running the following command:
 
 ```bash
 $ pod_name=$(kubectl get pods -l apps.emqx.io/db-role=core,apps.emqx.io/instance=emqx-ee -o jsonpath='{.items[0].metadata.name}')
-$ kubectl exec -it $pod_name -- emqx_ctl cluster status
+$ kubectl exec -it $pod_name -- emqx ctl cluster status
 Cluster status: #{running_nodes =>
                       ['emqx@10.244.0.12','emqx@10.244.0.13',
                        'emqx@10.244.0.14',
@@ -221,7 +223,7 @@ $ kubectl port-forward svc/emqx-ee-listeners 1883:1883
 
 Now you can access the EMQX listeners by visiting `tcp://localhost:1883` in your MQTT client.
 
-For example, you can use the MQTT X CLI to connect to the EMQX cluster, you can refer to the [MQTT X CLI documentation](https://mqttx.app/cli) for more information.
+For example, you can use the MQTT X CLI to connect to the EMQX cluster, you can refer to the [MQTTX CLI documentation](https://mqttx.app/cli) for more information.
 
 ```bash
 $ mqttx conn -h localhost -p 1883

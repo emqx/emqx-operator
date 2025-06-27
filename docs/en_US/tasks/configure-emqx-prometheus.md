@@ -23,7 +23,12 @@ kind: EMQX
 metadata:
   name: emqx
 spec:
-  image: emqx/emqx:latest
+  image: emqx/emqx-enterprise:5.10
+  config:
+    data: |
+      license {
+        key = "..."
+      }
 ```
 
 Save the above content as `emqx.yaml` and execute the following command to deploy the EMQX cluster:
@@ -39,8 +44,8 @@ Check the status of the EMQX cluster and make sure that `STATUS` is `Running`, w
 ```bash
 $ kubectl get emqx emqx
 
-NAME   IMAGE              STATUS    AGE
-emqx   emqx/emqx:latest   Running   10m
+NAME   IMAGE                         STATUS    AGE
+emqx   emqx/emqx-enterprise:5.10.0   Running   10m
 ```
 
 :::
@@ -59,7 +64,7 @@ spec:
       emqxContainer:
         image:
           repository: emqx/emqx-ee
-          version: 4.4.16
+          version: 4.4.30
         ports:
           # prometheus monitor requires the pod must name the target port
           - name: dashboard

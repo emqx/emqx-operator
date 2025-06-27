@@ -23,10 +23,13 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
   metadata:
     name: emqx
   spec:
-    image: emqx5.0
+    image: emqx/emqx-enterprise:5.10
     config:
       data: |
         log.console.level = debug
+        license {
+          key = "..."
+        }
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
@@ -41,8 +44,8 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
 
   ```bash
   $ kubectl get emqx
-  NAME   IMAGE              STATUS    AGE
-  emqx   emqx/emqx:latest   Running   10m
+  NAME   IMAGE                         STATUS    AGE
+  emqx   emqx/emqx-enterprise:5.10.0   Running   10m
   ```
 
 + EMQX Operator will create two EMQX Service resources, one is emqx-dashboard and the other is emqx-listeners, corresponding to EMQX console and EMQX listening port respectively.
@@ -73,7 +76,7 @@ The following is the relevant configuration of EMQX Custom Resource. You can cho
         emqxContainer:
           image:
             repository: emqx/emqx-ee
-            version: 4.4.14
+            version: 4.4.30
           emqxConfig:
             log.level: debug
     serviceTemplate:

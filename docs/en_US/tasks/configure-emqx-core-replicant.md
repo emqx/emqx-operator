@@ -33,7 +33,12 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
   metadata:
     name: emqx
   spec:
-    image: emqx/emqx:latest
+    image: emqx/emqx-enterprise:5.10
+    config:
+      data: |
+        license {
+          key = "..."
+        }
     coreTemplate:
       spec:
         replicas: 2
@@ -59,8 +64,8 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
 
   ```bash
   $ kubectl get emqx emqx
-  NAME   IMAGE              STATUS    AGE
-  emqx   emqx/emqx:latest   Running   10m
+  NAME   IMAGE                         STATUS    AGE
+  emqx   emqx/emqx-enterprise:5.10.0   Running   10m
   ```
 
 + Obtain the Dashboard External IP of EMQX cluster and access EMQX console
@@ -85,23 +90,23 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
     {
       "node": "emqx@emqx-core-0.emqx-headless.default.svc.cluster.local",
       "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "otp_release": "27.2-3/15.2",
       "role": "core",
-      "version": "5.0.20"
+      "version": "5.10.0"
     },
     {
       "node": "emqx@emqx-core-1.emqx-headless.default.svc.cluster.local",
       "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "otp_release": "27.2-3/15.2",
       "role": "core",
-      "version": "5.0.20"
+      "version": "5.10.0"
     },
      {
       "node": "emqx@emqx-core-2.emqx-headless.default.svc.cluster.local",
       "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "otp_release": "27.2-3/15.2",
       "role": "core",
-      "version": "5.0.20"
+      "version": "5.10.0"
     }
   ]
   ```
@@ -113,23 +118,23 @@ There must be at least one Core node in the EMQX cluster. For the purpose of hig
     {
       "node": "emqx@10.244.4.56",
       "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "otp_release": "27.2-3/15.2",
       "role": "replicant",
-      "version": "5.0.20"
+      "version": "5.10.0"
     },
     {
       "node": "emqx@10.244.4.57",
       "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "otp_release": "27.2-3/15.2",
       "role": "replicant",
-      "version": "5.0.20"
+      "version": "5.10.0"
     },
     {
       "node": "emqx@10.244.4.58",
       "node_status": "running",
-      "otp_release": "24.3.4.2-2/12.3.2.2",
+      "otp_release": "27.2-3/15.2",
       "role": "replicant",
-      "version": "5.0.20"
+      "version": "5.10.0"
     }
   ]
   ```

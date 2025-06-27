@@ -52,7 +52,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
   metadata:
     name: emqx
   spec:
-    image: emqx/emqx:latest
+    image: emqx/emqx-enterprise:5.10
     config:
       data: |
         listeners.ssl.default {
@@ -64,6 +64,9 @@ There are many types of Volumes. For the description of Volumes, please refer to
             gc_after_handshake = true
             handshake_timeout = 5s
           }
+        }
+        license {
+          key = "..."
         }
     coreTemplate:
       spec:
@@ -102,8 +105,8 @@ There are many types of Volumes. For the description of Volumes, please refer to
   ```bash
   $ kubectl get emqx
 
-  NAME   IMAGE              STATUS    AGE
-  emqx   emqx/emqx:latest   Running   10m
+  NAME   IMAGE                         STATUS    AGE
+  emqx   emqx/emqx-enterprise:5.10.0   Running   10m
   ```
 
 + Obtain the External IP of EMQX cluster and access EMQX console
@@ -138,7 +141,7 @@ There are many types of Volumes. For the description of Volumes, please refer to
         emqxContainer:
           image:
             repository: emqx/emqx-ee
-            version: 4.4.14
+            version: 4.4.30
           emqxConfig:
             listener.ssl.external.cacertfile: /mounted/cert/ca.crt
             listener.ssl.external.certfile: /mounted/cert/tls.crt
@@ -187,9 +190,9 @@ There are many types of Volumes. For the description of Volumes, please refer to
 :::
 ::::
 
-## Verify TLS Connection Using MQTT X CLI
+## Verify TLS Connection Using MQTTX CLI
 
-[MQTT X CLI](https://mqttx.app/cli) is an open source MQTT 5.0 command line client tool, designed to help developers to more Quickly develop and debug MQTT services and applications.
+[MQTTX CLI](https://mqttx.app/cli) is an open source MQTT 5.0 command line client tool, designed to help developers to more Quickly develop and debug MQTT services and applications.
 
 + Obtain the External IP of EMQX cluster
 
