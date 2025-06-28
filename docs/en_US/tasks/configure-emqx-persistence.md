@@ -18,7 +18,8 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
 
 + Save the following content as a YAML file and deploy it via the `kubectl apply` command
 
-  ```yaml
+```yaml
+
   apiVersion: apps.emqx.io/v2beta1
   kind: EMQX
   metadata:
@@ -36,19 +37,33 @@ When the user configures the `.spec.coreTemplate.spec.volumeClaimTemplates` fiel
           storageClassName: standard
           resources:
             requests:
-              storage: 20Mi
+              storage: 2Gi
           accessModes:
             - ReadWriteOnce
         replicas: 3
+        envFrom:
+          - configMapRef:
+              name: emqx-config
     listenersServiceTemplate:
       spec:
         type: LoadBalancer
     dashboardServiceTemplate:
       spec:
         type: LoadBalancer
-  ```
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: emqx-config
+data:
+  EMQX_DURABLE_STORAGE_MESSAGES_N_SHARDS: '2'
+  EMQX_DURABLE_STORAGE_QUEUES_N_SHARDS: '2'
+```
 
   > `storageClassName` field indicates the name of the StorageClass. You can use the command `kubectl get storageclass` to get the StorageClass that already exists in the Kubernetes cluster, or you can create a StorageClass according to your own needs.
+
+> Additional configuration is needed after version ```5.8.0``` to start service. It uses more persistnt storage and need extra cofig for storage.   
+
 
 + Wait for EMQX cluster to be ready, you can check the status of the EMQX cluster through `kubectl get` command, please make sure `STATUS` is `Running`, this may take some time
 
