@@ -17,31 +17,6 @@
 1. 在进行滚动更新时，对应的 Service 会同时选中新的和旧的 Pod。这可能导致 MQTT 客户端连接到错误的 Pod 上，从而频繁断开连接并进行重连操作。
 2. 在滚动更新过程中，只有 N - 1 个 Pod 能够提供服务，因为新的 Pod 需要一定时间来启动和准备就绪。这可能导致服务的可用性下降。
 
-```mermaid
-timeline
-				section Update start
-					Current Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-				section Rolling update
-					Current Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-					Update Cluster<br>Have Endpoint
-						: pod-2
-					Current Cluster<br>Have Endpoint
-						: pod-0
-					Update Cluster<br>Have Endpoint
-						: pod-1
-						: pod-2
-				section Finish Update
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-```
-
 ## 解决方案
 
 针对上文提到的滚动更新的问题，EMQX Operator 提供了蓝绿发布的升级方案，通过 EMQX 自定义资源升级 EMQX 集群时，EMQX Operator 会创建新的 EMQX 集群，并在集群就绪后将 Kubernetes Service 指向新的 EMQX 集群，并逐步删除旧的 EMQX 集群的 Pod，从而达到更新 EMQX 集群的目的。
@@ -50,47 +25,67 @@ timeline
 
 整个升级流程大致可分为以下几步：
 
-1. 创建一个相同规格的集群。
-2. 新集群就绪后，将 service 指向新集群，并将旧集群从 service 中摘除，此时新集群开始接受流量，旧集群现有的连接不受影响。
-3. （仅支持 EMQX 企业版）通过 EMQX 节点疏散功能，逐个对节点上的连接进行疏散。
-4. 将旧的集群逐步缩容到 0 个节点。
+1. 使用 EMQX 自定义资源创建新的 Pods，并将新的 Pods 加入 EMQX 集群。
+2. 当新的 Pods 就绪后，将 Service 重定向到新的 Pods，并从 Service 中移除旧的 Pods。此时，新的 Pods 开始接收流量，旧的 Pods 中的现有连接不受影响。
+3. （仅 EMQX 企业版支持）使用 EMQX 节点疏散功能逐个疏散每个节点上的连接。
+4. 逐渐将旧的 Pods 缩减至 0。
 5. 完成升级。
 
 ```mermaid
-timeline
-				section Update start
-					Current Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-				section Create update cluster
-					Current Cluster
-						: pod-0
-						: pod-1
-						: pod-2
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-				section Updating cluster
-					Current Cluster
-						: pod-0
-						: pod-1
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-					Current Cluster
-						: pod-0
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-				section Finish Update
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
+stateDiagram-v2
+  [*] --> Step1
+  Step1: Create new pods
+	state Step1 {
+    [*] --> CreateNewPods
+    CreateNewPods: Create new pods
+    CreateNewPods -->  NewPodsJoinTheCluster
+    NewPodsJoinTheCluster: New pods join the cluster
+    NewPodsJoinTheCluster --> WaitNewPodsReady
+    WaitNewPodsReady: Wait new pods ready
+    WaitNewPodsReady --> LBServiceSelectNewPods
+    LBServiceSelectNewPods: Redirect the Service to the new Pods and remove the old Pods from the Service
+    LBServiceSelectNewPods --> [*]
+  }
+  Step1 --> Step2
+  Step2: Delete old pods
+  state HasReplNode <<choice>>
+  state NodeEvacuationToNewPod1 <<choice>>
+  state NodeEvacuationToNewPod2 <<choice>>
+  state Step2 {
+    [*] --> SelectOldestPod
+    SelectOldestPod: Select oldest pod
+    SelectOldestPod --> HasReplNode
+
+    HasReplNode --> SelectOldestReplPod: Has EMQX replicant node pod
+    SelectOldestReplPod: Select oldest EMQX replicant node pod
+    SelectOldestReplPod --> NodeEvacuationToNewPod1
+    NodeEvacuationToNewPod1 --> NodeEvacuationToNewReplPod1: New pods has EMQX replicant node
+    NodeEvacuationToNewReplPod1: Node evacuation to new EMQX replicant node pod
+    NodeEvacuationToNewReplPod1 --> DeleteThisOldestPod1
+
+    NodeEvacuationToNewPod1 --> NodeEvacuationToNewCorePod1: New pods has no EMQX replicant node
+    NodeEvacuationToNewCorePod1: Node evacuation to new EMQX core node pod
+    NodeEvacuationToNewCorePod1 --> DeleteThisOldestPod1
+
+    DeleteThisOldestPod1: Delete this oldest pod
+    DeleteThisOldestPod1 --> HasReplNode
+
+    HasReplNode --> SelectOldestCorePod: Has no EMQX replicant node pod
+    SelectOldestCorePod: Select oldest EMQX core node pod
+    SelectOldestCorePod --> NodeEvacuationToNewPod2
+    NodeEvacuationToNewPod2 --> NodeEvacuationToNewReplPod2: New pods has EMQX replicant node
+    NodeEvacuationToNewReplPod2: Node evacuation to new EMQX replicant node pod
+    NodeEvacuationToNewReplPod2 --> DeleteThisOldestPod2
+
+    NodeEvacuationToNewPod2 --> NodeEvacuationToNewCorePod2: New pods has no EMQX replicant node
+    NodeEvacuationToNewCorePod2: Node evacuation to new EMQX core node pod
+    NodeEvacuationToNewCorePod2 --> DeleteThisOldestPod2
+
+    DeleteThisOldestPod2: Delete this oldest pod
+	  DeleteThisOldestPod2 --> [*]
+  }
+  Step2 --> Complete
+  Complete --> [*]
 ```
 
 ## 如何通过蓝绿发布更新 EMQX 集群
@@ -126,7 +121,7 @@ spec:
 
 `sessEvictRate`: MQTT Session 疏散速率，仅支持 EMQX 企业版（单位：count/second）。
 
-将上述内容保存为：emqx-update.yaml，执行如下命令部署 EMQX：
+将上述内容保存为：emqx-update.yaml，执行如下命令部署 EMQX，在这个示例中，只部署 EMQX core node 集群，不部署 EMQX replicant node：
 
 ```bash
 $ kubectl apply -f emqx-update.yaml
@@ -226,7 +221,23 @@ mqttx bench conn -h ${IP} -p ${PORT} -c 3000
   emqx.apps.emqx.io/emqx-ee patched
   ```
 
-- 检查蓝绿升级的状态
+- 检查 EMQX 集群状态
+
+  ```bash
+  kubectl get emqx emqx-ee -o json | jq '.status.coreNodesStatus'
+  {
+    "currentReplicas": 2,
+    "currentRevision": "54fc496fb4",
+    "readyReplicas": 4,
+    "replicas": 2,
+    "updateReplicas": 2,
+    "updateRevision": "5d87d4c6bd"
+  }
+  ```
+
+  在这个例子中，旧的 StatefulSet 是 `emqx-${currentRevision}`，有 2 个 Pod。新的 StatefulSet 是 `emqx-${updateRevision}`，有 2 个 Pod。然后 EMQX Operator 将开始节点疏散过程。
+
+- 检查节点疏散状态
 
   ```bash
   $ kubectl get emqx emqx-ee -o json | jq ".status.nodeEvacuationsStatus"

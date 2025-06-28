@@ -18,31 +18,6 @@ This feature only supports `apps.emqx.io/v1beta4 EmqxEnterprise` and `apps.emqx.
 
    2. During the rolling update process, only N - 1 Pods can provide services because it takes some time for new Pods to start up and become ready. This may lead to a decrease in service availability.
 
-```mermaid
-timeline
-				section Update start
-					Current Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-				section Rolling update
-					Current Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-					Update Cluster<br>Have Endpoint
-						: pod-2
-					Current Cluster<br>Have Endpoint
-						: pod-0
-					Update Cluster<br>Have Endpoint
-						: pod-1
-						: pod-2
-				section Finish Update
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-```
-
 ## Solution
 
 Regarding the issue of rolling updates mentioned in the previous text, EMQX Operator provides a blue-green deployment upgrade solution. When upgrading the EMQX cluster using EMQX custom resources, EMQX Operator will create a new EMQX cluster and redirect the Kubernetes Service to the new EMQX cluster after it is ready. It will then gradually delete Pods from the old EMQX cluster to achieve the purpose of updating the EMQX cluster.
@@ -51,51 +26,67 @@ When deleting Pods from the old EMQX cluster, EMQX Operator can also take advant
 
 The entire upgrade process can be roughly divided into the following steps:
 
-1. Create a cluster with the same specifications.
-
-2. After the new cluster is ready, redirect the service to the new cluster and remove the old cluster from the service. At this time, the new cluster starts to receive traffic, and existing connections in the old cluster are not affected.
-
-3. (Only supported by EMQX Enterprise Edition) Use EMQX node evacuation function to evacuate connections on each node one by one.
-
-4. Gradually scale down the old cluster to 0 nodes.
-
+1. Create new Pods with the EMQX custom resource, and join the new Pods to the EMQX cluster.
+2. After the new Pods are ready, redirect the Service to the new Pods and remove the old Pods from the Service. At this time, the new Pods start to receive traffic, and existing connections in the old Pods are not affected.
+3. (Only supported by EMQX Enterprise Edition) Use the EMQX node evacuation function to evacuate connections on each node one by one.
+4. Gradually scale down the old Pods to 0.
 5. Complete the upgrade.
 
 ```mermaid
-timeline
-				section Update start
-					Current Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-				section Create update cluster
-					Current Cluster
-						: pod-0
-						: pod-1
-						: pod-2
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-				section Updating cluster
-					Current Cluster
-						: pod-0
-						: pod-1
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-					Current Cluster
-						: pod-0
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
-				section Finish Update
-					Update Cluster<br>Have Endpoint
-						: pod-0
-						: pod-1
-						: pod-2
+stateDiagram-v2
+  [*] --> Step1
+  Step1: Create new pods
+	state Step1 {
+    [*] --> CreateNewPods
+    CreateNewPods: Create new pods
+    CreateNewPods -->  NewPodsJoinTheCluster
+    NewPodsJoinTheCluster: New pods join the cluster
+    NewPodsJoinTheCluster --> WaitNewPodsReady
+    WaitNewPodsReady: Wait new pods ready
+    WaitNewPodsReady --> LBServiceSelectNewPods
+    LBServiceSelectNewPods: Redirect the Service to the new Pods and remove the old Pods from the Service
+    LBServiceSelectNewPods --> [*]
+  }
+  Step1 --> Step2
+  Step2: Delete old pods
+  state HasReplNode <<choice>>
+  state NodeEvacuationToNewPod1 <<choice>>
+  state NodeEvacuationToNewPod2 <<choice>>
+  state Step2 {
+    [*] --> SelectOldestPod
+    SelectOldestPod: Select oldest pod
+    SelectOldestPod --> HasReplNode
+
+    HasReplNode --> SelectOldestReplPod: Has EMQX replicant node pod
+    SelectOldestReplPod: Select oldest EMQX replicant node pod
+    SelectOldestReplPod --> NodeEvacuationToNewPod1
+    NodeEvacuationToNewPod1 --> NodeEvacuationToNewReplPod1: New pods has EMQX replicant node
+    NodeEvacuationToNewReplPod1: Node evacuation to new EMQX replicant node pod
+    NodeEvacuationToNewReplPod1 --> DeleteThisOldestPod1
+
+    NodeEvacuationToNewPod1 --> NodeEvacuationToNewCorePod1: New pods has no EMQX replicant node
+    NodeEvacuationToNewCorePod1: Node evacuation to new EMQX core node pod
+    NodeEvacuationToNewCorePod1 --> DeleteThisOldestPod1
+
+    DeleteThisOldestPod1: Delete this oldest pod
+    DeleteThisOldestPod1 --> HasReplNode
+
+    HasReplNode --> SelectOldestCorePod: Has no EMQX replicant node pod
+    SelectOldestCorePod: Select oldest EMQX core node pod
+    SelectOldestCorePod --> NodeEvacuationToNewPod2
+    NodeEvacuationToNewPod2 --> NodeEvacuationToNewReplPod2: New pods has EMQX replicant node
+    NodeEvacuationToNewReplPod2: Node evacuation to new EMQX replicant node pod
+    NodeEvacuationToNewReplPod2 --> DeleteThisOldestPod2
+
+    NodeEvacuationToNewPod2 --> NodeEvacuationToNewCorePod2: New pods has no EMQX replicant node
+    NodeEvacuationToNewCorePod2: Node evacuation to new EMQX core node pod
+    NodeEvacuationToNewCorePod2 --> DeleteThisOldestPod2
+
+    DeleteThisOldestPod2: Delete this oldest pod
+	  DeleteThisOldestPod2 --> [*]
+  }
+  Step2 --> Complete
+  Complete --> [*]
 ```
 
 ## How to update the EMQX cluster through blue-green deployment.
@@ -136,7 +127,7 @@ spec:
 
 `sessEvictRate`: MQTT Session evacuation rate, only supported by EMQX Enterprise Edition (unit: count/second)。
 
-Save the above content as: `emqx-update.yaml`, execute the following command to deploy EMQX:
+Save the above content as: `emqx-update.yaml`, execute the following command to deploy EMQX, in this example, just deploy EMQX core node cluster without replicant node:
 
 ```bash
 $ kubectl apply -f emqx-update.yaml
@@ -236,7 +227,23 @@ Output is similar to:
   emqx.apps.emqx.io/emqx-ee patched
   ```
 
-- Check status.
+- Check the status of the EMQX core nodes
+
+  ```bash
+  kubectl get emqx emqx-ee -o json | jq '.status.coreNodesStatus'
+  {
+    "currentReplicas": 2,
+    "currentRevision": "54fc496fb4",
+    "readyReplicas": 4,
+    "replicas": 2,
+    "updateReplicas": 2,
+    "updateRevision": "5d87d4c6bd"
+  }
+  ```
+
+  In this example, the old StatefulSet is `emqx-${currentRevision}`, which has 2 ready pods. The new StatefulSet is `emqx-${updateRevision}`, which has 2 ready pods. Then the EMQX Operator will start the node evacuation process.
+
+- Check node evacuations status.
 
   ```bash
   $ kubectl get emqx emqx-ee -o json | jq ".status.nodeEvacuationsStatus"
