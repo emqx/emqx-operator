@@ -119,7 +119,7 @@ spec:
                 properties:
                   metadata:
                     description: |-
-                      Standard object's metadata.
+                      Standard object metadata.
                       More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
                     properties:
                       annotations:
@@ -7526,10 +7526,8 @@ spec:
                         type: array
                       volumeClaimTemplates:
                         description: |-
-                          This field is named VolumeClaimTemplates but actually it is PersistentVolumeClaimSpec. I'm sorry for the bad naming.
-                          PersistentVolumeClaimSpec describes the common attributes of storage devices
-                          and allows a Source for provider-specific attributes
-                          More than EMQXReplicantTemplateSpec
+                          PVC specification for a core node data storage.
+                          Note: this field named inconsistently, it is actually just a `PersistentVolumeClaimSpec`.
                         properties:
                           accessModes:
                             description: |-
@@ -8532,7 +8530,7 @@ spec:
                 properties:
                   metadata:
                     description: |-
-                      Standard object's metadata.
+                      Standard object metadata.
                       More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
                     properties:
                       annotations:

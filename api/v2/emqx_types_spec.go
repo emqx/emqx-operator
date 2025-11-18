@@ -142,7 +142,7 @@ type EvacuationStrategy struct {
 }
 
 type EMQXCoreTemplate struct {
-	// Standard object's metadata.
+	// Standard object metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired behavior of the EMQX core node.
@@ -151,7 +151,7 @@ type EMQXCoreTemplate struct {
 }
 
 type EMQXReplicantTemplate struct {
-	// Standard object's metadata.
+	// Standard object metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired behavior of the EMQX replicant node.
@@ -166,10 +166,8 @@ type EMQXCoreTemplateSpec struct {
 	// +kubebuilder:validation:XValidation:rule="has(self.minAvailable) && has(self.maxUnavailable) ? false : true",message="minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget."
 	EMQXReplicantTemplateSpec `json:",inline"`
 
-	// This field is named VolumeClaimTemplates but actually it is PersistentVolumeClaimSpec. I'm sorry for the bad naming.
-	// PersistentVolumeClaimSpec describes the common attributes of storage devices
-	// and allows a Source for provider-specific attributes
-	// More than EMQXReplicantTemplateSpec
+	// PVC specification for a core node data storage.
+	// Note: this field named inconsistently, it is actually just a `PersistentVolumeClaimSpec`.
 	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
 }
 
