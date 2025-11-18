@@ -24,13 +24,12 @@ import (
 
 // EMQXSpec defines the desired state of EMQX.
 type EMQXSpec struct {
-	// EMQX image name.
+	// EMQX container image.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
 	Image string `json:"image"`
-	// Image pull policy.
-	// One of Always, Never, IfNotPresent.
-	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
-	// Cannot be updated.
+	// Container image pull policy.
+	// One of `Always`, `Never`, `IfNotPresent`.
+	// Defaults to `Always` if `:latest` tag is specified, or `IfNotPresent` otherwise.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.
@@ -38,42 +37,44 @@ type EMQXSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	// Service Account Name
-	// This associates the ReplicaSet or StatefulSet with the specified Service Account for authentication purposes.
+	// ServiceAccount name.
+	// Managed ReplicaSets and StatefulSets are associated with the specified ServiceAccount for authentication purposes.
 	// More info: https://kubernetes.io/docs/concepts/security/service-accounts
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// EMQX bootstrap user
+	// Bootstrap API keys to access EMQX API.
 	// Cannot be updated.
 	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
 
-	// EMQX config
+	// EMQX Configuration.
 	Config Config `json:"config,omitempty"`
 
+	// Kubernetes cluster domain.
 	// +kubebuilder:default:="cluster.local"
 	ClusterDomain string `json:"clusterDomain,omitempty"`
 
-	// The number of old ReplicaSets, old StatefulSet and old PersistentVolumeClaim to retain to allow rollback.
+	// Number of old ReplicaSets, old StatefulSets and old PersistentVolumeClaims to retain to allow rollback.
 	// +kubebuilder:default:=3
 	RevisionHistoryLimit int32 `json:"revisionHistoryLimit,omitempty"`
 
-	// UpdateStrategy is the object that describes the EMQX blue-green update strategy
-	// +kubebuilder:default={type:Recreate,initialDelaySeconds:10,evacuationStrategy:{waitTakeover:10,connEvictRate:1000,sessEvictRate:1000}}
+	// Cluster upgrade strategy settings.
+	// +kubebuilder:default={type:Recreate}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
-	// CoreTemplate is the object that describes the EMQX core node that will be created
+	// Template for Pods running EMQX core nodes.
 	// +kubebuilder:default={spec:{replicas:2}}
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 
-	// ReplicantTemplate is the object that describes the EMQX replicant node that will be created
+	// Template for Pods running EMQX replicant nodes.
 	ReplicantTemplate *EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
 
-	// DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
-	// This service always selector the EMQX core node
+	// Template for Service exposing the EMQX Dashboard.
+	// Dashboard Service always points to the set of EMQX core nodes.
 	DashboardServiceTemplate *ServiceTemplate `json:"dashboardServiceTemplate,omitempty"`
-	// ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
-	// If the EMQX replicant node exist, this service will selector the EMQX replicant node
-	// Else this service will selector EMQX core node
+
+	// Template for Service exposing enabled EMQX listeners.
+	// Listeners Service points to the set of EMQX replicant nodes if they are enabled and exist.
+	// Otherwise, it points to the set of EMQX core nodes.
 	ListenersServiceTemplate *ServiceTemplate `json:"listenersServiceTemplate,omitempty"`
 }
 
@@ -82,39 +83,50 @@ type BootstrapAPIKey struct {
 	Key string `json:"key,omitempty"`
 	// +kubebuilder:validation:MinLength:=3
 	// +kubebuilder:validation:MaxLength:=128
-	Secret    string     `json:"secret,omitempty"`
+	Secret string `json:"secret,omitempty"`
+	// Reference to a Secret entry containing the EMQX API Key.
 	SecretRef *SecretRef `json:"secretRef,omitempty"`
 }
 
 type SecretRef struct {
-	Key    KeyRef `json:"key"`
+	// Reference to a Secret entry containing the EMQX API Key.
+	Key KeyRef `json:"key"`
+	// Reference to a Secret entry containing the EMQX API Key's secret.
 	Secret KeyRef `json:"secret"`
 }
 
 type KeyRef struct {
+	// Name of the Secret object.
 	SecretName string `json:"secretName"`
+	// Entry within the Secret data.
 	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d-_]+$`
 	SecretKey string `json:"secretKey"`
 }
 
 type Config struct {
+	// Determines how configuration updates are applied.
+	// * `Merge`: Merge the new configuration into the existing configuration.
+	// * `Replace`: Replace the whole configuration.
 	// +kubebuilder:validation:Enum=Merge;Replace
 	// +kubebuilder:default=Merge
 	Mode string `json:"mode,omitempty"`
-	// Bootstrap EMQX config, in HOCON format.
-	// This configuration will be supplied as `base.hocon` to the container, see respective
+	// EMQX configuration, in HOCON format.
+	// This configuration will be supplied as `base.hocon` to the container. See respective
 	// [documentation](https://docs.emqx.com/en/emqx/latest/configuration/configuration.html#base-configuration-file).
 	Data string `json:"data,omitempty"`
 }
 
 type UpdateStrategy struct {
+	// Determines how cluster upgrade is performed.
+	// * `Recreate`: Perform blue-green upgrade.
 	// +kubebuilder:validation:Enum=Recreate
 	// +kubebuilder:default=Recreate
 	Type string `json:"type,omitempty"`
-	// Number of seconds before evacuation connection start.
+	// Number of seconds before connection evacuation starts.
 	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=10
 	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
-	// Evacuation strategy.
+	// Evacuation strategy settings.
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 }
 
@@ -145,7 +157,7 @@ type EMQXCoreTemplate struct {
 	// Standard object metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Specification of the desired behavior of the EMQX core node.
+	// Specification of the desired state of a core node.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	Spec EMQXCoreTemplateSpec `json:"spec,omitempty"`
 }
@@ -154,15 +166,13 @@ type EMQXReplicantTemplate struct {
 	// Standard object metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Specification of the desired behavior of the EMQX replicant node.
+	// Specification of the desired state of a replicant node.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-	// Controller tools does not support more complex validations (oneOf/anyOf/allOf/etc), so use validation rule instead. https://github.com/kubernetes-sigs/controller-tools/issues/461#issuecomment-1982741599
 	// +kubebuilder:validation:XValidation:rule="has(self.minAvailable) && has(self.maxUnavailable) ? false : true",message="minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget."
 	Spec EMQXReplicantTemplateSpec `json:"spec,omitempty"`
 }
 
 type EMQXCoreTemplateSpec struct {
-	// Controller tools does not support more complex validations (oneOf/anyOf/allOf/etc), so use validation rule instead. https://github.com/kubernetes-sigs/controller-tools/issues/461#issuecomment-1982741599
 	// +kubebuilder:validation:XValidation:rule="has(self.minAvailable) && has(self.maxUnavailable) ? false : true",message="minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget."
 	EMQXReplicantTemplateSpec `json:",inline"`
 
@@ -172,24 +182,24 @@ type EMQXCoreTemplateSpec struct {
 }
 
 type EMQXReplicantTemplateSpec struct {
-	// NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node.
+	// Selector which must be true for the pod to fit on a node.
+	// Must match a node's labels for the pod to be scheduled on that node.
 	// More info: https://kubernetes.io/docs/concepts/config/assign-pod-node/
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-	// NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
+	// Request to schedule this pod onto a specific node.
+	// If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
 	NodeName string `json:"nodeName,omitempty"`
 	// Affinity for pod assignment
 	// ref: https://kubernetes.io/docs/concepts/config/assign-pod-node/#affinity-and-anti-affinity
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
-	// If specified, the pod's tolerations.
-	// The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
+	// Pod tolerations.
+	// If specified, Pod tolerates any taint that matches the triple <key,value,effect> using the matching operator.
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	// TopologySpreadConstraint specifies how to spread matching pods among the given topology.
+	// Specifies how to spread matching pods among the given topology.
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 
-	// Replicas is the desired number of replicas of the given Template.
-	// These are replicas in the sense that they are instantiations of the
-	// same Template, but individual replicas also have a consistent identity.
-	// Defaults to 2.
+	// Desired number of instances.
+	// In case of core nodes, each instance has a consistent identity.
 	// +kubebuilder:default:=2
 	// +kubebuilder:validation:Minimum=0
 	Replicas *int32 `json:"replicas,omitempty"`
@@ -208,49 +218,44 @@ type EMQXReplicantTemplateSpec struct {
 
 	// Entrypoint array. Not executed within a shell.
 	// The container image's ENTRYPOINT is used if this is not provided.
-	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
-	// cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
-	// to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
-	// produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
+	// Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable
+	// cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced
+	// to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will
+	// produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless
 	// of whether the variable exists or not. Cannot be updated.
 	// More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
 	// +optional
 	Command []string `json:"command,omitempty"`
 	// Arguments to the entrypoint.
 	// The container image's CMD is used if this is not provided.
-	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
-	// cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
-	// to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
-	// produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
-	// of whether the variable exists or not. Cannot be updated.
+	// Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable
+	// cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced
+	// to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will
+	// produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless
+	// of whether the variable exists or not.
 	// More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
 	Args []string `json:"args,omitempty"`
-	// List of ports to expose from the container. Exposing a port here gives
-	// the system additional information about the network connections a
-	// container uses, but is primarily informational. Not specifying a port here
-	// DOES NOT prevent that port from being exposed. Any port which is
-	// listening on the default "0.0.0.0" address inside a container will be
-	// accessible from the network.
-	// Cannot be updated.
+	// List of ports to expose from the container.
+	// Exposing a port here gives the system additional information about the network connections a
+	// container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that
+	// port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a
+	// container will be accessible from the network.
 	Ports []corev1.ContainerPort `json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"containerPort" protobuf:"bytes,6,rep,name=ports"`
 	// List of environment variables to set in the container.
-	// Cannot be updated.
 	Env []corev1.EnvVar `json:"env,omitempty"`
-	// List of sources to populate environment variables in the container.
+	// List of sources to populate environment variables from in the container.
 	// The keys defined within a source must be a C_IDENTIFIER. All invalid keys
 	// will be reported as an event when the container is starting. When a key exists in multiple
 	// sources, the value associated with the last source will take precedence.
 	// Values defined by an Env with a duplicate key will take precedence.
-	// Cannot be updated.
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty" protobuf:"bytes,19,rep,name=envFrom"`
 	// Compute Resources required by this container.
-	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/config/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-	// SecurityContext holds pod-level security attributes and common container settings.
+	// Pod-level security attributes and common container settings.
 	// +kubebuilder:default={runAsUser:1000,runAsGroup:1000,fsGroup:1000,fsGroupChangePolicy:Always,supplementalGroups: {1000}}
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
-	// SecurityContext defines the security options the container should be run with.
+	// Security options the container should be run with.
 	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
 	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 	// +kubebuilder:default={runAsUser:1000,runAsGroup:1000,runAsNonRoot:true}
@@ -265,51 +270,43 @@ type EMQXReplicantTemplateSpec struct {
 	// by finding the highest request/limit for each resource type, and then using the max of
 	// of that value or the sum of the normal containers. Limits are applied to init containers
 	// in a similar fashion.
-	// Init containers cannot currently be added or removed.
-	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
-	// ExtraContainers represents extra containers to be added to the pod.
-	// See https://github.com/emqx/emqx-operator/issues/252
+	// Additional containers to run alongside the main container.
 	ExtraContainers []corev1.Container `json:"extraContainers,omitempty"`
-	// See https://github.com/emqx/emqx-operator/pull/72
+	// Additional volumes to provide to a Pod.
 	ExtraVolumes []corev1.Volume `json:"extraVolumes,omitempty"`
-	// See https://github.com/emqx/emqx-operator/pull/72
+	// Specifies how additional volumes are mounted into the main container.
 	ExtraVolumeMounts []corev1.VolumeMount `json:"extraVolumeMounts,omitempty"`
 	// Periodic probe of container liveness.
 	// Container will be restarted if the probe fails.
-	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	// +kubebuilder:default={initialDelaySeconds:60,periodSeconds:30,failureThreshold:3,httpGet: {path:/status, port:"dashboard"}}
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 	// Periodic probe of container service readiness.
 	// Container will be removed from service endpoints if the probe fails.
-	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	// +kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,failureThreshold:12,httpGet: {path:/status, port:"dashboard"}}
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	// StartupProbe indicates that the Pod has successfully initialized.
 	// If specified, no other probes are executed until this completes successfully.
-	// If this probe fails, the Pod will be restarted, just as if the livenessProbe failed.
+	// If this probe fails, the Pod will be restarted, just as if the `livenessProbe` failed.
 	// This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,
 	// when it might take a long time to load data or warm a cache, than during steady-state operation.
-	// This cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 	// Actions that the management system should take in response to container lifecycle events.
-	// Cannot be updated.
 	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty" protobuf:"bytes,12,opt,name=lifecycle"`
 }
 
 type ServiceTemplate struct {
-	// EMQX Operator will create a service for EMQX nodes.
-	// This is a pointer to distinguish between `false` and not specified.
+	// Specifies whether the Service should be created.
 	// +kubebuilder:default:=true
 	Enabled *bool `json:"enabled,omitempty"`
-	// Standard object's metadata.
+	// Standard object metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Spec defines the behavior of a service.
+	// Specification of the desired state of a Service.
 	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	Spec corev1.ServiceSpec `json:"spec,omitempty"`
 }

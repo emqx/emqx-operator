@@ -24,19 +24,25 @@ import (
 
 // EMQXStatus defines the observed state of EMQX
 type EMQXStatus struct {
-	// Represents the latest available observations of a EMQX Custom Resource current state.
+	// Conditions representing the current status of the EMQX Custom Resource.
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	CoreNodes       []EMQXNode      `json:"coreNodes,omitempty"`
+	// Status of each core node in the cluster.
+	CoreNodes []EMQXNode `json:"coreNodes,omitempty"`
+	// Summary status of the set of core nodes.
 	CoreNodesStatus EMQXNodesStatus `json:"coreNodesStatus,omitempty"`
 
-	ReplicantNodes       []EMQXNode      `json:"replicantNodes,omitempty"`
+	// Status of each replicant node in the cluster.
+	ReplicantNodes []EMQXNode `json:"replicantNodes,omitempty"`
+	// Summary status of the set of replicant nodes.
 	ReplicantNodesStatus EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
 
+	// Status of active node evacuations in the cluster.
 	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodeEvacuationsStatus,omitempty"`
-	DSReplication         DSReplicationStatus    `json:"dsReplication,omitempty"`
+	// Status of EMQX Durable Storage replication.
+	DSReplication DSReplicationStatus `json:"dsReplication,omitempty"`
 }
 
 type NodeEvacuationStatus struct {
@@ -48,9 +54,11 @@ type NodeEvacuationStatus struct {
 	State string `json:"state,omitempty"`
 	// Session recipients
 	// +kubebuilder:example={"emqx@10.0.0.2", "emqx@10.0.0.3"}
-	SessionRecipients      []string `json:"sessionRecipients,omitempty"`
-	SessionEvictionRate    int32    `json:"sessionEvictionRate,omitempty"`
-	ConnectionEvictionRate int32    `json:"connectionEvictionRate,omitempty"`
+	SessionRecipients []string `json:"sessionRecipients,omitempty"`
+	// Session eviction rate, in sessions per second.
+	SessionEvictionRate int32 `json:"sessionEvictionRate,omitempty"`
+	// Connection eviction rate, in connections per second.
+	ConnectionEvictionRate int32 `json:"connectionEvictionRate,omitempty"`
 	// Initial number of sessions on this node
 	InitialSessions int32 `json:"initialSessions,omitempty"`
 	// Initial number of connections to this node
@@ -58,14 +66,19 @@ type NodeEvacuationStatus struct {
 }
 
 type EMQXNodesStatus struct {
-	Replicas      int32 `json:"replicas,omitempty"`
+	// Total number of replicas.
+	Replicas int32 `json:"replicas,omitempty"`
+	// Number of ready replicas.
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
-
+	// Current revision of the respective core or replicant set.
 	CurrentRevision string `json:"currentRevision,omitempty"`
-	CurrentReplicas int32  `json:"currentReplicas,omitempty"`
-
+	// Number of replicas running current revision.
+	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
+	// Update revision of the respective core or replicant set.
+	// When different from the current revision, the set is being updated.
 	UpdateRevision string `json:"updateRevision,omitempty"`
-	UpdateReplicas int32  `json:"updateReplicas,omitempty"`
+	// Number of replicas running update revision.
+	UpdateReplicas int32 `json:"updateReplicas,omitempty"`
 
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 }

@@ -27,18 +27,18 @@ import (
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
-// EMQX is the Schema for the emqxes API.
+// Custom Resource representing an EMQX cluster.
 type EMQX struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EMQXSpec   `json:"spec,omitempty"`
+	// Specification of the desired state of the EMQX cluster.
+	Spec EMQXSpec `json:"spec,omitempty"`
+	// Current status of the EMQX cluster.
 	Status EMQXStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-
-// EMQXList contains a list of EMQX.
 type EMQXList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

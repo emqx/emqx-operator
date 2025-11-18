@@ -26,7 +26,7 @@ spec:
     name: v2
     schema:
       openAPIV3Schema:
-        description: EMQX is the Schema for the emqxes API.
+        description: Custom Resource representing an EMQX cluster.
         properties:
           apiVersion:
             description: |-
@@ -46,11 +46,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: EMQXSpec defines the desired state of EMQX.
+            description: Specification of the desired state of the EMQX cluster.
             properties:
               bootstrapAPIKeys:
                 description: |-
-                  EMQX bootstrap user
+                  Bootstrap API keys to access EMQX API.
                   Cannot be updated.
                 items:
                   properties:
@@ -62,24 +62,34 @@ spec:
                       minLength: 3
                       type: string
                     secretRef:
+                      description: Reference to a Secret entry containing the EMQX
+                        API Key.
                       properties:
                         key:
+                          description: Reference to a Secret entry containing the
+                            EMQX API Key.
                           properties:
                             secretKey:
+                              description: Entry within the Secret data.
                               pattern: ^[a-zA-Z\d-_]+$
                               type: string
                             secretName:
+                              description: Name of the Secret object.
                               type: string
                           required:
                           - secretKey
                           - secretName
                           type: object
                         secret:
+                          description: Reference to a Secret entry containing the
+                            EMQX API Key's secret.
                           properties:
                             secretKey:
+                              description: Entry within the Secret data.
                               pattern: ^[a-zA-Z\d-_]+$
                               type: string
                             secretName:
+                              description: Name of the Secret object.
                               type: string
                           required:
                           - secretKey
@@ -93,18 +103,23 @@ spec:
                 type: array
               clusterDomain:
                 default: cluster.local
+                description: Kubernetes cluster domain.
                 type: string
               config:
-                description: EMQX config
+                description: EMQX Configuration.
                 properties:
                   data:
                     description: |-
-                      Bootstrap EMQX config, in HOCON format.
-                      This configuration will be supplied as `base.hocon` to the container, see respective
+                      EMQX configuration, in HOCON format.
+                      This configuration will be supplied as `base.hocon` to the container. See respective
                       [documentation](https://docs.emqx.com/en/emqx/latest/configuration/configuration.html#base-configuration-file).
                     type: string
                   mode:
                     default: Merge
+                    description: |-
+                      Determines how configuration updates are applied.
+                      * `Merge`: Merge the new configuration into the existing configuration.
+                      * `Replace`: Replace the whole configuration.
                     enum:
                     - Merge
                     - Replace
@@ -114,8 +129,7 @@ spec:
                 default:
                   spec:
                     replicas: 2
-                description: CoreTemplate is the object that describes the EMQX core
-                  node that will be created
+                description: Template for Pods running EMQX core nodes.
                 properties:
                   metadata:
                     description: |-
@@ -141,7 +155,7 @@ spec:
                     type: object
                   spec:
                     description: |-
-                      Specification of the desired behavior of the EMQX core node.
+                      Specification of the desired state of a core node.
                       More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
                     properties:
                       affinity:
@@ -1082,11 +1096,11 @@ spec:
                         description: |-
                           Arguments to the entrypoint.
                           The container image's CMD is used if this is not provided.
-                          Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
-                          cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
-                          to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
-                          produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
-                          of whether the variable exists or not. Cannot be updated.
+                          Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable
+                          cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced
+                          to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will
+                          produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless
+                          of whether the variable exists or not.
                           More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                         items:
                           type: string
@@ -1095,10 +1109,10 @@ spec:
                         description: |-
                           Entrypoint array. Not executed within a shell.
                           The container image's ENTRYPOINT is used if this is not provided.
-                          Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
-                          cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
-                          to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
-                          produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
+                          Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable
+                          cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced
+                          to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will
+                          produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless
                           of whether the variable exists or not. Cannot be updated.
                           More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                         items:
@@ -1110,7 +1124,7 @@ spec:
                           runAsNonRoot: true
                           runAsUser: 1000
                         description: |-
-                          SecurityContext defines the security options the container should be run with.
+                          Security options the container should be run with.
                           If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
                           More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                         properties:
@@ -1304,9 +1318,7 @@ spec:
                             type: object
                         type: object
                       env:
-                        description: |-
-                          List of environment variables to set in the container.
-                          Cannot be updated.
+                        description: List of environment variables to set in the container.
                         items:
                           description: EnvVar represents an environment variable present
                             in a Container.
@@ -1427,12 +1439,11 @@ spec:
                         type: array
                       envFrom:
                         description: |-
-                          List of sources to populate environment variables in the container.
+                          List of sources to populate environment variables from in the container.
                           The keys defined within a source must be a C_IDENTIFIER. All invalid keys
                           will be reported as an event when the container is starting. When a key exists in multiple
                           sources, the value associated with the last source will take precedence.
                           Values defined by an Env with a duplicate key will take precedence.
-                          Cannot be updated.
                         items:
                           description: EnvFromSource represents the source of a set
                             of ConfigMaps
@@ -1480,9 +1491,8 @@ spec:
                           type: object
                         type: array
                       extraContainers:
-                        description: |-
-                          ExtraContainers represents extra containers to be added to the pod.
-                          See https://github.com/emqx/emqx-operator/issues/252
+                        description: Additional containers to run alongside the main
+                          container.
                         items:
                           description: A single application container that you want
                             to run within a pod.
@@ -2918,7 +2928,8 @@ spec:
                           type: object
                         type: array
                       extraVolumeMounts:
-                        description: See https://github.com/emqx/emqx-operator/pull/72
+                        description: Specifies how additional volumes are mounted
+                          into the main container.
                         items:
                           description: VolumeMount describes a mounting of a Volume
                             within a container.
@@ -2982,7 +2993,7 @@ spec:
                           type: object
                         type: array
                       extraVolumes:
-                        description: See https://github.com/emqx/emqx-operator/pull/72
+                        description: Additional volumes to provide to a Pod.
                         items:
                           description: Volume represents a named volume in a pod that
                             may be accessed by any container in the pod.
@@ -4789,8 +4800,6 @@ spec:
                           by finding the highest request/limit for each resource type, and then using the max of
                           of that value or the sum of the normal containers. Limits are applied to init containers
                           in a similar fashion.
-                          Init containers cannot currently be added or removed.
-                          Cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
                         items:
                           description: A single application container that you want
@@ -6227,9 +6236,8 @@ spec:
                           type: object
                         type: array
                       lifecycle:
-                        description: |-
-                          Actions that the management system should take in response to container lifecycle events.
-                          Cannot be updated.
+                        description: Actions that the management system should take
+                          in response to container lifecycle events.
                         properties:
                           postStart:
                             description: |-
@@ -6462,7 +6470,6 @@ spec:
                         description: |-
                           Periodic probe of container liveness.
                           Container will be restarted if the probe fails.
-                          Cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                         properties:
                           exec:
@@ -6636,16 +6643,16 @@ spec:
                           evictions by specifying "100%".
                         x-kubernetes-int-or-string: true
                       nodeName:
-                        description: NodeName is a request to schedule this pod onto
-                          a specific node. If it is non-empty, the scheduler simply
-                          schedules this pod onto that node, assuming that it fits
-                          resource requirements.
+                        description: |-
+                          Request to schedule this pod onto a specific node.
+                          If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
                         type: string
                       nodeSelector:
                         additionalProperties:
                           type: string
                         description: |-
-                          NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node.
+                          Selector which must be true for the pod to fit on a node.
+                          Must match a node's labels for the pod to be scheduled on that node.
                           More info: https://kubernetes.io/docs/concepts/config/assign-pod-node/
                         type: object
                       podSecurityContext:
@@ -6656,8 +6663,8 @@ spec:
                           runAsUser: 1000
                           supplementalGroups:
                           - 1000
-                        description: SecurityContext holds pod-level security attributes
-                          and common container settings.
+                        description: Pod-level security attributes and common container
+                          settings.
                         properties:
                           appArmorProfile:
                             description: |-
@@ -6865,13 +6872,11 @@ spec:
                         type: object
                       ports:
                         description: |-
-                          List of ports to expose from the container. Exposing a port here gives
-                          the system additional information about the network connections a
-                          container uses, but is primarily informational. Not specifying a port here
-                          DOES NOT prevent that port from being exposed. Any port which is
-                          listening on the default "0.0.0.0" address inside a container will be
-                          accessible from the network.
-                          Cannot be updated.
+                          List of ports to expose from the container.
+                          Exposing a port here gives the system additional information about the network connections a
+                          container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that
+                          port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a
+                          container will be accessible from the network.
                         items:
                           description: ContainerPort represents a network port in
                             a single container.
@@ -6921,7 +6926,6 @@ spec:
                         description: |-
                           Periodic probe of container service readiness.
                           Container will be removed from service endpoints if the probe fails.
-                          Cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                         properties:
                           exec:
@@ -7077,17 +7081,14 @@ spec:
                       replicas:
                         default: 2
                         description: |-
-                          Replicas is the desired number of replicas of the given Template.
-                          These are replicas in the sense that they are instantiations of the
-                          same Template, but individual replicas also have a consistent identity.
-                          Defaults to 2.
+                          Desired number of instances.
+                          In case of core nodes, each instance has a consistent identity.
                         format: int32
                         minimum: 0
                         type: integer
                       resources:
                         description: |-
                           Compute Resources required by this container.
-                          Cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/config/manage-resources-containers/
                         properties:
                           claims:
@@ -7150,10 +7151,9 @@ spec:
                         description: |-
                           StartupProbe indicates that the Pod has successfully initialized.
                           If specified, no other probes are executed until this completes successfully.
-                          If this probe fails, the Pod will be restarted, just as if the livenessProbe failed.
+                          If this probe fails, the Pod will be restarted, just as if the `livenessProbe` failed.
                           This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,
                           when it might take a long time to load data or warm a cache, than during steady-state operation.
-                          This cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                         properties:
                           exec:
@@ -7308,8 +7308,8 @@ spec:
                         type: object
                       tolerations:
                         description: |-
-                          If specified, the pod's tolerations.
-                          The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
+                          Pod tolerations.
+                          If specified, Pod tolerates any taint that matches the triple <key,value,effect> using the matching operator.
                         items:
                           description: |-
                             The pod this Toleration is attached to tolerates any taint that matches
@@ -7348,8 +7348,8 @@ spec:
                           type: object
                         type: array
                       topologySpreadConstraints:
-                        description: TopologySpreadConstraint specifies how to spread
-                          matching pods among the given topology.
+                        description: Specifies how to spread matching pods among the
+                          given topology.
                         items:
                           description: TopologySpreadConstraint specifies how to spread
                             matching pods among the given topology.
@@ -7732,18 +7732,16 @@ spec:
                 type: object
               dashboardServiceTemplate:
                 description: |-
-                  DashboardServiceTemplate is the object that describes the EMQX dashboard service that will be created
-                  This service always selector the EMQX core node
+                  Template for Service exposing the EMQX Dashboard.
+                  Dashboard Service always points to the set of EMQX core nodes.
                 properties:
                   enabled:
                     default: true
-                    description: |-
-                      EMQX Operator will create a service for EMQX nodes.
-                      This is a pointer to distinguish between `false` and not specified.
+                    description: Specifies whether the Service should be created.
                     type: boolean
                   metadata:
                     description: |-
-                      Standard object's metadata.
+                      Standard object metadata.
                       More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
                     properties:
                       annotations:
@@ -7765,7 +7763,7 @@ spec:
                     type: object
                   spec:
                     description: |-
-                      Spec defines the behavior of a service.
+                      Specification of the desired state of a Service.
                       https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
                     properties:
                       allocateLoadBalancerNodePorts:
@@ -8111,15 +8109,14 @@ spec:
                 type: object
               image:
                 description: |-
-                  EMQX image name.
+                  EMQX container image.
                   More info: https://kubernetes.io/docs/concepts/containers/images
                 type: string
               imagePullPolicy:
                 description: |-
-                  Image pull policy.
-                  One of Always, Never, IfNotPresent.
-                  Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
-                  Cannot be updated.
+                  Container image pull policy.
+                  One of `Always`, `Never`, `IfNotPresent`.
+                  Defaults to `Always` if `:latest` tag is specified, or `IfNotPresent` otherwise.
                   More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
                 type: string
               imagePullSecrets:
@@ -8146,19 +8143,17 @@ spec:
                 type: array
               listenersServiceTemplate:
                 description: |-
-                  ListenersServiceTemplate is the object that describes the EMQX listener service that will be created
-                  If the EMQX replicant node exist, this service will selector the EMQX replicant node
-                  Else this service will selector EMQX core node
+                  Template for Service exposing enabled EMQX listeners.
+                  Listeners Service points to the set of EMQX replicant nodes if they are enabled and exist.
+                  Otherwise, it points to the set of EMQX core nodes.
                 properties:
                   enabled:
                     default: true
-                    description: |-
-                      EMQX Operator will create a service for EMQX nodes.
-                      This is a pointer to distinguish between `false` and not specified.
+                    description: Specifies whether the Service should be created.
                     type: boolean
                   metadata:
                     description: |-
-                      Standard object's metadata.
+                      Standard object metadata.
                       More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
                     properties:
                       annotations:
@@ -8180,7 +8175,7 @@ spec:
                     type: object
                   spec:
                     description: |-
-                      Spec defines the behavior of a service.
+                      Specification of the desired state of a Service.
                       https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
                     properties:
                       allocateLoadBalancerNodePorts:
@@ -8525,8 +8520,7 @@ spec:
                     type: object
                 type: object
               replicantTemplate:
-                description: ReplicantTemplate is the object that describes the EMQX
-                  replicant node that will be created
+                description: Template for Pods running EMQX replicant nodes.
                 properties:
                   metadata:
                     description: |-
@@ -8552,9 +8546,8 @@ spec:
                     type: object
                   spec:
                     description: |-
-                      Specification of the desired behavior of the EMQX replicant node.
+                      Specification of the desired state of a replicant node.
                       More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-                      Controller tools does not support more complex validations (oneOf/anyOf/allOf/etc), so use validation rule instead. https://github.com/kubernetes-sigs/controller-tools/issues/461#issuecomment-1982741599
                     properties:
                       affinity:
                         description: |-
@@ -9494,11 +9487,11 @@ spec:
                         description: |-
                           Arguments to the entrypoint.
                           The container image's CMD is used if this is not provided.
-                          Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
-                          cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
-                          to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
-                          produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
-                          of whether the variable exists or not. Cannot be updated.
+                          Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable
+                          cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced
+                          to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will
+                          produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless
+                          of whether the variable exists or not.
                           More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                         items:
                           type: string
@@ -9507,10 +9500,10 @@ spec:
                         description: |-
                           Entrypoint array. Not executed within a shell.
                           The container image's ENTRYPOINT is used if this is not provided.
-                          Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
-                          cannot be resolved, the reference in the input string will be unchanged. Double $$ are reduced
-                          to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
-                          produce the string literal "$(VAR_NAME)". Escaped references will never be expanded, regardless
+                          Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable
+                          cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced
+                          to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will
+                          produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless
                           of whether the variable exists or not. Cannot be updated.
                           More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                         items:
@@ -9522,7 +9515,7 @@ spec:
                           runAsNonRoot: true
                           runAsUser: 1000
                         description: |-
-                          SecurityContext defines the security options the container should be run with.
+                          Security options the container should be run with.
                           If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
                           More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                         properties:
@@ -9716,9 +9709,7 @@ spec:
                             type: object
                         type: object
                       env:
-                        description: |-
-                          List of environment variables to set in the container.
-                          Cannot be updated.
+                        description: List of environment variables to set in the container.
                         items:
                           description: EnvVar represents an environment variable present
                             in a Container.
@@ -9839,12 +9830,11 @@ spec:
                         type: array
                       envFrom:
                         description: |-
-                          List of sources to populate environment variables in the container.
+                          List of sources to populate environment variables from in the container.
                           The keys defined within a source must be a C_IDENTIFIER. All invalid keys
                           will be reported as an event when the container is starting. When a key exists in multiple
                           sources, the value associated with the last source will take precedence.
                           Values defined by an Env with a duplicate key will take precedence.
-                          Cannot be updated.
                         items:
                           description: EnvFromSource represents the source of a set
                             of ConfigMaps
@@ -9892,9 +9882,8 @@ spec:
                           type: object
                         type: array
                       extraContainers:
-                        description: |-
-                          ExtraContainers represents extra containers to be added to the pod.
-                          See https://github.com/emqx/emqx-operator/issues/252
+                        description: Additional containers to run alongside the main
+                          container.
                         items:
                           description: A single application container that you want
                             to run within a pod.
@@ -11330,7 +11319,8 @@ spec:
                           type: object
                         type: array
                       extraVolumeMounts:
-                        description: See https://github.com/emqx/emqx-operator/pull/72
+                        description: Specifies how additional volumes are mounted
+                          into the main container.
                         items:
                           description: VolumeMount describes a mounting of a Volume
                             within a container.
@@ -11394,7 +11384,7 @@ spec:
                           type: object
                         type: array
                       extraVolumes:
-                        description: See https://github.com/emqx/emqx-operator/pull/72
+                        description: Additional volumes to provide to a Pod.
                         items:
                           description: Volume represents a named volume in a pod that
                             may be accessed by any container in the pod.
@@ -13201,8 +13191,6 @@ spec:
                           by finding the highest request/limit for each resource type, and then using the max of
                           of that value or the sum of the normal containers. Limits are applied to init containers
                           in a similar fashion.
-                          Init containers cannot currently be added or removed.
-                          Cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
                         items:
                           description: A single application container that you want
@@ -14639,9 +14627,8 @@ spec:
                           type: object
                         type: array
                       lifecycle:
-                        description: |-
-                          Actions that the management system should take in response to container lifecycle events.
-                          Cannot be updated.
+                        description: Actions that the management system should take
+                          in response to container lifecycle events.
                         properties:
                           postStart:
                             description: |-
@@ -14874,7 +14861,6 @@ spec:
                         description: |-
                           Periodic probe of container liveness.
                           Container will be restarted if the probe fails.
-                          Cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                         properties:
                           exec:
@@ -15048,16 +15034,16 @@ spec:
                           evictions by specifying "100%".
                         x-kubernetes-int-or-string: true
                       nodeName:
-                        description: NodeName is a request to schedule this pod onto
-                          a specific node. If it is non-empty, the scheduler simply
-                          schedules this pod onto that node, assuming that it fits
-                          resource requirements.
+                        description: |-
+                          Request to schedule this pod onto a specific node.
+                          If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
                         type: string
                       nodeSelector:
                         additionalProperties:
                           type: string
                         description: |-
-                          NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node's labels for the pod to be scheduled on that node.
+                          Selector which must be true for the pod to fit on a node.
+                          Must match a node's labels for the pod to be scheduled on that node.
                           More info: https://kubernetes.io/docs/concepts/config/assign-pod-node/
                         type: object
                       podSecurityContext:
@@ -15068,8 +15054,8 @@ spec:
                           runAsUser: 1000
                           supplementalGroups:
                           - 1000
-                        description: SecurityContext holds pod-level security attributes
-                          and common container settings.
+                        description: Pod-level security attributes and common container
+                          settings.
                         properties:
                           appArmorProfile:
                             description: |-
@@ -15277,13 +15263,11 @@ spec:
                         type: object
                       ports:
                         description: |-
-                          List of ports to expose from the container. Exposing a port here gives
-                          the system additional information about the network connections a
-                          container uses, but is primarily informational. Not specifying a port here
-                          DOES NOT prevent that port from being exposed. Any port which is
-                          listening on the default "0.0.0.0" address inside a container will be
-                          accessible from the network.
-                          Cannot be updated.
+                          List of ports to expose from the container.
+                          Exposing a port here gives the system additional information about the network connections a
+                          container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that
+                          port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a
+                          container will be accessible from the network.
                         items:
                           description: ContainerPort represents a network port in
                             a single container.
@@ -15333,7 +15317,6 @@ spec:
                         description: |-
                           Periodic probe of container service readiness.
                           Container will be removed from service endpoints if the probe fails.
-                          Cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                         properties:
                           exec:
@@ -15489,17 +15472,14 @@ spec:
                       replicas:
                         default: 2
                         description: |-
-                          Replicas is the desired number of replicas of the given Template.
-                          These are replicas in the sense that they are instantiations of the
-                          same Template, but individual replicas also have a consistent identity.
-                          Defaults to 2.
+                          Desired number of instances.
+                          In case of core nodes, each instance has a consistent identity.
                         format: int32
                         minimum: 0
                         type: integer
                       resources:
                         description: |-
                           Compute Resources required by this container.
-                          Cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/config/manage-resources-containers/
                         properties:
                           claims:
@@ -15562,10 +15542,9 @@ spec:
                         description: |-
                           StartupProbe indicates that the Pod has successfully initialized.
                           If specified, no other probes are executed until this completes successfully.
-                          If this probe fails, the Pod will be restarted, just as if the livenessProbe failed.
+                          If this probe fails, the Pod will be restarted, just as if the `livenessProbe` failed.
                           This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,
                           when it might take a long time to load data or warm a cache, than during steady-state operation.
-                          This cannot be updated.
                           More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                         properties:
                           exec:
@@ -15720,8 +15699,8 @@ spec:
                         type: object
                       tolerations:
                         description: |-
-                          If specified, the pod's tolerations.
-                          The pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator .
+                          Pod tolerations.
+                          If specified, Pod tolerates any taint that matches the triple <key,value,effect> using the matching operator.
                         items:
                           description: |-
                             The pod this Toleration is attached to tolerates any taint that matches
@@ -15760,8 +15739,8 @@ spec:
                           type: object
                         type: array
                       topologySpreadConstraints:
-                        description: TopologySpreadConstraint specifies how to spread
-                          matching pods among the given topology.
+                        description: Specifies how to spread matching pods among the
+                          given topology.
                         items:
                           description: TopologySpreadConstraint specifies how to spread
                             matching pods among the given topology.
@@ -15945,29 +15924,23 @@ spec:
                 type: object
               revisionHistoryLimit:
                 default: 3
-                description: The number of old ReplicaSets, old StatefulSet and old
-                  PersistentVolumeClaim to retain to allow rollback.
+                description: Number of old ReplicaSets, old StatefulSets and old PersistentVolumeClaims
+                  to retain to allow rollback.
                 format: int32
                 type: integer
               serviceAccountName:
                 description: |-
-                  Service Account Name
-                  This associates the ReplicaSet or StatefulSet with the specified Service Account for authentication purposes.
+                  ServiceAccount name.
+                  Managed ReplicaSets and StatefulSets are associated with the specified ServiceAccount for authentication purposes.
                   More info: https://kubernetes.io/docs/concepts/security/service-accounts
                 type: string
               updateStrategy:
                 default:
-                  evacuationStrategy:
-                    connEvictRate: 1000
-                    sessEvictRate: 1000
-                    waitTakeover: 10
-                  initialDelaySeconds: 10
                   type: Recreate
-                description: UpdateStrategy is the object that describes the EMQX
-                  blue-green update strategy
+                description: Cluster upgrade strategy settings.
                 properties:
                   evacuationStrategy:
-                    description: Evacuation strategy.
+                    description: Evacuation strategy settings.
                     properties:
                       connEvictRate:
                         default: 1000
@@ -16003,12 +15976,16 @@ spec:
                         type: integer
                     type: object
                   initialDelaySeconds:
-                    description: Number of seconds before evacuation connection start.
+                    default: 10
+                    description: Number of seconds before connection evacuation starts.
                     format: int32
                     minimum: 0
                     type: integer
                   type:
                     default: Recreate
+                    description: |-
+                      Determines how cluster upgrade is performed.
+                      * `Recreate`: Perform blue-green upgrade.
                     enum:
                     - Recreate
                     type: string
@@ -16017,11 +15994,11 @@ spec:
             - image
             type: object
           status:
-            description: EMQXStatus defines the observed state of EMQX
+            description: Current status of the EMQX cluster.
             properties:
               conditions:
-                description: Represents the latest available observations of a EMQX
-                  Custom Resource current state.
+                description: Conditions representing the current status of the EMQX
+                  Custom Resource.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -16081,6 +16058,7 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               coreNodes:
+                description: Status of each core node in the cluster.
                 items:
                   properties:
                     connections:
@@ -16118,29 +16096,39 @@ spec:
                   type: object
                 type: array
               coreNodesStatus:
+                description: Summary status of the set of core nodes.
                 properties:
                   collisionCount:
                     format: int32
                     type: integer
                   currentReplicas:
+                    description: Number of replicas running current revision.
                     format: int32
                     type: integer
                   currentRevision:
+                    description: Current revision of the respective core or replicant
+                      set.
                     type: string
                   readyReplicas:
+                    description: Number of ready replicas.
                     format: int32
                     type: integer
                   replicas:
+                    description: Total number of replicas.
                     format: int32
                     type: integer
                   updateReplicas:
+                    description: Number of replicas running update revision.
                     format: int32
                     type: integer
                   updateRevision:
+                    description: |-
+                      Update revision of the respective core or replicant set.
+                      When different from the current revision, the set is being updated.
                     type: string
                 type: object
               dsReplication:
-                description: Summary of DS replication status per database.
+                description: Status of EMQX Durable Storage replication.
                 properties:
                   dbs:
                     items:
@@ -16188,9 +16176,11 @@ spec:
                     type: array
                 type: object
               nodeEvacuationsStatus:
+                description: Status of active node evacuations in the cluster.
                 items:
                   properties:
                     connectionEvictionRate:
+                      description: Connection eviction rate, in connections per second.
                       format: int32
                       type: integer
                     initialConnections:
@@ -16206,6 +16196,7 @@ spec:
                       example: emqx@10.0.0.1
                       type: string
                     sessionEvictionRate:
+                      description: Session eviction rate, in sessions per second.
                       format: int32
                       type: integer
                     sessionRecipients:
@@ -16223,6 +16214,7 @@ spec:
                   type: object
                 type: array
               replicantNodes:
+                description: Status of each replicant node in the cluster.
                 items:
                   properties:
                     connections:
@@ -16260,25 +16252,35 @@ spec:
                   type: object
                 type: array
               replicantNodesStatus:
+                description: Summary status of the set of replicant nodes.
                 properties:
                   collisionCount:
                     format: int32
                     type: integer
                   currentReplicas:
+                    description: Number of replicas running current revision.
                     format: int32
                     type: integer
                   currentRevision:
+                    description: Current revision of the respective core or replicant
+                      set.
                     type: string
                   readyReplicas:
+                    description: Number of ready replicas.
                     format: int32
                     type: integer
                   replicas:
+                    description: Total number of replicas.
                     format: int32
                     type: integer
                   updateReplicas:
+                    description: Number of replicas running update revision.
                     format: int32
                     type: integer
                   updateRevision:
+                    description: |-
+                      Update revision of the respective core or replicant set.
+                      When different from the current revision, the set is being updated.
                     type: string
                 type: object
             type: object
