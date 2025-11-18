@@ -1,0 +1,94 @@
+{
+  "en": [
+    {
+      "title": "Introduction",
+      "path": "./"
+    },
+    {
+      "title": "Hello EMQX Operator",
+      "path": "getting-started/hello-emqx-operator"
+    },
+    {
+      "title": "Getting Started",
+      "path": "getting-started/getting-started"
+    },
+    {
+      "title": "Deploy EMQX on Public Cloud",
+      "path": "deployment/overview",
+      "children": [
+        {
+          "title": "EMQX on AWS",
+          "path": "deployment/on-aws-eks"
+        },
+        {
+          "title": "EMQX on Azure",
+          "path": "deployment/on-azure-aks"
+        },
+        {
+          "title": "EMQX on Google Cloud",
+          "path": "deployment/on-gcp-gke"
+        }
+      ]
+    },
+    {
+      "title": "Manage EMQX Cluster",
+      "path": "tasks/overview",
+      "children": [
+        {
+          "title": "Manage License",
+          "path": "tasks/configure-emqx-license"
+        },
+        {
+          "title": "Enable TLS for EMQX listeners",
+          "path": "tasks/configure-emqx-tls"
+        },
+        {
+          "title": "Change EMQX Configuration",
+          "path": "tasks/configure-emqx-config"
+        },
+        {
+          "title": "Enable Core-Replicant Deployment",
+          "path": "tasks/configure-emqx-core-replicant"
+        },
+        {
+          "title": "Enable Persistence",
+          "path": "tasks/configure-emqx-persistence"
+        },
+        {
+          "title": "Access EMQX through LoadBalancer",
+          "path": "tasks/configure-emqx-service"
+        },
+        {
+          "title": "Perform Blue-Green Upgrade",
+          "path": "tasks/configure-emqx-blueGreenUpdate"
+        },
+        {
+          "title": "Collect EMQX Logs",
+          "path": "tasks/configure-emqx-log-collection"
+        },
+        {
+          "title": "Change EMQX Log Level",
+          "path": "tasks/configure-emqx-log-level"
+        }
+      ]
+    },
+    {
+      "title": "FAQs",
+      "path": "https://github.com/emqx/emqx-operator/discussions/categories/q-a"
+    },
+    {
+      "title": "API Reference",
+      "path": "reference/overview",
+      "children": [
+        {
+          "title": "apps.emqx.io/v2",
+          "path": "reference/v2-reference"
+        },
+        {
+          "title": "apps.emqx.io/v2beta1",
+          "path": "reference/v2beta1-reference"
+        }
+      ]
+    }
+  ]
+}
