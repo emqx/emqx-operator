@@ -12,6 +12,7 @@ on:
 
 jobs:
   test:
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +33,7 @@ jobs:
           retention-days: 1
 
   test-e2e:
+    name: E2E Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +60,7 @@ jobs:
           retention-days: 1
 
   test-upgrade:
+    name: E2E Upgrade Tests - ${{ matrix.profile }}
     strategy:
       fail-fast: false
       matrix:
