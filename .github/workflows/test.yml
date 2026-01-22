@@ -45,10 +45,6 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - uses: helm/kind-action@v1
-        with:
-          config: test/e2e/files/kind-with-mounts.yaml
-
       - run: go mod tidy
 
       - run: make test-e2e
@@ -82,10 +78,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-
-      - uses: helm/kind-action@v1
-        with:
-          config: test/e2e/files/kind-with-mounts.yaml
 
       - run: go mod tidy
 
