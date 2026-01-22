@@ -72,6 +72,8 @@ jobs:
             profile: "6.0.2-6.1.0"
 
     runs-on: ubuntu-latest
+    env:
+      TEST_E2E_DIAGNOSTIC_REPORT_PATH: ${{ github.workspace }}/test-report
     steps:
       - uses: actions/checkout@v4
 
@@ -85,6 +87,13 @@ jobs:
         env:
           TEST_E2E_UPGRADE_IMAGE_INITIAL: ${{ matrix.initial }}
           TEST_E2E_UPGRADE_IMAGE_UPGRADE: ${{ matrix.upgrade }}
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-report-upgrade-${{ matrix.profile }}
+          path: ${{ env.TEST_E2E_DIAGNOSTIC_REPORT_PATH }}
+          if-no-files-found: ignore
 
       - run: go tool covdata textfmt -i /tmp/kind/data/emqx-operator-system/test-e2e-coverage -o ${{ github.workspace }}/cover.upgrade.out
 

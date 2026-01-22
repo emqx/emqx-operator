@@ -97,6 +97,13 @@ func run(cmd *exec.Cmd, stdin []byte) (string, error) {
 	return string(output), nil
 }
 
+func Env(name string, defaultValue string) string {
+	if value, ok := os.LookupEnv(name); ok {
+		return value
+	}
+	return defaultValue
+}
+
 func FromYAMLFile(filePath string) []byte {
 	document, err := os.ReadFile(filePath)
 	if err != nil {

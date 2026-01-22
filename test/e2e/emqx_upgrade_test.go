@@ -109,7 +109,7 @@ var _ = Describe("EMQX Upgrade Test", Ordered, func() {
 
 	AfterEach(func() {
 		if CurrentSpecReport().Failed() {
-			PrintDiagnosticReport(namespace)
+			DumpDiagnosticReport(namespace, "emqx-upgrade", CurrentSpecReport().StartTime)
 		}
 	})
 
