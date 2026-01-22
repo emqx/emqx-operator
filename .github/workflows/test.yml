@@ -103,7 +103,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: coverprofile-upgrade-{{ matrix.profile }}
+          name: coverprofile-upgrade-${{ matrix.profile }}
           path: ${{ github.workspace }}/cover.upgrade.out
           if-no-files-found: ignore
           retention-days: 1
