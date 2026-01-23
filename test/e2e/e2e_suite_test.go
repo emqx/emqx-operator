@@ -17,13 +17,16 @@ limitations under the License.
 package e2e
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/emqx/emqx-operator/test/util"
 )
@@ -42,6 +45,9 @@ var (
 	// projectImage is the name of the image which will be build and loaded
 	// with the code source changes to be tested.
 	projectImage = "emqx/emqx-operator:0.0.1"
+
+	// diagnosticReportPath is the path to dump the diagnostic report on failure
+	diagnosticReportPath = util.Env("TEST_E2E_DIAGNOSTIC_REPORT_PATH", "test/_reports")
 )
 
 var isPrometheusInstalled = false
@@ -151,4 +157,72 @@ func PrintDiagnosticReport(namespace string) {
 	} else {
 		GinkgoWriter.Printf("Failed to get Kubernetes events: %s", err)
 	}
+}
+
+func DumpDiagnosticReport(namespace string, name string, time time.Time) {
+	path := filepath.Join(diagnosticReportPath, name, time.Format("20060102150405"))
+	err := os.MkdirAll(path, 0755)
+	if err != nil {
+		GinkgoWriter.Printf("Failed to create diagnostic report path: %s", err)
+		return
+	}
+
+	GinkgoWriter.Printf("Dumping diagnostic report: %s", path)
+
+	controllerLogs, err := util.KubectlOut("logs",
+		"--selector", "control-plane=controller-manager",
+		"--namespace", namespace,
+		"--tail", "-1")
+	if err == nil {
+		_ = dumpString(path, "controller.log", controllerLogs)
+	} else {
+		GinkgoWriter.Printf("Failed to get Controller logs: %s", err)
+	}
+
+	operatorManagedLabel := "apps.emqx.io/managed-by=emqx-operator"
+	resources, err := util.KubectlOut("get", "all", "--selector", operatorManagedLabel)
+	if err == nil {
+		_ = dumpString(path, "resources", resources)
+	} else {
+		GinkgoWriter.Printf("Failed to list managed resources: %s", err)
+	}
+
+	emqxCRs, err := util.KubectlOut("get", "emqx", "--output", "yaml")
+	if err == nil {
+		_ = dumpString(path, "emqx-crs.yaml", emqxCRs)
+	} else {
+		GinkgoWriter.Printf("Failed to list EMQX CRs: %s", err)
+	}
+
+	emqxPods, err := util.KubectlOut("get", "pod", "--selector", operatorManagedLabel, "-o", "yaml")
+	if err == nil {
+		_ = dumpString(path, "emqx-pods.yaml", emqxPods)
+	} else {
+		GinkgoWriter.Printf("Failed to list EMQX pods: %s", err)
+	}
+
+	var podList corev1.PodList
+	err = json.Unmarshal(util.FromYAML([]byte(emqxPods)), &podList)
+	if err != nil {
+		GinkgoWriter.Printf("Failed to unmarshal EMQX pods: %s", err)
+	}
+	for _, pod := range podList.Items {
+		logs, err := util.KubectlOut("logs", pod.Name, "--tail", "-1")
+		if err == nil {
+			_ = dumpString(path, pod.Name+".log", logs)
+		} else {
+			GinkgoWriter.Printf("Failed to get logs for pod %s: %s", pod.Name, err)
+		}
+	}
+
+	events, err := util.KubectlOut("get", "events", "--sort-by=.lastTimestamp")
+	if err == nil {
+		_ = dumpString(path, "events", events)
+	} else {
+		GinkgoWriter.Printf("Failed to get Kubernetes events: %s", err)
+	}
+}
+
+func dumpString(path string, name string, content string) error {
+	return os.WriteFile(filepath.Join(path, name), []byte(content), 0644)
 }

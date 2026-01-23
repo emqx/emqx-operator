@@ -107,4 +107,10 @@ var _ = Describe("EMQX Upgrade Test", Ordered, func() {
 		Eventually(checkDSReplicationHealthy).Should(Succeed())
 	})
 
+	AfterEach(func() {
+		if CurrentSpecReport().Failed() {
+			DumpDiagnosticReport(namespace, "emqx-upgrade", CurrentSpecReport().StartTime)
+		}
+	})
+
 })

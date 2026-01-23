@@ -59,6 +59,19 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint linter
+	$(GOLANGCI_LINT) run
+
+.PHONY: lint-fix
+lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
+	$(GOLANGCI_LINT) run --fix
+
+##@ Tests
+
+TEST_E2E_UPGRADE_IMAGE_INITIAL ?= emqx/emqx:5.10.2
+TEST_E2E_UPGRADE_IMAGE_UPGRADE ?= emqx/emqx:6.1.0
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v $$(go list ./... | grep -v /e2e) -coverprofile ./cover.out
@@ -69,7 +82,16 @@ test: manifests generate fmt vet envtest ## Run tests.
 # - PROMETHEUS_INSTALL_SKIP=true
 # - CERT_MANAGER_INSTALL_SKIP=true
 .PHONY: test-e2e
-test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated environment using Kind.
+test-e2e: manifests generate e2e-test-cluster ## Run general E2E tests. Expected an isolated environment using Kind.
+	go test ./test/e2e/ -v -ginkgo.v -timeout 60m
+
+test-e2e-upgrade: manifests generate e2e-test-cluster ## Run E2E upgrade tests. Expected an isolated environment using Kind.
+	go test ./test/e2e/ -v -ginkgo.v -timeout 20m -ginkgo.focus="EMQX Upgrade Test" \
+		-emqx-image-initial=$(TEST_E2E_UPGRADE_IMAGE_INITIAL) \
+		-emqx-image-upgrade=$(TEST_E2E_UPGRADE_IMAGE_UPGRADE)
+
+.PHONY: e2e-test-cluster
+e2e-test-cluster: ## Create a Kind cluster for e2e tests.
 	@command -v kind >/dev/null 2>&1 || { \
 		echo "Kind is not installed. Please install Kind manually."; \
 		exit 1; \
@@ -77,15 +99,10 @@ test-e2e: manifests generate fmt vet ## Run the e2e tests. Expected an isolated 
 	@kind get clusters | grep -q 'test-e2e' || { \
 		kind create cluster --config test/e2e/files/kind-with-mounts.yaml; \
 	}
-	go test ./test/e2e/ -v -ginkgo.v -timeout 60m
 
-.PHONY: lint
-lint: golangci-lint ## Run golangci-lint linter
-	$(GOLANGCI_LINT) run
-
-.PHONY: lint-fix
-lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
-	$(GOLANGCI_LINT) run --fix
+.PHONY: e2e-test-cluster-delete
+e2e-test-cluster-delete: ## Delete the Kind cluster for e2e tests.
+	kind delete cluster --name test-e2e
 
 ##@ Build
 
