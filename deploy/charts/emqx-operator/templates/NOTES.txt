@@ -1,0 +1,20 @@
+EMQX Operator Controller {{ .Chart.AppVersion }} has been deployed successfully!
+
+The operator is running in namespace: {{ .Release.Namespace }}
+
+Now you can create EMQX Custom Resources to deploy EMQX clusters.
+
+{{- if .Values.upgrade.preUpgradeCheck }}
+
+A pre-upgrade compatibility check Job ran automatically to ensure a smooth
+upgrade from any prior installation.
+
+The check:
+  - Verified no legacy custom resources exist (emqxbrokers, emqxenterprises,
+    emqxplugins) that would be destroyed when Helm removes their CRDs
+  - Patched CRDs to remove conversion webhooks, preventing API server
+    errors during the operator replacement window
+
+To skip the pre-upgrade Job on future installs (e.g. in air-gapped environments):
+  --set upgrade.preUpgradeCheck=false
+{{- end }}

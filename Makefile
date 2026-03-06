@@ -21,6 +21,9 @@ CONTAINER_TOOL ?= docker
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+HELM_CHART_DIR = deploy/charts/emqx-operator
+CRD_TARGET_DIR ?= $(HELM_CHART_DIR)
+
 .PHONY: all
 all: build
 
@@ -46,6 +49,10 @@ help: ## Display this help.
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:generateEmbeddedObjectMeta=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+.PHONY: build-crd
+build-crd: manifests kustomize ## Generate CRD manifests into the Helm chart data directory.
+	$(KUSTOMIZE) build config/crd > $(CRD_TARGET_DIR)/crds.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -89,6 +96,10 @@ test-e2e-upgrade: manifests generate e2e-test-cluster ## Run E2E upgrade tests. 
 	go test ./test/e2e/ -v -ginkgo.v -timeout 20m -ginkgo.focus="EMQX Upgrade Test" \
 		-emqx-image-initial=$(TEST_E2E_UPGRADE_IMAGE_INITIAL) \
 		-emqx-image-upgrade=$(TEST_E2E_UPGRADE_IMAGE_UPGRADE)
+
+.PHONY: test-e2e-helm
+test-e2e-helm: build-crd e2e-test-cluster ## Run Helm chart E2E tests. Expected an isolated environment using Kind.
+	go test ./test/e2e-helm/ -v -ginkgo.v -timeout 20m
 
 .PHONY: e2e-test-cluster
 e2e-test-cluster: ## Create a Kind cluster for e2e tests.
