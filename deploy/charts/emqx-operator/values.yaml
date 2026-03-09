@@ -1,0 +1,88 @@
+# Default values for emqx-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# If true, CRDs will not be installed.
+skipCRDs: false
+
+# If true, the operator will watch only the namespace where it is deployed.
+# If false, the operator will watch all namespaces.
+singleNamespace: false
+
+# Development configures the logger to use a Zap development config
+# (stacktraces on warnings, no sampling), otherwise a Zap production
+# config will be used (stacktraces on errors, sampling).
+development: false
+
+replicaCount: 1
+
+# The number of old history to retain to allow rollback.
+revisionHistoryLimit: 10
+
+image:
+  repository: emqx/emqx-operator-controller
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created.
+  create: true
+  # Annotations to add to the service account.
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - "ALL"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+## Upgrade settings.
+## A pre-install/pre-upgrade Job runs automatically to ensure a smooth
+## upgrade from earlier chart versions:
+##   1. Checks for legacy custom resources (emqxbrokers, emqxenterprises,
+##      emqxplugins) and blocks the upgrade if any exist, because Helm
+##      will delete those CRDs (and their CRs) during the upgrade.
+##   2. Patches CRD conversion webhooks to strategy "None" so the API
+##      server does not fail while the old operator is being replaced.
+##
+## The Job is fully idempotent and becomes a no-op on fresh installs.
+upgrade:
+  ## Run the pre-upgrade compatibility check Job.
+  ## Enabled by default so that upgrades from 2.2.x work out of the box.
+  ## Set to false to skip the Job entirely (e.g. in air-gapped
+  ## environments where pulling the kubectl image is not possible).
+  preUpgradeCheck: true
+
+  ## Image used for the pre-upgrade cleanup Job.
+  ## Must include kubectl and sh.
+  image:
+    repository: alpine/k8s
+    tag: "1.31.4"
+    pullPolicy: IfNotPresent

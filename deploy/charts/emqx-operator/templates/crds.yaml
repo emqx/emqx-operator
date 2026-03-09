@@ -1,0 +1,3 @@
+{{- if not .Values.skipCRDs }}
+{{ .Files.Get "crds.yaml" }}
+{{- end }}
