@@ -20,21 +20,28 @@ type updateStatus struct {
 func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
 	status := &instance.Status
 
-	status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
-	if instance.Spec.ReplicantTemplate != nil {
+	status.CoreNodesStatus.Replicas = 1
+	if instance.Spec.CoreTemplate.Spec.Replicas != nil {
+		status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
+	}
+	if instance.Spec.ReplicantTemplate != nil && instance.Spec.ReplicantTemplate.Spec.Replicas != nil {
 		status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 	}
 
-	currentCoreSet, updateCoreSet := switchCoreSet(r, instance)
-	currentReplicantSet, updateReplicantSet := switchReplicantSet(r, instance)
+	// Core: single StatefulSet, revision tracking from StatefulSet status.
+	status.CoreNodesStatus.UpdateReplicas = 0
+	status.CoreNodesStatus.CurrentReplicas = 0
+	// Count pods on each revision.
+	for _, pod := range r.state.podsManagedBy(r.state.coreSet()) {
+		if r.state.partOfCoreSetLatestRevision(pod) {
+			status.CoreNodesStatus.UpdateReplicas++
+		} else {
+			status.CoreNodesStatus.CurrentReplicas++
+		}
+	}
 
-	status.CoreNodesStatus.ReadyReplicas = 0
-	if currentCoreSet != nil {
-		status.CoreNodesStatus.CurrentReplicas = currentCoreSet.Status.Replicas
-	}
-	if updateCoreSet != nil {
-		status.CoreNodesStatus.UpdateReplicas = updateCoreSet.Status.Replicas
-	}
+	// Replicant: multi-ReplicaSet pattern retained.
+	currentReplicantSet, updateReplicantSet := switchReplicantSet(r, instance)
 
 	status.ReplicantNodesStatus.ReadyReplicas = 0
 	if currentReplicantSet != nil {
@@ -54,6 +61,8 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 		}
 		u.updateEMQXNodesStatus(r, instance, nodes)
 	}
+
+	status.CoreNodesStatus.ReadyReplicas = 0
 	for _, node := range status.CoreNodes {
 		if node.Status == "running" {
 			status.CoreNodesStatus.ReadyReplicas++
@@ -149,19 +158,19 @@ func (u *updateStatus) updateStatusCondition(r *reconcileRound, instance *crdv2.
 		return
 	}
 
+	sts := r.state.coreSet()
+
 	switch condition.Type {
 
 	case crdv2.Initialized:
-		updateSts := r.state.updateCoreSet(instance)
-		if updateSts != nil {
+		if sts != nil {
 			u.statusTransition(r, instance, crdv2.CoreNodesProgressing)
 		}
 
 	case crdv2.CoreNodesProgressing:
-		updateSts := r.state.updateCoreSet(instance)
-		if updateSts != nil &&
-			updateSts.Status.ReadyReplicas > 0 &&
-			updateSts.Status.ReadyReplicas == status.CoreNodesStatus.UpdateReplicas {
+		if sts != nil &&
+			sts.Status.ReadyReplicas > 0 &&
+			sts.Status.ReadyReplicas == status.CoreNodesStatus.Replicas {
 			u.statusTransition(r, instance, crdv2.CoreNodesReady)
 		}
 
@@ -214,9 +223,8 @@ func (u *updateStatus) updateStatusCondition(r *reconcileRound, instance *crdv2.
 		})
 
 	case crdv2.Ready:
-		updateSts := r.state.updateCoreSet(instance)
-		if updateSts != nil &&
-			updateSts.Status.ReadyReplicas != status.CoreNodesStatus.Replicas {
+		if sts != nil &&
+			sts.Status.ReadyReplicas != status.CoreNodesStatus.Replicas {
 			u.resetConditions(r, instance, "CoreNodesNotReady")
 			return
 		}
@@ -252,33 +260,6 @@ func (u *updateStatus) statusTransition(
 ) {
 	instance.Status.SetTrueCondition(conditionType)
 	u.updateStatusCondition(r, instance)
-}
-
-func switchCoreSet(
-	r *reconcileRound,
-	instance *crdv2.EMQX,
-) (*appsv1.StatefulSet, *appsv1.StatefulSet) {
-	current := r.state.currentCoreSet(instance)
-	update := r.state.updateCoreSet(instance)
-	if (current == nil || current.Status.Replicas == 0) && update != nil {
-		current = nil
-		for _, coreSet := range r.state.coreSets {
-			// Adopt oldest non-empty coreSet if there are more than 2 (current and update) coreSets:
-			if coreSet.UID != update.UID && coreSet.Status.Replicas > 0 {
-				r.log.V(1).Info("adopting non-empty current coreSet", "statefulSet", klog.KObj(coreSet))
-				current = coreSet
-				break
-			}
-		}
-		if current == nil {
-			r.log.V(1).Info("switching update -> current coreSet", "statefulSet", klog.KObj(update))
-			current = update
-		}
-	}
-	if current != nil {
-		instance.Status.CoreNodesStatus.CurrentRevision = current.Labels[crdv2.LabelPodTemplateHash]
-	}
-	return current, update
 }
 
 func switchReplicantSet(

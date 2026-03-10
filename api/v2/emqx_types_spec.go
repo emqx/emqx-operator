@@ -318,3 +318,10 @@ func (spec *EMQXSpec) HasReplicants() bool {
 func (s *ServiceTemplate) IsEnabled() bool {
 	return s.Enabled != nil && *s.Enabled
 }
+
+func (spec *EMQXSpec) DesiredReplicas() int32 {
+	if spec.CoreTemplate.Spec.Replicas != nil {
+		return *spec.CoreTemplate.Spec.Replicas
+	}
+	return 1
+}

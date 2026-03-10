@@ -13,8 +13,8 @@ type dsLoadClusterState struct {
 }
 
 func (c *dsLoadClusterState) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
-	// Instantiate API requester for a node that is part of update StatefulSet.
-	req := r.requester.forOldestCore(r.state, &managedByFilter{r.state.updateCoreSet(instance)})
+	// Instantiate API requester for a node that is part of the core StatefulSet.
+	req := r.requester.forOldestCore(r.state, &managedByFilter{r.state.coreSet()})
 	// If there's no suitable EMQX API to query, skip the reconciliation.
 	if req == nil {
 		return subResult{}

@@ -137,7 +137,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&dsUpdateReplicaSets{r},
 		&dsReflectPodCondition{r},
 		&syncReplicantSets{r},
-		&syncCoreSets{r},
+		&syncCoreSet{r},
 		&cleanupOutdatedSets{r},
 		&dsCleanupSites{r},
 	} {

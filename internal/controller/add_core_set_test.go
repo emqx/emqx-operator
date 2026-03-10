@@ -6,6 +6,7 @@ import (
 	crdv2 "github.com/emqx/emqx-operator/api/v2"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,9 +39,6 @@ func TestGetNewStatefulSet(t *testing.T) {
 		},
 	}
 	instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(3))
-	instance.Status.CoreNodesStatus = crdv2.EMQXNodesStatus{
-		CollisionCount: ptr.To(int32(0)),
-	}
 
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
@@ -52,7 +50,8 @@ func TestGetNewStatefulSet(t *testing.T) {
 		assert.Equal(t, "emqx", got.Labels[crdv2.LabelInstance])
 		assert.Equal(t, "emqx-operator", got.Labels[crdv2.LabelManagedBy])
 		assert.Equal(t, "core", got.Labels[crdv2.LabelDBRole])
-		assert.Equal(t, "emqx-core-"+got.Labels[crdv2.LabelPodTemplateHash], got.Name)
+		// Single StatefulSet: name is deterministic, no hash suffix.
+		assert.Equal(t, "emqx-core", got.Name)
 		assert.Equal(t, emqx.Namespace, got.Namespace)
 	})
 
@@ -62,20 +61,25 @@ func TestGetNewStatefulSet(t *testing.T) {
 		got := newStatefulSet(emqx, conf)
 		assert.Equal(t, emqx.Spec.CoreTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
-			crdv2.LabelInstance:        "emqx",
-			crdv2.LabelManagedBy:       "emqx-operator",
-			crdv2.LabelDBRole:          "core",
-			crdv2.LabelPodTemplateHash: got.Labels[crdv2.LabelPodTemplateHash],
-			"core-label-key":           "core-label-value",
+			crdv2.LabelInstance:  "emqx",
+			crdv2.LabelManagedBy: "emqx-operator",
+			crdv2.LabelDBRole:    "core",
+			"core-label-key":     "core-label-value",
 		}, got.Spec.Template.Labels)
 
 		assert.EqualValues(t, map[string]string{
-			crdv2.LabelInstance:        "emqx",
-			crdv2.LabelManagedBy:       "emqx-operator",
-			crdv2.LabelDBRole:          "core",
-			crdv2.LabelPodTemplateHash: got.Labels[crdv2.LabelPodTemplateHash],
-			"core-label-key":           "core-label-value",
+			crdv2.LabelInstance:  "emqx",
+			crdv2.LabelManagedBy: "emqx-operator",
+			crdv2.LabelDBRole:    "core",
+			"core-label-key":     "core-label-value",
 		}, got.Spec.Selector.MatchLabels)
+	})
+
+	t.Run("check update strategy is OnDelete", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
+		got := newStatefulSet(emqx, conf)
+		assert.Equal(t, appsv1.OnDeleteStatefulSetStrategyType, got.Spec.UpdateStrategy.Type)
 	})
 
 	t.Run("check bootstrap API keys", func(t *testing.T) {

@@ -9,30 +9,35 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Reconciler cleanupOutdatedSets", func() {
+var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 	var s *cleanupOutdatedSets
 
 	var instance *crdv2.EMQX = &crdv2.EMQX{}
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var round *reconcileRound
 
-	BeforeEach(func() {
-		s = &cleanupOutdatedSets{emqxReconciler}
+	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-v2beta1-sync-sets-test-" + rand.String(5),
+				Name: "controller-cleanup-outdated-test",
 				Labels: map[string]string{
 					"test": "e2e",
 				},
 			},
 		}
+		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+	})
+
+	AfterAll(func() {
+		Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
+	})
+
+	BeforeEach(func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.RevisionHistoryLimit = 3
@@ -45,13 +50,14 @@ var _ = Describe("Reconciler cleanupOutdatedSets", func() {
 				},
 			},
 		}
-
+		s = &cleanupOutdatedSets{emqxReconciler}
 		round = newReconcileRound()
+	})
 
-		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
-		for i := 0; i < 5; i++ {
+	It("should delete outdated replicant sets", func() {
+		numReplicaSets := 5
+		for i := 0; i < numReplicaSets; i++ {
 			name := fmt.Sprintf("%s-%d", instance.Name, i)
-
 			rs := &appsv1.ReplicaSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -88,113 +94,21 @@ var _ = Describe("Reconciler cleanupOutdatedSets", func() {
 			rs.Status.Replicas = 0
 			rs.Status.ObservedGeneration = 1
 			Expect(k8sClient.Status().Patch(ctx, rs.DeepCopy(), client.Merge)).Should(Succeed())
-
 			round.state.replicantSets = append(round.state.replicantSets, rs)
-
-			sts := &appsv1.StatefulSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: instance.Namespace,
-					Labels: instance.DefaultLabelsWith(
-						crdv2.CoreLabels(),
-						map[string]string{crdv2.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
-					),
-				},
-				Spec: appsv1.StatefulSetSpec{
-					Replicas: ptr.To(int32(0)),
-					Selector: &metav1.LabelSelector{
-						MatchLabels: instance.DefaultLabelsWith(
-							crdv2.CoreLabels(),
-							map[string]string{crdv2.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
-						),
-					},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: instance.DefaultLabelsWith(
-								crdv2.CoreLabels(),
-								map[string]string{crdv2.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
-							),
-						},
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{Name: "emqx", Image: "emqx"},
-							},
-						},
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, sts.DeepCopy())).Should(Succeed())
-			sts.Status.Replicas = 0
-			sts.Status.ObservedGeneration = 1
-			Expect(k8sClient.Status().Patch(ctx, sts.DeepCopy(), client.Merge)).Should(Succeed())
-
-			round.state.coreSets = append(round.state.coreSets, sts)
-
-			pvc := &corev1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      sts.Name,
-					Namespace: sts.Namespace,
-					Labels:    sts.Labels,
-				},
-				Spec: corev1.PersistentVolumeClaimSpec{
-					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-					Resources: corev1.VolumeResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("1Gi"),
-						},
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, pvc.DeepCopy())).Should(Succeed())
 		}
-	})
 
-	It("should delete rs sts and pvc", func() {
 		Expect(s.reconcile(round, instance)).Should(Equal(subResult{}))
 
-		Eventually(func() int {
+		Eventually(func() *appsv1.ReplicaSetList {
 			list := &appsv1.ReplicaSetList{}
 			_ = k8sClient.List(ctx, list,
 				client.InNamespace(instance.Namespace),
 				client.MatchingLabels(instance.DefaultLabelsWith(crdv2.ReplicantLabels())),
 			)
-			count := 0
-			for _, rs := range list.Items {
-				if rs.DeletionTimestamp == nil {
-					count++
-				}
-			}
-			return count
-		}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo(instance.Spec.RevisionHistoryLimit))
-
-		Eventually(func() int {
-			list := &appsv1.StatefulSetList{}
-			_ = k8sClient.List(ctx, list,
-				client.InNamespace(instance.Namespace),
-				client.MatchingLabels(instance.DefaultLabelsWith(crdv2.CoreLabels())),
-			)
-			count := 0
-			for _, sts := range list.Items {
-				if sts.DeletionTimestamp == nil {
-					count++
-				}
-			}
-			return count
-		}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo(instance.Spec.RevisionHistoryLimit))
-
-		Eventually(func() int {
-			list := &corev1.PersistentVolumeClaimList{}
-			_ = k8sClient.List(ctx, list,
-				client.InNamespace(instance.Namespace),
-				client.MatchingLabels(instance.DefaultLabelsWith(crdv2.CoreLabels())),
-			)
-			count := 0
-			for _, pvc := range list.Items {
-				if pvc.DeletionTimestamp == nil {
-					count++
-				}
-			}
-			return count
-		}).WithTimeout(timeout).WithPolling(interval).Should(BeEquivalentTo(instance.Spec.RevisionHistoryLimit))
+			return list
+		}).
+			WithTimeout(timeout).
+			WithPolling(interval).
+			Should(HaveField("Items", HaveLen(int(instance.Spec.RevisionHistoryLimit))))
 	})
 })

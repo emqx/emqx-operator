@@ -45,3 +45,10 @@ func UpdatePodCondition(
 	patch := client.RawPatch(types.StrategicMergePatchType, patchBytes)
 	return k8sClient.Status().Patch(ctx, pod, patch)
 }
+
+func IsPodManagedBy(pod *corev1.Pod, object metav1.Object) bool {
+	if metav1.GetControllerOf(pod) != nil && metav1.GetControllerOf(pod).UID == object.GetUID() {
+		return true
+	}
+	return false
+}

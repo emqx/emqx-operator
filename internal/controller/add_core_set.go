@@ -15,11 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type addCoreSet struct {
@@ -28,102 +25,62 @@ type addCoreSet struct {
 
 func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
 	sts := newStatefulSet(instance, r.conf)
-	stsHash := sts.Labels[crdv2.LabelPodTemplateHash]
 
-	needCreate := false
-	updateCoreSet := r.state.updateCoreSet(instance)
-	if updateCoreSet == nil {
-		r.log.Info("creating new statefulSet",
+	existing := r.state.coreSet()
+	if existing == nil {
+		// No StatefulSet exists yet.
+		r.log.Info("creating statefulSet",
 			"statefulSet", klog.KObj(sts),
 			"reason", "no existing statefulSet",
 		)
-		needCreate = true
-	} else {
-		patchResult, _ := a.Patcher.Calculate(updateCoreSet, sts, justCheckPodTemplate())
-		if !patchResult.IsEmpty() {
-			r.log.Info("creating new statefulSet",
-				"statefulSet", klog.KObj(sts),
-				"reason", "pod template has changed",
-				"patch", string(patchResult.Patch),
-			)
-			needCreate = true
-		}
-	}
-
-	if needCreate {
 		_ = ctrl.SetControllerReference(instance, sts, a.Scheme)
 		if err := a.Handler.Create(r.ctx, sts); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
-				cond := instance.Status.GetLastTrueCondition()
-				if cond != nil && cond.Type != crdv2.Available && cond.Type != crdv2.Ready {
-					// Sometimes the updated statefulSet will not be ready, because the EMQX node can not be started.
-					// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new statefulSet.
-					// But the new statefulSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
-					if stsHash == instance.Status.CoreNodesStatus.CurrentRevision {
-						_ = a.updateEMQXStatus(r, instance, "RevertStatefulSet", stsHash)
-						return subResult{}
-					}
-				}
-				if instance.Status.CoreNodesStatus.CollisionCount == nil {
-					instance.Status.CoreNodesStatus.CollisionCount = ptr.To(int32(0))
-				}
-				*instance.Status.CoreNodesStatus.CollisionCount++
-				_ = a.Client.Status().Update(r.ctx, instance)
 				return subResult{result: ctrl.Result{Requeue: true}}
 			}
 			return subResult{err: emperror.Wrap(err, "failed to create statefulSet")}
 		}
-		updateResult := a.updateEMQXStatus(r, instance, "CreateNewStatefulSet", stsHash)
-		return subResult{err: updateResult}
+		return subResult{}
 	}
 
-	sts.ObjectMeta = updateCoreSet.ObjectMeta
-	sts.Spec.Template.ObjectMeta = updateCoreSet.Spec.Template.ObjectMeta
-	sts.Spec.Selector = updateCoreSet.Spec.Selector
+	// StatefulSet exists.
+	// Update it in place if the spec has changed.
+	// With OnDelete strategy, updating the spec does not restart pods.
+	sts.ObjectMeta = existing.ObjectMeta
+	sts.Spec.Template.ObjectMeta = existing.Spec.Template.ObjectMeta
+	sts.Spec.Selector = existing.Spec.Selector
 	patchResult, _ := a.Patcher.Calculate(
-		updateCoreSet,
+		existing,
 		sts,
-		// Ignore Status fields and VolumeClaimTemplate stuff.
 		patch.IgnoreStatusFields(),
 		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
 		// Ignore if number of replicas has changed.
-		// Reconciler `syncCoreSets` will handle scaling up and down of the existing statefulSet.
+		// Reconciler `syncCoreSets` will handle scaling of the statefulSet.
 		ignoreStatefulSetReplicas(),
 	)
 	if !patchResult.IsEmpty() {
-		// Update statefulSet
 		r.log.Info("updating statefulSet",
 			"statefulSet", klog.KObj(sts),
-			"reason", "statefulSet has changed",
+			"reason", "spec has changed",
 			"patch", string(patchResult.Patch),
 		)
-		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			storage := &appsv1.StatefulSet{}
-			_ = a.Client.Get(r.ctx, client.ObjectKeyFromObject(sts), storage)
-			sts.ResourceVersion = storage.ResourceVersion
-			return a.Handler.Update(r.ctx, sts)
-		}); err != nil {
+		err := a.Handler.Update(r.ctx, sts)
+		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
 		}
-		updateResult := a.updateEMQXStatus(r, instance, "UpdateStatefulSet", stsHash)
-		return subResult{err: updateResult}
+		// Reset conditions: pods have not been updated yet and the cluster needs
+		// a rolling update, so it's no longer Ready / CoreNodesReady.
+		instance.Status.ResetConditions("UpdateStatefulSet")
+		err = a.Client.Status().Update(r.ctx, instance)
+		if err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to update status after statefulSet update")}
+		}
 	}
 	return subResult{}
 }
 
-func (a *addCoreSet) updateEMQXStatus(r *reconcileRound, instance *crdv2.EMQX, reason, podTemplateHash string) error {
-	instance.Status.ResetConditions(reason)
-	instance.Status.CoreNodesStatus.UpdateRevision = podTemplateHash
-	return a.Client.Status().Update(r.ctx, instance)
-}
-
 func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet {
 	sts := generateStatefulSet(instance)
-	podTemplateHash := computeHash(sts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
-	sts.Name = sts.Name + "-" + podTemplateHash
-	sts.Labels[crdv2.LabelPodTemplateHash] = podTemplateHash
-	sts.Spec.Template.Labels[crdv2.LabelPodTemplateHash] = podTemplateHash
-	sts.Spec.Selector = util.CloneSelectorAndAddLabel(sts.Spec.Selector, crdv2.LabelPodTemplateHash, podTemplateHash)
 	sts.Spec.Template.Spec.Containers[0].Ports = util.MergeContainerPorts(
 		sts.Spec.Template.Spec.Containers[0].Ports,
 		util.MapServicePortsToContainerPorts(conf.GetDashboardServicePorts()),
@@ -151,6 +108,11 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 	bootstrapAPIKeys := resources.BootstrapAPIKey(instance)
 	config := resources.EMQXConfig(instance)
 
+	// Use OnDelete update strategy so the operator controls pod replacement.
+	updateStrategy := appsv1.StatefulSetUpdateStrategy{
+		Type: appsv1.OnDeleteStatefulSetStrategyType,
+	}
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -163,12 +125,13 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 			Labels:      statefulSetLabels(instance),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: instance.HeadlessServiceNamespacedName().Name,
-			Replicas:    instance.Spec.CoreTemplate.Spec.Replicas,
+			ServiceName:         instance.HeadlessServiceNamespacedName().Name,
+			Replicas:            instance.Spec.CoreTemplate.Spec.Replicas,
+			UpdateStrategy:      updateStrategy,
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: statefulSetLabels(instance),
 			},
-			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: instance.Spec.CoreTemplate.DeepCopy().Annotations,

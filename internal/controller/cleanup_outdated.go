@@ -3,10 +3,8 @@ package controller
 import (
 	crdv2 "github.com/emqx/emqx-operator/api/v2"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type cleanupOutdatedSets struct {
@@ -42,50 +40,10 @@ func (s *cleanupOutdatedSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 		}
 	}
 
-	// List outdated coreSets, preserving order by creation timestamp:
-	currentSts := r.state.currentCoreSet(instance)
-	updateSts := r.state.updateCoreSet(instance)
-	prevStsList := []*appsv1.StatefulSet{}
-	for _, sts := range r.state.coreSets {
-		if sts.DeletionTimestamp == nil && sts != currentSts && sts != updateSts {
-			prevStsList = append(prevStsList, sts)
-		}
-	}
-
-	stsOutdated := len(prevStsList) - int(instance.Spec.RevisionHistoryLimit)
-	for i := 0; i < stsOutdated; i++ {
-		sts := prevStsList[i]
-		// Avoid delete stateful set with non-zero replica counts
-		if sts.Status.Replicas != 0 || *(sts.Spec.Replicas) != 0 || sts.Generation > sts.Status.ObservedGeneration {
-			continue
-		}
-
-		// Delete PVCs
-		pvcList := &corev1.PersistentVolumeClaimList{}
-		_ = s.Client.List(r.ctx, pvcList,
-			client.InNamespace(instance.Namespace),
-			client.MatchingLabels(sts.Spec.Selector.MatchLabels),
-		)
-		for _, p := range pvcList.Items {
-			pvc := p.DeepCopy()
-			if pvc.DeletionTimestamp != nil {
-				continue
-			}
-			r.log.Info("removing persistentVolumeClaim of outdated coreSet",
-				"persistentVolumeClaim", klog.KObj(pvc),
-				"coreSet", klog.KObj(sts),
-			)
-			if err := s.Client.Delete(r.ctx, pvc); err != nil && !k8sErrors.IsNotFound(err) {
-				return subResult{err: err}
-			}
-		}
-
-		r.log.Info("removing outdated coreSet", "statefulSet", klog.KObj(sts))
-		if err := s.Client.Delete(r.ctx, sts); err != nil && !k8sErrors.IsNotFound(err) {
-			return subResult{err: err}
-		}
-
-	}
+	// With the single-StatefulSet model for cores, there are no outdated core StatefulSets
+	// to clean up. The single StatefulSet is updated in place. Legacy StatefulSets from
+	// previous operator versions (with hash-suffixed names) will be cleaned up separately
+	// if needed.
 
 	return subResult{}
 }

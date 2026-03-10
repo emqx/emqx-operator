@@ -15,7 +15,7 @@ import (
 )
 
 func TestRequesterFilter(t *testing.T) {
-	var coreSetName string = "emqx-core-cur"
+	var coreSetName string = "emqx-core"
 	var coreSetUID types.UID = "123"
 
 	instance := &crdv2.EMQX{
@@ -72,12 +72,12 @@ func TestRequesterFilter(t *testing.T) {
 		coreSets: []*appsv1.StatefulSet{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   coreSetName,
-					UID:    coreSetUID,
-					Labels: map[string]string{crdv2.LabelPodTemplateHash: "cur"},
+					Name: coreSetName,
+					UID:  coreSetUID,
 				},
 				Status: appsv1.StatefulSetStatus{
-					Replicas: 2,
+					Replicas:       2,
+					UpdateRevision: "upd",
 				},
 			},
 		},
@@ -131,12 +131,10 @@ func TestRequesterFilter(t *testing.T) {
 	requester = builder.forPod(state.pods[1])
 	assert.NotNil(t, requester)
 
-	requester = builder.forOldestCore(state, &managedByFilter{state.currentCoreSet(instance)})
+	// Filter by the single core StatefulSet:
+	requester = builder.forOldestCore(state, &managedByFilter{state.coreSet()})
 	assert.NotNil(t, requester)
 	assert.Equal(t, state.pods[1].Name, requester.GetDescription())
-
-	requester = builder.forOldestCore(state, &managedByFilter{state.updateCoreSet(instance)})
-	assert.Nil(t, requester)
 
 	requester = builder.forOldestCore(state, &emqxVersionFilter{instance, "5.10."})
 	assert.NotNil(t, requester)

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	util "github.com/emqx/emqx-operator/internal/controller/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,23 +42,45 @@ func (r *reconcileState) podsManagedBy(object metav1.Object) []*corev1.Pod {
 		return list
 	}
 	for _, pod := range r.pods {
-		if metav1.GetControllerOf(pod) != nil && metav1.GetControllerOf(pod).UID == object.GetUID() {
+		if util.IsPodManagedBy(pod, object) {
 			list = append(list, pod)
 		}
 	}
 	return list
 }
 
-func (r *reconcileState) currentCoreSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
-	for _, sts := range r.coreSets {
-		hash := sts.Labels[crdv2.LabelPodTemplateHash]
-		if hash == instance.Status.CoreNodesStatus.CurrentRevision {
-			return sts
-		}
+// coreSet returns the single core StatefulSet, or nil if none exists.
+// With the rolling update model, there is always at most one core StatefulSet.
+func (r *reconcileState) coreSet() *appsv1.StatefulSet {
+	if len(r.coreSets) > 0 {
+		return r.coreSets[0]
 	}
 	return nil
 }
 
+func (r *reconcileState) partOfCoreSet(pod *corev1.Pod) bool {
+	sts := r.coreSet()
+	if sts == nil {
+		return false
+	}
+	return util.IsPodManagedBy(pod, sts)
+}
+
+// partOfCoreSetLatestRevision checks if a core pod's revision matches the StatefulSet's updateRevision.
+func (r *reconcileState) partOfCoreSetLatestRevision(pod *corev1.Pod) bool {
+	sts := r.coreSet()
+	if sts == nil {
+		return false
+	}
+	if !util.IsPodManagedBy(pod, sts) {
+		return false
+	}
+	podRevision := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
+	return podRevision == sts.Status.UpdateRevision
+}
+
+// Returns ReplicaSet representing current set of replicant nodes.
+// Current set is considered outdated if CurrentRevision != UpdateRevision.
 func (r *reconcileState) currentReplicantSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 	for _, rs := range r.replicantSets {
 		hash := rs.Labels[crdv2.LabelPodTemplateHash]
@@ -68,16 +91,8 @@ func (r *reconcileState) currentReplicantSet(instance *crdv2.EMQX) *appsv1.Repli
 	return nil
 }
 
-func (r *reconcileState) updateCoreSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
-	for _, sts := range r.coreSets {
-		hash := sts.Labels[crdv2.LabelPodTemplateHash]
-		if hash == instance.Status.CoreNodesStatus.UpdateRevision {
-			return sts
-		}
-	}
-	return nil
-}
-
+// Returns ReplicaSet representing newest set of replicant nodes.
+// Same as current if CurrentRevision == UpdateRevision.
 func (r *reconcileState) updateReplicantSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 	for _, rs := range r.replicantSets {
 		hash := rs.Labels[crdv2.LabelPodTemplateHash]
@@ -88,33 +103,27 @@ func (r *reconcileState) updateReplicantSet(instance *crdv2.EMQX) *appsv1.Replic
 	return nil
 }
 
-func (r *reconcileState) partOfCurrentSet(pod *corev1.Pod, instance *crdv2.EMQX) bool {
+// partOfUpdateReplicantSet checks if a pod belongs to the update (newest) ReplicaSet.
+func (r *reconcileState) partOfUpdateReplicantSet(pod *corev1.Pod, instance *crdv2.EMQX) bool {
 	controllerRef := metav1.GetControllerOf(pod)
 	if controllerRef == nil {
 		return false
 	}
-	currentCoreSet := r.currentCoreSet(instance)
-	if currentCoreSet != nil && controllerRef.UID == currentCoreSet.UID {
-		return true
-	}
-	currentReplicantSet := r.currentReplicantSet(instance)
-	if currentReplicantSet != nil && controllerRef.UID == currentReplicantSet.UID {
+	updateReplicantSet := r.updateReplicantSet(instance)
+	if updateReplicantSet != nil && controllerRef.UID == updateReplicantSet.UID {
 		return true
 	}
 	return false
 }
 
-func (r *reconcileState) partOfUpdateSet(pod *corev1.Pod, instance *crdv2.EMQX) bool {
+// partOfCurrentReplicantSet checks if a pod belongs to the current (outdated) ReplicaSet.
+func (r *reconcileState) partOfCurrentReplicantSet(pod *corev1.Pod, instance *crdv2.EMQX) bool {
 	controllerRef := metav1.GetControllerOf(pod)
 	if controllerRef == nil {
 		return false
 	}
-	updateCoreSet := r.updateCoreSet(instance)
-	if updateCoreSet != nil && controllerRef.UID == updateCoreSet.UID {
-		return true
-	}
-	updateReplicantSet := r.updateReplicantSet(instance)
-	if updateReplicantSet != nil && controllerRef.UID == updateReplicantSet.UID {
+	currentReplicantSet := r.currentReplicantSet(instance)
+	if currentReplicantSet != nil && controllerRef.UID == currentReplicantSet.UID {
 		return true
 	}
 	return false

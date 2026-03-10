@@ -21,14 +21,14 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 		return subResult{}
 	}
 
-	// Get the most recent stateful set.
-	updateCoreSet := r.state.updateCoreSet(instance)
-	if updateCoreSet == nil {
+	// Get the single core StatefulSet.
+	coreSet := r.state.coreSet()
+	if coreSet == nil {
 		return subResult{}
 	}
 
-	// Instantiate API requester for a node that is part of update StatefulSet.
-	req := r.requester.forOldestCore(r.state, &managedByFilter{updateCoreSet})
+	// Instantiate API requester for a node that is part of the core StatefulSet.
+	req := r.requester.forOldestCore(r.state, &managedByFilter{coreSet})
 
 	// If there's no EMQX API to query, skip the reconciliation.
 	if req == nil {
@@ -37,7 +37,7 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 
 	// Wait until all pods are ready.
 	desiredReplicas := instance.Status.CoreNodesStatus.Replicas
-	if updateCoreSet.Status.AvailableReplicas < desiredReplicas {
+	if coreSet.Status.AvailableReplicas < desiredReplicas {
 		return subResult{}
 	}
 
@@ -47,8 +47,7 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 	// Compute the target sites.
 	targetSites := []string{}
 	for _, node := range instance.Status.CoreNodes {
-		pod := r.state.podWithName(node.PodName)
-		if pod != nil && r.state.partOfUpdateSet(pod, instance) {
+		if r.state.podWithName(node.PodName) != nil {
 			site := r.dsCluster.FindSite(node.Name)
 			if site == nil {
 				return subResult{err: emperror.Errorf("no site for node %s", node.Name)}

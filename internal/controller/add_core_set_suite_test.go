@@ -83,7 +83,7 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 		))
 	})
 
-	It("change image creates new statefulSet", func() {
+	It("change image updates existing statefulSet in place", func() {
 		instance.Spec.Image = "emqx/emqx"
 		instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(999999999)
 		Eventually(a.reconcile).WithArguments(round, instance).
@@ -99,7 +99,6 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 			)
 			return list.Items
 		}).WithTimeout(timeout).WithPolling(interval).Should(ConsistOf(
-			HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal("emqx")))),
 			HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal("emqx/emqx")))),
 		))
 
