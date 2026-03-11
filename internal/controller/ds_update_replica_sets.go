@@ -35,8 +35,13 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 		return subResult{}
 	}
 
+	// If there are no known DS DBs, skip the reconciliation.
+	if len(r.dsReplication.DBs) == 0 {
+		return subResult{}
+	}
+
 	// Wait until all pods are ready.
-	desiredReplicas := instance.Status.CoreNodesStatus.Replicas
+	desiredReplicas := instance.Spec.DesiredReplicas()
 	if coreSet.Status.AvailableReplicas < desiredReplicas {
 		return subResult{}
 	}
@@ -67,9 +72,7 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 	}
 
 	// Update replica sets for each DB.
-	if len(r.dsReplication.DBs) > 0 {
-		r.log.V(1).Info("updating DS replica sets", "targetSites", targetSites, "currentSites", currentSites)
-	}
+	r.log.V(1).Info("updating DS replica sets", "targetSites", targetSites, "currentSites", currentSites)
 	for _, db := range r.dsReplication.DBs {
 		err := api.UpdateDSReplicaSet(req, db.Name, targetSites)
 		if err != nil {
