@@ -329,7 +329,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 	It("emqx is not available", func() {
 		instance.Status.Conditions = []metav1.Condition{}
-		admission := checkCorePodRemoval(instance, currentPod)
+		admission := checkCorePodRemoval(instance, currentPod, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("not ready")),
@@ -338,7 +338,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 	It("emqx is available / initial delay has not passed", func() {
 		instance.Spec.UpdateStrategy.InitialDelaySeconds = 99999999
-		admission := checkCorePodRemoval(instance, currentPod)
+		admission := checkCorePodRemoval(instance, currentPod, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("not ready")),
@@ -355,7 +355,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 			UpdateRevision:  updateRevision,
 			CurrentRevision: currentRevision,
 		}
-		admission := checkCorePodRemoval(instance, currentPod)
+		admission := checkCorePodRemoval(instance, currentPod, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("replicaSet")),
@@ -368,7 +368,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 	It("node session > 0", func() {
 		instance.Status.CoreNodes[0].Sessions = 99999
-		admission := checkCorePodRemoval(instance, currentPod)
+		admission := checkCorePodRemoval(instance, currentPod, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionEvacuate)),
 			HaveField("Reason", ContainSubstring("active sessions")),
@@ -377,10 +377,35 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 	It("node session is 0", func() {
 		instance.Status.CoreNodes[0].Sessions = 0
-		admission := checkCorePodRemoval(instance, currentPod)
+		admission := checkCorePodRemoval(instance, currentPod, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionRemove)),
 			HaveField("Reason", BeEmpty()),
+		))
+	})
+
+	It("DS replication site blocks scale-down", func() {
+		instance.Status.CoreNodes[0].Sessions = 0
+		currentPod.Status.Conditions = append(currentPod.Status.Conditions, corev1.PodCondition{
+			Type:   crdv2.DSReplicationSite,
+			Status: corev1.ConditionTrue,
+		})
+		admission := checkCorePodRemoval(instance, currentPod, true)
+		Expect(admission).Should(And(
+			HaveField("Action", Equal(admissionWait)),
+			HaveField("Reason", ContainSubstring("DS replication site")),
+		))
+	})
+
+	It("DS replication site does not block rolling update", func() {
+		instance.Status.CoreNodes[0].Sessions = 0
+		currentPod.Status.Conditions = append(currentPod.Status.Conditions, corev1.PodCondition{
+			Type:   crdv2.DSReplicationSite,
+			Status: corev1.ConditionTrue,
+		})
+		admission := checkCorePodRemoval(instance, currentPod, false)
+		Expect(admission).Should(And(
+			HaveField("Action", Equal(admissionRemove)),
 		))
 	})
 })

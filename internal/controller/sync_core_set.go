@@ -90,7 +90,7 @@ func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crdv2.EMQX) sub
 	)
 
 	candidate := outdated[len(outdated)-1]
-	admission := checkCorePodRemoval(instance, candidate)
+	admission := checkCorePodRemoval(instance, candidate, false)
 
 	return s.onCoreAdmission(r, instance, candidate, admission, "rollingUpdate")
 }
@@ -117,7 +117,7 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX) subResu
 
 	// Scale down the highest-ordinal pod.
 	candidate := pods[len(pods)-1]
-	admission := checkCorePodRemoval(instance, candidate)
+	admission := checkCorePodRemoval(instance, candidate, true)
 
 	return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
 }
@@ -125,7 +125,12 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX) subResu
 // checkCorePodRemoval is a pure function that decides whether a core pod can
 // be safely removed. It inspects instance status and pod state but performs no
 // side effects.
-func checkCorePodRemoval(instance *crdv2.EMQX, pod *corev1.Pod) coreAdmission {
+//
+// When isPermanent is true, the pod is being permanently removed:
+// data would be lost so there are extra safety checks (e.g. DS replication site).
+// When isPermanent is false (rolling update), the replacement pod inherits the
+// data: blocking on DS site condition would stall the rollout indefinitely.
+func checkCorePodRemoval(instance *crdv2.EMQX, pod *corev1.Pod, isPermanent bool) coreAdmission {
 	status := &instance.Status
 
 	if instance.Spec.HasReplicants() {
@@ -148,9 +153,11 @@ func checkCorePodRemoval(instance *crdv2.EMQX, pod *corev1.Pod) coreAdmission {
 		return coreAdmission{Action: admissionWait, Reason: fmt.Sprintf("pod %s deletion in progress", pod.Name)}
 	}
 
-	dsCondition := util.FindPodCondition(pod, crdv2.DSReplicationSite)
-	if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
-		return coreAdmission{Action: admissionWait, Reason: fmt.Sprintf("pod %s is still a DS replication site", pod.Name)}
+	if isPermanent {
+		dsCondition := util.FindPodCondition(pod, crdv2.DSReplicationSite)
+		if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
+			return coreAdmission{Action: admissionWait, Reason: fmt.Sprintf("pod %s is still a DS replication site", pod.Name)}
+		}
 	}
 
 	var nodeInfo *crdv2.EMQXNode
