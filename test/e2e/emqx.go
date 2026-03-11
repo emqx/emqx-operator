@@ -26,7 +26,7 @@ func checkEMQXReady(g Gomega, afterTime ...metav1.Time) {
 
 func checkEMQXStatus(g Gomega, coreReplicas int) {
 	var podList corev1.PodList
-	var status crdv2.EMQXNodesStatus
+	var status crdv2.CoreNodesStatus
 	g.Expect(KubectlOut("get", "pod",
 		"--selector", "apps.emqx.io/instance=emqx,apps.emqx.io/managed-by=emqx-operator",
 		"-o", "json",
@@ -46,12 +46,9 @@ func checkEMQXStatus(g Gomega, coreReplicas int) {
 		And(
 			HaveField("Replicas", BeEquivalentTo(coreReplicas)),
 			HaveField("ReadyReplicas", BeEquivalentTo(coreReplicas)),
-			HaveField("CurrentReplicas", BeEquivalentTo(coreReplicas)),
-			HaveField("UpdateReplicas", BeEquivalentTo(coreReplicas)),
 		),
 		"EMQX status does not have expected number of core nodes",
 	)
-	checkNodesStatusRevision(g, status, "core", coreReplicas)
 }
 
 func checkNoReplicants(g Gomega) {
@@ -62,7 +59,7 @@ func checkNoReplicants(g Gomega) {
 }
 
 func checkReplicantStatus(g Gomega, replicantReplicas int) {
-	var status crdv2.EMQXNodesStatus
+	var status crdv2.ReplicantNodesStatus
 	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus}")).
 		To(UnmarshalInto(&status), "Failed to get EMQX replicant nodes status")
 	g.Expect(status).To(
@@ -74,30 +71,30 @@ func checkReplicantStatus(g Gomega, replicantReplicas int) {
 		),
 		"EMQX status does not have expected number of replicant nodes",
 	)
-	checkNodesStatusRevision(g, status, "replicant", replicantReplicas)
+	checkReplicantNodesStatusRevision(g, status, replicantReplicas)
 }
 
-func checkNodesStatusRevision(g Gomega, status crdv2.EMQXNodesStatus, role string, replicas int) {
+func checkReplicantNodesStatusRevision(g Gomega, status crdv2.ReplicantNodesStatus, replicas int) {
 	var podList corev1.PodList
 	g.Expect(status).To(
 		And(
 			HaveField("CurrentRevision", Not(BeEmpty())),
 			HaveField("UpdateRevision", Not(BeEmpty())),
 		),
-		"EMQX %s nodes status does not have expected revision", role,
+		"EMQX replicant nodes status does not have expected revision",
 	)
 	g.Expect(status.CurrentRevision).To(
 		Equal(status.UpdateRevision),
-		"EMQX %s nodes current and update revisions are different", role,
+		"EMQX replicant nodes current and update revisions are different",
 	)
 	g.Expect(KubectlOut("get", "pods",
 		"--selector", crdv2.LabelPodTemplateHash+"="+status.CurrentRevision,
 		"--field-selector", "status.phase==Running",
 		"-o", "json",
-	)).To(UnmarshalInto(&podList), "Failed to list %s pods", role)
+	)).To(UnmarshalInto(&podList), "Failed to list replicant pods")
 	g.Expect(podList.Items).To(
 		HaveLen(replicas),
-		"EMQX cluster does not have %d current revision %s pods", replicas, role,
+		"EMQX cluster does not have %d current revision replicant pods", replicas,
 	)
 }
 

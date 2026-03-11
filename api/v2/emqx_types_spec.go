@@ -58,7 +58,7 @@ type EMQXSpec struct {
 	RevisionHistoryLimit int32 `json:"revisionHistoryLimit,omitempty"`
 
 	// Cluster upgrade strategy settings.
-	// +kubebuilder:default={type:Recreate}
+	// +kubebuilder:default={type:RollingUpdate}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// Template for Pods running EMQX core nodes.
@@ -118,9 +118,9 @@ type Config struct {
 
 type UpdateStrategy struct {
 	// Determines how cluster upgrade is performed.
-	// * `Recreate`: Perform blue-green upgrade.
-	// +kubebuilder:validation:Enum=Recreate
-	// +kubebuilder:default=Recreate
+	// * `RollingUpdate`: Perform a rolling upgrade, updating pods one at a time.
+	// +kubebuilder:validation:Enum=RollingUpdate
+	// +kubebuilder:default=RollingUpdate
 	Type string `json:"type,omitempty"`
 	// Number of seconds before connection evacuation starts.
 	// +kubebuilder:validation:Minimum=0

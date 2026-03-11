@@ -280,7 +280,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				To(Succeed())
 
 			By("lookup initial EMQX status")
-			var statusInitial crdv2.EMQXNodesStatus
+			var statusInitial crdv2.CoreNodesStatus
 			Eventually(checkEMQXReady).Should(Succeed())
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
 				To(UnmarshalInto(&statusInitial))
@@ -296,9 +296,6 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				]`)).
 				To(Succeed())
 			Consistently(checkEMQXReady, "30s", "3s").WithArguments(changedAt1).Should(Not(Succeed()))
-			var status1 crdv2.EMQXNodesStatus
-			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
-				To(UnmarshalInto(&status1))
 
 			By("specify broken EMQX config")
 			changedAt2 := metav1.Now()
@@ -311,17 +308,13 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				]`)).
 				To(Succeed())
 			Consistently(checkEMQXReady, "30s", "3s").WithArguments(changedAt2).Should(Not(Succeed()))
-			var status2 crdv2.EMQXNodesStatus
-			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
-				To(UnmarshalInto(&status2))
 
-			By("verify current sets have not changed")
-			var status crdv2.EMQXNodesStatus
+			By("verify core nodes are still intact")
+			var status crdv2.CoreNodesStatus
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
 				To(BeUnmarshalledAs(&status, And(
-					HaveField("CurrentRevision", Equal(statusInitial.CurrentRevision)),
-					HaveField("CurrentReplicas", Equal(statusInitial.CurrentReplicas)),
-					HaveField("ReadyReplicas", Equal(statusInitial.CurrentReplicas)),
+					HaveField("Replicas", Equal(statusInitial.Replicas)),
+					HaveField("ReadyReplicas", Equal(statusInitial.ReadyReplicas)),
 				)))
 
 			By("specify correct EMQX config")
@@ -336,21 +329,6 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				To(Succeed())
 			Eventually(checkEMQXReady).WithArguments(changedAt3).Should(Succeed())
 			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-
-			var stsList appsv1.StatefulSetList
-			Eventually(KubectlOut).WithArguments("get", "statefulset",
-				"--selector", crdv2.LabelInstance+"=emqx",
-				"-o", "json",
-			).Should(BeUnmarshalledAs(&stsList, HaveField("Items",
-				// Current (same as update) + 1 outdated
-				HaveLen(2),
-			)))
-			Expect(stsList.Items).To(And(
-				// First botched coreSet should be cleaned
-				Not(ContainElement(HaveLabel(crdv2.LabelPodTemplateHash, Equal(status1.UpdateRevision)))),
-				// Second botched coreSet should be preserved as part of revision history
-				ContainElement(HaveLabel(crdv2.LabelPodTemplateHash, Equal(status2.UpdateRevision))),
-			))
 		})
 
 		It("delete cluster", func() {

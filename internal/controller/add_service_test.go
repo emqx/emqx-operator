@@ -226,7 +226,7 @@ func TestGenerateListenersService(t *testing.T) {
 				},
 			},
 			Status: crdv2.EMQXStatus{
-				ReplicantNodesStatus: crdv2.EMQXNodesStatus{
+				ReplicantNodesStatus: crdv2.ReplicantNodesStatus{
 					ReadyReplicas: 3,
 				},
 			},

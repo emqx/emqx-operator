@@ -24,12 +24,10 @@ func TestRequesterFilter(t *testing.T) {
 			Namespace: "emqx",
 		},
 		Status: crdv2.EMQXStatus{
-			CoreNodesStatus: crdv2.EMQXNodesStatus{
-				Replicas:        2,
-				CurrentRevision: "cur",
-				UpdateRevision:  "upd",
+			CoreNodesStatus: crdv2.CoreNodesStatus{
+				Replicas: 2,
 			},
-			ReplicantNodesStatus: crdv2.EMQXNodesStatus{
+			ReplicantNodesStatus: crdv2.ReplicantNodesStatus{
 				Replicas:        0,
 				CurrentRevision: "cur",
 				UpdateRevision:  "upd",

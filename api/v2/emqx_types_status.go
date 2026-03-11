@@ -32,12 +32,12 @@ type EMQXStatus struct {
 	// Status of each core node in the cluster.
 	CoreNodes []EMQXNode `json:"coreNodes,omitempty"`
 	// Summary status of the set of core nodes.
-	CoreNodesStatus EMQXNodesStatus `json:"coreNodesStatus,omitempty"`
+	CoreNodesStatus CoreNodesStatus `json:"coreNodesStatus,omitempty"`
 
 	// Status of each replicant node in the cluster.
 	ReplicantNodes []EMQXNode `json:"replicantNodes,omitempty"`
 	// Summary status of the set of replicant nodes.
-	ReplicantNodesStatus EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
+	ReplicantNodesStatus ReplicantNodesStatus `json:"replicantNodesStatus,omitempty"`
 
 	// Status of active node evacuations in the cluster.
 	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodeEvacuationsStatus,omitempty"`
@@ -65,16 +65,30 @@ type NodeEvacuationStatus struct {
 	InitialConnections int32 `json:"initialConnections,omitempty"`
 }
 
-type EMQXNodesStatus struct {
+// CoreNodesStatus is the summary status of core nodes managed by a single StatefulSet.
+type CoreNodesStatus struct {
 	// Total number of replicas.
 	Replicas int32 `json:"replicas,omitempty"`
 	// Number of ready replicas.
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
-	// Current revision of the respective core or replicant set.
+	// Number of replicas already updated to the desired pod template.
+	UpdatedReplicas int32 `json:"updatedReplicas,omitempty"`
+	// Number of replicas still running the previous pod template.
+	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
+}
+
+// ReplicantNodesStatus is the summary status of the set of replicant nodes.
+// The multi-ReplicaSet pattern requires revision tracking at the CR level.
+type ReplicantNodesStatus struct {
+	// Total number of replicas.
+	Replicas int32 `json:"replicas,omitempty"`
+	// Number of ready replicas.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	// Current revision of the replicant set.
 	CurrentRevision string `json:"currentRevision,omitempty"`
 	// Number of replicas running current revision.
 	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
-	// Update revision of the respective core or replicant set.
+	// Update revision of the replicant set.
 	// When different from the current revision, the set is being updated.
 	UpdateRevision string `json:"updateRevision,omitempty"`
 	// Number of replicas running update revision.
@@ -85,10 +99,10 @@ type EMQXNodesStatus struct {
 
 type EMQXNode struct {
 	// Node name
-	// +kubebuilder:example="emqx@emqx-core-557c8b7684-0.emqx-headless.default.svc.cluster.local"
+	// +kubebuilder:example="emqx@emqx-core-0.emqx-headless.default.svc.cluster.local"
 	Name string `json:"name,omitempty"`
 	// Corresponding pod name
-	// +kubebuilder:example="emqx-core-557c8b7684-0"
+	// +kubebuilder:example="emqx-core-0"
 	PodName string `json:"podName,omitempty"`
 	// Node status
 	// +kubebuilder:example=running

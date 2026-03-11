@@ -28,13 +28,12 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 		status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
 	}
 
-	// Core: single StatefulSet, revision tracking from StatefulSet status.
-	status.CoreNodesStatus.UpdateReplicas = 0
+	// Core: count pods on each revision for rolling update progress.
+	status.CoreNodesStatus.UpdatedReplicas = 0
 	status.CoreNodesStatus.CurrentReplicas = 0
-	// Count pods on each revision.
 	for _, pod := range r.state.podsManagedBy(r.state.coreSet()) {
 		if r.state.partOfCoreSetLatestRevision(pod) {
-			status.CoreNodesStatus.UpdateReplicas++
+			status.CoreNodesStatus.UpdatedReplicas++
 		} else {
 			status.CoreNodesStatus.CurrentReplicas++
 		}
@@ -201,9 +200,9 @@ func (u *updateStatus) updateStatusCondition(r *reconcileRound, instance *crdv2.
 		}
 
 	case crdv2.Available:
-		if status.CoreNodesStatus.UpdateReplicas != status.CoreNodesStatus.Replicas ||
-			status.CoreNodesStatus.ReadyReplicas != status.CoreNodesStatus.Replicas ||
-			status.CoreNodesStatus.UpdateRevision != status.CoreNodesStatus.CurrentRevision {
+		// Core: all pods must be on the latest revision and ready.
+		if status.CoreNodesStatus.UpdatedReplicas != status.CoreNodesStatus.Replicas ||
+			status.CoreNodesStatus.ReadyReplicas != status.CoreNodesStatus.Replicas {
 			break
 		}
 

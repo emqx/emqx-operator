@@ -15936,7 +15936,7 @@ spec:
                 type: string
               updateStrategy:
                 default:
-                  type: Recreate
+                  type: RollingUpdate
                 description: Cluster upgrade strategy settings.
                 properties:
                   evacuationStrategy:
@@ -15982,12 +15982,12 @@ spec:
                     minimum: 0
                     type: integer
                   type:
-                    default: Recreate
+                    default: RollingUpdate
                     description: |-
                       Determines how cluster upgrade is performed.
-                      * `Recreate`: Perform blue-green upgrade.
+                      * `RollingUpdate`: Perform a rolling upgrade, updating pods one at a time.
                     enum:
-                    - Recreate
+                    - RollingUpdate
                     type: string
                 type: object
             required:
@@ -16067,7 +16067,7 @@ spec:
                       type: integer
                     name:
                       description: Node name
-                      example: emqx@emqx-core-557c8b7684-0.emqx-headless.default.svc.cluster.local
+                      example: emqx@emqx-core-0.emqx-headless.default.svc.cluster.local
                       type: string
                     otpRelease:
                       description: Erlang/OTP version node is running on
@@ -16075,7 +16075,7 @@ spec:
                       type: string
                     podName:
                       description: Corresponding pod name
-                      example: emqx-core-557c8b7684-0
+                      example: emqx-core-0
                       type: string
                     role:
                       description: Node role, either "core" or "replicant"
@@ -16098,17 +16098,11 @@ spec:
               coreNodesStatus:
                 description: Summary status of the set of core nodes.
                 properties:
-                  collisionCount:
-                    format: int32
-                    type: integer
                   currentReplicas:
-                    description: Number of replicas running current revision.
+                    description: Number of replicas still running the previous pod
+                      template.
                     format: int32
                     type: integer
-                  currentRevision:
-                    description: Current revision of the respective core or replicant
-                      set.
-                    type: string
                   readyReplicas:
                     description: Number of ready replicas.
                     format: int32
@@ -16117,15 +16111,11 @@ spec:
                     description: Total number of replicas.
                     format: int32
                     type: integer
-                  updateReplicas:
-                    description: Number of replicas running update revision.
+                  updatedReplicas:
+                    description: Number of replicas already updated to the desired
+                      pod template.
                     format: int32
                     type: integer
-                  updateRevision:
-                    description: |-
-                      Update revision of the respective core or replicant set.
-                      When different from the current revision, the set is being updated.
-                    type: string
                 type: object
               dsReplication:
                 description: Status of EMQX Durable Storage replication.
@@ -16223,7 +16213,7 @@ spec:
                       type: integer
                     name:
                       description: Node name
-                      example: emqx@emqx-core-557c8b7684-0.emqx-headless.default.svc.cluster.local
+                      example: emqx@emqx-core-0.emqx-headless.default.svc.cluster.local
                       type: string
                     otpRelease:
                       description: Erlang/OTP version node is running on
@@ -16231,7 +16221,7 @@ spec:
                       type: string
                     podName:
                       description: Corresponding pod name
-                      example: emqx-core-557c8b7684-0
+                      example: emqx-core-0
                       type: string
                     role:
                       description: Node role, either "core" or "replicant"
@@ -16262,8 +16252,7 @@ spec:
                     format: int32
                     type: integer
                   currentRevision:
-                    description: Current revision of the respective core or replicant
-                      set.
+                    description: Current revision of the replicant set.
                     type: string
                   readyReplicas:
                     description: Number of ready replicas.
@@ -16279,7 +16268,7 @@ spec:
                     type: integer
                   updateRevision:
                     description: |-
-                      Update revision of the respective core or replicant set.
+                      Update revision of the replicant set.
                       When different from the current revision, the set is being updated.
                     type: string
                 type: object

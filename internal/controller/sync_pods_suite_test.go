@@ -171,16 +171,12 @@ var _ = Describe("Reconciler syncPods", Ordered, func() {
 					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 				},
 			},
-			CoreNodesStatus: crdv2.EMQXNodesStatus{
-				UpdateRevision:  updateRevision,
-				UpdateReplicas:  1,
-				CurrentRevision: updateRevision,
-				CurrentReplicas: 1,
-				ReadyReplicas:   1,
-				Replicas:        1,
+			CoreNodesStatus: crdv2.CoreNodesStatus{
+				ReadyReplicas: 1,
+				Replicas:      1,
 			},
 			CoreNodes: []crdv2.EMQXNode{},
-			ReplicantNodesStatus: crdv2.EMQXNodesStatus{
+			ReplicantNodesStatus: crdv2.ReplicantNodesStatus{
 				UpdateRevision:  updateRevision,
 				UpdateReplicas:  1,
 				CurrentRevision: currentRevision,
@@ -357,7 +353,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 				Replicas: ptr.To(int32(3)),
 			},
 		}
-		instance.Status.ReplicantNodesStatus = crdv2.EMQXNodesStatus{
+		instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
 			UpdateRevision:  updateRevision,
 			CurrentRevision: currentRevision,
 		}
