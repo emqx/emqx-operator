@@ -20,14 +20,6 @@ type updateStatus struct {
 func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
 	status := &instance.Status
 
-	status.CoreNodesStatus.Replicas = 1
-	if instance.Spec.CoreTemplate.Spec.Replicas != nil {
-		status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
-	}
-	if instance.Spec.ReplicantTemplate != nil && instance.Spec.ReplicantTemplate.Spec.Replicas != nil {
-		status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
-	}
-
 	// Core: count pods on each revision for rolling update progress.
 	status.CoreNodesStatus.UpdatedReplicas = 0
 	status.CoreNodesStatus.CurrentReplicas = 0
@@ -169,7 +161,7 @@ func (u *updateStatus) updateStatusCondition(r *reconcileRound, instance *crdv2.
 	case crdv2.CoreNodesProgressing:
 		if sts != nil &&
 			sts.Status.ReadyReplicas > 0 &&
-			sts.Status.ReadyReplicas == status.CoreNodesStatus.Replicas {
+			sts.Status.ReadyReplicas == instance.Spec.NumCoreReplicas() {
 			u.statusTransition(r, instance, crdv2.CoreNodesReady)
 		}
 
@@ -201,14 +193,16 @@ func (u *updateStatus) updateStatusCondition(r *reconcileRound, instance *crdv2.
 
 	case crdv2.Available:
 		// Core: all pods must be on the latest revision and ready.
-		if status.CoreNodesStatus.UpdatedReplicas != status.CoreNodesStatus.Replicas ||
-			status.CoreNodesStatus.ReadyReplicas != status.CoreNodesStatus.Replicas {
+		numCores := instance.Spec.NumCoreReplicas()
+		if status.CoreNodesStatus.UpdatedReplicas != numCores ||
+			status.CoreNodesStatus.ReadyReplicas != numCores {
 			break
 		}
 
 		if instance.Spec.HasReplicants() {
-			if status.ReplicantNodesStatus.UpdateReplicas != status.ReplicantNodesStatus.Replicas ||
-				status.ReplicantNodesStatus.ReadyReplicas != status.ReplicantNodesStatus.Replicas ||
+			numReplicants := instance.Spec.NumReplicantReplicas()
+			if status.ReplicantNodesStatus.UpdateReplicas != numReplicants ||
+				status.ReplicantNodesStatus.ReadyReplicas != numReplicants ||
 				status.ReplicantNodesStatus.UpdateRevision != status.ReplicantNodesStatus.CurrentRevision {
 				break
 			}
@@ -223,7 +217,7 @@ func (u *updateStatus) updateStatusCondition(r *reconcileRound, instance *crdv2.
 
 	case crdv2.Ready:
 		if sts != nil &&
-			sts.Status.ReadyReplicas != status.CoreNodesStatus.Replicas {
+			sts.Status.ReadyReplicas != instance.Spec.NumCoreReplicas() {
 			u.resetConditions(r, instance, "CoreNodesNotReady")
 			return
 		}
@@ -231,7 +225,7 @@ func (u *updateStatus) updateStatusCondition(r *reconcileRound, instance *crdv2.
 		if instance.Spec.HasReplicants() {
 			updateRs := r.state.updateReplicantSet(instance)
 			if updateRs != nil &&
-				updateRs.Status.ReadyReplicas != status.ReplicantNodesStatus.Replicas {
+				updateRs.Status.ReadyReplicas != instance.Spec.NumReplicantReplicas() {
 				u.resetConditions(r, instance, "ReplicantNodesNotReady")
 				return
 			}

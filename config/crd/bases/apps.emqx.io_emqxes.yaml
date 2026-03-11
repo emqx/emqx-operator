@@ -16107,10 +16107,6 @@ spec:
                     description: Number of ready replicas.
                     format: int32
                     type: integer
-                  replicas:
-                    description: Total number of replicas.
-                    format: int32
-                    type: integer
                   updatedReplicas:
                     description: Number of replicas already updated to the desired
                       pod template.
@@ -16256,10 +16252,6 @@ spec:
                     type: string
                   readyReplicas:
                     description: Number of ready replicas.
-                    format: int32
-                    type: integer
-                  replicas:
-                    description: Total number of replicas.
                     format: int32
                     type: integer
                   updateReplicas:

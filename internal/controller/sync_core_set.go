@@ -38,7 +38,7 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResu
 		return subResult{}
 	}
 
-	desiredReplicas := instance.Spec.DesiredReplicas()
+	desiredReplicas := instance.Spec.NumCoreReplicas()
 	currentReplicas := util.NumReplicas(coreSet)
 
 	// Handle scale-up: simply update the StatefulSet replica count.

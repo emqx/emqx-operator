@@ -78,9 +78,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			},
 		}
 		instance.Status = crdv2.EMQXStatus{
-			ReplicantNodesStatus: crdv2.ReplicantNodesStatus{
-				Replicas: 3,
-			},
+			ReplicantNodesStatus: crdv2.ReplicantNodesStatus{},
 			Conditions: []metav1.Condition{
 				{
 					Type:               crdv2.Ready,

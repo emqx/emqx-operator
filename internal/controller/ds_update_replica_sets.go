@@ -41,7 +41,7 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 	}
 
 	// Wait until all pods are ready.
-	desiredReplicas := instance.Spec.DesiredReplicas()
+	desiredReplicas := instance.Spec.NumCoreReplicas()
 	if coreSet.Status.AvailableReplicas < desiredReplicas {
 		return subResult{}
 	}

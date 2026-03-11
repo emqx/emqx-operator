@@ -173,7 +173,6 @@ var _ = Describe("Reconciler syncPods", Ordered, func() {
 			},
 			CoreNodesStatus: crdv2.CoreNodesStatus{
 				ReadyReplicas: 1,
-				Replicas:      1,
 			},
 			CoreNodes: []crdv2.EMQXNode{},
 			ReplicantNodesStatus: crdv2.ReplicantNodesStatus{
@@ -182,7 +181,6 @@ var _ = Describe("Reconciler syncPods", Ordered, func() {
 				CurrentRevision: currentRevision,
 				CurrentReplicas: 1,
 				ReadyReplicas:   2,
-				Replicas:        1,
 			},
 			ReplicantNodes: []crdv2.EMQXNode{
 				{Name: "emqx@10.0.0.1", PodName: currentReplicantPod.Name, Status: "running"},

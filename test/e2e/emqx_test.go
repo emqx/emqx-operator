@@ -313,7 +313,6 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			var status crdv2.CoreNodesStatus
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
 				To(BeUnmarshalledAs(&status, And(
-					HaveField("Replicas", Equal(statusInitial.Replicas)),
 					HaveField("ReadyReplicas", Equal(statusInitial.ReadyReplicas)),
 				)))
 

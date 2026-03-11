@@ -319,9 +319,16 @@ func (s *ServiceTemplate) IsEnabled() bool {
 	return s.Enabled != nil && *s.Enabled
 }
 
-func (spec *EMQXSpec) DesiredReplicas() int32 {
+func (spec *EMQXSpec) NumCoreReplicas() int32 {
 	if spec.CoreTemplate.Spec.Replicas != nil {
 		return *spec.CoreTemplate.Spec.Replicas
 	}
 	return 1
+}
+
+func (spec *EMQXSpec) NumReplicantReplicas() int32 {
+	if spec.ReplicantTemplate != nil && spec.ReplicantTemplate.Spec.Replicas != nil {
+		return *spec.ReplicantTemplate.Spec.Replicas
+	}
+	return 0
 }

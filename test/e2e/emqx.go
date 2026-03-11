@@ -44,8 +44,8 @@ func checkEMQXStatus(g Gomega, coreReplicas int) {
 		To(UnmarshalInto(&status), "Failed to get EMQX status")
 	g.Expect(status).To(
 		And(
-			HaveField("Replicas", BeEquivalentTo(coreReplicas)),
 			HaveField("ReadyReplicas", BeEquivalentTo(coreReplicas)),
+			HaveField("UpdatedReplicas", BeEquivalentTo(coreReplicas)),
 		),
 		"EMQX status does not have expected number of core nodes",
 	)
@@ -64,7 +64,6 @@ func checkReplicantStatus(g Gomega, replicantReplicas int) {
 		To(UnmarshalInto(&status), "Failed to get EMQX replicant nodes status")
 	g.Expect(status).To(
 		And(
-			HaveField("Replicas", BeEquivalentTo(replicantReplicas)),
 			HaveField("ReadyReplicas", BeEquivalentTo(replicantReplicas)),
 			HaveField("CurrentReplicas", BeEquivalentTo(replicantReplicas)),
 			HaveField("UpdateReplicas", BeEquivalentTo(replicantReplicas)),

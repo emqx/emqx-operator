@@ -67,8 +67,6 @@ type NodeEvacuationStatus struct {
 
 // CoreNodesStatus is the summary status of core nodes managed by a single StatefulSet.
 type CoreNodesStatus struct {
-	// Total number of replicas.
-	Replicas int32 `json:"replicas,omitempty"`
 	// Number of ready replicas.
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 	// Number of replicas already updated to the desired pod template.
@@ -80,8 +78,6 @@ type CoreNodesStatus struct {
 // ReplicantNodesStatus is the summary status of the set of replicant nodes.
 // The multi-ReplicaSet pattern requires revision tracking at the CR level.
 type ReplicantNodesStatus struct {
-	// Total number of replicas.
-	Replicas int32 `json:"replicas,omitempty"`
 	// Number of ready replicas.
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 	// Current revision of the replicant set.
