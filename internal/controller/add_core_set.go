@@ -89,14 +89,14 @@ func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet
 }
 
 func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
+	template := instance.Spec.CoreTemplate
+
 	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
 	// This is especially important when DS Raft is enabled, otherwise there will be a
 	// lot of leftover records in the DS cluster metadata.
-	lifecycle := instance.Spec.CoreTemplate.Spec.Lifecycle
-	if lifecycle == nil {
-		lifecycle = &corev1.Lifecycle{}
-	} else {
-		lifecycle = lifecycle.DeepCopy()
+	lifecycle := &corev1.Lifecycle{}
+	if template.Spec.Lifecycle != nil {
+		lifecycle = template.Spec.Lifecycle.DeepCopy()
 	}
 	lifecycle.PreStop = &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{
@@ -113,6 +113,16 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 		Type: appsv1.OnDeleteStatefulSetStrategyType,
 	}
 
+	readinessProbe := resources.EvacuationReadinessProbe()
+
+	// Prefer evacuation-aware probe over older-version defaults.
+	if template.Spec.ReadinessProbe != nil {
+		if template.Spec.ReadinessProbe.HTTPGet != nil &&
+			template.Spec.ReadinessProbe.HTTPGet.Path != "/status" {
+			readinessProbe = template.Spec.ReadinessProbe.DeepCopy()
+		}
+	}
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -121,12 +131,12 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
 			Name:        instance.CoreNamespacedName().Name,
-			Annotations: instance.Spec.CoreTemplate.DeepCopy().Annotations,
+			Annotations: util.CloneAnnotations(template.Annotations),
 			Labels:      statefulSetLabels(instance),
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName:         instance.HeadlessServiceNamespacedName().Name,
-			Replicas:            instance.Spec.CoreTemplate.Spec.Replicas,
+			Replicas:            template.Spec.Replicas,
 			UpdateStrategy:      updateStrategy,
 			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Selector: &metav1.LabelSelector{
@@ -134,32 +144,27 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: instance.Spec.CoreTemplate.DeepCopy().Annotations,
+					Annotations: util.CloneAnnotations(template.Annotations),
 					Labels:      statefulSetLabels(instance),
 				},
 				Spec: corev1.PodSpec{
-					ReadinessGates: []corev1.PodReadinessGate{
-						{
-							ConditionType: crdv2.PodOnServing,
-						},
-					},
 					ImagePullSecrets:          instance.Spec.ImagePullSecrets,
 					ServiceAccountName:        instance.Spec.ServiceAccountName,
-					SecurityContext:           instance.Spec.CoreTemplate.Spec.PodSecurityContext,
-					Affinity:                  instance.Spec.CoreTemplate.Spec.Affinity,
-					Tolerations:               instance.Spec.CoreTemplate.Spec.Tolerations,
-					TopologySpreadConstraints: instance.Spec.CoreTemplate.Spec.TopologySpreadConstraints,
-					NodeName:                  instance.Spec.CoreTemplate.Spec.NodeName,
-					NodeSelector:              instance.Spec.CoreTemplate.Spec.NodeSelector,
-					InitContainers:            instance.Spec.CoreTemplate.Spec.InitContainers,
+					SecurityContext:           template.Spec.PodSecurityContext,
+					Affinity:                  template.Spec.Affinity,
+					Tolerations:               template.Spec.Tolerations,
+					TopologySpreadConstraints: template.Spec.TopologySpreadConstraints,
+					NodeName:                  template.Spec.NodeName,
+					NodeSelector:              template.Spec.NodeSelector,
+					InitContainers:            template.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
 							Name:            crdv2.DefaultContainerName,
 							Image:           instance.Spec.Image,
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
-							Command:         instance.Spec.CoreTemplate.Spec.Command,
-							Args:            instance.Spec.CoreTemplate.Spec.Args,
-							Ports:           instance.Spec.CoreTemplate.Spec.Ports,
+							Command:         template.Spec.Command,
+							Args:            template.Spec.Args,
+							Ports:           template.Spec.Ports,
 							Env: append([]corev1.EnvVar{
 								{
 									Name: "POD_NAME",
@@ -195,13 +200,13 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 								},
 								cookie.EnvVar(),
 								bootstrapAPIKeys.EnvVar(),
-							}, instance.Spec.CoreTemplate.Spec.Env...),
-							EnvFrom:         instance.Spec.CoreTemplate.Spec.EnvFrom,
-							Resources:       instance.Spec.CoreTemplate.Spec.Resources,
-							SecurityContext: instance.Spec.CoreTemplate.Spec.ContainerSecurityContext,
-							LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
-							ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
-							StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
+							}, template.Spec.Env...),
+							EnvFrom:         template.Spec.EnvFrom,
+							Resources:       template.Spec.Resources,
+							SecurityContext: template.Spec.ContainerSecurityContext,
+							LivenessProbe:   template.Spec.LivenessProbe,
+							ReadinessProbe:  readinessProbe,
+							StartupProbe:    template.Spec.StartupProbe,
 							Lifecycle:       lifecycle,
 							VolumeMounts: slices.Concat(
 								[]corev1.VolumeMount{
@@ -216,10 +221,10 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 									bootstrapAPIKeys.VolumeMount(),
 								},
 								config.VolumeMounts(),
-								instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts,
+								template.Spec.ExtraVolumeMounts,
 							),
 						},
-					}, instance.Spec.CoreTemplate.Spec.ExtraContainers...),
+					}, template.Spec.ExtraContainers...),
 					Volumes: append([]corev1.Volume{
 						config.Volume(),
 						bootstrapAPIKeys.Volume(),
@@ -229,14 +234,14 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
-					}, instance.Spec.CoreTemplate.Spec.ExtraVolumes...),
+					}, template.Spec.ExtraVolumes...),
 				},
 			},
 		},
 	}
 
-	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates).IsZero() {
-		volumeClaimTemplates := instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates.DeepCopy()
+	if !reflect.ValueOf(template.Spec.VolumeClaimTemplates).IsZero() {
+		volumeClaimTemplates := template.Spec.VolumeClaimTemplates.DeepCopy()
 		if volumeClaimTemplates.VolumeMode == nil {
 			// Wait https://github.com/cisco-open/k8s-objectmatcher/issues/51 fixed
 			fs := corev1.PersistentVolumeFilesystem

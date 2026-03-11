@@ -32,6 +32,14 @@ type podRequesterFilter interface {
 	filter(pod *corev1.Pod) bool
 }
 
+type podConditionFilter struct {
+	cond corev1.PodConditionType
+}
+
+func (f *podConditionFilter) filter(pod *corev1.Pod) bool {
+	return util.IsPodConditionTrue(pod, f.cond)
+}
+
 type managedByFilter struct {
 	manager metav1.Object
 }
@@ -83,7 +91,7 @@ func (b *apiRequesterBuilder) forPod(pod *corev1.Pod) req.RequesterInterface {
 	if b == nil {
 		return nil
 	}
-	if pod.Status.PodIP == "" || !util.IsPodConditionTrue(pod, corev1.ContainersReady) {
+	if pod.Status.PodIP == "" || pod.Status.Phase != corev1.PodRunning {
 		return nil
 	}
 	return &req.Requester{

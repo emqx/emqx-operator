@@ -128,7 +128,12 @@ func generateListenerService(instance *crdv2.EMQX, conf *config.EMQX) *corev1.Se
 	spec.Ports = util.MergeServicePorts(spec.Ports, ports)
 	spec.Selector = instance.DefaultLabelsWith(crdv2.CoreLabels())
 	if instance.Spec.HasReplicants() && instance.Status.ReplicantNodesStatus.ReadyReplicas > 0 {
-		spec.Selector = instance.DefaultLabelsWith(crdv2.ReplicantLabels())
+		spec.Selector = instance.DefaultLabelsWith(
+			crdv2.ReplicantLabels(),
+			map[string]string{
+				crdv2.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.UpdateRevision,
+			},
+		)
 	}
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{

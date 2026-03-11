@@ -227,15 +227,17 @@ func TestGenerateListenersService(t *testing.T) {
 			},
 			Status: crdv2.EMQXStatus{
 				ReplicantNodesStatus: crdv2.ReplicantNodesStatus{
-					ReadyReplicas: 3,
+					ReadyReplicas:  3,
+					UpdateRevision: "update-revision",
 				},
 			},
 		}
 		got := generateListenerService(emqx, loadConf(""))
 		assert.Equal(t, map[string]string{
-			crdv2.LabelInstance:  "emqx",
-			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "replicant",
+			crdv2.LabelInstance:        "emqx",
+			crdv2.LabelManagedBy:       "emqx-operator",
+			crdv2.LabelDBRole:          "replicant",
+			crdv2.LabelPodTemplateHash: "update-revision",
 		}, got.Spec.Selector)
 	})
 

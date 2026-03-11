@@ -136,19 +136,29 @@ func newReplicaSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.ReplicaSet {
 }
 
 func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
+	template := instance.Spec.ReplicantTemplate
+
 	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
 	// This is especially important when DS Raft is enabled, otherwise there will be a
 	// lot of leftover records in the DS cluster metadata.
-	lifecycle := instance.Spec.ReplicantTemplate.Spec.Lifecycle
-	if lifecycle == nil {
-		lifecycle = &corev1.Lifecycle{}
-	} else {
-		lifecycle = lifecycle.DeepCopy()
+	lifecycle := &corev1.Lifecycle{}
+	if template.Spec.Lifecycle != nil {
+		lifecycle = template.Spec.Lifecycle.DeepCopy()
 	}
 	lifecycle.PreStop = &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{
 			Command: []string{"/bin/sh", "-c", "emqx ctl cluster leave"},
 		},
+	}
+
+	readinessProbe := resources.EvacuationReadinessProbe()
+
+	// Prefer evacuation-aware probe over older-version defaults.
+	if template.Spec.ReadinessProbe != nil {
+		if template.Spec.ReadinessProbe.HTTPGet != nil &&
+			template.Spec.ReadinessProbe.HTTPGet.Path != "/status" {
+			readinessProbe = template.Spec.ReadinessProbe.DeepCopy()
+		}
 	}
 
 	cookie := resources.Cookie(instance)
@@ -162,42 +172,37 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
 			Name:        instance.ReplicantNamespacedName().Name,
-			Annotations: instance.Spec.ReplicantTemplate.DeepCopy().Annotations,
+			Annotations: util.CloneAnnotations(template.Annotations),
 			Labels:      replicaSetLabels(instance),
 		},
 		Spec: appsv1.ReplicaSetSpec{
-			Replicas: instance.Spec.ReplicantTemplate.Spec.Replicas,
+			Replicas: template.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: replicaSetLabels(instance),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: instance.Spec.ReplicantTemplate.DeepCopy().Annotations,
+					Annotations: util.CloneAnnotations(template.Annotations),
 					Labels:      replicaSetLabels(instance),
 				},
 				Spec: corev1.PodSpec{
-					ReadinessGates: []corev1.PodReadinessGate{
-						{
-							ConditionType: crdv2.PodOnServing,
-						},
-					},
 					ImagePullSecrets:          instance.Spec.ImagePullSecrets,
 					ServiceAccountName:        instance.Spec.ServiceAccountName,
-					SecurityContext:           instance.Spec.ReplicantTemplate.Spec.PodSecurityContext,
-					Affinity:                  instance.Spec.ReplicantTemplate.Spec.Affinity,
-					Tolerations:               instance.Spec.ReplicantTemplate.Spec.Tolerations,
-					TopologySpreadConstraints: instance.Spec.ReplicantTemplate.Spec.TopologySpreadConstraints,
-					NodeName:                  instance.Spec.ReplicantTemplate.Spec.NodeName,
-					NodeSelector:              instance.Spec.ReplicantTemplate.Spec.NodeSelector,
-					InitContainers:            instance.Spec.ReplicantTemplate.Spec.InitContainers,
+					SecurityContext:           template.Spec.PodSecurityContext,
+					Affinity:                  template.Spec.Affinity,
+					Tolerations:               template.Spec.Tolerations,
+					TopologySpreadConstraints: template.Spec.TopologySpreadConstraints,
+					NodeName:                  template.Spec.NodeName,
+					NodeSelector:              template.Spec.NodeSelector,
+					InitContainers:            template.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
 							Name:            crdv2.DefaultContainerName,
 							Image:           instance.Spec.Image,
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
-							Command:         instance.Spec.ReplicantTemplate.Spec.Command,
-							Args:            instance.Spec.ReplicantTemplate.Spec.Args,
-							Ports:           instance.Spec.ReplicantTemplate.Spec.Ports,
+							Command:         template.Spec.Command,
+							Args:            template.Spec.Args,
+							Ports:           template.Spec.Ports,
 							Env: append([]corev1.EnvVar{
 								{
 									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
@@ -228,13 +233,13 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 									Value: "replicant",
 								},
 								cookie.EnvVar(),
-							}, instance.Spec.ReplicantTemplate.Spec.Env...),
-							EnvFrom:         instance.Spec.ReplicantTemplate.Spec.EnvFrom,
-							Resources:       instance.Spec.ReplicantTemplate.Spec.Resources,
-							SecurityContext: instance.Spec.ReplicantTemplate.Spec.ContainerSecurityContext,
-							LivenessProbe:   instance.Spec.ReplicantTemplate.Spec.LivenessProbe,
-							ReadinessProbe:  instance.Spec.ReplicantTemplate.Spec.ReadinessProbe,
-							StartupProbe:    instance.Spec.ReplicantTemplate.Spec.StartupProbe,
+							}, template.Spec.Env...),
+							EnvFrom:         template.Spec.EnvFrom,
+							Resources:       template.Spec.Resources,
+							SecurityContext: template.Spec.ContainerSecurityContext,
+							LivenessProbe:   template.Spec.LivenessProbe,
+							ReadinessProbe:  readinessProbe,
+							StartupProbe:    template.Spec.StartupProbe,
 							Lifecycle:       lifecycle,
 							VolumeMounts: slices.Concat(
 								[]corev1.VolumeMount{
@@ -248,10 +253,10 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 									},
 								},
 								config.VolumeMounts(),
-								instance.Spec.ReplicantTemplate.Spec.ExtraVolumeMounts,
+								template.Spec.ExtraVolumeMounts,
 							),
 						},
-					}, instance.Spec.ReplicantTemplate.Spec.ExtraContainers...),
+					}, template.Spec.ExtraContainers...),
 					Volumes: append([]corev1.Volume{
 						config.Volume(),
 						{
@@ -266,7 +271,7 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
-					}, instance.Spec.ReplicantTemplate.Spec.ExtraVolumes...),
+					}, template.Spec.ExtraVolumes...),
 				},
 			},
 		},

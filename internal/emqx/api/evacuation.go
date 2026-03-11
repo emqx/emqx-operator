@@ -11,6 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const URLAvailabilityCheck = "api/v5/load_rebalance/availability_check"
+
 type nodeEvacuationStatusResponse struct {
 	Evacuations []NodeEvacuationStatus `json:"evacuations"`
 }
@@ -84,7 +86,7 @@ func StartEvacuation(
 }
 
 func AvailabilityCheck(req req.RequesterInterface) corev1.ConditionStatus {
-	_, err := get(req, "api/v5/load_rebalance/availability_check")
+	_, err := get(req, URLAvailabilityCheck)
 	if err != nil && emperror.Is(err, ErrorServiceUnavailable) {
 		return corev1.ConditionFalse
 	}

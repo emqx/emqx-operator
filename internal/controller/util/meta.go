@@ -36,3 +36,11 @@ func CloneSelectorAndAddLabel(selector *metav1.LabelSelector, labelKey, labelVal
 
 	return newSelector
 }
+
+func CloneAnnotations(annotations map[string]string) map[string]string {
+	clone := make(map[string]string)
+	for k, v := range annotations {
+		clone[k] = v
+	}
+	return clone
+}

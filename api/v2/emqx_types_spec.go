@@ -285,8 +285,10 @@ type EMQXReplicantTemplateSpec struct {
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 	// Periodic probe of container service readiness.
 	// Container will be removed from service endpoints if the probe fails.
+	// Strongly advised to keep the current default: it takes into account ongoing node evacuations managed
+	// by the Operator as part of scaling operations and rolling updates.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	// +kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,failureThreshold:12,httpGet: {path:/status, port:"dashboard"}}
+	// +kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,timeoutSeconds:3,failureThreshold:1,httpGet:{path:"/api/v5/load_rebalance/availability_check", port:"dashboard"}}
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	// StartupProbe indicates that the Pod has successfully initialized.
 	// If specified, no other probes are executed until this completes successfully.
