@@ -448,8 +448,8 @@ func (in *EMQXStatus) DeepCopyInto(out *EMQXStatus) {
 		copy(*out, *in)
 	}
 	in.ReplicantNodesStatus.DeepCopyInto(&out.ReplicantNodesStatus)
-	if in.NodeEvacuationsStatus != nil {
-		in, out := &in.NodeEvacuationsStatus, &out.NodeEvacuationsStatus
+	if in.NodeEvacuations != nil {
+		in, out := &in.NodeEvacuations, &out.NodeEvacuations
 		*out = make([]NodeEvacuationStatus, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

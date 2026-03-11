@@ -68,9 +68,9 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 	if req != nil {
 		clusterEvacuationsStatus, err := api.ClusterEvacuationStatus(req)
 		if err == nil {
-			status.NodeEvacuationsStatus = []crdv2.NodeEvacuationStatus{}
+			status.NodeEvacuations = []crdv2.NodeEvacuationStatus{}
 			for _, ns := range clusterEvacuationsStatus {
-				status.NodeEvacuationsStatus = append(status.NodeEvacuationsStatus, crdv2.NodeEvacuationStatus{
+				status.NodeEvacuations = append(status.NodeEvacuations, crdv2.NodeEvacuationStatus{
 					NodeName:               ns.Node,
 					State:                  ns.State,
 					SessionRecipients:      ns.SessionRecipients,

@@ -99,8 +99,8 @@ func (s *syncReplicantSets) chooseScaleDownReplicant(
 		}
 	}
 
-	if len(status.NodeEvacuationsStatus) > 0 {
-		evacuatingNode := status.NodeEvacuationsStatus[0]
+	if len(status.NodeEvacuations) > 0 {
+		evacuatingNode := status.NodeEvacuations[0]
 		if evacuatingNode.State != "prohibiting" {
 			return scaleDownReplicant{Reason: fmt.Sprintf("node %s evacuation in progress", evacuatingNode.NodeName)}, nil
 		}

@@ -16161,7 +16161,7 @@ spec:
                       type: object
                     type: array
                 type: object
-              nodeEvacuationsStatus:
+              nodeEvacuations:
                 description: Status of active node evacuations in the cluster.
                 items:
                   properties:

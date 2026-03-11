@@ -504,7 +504,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 	})
 
 	It("emqx is in node evacuations", func() {
-		instance.Status.NodeEvacuationsStatus = []crdv2.NodeEvacuationStatus{
+		instance.Status.NodeEvacuations = []crdv2.NodeEvacuationStatus{
 			{State: "fake"},
 		}
 		admission, err := s.chooseScaleDownReplicant(round, instance, current)

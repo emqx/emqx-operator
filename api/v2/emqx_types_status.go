@@ -40,7 +40,7 @@ type EMQXStatus struct {
 	ReplicantNodesStatus ReplicantNodesStatus `json:"replicantNodesStatus,omitempty"`
 
 	// Status of active node evacuations in the cluster.
-	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodeEvacuationsStatus,omitempty"`
+	NodeEvacuations []NodeEvacuationStatus `json:"nodeEvacuations,omitempty"`
 	// Status of EMQX Durable Storage replication.
 	DSReplication DSReplicationStatus `json:"dsReplication,omitempty"`
 }

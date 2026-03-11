@@ -185,7 +185,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 
 			By("check EMQX cluster node evacuations status")
 			Eventually(KubectlOut).
-				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status.nodeEvacuationsStatus}").
+				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status.nodeEvacuations}").
 				ShouldNot(ContainSubstring("connection_eviction_rate"))
 
 			Eventually(checkEMQXReady).WithArguments(changedAt).Should(Succeed())
@@ -415,7 +415,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 
 			By("check EMQX cluster node evacuations status")
 			Eventually(KubectlOut).
-				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status.nodeEvacuationsStatus}").
+				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status.nodeEvacuations}").
 				ShouldNot(ContainSubstring("connection_eviction_rate"))
 
 			By("wait for EMQX cluster to be ready again")

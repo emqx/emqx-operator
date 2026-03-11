@@ -138,8 +138,8 @@ func checkCorePodRemoval(instance *crdv2.EMQX, pod *corev1.Pod) coreAdmission {
 		return coreAdmission{Action: admissionWait, Reason: "instance is not ready"}
 	}
 
-	if len(status.NodeEvacuationsStatus) > 0 {
-		if status.NodeEvacuationsStatus[0].State != "prohibiting" {
+	if len(status.NodeEvacuations) > 0 {
+		if status.NodeEvacuations[0].State != "prohibiting" {
 			return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
 		}
 	}
