@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e_helm
+package helm
 
 import (
 	"fmt"
@@ -28,7 +28,11 @@ import (
 )
 
 // projectImage is the operator image which should already be built and available.
-var projectImage = "emqx/emqx-operator:0.0.1"
+var (
+	operatorImageRepo = "emqx/emqx-operator"
+	operatorImageTag  = "0.0.1-helm"
+	operatorImage     = operatorImageRepo + ":" + operatorImageTag
+)
 
 func TestHelmE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -44,6 +48,14 @@ var _ = BeforeSuite(func() {
 	Expect(util.Run("helm", "repo", "add", "emqx", "https://repos.emqx.io/charts")).To(Succeed())
 	Expect(util.Run("helm", "repo", "update")).To(Succeed())
 
+	By("generate Helm chart files")
+	Expect(util.Run("make", "helm")).To(Succeed())
+
+	By("build emqx-operator docker image")
+	Expect(util.Run("make", "docker-build",
+		fmt.Sprintf("OPERATOR_IMAGE=%s", operatorImage),
+	)).To(Succeed())
+
 	By("load operator image into Kind cluster")
-	Expect(util.LoadImageToKindClusterWithName(projectImage)).To(Succeed())
+	Expect(util.LoadImageToKindClusterWithName(operatorImage)).To(Succeed())
 })

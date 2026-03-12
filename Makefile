@@ -46,6 +46,9 @@ help: ## Display this help.
 
 ##@ Development
 
+.PHONY: helm ## Generate files needed by the Helm chart.
+helm: build-crd
+
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:generateEmbeddedObjectMeta=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
@@ -98,7 +101,7 @@ test-e2e-upgrade: manifests generate e2e-test-cluster ## Run E2E upgrade tests. 
 		-emqx-image-upgrade=$(TEST_E2E_UPGRADE_IMAGE_UPGRADE)
 
 .PHONY: test-e2e-helm
-test-e2e-helm: build-crd e2e-test-cluster ## Run Helm chart E2E tests. Expected an isolated environment using Kind.
+test-e2e-helm: e2e-test-cluster ## Run Helm chart E2E tests. Expected an isolated environment using Kind.
 	go test ./test/e2e-helm/ -v -ginkgo.v -timeout 20m
 
 .PHONY: e2e-test-cluster
