@@ -20,7 +20,7 @@ replicaCount: 1
 revisionHistoryLimit: 10
 
 image:
-  repository: emqx/emqx-operator-controller
+  repository: ghcr.io/emqx/emqx-operator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
