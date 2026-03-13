@@ -31,7 +31,7 @@ const (
 	// helmReleaseName is the Helm release name used across all Helm upgrade tests.
 	helmReleaseName = "emqx-operator"
 
-	// localChartPath is the path to the local 2.3.0 chart being tested.
+	// localChartPath is the path to the local 2.3.x chart being tested.
 	localChartPath = "deploy/charts/emqx-operator"
 
 	// operatorImage is the operator image which should already be built and available.
