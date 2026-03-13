@@ -136,7 +136,7 @@ spec:
             echo "Upgrade BLOCKED: legacy custom resources still exist ($BLOCKED)."
             echo "These CRDs will be removed by the 2.3.0 chart, which would destroy the CRs."
             echo "Please migrate or delete these resources before upgrading."
-            echo "See: https://github.com/emqx/emqx-operator#upgrading-from-22x-to-230"
+            echo "See: https://github.com/emqx/emqx-operator/blob/main-2.3/README.md#from-22x"
             exit 1
           fi
 
@@ -149,17 +149,17 @@ spec:
           # would fail to serve any request that triggers CRD conversion, because the
           # webhook endpoint no longer exists. Patching the strategy to None *before*
           # Helm starts the upgrade avoids this.
-          echo "Patching CRD emqxes.apps.emqx.io ..."
+          echo "--- Patching CRD emqxes.apps.emqx.io ..."
           kubectl patch crd emqxes.apps.emqx.io \
             --type=json \
             -p='[{"op":"replace","path":"/spec/conversion","value":{"strategy":"None"}}]' \
-            2>/dev/null || echo "  not found or already patched, skipping."
+              || echo "*** not found or already patched, skipping."
 
-          echo "Patching CRD rebalances.apps.emqx.io ..."
+          echo "--- Patching CRD rebalances.apps.emqx.io ..."
           kubectl patch crd rebalances.apps.emqx.io \
             --type=json \
             -p='[{"op":"replace","path":"/spec/conversion","value":{"strategy":"None"}}]' \
-            2>/dev/null || echo "  not found or already patched, skipping."
+              || echo "*** not found or already patched, skipping."
 
           echo "=== Pre-upgrade cleanup complete ==="
 {{- end }}

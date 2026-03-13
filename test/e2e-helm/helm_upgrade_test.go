@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,15 +26,21 @@ import (
 )
 
 const (
-	// helmReleaseName is the Helm release name used across all Helm upgrade tests.
-	helmReleaseName = "emqx-operator"
-
 	// v22xChartVersion is the 2.2.x chart version from the emqx Helm repo.
 	v22xChartVersion = "2.2.29"
-
-	// localChartPath is the path to the local 2.3.0 chart being tested.
-	localChartPath = "deploy/charts/emqx-operator"
 )
+
+// helmInstall22x installs the 2.2.x operator chart into the given namespace.
+// Does not use --wait because the deployment won't become ready without cert-manager.
+func helmInstall22x(namespace string) error {
+	return Run("helm", "install",
+		helmReleaseName,
+		"emqx/emqx-operator",
+		"--version", v22xChartVersion,
+		"--namespace", namespace,
+		"--set", "cert-manager.enable=false",
+	)
+}
 
 // cleanup22x removes all resources that 2.2.x chart may have left behind.
 func cleanup22x() {
@@ -48,151 +54,6 @@ func cleanup22x() {
 	_ = Kubectl("delete", "ns", "emqx-operator-system", "--ignore-not-found")
 }
 
-// cleanup23x removes all resources that 2.3.x chart may have left behind in
-// the given namespace, including the Helm release itself.
-func cleanup23x(namespace string) {
-	_ = Run("helm", "uninstall", helmReleaseName, "--namespace", namespace)
-	_ = Kubectl("delete", "clusterrole", "emqx-operator-manager-role", "--ignore-not-found")
-	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-manager-rolebinding", "--ignore-not-found")
-	_ = Kubectl("delete", "clusterrole", "emqx-operator-pre-upgrade", "--ignore-not-found")
-	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-pre-upgrade", "--ignore-not-found")
-	_ = Kubectl("delete", "crd", "emqxes.apps.emqx.io", "--ignore-not-found")
-	_ = Kubectl("delete", "crd", "rebalances.apps.emqx.io", "--ignore-not-found")
-	_ = Kubectl("delete", "ns", namespace, "--ignore-not-found")
-}
-
-// crdExists checks whether a CRD exists in the cluster.
-func crdExists(name string) bool {
-	return Kubectl("get", "crd", name) == nil
-}
-
-// resourceExists checks whether a cluster-scoped resource exists.
-func resourceExists(kind, name string) bool {
-	return Kubectl("get", kind, name) == nil
-}
-
-// dumpHelmDiagnostics writes debug info for the given namespace to GinkgoWriter.
-func dumpHelmDiagnostics(namespace string) {
-	out, _ := Output("helm", "list", "--namespace", namespace)
-	GinkgoWriter.Print("Helm releases:\n", out)
-	out, _ = KubectlOut("get", "jobs", "--namespace", namespace, "-o", "yaml")
-	GinkgoWriter.Print("Jobs in namespace:\n", out)
-	out, _ = KubectlOut("get", "pods", "--namespace", namespace, "-o", "wide")
-	GinkgoWriter.Print("Pods in namespace:\n", out)
-	out, _ = KubectlOut("get", "crds", "-o", "custom-columns=NAME:.metadata.name,CONVERSION:.spec.conversion.strategy")
-	GinkgoWriter.Print("CRDs:\n", out)
-	out, _ = KubectlOut("get", "events", "--namespace", namespace, "--sort-by=.lastTimestamp")
-	GinkgoWriter.Print("Events:\n", out)
-}
-
-// install22x installs the 2.2.x operator chart into the given namespace.
-// Does not use --wait because the deployment won't become ready without cert-manager.
-func install22x(namespace string) error {
-	return Run("helm", "install",
-		helmReleaseName,
-		"emqx/emqx-operator",
-		"--version", v22xChartVersion,
-		"--namespace", namespace,
-		"--set", "cert-manager.enable=false",
-		"--timeout", "2m",
-	)
-}
-
-// install23x installs the local 2.3.0 chart into the given namespace with --wait.
-func install23x(namespace string, extraArgs ...string) error {
-	args := []string{
-		"install",
-		helmReleaseName,
-		localChartPath,
-		"--namespace", namespace,
-		"--set", "image.repository=" + operatorImageRepo,
-		"--set", "image.tag=" + operatorImageTag,
-		"--set", "image.pullPolicy=Never",
-		"--wait",
-		"--timeout", "2m",
-	}
-	args = append(args, extraArgs...)
-	return Run("helm", args...)
-}
-
-// upgrade23x upgrades to the local 2.3.0 chart in the given namespace with --wait.
-func upgrade23x(namespace string) error {
-	return Run("helm", "upgrade",
-		helmReleaseName,
-		localChartPath,
-		"--namespace", namespace,
-		"--set", "image.repository="+operatorImageRepo,
-		"--set", "image.tag="+operatorImageTag,
-		"--set", "image.pullPolicy=Never",
-		"--wait",
-		"--timeout", "2m",
-	)
-}
-
-//nolint:errcheck
-var _ = Describe("Helm Fresh Install", Ordered, func() {
-
-	const namespace = "emqx-operator-fresh"
-
-	BeforeEach(func() {
-		By("ensure clean state")
-		cleanup23x(namespace)
-
-		By("create namespace")
-		Expect(Kubectl("create", "ns", namespace)).To(Succeed())
-	})
-
-	AfterEach(func() {
-		cleanup23x(namespace)
-	})
-
-	AfterEach(func() {
-		if CurrentSpecReport().Failed() {
-			dumpHelmDiagnostics(namespace)
-		}
-	})
-
-	It("should install cleanly / cleanup no-op", func() {
-		By("install 2.3.0 chart")
-		Expect(install23x(namespace)).To(Succeed())
-
-		By("verify CRDs are installed")
-		Expect(crdExists("emqxes.apps.emqx.io")).To(BeTrue())
-		Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
-
-		By("verify operator deployment is available")
-		Expect(Kubectl("wait", "deployment",
-			"emqx-operator-controller-manager",
-			"--for", "condition=Available",
-			"--namespace", namespace,
-			"--timeout", "2m",
-		)).To(Succeed())
-
-		By("verify no legacy CRDs were created")
-		Expect(crdExists("emqxbrokers.apps.emqx.io")).To(BeFalse())
-		Expect(crdExists("emqxenterprises.apps.emqx.io")).To(BeFalse())
-		Expect(crdExists("emqxplugins.apps.emqx.io")).To(BeFalse())
-	})
-
-	It("should install cleanly / pre-upgrade check disabled", func() {
-		By("install 2.3.0 with pre-upgrade check disabled")
-		Expect(install23x(namespace, "--set", "upgrade.preUpgradeCheck=false")).
-			To(Succeed())
-
-		By("verify operator is running")
-		Expect(Kubectl("wait", "deployment",
-			"emqx-operator-controller-manager",
-			"--for", "condition=Available",
-			"--namespace", namespace,
-			"--timeout", "2m",
-		)).To(Succeed())
-
-		By("verify CRDs are installed")
-		Expect(crdExists("emqxes.apps.emqx.io")).To(BeTrue())
-		Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
-	})
-})
-
 //nolint:errcheck
 var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 
@@ -200,7 +61,7 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 
 	BeforeAll(func() {
 		By("clean up any leftover resources from previous test runs")
-		cleanup23x(namespace)
+		helmCleanup(namespace)
 		cleanup22x()
 
 		By("create test namespace")
@@ -208,7 +69,7 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 	})
 
 	AfterAll(func() {
-		cleanup23x(namespace)
+		helmCleanup(namespace)
 		cleanup22x()
 	})
 
@@ -218,9 +79,9 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 		}
 	})
 
-	It("should install 2.2.x and upgrade to 2.3.0", func() {
+	It("should install 2.2.x and upgrade to 2.3.x", func() {
 		By("install emqx-operator 2.2.x from Helm repo")
-		Expect(install22x(namespace)).To(Succeed())
+		Expect(helmInstall22x(namespace)).To(Succeed())
 
 		By("verify 2.2.x deployment and all 5 CRDs exist")
 		Expect(Kubectl("get", "deployment", "emqx-operator-controller-manager",
@@ -239,8 +100,8 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 			)
 		}
 
-		By("upgrade to 2.3.0 chart with default values (cleanup enabled)")
-		Expect(upgrade23x(namespace)).To(Succeed())
+		By("upgrade to 2.3.x chart with default values (cleanup enabled)")
+		Expect(helmUpgrade(namespace)).To(Succeed())
 
 		By("verify pre-upgrade completed successfully")
 		var jobList batchv1.JobList
@@ -277,7 +138,7 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 		Expect(resourceExists("validatingwebhookconfiguration",
 			"emqx-operator-validating-webhook-configuration")).To(BeFalse())
 
-		By("verify 2.3.0 operator deployment is running")
+		By("verify 2.3.x operator deployment is running")
 		var deployment appsv1.Deployment
 		Eventually(KubectlOut).
 			WithArguments("get", "deployment",
@@ -306,7 +167,7 @@ var _ = Describe("Helm Upgrade / 2.2.x + legacy CRs", Ordered, func() {
 
 	BeforeAll(func() {
 		By("clean up any leftover resources")
-		cleanup23x(namespace)
+		helmCleanup(namespace)
 		cleanup22x()
 
 		By("create test namespace")
@@ -314,7 +175,7 @@ var _ = Describe("Helm Upgrade / 2.2.x + legacy CRs", Ordered, func() {
 	})
 
 	AfterAll(func() {
-		cleanup23x(namespace)
+		helmCleanup(namespace)
 		cleanup22x()
 	})
 
@@ -330,7 +191,7 @@ var _ = Describe("Helm Upgrade / 2.2.x + legacy CRs", Ordered, func() {
 
 	It("should block upgrade when legacy CRs exist", func() {
 		By("install 2.2.x operator")
-		Expect(install22x(namespace)).To(Succeed())
+		Expect(helmInstall22x(namespace)).To(Succeed())
 
 		By("verify legacy CRD exists")
 		Expect(crdExists("emqxbrokers.apps.emqx.io")).To(BeTrue())
@@ -357,8 +218,8 @@ var _ = Describe("Helm Upgrade / 2.2.x + legacy CRs", Ordered, func() {
 		Expect(KubectlStdin(brokerCR, "apply", "-f", "-", "--namespace", namespace)).
 			To(Succeed())
 
-		By("attempt upgrade to 2.3.0")
-		Expect(upgrade23x(namespace)).To(HaveOccurred(),
+		By("attempt upgrade to 2.3.x")
+		Expect(helmUpgrade(namespace)).To(HaveOccurred(),
 			"upgrade should fail when legacy CRs exist")
 
 		By("verify the Helm release is in failed state")
@@ -372,9 +233,9 @@ var _ = Describe("Helm Upgrade / 2.2.x + legacy CRs", Ordered, func() {
 			"--namespace", namespace, "--ignore-not-found")).To(Succeed())
 
 		By("retry upgrade")
-		Expect(upgrade23x(namespace)).To(Succeed())
+		Expect(helmUpgrade(namespace)).To(Succeed())
 
-		By("verify 2.3.0 operator is running")
+		By("verify 2.3.x operator is running")
 		Expect(Kubectl("wait", "deployment",
 			"emqx-operator-controller-manager",
 			"--for", "condition=Available",
