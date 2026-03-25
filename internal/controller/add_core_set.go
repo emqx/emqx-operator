@@ -87,19 +87,6 @@ func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet
 func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 	template := instance.Spec.CoreTemplate
 
-	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
-	// This is especially important when DS Raft is enabled, otherwise there will be a
-	// lot of leftover records in the DS cluster metadata.
-	lifecycle := &corev1.Lifecycle{}
-	if template.Spec.Lifecycle != nil {
-		lifecycle = template.Spec.Lifecycle.DeepCopy()
-	}
-	lifecycle.PreStop = &corev1.LifecycleHandler{
-		Exec: &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", "emqx ctl cluster leave"},
-		},
-	}
-
 	cookie := resources.Cookie(instance)
 	bootstrapAPIKeys := resources.BootstrapAPIKey(instance)
 	config := resources.EMQXConfig(instance)
@@ -203,7 +190,7 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 							LivenessProbe:   template.Spec.LivenessProbe,
 							ReadinessProbe:  readinessProbe,
 							StartupProbe:    template.Spec.StartupProbe,
-							Lifecycle:       lifecycle,
+							Lifecycle:       template.Spec.Lifecycle,
 							VolumeMounts: slices.Concat(
 								[]corev1.VolumeMount{
 									{
