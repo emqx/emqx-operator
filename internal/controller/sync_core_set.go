@@ -72,7 +72,7 @@ func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crdv2.EMQX) sub
 
 	var outdated []*corev1.Pod
 	for _, pod := range r.state.podsManagedBy(coreSet) {
-		if !r.state.partOfCoreSetLatestRevision(pod) {
+		if !r.state.partOfCoreSetRevision(pod, coreSet.Status.UpdateRevision) {
 			outdated = append(outdated, pod)
 		}
 	}
@@ -90,7 +90,7 @@ func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crdv2.EMQX) sub
 	)
 
 	candidate := outdated[len(outdated)-1]
-	admission := checkCorePodRemoval(instance, candidate, false)
+	admission := checkCorePodRemoval(r, instance, candidate, false)
 
 	return s.onCoreAdmission(r, instance, candidate, admission, "rollingUpdate")
 }
@@ -117,7 +117,7 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX) subResu
 
 	// Scale down the highest-ordinal pod.
 	candidate := pods[len(pods)-1]
-	admission := checkCorePodRemoval(instance, candidate, true)
+	admission := checkCorePodRemoval(r, instance, candidate, true)
 
 	return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
 }
@@ -130,7 +130,12 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX) subResu
 // data would be lost so there are extra safety checks (e.g. DS replication site).
 // When isPermanent is false (rolling update), the replacement pod inherits the
 // data: blocking on DS site condition would stall the rollout indefinitely.
-func checkCorePodRemoval(instance *crdv2.EMQX, pod *corev1.Pod, isPermanent bool) coreAdmission {
+func checkCorePodRemoval(
+	r *reconcileRound,
+	instance *crdv2.EMQX,
+	pod *corev1.Pod,
+	isPermanent bool,
+) coreAdmission {
 	status := &instance.Status
 
 	if instance.Spec.HasReplicants() {
@@ -139,8 +144,9 @@ func checkCorePodRemoval(instance *crdv2.EMQX, pod *corev1.Pod, isPermanent bool
 		}
 	}
 
-	if !checkInitialDelaySecondsReady(instance) {
-		return coreAdmission{Action: admissionWait, Reason: "instance is not ready"}
+	// Disallow removing pod if cores just recently became ready.
+	if !r.state.areCoresAvailable(instance) {
+		return coreAdmission{Action: admissionWait, Reason: "cores are not available yet"}
 	}
 
 	if len(status.NodeEvacuations) > 0 {
@@ -149,10 +155,12 @@ func checkCorePodRemoval(instance *crdv2.EMQX, pod *corev1.Pod, isPermanent bool
 		}
 	}
 
+	// If a pod is already being deleted, return it.
 	if pod.DeletionTimestamp != nil {
 		return coreAdmission{Action: admissionWait, Reason: fmt.Sprintf("pod %s deletion in progress", pod.Name)}
 	}
 
+	// Disallow permanently removing the pod that is still a DS replication site.
 	if isPermanent {
 		dsCondition := util.FindPodCondition(pod, crdv2.DSReplicationSite)
 		if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {

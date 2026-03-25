@@ -77,9 +77,9 @@ func (s *syncReplicantSets) chooseScaleDownReplicant(
 	var scaleDownNode *crdv2.EMQXNode
 	status := &instance.Status
 
-	// Disallow scaling down the replicaSet if the instance just recently became ready.
-	if !checkInitialDelaySecondsReady(instance) {
-		return scaleDownReplicant{Reason: "instance is not ready"}, nil
+	// Disallow scaling down the replicaSet if replicants just recently became ready.
+	if !r.state.areReplicantsAvailable(instance) {
+		return scaleDownReplicant{Reason: "replicants are not available yet"}, nil
 	}
 
 	// Nothing to do if the replicaSet has no pods.

@@ -80,8 +80,8 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		return subResult{}
 	}
 
-	// Postpone runtime config updates until ready.
-	if !instance.Status.IsConditionTrue(crdv2.CoreNodesReady) {
+	// Postpone runtime config updates until at least one core is ready.
+	if !r.state.areCoresReady(instance) {
 		return subResult{}
 	}
 

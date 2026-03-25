@@ -125,7 +125,11 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		return ctrl.Result{}, emperror.Wrap(err, "failed to create EMQX API requester")
 	}
 
-	state := loadReconcileState(ctx, r.Client, emqx)
+	state, err := loadReconcileState(ctx, r.Client, emqx)
+	if err != nil {
+		return ctrl.Result{}, emperror.New("failed to load reconcile round state")
+	}
+
 	req = requester.forOldestCore(state)
 	if req == nil {
 		return ctrl.Result{}, emperror.New("EMQX API requester unavailable")

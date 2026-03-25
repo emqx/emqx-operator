@@ -2,7 +2,9 @@ package controller
 
 import (
 	"context"
+	"time"
 
+	emperror "emperror.dev/errors"
 	crdv2 "github.com/emqx/emqx-operator/api/v2"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	appsv1 "k8s.io/api/apps/v1"
@@ -66,17 +68,17 @@ func (r *reconcileState) partOfCoreSet(pod *corev1.Pod) bool {
 	return util.IsPodManagedBy(pod, sts)
 }
 
-// partOfCoreSetLatestRevision checks if a core pod's revision matches the StatefulSet's updateRevision.
-func (r *reconcileState) partOfCoreSetLatestRevision(pod *corev1.Pod) bool {
-	sts := r.coreSet()
-	if sts == nil {
+// partOfCoreSetRevision checks if a core pod's StatefulSet-assigned revision matches the specified revision.
+func (r *reconcileState) partOfCoreSetRevision(pod *corev1.Pod, revision string) bool {
+	coreSet := r.coreSet()
+	if coreSet == nil {
 		return false
 	}
-	if !util.IsPodManagedBy(pod, sts) {
+	if !util.IsPodManagedBy(pod, coreSet) {
 		return false
 	}
 	podRevision := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
-	return podRevision == sts.Status.UpdateRevision
+	return podRevision == revision
 }
 
 // Returns ReplicaSet representing current set of replicant nodes.
@@ -129,24 +131,97 @@ func (r *reconcileState) partOfCurrentReplicantSet(pod *corev1.Pod, instance *cr
 	return false
 }
 
+func (r *reconcileState) areCoresReady(instance *crdv2.EMQX) bool {
+	desired := instance.Spec.NumCoreReplicas()
+	coreSet := r.coreSet()
+	coresReady := int32(0)
+	coresUpdated := int32(0)
+	nodesReady := instance.Status.CoreNodesStatus.ReadyReplicas
+	if coreSet != nil {
+		coresReady = coreSet.Status.ReadyReplicas
+		coresUpdated = coreSet.Status.UpdatedReplicas
+	}
+	return coresReady == desired && nodesReady == desired && coresUpdated == desired
+}
+
+func (r *reconcileState) areReplicantsReady(instance *crdv2.EMQX) bool {
+	desired := instance.Spec.NumReplicantReplicas()
+	replicantSet := r.updateReplicantSet(instance)
+	replicantsReady := int32(0)
+	nodesReady := instance.Status.ReplicantNodesStatus.ReadyReplicas
+	if replicantSet != nil {
+		replicantsReady = replicantSet.Status.ReadyReplicas
+	}
+	return replicantsReady == desired && nodesReady == desired
+}
+
+func (r *reconcileState) areCoresAvailable(instance *crdv2.EMQX) bool {
+	coreSet := r.coreSet()
+	if coreSet == nil {
+		return false
+	}
+	available := r.numAvailablePods(coreSet, instance.Spec.UpdateStrategy.MinReadySeconds)
+	return available >= instance.Spec.NumCoreReplicas()
+}
+
+func (r *reconcileState) areReplicantsAvailable(instance *crdv2.EMQX) bool {
+	replicantSet := r.updateReplicantSet(instance)
+	if replicantSet == nil {
+		return instance.Spec.NumReplicantReplicas() == 0
+	}
+	available := r.numAvailablePods(replicantSet, instance.Spec.UpdateStrategy.MinReadySeconds)
+	return available >= instance.Spec.NumReplicantReplicas()
+}
+
+// countAvailablePods counts pods managed by the given owner that are Ready for at least minReadySeconds.
+func (r *reconcileState) numAvailablePods(managedBy metav1.Object, minReadySeconds int32) int32 {
+	var count int32
+	for _, pod := range r.podsManagedBy(managedBy) {
+		if util.PodReadyDuration(pod) > time.Duration(minReadySeconds)*time.Second {
+			count++
+		}
+	}
+	return count
+}
+
 type loadState struct {
 	*EMQXReconciler
 }
 
 func (l *loadState) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
-	state := loadReconcileState(r.ctx, l.Client, instance)
+	state, err := loadReconcileState(r.ctx, l.Client, instance)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to load reconcile round state")}
+	}
 	r.state = state
 	return subResult{}
 }
 
-func loadReconcileState(ctx context.Context, client k8s.Client, instance *crdv2.EMQX) *reconcileState {
+func reloadReconcileState(r *reconcileRound, client k8s.Client, instance *crdv2.EMQX) error {
+	state, err := loadReconcileState(r.ctx, client, instance)
+	if err != nil {
+		return err
+	}
+	r.state = state
+	return nil
+}
+
+func loadReconcileState(
+	ctx context.Context,
+	client k8s.Client,
+	instance *crdv2.EMQX,
+) (*reconcileState, error) {
+	var err error
 	state := &reconcileState{}
 
 	stsList := &appsv1.StatefulSetList{}
-	_ = client.List(ctx, stsList,
+	err = client.List(ctx, stsList,
 		k8s.InNamespace(instance.Namespace),
 		k8s.MatchingLabels(instance.DefaultLabelsWith(crdv2.CoreLabels())),
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, sts := range stsList.Items {
 		state.coreSets = append(state.coreSets, sts.DeepCopy())
@@ -155,10 +230,13 @@ func loadReconcileState(ctx context.Context, client k8s.Client, instance *crdv2.
 	sortByCreationTimestamp(state.coreSets)
 
 	rsList := &appsv1.ReplicaSetList{}
-	_ = client.List(ctx, rsList,
+	err = client.List(ctx, rsList,
 		k8s.InNamespace(instance.Namespace),
 		k8s.MatchingLabels(instance.DefaultLabelsWith(crdv2.ReplicantLabels())),
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, rs := range rsList.Items {
 		state.replicantSets = append(state.replicantSets, rs.DeepCopy())
@@ -167,10 +245,13 @@ func loadReconcileState(ctx context.Context, client k8s.Client, instance *crdv2.
 	sortByCreationTimestamp(state.replicantSets)
 
 	podList := &corev1.PodList{}
-	_ = client.List(ctx, podList,
+	err = client.List(ctx, podList,
 		k8s.InNamespace(instance.Namespace),
 		k8s.MatchingLabels(instance.DefaultLabels()),
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, pod := range podList.Items {
 		// Disregard pods that are being deleted.
@@ -189,5 +270,5 @@ func loadReconcileState(ctx context.Context, client k8s.Client, instance *crdv2.
 		state.pods = append(state.pods, pod)
 	}
 
-	return state
+	return state, nil
 }

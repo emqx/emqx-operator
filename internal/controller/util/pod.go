@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +45,14 @@ func UpdatePodCondition(
 	})
 	patch := client.RawPatch(types.StrategicMergePatchType, patchBytes)
 	return k8sClient.Status().Patch(ctx, pod, patch)
+}
+
+func PodReadyDuration(pod *corev1.Pod) time.Duration {
+	cond := FindPodCondition(pod, corev1.PodReady)
+	if cond == nil || cond.Status != corev1.ConditionTrue {
+		return 0
+	}
+	return time.Since(cond.LastTransitionTime.Time)
 }
 
 func IsPodManagedBy(pod *corev1.Pod, object metav1.Object) bool {

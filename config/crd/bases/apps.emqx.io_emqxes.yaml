@@ -15981,9 +15981,11 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
-                  initialDelaySeconds:
+                  minReadySeconds:
                     default: 10
-                    description: Number of seconds before connection evacuation starts.
+                    description: |-
+                      Minimum number of seconds for which a newly created pod should be Ready
+                      before the pod is considered available for the purposes of the Available condition.
                     format: int32
                     minimum: 0
                     type: integer

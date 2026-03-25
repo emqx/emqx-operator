@@ -22,7 +22,7 @@ func (a *addService) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		return subResult{}
 	}
 
-	if !instance.Status.IsConditionTrue(crdv2.CoreNodesReady) {
+	if !r.state.areCoresReady(instance) {
 		return subResult{}
 	}
 

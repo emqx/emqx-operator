@@ -122,10 +122,11 @@ type UpdateStrategy struct {
 	// +kubebuilder:validation:Enum=RollingUpdate
 	// +kubebuilder:default=RollingUpdate
 	Type string `json:"type,omitempty"`
-	// Number of seconds before connection evacuation starts.
+	// Minimum number of seconds for which a newly created pod should be Ready
+	// before the pod is considered available for the purposes of the Available condition.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=10
-	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
+	MinReadySeconds int32 `json:"minReadySeconds,omitempty"`
 	// Evacuation strategy settings.
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 }

@@ -68,13 +68,9 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
 		}
-		// Reset conditions: pods have not been updated yet and the cluster needs
-		// a rolling update, so it's no longer Ready / CoreNodesReady.
-		instance.Status.ResetConditions("UpdateStatefulSet")
-		err = a.Client.Status().Update(r.ctx, instance)
-		if err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update status after statefulSet update")}
-		}
+		forceCoreNodesProgressing(instance)
+		updateResult := a.Client.Status().Update(r.ctx, instance)
+		return subResult{err: updateResult}
 	}
 	return subResult{}
 }

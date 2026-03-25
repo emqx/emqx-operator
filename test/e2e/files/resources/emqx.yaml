@@ -9,6 +9,7 @@ spec:
     data: |
       license { key = "evaluation" }
   updateStrategy:
+    minReadySeconds: 5
     evacuationStrategy:
       waitTakeover: 5 # seconds
       waitHealthCheck: 10 # seconds

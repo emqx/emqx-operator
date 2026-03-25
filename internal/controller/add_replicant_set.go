@@ -32,7 +32,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 	}
 
 	// Core nodes are still spinning up, wait for them to be ready.
-	if !instance.Status.IsConditionTrue(crdv2.CoreNodesReady) {
+	if !r.state.areCoresReady(instance) {
 		return subResult{}
 	}
 
@@ -63,14 +63,13 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 		_ = ctrl.SetControllerReference(instance, rs, a.Scheme)
 		if err := a.Handler.Create(r.ctx, rs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
-				cond := instance.Status.GetLastTrueCondition()
-				if cond != nil && cond.Type != crdv2.Available && cond.Type != crdv2.Ready {
-					// Sometimes the updated replicaSet will not be ready, because the EMQX node can not be started.
-					// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new replicaSet.
-					// But the new replicaSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
+				if !instance.Status.IsConditionTrue(crdv2.Ready) {
+					// The updated replicaSet may not be ready because the EMQX node can not be started.
+					// If the user reverts the CR spec, the desired RS matches the current revision —
+					// just update the status instead of creating a duplicate.
 					if rsHash == instance.Status.ReplicantNodesStatus.CurrentRevision {
-						_ = a.updateEMQXStatus(r, instance, "RevertReplicaSet", rsHash)
-						return subResult{}
+						updateResult := a.updateEMQXStatus(r, instance, rsHash)
+						return subResult{err: updateResult}
 					}
 				}
 				if instance.Status.ReplicantNodesStatus.CollisionCount == nil {
@@ -82,7 +81,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 			}
 			return subResult{err: emperror.Wrap(err, "failed to create replicaSet")}
 		}
-		updateResult := a.updateEMQXStatus(r, instance, "CreateReplicaSet", rsHash)
+		updateResult := a.updateEMQXStatus(r, instance, rsHash)
 		return subResult{err: updateResult}
 	}
 
@@ -109,15 +108,15 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 		}); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
 		}
-		updateResult := a.updateEMQXStatus(r, instance, "UpdateReplicaSet", rsHash)
+		updateResult := a.updateEMQXStatus(r, instance, rsHash)
 		return subResult{err: updateResult}
 	}
 	return subResult{}
 }
 
-func (a *addReplicantSet) updateEMQXStatus(r *reconcileRound, instance *crdv2.EMQX, reason, podTemplateHash string) error {
-	instance.Status.ResetConditions(reason)
+func (a *addReplicantSet) updateEMQXStatus(r *reconcileRound, instance *crdv2.EMQX, podTemplateHash string) error {
 	instance.Status.ReplicantNodesStatus.UpdateRevision = podTemplateHash
+	forceReplicantNodesProgressing(instance)
 	return a.Client.Status().Update(r.ctx, instance)
 }
 

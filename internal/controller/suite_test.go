@@ -29,6 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	ginkgotypes "github.com/onsi/ginkgo/v2/types"
+	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
 
@@ -88,6 +89,9 @@ func TestControllers(t *testing.T) {
 var _ = BeforeSuite(func() {
 	timeout = time.Second * 10
 	interval = time.Second
+
+	gomega.SetDefaultEventuallyTimeout(timeout)
+	gomega.SetDefaultEventuallyPollingInterval(interval)
 
 	logger = zap.New(
 		zap.WriteTo(GinkgoWriter),
@@ -157,6 +161,11 @@ var _ = AfterSuite(func() {
 	// err := testEnv.Stop()
 	// Expect(err).NotTo(HaveOccurred())
 })
+
+func actualObject[Object client.Object](o Object) (Object, error) {
+	err := k8sClient.Get(ctx, client.ObjectKeyFromObject(o), o)
+	return o, err
+}
 
 func newReconcileRound() *reconcileRound {
 	req := req.NewMockRequester(

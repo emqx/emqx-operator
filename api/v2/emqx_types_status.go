@@ -172,57 +172,29 @@ type DSDBReplicationStatus struct {
 }
 
 const (
-	Initialized               string = "Initialized"
 	CoreNodesProgressing      string = "CoreNodesProgressing"
-	CoreNodesReady            string = "CoreNodesReady"
 	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
-	ReplicantNodesReady       string = "ReplicantNodesReady"
 	Available                 string = "Available"
 	Ready                     string = "Ready"
 )
 
-func (s *EMQXStatus) ResetConditions(reason string) {
-	conditionTypes := []string{}
-	for _, c := range s.Conditions {
-		if c.Type != Initialized && c.Status == metav1.ConditionTrue {
-			conditionTypes = append(conditionTypes, c.Type)
-		}
+func (s *EMQXStatus) SetCondition(ty string, status metav1.ConditionStatus, reason, message string) {
+	_, existing := s.GetCondition(ty)
+	if existing != nil &&
+		existing.Status == status &&
+		existing.Reason == reason &&
+		existing.Message == message {
+		return
 	}
-	for _, conditionType := range conditionTypes {
-		s.SetFalseCondition(conditionType, reason)
+	s.RemoveCondition(ty)
+	c := metav1.Condition{
+		Type:               ty,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: metav1.Now(),
 	}
-}
-
-func (s *EMQXStatus) SetCondition(c metav1.Condition) {
-	s.RemoveCondition(c.Type)
-	c.LastTransitionTime = metav1.Now()
-	s.Conditions = slices.Insert(s.Conditions, 0, c)
-}
-
-func (s *EMQXStatus) SetTrueCondition(conditionType string) {
-	s.SetCondition(metav1.Condition{
-		Type:   conditionType,
-		Status: metav1.ConditionTrue,
-		Reason: conditionType,
-	})
-}
-
-func (s *EMQXStatus) SetFalseCondition(conditionType string, reason string) {
-	s.SetCondition(metav1.Condition{
-		Type:   conditionType,
-		Status: metav1.ConditionFalse,
-		Reason: reason,
-	})
-}
-
-func (s *EMQXStatus) GetLastTrueCondition() *metav1.Condition {
-	for i := range s.Conditions {
-		c := s.Conditions[i]
-		if c.Status == metav1.ConditionTrue {
-			return &c
-		}
-	}
-	return nil
+	s.Conditions = append(s.Conditions, c)
 }
 
 func (s *EMQXStatus) GetCondition(conditionType string) (int, *metav1.Condition) {
