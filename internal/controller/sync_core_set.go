@@ -191,10 +191,19 @@ func checkCorePodRemoval(
 	}
 
 	if nodeInfo.Sessions > 0 {
-		return coreAdmission{Action: admissionEvacuate, Reason: fmt.Sprintf("node %s has active sessions", nodeInfo.Name)}
+		if instance.Spec.NumCoreReplicas() == 1 && !instance.Spec.HasReplicants() {
+			return coreAdmission{
+				Action: admissionRemove,
+				Reason: fmt.Sprintf("node %s has active sessions nowhere to evacuate", nodeInfo.Name),
+			}
+		}
+		return coreAdmission{
+			Action: admissionEvacuate,
+			Reason: fmt.Sprintf("node %s has active sessions", nodeInfo.Name),
+		}
 	}
 
-	return coreAdmission{Action: admissionRemove}
+	return coreAdmission{Action: admissionRemove, Reason: "node is safe to stop"}
 }
 
 // onCoreAdmission performs the side effects implied by a coreAdmission.
@@ -209,6 +218,7 @@ func (s *syncCoreSet) onCoreAdmission(
 	switch admission.Action {
 	case admissionRemove:
 		r.log.V(1).Info("removing core pod",
+			"reason", admission.Reason,
 			"pod", klog.KObj(candidate),
 			"statefulSet", klog.KObj(r.state.coreSet()),
 			"cause", cause,

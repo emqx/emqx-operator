@@ -357,6 +357,18 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 		))
 	})
 
+	It("single node session > 0", func() {
+		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
+		instance.Status.CoreNodes = []crdv2.EMQXNode{
+			{Name: "emqx@" + pod0.Name, PodName: pod0.Name, Status: "running", Sessions: 99999},
+		}
+		admission := checkCorePodRemoval(round, instance, pod0, false)
+		Expect(admission).Should(And(
+			HaveField("Action", Equal(admissionRemove)),
+			HaveField("Reason", ContainSubstring("nowhere")),
+		))
+	})
+
 	It("node session is 0", func() {
 		instance.Status.CoreNodes[1].Sessions = 0
 		admission := checkCorePodRemoval(round, instance, pod1, false)
