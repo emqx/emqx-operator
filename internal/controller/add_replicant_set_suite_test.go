@@ -40,7 +40,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 		// Create EMQX instance:
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
+		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
 		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
 			Spec: crdv2.EMQXReplicantTemplateSpec{
 				Replicas: ptr.To(int32(3)),
@@ -57,7 +57,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			},
 			Spec: appsv1.StatefulSetSpec{
 				ServiceName: instance.Name + "-core",
-				Replicas:    ptr.To(int32(1)),
+				Replicas:    ptr.To(int32(2)),
 				UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 					Type: appsv1.OnDeleteStatefulSetStrategyType,
 				},
@@ -77,12 +77,12 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			},
 		}
 		Expect(k8sClient.Create(ctx, coreSet)).Should(Succeed())
-		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Status.CoreNodesStatus.ReadyReplicas = 1
-		coreSet.Status.Replicas = 1
-		coreSet.Status.ReadyReplicas = 1
-		coreSet.Status.UpdatedReplicas = 1
-		coreSet.Status.CurrentReplicas = 1
+		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
+		instance.Status.CoreNodesStatus.ReadyReplicas = 2
+		coreSet.Status.Replicas = 2
+		coreSet.Status.ReadyReplicas = 2
+		coreSet.Status.UpdatedReplicas = 2
+		coreSet.Status.CurrentReplicas = 2
 		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
 		Expect(k8sClient.Status().Update(ctx, instance)).Should(Succeed())
 		// Instantiate reconciler and reconcile round:
@@ -105,6 +105,15 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 				Should(Equal(subResult{}))
 			Expect(replicantSets(instance)).
 				To(BeEmpty())
+		})
+	})
+
+	When("single core node instance", func() {
+		It("should fail to create", func() {
+			instanceInvalid := instance.DeepCopy()
+			instanceInvalid.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
+			instanceInvalid.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(2))
+			Expect(k8sClient.Create(ctx, instanceInvalid)).To(HaveOccurred())
 		})
 	})
 

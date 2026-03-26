@@ -16001,6 +16001,12 @@ spec:
             required:
             - image
             type: object
+            x-kubernetes-validations:
+            - message: Core-replicant clusters require at least 2 core replicas for
+                rolling updates.
+              rule: '!has(self.replicantTemplate) || !has(self.replicantTemplate.spec.replicas)
+                || self.replicantTemplate.spec.replicas == 0 || self.coreTemplate.spec.replicas
+                >= 2'
           status:
             description: Current status of the EMQX cluster.
             properties:

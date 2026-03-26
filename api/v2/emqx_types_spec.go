@@ -23,6 +23,7 @@ import (
 )
 
 // EMQXSpec defines the desired state of EMQX.
+// +kubebuilder:validation:XValidation:rule="!has(self.replicantTemplate) || !has(self.replicantTemplate.spec.replicas) || self.replicantTemplate.spec.replicas == 0 || self.coreTemplate.spec.replicas >= 2",message="Core-replicant clusters require at least 2 core replicas for rolling updates."
 type EMQXSpec struct {
 	// EMQX container image.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
