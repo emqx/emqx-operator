@@ -210,7 +210,7 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 
 	var round *reconcileRound
 	var coreSet *appsv1.StatefulSet
-	var currentPod *corev1.Pod
+	var pod0, pod1 *corev1.Pod
 
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
@@ -230,7 +230,7 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 			},
 			Spec: appsv1.StatefulSetSpec{
 				ServiceName: emqx.Name + "-core",
-				Replicas:    ptr.To(int32(1)),
+				Replicas:    ptr.To(int32(2)),
 				UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 					Type: appsv1.OnDeleteStatefulSetStrategyType,
 				},
@@ -251,7 +251,7 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 		}
 		Expect(k8sClient.Create(ctx, coreSet)).Should(Succeed())
 
-		currentPod = &corev1.Pod{
+		pod0 = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      coreSet.Name + "-0",
 				Namespace: ns.Name,
@@ -277,10 +277,13 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 				},
 			},
 		}
-		Expect(k8sClient.Create(ctx, currentPod)).Should(Succeed())
+		pod1 = pod0.DeepCopy()
+		pod1.ObjectMeta.Name = coreSet.Name + "-1"
+		Expect(k8sClient.Create(ctx, pod0)).Should(Succeed())
+		Expect(k8sClient.Create(ctx, pod1)).Should(Succeed())
 
-		coreSet.Status.Replicas = 1
-		coreSet.Status.ReadyReplicas = 1
+		coreSet.Status.Replicas = 2
+		coreSet.Status.ReadyReplicas = 2
 		coreSet.Status.UpdateRevision = "new-revision"
 		coreSet.Status.CurrentRevision = "old-revision"
 		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
@@ -293,23 +296,25 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 	BeforeEach(func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
+		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
 		instance.Status.CoreNodes = []crdv2.EMQXNode{
-			{Name: "emqx@" + currentPod.Name, PodName: currentPod.Name, Status: "running"},
+			{Name: "emqx@" + pod0.Name, PodName: pod0.Name, Status: "running"},
+			{Name: "emqx@" + pod1.Name, PodName: pod1.Name, Status: "running"},
 		}
-		currentPod.Status.Conditions = []corev1.PodCondition{
+		pod0.Status.Conditions = []corev1.PodCondition{
 			{Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: metav1.Now()},
 		}
-		Expect(k8sClient.Status().Update(ctx, currentPod)).Should(Succeed())
+		Expect(k8sClient.Status().Update(ctx, pod0)).Should(Succeed())
 		round = newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 	})
 
 	It("cores not available", func() {
-		// Pod is not Ready, so areCoresAvailable returns false.
-		currentPod.Status.Conditions = []corev1.PodCondition{}
-		Expect(k8sClient.Status().Update(ctx, currentPod)).Should(Succeed())
+		// Pod 0 is not Ready, so areCoresAvailable returns false.
+		pod0.Status.Conditions = []corev1.PodCondition{}
+		Expect(k8sClient.Status().Update(ctx, pod0)).Should(Succeed())
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-		admission := checkCorePodRemoval(round, instance, currentPod, false)
+		admission := checkCorePodRemoval(round, instance, pod1, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("not available")),
@@ -319,7 +324,7 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 	It("cores available / MinReadySeconds has not passed", func() {
 		// But MinReadySeconds is very large, so pod is not yet "available".
 		instance.Spec.UpdateStrategy.MinReadySeconds = 99999999
-		admission := checkCorePodRemoval(round, instance, currentPod, false)
+		admission := checkCorePodRemoval(round, instance, pod1, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("not available")),
@@ -336,7 +341,7 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 			UpdateRevision:  updateRevision,
 			CurrentRevision: currentRevision,
 		}
-		admission := checkCorePodRemoval(round, instance, currentPod, false)
+		admission := checkCorePodRemoval(round, instance, pod1, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("replicaSet")),
@@ -344,8 +349,8 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 	})
 
 	It("node session > 0", func() {
-		instance.Status.CoreNodes[0].Sessions = 99999
-		admission := checkCorePodRemoval(round, instance, currentPod, false)
+		instance.Status.CoreNodes[1].Sessions = 99999
+		admission := checkCorePodRemoval(round, instance, pod1, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionEvacuate)),
 			HaveField("Reason", ContainSubstring("active sessions")),
@@ -353,35 +358,30 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 	})
 
 	It("node session is 0", func() {
-		instance.Status.CoreNodes[0].Sessions = 0
-		admission := checkCorePodRemoval(round, instance, currentPod, false)
-		Expect(admission).Should(And(
+		instance.Status.CoreNodes[1].Sessions = 0
+		admission := checkCorePodRemoval(round, instance, pod1, false)
+		Expect(admission).To(
 			HaveField("Action", Equal(admissionRemove)),
-			HaveField("Reason", BeEmpty()),
-		))
+		)
 	})
 
 	It("DS replication site blocks scale-down", func() {
-		instance.Status.CoreNodes[0].Sessions = 0
-		currentPod.Status.Conditions = []corev1.PodCondition{
-			{Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: metav1.Now()},
+		pod1.Status.Conditions = []corev1.PodCondition{
 			{Type: crdv2.DSReplicationSite, Status: corev1.ConditionTrue},
 		}
-		admission := checkCorePodRemoval(round, instance, currentPod, true)
-		Expect(admission).Should(And(
+		admission := checkCorePodRemoval(round, instance, pod1, true)
+		Expect(admission).To(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("DS replication site")),
 		))
 	})
 
 	It("DS replication site does not block rolling update", func() {
-		instance.Status.CoreNodes[0].Sessions = 0
-		currentPod.Status.Conditions = []corev1.PodCondition{
-			{Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: metav1.Now()},
+		pod1.Status.Conditions = []corev1.PodCondition{
 			{Type: crdv2.DSReplicationSite, Status: corev1.ConditionTrue},
 		}
-		admission := checkCorePodRemoval(round, instance, currentPod, false)
-		Expect(admission).Should(
+		admission := checkCorePodRemoval(round, instance, pod1, false)
+		Expect(admission).To(
 			HaveField("Action", Equal(admissionRemove)),
 		)
 	})

@@ -144,15 +144,21 @@ func checkCorePodRemoval(
 		}
 	}
 
-	// Disallow removing pod if cores just recently became ready.
-	if !r.state.areCoresAvailable(instance) {
-		return coreAdmission{Action: admissionWait, Reason: "cores are not available yet"}
-	}
-
 	if len(status.NodeEvacuations) > 0 {
 		if status.NodeEvacuations[0].State != "prohibiting" {
 			return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
 		}
+	}
+
+	// Disallow removing pod if other cores just recently became ready.
+	numAvailableCores := int32(0)
+	for _, p := range r.state.podsManagedBy(r.state.coreSet()) {
+		if p.GetUID() != pod.GetUID() && isPodAvailable(p, instance) {
+			numAvailableCores++
+		}
+	}
+	if numAvailableCores < instance.Spec.NumCoreReplicas()-1 {
+		return coreAdmission{Action: admissionWait, Reason: "cores are not available yet"}
 	}
 
 	// If a pod is already being deleted, return it.

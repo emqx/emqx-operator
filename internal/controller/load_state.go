@@ -160,7 +160,7 @@ func (r *reconcileState) areCoresAvailable(instance *crdv2.EMQX) bool {
 	if coreSet == nil {
 		return false
 	}
-	available := r.numAvailablePods(coreSet, instance.Spec.UpdateStrategy.MinReadySeconds)
+	available := r.numAvailablePods(coreSet, instance)
 	return available >= instance.Spec.NumCoreReplicas()
 }
 
@@ -169,19 +169,24 @@ func (r *reconcileState) areReplicantsAvailable(instance *crdv2.EMQX) bool {
 	if replicantSet == nil {
 		return instance.Spec.NumReplicantReplicas() == 0
 	}
-	available := r.numAvailablePods(replicantSet, instance.Spec.UpdateStrategy.MinReadySeconds)
+	available := r.numAvailablePods(replicantSet, instance)
 	return available >= instance.Spec.NumReplicantReplicas()
 }
 
 // countAvailablePods counts pods managed by the given owner that are Ready for at least minReadySeconds.
-func (r *reconcileState) numAvailablePods(managedBy metav1.Object, minReadySeconds int32) int32 {
+func (r *reconcileState) numAvailablePods(managedBy metav1.Object, instance *crdv2.EMQX) int32 {
 	var count int32
 	for _, pod := range r.podsManagedBy(managedBy) {
-		if util.PodReadyDuration(pod) > time.Duration(minReadySeconds)*time.Second {
+		if isPodAvailable(pod, instance) {
 			count++
 		}
 	}
 	return count
+}
+
+func isPodAvailable(pod *corev1.Pod, instance *crdv2.EMQX) bool {
+	minReady := time.Duration(instance.Spec.UpdateStrategy.MinReadySeconds) * time.Second
+	return util.PodReadyDuration(pod) > minReady
 }
 
 type loadState struct {
