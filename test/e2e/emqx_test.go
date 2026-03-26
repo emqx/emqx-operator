@@ -156,7 +156,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			checkNoReplicants(Default)
 		})
 
-		It("change image to trigger blue-green update", func() {
+		It("change image to trigger rolling update", func() {
 			By("create MQTTX client")
 			Expect(Kubectl("apply", "-f", "test/e2e/files/resources/mqttx.yaml")).To(Succeed())
 			defer Kubectl("delete", "-f", "test/e2e/files/resources/mqttx.yaml")
@@ -166,15 +166,14 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				"--timeout=1m",
 			)).To(Succeed(), "Timed out waiting MQTTX to be ready")
 
-			By("fetch current core StatefulSet")
-			var stsList appsv1.StatefulSetList
-			coreRev, err := KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.currentRevision}")
-			Expect(err).NotTo(HaveOccurred(), "Failed to get EMQX status")
+			By("fetch core StatefulSet")
+			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelPodTemplateHash+"="+coreRev,
+				"--selector", crdv2.LabelDBRole+"=core",
 				"-o", "json",
-			)).To(UnmarshalInto(&stsList), "Failed to list statefulsets")
-			Expect(stsList.Items).To(HaveLen(1))
+			)).To(UnmarshalInto(&stsListBefore))
+			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
+			stsBefore := stsListBefore.Items[0].DeepCopy()
 
 			By("change EMQX image")
 			changedAt := metav1.Now()
@@ -186,16 +185,26 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("check EMQX cluster node evacuations status")
 			Eventually(KubectlOut).
 				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status.nodeEvacuations}").
-				ShouldNot(ContainSubstring("connection_eviction_rate"))
+				Should(BeEmpty())
 
 			Eventually(checkEMQXReady).WithArguments(changedAt).Should(Succeed())
 			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
 			checkNoReplicants(Default)
 
-			By("check previous core StatefulSet has been scaled down to 0")
-			out, err := KubectlOut("get", "statefulset", stsList.Items[0].Name, "-o", "jsonpath={.status.replicas}")
-			Expect(err).NotTo(HaveOccurred(), "Failed to get core StatefulSet replicas")
-			Expect(out).To(Equal("0"))
+			By("verify exactly one core StatefulSet was updated")
+			var stsList appsv1.StatefulSetList
+			Expect(KubectlOut("get", "statefulset",
+				"--selector", crdv2.LabelDBRole+"=core",
+				"-o", "json",
+			)).To(UnmarshalInto(&stsList))
+
+			Expect(stsList.Items).To(
+				ConsistOf(And(
+					HaveField("ObjectMeta.Name", Equal(stsBefore.ObjectMeta.Name)),
+					HaveField("Status.UpdateRevision", Not(Equal(stsBefore.Status.UpdateRevision))),
+				)),
+				"Unexpected set of core StatefulSets",
+			)
 		})
 
 		It("change config", func() {
