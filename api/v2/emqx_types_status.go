@@ -68,27 +68,27 @@ type NodeEvacuationStatus struct {
 // CoreNodesStatus is the summary status of core nodes managed by a single StatefulSet.
 type CoreNodesStatus struct {
 	// Number of ready replicas.
-	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	ReadyReplicas int32 `json:"readyReplicas"`
 	// Number of replicas already updated to the desired pod template.
-	UpdatedReplicas int32 `json:"updatedReplicas,omitempty"`
+	UpdatedReplicas int32 `json:"updatedReplicas"`
 	// Number of replicas still running the previous pod template.
-	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
+	CurrentReplicas int32 `json:"currentReplicas"`
 }
 
 // ReplicantNodesStatus is the summary status of the set of replicant nodes.
 // The multi-ReplicaSet pattern requires revision tracking at the CR level.
 type ReplicantNodesStatus struct {
 	// Number of ready replicas.
-	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	ReadyReplicas int32 `json:"readyReplicas"`
 	// Current revision of the replicant set.
 	CurrentRevision string `json:"currentRevision,omitempty"`
 	// Number of replicas running current revision.
-	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
+	CurrentReplicas int32 `json:"currentReplicas"`
 	// Update revision of the replicant set.
 	// When different from the current revision, the set is being updated.
 	UpdateRevision string `json:"updateRevision,omitempty"`
 	// Number of replicas running update revision.
-	UpdateReplicas int32 `json:"updateReplicas,omitempty"`
+	UpdateReplicas int32 `json:"updateReplicas"`
 
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 }
@@ -113,9 +113,9 @@ type EMQXNode struct {
 	// +kubebuilder:example=core
 	Role string `json:"role,omitempty"`
 	// Number of MQTT sessions
-	Sessions int64 `json:"sessions,omitempty"`
+	Sessions int64 `json:"sessions"`
 	// Number of connected MQTT clients
-	Connections int64 `json:"connections,omitempty"`
+	Connections int64 `json:"connections"`
 }
 
 func (s EMQXStatus) FindNode(node string) *EMQXNode {

@@ -16101,6 +16101,9 @@ spec:
                       description: EMQX version
                       example: 5.10.1
                       type: string
+                  required:
+                  - connections
+                  - sessions
                   type: object
                 type: array
               coreNodesStatus:
@@ -16120,6 +16123,10 @@ spec:
                       pod template.
                     format: int32
                     type: integer
+                required:
+                - currentReplicas
+                - readyReplicas
+                - updatedReplicas
                 type: object
               dsReplication:
                 description: Status of EMQX Durable Storage replication.
@@ -16243,6 +16250,9 @@ spec:
                       description: EMQX version
                       example: 5.10.1
                       type: string
+                  required:
+                  - connections
+                  - sessions
                   type: object
                 type: array
               replicantNodesStatus:
@@ -16271,6 +16281,10 @@ spec:
                       Update revision of the replicant set.
                       When different from the current revision, the set is being updated.
                     type: string
+                required:
+                - currentReplicas
+                - readyReplicas
+                - updateReplicas
                 type: object
             type: object
         type: object

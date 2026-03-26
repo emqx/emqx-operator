@@ -52,10 +52,12 @@ func checkEMQXStatus(g Gomega, coreReplicas int) {
 }
 
 func checkNoReplicants(g Gomega) {
-	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus}")).
-		To(Equal("{}"), "EMQX cluster status has replicant nodes status")
-	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodes}")).
-		To(BeEmpty(), "EMQX cluster status lists replicant nodes")
+	g.Expect(KubectlOut("get", "emqx", "emqx",
+		"-o", "jsonpath={.status.replicantNodesStatus.currentReplicas}",
+	)).To(Equal("0"), "EMQX cluster status has replicant replicas")
+	g.Expect(KubectlOut("get", "emqx", "emqx",
+		"-o", "jsonpath={.status.replicantNodes}",
+	)).To(BeEmpty(), "EMQX cluster status lists replicant nodes")
 }
 
 func checkReplicantStatus(g Gomega, replicantReplicas int) {
