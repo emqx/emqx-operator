@@ -252,7 +252,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 		})
 	})
 
-	Context("EMQX Cluster / Botched Blue-Green Updates", func() {
+	Context("EMQX Cluster / Botched Rolling Updates", func() {
 		// Initial number of core replicas:
 		var coreReplicas int = 2
 
@@ -270,7 +270,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
 		})
 
-		It("trigger botched blue-green updates", func() {
+		It("trigger botched rolling updates", func() {
 			By("create MQTT workload")
 			Expect(Kubectl("apply", "-f", "test/e2e/files/resources/mqttx.yaml")).To(Succeed())
 			defer Kubectl("delete", "-f", "test/e2e/files/resources/mqttx.yaml")
@@ -280,14 +280,6 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				"--timeout=1m",
 			)).To(Succeed(), "Timed out waiting MQTTX to be ready")
 
-			By("decrease revision history limit")
-			Expect(Kubectl("patch", "emqx", "emqx",
-				"--type", "json",
-				"--patch", `[
-					{"op": "replace", "path": "/spec/revisionHistoryLimit", "value": 1}
-				]`)).
-				To(Succeed())
-
 			By("lookup initial EMQX status")
 			var statusInitial crdv2.CoreNodesStatus
 			Eventually(checkEMQXReady).Should(Succeed())
@@ -295,12 +287,10 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				To(UnmarshalInto(&statusInitial))
 
 			By("specify incorrect EMQX image")
-			coreReplicas = 1
 			changedAt1 := metav1.Now()
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
 				"--patch", `[
-					{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 1},
 					{"op": "replace", "path": "/spec/image", "value": "emqx/emqx:5.Y.ZZZ"}
 				]`)).
 				To(Succeed())
@@ -318,12 +308,14 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				To(Succeed())
 			Consistently(checkEMQXReady, "30s", "3s").WithArguments(changedAt2).Should(Not(Succeed()))
 
-			By("verify core nodes are still intact")
 			var status crdv2.CoreNodesStatus
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
-				To(BeUnmarshalledAs(&status, And(
-					HaveField("ReadyReplicas", Equal(statusInitial.ReadyReplicas)),
-				)))
+				To(
+					BeUnmarshalledAs(&status,
+						HaveField("ReadyReplicas", Equal(statusInitial.ReadyReplicas-1)),
+					),
+					"no more than 1 replica went unavailable",
+				)
 
 			By("specify correct EMQX config")
 			changedAt3 := metav1.Now()
