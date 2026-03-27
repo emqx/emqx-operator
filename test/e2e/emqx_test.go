@@ -338,7 +338,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 
 	Context("EMQX Core-Replicant Cluster", func() {
 		// Initial number of core and replicant replicas:
-		var coreReplicas int = 1
+		var coreReplicas int = 2
 		var replicantReplicas int = 2
 
 		It("deploy cluster", func() {
@@ -358,13 +358,13 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 		})
 
 		It("scale cluster up", func() {
-			coreReplicas = 2
+			coreReplicas = 3
 			replicantReplicas = 3
 			scaleupStartedAt := metav1.Now()
 			By("change number of core replicas")
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
-				"--patch", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 2}]`)).
+				"--patch", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 3}]`)).
 				To(Succeed(), "Failed to scale emqx cluster")
 			By("change number of replicant replicas")
 			Expect(Kubectl("patch", "emqx", "emqx",
@@ -377,7 +377,27 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
 		})
 
-		It("change image for target blue-green update", func() {
+		It("scale cluster down", func() {
+			coreReplicas = 2
+			replicantReplicas = 2
+			scaledownStartedAt := metav1.Now()
+			By("change number of core replicas")
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "json",
+				"--patch", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 2}]`)).
+				To(Succeed(), "Failed to scale emqx cluster")
+			By("change number of replicant replicas")
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "json",
+				"--patch", `[{"op": "replace", "path": "/spec/replicantTemplate/spec/replicas", "value": 2}]`)).
+				To(Succeed(), "Failed to scale emqx cluster")
+			By("wait for EMQX cluster to be ready after scaling")
+			Eventually(checkEMQXReady).WithArguments(scaledownStartedAt).Should(Succeed())
+			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+		})
+
+		It("change image to trigger rolling update", func() {
 			By("create MQTTX client")
 			Expect(Kubectl("apply", "-f", "test/e2e/files/resources/mqttx.yaml")).To(Succeed())
 			defer Kubectl("delete", "-f", "test/e2e/files/resources/mqttx.yaml")
@@ -387,15 +407,13 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				"--timeout=1m",
 			)).To(Succeed(), "Timed out waiting for MQTTX to be ready")
 
-			By("fetch current core StatefulSet")
-			var stsList appsv1.StatefulSetList
-			coreRev, err := KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.currentRevision}")
-			Expect(err).NotTo(HaveOccurred(), "Failed to get EMQX status")
+			By("fetch core StatefulSet")
+			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelPodTemplateHash+"="+coreRev,
+				"--selector", crdv2.LabelDBRole+"=core",
 				"-o", "json",
-			)).To(UnmarshalInto(&stsList), "Failed to list statefulsets")
-			Expect(stsList.Items).To(HaveLen(1))
+			)).To(UnmarshalInto(&stsListBefore))
+			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
 
 			By("fetch current replicant ReplicaSet")
 			var rsList appsv1.ReplicaSetList
@@ -424,15 +442,26 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
 			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
 
-			By("check previous coreSet has been scaled down to 0")
-			out, err := KubectlOut("get", "statefulset", stsList.Items[0].Name, "-o", "jsonpath={.status.replicas}")
-			Expect(err).NotTo(HaveOccurred(), "Failed to get core StatefulSet")
-			Expect(out).To(Equal("0"))
+			By("verify exactly one core StatefulSet was updated")
+			var stsList appsv1.StatefulSetList
+			Expect(KubectlOut("get", "statefulset",
+				"--selector", crdv2.LabelDBRole+"=core",
+				"-o", "json",
+			)).To(UnmarshalInto(&stsList))
+
+			stsBefore := stsListBefore.Items[0]
+			Expect(stsList.Items).To(
+				ConsistOf(And(
+					HaveField("ObjectMeta.Name", Equal(stsBefore.ObjectMeta.Name)),
+					HaveField("Status.UpdateRevision", Not(Equal(stsBefore.Status.UpdateRevision))),
+				)),
+				"Unexpected set of core StatefulSets",
+			)
 
 			By("check previous replicantSet has been scaled down to 0")
-			out, err = KubectlOut("get", "replicaset", rsList.Items[0].Name, "-o", "jsonpath={.status.replicas}")
-			Expect(err).NotTo(HaveOccurred(), "Failed to get replicant ReplicaSet")
-			Expect(out).To(Equal("0"))
+			Expect(KubectlOut("get", "replicaset", rsList.Items[0].Name,
+				"-o", "jsonpath={.status.replicas}",
+			)).To(Equal("0"))
 		})
 
 		It("delete cluster", func() {

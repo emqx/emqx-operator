@@ -58,7 +58,7 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResu
 			"from", currentReplicas,
 			"to", desiredReplicas,
 		)
-		return s.scaleDown(r, instance)
+		return s.scaleDown(r, instance, currentReplicas)
 	}
 
 	// Handle rolling update: replace outdated pods one at a time, highest ordinal first.
@@ -109,17 +109,30 @@ func (s *syncCoreSet) scaleUp(r *reconcileRound, desiredReplicas int32) subResul
 
 // scaleDown removes the highest-ordinal pod with evacuation gating, then
 // decrements the StatefulSet replica count.
-func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX) subResult {
-	pods := r.state.podsManagedBy(r.state.coreSet())
-	sortByName(pods)
+func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX, currentReplicas int32) subResult {
+	coreSet := r.state.coreSet()
 
-	if len(pods) == 0 {
-		return subResult{}
+	// Candidate is the highest-ordinal pod, where ordinal = currentReplicas-1.
+	candidateName := fmt.Sprintf("%s-%d", coreSet.Name, currentReplicas-1)
+	candidate := r.state.podWithName(candidateName)
+
+	var admission coreAdmission
+	if candidate == nil {
+		admission = coreAdmission{Action: admissionRemove, Reason: "already terminated"}
+	} else {
+		admission = checkCorePodRemoval(r, instance, candidate, true)
 	}
 
-	// Scale down the highest-ordinal pod.
-	candidate := pods[len(pods)-1]
-	admission := checkCorePodRemoval(r, instance, candidate, true)
+	if admission.Action == admissionRemove {
+		// Decrement StatefulSet replica count first so the StatefulSet controller
+		// won't recreate the pod after we delete it.
+		newReplicas := currentReplicas - 1
+		coreSet.Spec.Replicas = &newReplicas
+		err := s.Client.Update(r.ctx, coreSet)
+		if err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to decrement coreSet replicas")}
+		}
+	}
 
 	return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
 }
