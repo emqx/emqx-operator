@@ -104,18 +104,10 @@ var _ = Describe("Reconciler syncReplicantSet", Ordered, func() {
 
 		currentReplicantPod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: current.Name + "-",
-				Namespace:    current.Namespace,
-				Labels:       current.Spec.Template.Labels,
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: "apps/v1",
-						Kind:       "ReplicaSet",
-						Name:       current.Name,
-						UID:        current.UID,
-						Controller: ptr.To(true),
-					},
-				},
+				GenerateName:    current.Name + "-",
+				Namespace:       current.Namespace,
+				Labels:          current.Spec.Template.Labels,
+				OwnerReferences: ownerReferences(current),
 			},
 			Spec: current.Spec.Template.Spec,
 		}
@@ -124,18 +116,10 @@ var _ = Describe("Reconciler syncReplicantSet", Ordered, func() {
 		// Create a pod for the update RS so areReplicantsAvailable is satisfied.
 		updateReplicantPod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: update.Name + "-",
-				Namespace:    update.Namespace,
-				Labels:       update.Spec.Template.Labels,
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: "apps/v1",
-						Kind:       "ReplicaSet",
-						Name:       update.Name,
-						UID:        update.UID,
-						Controller: ptr.To(true),
-					},
-				},
+				GenerateName:    update.Name + "-",
+				Namespace:       update.Namespace,
+				Labels:          update.Spec.Template.Labels,
+				OwnerReferences: ownerReferences(update),
 			},
 			Spec: update.Spec.Template.Spec,
 		}
@@ -204,7 +188,7 @@ var _ = Describe("Reconciler syncReplicantSet", Ordered, func() {
 	})
 })
 
-var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
+var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crdv2.EMQX
 
@@ -220,7 +204,13 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+	})
 
+	AfterAll(func() {
+		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
+	})
+
+	BeforeEach(func() {
 		coreLabels := emqx.DefaultLabelsWith(crdv2.CoreLabels())
 		coreSet = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -259,17 +249,9 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 					crdv2.LabelInstance:                   "emqx",
 					crdv2.LabelManagedBy:                  "emqx-operator",
 					crdv2.LabelDBRole:                     "core",
-					appsv1.ControllerRevisionHashLabelKey: "old-revision",
+					appsv1.ControllerRevisionHashLabelKey: currentRevision,
 				},
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: "apps/v1",
-						Kind:       "StatefulSet",
-						Name:       coreSet.Name,
-						UID:        coreSet.UID,
-						Controller: ptr.To(true),
-					},
-				},
+				OwnerReferences: ownerReferences(coreSet),
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -281,19 +263,19 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 		pod1.ObjectMeta.Name = coreSet.Name + "-1"
 		Expect(k8sClient.Create(ctx, pod0)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, pod1)).Should(Succeed())
+		pod0.Status.Conditions = []corev1.PodCondition{
+			{Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: metav1.Now()},
+		}
+		pod1.Status.Conditions = pod0.Status.Conditions
+		Expect(k8sClient.Status().Update(ctx, pod0)).Should(Succeed())
+		Expect(k8sClient.Status().Update(ctx, pod1)).Should(Succeed())
 
 		coreSet.Status.Replicas = 2
 		coreSet.Status.ReadyReplicas = 2
-		coreSet.Status.UpdateRevision = "new-revision"
-		coreSet.Status.CurrentRevision = "old-revision"
+		coreSet.Status.CurrentRevision = currentRevision
+		coreSet.Status.UpdateRevision = updateRevision
 		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
-	})
 
-	AfterAll(func() {
-		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
-	})
-
-	BeforeEach(func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
@@ -301,12 +283,15 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 			{Name: "emqx@" + pod0.Name, PodName: pod0.Name, Status: "running"},
 			{Name: "emqx@" + pod1.Name, PodName: pod1.Name, Status: "running"},
 		}
-		pod0.Status.Conditions = []corev1.PodCondition{
-			{Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: metav1.Now()},
-		}
-		Expect(k8sClient.Status().Update(ctx, pod0)).Should(Succeed())
+
 		round = newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		k8sClient.Delete(ctx, pod0)
+		k8sClient.Delete(ctx, pod1)
+		Expect(k8sClient.Delete(ctx, coreSet)).Should(Succeed())
 	})
 
 	It("cores not available", func() {
@@ -328,23 +313,6 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("not available")),
-		))
-	})
-
-	It("replicant replicaSet is still updating", func() {
-		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
-			Spec: crdv2.EMQXReplicantTemplateSpec{
-				Replicas: ptr.To(int32(3)),
-			},
-		}
-		instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
-			UpdateRevision:  updateRevision,
-			CurrentRevision: currentRevision,
-		}
-		admission := checkCorePodRemoval(round, instance, pod1, false)
-		Expect(admission).Should(And(
-			HaveField("Action", Equal(admissionWait)),
-			HaveField("Reason", ContainSubstring("replicaSet")),
 		))
 	})
 
@@ -377,6 +345,43 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 		)
 	})
 
+	When("replicant replicaSet updating", func() {
+		BeforeEach(func() {
+			instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
+				Spec: crdv2.EMQXReplicantTemplateSpec{
+					Replicas: ptr.To(int32(3)),
+				},
+			}
+			instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
+				UpdateRevision:  updateRevision,
+				CurrentRevision: currentRevision,
+			}
+		})
+
+		It("should allow rolling update with multiple old cores", func() {
+			s := &syncCoreSet{emqxReconciler}
+			result := s.rollingUpdate(round, instance)
+			Expect(result.err).ShouldNot(HaveOccurred())
+			// Highest ordinal `pod1` should have been deleted.
+			_, err := actualObject(pod1)
+			Expect(err).Should(HaveOccurred())
+		})
+
+		It("should block rolling update with 1 old core", func() {
+			// Simulate `pod1` already on new revision, while `pod0` is outdated.
+			pod1.Labels[appsv1.ControllerRevisionHashLabelKey] = coreSet.Status.UpdateRevision
+			Expect(k8sClient.Update(ctx, pod1)).Should(Succeed())
+			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+			// Perform rolling update reconciliation.
+			s := &syncCoreSet{emqxReconciler}
+			result := s.rollingUpdate(round, instance)
+			Expect(result.err).ShouldNot(HaveOccurred())
+			// Latest old core `pod0` should have been deleted.
+			Expect(actualObject(pod0)).ShouldNot(BeNil())
+		})
+
+	})
+
 	It("DS replication site blocks scale-down", func() {
 		pod1.Status.Conditions = []corev1.PodCondition{
 			{Type: crdv2.DSReplicationSite, Status: corev1.ConditionTrue},
@@ -399,7 +404,7 @@ var _ = Describe("Reconciler syncCoreSet / admissions", Ordered, func() {
 	})
 })
 
-var _ = Describe("Reconciler syncReplicantSets / admissions", Ordered, func() {
+var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crdv2.EMQX
 
@@ -454,18 +459,10 @@ var _ = Describe("Reconciler syncReplicantSets / admissions", Ordered, func() {
 		// Create pod owned by "current" RS.
 		currentPod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: current.Name + "-",
-				Namespace:    ns.Name,
-				Labels:       current.Spec.Selector.MatchLabels,
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: "apps/v1",
-						Kind:       "ReplicaSet",
-						Name:       current.Name,
-						UID:        current.UID,
-						Controller: ptr.To(true),
-					},
-				},
+				GenerateName:    current.Name + "-",
+				Namespace:       ns.Name,
+				Labels:          current.Spec.Selector.MatchLabels,
+				OwnerReferences: ownerReferences(current),
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -508,18 +505,10 @@ var _ = Describe("Reconciler syncReplicantSets / admissions", Ordered, func() {
 		// Create a Ready pod owned by "update" RS so that areReplicantsAvailable passes.
 		updatePod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: update.Name + "-",
-				Namespace:    ns.Name,
-				Labels:       update.Spec.Selector.MatchLabels,
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: "apps/v1",
-						Kind:       "ReplicaSet",
-						Name:       update.Name,
-						UID:        update.UID,
-						Controller: ptr.To(true),
-					},
-				},
+				GenerateName:    update.Name + "-",
+				Namespace:       ns.Name,
+				Labels:          update.Spec.Selector.MatchLabels,
+				OwnerReferences: ownerReferences(update),
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{

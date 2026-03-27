@@ -81,6 +81,22 @@ func (r *reconcileState) partOfCoreSetRevision(pod *corev1.Pod, revision string)
 	return podRevision == revision
 }
 
+// numCoresRevision counts number of core pods running specified StatefulSet revision.
+func (r *reconcileState) numCoresRevision(revision string) int {
+	coreSet := r.coreSet()
+	if coreSet == nil {
+		return 0
+	}
+	num := 0
+	for _, pod := range r.podsManagedBy(coreSet) {
+		podRevision := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
+		if podRevision == revision {
+			num++
+		}
+	}
+	return num
+}
+
 // Returns ReplicaSet representing current set of replicant nodes.
 // Current set is considered outdated if CurrentRevision != UpdateRevision.
 func (r *reconcileState) currentReplicantSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {

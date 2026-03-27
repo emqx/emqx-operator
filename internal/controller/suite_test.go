@@ -33,10 +33,12 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -165,6 +167,28 @@ var _ = AfterSuite(func() {
 func actualObject[Object client.Object](o Object) (Object, error) {
 	err := k8sClient.Get(ctx, client.ObjectKeyFromObject(o), o)
 	return o, err
+}
+
+func ownerReferences(owner client.Object) []metav1.OwnerReference {
+	var apiVersion, kind string
+	switch owner.(type) {
+	case *appsv1.StatefulSet:
+		apiVersion = "apps/v1"
+		kind = "StatefulSet"
+	case *appsv1.ReplicaSet:
+		apiVersion = "apps/v1"
+		kind = "ReplicaSet"
+	}
+	return []metav1.OwnerReference{
+		{
+			APIVersion:         apiVersion,
+			Kind:               kind,
+			Name:               owner.GetName(),
+			UID:                owner.GetUID(),
+			BlockOwnerDeletion: ptr.To(true),
+			Controller:         ptr.To(true),
+		},
+	}
 }
 
 func newReconcileRound() *reconcileRound {

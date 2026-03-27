@@ -68,16 +68,8 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResu
 // rollingUpdate detects outdated core pods and replaces them one at a time,
 // starting from the highest ordinal. Each pod is evacuated before deletion.
 func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crdv2.EMQX) subResult {
-	coreSet := r.state.coreSet()
-
-	var outdated []*corev1.Pod
-	for _, pod := range r.state.podsManagedBy(coreSet) {
-		if !r.state.partOfCoreSetRevision(pod, coreSet.Status.UpdateRevision) {
-			outdated = append(outdated, pod)
-		}
-	}
-
-	// Sort by name descending to delete highest ordinal first.
+	// Sort outdated pods by name descending to delete highest ordinal first.
+	outdated := listOutdatedPods(r)
 	sortByName(outdated)
 
 	if len(outdated) == 0 {
@@ -85,13 +77,23 @@ func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crdv2.EMQX) sub
 	}
 
 	r.log.V(1).Info("rolling coreSet update",
-		"statefulSet", klog.KObj(coreSet),
+		"statefulSet", klog.KObj(r.state.coreSet()),
 		"outdatedPods", len(outdated),
 	)
 
 	candidate := outdated[len(outdated)-1]
-	admission := checkCorePodRemoval(r, instance, candidate, false)
 
+	if instance.Spec.HasReplicants() &&
+		instance.Status.ReplicantNodesStatus.CurrentRevision != instance.Status.ReplicantNodesStatus.UpdateRevision {
+		// ReplicantSet is in the process of update.
+		// Keep at least one old-version core alive so current-revision replicants can rejoin.
+		if len(outdated) == 1 {
+			admission := coreAdmission{Action: admissionWait, Reason: "current replicantSet still migrating"}
+			return s.onCoreAdmission(r, instance, candidate, admission, "rollingUpdate")
+		}
+	}
+
+	admission := checkCorePodRemoval(r, instance, candidate, false)
 	return s.onCoreAdmission(r, instance, candidate, admission, "rollingUpdate")
 }
 
@@ -122,6 +124,17 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX) subResu
 	return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
 }
 
+func listOutdatedPods(r *reconcileRound) []*corev1.Pod {
+	coreSet := r.state.coreSet()
+	var outdated []*corev1.Pod
+	for _, pod := range r.state.podsManagedBy(coreSet) {
+		if !r.state.partOfCoreSetRevision(pod, coreSet.Status.UpdateRevision) {
+			outdated = append(outdated, pod)
+		}
+	}
+	return outdated
+}
+
 // checkCorePodRemoval is a pure function that decides whether a core pod can
 // be safely removed. It inspects instance status and pod state but performs no
 // side effects.
@@ -137,12 +150,6 @@ func checkCorePodRemoval(
 	isPermanent bool,
 ) coreAdmission {
 	status := &instance.Status
-
-	if instance.Spec.HasReplicants() {
-		if status.ReplicantNodesStatus.CurrentRevision != status.ReplicantNodesStatus.UpdateRevision {
-			return coreAdmission{Action: admissionWait, Reason: "replicant replicaSet is still updating"}
-		}
-	}
 
 	if len(status.NodeEvacuations) > 0 {
 		if status.NodeEvacuations[0].State != "prohibiting" {

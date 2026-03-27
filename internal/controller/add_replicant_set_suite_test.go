@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"time"
+
 	crdv2 "github.com/emqx/emqx-operator/api/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +19,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crdv2.EMQX = &crdv2.EMQX{}
 	var coreSet *appsv1.StatefulSet
+	var corePod0, corePod1 *corev1.Pod
 	var a *addReplicantSet
 	var round *reconcileRound
 
@@ -76,15 +79,41 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 				},
 			},
 		}
-		Expect(k8sClient.Create(ctx, coreSet)).Should(Succeed())
-		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
+		Expect(k8sClient.Create(ctx, coreSet)).To(Succeed())
+		corePod0 = &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            coreSet.Name + "-0",
+				Namespace:       ns.Name,
+				Labels:          coreLabels,
+				OwnerReferences: ownerReferences(coreSet),
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{Name: "emqx", Image: "emqx"},
+				},
+			},
+		}
+		corePod1 = corePod0.DeepCopy()
+		corePod1.ObjectMeta.Name = coreSet.Name + "-1"
+		Expect(k8sClient.Create(ctx, corePod0)).To(Succeed())
+		Expect(k8sClient.Create(ctx, corePod1)).To(Succeed())
 		instance.Status.CoreNodesStatus.ReadyReplicas = 2
 		coreSet.Status.Replicas = 2
 		coreSet.Status.ReadyReplicas = 2
 		coreSet.Status.UpdatedReplicas = 2
 		coreSet.Status.CurrentReplicas = 2
-		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
-		Expect(k8sClient.Status().Update(ctx, instance)).Should(Succeed())
+		corePod0.Status.Conditions = []corev1.PodCondition{
+			{
+				Type:               corev1.PodReady,
+				Status:             corev1.ConditionTrue,
+				LastTransitionTime: metav1.NewTime(time.Now().Add(-1 * time.Minute)),
+			},
+		}
+		corePod1.Status.Conditions = corePod0.Status.Conditions
+		Expect(k8sClient.Status().Update(ctx, instance)).To(Succeed())
+		Expect(k8sClient.Status().Update(ctx, coreSet)).To(Succeed())
+		Expect(k8sClient.Status().Update(ctx, corePod0)).To(Succeed())
+		Expect(k8sClient.Status().Update(ctx, corePod1)).To(Succeed())
 		// Instantiate reconciler and reconcile round:
 		a = &addReplicantSet{emqxReconciler}
 		round = newReconcileRound()
@@ -92,6 +121,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 	})
 
 	AfterEach(func() {
+		_ = k8sClient.Delete(ctx, corePod0)
+		_ = k8sClient.Delete(ctx, corePod1)
 		Expect(k8sClient.Delete(ctx, coreSet)).To(Succeed())
 		Expect(k8sClient.Delete(ctx, instance)).To(Succeed())
 	})
@@ -117,11 +148,12 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 		})
 	})
 
-	When("core nodes not ready", func() {
+	When("no available core pods", func() {
 		It("should do nothing", func() {
-			// Core nodes are not ready:
-			instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(3))
-			// Reconciliation step should succeed:
+			// MinReadySeconds very high so no pod is considered "available".
+			instance.Spec.UpdateStrategy.MinReadySeconds = 999999999
+			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+			// Reconciliation step should succeed but not create any RS:
 			Eventually(a.reconcile).WithArguments(round, instance).
 				Should(Equal(subResult{}))
 			Expect(replicantSets(instance)).
@@ -230,7 +262,6 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 		It("should create new replicaSet", func() {
 			// Introduce changes that require creating a new replicaSet:
 			instance.Spec.Image = "emqx/emqx"
-			instance.Spec.UpdateStrategy.MinReadySeconds = int32(999999999)
 			Expect(k8sClient.Update(ctx, instance)).To(Succeed())
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed:

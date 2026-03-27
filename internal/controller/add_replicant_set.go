@@ -32,7 +32,15 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 	}
 
 	// Core nodes are still spinning up, wait for them to be ready.
-	if !r.state.areCoresReady(instance) {
+	coreSet := r.state.coreSet()
+	if r.state.numAvailablePods(coreSet, instance) == 0 {
+		return subResult{}
+	}
+
+	// Postpone until at least one core of newest revision.
+	// If there's a rolling update involving version upgrade, replicants should be
+	// able to connect to at least one core.
+	if r.state.numCoresRevision(coreSet.Status.UpdateRevision) == 0 {
 		return subResult{}
 	}
 
@@ -88,12 +96,13 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 	rs.ObjectMeta = updateReplicantSet.ObjectMeta
 	rs.Spec.Template.ObjectMeta = updateReplicantSet.Spec.Template.ObjectMeta
 	rs.Spec.Selector = updateReplicantSet.Spec.Selector
-	if patchResult, _ := a.Patcher.Calculate(
+	patchResult, _ := a.Patcher.Calculate(
 		updateReplicantSet,
 		rs,
 		patch.IgnoreStatusFields(),
 		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
-	); !patchResult.IsEmpty() {
+	)
+	if !patchResult.IsEmpty() {
 		// Update replicaSet
 		r.log.Info("updating replicaSet",
 			"replicaSet", klog.KObj(rs),
