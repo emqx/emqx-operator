@@ -26,6 +26,7 @@ func checkEMQXReady(g Gomega, afterTime ...metav1.Time) {
 
 func checkEMQXStatus(g Gomega, coreReplicas int) {
 	var status crdv2.CoreNodesStatus
+	var nodes []crdv2.EMQXNode
 	var podList corev1.PodList
 	var pvcList corev1.PersistentVolumeClaimList
 	g.Expect(KubectlOut("get", "pod",
@@ -50,6 +51,16 @@ func checkEMQXStatus(g Gomega, coreReplicas int) {
 		),
 		"EMQX status does not have expected number of core nodes",
 	)
+	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodes}")).
+		To(UnmarshalInto(&nodes), "Failed to get EMQX cluster nodes")
+	g.Expect(nodes).To(
+		HaveEach(HaveField("Status", Equal("running"))),
+		"EMQX cluster contains stopped nodes",
+	)
+	g.Expect(nodes).To(
+		HaveEach(HaveField("PodName", Not(BeEmpty()))),
+		"EMQX cluster contains nodes without pods",
+	)
 	g.Expect(KubectlOut("get", "pvc",
 		"--selector", crdv2.LabelDBRole+"=core,"+crdv2.LabelManagedBy+"=emqx-operator",
 		"-o", "json",
@@ -58,9 +69,10 @@ func checkEMQXStatus(g Gomega, coreReplicas int) {
 		HaveLen(coreReplicas),
 		"Expected %d core PVCs", coreReplicas,
 	)
-	g.Expect(pvcList.Items).To(HaveEach(
-		HaveField("Status.Phase", Equal(corev1.ClaimBound)),
-	), "Not all core PVCs are bound")
+	g.Expect(pvcList.Items).To(
+		HaveEach(HaveField("Status.Phase", Equal(corev1.ClaimBound))),
+		"Not all core PVCs are bound",
+	)
 }
 
 func checkNoReplicants(g Gomega) {
