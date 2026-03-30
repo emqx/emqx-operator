@@ -132,10 +132,9 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Clear replicant template:
 			instance.Spec.ReplicantTemplate = nil
 			// Reconciliation step should do nothing and succeed:
-			Eventually(a.reconcile).WithArguments(round, instance).
-				Should(Equal(subResult{}))
-			Expect(replicantSets(instance)).
-				To(BeEmpty())
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
+			Expect(replicantSets(instance)).To(BeEmpty())
 		})
 	})
 
@@ -154,17 +153,16 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			instance.Spec.UpdateStrategy.MinReadySeconds = 999999999
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed but not create any RS:
-			Eventually(a.reconcile).WithArguments(round, instance).
-				Should(Equal(subResult{}))
-			Expect(replicantSets(instance)).
-				To(BeEmpty())
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
+			Expect(replicantSets(instance)).To(BeEmpty())
 		})
 	})
 
 	When("core nodes are ready", func() {
 		It("should create replicaSet", func() {
-			Expect(a.reconcile(round, instance)).
-				To(Equal(subResult{}))
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Template.Spec.Containers", ConsistOf(
 					HaveField("Image", Equal(instance.Spec.Image)),
@@ -182,8 +180,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Start with 3 replicas:
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
 			// Run the reconcile to create replicantSet:
-			Expect(a.reconcile(round, instance)).
-				To(Equal(subResult{}))
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(3))),
 			))
@@ -194,8 +192,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed:
-			Eventually(a.reconcile).WithArguments(round, instance).
-				Should(Equal(subResult{}))
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
 			// Status conditions should reset:
 			Expect(actualObject(instance)).To(And(
 				HaveCondition(crdv2.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
@@ -217,8 +215,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Start with 1 replicas:
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(1))
 			// Run the reconcile to create replicantSet:
-			Eventually(a.reconcile).WithArguments(round, instance).
-				Should(Equal(subResult{}))
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(1))),
 			))
@@ -229,8 +227,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(4))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed:
-			Eventually(a.reconcile).WithArguments(round, instance).
-				Should(Equal(subResult{}))
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
 			// Status conditions should reset:
 			Expect(actualObject(instance)).To(And(
 				HaveCondition(crdv2.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
@@ -252,8 +250,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Start with 1 replicas:
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(1))
 			// Run the reconcile to create replicantSet:
-			Eventually(a.reconcile).WithArguments(round, instance).
-				Should(Equal(subResult{}))
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(1))),
 			))
@@ -265,8 +263,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			Expect(k8sClient.Update(ctx, instance)).To(Succeed())
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed:
-			Expect(a.reconcile(round, instance)).
-				To(Equal(subResult{}))
+			result := a.reconcile(round, instance)
+			Expect(result.err).ToNot(HaveOccurred())
 			// There should be two replicaSets soon:
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal(emqx.Spec.Image)))),

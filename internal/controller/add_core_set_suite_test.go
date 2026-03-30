@@ -39,12 +39,12 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 		// Instantiate reconciler:
 		a = &addCoreSet{emqxReconciler}
 		round = newReconcileRound()
-		round.state, _ = loadReconcileState(ctx, k8sClient, instance)
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 	})
 
 	It("should create statefulSet", func() {
-		Eventually(a.reconcile).WithArguments(round, instance).
-			Should(Equal(subResult{}))
+		result := a.reconcile(round, instance)
+		Expect(result.err).ToNot(HaveOccurred())
 		Expect(coreSets(instance)).To(ConsistOf(
 			HaveField("Spec.Template.Spec.Containers", ConsistOf(
 				HaveField("Image", Equal(instance.Spec.Image)))),
@@ -54,8 +54,8 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 	It("change image updates existing statefulSet in place", func() {
 		instance.Spec.Image = "emqx/emqx"
 		instance.Spec.UpdateStrategy.MinReadySeconds = int32(999999999)
-		Eventually(a.reconcile).WithArguments(round, instance).
-			Should(Equal(subResult{}))
+		result := a.reconcile(round, instance)
+		Expect(result.err).ToNot(HaveOccurred())
 		Expect(actualObject(instance)).To(And(
 			HaveCondition(crdv2.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
 			HaveCondition(crdv2.CoreNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),

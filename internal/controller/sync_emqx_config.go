@@ -38,16 +38,16 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	if err != nil && k8sErrors.IsNotFound(err) {
 		configMap = resource.ConfigMap(confWithDefaults)
 		if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
+			return reconcileError(emperror.Wrap(err, "failed to set controller reference for configMap"))
 		}
 		r.log.V(1).Info("creating config resource", "configMap", klog.KObj(configMap))
 		if err := s.Client.Create(r.ctx, configMap); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to create configMap")}
+			return reconcileError(emperror.Wrap(err, "failed to create configMap"))
 		}
 		return subResult{}
 	}
 	if err != nil {
-		return subResult{err: emperror.Wrap(err, "failed to get configMap")}
+		return reconcileError(emperror.Wrap(err, "failed to get configMap"))
 	}
 
 	// If the config is different, update the config right away.
@@ -55,11 +55,11 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	if configMap.Data[resources.BaseConfigFile] != confWithDefaults {
 		configMap = resource.ConfigMap(confWithDefaults)
 		if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
+			return reconcileError(emperror.Wrap(err, "failed to set controller reference for configMap"))
 		}
 		r.log.V(1).Info("updating config resource", "configMap", klog.KObj(configMap))
 		if err := s.Client.Update(r.ctx, configMap); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update configMap")}
+			return reconcileError(emperror.Wrap(err, "failed to update configMap"))
 		}
 		if len(stripped) > 0 {
 			s.EventRecorder.Event(
@@ -90,7 +90,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		// Delete readonly configs
 		c, err := config.EMQXConfig(confWithDefaults)
 		if err != nil || c == nil {
-			return subResult{err: emperror.Wrap(err, "failed to parse .spec.config.data")}
+			return reconcileError(emperror.Wrap(err, "failed to parse .spec.config.data"))
 		}
 		strippedReadonly := c.StripReadOnlyConfig()
 		confRuntime := c.Print()
@@ -98,7 +98,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		// Update the config through API
 		r.log.V(1).Info("applying runtime config", "config", confRuntime)
 		if err := api.UpdateConfigs(r.oldestCoreRequester(), instance.Spec.Config.Mode, confRuntime); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update emqx config through API")}
+			return reconcileError(emperror.Wrap(err, "failed to update emqx config through API"))
 		}
 		if len(strippedReadonly) > 0 {
 			s.EventRecorder.Event(
@@ -110,11 +110,11 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 
 		reflectLastAppliedConfig(instance, conf)
 		if err := s.Client.Update(r.ctx, instance); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update emqx instance annotation")}
+			return reconcileError(emperror.Wrap(err, "failed to update emqx instance annotation"))
 		}
 
 		// Restart reconciliation loop with consistent reconcile state.
-		return subResult{result: ctrl.Result{Requeue: true}}
+		return reconcileRequeue()
 	}
 
 	return subResult{}

@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"slices"
+	"time"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -14,11 +15,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type addReplicantSet struct {
@@ -85,12 +84,12 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 				}
 				*instance.Status.ReplicantNodesStatus.CollisionCount++
 				_ = a.Client.Status().Update(r.ctx, instance)
-				return subResult{result: ctrl.Result{Requeue: true}}
+				return reconcileRequeue()
 			}
-			return subResult{err: emperror.Wrap(err, "failed to create replicaSet")}
+			return reconcileError(emperror.Wrap(err, "failed to create replicaSet"))
 		}
 		updateResult := a.updateEMQXStatus(r, instance, rsHash)
-		return subResult{err: updateResult}
+		return subResult{err: updateResult, result: &ctrl.Result{RequeueAfter: time.Second}}
 	}
 
 	rs.ObjectMeta = updateReplicantSet.ObjectMeta
@@ -109,17 +108,14 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 			"reason", "replicaSet has changed",
 			"patch", string(patchResult.Patch),
 		)
-		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			storage := &appsv1.ReplicaSet{}
-			_ = a.Client.Get(r.ctx, client.ObjectKeyFromObject(rs), storage)
-			rs.ResourceVersion = storage.ResourceVersion
-			return a.Handler.Update(r.ctx, rs)
-		}); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
+		err := a.Handler.Update(r.ctx, rs)
+		if err != nil {
+			return reconcileError(emperror.Wrap(err, "failed to update replicaSet"))
 		}
 		updateResult := a.updateEMQXStatus(r, instance, rsHash)
-		return subResult{err: updateResult}
+		return subResult{err: updateResult, result: &ctrl.Result{RequeueAfter: time.Second}}
 	}
+
 	return subResult{}
 }
 

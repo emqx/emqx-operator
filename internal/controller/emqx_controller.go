@@ -64,7 +64,19 @@ func (r *reconcileRound) oldestCoreRequester() req.RequesterInterface {
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
 	err    error
-	result ctrl.Result
+	result *ctrl.Result
+}
+
+func reconcileError(err error) subResult {
+	return subResult{err: err}
+}
+
+func reconcileRequeue() subResult {
+	return subResult{result: &ctrl.Result{Requeue: true}}
+}
+
+func reconcileRequeueAfter(duration time.Duration) subResult {
+	return subResult{result: &ctrl.Result{RequeueAfter: duration}}
 }
 
 type subReconciler interface {
@@ -143,9 +155,6 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	} {
 		round.log = logger.WithValues("reconciler", subReconcilerName(subReconciler))
 		subResult := subReconciler.reconcile(&round, instance)
-		if !subResult.result.IsZero() {
-			return subResult.result, nil
-		}
 		if subResult.err != nil {
 			if errors.IsCommonError(subResult.err) {
 				round.log.Info("reconciler requeue", "reason", subResult.err)
@@ -156,6 +165,9 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				"reconcile failed at step %s, reason: %s", subReconcilerName(subReconciler), subResult.err.Error(),
 			)
 			return ctrl.Result{}, subResult.err
+		}
+		if subResult.result != nil {
+			return *subResult.result, nil
 		}
 	}
 

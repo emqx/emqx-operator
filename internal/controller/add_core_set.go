@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"time"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -36,11 +37,12 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		_ = ctrl.SetControllerReference(instance, sts, a.Scheme)
 		if err := a.Handler.Create(r.ctx, sts); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
-				return subResult{result: ctrl.Result{Requeue: true}}
+				return reconcileRequeue()
 			}
-			return subResult{err: emperror.Wrap(err, "failed to create statefulSet")}
+			return reconcileError(emperror.Wrap(err, "failed to create statefulSet"))
 		}
-		return subResult{}
+		// Force Requeue to give StatefulSet controller time to reflect status.
+		return reconcileRequeueAfter(time.Second)
 	}
 
 	// StatefulSet exists.
@@ -66,12 +68,14 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		)
 		err := a.Handler.Update(r.ctx, sts)
 		if err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
+			return reconcileError(emperror.Wrap(err, "failed to update statefulSet"))
 		}
 		forceCoreNodesProgressing(instance)
 		updateResult := a.Client.Status().Update(r.ctx, instance)
-		return subResult{err: updateResult}
+		// Force Requeue to give StatefulSet controller time to reflect status.
+		return subResult{err: updateResult, result: &ctrl.Result{RequeueAfter: time.Second}}
 	}
+
 	return subResult{}
 }
 
@@ -85,7 +89,7 @@ func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet
 }
 
 func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
-	template := instance.Spec.CoreTemplate
+	template := &instance.Spec.CoreTemplate
 
 	cookie := resources.Cookie(instance)
 	bootstrapAPIKeys := resources.BootstrapAPIKey(instance)
