@@ -61,6 +61,11 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResu
 		return s.scaleDown(r, instance, currentReplicas)
 	}
 
+	err := s.updateEvacuationState(r, instance)
+	if err != nil {
+		return reconcileError(emperror.Wrap(err, "failed to update evacuation state"))
+	}
+
 	// Handle rolling update: replace outdated pods one at a time, highest ordinal first.
 	return s.rollingUpdate(r, instance)
 }
@@ -135,6 +140,36 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX, current
 	}
 
 	return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
+}
+
+// Stops evacuation on nodes that are no longer need to evacuate anything:
+// nodes that belong to the most recent coreSet revision.
+func (s *syncCoreSet) updateEvacuationState(r *reconcileRound, instance *crdv2.EMQX) error {
+	updateRevision := r.state.coreSet().Status.UpdateRevision
+	for _, evacuation := range instance.Status.NodeEvacuations {
+		if evacuation.State != "prohibiting" {
+			continue
+		}
+		node := instance.Status.FindNode(evacuation.NodeName)
+		if node == nil || node.Role != "core" || node.PodName == "" {
+			continue
+		}
+		pod := r.state.podWithName(node.PodName)
+		if pod != nil && r.state.partOfCoreSetRevision(pod, updateRevision) {
+			err := api.StopEvacuation(r.requester.forPod(pod), node.Name)
+			if err == nil {
+				s.EventRecorder.Event(
+					instance,
+					corev1.EventTypeNormal,
+					"NodeEvacuation",
+					fmt.Sprintf("Node %s evacuation stopped", node.Name),
+				)
+			} else {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // listOutdatedPods returns core StatefulSet pods whose pod template is not yet the
@@ -304,7 +339,7 @@ func (s *syncCoreSet) startEvacuation(
 		)
 		return nil
 	}
-	err := api.StartEvacuation(r.oldestCoreRequester(), strategy, migrateTo, nodeName)
+	err := api.StartEvacuation(r.requester.forPod(pod), strategy, migrateTo, nodeName)
 	if err != nil {
 		return err
 	}

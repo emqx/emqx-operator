@@ -85,6 +85,24 @@ func StartEvacuation(
 	return nil
 }
 
+func StopEvacuation(
+	r req.RequesterInterface,
+	nodeName string,
+) error {
+	path := fmt.Sprintf("api/v5/load_rebalance/%s/evacuation/stop", nodeName)
+	_, err := post(r, path, []byte{})
+	var apiErr apiError
+	if ok := emperror.As(err, &apiErr); ok {
+		if apiErr.StatusCode == 400 && strings.Contains(apiErr.Message, "not_started") {
+			return nil
+		}
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func AvailabilityCheck(req req.RequesterInterface) corev1.ConditionStatus {
 	_, err := get(req, URLAvailabilityCheck)
 	if err != nil && emperror.Is(err, ErrorServiceUnavailable) {
