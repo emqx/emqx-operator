@@ -137,11 +137,21 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX, current
 	return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
 }
 
+// listOutdatedPods returns core StatefulSet pods whose pod template is not yet the
+// desired one: anything not labeled with Status.UpdateRevision.
+//
+// We intentionally do not key off CurrentRevision alone. Pods can remain labeled
+// with a revision hash that is neither CurrentRevision nor UpdateRevision (e.g.
+// stuck pod after ControllerRevision history moved on). Those are still outdated.
 func listOutdatedPods(r *reconcileRound) []*corev1.Pod {
-	coreSet := r.state.coreSet()
 	var outdated []*corev1.Pod
+	coreSet := r.state.coreSet()
+	updateRevision := coreSet.Status.UpdateRevision
+	if updateRevision == "" || updateRevision == coreSet.Status.CurrentRevision {
+		return outdated
+	}
 	for _, pod := range r.state.podsManagedBy(coreSet) {
-		if !r.state.partOfCoreSetRevision(pod, coreSet.Status.UpdateRevision) {
+		if !r.state.partOfCoreSetRevision(pod, updateRevision) {
 			outdated = append(outdated, pod)
 		}
 	}
