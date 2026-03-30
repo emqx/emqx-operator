@@ -8,6 +8,7 @@ import (
 	"hash"
 	"hash/fnv"
 	"slices"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
@@ -146,4 +147,27 @@ func deepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 		SpewKeys:       true,
 	}
 	_, _ = printer.Fprintf(hasher, "%#v", objectToWrite)
+}
+
+type nodeName struct {
+	name     string
+	hostName string
+	podName  string
+}
+
+func parseNodeName(s string, instance *crdv2.EMQX) *nodeName {
+	// Example: emqx@emqx-core-557c8b7684-0.emqx-headless.default.svc.cluster.local
+	// Example: emqx@10.244.0.23
+	var parsed nodeName
+	nameParts := strings.Split(s, "@")
+	if len(nameParts) != 2 {
+		return nil
+	}
+	parsed.name = nameParts[0]
+	parsed.hostName = nameParts[1]
+	hostParts := strings.Split(nameParts[1], instance.HeadlessServiceNamespacedName().Name)
+	if len(hostParts) > 1 {
+		parsed.podName = strings.TrimRight(hostParts[0], ".")
+	}
+	return &parsed
 }

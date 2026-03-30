@@ -340,7 +340,7 @@ func (u *updateStatus) updateEMQXNodesStatus(r *reconcileRound, instance *crdv2.
 			Connections: n.LiveConnections,
 		}
 		list := &status.CoreNodes
-		host := extractHostname(n.Node)
+		host := parseNodeName(n.Node, instance).hostName
 		if node.Role == "replicant" {
 			list = &status.ReplicantNodes
 		}
@@ -356,10 +356,4 @@ func (u *updateStatus) updateEMQXNodesStatus(r *reconcileRound, instance *crdv2.
 		}
 		*list = append(*list, node)
 	}
-}
-
-func extractHostname(node string) string {
-	// Example: emqx@emqx-core-557c8b7684-0.emqx-headless.default.svc.cluster.local
-	// Example: emqx@10.244.0.23
-	return strings.Split(node[strings.Index(node, "@")+1:], ":")[0]
 }

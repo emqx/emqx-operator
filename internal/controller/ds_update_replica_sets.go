@@ -28,7 +28,7 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 	}
 
 	// Instantiate API requester for a node that is part of the core StatefulSet.
-	req := r.requester.forOldestCore(r.state, &managedByFilter{coreSet})
+	req := r.requester.forOldestCore(r.state)
 
 	// If there's no EMQX API to query, skip the reconciliation.
 	if req == nil {
@@ -51,16 +51,22 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 
 	// Compute the target sites.
 	targetSites := []string{}
-	for _, node := range instance.Status.CoreNodes {
-		if r.state.podWithName(node.PodName) != nil {
-			site := r.dsCluster.FindSite(node.Name)
-			if site == nil {
-				return subResult{err: emperror.Errorf("no site for node %s", node.Name)}
-			}
-			if getPodIndex(node.PodName) < desiredReplicas {
+	for _, site := range r.dsCluster.Sites {
+		nodeName := parseNodeName(site.Node, instance)
+		if nodeName == nil {
+			return subResult{err: emperror.Errorf("unrecognized DS site node name: %s", site.Node)}
+		}
+		if strings.HasPrefix(nodeName.podName, instance.CoreName()) {
+			index := getPodIndex(nodeName.podName)
+			if index >= 0 && index < desiredReplicas {
 				targetSites = append(targetSites, site.ID)
 			}
 		}
+	}
+
+	// No target sites.
+	if len(targetSites) == 0 {
+		return subResult{}
 	}
 
 	sort.Strings(targetSites)
