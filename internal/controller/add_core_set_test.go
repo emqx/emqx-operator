@@ -82,6 +82,15 @@ func TestGetNewStatefulSet(t *testing.T) {
 		assert.Equal(t, appsv1.OnDeleteStatefulSetStrategyType, got.Spec.UpdateStrategy.Type)
 	})
 
+	t.Run("check PVC retention policy deletes on scale-down and sts deletion", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
+		got := newStatefulSet(emqx, conf)
+		assert.NotNil(t, got.Spec.PersistentVolumeClaimRetentionPolicy)
+		assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, got.Spec.PersistentVolumeClaimRetentionPolicy.WhenScaled)
+		assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, got.Spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted)
+	})
+
 	t.Run("check bootstrap API keys", func(t *testing.T) {
 		emqx := instance.DeepCopy()
 		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
@@ -151,15 +160,53 @@ func TestGetNewStatefulSet(t *testing.T) {
 		)
 	})
 
-	t.Run("check sts volume claim templates", func(t *testing.T) {
+	t.Run("check default volume claim templates", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.CoreTemplate.Spec.VolumeClaimTemplates = corev1.PersistentVolumeClaimSpec{
+
+		fs := corev1.PersistentVolumeFilesystem
+		got := generateStatefulSet(emqx)
+		assert.Equal(t, []corev1.PersistentVolumeClaim{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "emqx-core-data",
+					Namespace: "emqx",
+					Labels: map[string]string{
+						crdv2.LabelDBRole:    "core",
+						crdv2.LabelInstance:  "emqx",
+						crdv2.LabelManagedBy: "emqx-operator",
+						"core-label-key":     "core-label-value",
+					},
+				},
+				Spec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{
+						corev1.ReadWriteOnce,
+					},
+					Resources: corev1.VolumeResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: resource.MustParse("500Mi"),
+						},
+					},
+					VolumeMode: &fs,
+				},
+			},
+		}, got.Spec.VolumeClaimTemplates)
+		assert.NotContains(t, got.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: "emqx-core-data",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+	})
+
+	t.Run("check explicit volume claim templates", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Spec.CoreTemplate.Spec.PersistentVolumeClaimSpec = corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{
 				corev1.ReadWriteOnce,
 			},
 			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse("20Mi"),
+					corev1.ResourceStorage: resource.MustParse("1Gi"),
 				},
 			},
 		}
@@ -184,7 +231,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 					},
 					Resources: corev1.VolumeResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: resource.MustParse("20Mi"),
+							corev1.ResourceStorage: resource.MustParse("1Gi"),
 						},
 					},
 					VolumeMode: &fs,

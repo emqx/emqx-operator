@@ -21,6 +21,8 @@ This operator is compatible with the following EMQX releases:
 - EMQX 5.10
 - EMQX 6.x
 
+Requires Kubernetes >= 1.27. PVC auto-cleanup for core nodes (on scale-down and CR deletion) relies on the `StatefulSetAutoDeletePVC` feature gate, which is stable and enabled by default since Kubernetes 1.32.
+
 ## Installation
 
 Here's the simplest way to install the operator.
@@ -74,8 +76,8 @@ kubectl logs -l "control-plane=controller-manager" --tail=-1 --namespace emqx-op
 ### Prerequisites
 - go version v1.22.0+
 - docker version 17.03+.
-- kubectl version v1.24+.
-- Access to a Kubernetes v1.24+ cluster.
+- kubectl version v1.27+.
+- Access to a Kubernetes v1.27+ cluster.
 
 ### To Deploy on the cluster
 **Build and push your image to the location specified by `OPERATOR_IMAGE`:**

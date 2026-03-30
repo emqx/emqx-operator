@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"reflect"
 	"slices"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -100,6 +100,12 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 		Type: appsv1.OnDeleteStatefulSetStrategyType,
 	}
 
+	// Requires K8s >= 1.27 and the StatefulSetAutoDeletePVC feature gate (stable since K8s 1.32).
+	pvcRetentionPolicy := appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+		WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+		WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+	}
+
 	readinessProbe := resources.EvacuationReadinessProbe()
 
 	// Prefer evacuation-aware probe over older-version defaults.
@@ -122,10 +128,11 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 			Labels:      statefulSetLabels(instance),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName:         instance.HeadlessServiceNamespacedName().Name,
-			Replicas:            template.Spec.Replicas,
-			UpdateStrategy:      updateStrategy,
-			PodManagementPolicy: appsv1.ParallelPodManagement,
+			ServiceName:                          instance.HeadlessServiceNamespacedName().Name,
+			Replicas:                             template.Spec.Replicas,
+			UpdateStrategy:                       updateStrategy,
+			PodManagementPolicy:                  appsv1.ParallelPodManagement,
+			PersistentVolumeClaimRetentionPolicy: &pvcRetentionPolicy,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: statefulSetLabels(instance),
 			},
@@ -227,32 +234,15 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 		},
 	}
 
-	if !reflect.ValueOf(template.Spec.VolumeClaimTemplates).IsZero() {
-		volumeClaimTemplates := template.Spec.VolumeClaimTemplates.DeepCopy()
-		if volumeClaimTemplates.VolumeMode == nil {
-			// Wait https://github.com/cisco-open/k8s-objectmatcher/issues/51 fixed
-			fs := corev1.PersistentVolumeFilesystem
-			volumeClaimTemplates.VolumeMode = &fs
-		}
-		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      instance.CoreNamespacedName().Name + "-data",
-					Namespace: instance.Namespace,
-					Labels:    statefulSetLabels(instance),
-				},
-				Spec: *volumeClaimTemplates,
+	sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      instance.CoreNamespacedName().Name + "-data",
+				Namespace: instance.Namespace,
+				Labels:    statefulSetLabels(instance),
 			},
-		}
-	} else {
-		sts.Spec.Template.Spec.Volumes = append([]corev1.Volume{
-			{
-				Name: instance.CoreNamespacedName().Name + "-data",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
-		}, sts.Spec.Template.Spec.Volumes...)
+			Spec: coreDataVolumeClaimSpec(template),
+		},
 	}
 
 	return sts
@@ -261,4 +251,20 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 // Combine instance labels, core labels and template labels.
 func statefulSetLabels(instance *crdv2.EMQX) map[string]string {
 	return instance.DefaultLabelsWith(crdv2.CoreLabels(), instance.Spec.CoreTemplate.Labels)
+}
+
+func coreDataVolumeClaimSpec(template *crdv2.EMQXCoreTemplate) corev1.PersistentVolumeClaimSpec {
+	spec := template.Spec.PersistentVolumeClaimSpec.DeepCopy()
+	if len(spec.AccessModes) == 0 {
+		spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+	}
+	if spec.Resources.Requests == nil {
+		spec.Resources.Requests = corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("500Mi")}
+	}
+	if spec.VolumeMode == nil {
+		// https://github.com/cisco-open/k8s-objectmatcher/issues/51
+		fs := corev1.PersistentVolumeFilesystem
+		spec.VolumeMode = &fs
+	}
+	return *spec
 }

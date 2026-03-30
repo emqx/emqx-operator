@@ -63,7 +63,7 @@ type EMQXSpec struct {
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// Template for Pods running EMQX core nodes.
-	// +kubebuilder:default={spec:{replicas:2}}
+	// +kubebuilder:default={spec:{replicas:2,persistentVolumeClaimSpec:{accessModes:{"ReadWriteOnce"},resources:{requests:{storage:"500Mi"}}}}}
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 
 	// Template for Pods running EMQX replicant nodes.
@@ -179,8 +179,7 @@ type EMQXCoreTemplateSpec struct {
 	EMQXReplicantTemplateSpec `json:",inline"`
 
 	// PVC specification for a core node data storage.
-	// Note: this field named inconsistently, it is actually just a `PersistentVolumeClaimSpec`.
-	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
+	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
 }
 
 type EMQXReplicantTemplateSpec struct {
