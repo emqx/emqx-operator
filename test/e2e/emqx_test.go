@@ -145,13 +145,31 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 		})
 
 		It("scale cluster up", func() {
-			coreReplicas = 3
+			coreReplicas = 4
 			scaleupStartedAt := metav1.Now()
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
-				"--patch", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 3}]`,
+				"--patch", fmt.Sprintf(
+					`[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": %d}]`,
+					coreReplicas,
+				),
 			)).To(Succeed(), "Failed to scale up EMQX cluster")
 			Eventually(checkEMQXReady).WithArguments(scaleupStartedAt).Should(Succeed())
+			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
+			checkNoReplicants(Default)
+		})
+
+		It("scale cluster down", func() {
+			coreReplicas = 3
+			scaledownStartedAt := metav1.Now()
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "json",
+				"--patch", fmt.Sprintf(
+					`[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": %d}]`,
+					coreReplicas,
+				),
+			)).To(Succeed(), "Failed to scale down EMQX cluster")
+			Eventually(checkEMQXReady).WithArguments(scaledownStartedAt).Should(Succeed())
 			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
 			checkNoReplicants(Default)
 		})
