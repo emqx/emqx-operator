@@ -3,12 +3,12 @@ package controller
 import (
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 
 	emperror "emperror.dev/errors"
 	crdv2 "github.com/emqx/emqx-operator/api/v2"
-	"github.com/emqx/emqx-operator/internal/emqx/api"
+	util "github.com/emqx/emqx-operator/internal/controller/util"
+	api "github.com/emqx/emqx-operator/internal/emqx/api"
 )
 
 type dsUpdateReplicaSets struct {
@@ -57,8 +57,8 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 			return subResult{err: emperror.Errorf("unrecognized DS site node name: %s", site.Node)}
 		}
 		if strings.HasPrefix(nodeName.podName, instance.CoreName()) {
-			index := getPodIndex(nodeName.podName)
-			if index >= 0 && index < desiredReplicas {
+			ordinal := util.PodOrdinal(nodeName.podName)
+			if ordinal >= 0 && ordinal < int(desiredReplicas) {
 				targetSites = append(targetSites, site.ID)
 			}
 		}
@@ -87,17 +87,4 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 	}
 
 	return subResult{}
-}
-
-func getPodIndex(podName string) int32 {
-	parts := strings.Split(podName, "-")
-	if len(parts) < 2 {
-		return -1
-	}
-	indexPart := parts[len(parts)-1]
-	index, err := strconv.Atoi(indexPart)
-	if err != nil {
-		return -1
-	}
-	return int32(index)
 }

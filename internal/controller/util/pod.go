@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -60,4 +62,17 @@ func IsPodManagedBy(pod *corev1.Pod, object metav1.Object) bool {
 		return true
 	}
 	return false
+}
+
+func PodOrdinal(podName string) int {
+	parts := strings.Split(podName, "-")
+	if len(parts) < 2 {
+		return -1
+	}
+	indexPart := parts[len(parts)-1]
+	index, err := strconv.Atoi(indexPart)
+	if err != nil {
+		return -1
+	}
+	return index
 }

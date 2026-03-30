@@ -46,6 +46,17 @@ func NodeInfo(req req.RequesterInterface, nodeName string) (*EMQXNode, error) {
 	return nodeInfo, nil
 }
 
+// ForceLeave removes a node from the EMQX cluster.
+// DELETE /api/v5/cluster/{node}/force_leave
+func ForceLeave(req req.RequesterInterface, nodeName string) error {
+	path := fmt.Sprintf("api/v5/cluster/%s/force_leave", nodeName)
+	_, err := delete(req, path)
+	if emperror.Is(err, ErrorNotFound) {
+		return nil
+	}
+	return err
+}
+
 func Nodes(req req.RequesterInterface) ([]EMQXNode, error) {
 	body, err := get(req, "api/v5/nodes")
 	if err != nil {
