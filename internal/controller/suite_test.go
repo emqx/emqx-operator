@@ -221,3 +221,14 @@ func (b *apiRequesterOverride) forOldestCore(_ *reconcileState, _ ...podRequeste
 func (b *apiRequesterOverride) forPod(_ *corev1.Pod) req.RequesterInterface {
 	return b.requester
 }
+
+type apiRequesterUnavailable struct {
+}
+
+func (b *apiRequesterUnavailable) forOldestCore(_ *reconcileState, _ ...podRequesterFilter) req.RequesterInterface {
+	return nil
+}
+
+func (b *apiRequesterUnavailable) forPod(_ *corev1.Pod) req.RequesterInterface {
+	return nil
+}

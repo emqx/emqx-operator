@@ -17,13 +17,10 @@ type addService struct {
 }
 
 func (a *addService) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+	// Postpone if there are no usable cores yet.
 	req := r.oldestCoreRequester()
 	if req == nil {
-		return subResult{}
-	}
-
-	if !r.state.areCoresReady(instance) {
-		return subResult{}
+		return reconcilePostpone()
 	}
 
 	configStr, err := api.Configs(req)
