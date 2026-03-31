@@ -33,14 +33,14 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 	// Core nodes are still spinning up, wait for them to be ready.
 	coreSet := r.state.coreSet()
 	if coreSet == nil || coreSet.Status.AvailableReplicas == 0 {
-		return subResult{}
+		return reconcilePostpone()
 	}
 
 	// Postpone until at least one core of newest revision.
 	// If there's a rolling update involving version upgrade, replicants should be
 	// able to connect to at least one core.
 	if r.state.numCoresRevision(coreSet.Status.UpdateRevision) == 0 {
-		return subResult{}
+		return reconcilePostpone()
 	}
 
 	rs := newReplicaSet(instance, r.conf)
@@ -89,7 +89,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 			return reconcileError(emperror.Wrap(err, "failed to create replicaSet"))
 		}
 		updateResult := a.updateEMQXStatus(r, instance, rsHash)
-		return subResult{err: updateResult, result: &ctrl.Result{RequeueAfter: time.Second}}
+		return subResult{err: updateResult, immediateResult: &ctrl.Result{RequeueAfter: time.Second}}
 	}
 
 	rs.ObjectMeta = updateReplicantSet.ObjectMeta
@@ -113,7 +113,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 			return reconcileError(emperror.Wrap(err, "failed to update replicaSet"))
 		}
 		updateResult := a.updateEMQXStatus(r, instance, rsHash)
-		return subResult{err: updateResult, result: &ctrl.Result{RequeueAfter: time.Second}}
+		return subResult{err: updateResult, immediateResult: &ctrl.Result{RequeueAfter: time.Second}}
 	}
 
 	return subResult{}

@@ -73,7 +73,7 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		forceCoreNodesProgressing(instance)
 		updateResult := a.Client.Status().Update(r.ctx, instance)
 		// Force Requeue to give StatefulSet controller time to reflect status.
-		return subResult{err: updateResult, result: &ctrl.Result{RequeueAfter: time.Second}}
+		return subResult{err: updateResult, immediateResult: &ctrl.Result{RequeueAfter: time.Second}}
 	}
 
 	return subResult{}

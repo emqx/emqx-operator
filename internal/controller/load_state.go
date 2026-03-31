@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"time"
 
 	emperror "emperror.dev/errors"
 	crdv2 "github.com/emqx/emqx-operator/api/v2"

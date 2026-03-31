@@ -35,7 +35,7 @@ type coreAdmission struct {
 func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
 	coreSet := r.state.coreSet()
 	if coreSet == nil {
-		return subResult{}
+		return reconcilePostpone()
 	}
 
 	desiredReplicas := instance.Spec.NumCoreReplicas()

@@ -17,7 +17,7 @@ func (c *dsLoadClusterState) reconcile(r *reconcileRound, instance *crdv2.EMQX) 
 	req := r.oldestCoreRequester()
 	// If there's no suitable EMQX API to query, skip the reconciliation.
 	if req == nil {
-		return subResult{}
+		return reconcilePostpone()
 	}
 
 	// If EMQX DS API is not available, fail the reconciliation.

@@ -63,8 +63,11 @@ func (r *reconcileRound) oldestCoreRequester() req.RequesterInterface {
 
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
-	err    error
-	result *ctrl.Result
+	err error
+	// If `true`, short timeout requeue is needed:
+	needRequeue bool
+	// Immediately report controller `Result` if not nil:
+	immediateResult *ctrl.Result
 }
 
 func reconcileError(err error) subResult {
@@ -72,11 +75,15 @@ func reconcileError(err error) subResult {
 }
 
 func reconcileRequeue() subResult {
-	return subResult{result: &ctrl.Result{Requeue: true}}
+	return subResult{immediateResult: &ctrl.Result{Requeue: true}}
 }
 
 func reconcileRequeueAfter(duration time.Duration) subResult {
-	return subResult{result: &ctrl.Result{RequeueAfter: duration}}
+	return subResult{immediateResult: &ctrl.Result{RequeueAfter: duration}}
+}
+
+func reconcilePostpone() subResult {
+	return subResult{needRequeue: true}
 }
 
 type subReconciler interface {
@@ -127,6 +134,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	logger := log.FromContext(ctx)
 	round := reconcileRound{ctx: ctx, log: logger}
+	needRequeue := false
 
 	for _, subReconciler := range []subReconciler{
 		// Load EMQX configuration defined in the spec.config.data:
@@ -149,13 +157,14 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&dsCleanupSites{r},
 		&dsUpdateReplicaSets{r},
 		&dsReflectPodCondition{r},
-		&syncReplicantSets{r},
 		&syncCoreSet{r},
+		&syncReplicantSets{r},
 		&syncClusterMembership{r},
 		&cleanupOutdatedSets{r},
 	} {
 		round.log = logger.WithValues("reconciler", subReconcilerName(subReconciler))
 		subResult := subReconciler.reconcile(&round, instance)
+		needRequeue = needRequeue || subResult.needRequeue
 		if subResult.err != nil {
 			if errors.IsCommonError(subResult.err) {
 				round.log.Info("reconciler requeue", "reason", subResult.err)
@@ -167,15 +176,15 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			)
 			return ctrl.Result{}, subResult.err
 		}
-		if subResult.result != nil {
-			return *subResult.result, nil
+		if subResult.immediateResult != nil {
+			return *subResult.immediateResult, nil
 		}
 	}
 
-	isStable := instance.Status.IsConditionTrue(crdv2.Ready) && instance.Status.DSReplication.IsStable()
-	if !isStable {
+	if !instance.Status.IsConditionTrue(crdv2.Ready) || needRequeue {
 		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
+
 	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
 }
 

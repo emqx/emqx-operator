@@ -20,7 +20,7 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crdv2.EMQ
 	// Instantiate API requester.
 	req := r.oldestCoreRequester()
 	if req == nil {
-		return subResult{}
+		return reconcilePostpone()
 	}
 
 	staleNodes := []*crdv2.EMQXNode{}

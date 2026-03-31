@@ -32,7 +32,7 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 
 	// If there's no EMQX API to query, skip the reconciliation.
 	if req == nil {
-		return subResult{}
+		return reconcilePostpone()
 	}
 
 	// If there are no known DS DBs, skip the reconciliation.
@@ -43,7 +43,7 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 	// Wait until all pods are ready.
 	desiredReplicas := instance.Spec.NumCoreReplicas()
 	if coreSet.Status.AvailableReplicas < desiredReplicas {
-		return subResult{}
+		return reconcilePostpone()
 	}
 
 	// Compute the current sites.
