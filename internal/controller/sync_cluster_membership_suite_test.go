@@ -27,6 +27,8 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 
 	var forceLeftNodes []string
 
+	const updateRevision = "update"
+
 	emqxNodeName := func(podName string) string {
 		return fmt.Sprintf("emqx@%s.%s.%s.svc.%s",
 			podName,
