@@ -218,7 +218,7 @@ func checkCorePodRemoval(
 	// Disallow removing pod if other cores just recently became ready.
 	numAvailableCores := int32(0)
 	for _, p := range r.state.podsManagedBy(r.state.coreSet()) {
-		if p.GetUID() != pod.GetUID() && isPodAvailable(p, instance) {
+		if p.GetUID() != pod.GetUID() && util.IsPodAvailable(p, instance.Spec.CoreTemplate.Spec.MinReadySeconds) {
 			numAvailableCores++
 		}
 	}

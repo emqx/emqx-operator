@@ -80,6 +80,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
 		got := newStatefulSet(emqx, conf)
 		assert.Equal(t, appsv1.OnDeleteStatefulSetStrategyType, got.Spec.UpdateStrategy.Type)
+		assert.EqualValues(t, int32(0), got.Spec.MinReadySeconds)
 	})
 
 	t.Run("check PVC retention policy deletes on scale-down and sts deletion", func(t *testing.T) {

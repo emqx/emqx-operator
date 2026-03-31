@@ -123,11 +123,6 @@ type UpdateStrategy struct {
 	// +kubebuilder:validation:Enum=RollingUpdate
 	// +kubebuilder:default=RollingUpdate
 	Type string `json:"type,omitempty"`
-	// Minimum number of seconds for which a newly created pod should be Ready
-	// before the pod is considered available for the purposes of the Available condition.
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=10
-	MinReadySeconds int32 `json:"minReadySeconds,omitempty"`
 	// Evacuation strategy settings.
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 }
@@ -216,6 +211,12 @@ type EMQXReplicantTemplateSpec struct {
 	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
 	// +kubebuilder:validation:XIntOrString
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	// MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.
+	// For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);
+	// for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).
+	// Omitted or zero matches the apps/v1 default (0).
+	// +kubebuilder:validation:Minimum=0
+	MinReadySeconds int32 `json:"minReadySeconds,omitempty"`
 
 	// Entrypoint array. Not executed within a shell.
 	// The container image's ENTRYPOINT is used if this is not provided.

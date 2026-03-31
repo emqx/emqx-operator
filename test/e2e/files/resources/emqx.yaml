@@ -8,8 +8,10 @@ spec:
   config:
     data: |
       license { key = "evaluation" }
+  coreTemplate:
+    spec:
+      minReadySeconds: 3
   updateStrategy:
-    minReadySeconds: 5
     evacuationStrategy:
       waitTakeover: 5 # seconds
       waitHealthCheck: 5 # seconds

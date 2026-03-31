@@ -57,6 +57,13 @@ func PodReadyDuration(pod *corev1.Pod) time.Duration {
 	return time.Since(cond.LastTransitionTime.Time)
 }
 
+// IsPodAvailable tells if the pod is Ready and has been so for longer than MinReadySeconds
+// on the owning StatefulSet or ReplicaSet.
+// Mirrors apps/v1 availability criterion.
+func IsPodAvailable(pod *corev1.Pod, minReadySeconds int32) bool {
+	return PodReadyDuration(pod) > time.Duration(minReadySeconds)*time.Second
+}
+
 func IsPodManagedBy(pod *corev1.Pod, object metav1.Object) bool {
 	if metav1.GetControllerOf(pod) != nil && metav1.GetControllerOf(pod).UID == object.GetUID() {
 		return true

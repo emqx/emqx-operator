@@ -80,9 +80,10 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		return subResult{}
 	}
 
-	// Postpone runtime config updates until at least one core is ready.
-	if !r.state.areCoresReady(instance) {
-		return subResult{}
+	// Postpone runtime config updates until at least one core is available.
+	coreSet := r.state.coreSet()
+	if coreSet.Status.ReadyReplicas == 0 {
+		return reconcilePostpone()
 	}
 
 	// If the annotation is set, and the config is different, update the config.

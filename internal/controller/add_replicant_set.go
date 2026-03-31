@@ -32,7 +32,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 
 	// Core nodes are still spinning up, wait for them to be ready.
 	coreSet := r.state.coreSet()
-	if r.state.numAvailablePods(coreSet, instance) == 0 {
+	if coreSet == nil || coreSet.Status.AvailableReplicas == 0 {
 		return subResult{}
 	}
 
@@ -180,7 +180,8 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 			Labels:      replicaSetLabels(instance),
 		},
 		Spec: appsv1.ReplicaSetSpec{
-			Replicas: template.Spec.Replicas,
+			Replicas:        template.Spec.Replicas,
+			MinReadySeconds: instance.Spec.ReplicantTemplate.Spec.MinReadySeconds,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: replicaSetLabels(instance),
 			},

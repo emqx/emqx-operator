@@ -25,7 +25,7 @@ func withCores(numReplicas int) []byte {
 
 func withReplicants(numReplicas int) []byte {
 	return fmt.Appendf(nil,
-		`{"spec": {"replicantTemplate": {"spec": {"replicas": %d}}}}`,
+		`{"spec": {"replicantTemplate": {"spec": {"minReadySeconds": 3, "replicas": %d}}}}`,
 		numReplicas,
 	)
 }

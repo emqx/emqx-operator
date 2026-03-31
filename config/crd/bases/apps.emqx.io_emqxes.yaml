@@ -6648,6 +6648,15 @@ spec:
                           absence of the evicted pod.  So for example you can prevent all voluntary
                           evictions by specifying "100%".
                         x-kubernetes-int-or-string: true
+                      minReadySeconds:
+                        description: |-
+                          MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.
+                          For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);
+                          for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).
+                          Omitted or zero matches the apps/v1 default (0).
+                        format: int32
+                        minimum: 0
+                        type: integer
                       nodeName:
                         description: |-
                           Request to schedule this pod onto a specific node.
@@ -15040,6 +15049,15 @@ spec:
                           absence of the evicted pod.  So for example you can prevent all voluntary
                           evictions by specifying "100%".
                         x-kubernetes-int-or-string: true
+                      minReadySeconds:
+                        description: |-
+                          MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.
+                          For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);
+                          for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).
+                          Omitted or zero matches the apps/v1 default (0).
+                        format: int32
+                        minimum: 0
+                        type: integer
                       nodeName:
                         description: |-
                           Request to schedule this pod onto a specific node.
@@ -15985,14 +16003,6 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
-                  minReadySeconds:
-                    default: 10
-                    description: |-
-                      Minimum number of seconds for which a newly created pod should be Ready
-                      before the pod is considered available for the purposes of the Available condition.
-                    format: int32
-                    minimum: 0
-                    type: integer
                   type:
                     default: RollingUpdate
                     description: |-

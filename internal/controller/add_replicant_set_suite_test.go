@@ -100,6 +100,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 		instance.Status.CoreNodesStatus.ReadyReplicas = 2
 		coreSet.Status.Replicas = 2
 		coreSet.Status.ReadyReplicas = 2
+		coreSet.Status.AvailableReplicas = 2
 		coreSet.Status.UpdatedReplicas = 2
 		coreSet.Status.CurrentReplicas = 2
 		corePod0.Status.Conditions = []corev1.PodCondition{
@@ -149,8 +150,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 
 	When("no available core pods", func() {
 		It("should do nothing", func() {
-			// MinReadySeconds very high so no pod is considered "available".
-			instance.Spec.UpdateStrategy.MinReadySeconds = 999999999
+			coreSet.Status.AvailableReplicas = 0
+			Expect(k8sClient.Status().Update(ctx, coreSet)).To(Succeed())
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed but not create any RS:
 			result := a.reconcile(round, instance)

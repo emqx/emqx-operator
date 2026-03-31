@@ -57,6 +57,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 		assert.Equal(t, "replicant", got.Labels[crdv2.LabelDBRole])
 		assert.Equal(t, "emqx-replicant-"+got.Labels[crdv2.LabelPodTemplateHash], got.Name)
 		assert.Equal(t, emqx.Namespace, got.Namespace)
+		assert.EqualValues(t, int32(0), got.Spec.MinReadySeconds)
 	})
 
 	t.Run("check selector and pod metadata", func(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	crdv2 "github.com/emqx/emqx-operator/api/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -100,6 +101,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 		coreSet.Status.Replicas = 2
 		coreSet.Status.ReadyReplicas = 2
+		coreSet.Status.AvailableReplicas = 2
 		coreSet.Status.CurrentRevision = currentRevision
 		coreSet.Status.UpdateRevision = updateRevision
 		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
@@ -117,30 +119,33 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 	})
 
 	AfterEach(func() {
-		k8sClient.Delete(ctx, pod0)
-		k8sClient.Delete(ctx, pod1)
+		_ = k8sClient.Delete(ctx, pod0)
+		_ = k8sClient.Delete(ctx, pod1)
 		Expect(k8sClient.Delete(ctx, coreSet)).Should(Succeed())
 	})
 
-	It("cores not available", func() {
-		// Pod 0 is not Ready, so areCoresAvailable returns false.
+	It("waits when fewer than N-1 other core pods are available (ready)", func() {
+		// Removing pod1 requires at least one *other* available core; pod0 is not Ready.
 		pod0.Status.Conditions = []corev1.PodCondition{}
 		Expect(k8sClient.Status().Update(ctx, pod0)).Should(Succeed())
+		coreSet.Status.AvailableReplicas = 1
+		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		admission := checkCorePodRemoval(round, instance, pod1, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
-			HaveField("Reason", ContainSubstring("not available")),
+			HaveField("Reason", Equal("cores are not available yet")),
 		))
 	})
 
-	It("cores available / MinReadySeconds has not passed", func() {
-		// But MinReadySeconds is very large, so pod is not yet "available".
-		instance.Spec.UpdateStrategy.MinReadySeconds = 99999999
+	It("waits while a node evacuation is still in progress", func() {
+		instance.Status.NodeEvacuations = []crdv2.NodeEvacuationStatus{
+			{NodeName: "emqx@" + pod1.Name, State: "evicting_sessions"},
+		}
 		admission := checkCorePodRemoval(round, instance, pod1, false)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
-			HaveField("Reason", ContainSubstring("not available")),
+			HaveField("Reason", Equal("node evacuation is still in progress")),
 		))
 	})
 
@@ -189,10 +194,9 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 		It("should allow rolling update with multiple old cores", func() {
 			s := &syncCoreSet{emqxReconciler}
 			result := s.rollingUpdate(round, instance)
-			Expect(result.err).ShouldNot(HaveOccurred())
-			// Highest ordinal `pod1` should have been deleted.
+			Expect(result).To(Equal(subResult{}))
 			_, err := actualObject(pod1)
-			Expect(err).Should(HaveOccurred())
+			Expect(k8sErrors.IsNotFound(err)).To(BeTrue(), "highest-ordinal outdated pod should be deleted first")
 		})
 
 		It("should block rolling update with 1 old core", func() {
@@ -200,12 +204,13 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 			pod1.Labels[appsv1.ControllerRevisionHashLabelKey] = coreSet.Status.UpdateRevision
 			Expect(k8sClient.Update(ctx, pod1)).Should(Succeed())
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			// Perform rolling update reconciliation.
 			s := &syncCoreSet{emqxReconciler}
 			result := s.rollingUpdate(round, instance)
-			Expect(result.err).ShouldNot(HaveOccurred())
-			// Latest old core `pod0` should have been deleted.
-			Expect(actualObject(pod0)).ShouldNot(BeNil())
+			Expect(result).To(Equal(subResult{}))
+			Expect(actualObject(pod0)).To(
+				Not(BeNil()),
+				"sole remaining outdated core must stay up while replicant ReplicaSet migrates",
+			)
 		})
 
 	})

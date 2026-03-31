@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -137,6 +138,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 		coreSet.Status.CurrentRevision = updateRevision
 		update.Status.Replicas = 1
 		update.Status.ReadyReplicas = 1
+		update.Status.AvailableReplicas = 1
 		current.Status.Replicas = 1
 		current.Status.ReadyReplicas = 1
 		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
@@ -312,6 +314,11 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 			{Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: metav1.Now()},
 		}
 		Expect(k8sClient.Status().Update(ctx, updatePod)).Should(Succeed())
+
+		update.Status.Replicas = 1
+		update.Status.ReadyReplicas = 1
+		update.Status.AvailableReplicas = 1
+		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
 	})
 
 	AfterAll(func() {
@@ -333,11 +340,16 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		}
 		s = &syncReplicantSets{emqxReconciler}
 		round = newReconcileRound()
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(update), update)).Should(Succeed())
+		update.Status.AvailableReplicas = 1
+		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 	})
 
 	It("replicants not available (update pod not yet ready)", func() {
-		instance.Spec.UpdateStrategy.MinReadySeconds = 99999999
+		update.Status.AvailableReplicas = 0
+		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		admission, err := s.chooseScaleDownReplicant(round, instance, current)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(admission).Should(And(

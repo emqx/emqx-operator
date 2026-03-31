@@ -130,6 +130,7 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName:                          instance.HeadlessServiceNamespacedName().Name,
 			Replicas:                             template.Spec.Replicas,
+			MinReadySeconds:                      instance.Spec.CoreTemplate.Spec.MinReadySeconds,
 			UpdateStrategy:                       updateStrategy,
 			PodManagementPolicy:                  appsv1.ParallelPodManagement,
 			PersistentVolumeClaimRetentionPolicy: &pvcRetentionPolicy,

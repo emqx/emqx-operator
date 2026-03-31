@@ -61,11 +61,11 @@ func (r *reconcileState) coreSet() *appsv1.StatefulSet {
 }
 
 func (r *reconcileState) partOfCoreSet(pod *corev1.Pod) bool {
-	sts := r.coreSet()
-	if sts == nil {
+	coreSet := r.coreSet()
+	if coreSet == nil {
 		return false
 	}
-	return util.IsPodManagedBy(pod, sts)
+	return util.IsPodManagedBy(pod, coreSet)
 }
 
 // partOfCoreSetRevision checks if a core pod's StatefulSet-assigned revision matches the specified revision.
@@ -134,75 +134,24 @@ func (r *reconcileState) partOfUpdateReplicantSet(pod *corev1.Pod, instance *crd
 	return false
 }
 
-// partOfCurrentReplicantSet checks if a pod belongs to the current (outdated) ReplicaSet.
-func (r *reconcileState) partOfCurrentReplicantSet(pod *corev1.Pod, instance *crdv2.EMQX) bool {
-	controllerRef := metav1.GetControllerOf(pod)
-	if controllerRef == nil {
-		return false
-	}
-	currentReplicantSet := r.currentReplicantSet(instance)
-	if currentReplicantSet != nil && controllerRef.UID == currentReplicantSet.UID {
-		return true
-	}
-	return false
-}
-
-func (r *reconcileState) areCoresReady(instance *crdv2.EMQX) bool {
-	desired := instance.Spec.NumCoreReplicas()
-	coreSet := r.coreSet()
-	coresReady := int32(0)
-	coresUpdated := int32(0)
-	nodesReady := instance.Status.CoreNodesStatus.ReadyReplicas
-	if coreSet != nil {
-		coresReady = coreSet.Status.ReadyReplicas
-		coresUpdated = coreSet.Status.UpdatedReplicas
-	}
-	return coresReady == desired && nodesReady == desired && coresUpdated == desired
-}
-
-func (r *reconcileState) areReplicantsReady(instance *crdv2.EMQX) bool {
-	desired := instance.Spec.NumReplicantReplicas()
-	replicantSet := r.updateReplicantSet(instance)
-	replicantsReady := int32(0)
-	nodesReady := instance.Status.ReplicantNodesStatus.ReadyReplicas
-	if replicantSet != nil {
-		replicantsReady = replicantSet.Status.ReadyReplicas
-	}
-	return replicantsReady == desired && nodesReady == desired
-}
-
 func (r *reconcileState) areCoresAvailable(instance *crdv2.EMQX) bool {
 	coreSet := r.coreSet()
 	if coreSet == nil {
 		return false
 	}
-	available := r.numAvailablePods(coreSet, instance)
-	return available >= instance.Spec.NumCoreReplicas()
+	return coreSet.Status.AvailableReplicas >= instance.Spec.NumCoreReplicas()
 }
 
 func (r *reconcileState) areReplicantsAvailable(instance *crdv2.EMQX) bool {
+	desired := instance.Spec.NumReplicantReplicas()
+	if desired == 0 {
+		return true
+	}
 	replicantSet := r.updateReplicantSet(instance)
 	if replicantSet == nil {
-		return instance.Spec.NumReplicantReplicas() == 0
+		return false
 	}
-	available := r.numAvailablePods(replicantSet, instance)
-	return available >= instance.Spec.NumReplicantReplicas()
-}
-
-// countAvailablePods counts pods managed by the given owner that are Ready for at least minReadySeconds.
-func (r *reconcileState) numAvailablePods(managedBy metav1.Object, instance *crdv2.EMQX) int32 {
-	var count int32
-	for _, pod := range r.podsManagedBy(managedBy) {
-		if isPodAvailable(pod, instance) {
-			count++
-		}
-	}
-	return count
-}
-
-func isPodAvailable(pod *corev1.Pod, instance *crdv2.EMQX) bool {
-	minReady := time.Duration(instance.Spec.UpdateStrategy.MinReadySeconds) * time.Second
-	return util.PodReadyDuration(pod) > minReady
+	return replicantSet.Status.AvailableReplicas >= desired
 }
 
 type loadState struct {

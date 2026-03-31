@@ -53,7 +53,6 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 
 	It("change image updates existing statefulSet in place", func() {
 		instance.Spec.Image = "emqx/emqx"
-		instance.Spec.UpdateStrategy.MinReadySeconds = int32(999999999)
 		result := a.reconcile(round, instance)
 		Expect(result.err).ToNot(HaveOccurred())
 		Expect(actualObject(instance)).To(And(

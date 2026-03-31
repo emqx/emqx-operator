@@ -239,7 +239,7 @@ func evaluateAvailable(s *reconcileState, instance *crdv2.EMQX) {
 		desired := instance.Spec.NumReplicantReplicas()
 		available := int32(0)
 		if replicantSet != nil {
-			available = s.numAvailablePods(replicantSet, instance)
+			available = replicantSet.Status.AvailableReplicas
 		}
 		if available >= desired {
 			status.SetCondition(cond, metav1.ConditionTrue, "ReplicantPodsAvailable",
@@ -253,7 +253,7 @@ func evaluateAvailable(s *reconcileState, instance *crdv2.EMQX) {
 		desired := instance.Spec.NumCoreReplicas()
 		available := int32(0)
 		if coreSet != nil {
-			available = s.numAvailablePods(coreSet, instance)
+			available = coreSet.Status.AvailableReplicas
 		}
 		if available >= desired {
 			status.SetCondition(cond, metav1.ConditionTrue, "CorePodsAvailable",
@@ -268,7 +268,7 @@ func evaluateAvailable(s *reconcileState, instance *crdv2.EMQX) {
 func evaluateReady(s *reconcileState, instance *crdv2.EMQX) {
 	status := &instance.Status
 
-	if !s.areCoresReady(instance) {
+	if !evaluateCoresReady(s, instance) {
 		status.SetCondition(crdv2.Ready, metav1.ConditionFalse,
 			"CoreNodesProgressing",
 			"Core nodes are progressing",
@@ -277,7 +277,7 @@ func evaluateReady(s *reconcileState, instance *crdv2.EMQX) {
 	}
 
 	if instance.Spec.HasReplicants() {
-		if !s.areReplicantsReady(instance) {
+		if !evaluateReplicantsReady(s, instance) {
 			status.SetCondition(crdv2.Ready, metav1.ConditionFalse,
 				"ReplicantNodesProgressing",
 				"Replicant nodes are progressing",
@@ -287,6 +287,38 @@ func evaluateReady(s *reconcileState, instance *crdv2.EMQX) {
 	}
 
 	status.SetCondition(crdv2.Ready, metav1.ConditionTrue, "Ready", "Cluster is ready")
+}
+
+func evaluateCoresReady(r *reconcileState, instance *crdv2.EMQX) bool {
+	desired := instance.Spec.NumCoreReplicas()
+	coreSet := r.coreSet()
+	coresReady := int32(0)
+	coresUpdated := int32(0)
+	coresTotal := int32(0)
+	nodesTotal := int32(len(instance.Status.CoreNodes))
+	nodesReady := instance.Status.CoreNodesStatus.ReadyReplicas
+	if coreSet != nil {
+		coresTotal = coreSet.Status.Replicas
+		coresReady = coreSet.Status.ReadyReplicas
+		coresUpdated = coreSet.Status.UpdatedReplicas
+	}
+	return coresTotal == desired && coresReady == desired && coresUpdated == desired &&
+		nodesTotal == desired && nodesReady == desired
+}
+
+func evaluateReplicantsReady(s *reconcileState, instance *crdv2.EMQX) bool {
+	desired := instance.Spec.NumReplicantReplicas()
+	replicantSet := s.updateReplicantSet(instance)
+	replicantsTotal := int32(0)
+	replicantsReady := int32(0)
+	nodesTotal := int32(len(instance.Status.ReplicantNodes))
+	nodesReady := instance.Status.ReplicantNodesStatus.ReadyReplicas
+	if replicantSet != nil {
+		replicantsTotal = replicantSet.Status.Replicas
+		replicantsReady = replicantSet.Status.ReadyReplicas
+	}
+	return replicantsTotal == desired && replicantsReady == desired &&
+		nodesTotal == desired && nodesReady == desired
 }
 
 func switchReplicantSet(
