@@ -567,15 +567,14 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			// Eventually(checkDSReplicationHealthy).Should(Succeed())
 		})
 
-		It("perform a blue-green update", func() {
-			By("fetch current core StatefulSet")
-			var stsList appsv1.StatefulSetList
-			coreRev, err := KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.currentRevision}")
-			Expect(err).NotTo(HaveOccurred(), "Failed to get EMQX status")
+		It("perform a rolling update", func() {
+			By("fetch core StatefulSet")
+			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelPodTemplateHash+"="+coreRev,
+				"--selector", crdv2.LabelDBRole+"=core",
 				"-o", "json",
-			)).To(UnmarshalInto(&stsList), "Failed to list statefulSets")
+			)).To(UnmarshalInto(&stsListBefore))
+			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
 
 			By("change EMQX image + number of replicas")
 			coreReplicas = 2
@@ -588,19 +587,26 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				]`,
 			)).To(Succeed())
 
-			By("check new core StatefulSet is spinning up")
-			Eventually(KubectlOut).
-				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus.updateRevision}").
-				ShouldNot(Equal(coreRev), "New StatefulSet has not been spun up")
-
 			By("wait for EMQX cluster to be ready again")
 			Eventually(checkEMQXReady).WithArguments(changedAt).Should(Succeed())
 			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
 			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
 
-			By("check previous coreSet has been scaled down to 0")
-			Expect(KubectlOut("get", "statefulset", stsList.Items[0].Name, "-o", "jsonpath={.status.replicas}")).
-				To(Equal("0"))
+			By("verify exactly one core StatefulSet was updated")
+			var stsList appsv1.StatefulSetList
+			Expect(KubectlOut("get", "statefulset",
+				"--selector", crdv2.LabelDBRole+"=core",
+				"-o", "json",
+			)).To(UnmarshalInto(&stsList))
+
+			stsBefore := stsListBefore.Items[0]
+			Expect(stsList.Items).To(
+				ConsistOf(And(
+					HaveField("ObjectMeta.Name", Equal(stsBefore.ObjectMeta.Name)),
+					HaveField("Status.UpdateRevision", Not(Equal(stsBefore.Status.UpdateRevision))),
+				)),
+				"Unexpected set of core StatefulSets",
+			)
 
 			By("wait for DS replication status to be stable")
 			Eventually(checkDSReplicationStatus).WithArguments(coreReplicas).Should(Succeed())
