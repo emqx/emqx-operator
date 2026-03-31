@@ -286,6 +286,14 @@ func evaluateReady(s *reconcileState, instance *crdv2.EMQX) {
 		}
 	}
 
+	if !instance.Status.DSReplication.IsStable() {
+		status.SetCondition(crdv2.Ready, metav1.ConditionFalse,
+			"DSReplicationProgressing",
+			"Durable storage membership transitions are in progress",
+		)
+		return
+	}
+
 	status.SetCondition(crdv2.Ready, metav1.ConditionTrue, "Ready", "Cluster is ready")
 }
 
