@@ -12,12 +12,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Responsibilities:
+// - Sets up Service resources: for MQTT/Gateway EMQX listeners, and for the API/Dashboard endpoint.
+// - Switches target set of pods on readiness change, see `listenerServiceSelector`.
 type addService struct {
 	*EMQXReconciler
 }
 
 func (a *addService) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
 	// Postpone if there are no usable cores yet.
+	// Should proceed once one core replica is Ready.
 	req := r.oldestCoreRequester()
 	if req == nil {
 		return reconcilePostpone()
@@ -37,7 +41,7 @@ func (a *addService) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	if dashboard := generateDashboardService(instance, conf); dashboard != nil {
 		resources = append(resources, dashboard)
 	}
-	if listeners := generateListenerService(instance, conf); listeners != nil {
+	if listeners := generateListenerService(r, instance, conf); listeners != nil {
 		resources = append(resources, listeners)
 	}
 
@@ -81,7 +85,7 @@ func generateDashboardService(instance *crdv2.EMQX, conf *config.EMQX) *corev1.S
 	}
 }
 
-func generateListenerService(instance *crdv2.EMQX, conf *config.EMQX) *corev1.Service {
+func generateListenerService(r *reconcileRound, instance *crdv2.EMQX, conf *config.EMQX) *corev1.Service {
 	meta := &metav1.ObjectMeta{}
 	spec := &corev1.ServiceSpec{}
 	if instance.Spec.ListenersServiceTemplate != nil {
@@ -123,15 +127,7 @@ func generateListenerService(instance *crdv2.EMQX, conf *config.EMQX) *corev1.Se
 	}
 
 	spec.Ports = util.MergeServicePorts(spec.Ports, ports)
-	spec.Selector = instance.DefaultLabelsWith(crdv2.CoreLabels())
-	if instance.Spec.HasReplicants() && instance.Status.ReplicantNodesStatus.ReadyReplicas > 0 {
-		spec.Selector = instance.DefaultLabelsWith(
-			crdv2.ReplicantLabels(),
-			map[string]string{
-				crdv2.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.UpdateRevision,
-			},
-		)
-	}
+	spec.Selector = listenerServiceSelector(r, instance)
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -145,4 +141,36 @@ func generateListenerService(instance *crdv2.EMQX, conf *config.EMQX) *corev1.Se
 		},
 		Spec: *spec,
 	}
+}
+
+// listenerServiceSelector chooses Service endpoints for MQTT/TLS listeners.
+// ReplicaSet readiness uses Status.ReadyReplicas only (not EMQX node status).
+//  1. No replicants in spec -> cores serve.
+//  2. If the "update" replicant set has Ready replicas, its pods serve.
+//  3. While the "update" replicant set is not ready yet, the "current" replicant set serves if
+//     it has ready pods.
+//  4. If no replicant sets can serve traffic, cores serve.
+//
+// Criteria are intentionally lax (ReadyReplicas > 0):
+// during replicant restarts or scale-up, both ReplicaSets can sit below desired ready
+// for a while; requiring ReadyReplicas >= desired would send traffic to cores and drop
+// listener sessions. Prefer routing to whichever revision still has ready pods.
+func listenerServiceSelector(r *reconcileRound, instance *crdv2.EMQX) map[string]string {
+	if instance.Spec.HasReplicants() {
+		updateRs := r.state.updateReplicantSet(instance)
+		currentRs := r.state.currentReplicantSet(instance)
+		if updateRs != nil && updateRs.Status.ReadyReplicas > 0 {
+			return instance.DefaultLabelsWith(
+				crdv2.ReplicantLabels(),
+				map[string]string{crdv2.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.UpdateRevision},
+			)
+		}
+		if currentRs != nil && currentRs.Status.ReadyReplicas > 0 {
+			return instance.DefaultLabelsWith(
+				crdv2.ReplicantLabels(),
+				map[string]string{crdv2.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.CurrentRevision},
+			)
+		}
+	}
+	return instance.DefaultLabelsWith(crdv2.CoreLabels())
 }

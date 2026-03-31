@@ -10,6 +10,7 @@ import (
 	req "github.com/emqx/emqx-operator/internal/requester"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,7 +65,7 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 		var serviceList corev1.ServiceList
 		Expect(k8sClient.List(ctx, &serviceList, client.InNamespace(ns.Name))).To(Succeed())
 		for _, service := range serviceList.Items {
-			k8sClient.Delete(ctx, &service)
+			_ = k8sClient.Delete(ctx, &service)
 		}
 	})
 
@@ -96,15 +97,32 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(crdv2.CoreLabels())))
 	})
 
-	It("points the Listeners Service at the recent-revision replicants when ready", func() {
+	It("points the Listeners Service at current-revision replicants when recent revision not ready", func() {
 		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
 			Spec: crdv2.EMQXReplicantTemplateSpec{
 				Replicas: ptr.To(int32(1)),
 			},
 		}
 		instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
-			ReadyReplicas:  1,
-			UpdateRevision: "rev-ready",
+			ReadyReplicas:   1,
+			UpdateRevision:  "rev-update",
+			CurrentRevision: "rev-current",
+		}
+		round.state.replicantSets = []*appsv1.ReplicaSet{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "emqx-rev-current",
+					Labels: map[string]string{crdv2.LabelPodTemplateHash: "rev-current"},
+				},
+				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "emqx-rev-update",
+					Labels: map[string]string{crdv2.LabelPodTemplateHash: "rev-update"},
+				},
+				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 0},
+			},
 		}
 
 		Eventually(a.reconcile).WithArguments(round, instance).
@@ -114,7 +132,46 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
 		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(
 			crdv2.ReplicantLabels(),
-			map[string]string{crdv2.LabelPodTemplateHash: "rev-ready"},
+			map[string]string{crdv2.LabelPodTemplateHash: "rev-current"},
+		)))
+	})
+
+	It("points the Listeners Service at recent-revision replicants when ready", func() {
+		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
+			Spec: crdv2.EMQXReplicantTemplateSpec{
+				Replicas: ptr.To(int32(1)),
+			},
+		}
+		instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
+			ReadyReplicas:   1,
+			UpdateRevision:  "rev-update",
+			CurrentRevision: "rev-current",
+		}
+		round.state.replicantSets = []*appsv1.ReplicaSet{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "emqx-rev-current",
+					Labels: map[string]string{crdv2.LabelPodTemplateHash: "rev-current"},
+				},
+				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "emqx-rev-update",
+					Labels: map[string]string{crdv2.LabelPodTemplateHash: "rev-update"},
+				},
+				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
+			},
+		}
+
+		Eventually(a.reconcile).WithArguments(round, instance).
+			Should(Equal(subResult{}))
+
+		listeners := &corev1.Service{}
+		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
+		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(
+			crdv2.ReplicantLabels(),
+			map[string]string{crdv2.LabelPodTemplateHash: "rev-update"},
 		)))
 	})
 

@@ -16,7 +16,6 @@ func loadConf(data string) *config.EMQX {
 	conf, _ := config.EMQXConfigWithDefaults(data)
 	return conf
 }
-
 func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check metadata", func(t *testing.T) {
@@ -175,7 +174,7 @@ func TestGenerateListenersService(t *testing.T) {
 				},
 			},
 		}
-		got := generateListenerService(emqx, loadConf(""))
+		got := generateListenerService(newReconcileRound(), emqx, loadConf(""))
 		assert.Equal(t, metav1.ObjectMeta{
 			Name:      "emqx-listeners",
 			Namespace: "emqx",
@@ -195,17 +194,17 @@ func TestGenerateListenersService(t *testing.T) {
 		emqx.Spec.ListenersServiceTemplate = &crdv2.ServiceTemplate{
 			Enabled: ptr.To(false),
 		}
-		got := generateListenerService(emqx, loadConf(""))
+		got := generateListenerService(newReconcileRound(), emqx, loadConf(""))
 		assert.Nil(t, got)
 	})
 
-	t.Run("should selector core pods", func(t *testing.T) {
+	t.Run("check core pod selector by default", func(t *testing.T) {
 		emqx := &crdv2.EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "emqx",
 			},
 		}
-		got := generateListenerService(emqx, loadConf(""))
+		got := generateListenerService(newReconcileRound(), emqx, loadConf(""))
 		assert.Equal(t, map[string]string{
 			crdv2.LabelInstance:  "emqx",
 			crdv2.LabelManagedBy: "emqx-operator",
@@ -213,37 +212,9 @@ func TestGenerateListenersService(t *testing.T) {
 		}, got.Spec.Selector)
 	})
 
-	t.Run("should selector replicant pods", func(t *testing.T) {
-		emqx := &crdv2.EMQX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "emqx",
-			},
-			Spec: crdv2.EMQXSpec{
-				ReplicantTemplate: &crdv2.EMQXReplicantTemplate{
-					Spec: crdv2.EMQXReplicantTemplateSpec{
-						Replicas: ptr.To(int32(3)),
-					},
-				},
-			},
-			Status: crdv2.EMQXStatus{
-				ReplicantNodesStatus: crdv2.ReplicantNodesStatus{
-					ReadyReplicas:  3,
-					UpdateRevision: "update-revision",
-				},
-			},
-		}
-		got := generateListenerService(emqx, loadConf(""))
-		assert.Equal(t, map[string]string{
-			crdv2.LabelInstance:        "emqx",
-			crdv2.LabelManagedBy:       "emqx-operator",
-			crdv2.LabelDBRole:          "replicant",
-			crdv2.LabelPodTemplateHash: "update-revision",
-		}, got.Spec.Selector)
-	})
-
 	t.Run("check default ports", func(t *testing.T) {
 		emqx := &crdv2.EMQX{}
-		got := generateListenerService(emqx, loadConf(""))
+		got := generateListenerService(newReconcileRound(), emqx, loadConf(""))
 		assert.ElementsMatch(t, []corev1.ServicePort{
 			{
 				Name:       "tcp-default",
@@ -277,7 +248,7 @@ func TestGenerateListenersService(t *testing.T) {
 		conf, _ := config.EMQXConfigWithDefaults(`
 		gateway.lwm2m.listeners.udp.default.bind = 5783
 		`)
-		got := generateListenerService(emqx, conf)
+		got := generateListenerService(newReconcileRound(), emqx, conf)
 		assert.ElementsMatch(t, []corev1.ServicePort{
 			{
 				Name:       "lwm2m-udp-default",
