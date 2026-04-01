@@ -623,8 +623,10 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 
 	Context("EMQX Core-Replicant Cluster / Runtime-enabled DS Replication", func() {
 		// Initial number of core and replicant replicas:
-		var coreReplicas int = 1
+		var coreReplicas int = 2
 		var replicantReplicas int = 2
+
+		const emqxImage = "emqx/emqx:5.10.2"
 
 		It("deploy core-replicant EMQX cluster", func() {
 			By("create EMQX cluster")
@@ -644,16 +646,14 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 		})
 
 		It("enable DS replication", func() {
-			By("change config + add label to trigger new deployment")
+			By("change config + add label to trigger rolling update")
 			configDs := string(intoJsonString(configDS()))
-			coreReplicas = 2
 			changedAt := metav1.Now()
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
 				"--patch", `[
 					{"op": "replace", "path": "/spec/config/data", "value": `+configDs+`},
-					{"op": "add", "path": "/spec/coreTemplate/metadata/labels", "value": {"e2e/ds-replication": "true"}},
-					{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 2}
+					{"op": "add", "path": "/spec/coreTemplate/metadata/labels", "value": {"e2e/ds-replication": "true"}}
 				]`,
 			)).To(Succeed())
 
