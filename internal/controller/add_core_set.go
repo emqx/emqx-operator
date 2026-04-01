@@ -240,7 +240,13 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      instance.CoreNamespacedName().Name + "-data",
 				Namespace: instance.Namespace,
-				Labels:    statefulSetLabels(instance),
+				// TODO
+				// Labels from the core template are currently not attached to PVCs.
+				// This is deliberate, as it simplifies StatefulSet management.
+				// If this is needed, care must be taken to propagate the core template
+				// changes correctly: updating PVC template (if only just labels) inside
+				// the StatefulSet spec is explicitly forbidden by K8S API server.
+				Labels: instance.DefaultLabelsWith(crdv2.CoreLabels()),
 			},
 			Spec: coreDataVolumeClaimSpec(template),
 		},
