@@ -25,17 +25,17 @@ type addCoreSet struct {
 }
 
 func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
-	sts := newStatefulSet(instance, r.conf)
-
 	existing := r.state.coreSet()
+	coreSet := newStatefulSet(instance, r.conf)
+	_ = ctrl.SetControllerReference(instance, coreSet, a.Scheme)
+
 	if existing == nil {
 		// No StatefulSet exists yet.
 		r.log.Info("creating statefulSet",
-			"statefulSet", klog.KObj(sts),
+			"statefulSet", klog.KObj(coreSet),
 			"reason", "no existing statefulSet",
 		)
-		_ = ctrl.SetControllerReference(instance, sts, a.Scheme)
-		if err := a.Handler.Create(r.ctx, sts); err != nil {
+		if err := a.Handler.Create(r.ctx, coreSet); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				return reconcileRequeue()
 			}
@@ -48,12 +48,9 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	// StatefulSet exists.
 	// Update it in place if the spec has changed.
 	// With OnDelete strategy, updating the spec does not restart pods.
-	sts.ObjectMeta = existing.ObjectMeta
-	sts.Spec.Template.ObjectMeta = existing.Spec.Template.ObjectMeta
-	sts.Spec.Selector = existing.Spec.Selector
 	patchResult, _ := a.Patcher.Calculate(
 		existing,
-		sts,
+		coreSet,
 		patch.IgnoreStatusFields(),
 		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
 		// Ignore if number of replicas has changed.
@@ -62,11 +59,11 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	)
 	if !patchResult.IsEmpty() {
 		r.log.Info("updating statefulSet",
-			"statefulSet", klog.KObj(sts),
+			"statefulSet", klog.KObj(coreSet),
 			"reason", "spec has changed",
 			"patch", string(patchResult.Patch),
 		)
-		err := a.Handler.Update(r.ctx, sts)
+		err := a.Handler.Update(r.ctx, coreSet)
 		if err != nil {
 			return reconcileError(emperror.Wrap(err, "failed to update statefulSet"))
 		}
@@ -135,7 +132,7 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 			PodManagementPolicy:                  appsv1.ParallelPodManagement,
 			PersistentVolumeClaimRetentionPolicy: &pvcRetentionPolicy,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: statefulSetLabels(instance),
+				MatchLabels: statefulSetSelectorLabels(instance),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -258,6 +255,12 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 // Combine instance labels, core labels and template labels.
 func statefulSetLabels(instance *crdv2.EMQX) map[string]string {
 	return instance.DefaultLabelsWith(crdv2.CoreLabels(), instance.Spec.CoreTemplate.Labels)
+}
+
+// Combine just instance labels and core labels.
+// Should be stable across EMQX spec changes.
+func statefulSetSelectorLabels(instance *crdv2.EMQX) map[string]string {
+	return instance.DefaultLabelsWith(crdv2.CoreLabels())
 }
 
 func coreDataVolumeClaimSpec(template *crdv2.EMQXCoreTemplate) corev1.PersistentVolumeClaimSpec {

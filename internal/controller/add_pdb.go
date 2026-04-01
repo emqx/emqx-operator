@@ -40,7 +40,7 @@ func generatePodDisruptionBudget(instance *crdv2.EMQX) (*policyv1.PodDisruptionB
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: instance.DefaultLabelsWith(crdv2.CoreLabels(), instance.Spec.CoreTemplate.Labels),
+				MatchLabels: instance.DefaultLabelsWith(crdv2.CoreLabels()),
 			},
 			MinAvailable:   instance.Spec.CoreTemplate.Spec.MinAvailable,
 			MaxUnavailable: instance.Spec.CoreTemplate.Spec.MaxUnavailable,
@@ -50,10 +50,7 @@ func generatePodDisruptionBudget(instance *crdv2.EMQX) (*policyv1.PodDisruptionB
 	if instance.Spec.HasReplicants() {
 		replPdb := corePdb.DeepCopy()
 		replPdb.Name = instance.ReplicantNamespacedName().Name
-		replPdb.Spec.Selector.MatchLabels = instance.DefaultLabelsWith(
-			crdv2.ReplicantLabels(),
-			instance.Spec.ReplicantTemplate.Labels,
-		)
+		replPdb.Spec.Selector.MatchLabels = instance.DefaultLabelsWith(crdv2.ReplicantLabels())
 		replPdb.Spec.MinAvailable = instance.Spec.ReplicantTemplate.Spec.MinAvailable
 		replPdb.Spec.MaxUnavailable = instance.Spec.ReplicantTemplate.Spec.MaxUnavailable
 		return corePdb, replPdb

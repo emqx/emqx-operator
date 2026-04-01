@@ -71,7 +71,6 @@ func TestGetNewStatefulSet(t *testing.T) {
 			crdv2.LabelInstance:  "emqx",
 			crdv2.LabelManagedBy: "emqx-operator",
 			crdv2.LabelDBRole:    "core",
-			"core-label-key":     "core-label-value",
 		}, got.Spec.Selector.MatchLabels)
 	})
 
@@ -175,7 +174,6 @@ func TestGetNewStatefulSet(t *testing.T) {
 						crdv2.LabelDBRole:    "core",
 						crdv2.LabelInstance:  "emqx",
 						crdv2.LabelManagedBy: "emqx-operator",
-						"core-label-key":     "core-label-value",
 					},
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
@@ -223,7 +221,6 @@ func TestGetNewStatefulSet(t *testing.T) {
 						crdv2.LabelDBRole:    "core",
 						crdv2.LabelInstance:  "emqx",
 						crdv2.LabelManagedBy: "emqx-operator",
-						"core-label-key":     "core-label-value",
 					},
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
