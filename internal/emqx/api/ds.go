@@ -90,17 +90,6 @@ func (s *DSReplicationStatus) TargetSites() (sites []string) {
 	return sites
 }
 
-func IsDSAvailable(r req.RequesterInterface) (bool, error) {
-	_, err := get(r, "api/v5/ds/sites")
-	if err == nil {
-		return true, nil
-	}
-	if emperror.Is(err, ErrorNotFound) {
-		return false, nil
-	}
-	return false, err
-}
-
 func GetDSReplicationStatus(requester req.RequesterInterface) (DSReplicationStatus, error) {
 	status := DSReplicationStatus{DBs: []DSDBReplicationStatus{}}
 

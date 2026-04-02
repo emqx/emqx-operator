@@ -8,7 +8,6 @@ import (
 	emperror "emperror.dev/errors"
 	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	req "github.com/emqx/emqx-operator/internal/requester"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // EMQX node evacuation state values reported by the API.
@@ -104,15 +103,4 @@ func StopEvacuation(
 		return err
 	}
 	return nil
-}
-
-func AvailabilityCheck(req req.RequesterInterface) corev1.ConditionStatus {
-	_, err := get(req, URLAvailabilityCheck)
-	if err != nil && emperror.Is(err, ErrorServiceUnavailable) {
-		return corev1.ConditionFalse
-	}
-	if err != nil {
-		return corev1.ConditionUnknown
-	}
-	return corev1.ConditionTrue
 }

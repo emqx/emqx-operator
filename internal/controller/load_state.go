@@ -133,14 +133,6 @@ func (r *reconcileState) partOfUpdateReplicantSet(pod *corev1.Pod, instance *crd
 	return false
 }
 
-func (r *reconcileState) areCoresAvailable(instance *crd.EMQX) bool {
-	coreSet := r.coreSet()
-	if coreSet == nil {
-		return false
-	}
-	return coreSet.Status.AvailableReplicas >= instance.Spec.NumCoreReplicas()
-}
-
 func (r *reconcileState) areReplicantsAvailable(instance *crd.EMQX) bool {
 	desired := instance.Spec.NumReplicantReplicas()
 	if desired == 0 {
