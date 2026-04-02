@@ -60,6 +60,26 @@ jobs:
       - name: Helm template dry-run
         run: helm template emqx-operator deploy/charts/emqx-operator | kubectl apply --dry-run=client -f -
 
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1.14.0
+
+      - name: Helm install
+        run: |
+          helm install emqx-operator deploy/charts/emqx-operator \
+            --namespace "emqx-operator-system" \
+            --create-namespace \
+            --wait \
+            --timeout 3m
+
+      - name: Verify Operator workload
+        run: |
+          kubectl wait --for=condition=ready pod \
+            -n "emqx-operator-system" \
+            -l control-plane=controller-manager \
+            --timeout=180s
+          kubectl -n "emqx-operator-system" get all -l control-plane=controller-manager
+          kubectl -n "emqx-operator-system" get events
+
       - name: Vet Chart
         if: ${{ env.CHART_VERSION != '' }}
         run: |
