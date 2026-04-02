@@ -91,11 +91,20 @@ jobs:
 
       - name: Push Helm Chart
         if: ${{ env.CHART_VERSION != '' }}
-        uses: emqx/push-helm-action@v1.1
-        with:
-          charts_dir: "${{ github.workspace }}/deploy/charts/emqx-operator"
-          version: ${{ env.CHART_VERSION }}
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: "us-west-2"
-          aws_bucket_name: "repos-emqx-io"
+        env:
+          HELM_REPO_AWS_BUCKET_NAME: "repos-emqx-io"
+          AWS_DEFAULT_REGION: "us-west-2"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        working-directory: "deploy/charts/emqx-operator"
+        run: |
+          # Update helm packages
+          helm dependency update
+          helm package .
+          # Upload to AWS
+          mkdir -p /tmp/helm-repo
+          aws s3 sync s3://${{ env.HELM_REPO_AWS_BUCKET_NAME }}/charts/ /tmp/helm-repo/
+          mv *.tgz /tmp/helm-repo
+          cd /tmp/helm-repo
+          helm repo index .
+          aws s3 sync . s3://${{ env.HELM_REPO_AWS_BUCKET_NAME }}/charts/
