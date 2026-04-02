@@ -1,17 +1,17 @@
-name: Release
+name: Release Operator
 
 on:
   push:
     tags:
-      - '*'
+      - '[0-9]+.[0-9]*'
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to build from (e.g., main)'
+        description: 'Branch to build from (e.g., main-2.3)'
         required: true
         default: main-2.3
       tag:
-        description: 'Release tag (e.g., 2.3.0). If empty, dry run.'
+        description: 'Operator tag (e.g. 2.3.0). Empty = dry run.'
         required: false
 
 permissions:
@@ -72,47 +72,3 @@ jobs:
             --generate-notes \
             --verify-tag \
             --draft
-
-  helm:
-    needs: release
-    runs-on: ubuntu-latest
-    env:
-      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ (github.event_name == 'workflow_dispatch' && inputs.branch) || github.ref }}
-
-      - uses: azure/setup-helm@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-
-      - name: Vet Chart
-        run: |
-          app_version=$(yq '.appVersion' deploy/charts/emqx-operator/Chart.yaml)
-          if [ "$app_version" != "$RELEASE_VERSION" ]; then
-            echo "::error::Chart appVersion ($app_version) does not match release tag ($RELEASE_VERSION)"
-            exit 1
-          fi
-
-      - name: Generate CRDs
-        run: make build-crd
-
-      - name: Helm lint
-        run: helm lint deploy/charts/emqx-operator
-
-      - name: Helm template dry-run
-        run: helm template emqx-operator deploy/charts/emqx-operator | kubectl apply --dry-run=client -f -
-
-      - name: Push Helm Chart
-        if: ${{ (github.event_name == 'push' && github.ref_type == 'tag') || (github.event_name == 'workflow_dispatch' && inputs.tag != '') }}
-        uses: emqx/push-helm-action@v1.1
-        with:
-          charts_dir: "${{ github.workspace }}/deploy/charts/emqx-operator"
-          version: ${{ env.RELEASE_VERSION }}
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: "us-west-2"
-          aws_bucket_name: "repos-emqx-io"

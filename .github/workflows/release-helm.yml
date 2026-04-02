@@ -1,0 +1,101 @@
+name: Release Helm Chart
+
+on:
+  push:
+    tags:
+      - 'helm-[0-9]+.[0-9]*'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from (e.g., main-2.3)'
+        required: true
+        default: main-2.3
+      tag:
+        description: 'Helm tag (e.g. helm-2.3.0-rc.1). Empty = dry run.'
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ (github.event_name == 'workflow_dispatch' && inputs.branch) || github.ref }}
+
+      - name: Resolve chart version from tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          case "$TAG" in
+            helm-*)
+              echo "CHART_VERSION=${TAG#helm-}" | tee -a "$GITHUB_ENV"
+              ;;
+            "")
+              echo "No Helm release tag, dry running"
+              ;;
+            *)
+              echo "::error::Helm release tags must match helm-X.Y.[...], got ${TAG}"
+              exit 1
+              ;;
+          esac
+
+      - uses: azure/setup-helm@v5
+
+      - uses: actions/setup-go@v6.4
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Generate CRDs
+        run: make build-crd
+
+      - name: Helm lint
+        run: helm lint deploy/charts/emqx-operator
+
+      - name: Helm template dry-run
+        run: helm template emqx-operator deploy/charts/emqx-operator | kubectl apply --dry-run=client -f -
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1.14.0
+
+      - name: Helm install
+        run: |
+          helm install emqx-operator deploy/charts/emqx-operator \
+            --namespace "emqx-operator-system" \
+            --create-namespace \
+            --wait \
+            --timeout 3m
+
+      - name: Verify Operator workload
+        run: |
+          kubectl wait --for=condition=ready pod \
+            -n "emqx-operator-system" \
+            -l control-plane=controller-manager \
+            --timeout=180s
+          kubectl -n "emqx-operator-system" get all -l control-plane=controller-manager
+          kubectl -n "emqx-operator-system" get events
+
+      - name: Vet Chart
+        if: ${{ env.CHART_VERSION != '' }}
+        run: |
+          chart_version=$(yq '.version' deploy/charts/emqx-operator/Chart.yaml)
+          if [ "$chart_version" != "$CHART_VERSION" ]; then
+            echo "::error::Chart version `$chart_version` does not match git tag `helm-${CHART_VERSION}`"
+            exit 1
+          fi
+
+      - name: Push Helm Chart
+        if: ${{ env.CHART_VERSION != '' }}
+        uses: emqx/push-helm-action@v1.1
+        with:
+          charts_dir: "${{ github.workspace }}/deploy/charts/emqx-operator"
+          version: ${{ env.CHART_VERSION }}
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: "us-west-2"
+          aws_bucket_name: "repos-emqx-io"
