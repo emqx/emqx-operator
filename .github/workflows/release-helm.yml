@@ -47,7 +47,7 @@ jobs:
 
       - uses: azure/setup-helm@v5
 
-      - uses: actions/setup-go@v6.4
+      - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
 
