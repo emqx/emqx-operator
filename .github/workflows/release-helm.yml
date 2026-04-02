@@ -21,7 +21,7 @@ jobs:
   helm:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ (github.event_name == 'workflow_dispatch' && inputs.branch) || github.ref }}
 
@@ -45,9 +45,9 @@ jobs:
               ;;
           esac
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6.4
         with:
           go-version-file: 'go.mod'
 
