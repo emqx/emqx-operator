@@ -51,6 +51,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1.14.0
+
       - name: Generate CRDs
         run: make build-crd
 
@@ -59,9 +62,6 @@ jobs:
 
       - name: Helm template dry-run
         run: helm template emqx-operator deploy/charts/emqx-operator | kubectl apply --dry-run=client -f -
-
-      - name: Create Kind cluster
-        uses: helm/kind-action@v1.14.0
 
       - name: Helm install
         run: |
