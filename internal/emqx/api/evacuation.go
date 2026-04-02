@@ -11,6 +11,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// EMQX node evacuation state values reported by the API.
+const EvacuationStateProhibiting = "prohibiting"
+
 const URLAvailabilityCheck = "api/v5/load_rebalance/availability_check"
 
 type nodeEvacuationStatusResponse struct {

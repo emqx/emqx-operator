@@ -147,7 +147,7 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentRe
 func (s *syncCoreSet) updateEvacuationState(r *reconcileRound, instance *crd.EMQX) error {
 	updateRevision := r.state.coreSet().Status.UpdateRevision
 	for _, evacuation := range instance.Status.NodeEvacuations {
-		if evacuation.State != "prohibiting" {
+		if evacuation.State != api.EvacuationStateProhibiting {
 			continue
 		}
 		node := instance.Status.FindNode(evacuation.NodeName)
@@ -210,7 +210,7 @@ func checkCorePodRemoval(
 	status := &instance.Status
 
 	if len(status.NodeEvacuations) > 0 {
-		if status.NodeEvacuations[0].State != "prohibiting" {
+		if status.NodeEvacuations[0].State != api.EvacuationStateProhibiting {
 			return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
 		}
 	}
@@ -251,7 +251,7 @@ func checkCorePodRemoval(
 		return coreAdmission{Action: admissionRemove, Reason: "node is out of cluster"}
 	}
 
-	if nodeInfo.Status == "stopped" {
+	if nodeInfo.Status == api.NodeStatusStopped {
 		return coreAdmission{Action: admissionRemove, Reason: "node is already stopped"}
 	}
 

@@ -26,7 +26,7 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 	staleNodes := []*crd.EMQXNode{}
 	for _, node := range instance.Status.CoreNodes {
 		// Running cores / cores still having respective pods should not be force-left:
-		if node.Status != "stopped" || node.PodName != "" || r.state.podWithName(node.PodName) != nil {
+		if node.Status != api.NodeStatusStopped || node.PodName != "" || r.state.podWithName(node.PodName) != nil {
 			continue
 		}
 		// Cores with node name having pod ordinal under desired number of replicas should not be force-left:
@@ -41,7 +41,7 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 
 	for _, node := range instance.Status.ReplicantNodes {
 		// Running replicants / replicants still having respective pods should not be force-left:
-		if node.Status != "stopped" || node.PodName != "" || r.state.podWithName(node.PodName) != nil {
+		if node.Status != api.NodeStatusStopped || node.PodName != "" || r.state.podWithName(node.PodName) != nil {
 			continue
 		}
 		// Stopped replicants w/o respective pods should be force-left:

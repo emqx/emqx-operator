@@ -101,7 +101,7 @@ func (s *syncReplicantSets) chooseScaleDownReplicant(
 
 	if len(status.NodeEvacuations) > 0 {
 		evacuatingNode := status.NodeEvacuations[0]
-		if evacuatingNode.State != "prohibiting" {
+		if evacuatingNode.State != api.EvacuationStateProhibiting {
 			return scaleDownReplicant{Reason: fmt.Sprintf("node %s evacuation in progress", evacuatingNode.NodeName)}, nil
 		}
 		for _, node := range status.ReplicantNodes {
@@ -127,7 +127,7 @@ func (s *syncReplicantSets) chooseScaleDownReplicant(
 			return scaleDownReplicant{}, emperror.Errorf("node is missing for pod %s", scaleDownPod.Name)
 		}
 		// If the pod is already stopped, return it.
-		if scaleDownNode.Status == "stopped" {
+		if scaleDownNode.Status == api.NodeStatusStopped {
 			return scaleDownReplicant{Pod: scaleDownPod, Reason: "pod is already stopped"}, nil
 		}
 	}

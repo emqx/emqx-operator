@@ -8,6 +8,9 @@ import (
 	req "github.com/emqx/emqx-operator/internal/requester"
 )
 
+// EMQX node status values reported by the API.
+const NodeStatusStopped = "stopped"
+
 type EMQXNode struct {
 	// EMQX node name, example: emqx@127.0.0.1
 	Node string `json:"node,omitempty"`
