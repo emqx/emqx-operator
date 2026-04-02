@@ -7,7 +7,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
@@ -24,7 +24,7 @@ type addCoreSet struct {
 	*EMQXReconciler
 }
 
-func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	existing := r.state.coreSet()
 	coreSet := newStatefulSet(instance, r.conf)
 	_ = ctrl.SetControllerReference(instance, coreSet, a.Scheme)
@@ -76,7 +76,7 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	return subResult{}
 }
 
-func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet {
+func newStatefulSet(instance *crd.EMQX, conf *config.EMQX) *appsv1.StatefulSet {
 	sts := generateStatefulSet(instance)
 	sts.Spec.Template.Spec.Containers[0].Ports = util.MergeContainerPorts(
 		sts.Spec.Template.Spec.Containers[0].Ports,
@@ -85,7 +85,7 @@ func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet
 	return sts
 }
 
-func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
+func generateStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
 	template := &instance.Spec.CoreTemplate
 
 	cookie := resources.Cookie(instance)
@@ -151,7 +151,7 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 					InitContainers:            template.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
-							Name:            crdv2.DefaultContainerName,
+							Name:            crd.DefaultContainerName,
 							Image:           instance.Spec.Image,
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
 							Command:         template.Spec.Command,
@@ -243,7 +243,7 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 				// If this is needed, care must be taken to propagate the core template
 				// changes correctly: updating PVC template (if only just labels) inside
 				// the StatefulSet spec is explicitly forbidden by K8S API server.
-				Labels: instance.DefaultLabelsWith(crdv2.CoreLabels()),
+				Labels: instance.DefaultLabelsWith(crd.CoreLabels()),
 			},
 			Spec: coreDataVolumeClaimSpec(template),
 		},
@@ -253,17 +253,17 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 }
 
 // Combine instance labels, core labels and template labels.
-func statefulSetLabels(instance *crdv2.EMQX) map[string]string {
-	return instance.DefaultLabelsWith(crdv2.CoreLabels(), instance.Spec.CoreTemplate.Labels)
+func statefulSetLabels(instance *crd.EMQX) map[string]string {
+	return instance.DefaultLabelsWith(crd.CoreLabels(), instance.Spec.CoreTemplate.Labels)
 }
 
 // Combine just instance labels and core labels.
 // Should be stable across EMQX spec changes.
-func statefulSetSelectorLabels(instance *crdv2.EMQX) map[string]string {
-	return instance.DefaultLabelsWith(crdv2.CoreLabels())
+func statefulSetSelectorLabels(instance *crd.EMQX) map[string]string {
+	return instance.DefaultLabelsWith(crd.CoreLabels())
 }
 
-func coreDataVolumeClaimSpec(template *crdv2.EMQXCoreTemplate) corev1.PersistentVolumeClaimSpec {
+func coreDataVolumeClaimSpec(template *crd.EMQXCoreTemplate) corev1.PersistentVolumeClaimSpec {
 	spec := template.Spec.PersistentVolumeClaimSpec.DeepCopy()
 	if len(spec.AccessModes) == 0 {
 		spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}

@@ -1,4 +1,4 @@
-apiVersion: apps.emqx.io/v2
+apiVersion: apps.emqx.io/v3alpha1
 kind: EMQX
 metadata:
   name: emqx

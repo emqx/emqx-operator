@@ -3,7 +3,7 @@ package controller
 import (
 	"fmt"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	api "github.com/emqx/emqx-operator/internal/emqx/api"
 	corev1 "k8s.io/api/core/v1"
@@ -16,14 +16,14 @@ type syncClusterMembership struct {
 	*EMQXReconciler
 }
 
-func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Instantiate API requester.
 	req := r.oldestCoreRequester()
 	if req == nil {
 		return reconcilePostpone()
 	}
 
-	staleNodes := []*crdv2.EMQXNode{}
+	staleNodes := []*crd.EMQXNode{}
 	for _, node := range instance.Status.CoreNodes {
 		// Running cores / cores still having respective pods should not be force-left:
 		if node.Status != "stopped" || node.PodName != "" || r.state.podWithName(node.PodName) != nil {

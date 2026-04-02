@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	. "github.com/onsi/ginkgo/v2"
@@ -31,7 +31,7 @@ func mockConfigsRequester(configBody string) req.RequesterInterface {
 
 var _ = Describe("Reconciler addService", Ordered, func() {
 	var a *addService
-	var instance *crdv2.EMQX
+	var instance *crd.EMQX
 	var ns *corev1.Namespace
 	var round *reconcileRound
 
@@ -52,7 +52,7 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 	BeforeEach(func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-		instance.Spec.CoreTemplate = crdv2.EMQXCoreTemplate{
+		instance.Spec.CoreTemplate = crd.EMQXCoreTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{"test": "label"},
 			},
@@ -90,20 +90,20 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 
 		dashboard := &corev1.Service{}
 		Expect(k8sClient.Get(ctx, instance.DashboardServiceNamespacedName(), dashboard)).To(Succeed())
-		Expect(dashboard.Spec.Selector).To(Equal(instance.DefaultLabelsWith(crdv2.CoreLabels())))
+		Expect(dashboard.Spec.Selector).To(Equal(instance.DefaultLabelsWith(crd.CoreLabels())))
 
 		listeners := &corev1.Service{}
 		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
-		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(crdv2.CoreLabels())))
+		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(crd.CoreLabels())))
 	})
 
 	It("points the Listeners Service at current-revision replicants when recent revision not ready", func() {
-		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
-			Spec: crdv2.EMQXReplicantTemplateSpec{
+		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+			Spec: crd.EMQXReplicantTemplateSpec{
 				Replicas: ptr.To(int32(1)),
 			},
 		}
-		instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
+		instance.Status.ReplicantNodesStatus = crd.ReplicantNodesStatus{
 			ReadyReplicas:   1,
 			UpdateRevision:  "rev-update",
 			CurrentRevision: "rev-current",
@@ -112,14 +112,14 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "emqx-rev-current",
-					Labels: map[string]string{crdv2.LabelPodTemplateHash: "rev-current"},
+					Labels: map[string]string{crd.LabelPodTemplateHash: "rev-current"},
 				},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "emqx-rev-update",
-					Labels: map[string]string{crdv2.LabelPodTemplateHash: "rev-update"},
+					Labels: map[string]string{crd.LabelPodTemplateHash: "rev-update"},
 				},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 0},
 			},
@@ -131,18 +131,18 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 		listeners := &corev1.Service{}
 		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
 		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(
-			crdv2.ReplicantLabels(),
-			map[string]string{crdv2.LabelPodTemplateHash: "rev-current"},
+			crd.ReplicantLabels(),
+			map[string]string{crd.LabelPodTemplateHash: "rev-current"},
 		)))
 	})
 
 	It("points the Listeners Service at recent-revision replicants when ready", func() {
-		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
-			Spec: crdv2.EMQXReplicantTemplateSpec{
+		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+			Spec: crd.EMQXReplicantTemplateSpec{
 				Replicas: ptr.To(int32(1)),
 			},
 		}
-		instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
+		instance.Status.ReplicantNodesStatus = crd.ReplicantNodesStatus{
 			ReadyReplicas:   1,
 			UpdateRevision:  "rev-update",
 			CurrentRevision: "rev-current",
@@ -151,14 +151,14 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "emqx-rev-current",
-					Labels: map[string]string{crdv2.LabelPodTemplateHash: "rev-current"},
+					Labels: map[string]string{crd.LabelPodTemplateHash: "rev-current"},
 				},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "emqx-rev-update",
-					Labels: map[string]string{crdv2.LabelPodTemplateHash: "rev-update"},
+					Labels: map[string]string{crd.LabelPodTemplateHash: "rev-update"},
 				},
 				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 			},
@@ -170,14 +170,14 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 		listeners := &corev1.Service{}
 		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
 		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(
-			crdv2.ReplicantLabels(),
-			map[string]string{crdv2.LabelPodTemplateHash: "rev-update"},
+			crd.ReplicantLabels(),
+			map[string]string{crd.LabelPodTemplateHash: "rev-update"},
 		)))
 	})
 
 	It("does not create the Dashboard Service when the template is disabled", func() {
 		disabled := false
-		instance.Spec.DashboardServiceTemplate = &crdv2.ServiceTemplate{
+		instance.Spec.DashboardServiceTemplate = &crd.ServiceTemplate{
 			Enabled: &disabled,
 		}
 

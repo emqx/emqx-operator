@@ -2,7 +2,7 @@ package controller
 
 import (
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
@@ -19,7 +19,7 @@ type addService struct {
 	*EMQXReconciler
 }
 
-func (a *addService) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (a *addService) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Postpone if there are no usable cores yet.
 	// Should proceed once one core replica is Ready.
 	req := r.oldestCoreRequester()
@@ -51,7 +51,7 @@ func (a *addService) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	return subResult{}
 }
 
-func generateDashboardService(instance *crdv2.EMQX, conf *config.EMQX) *corev1.Service {
+func generateDashboardService(instance *crd.EMQX, conf *config.EMQX) *corev1.Service {
 	meta := &metav1.ObjectMeta{}
 	spec := &corev1.ServiceSpec{}
 	if instance.Spec.DashboardServiceTemplate != nil {
@@ -68,7 +68,7 @@ func generateDashboardService(instance *crdv2.EMQX, conf *config.EMQX) *corev1.S
 	}
 
 	spec.Ports = util.MergeServicePorts(spec.Ports, ports)
-	spec.Selector = instance.DefaultLabelsWith(crdv2.CoreLabels())
+	spec.Selector = instance.DefaultLabelsWith(crd.CoreLabels())
 
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -85,7 +85,7 @@ func generateDashboardService(instance *crdv2.EMQX, conf *config.EMQX) *corev1.S
 	}
 }
 
-func generateListenerService(r *reconcileRound, instance *crdv2.EMQX, conf *config.EMQX) *corev1.Service {
+func generateListenerService(r *reconcileRound, instance *crd.EMQX, conf *config.EMQX) *corev1.Service {
 	meta := &metav1.ObjectMeta{}
 	spec := &corev1.ServiceSpec{}
 	if instance.Spec.ListenersServiceTemplate != nil {
@@ -155,22 +155,22 @@ func generateListenerService(r *reconcileRound, instance *crdv2.EMQX, conf *conf
 // during replicant restarts or scale-up, both ReplicaSets can sit below desired ready
 // for a while; requiring ReadyReplicas >= desired would send traffic to cores and drop
 // listener sessions. Prefer routing to whichever revision still has ready pods.
-func listenerServiceSelector(r *reconcileRound, instance *crdv2.EMQX) map[string]string {
+func listenerServiceSelector(r *reconcileRound, instance *crd.EMQX) map[string]string {
 	if instance.Spec.HasReplicants() {
 		updateRs := r.state.updateReplicantSet(instance)
 		currentRs := r.state.currentReplicantSet(instance)
 		if updateRs != nil && updateRs.Status.ReadyReplicas > 0 {
 			return instance.DefaultLabelsWith(
-				crdv2.ReplicantLabels(),
-				map[string]string{crdv2.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.UpdateRevision},
+				crd.ReplicantLabels(),
+				map[string]string{crd.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.UpdateRevision},
 			)
 		}
 		if currentRs != nil && currentRs.Status.ReadyReplicas > 0 {
 			return instance.DefaultLabelsWith(
-				crdv2.ReplicantLabels(),
-				map[string]string{crdv2.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.CurrentRevision},
+				crd.ReplicantLabels(),
+				map[string]string{crd.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.CurrentRevision},
 			)
 		}
 	}
-	return instance.DefaultLabelsWith(crdv2.CoreLabels())
+	return instance.DefaultLabelsWith(crd.CoreLabels())
 }

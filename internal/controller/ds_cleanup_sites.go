@@ -2,7 +2,7 @@ package controller
 
 import (
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 )
 
@@ -12,7 +12,7 @@ type dsCleanupSites struct {
 	*EMQXReconciler
 }
 
-func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// If DS cluster state is not loaded, skip the reconciliation.
 	if r.dsCluster == nil {
 		return subResult{}

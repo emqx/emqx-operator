@@ -1,7 +1,7 @@
 package controller
 
 import (
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -12,10 +12,10 @@ const OverridesConfigFile string = "emqx.conf"
 const configVolumeName = "bootstrap-config"
 
 type emqxConfigResource struct {
-	*crdv2.EMQX
+	*crd.EMQX
 }
 
-func EMQXConfig(instance *crdv2.EMQX) emqxConfigResource {
+func EMQXConfig(instance *crd.EMQX) emqxConfigResource {
 	return emqxConfigResource{instance}
 }
 

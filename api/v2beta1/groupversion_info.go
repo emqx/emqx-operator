@@ -14,7 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// package v2beta1 contains API Schema definitions for the apps v2beta1 API group.
+// Package v2beta1 contains Rebalance API Schema definitions for the apps.emqx.io v2beta1 API group.
+//
+// NOTE: The Rebalance CRD is currently NOT FUNCTIONAL.
+// Type definitions are retained for future use but the CRD is not registered
+// with the scheme, not installed in the cluster, and no controller reconciles it.
+//
 // +kubebuilder:object:generate=true
 // +groupName=apps.emqx.io
 package v2beta1

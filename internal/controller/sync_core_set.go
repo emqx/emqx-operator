@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +32,7 @@ type coreAdmission struct {
 	Reason string
 }
 
-func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	coreSet := r.state.coreSet()
 	if coreSet == nil {
 		return reconcilePostpone()
@@ -72,7 +72,7 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResu
 
 // rollingUpdate detects outdated core pods and replaces them one at a time,
 // starting from the highest ordinal. Each pod is evacuated before deletion.
-func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Sort outdated pods by name descending to delete highest ordinal first.
 	outdated := listOutdatedPods(r)
 	sortByName(outdated)
@@ -114,7 +114,7 @@ func (s *syncCoreSet) scaleUp(r *reconcileRound, desiredReplicas int32) subResul
 
 // scaleDown removes the highest-ordinal pod with evacuation gating, then
 // decrements the StatefulSet replica count.
-func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX, currentReplicas int32) subResult {
+func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentReplicas int32) subResult {
 	coreSet := r.state.coreSet()
 
 	// Candidate is the highest-ordinal pod, where ordinal = currentReplicas-1.
@@ -144,7 +144,7 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crdv2.EMQX, current
 
 // Stops evacuation on nodes that are no longer need to evacuate anything:
 // nodes that belong to the most recent coreSet revision.
-func (s *syncCoreSet) updateEvacuationState(r *reconcileRound, instance *crdv2.EMQX) error {
+func (s *syncCoreSet) updateEvacuationState(r *reconcileRound, instance *crd.EMQX) error {
 	updateRevision := r.state.coreSet().Status.UpdateRevision
 	for _, evacuation := range instance.Status.NodeEvacuations {
 		if evacuation.State != "prohibiting" {
@@ -203,7 +203,7 @@ func listOutdatedPods(r *reconcileRound) []*corev1.Pod {
 // data: blocking on DS site condition would stall the rollout indefinitely.
 func checkCorePodRemoval(
 	r *reconcileRound,
-	instance *crdv2.EMQX,
+	instance *crd.EMQX,
 	pod *corev1.Pod,
 	isPermanent bool,
 ) coreAdmission {
@@ -233,13 +233,13 @@ func checkCorePodRemoval(
 
 	// Disallow permanently removing the pod that is still a DS replication site.
 	if isPermanent {
-		dsCondition := util.FindPodCondition(pod, crdv2.DSReplicationSite)
+		dsCondition := util.FindPodCondition(pod, crd.DSReplicationSite)
 		if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
 			return coreAdmission{Action: admissionWait, Reason: fmt.Sprintf("pod %s is still a DS replication site", pod.Name)}
 		}
 	}
 
-	var nodeInfo *crdv2.EMQXNode
+	var nodeInfo *crd.EMQXNode
 	for _, node := range status.CoreNodes {
 		if node.PodName == pod.Name {
 			nodeInfo = &node
@@ -275,7 +275,7 @@ func checkCorePodRemoval(
 // Currently this only handles coreAdmitEvacuate by calling the evacuation API.
 func (s *syncCoreSet) onCoreAdmission(
 	r *reconcileRound,
-	instance *crdv2.EMQX,
+	instance *crd.EMQX,
 	candidate *corev1.Pod,
 	admission coreAdmission,
 	cause string,
@@ -316,7 +316,7 @@ func (s *syncCoreSet) onCoreAdmission(
 // Currently this only handles coreAdmitEvacuate by calling the evacuation API.
 func (s *syncCoreSet) startEvacuation(
 	r *reconcileRound,
-	instance *crdv2.EMQX,
+	instance *crd.EMQX,
 	pod *corev1.Pod,
 ) error {
 	nodeInfo := instance.Status.FindNodeByPodName(pod.Name)
@@ -355,7 +355,7 @@ func (s *syncCoreSet) startEvacuation(
 // migrationTargetNodes returns the list of EMQX nodes to migrate workloads to.
 // For cores, targets are pods on the current (update) revision. For replicants,
 // targets are pods in the update ReplicaSet.
-func migrationTargetNodes(r *reconcileRound, instance *crdv2.EMQX) []string {
+func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 	targets := []string{}
 	if instance.Spec.HasReplicants() {
 		for _, node := range instance.Status.ReplicantNodes {

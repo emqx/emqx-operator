@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("Reconciler addBootstrap", Ordered, func() {
-	var instance *crdv2.EMQX = &crdv2.EMQX{}
+	var instance *crd.EMQX = &crd.EMQX{}
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var a *addBootstrap
 
@@ -77,7 +77,7 @@ var _ = Describe("Reconciler addBootstrap", Ordered, func() {
 
 	It("should contain key and secret in bootstrap secret given initial values", func() {
 		// Given
-		instance.Spec.BootstrapAPIKeys = []crdv2.BootstrapAPIKey{
+		instance.Spec.BootstrapAPIKeys = []crd.BootstrapAPIKey{
 			{
 				Key:    "test_key",
 				Secret: "test_secret",
@@ -104,15 +104,15 @@ var _ = Describe("Reconciler addBootstrap", Ordered, func() {
 
 	It("should contain key and secret in bootstrap secret given SecretRef values", func() {
 		// Given
-		instance.Spec.BootstrapAPIKeys = []crdv2.BootstrapAPIKey{
+		instance.Spec.BootstrapAPIKeys = []crd.BootstrapAPIKey{
 			{
-				SecretRef: &crdv2.SecretRef{
-					Key: crdv2.KeyRef{
+				SecretRef: &crd.SecretRef{
+					Key: crd.KeyRef{
 						// Note: a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters
 						SecretName: "test-key-secret",
 						SecretKey:  "key",
 					},
-					Secret: crdv2.KeyRef{
+					Secret: crd.KeyRef{
 						SecretName: "test-value-secret",
 						SecretKey:  "secret",
 					},

@@ -13,7 +13,7 @@ import (
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	"github.com/davecgh/go-spew/spew"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +30,7 @@ func justCheckPodTemplate() patch.CalculateOption {
 		_ = json.Unmarshal([]byte(podTemplateSpecJson.String()), podTemplateSpec)
 
 		// Remove the podTemplateHashLabelKey from the podTemplateSpec
-		delete(podTemplateSpec.Labels, crdv2.LabelPodTemplateHash)
+		delete(podTemplateSpec.Labels, crd.LabelPodTemplateHash)
 
 		emptyRs := &appsv1.ReplicaSet{}
 		emptyRs.Spec.Template = *podTemplateSpec
@@ -155,7 +155,7 @@ type nodeName struct {
 	podName  string
 }
 
-func parseNodeName(s string, instance *crdv2.EMQX) *nodeName {
+func parseNodeName(s string, instance *crd.EMQX) *nodeName {
 	// Example: emqx@emqx-core-557c8b7684-0.emqx-headless.default.svc.cluster.local
 	// Example: emqx@10.244.0.23
 	var parsed nodeName

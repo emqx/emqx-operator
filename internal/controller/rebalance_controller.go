@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
 	crdv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
@@ -79,7 +79,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	emqx := &crdv2.EMQX{}
+	emqx := &crd.EMQX{}
 	if err := r.Client.Get(ctx, client.ObjectKey{
 		Name:      rebalance.Spec.InstanceName,
 		Namespace: rebalance.Namespace,
@@ -100,7 +100,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 	}
 
 	// check if emqx is ready
-	if !emqx.Status.IsConditionTrue(crdv2.Ready) {
+	if !emqx.Status.IsConditionTrue(crd.Ready) {
 		// return ctrl.Result{}, emperror.New("EMQX is not ready")
 		_ = rebalance.Status.SetFailed(crdv2beta1.RebalanceCondition{
 			Type:    crdv2beta1.RebalanceConditionFailed,
@@ -181,7 +181,7 @@ func (r *RebalanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func rebalanceStatusHandler(emqx *crdv2.EMQX, rebalance *crdv2beta1.Rebalance, req req.RequesterInterface) {
+func rebalanceStatusHandler(emqx *crd.EMQX, rebalance *crdv2beta1.Rebalance, req req.RequesterInterface) {
 	switch rebalance.Status.Phase {
 	case "":
 		if err := startRebalance(emqx, rebalance, req); err != nil {
@@ -226,7 +226,7 @@ func rebalanceStatusHandler(emqx *crdv2.EMQX, rebalance *crdv2beta1.Rebalance, r
 	}
 }
 
-func startRebalance(emqx *crdv2.EMQX, rebalance *crdv2beta1.Rebalance, req req.RequesterInterface) error {
+func startRebalance(emqx *crd.EMQX, rebalance *crdv2beta1.Rebalance, req req.RequesterInterface) error {
 	nodes := []string{}
 	if len(emqx.Status.ReplicantNodes) == 0 {
 		for _, node := range emqx.Status.CoreNodes {

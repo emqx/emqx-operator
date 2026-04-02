@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	. "github.com/emqx/emqx-operator/test/util"
 	"github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo/v2"
@@ -187,7 +187,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("fetch core StatefulSet")
 			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelDBRole+"=core",
+				"--selector", crd.LabelDBRole+"=core",
 				"-o", "json",
 			)).To(UnmarshalInto(&stsListBefore))
 			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
@@ -212,7 +212,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelDBRole+"=core",
+				"--selector", crd.LabelDBRole+"=core",
 				"-o", "json",
 			)).To(UnmarshalInto(&stsList))
 
@@ -299,7 +299,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			)).To(Succeed(), "Timed out waiting MQTTX to be ready")
 
 			By("lookup initial EMQX status")
-			var statusInitial crdv2.CoreNodesStatus
+			var statusInitial crd.CoreNodesStatus
 			Eventually(checkEMQXReady).Should(Succeed())
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
 				To(UnmarshalInto(&statusInitial))
@@ -326,7 +326,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				To(Succeed())
 			Consistently(checkEMQXReady, "30s", "3s").WithArguments(changedAt2).Should(Not(Succeed()))
 
-			var status crdv2.CoreNodesStatus
+			var status crd.CoreNodesStatus
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
 				To(
 					BeUnmarshalledAs(&status,
@@ -428,7 +428,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("fetch core StatefulSet")
 			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelDBRole+"=core",
+				"--selector", crd.LabelDBRole+"=core",
 				"-o", "json",
 			)).To(UnmarshalInto(&stsListBefore))
 			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
@@ -438,7 +438,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			replRev, err := KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus.currentRevision}")
 			Expect(err).NotTo(HaveOccurred(), "Failed to get EMQX status")
 			Expect(KubectlOut("get", "replicaset",
-				"--selector", crdv2.LabelPodTemplateHash+"="+replRev,
+				"--selector", crd.LabelPodTemplateHash+"="+replRev,
 				"-o", "json",
 			)).To(UnmarshalInto(&rsList), "Failed to list replicasets")
 			Expect(rsList.Items).To(HaveLen(1))
@@ -463,7 +463,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelDBRole+"=core",
+				"--selector", crd.LabelDBRole+"=core",
 				"-o", "json",
 			)).To(UnmarshalInto(&stsList))
 
@@ -514,20 +514,20 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("verify EMQX pods have relevant conditions")
 			var pods corev1.PodList
 			Expect(KubectlOut("get", "pods",
-				"--selector", crdv2.LabelManagedBy+"=emqx-operator",
+				"--selector", crd.LabelManagedBy+"=emqx-operator",
 				"-o", "json",
 			)).To(UnmarshalInto(&pods), "Failed to list EMQX pods")
 			Expect(pods.Items).To(HaveLen(4), "EMQX cluster does not have 4 pods")
 			for _, pod := range pods.Items {
-				if pod.Labels[crdv2.LabelDBRole] == "core" {
+				if pod.Labels[crd.LabelDBRole] == "core" {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
-						HaveField("Type", Equal(crdv2.DSReplicationSite)),
+						HaveField("Type", Equal(crd.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionTrue)),
 					)))
 				}
-				if pod.Labels[crdv2.LabelDBRole] == "replicant" {
+				if pod.Labels[crd.LabelDBRole] == "replicant" {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
-						HaveField("Type", Equal(crdv2.DSReplicationSite)),
+						HaveField("Type", Equal(crd.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionFalse)),
 					)))
 				}
@@ -571,7 +571,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("fetch core StatefulSet")
 			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelDBRole+"=core",
+				"--selector", crd.LabelDBRole+"=core",
 				"-o", "json",
 			)).To(UnmarshalInto(&stsListBefore))
 			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
@@ -595,7 +595,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crdv2.LabelDBRole+"=core",
+				"--selector", crd.LabelDBRole+"=core",
 				"-o", "json",
 			)).To(UnmarshalInto(&stsList))
 
@@ -668,20 +668,20 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("verify EMQX pods have relevant conditions")
 			var pods corev1.PodList
 			Expect(KubectlOut("get", "pods",
-				"--selector", crdv2.LabelManagedBy+"=emqx-operator",
+				"--selector", crd.LabelManagedBy+"=emqx-operator",
 				"-o", "json",
 			)).To(UnmarshalInto(&pods), "Failed to list EMQX pods")
 			Expect(pods.Items).To(HaveLen(4))
 			for _, pod := range pods.Items {
-				if pod.Labels[crdv2.LabelDBRole] == "core" {
+				if pod.Labels[crd.LabelDBRole] == "core" {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
-						HaveField("Type", Equal(crdv2.DSReplicationSite)),
+						HaveField("Type", Equal(crd.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionTrue)),
 					)))
 				}
-				if pod.Labels[crdv2.LabelDBRole] == "replicant" {
+				if pod.Labels[crd.LabelDBRole] == "replicant" {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
-						HaveField("Type", Equal(crdv2.DSReplicationSite)),
+						HaveField("Type", Equal(crd.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionFalse)),
 					)))
 				}

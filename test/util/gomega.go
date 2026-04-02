@@ -3,7 +3,7 @@ package util
 import (
 	"encoding/json"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +11,7 @@ import (
 
 func HaveCondition(conditionType string, matcher types.GomegaMatcher) types.GomegaMatcher {
 	return gomega.WithTransform(
-		func(instance *crdv2.EMQX) *metav1.Condition {
+		func(instance *crd.EMQX) *metav1.Condition {
 			_, condition := instance.Status.GetCondition(conditionType)
 			return condition
 		},

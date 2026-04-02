@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +18,7 @@ type updateStatus struct {
 	*EMQXReconciler
 }
 
-func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	status := &instance.Status
 
 	// Core: count pods on each revision for rolling update progress.
@@ -71,9 +71,9 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 	if req != nil {
 		clusterEvacuationsStatus, err := api.ClusterEvacuationStatus(req)
 		if err == nil {
-			status.NodeEvacuations = []crdv2.NodeEvacuationStatus{}
+			status.NodeEvacuations = []crd.NodeEvacuationStatus{}
 			for _, ns := range clusterEvacuationsStatus {
-				status.NodeEvacuations = append(status.NodeEvacuations, crdv2.NodeEvacuationStatus{
+				status.NodeEvacuations = append(status.NodeEvacuations, crd.NodeEvacuationStatus{
 					NodeName:               ns.Node,
 					State:                  ns.State,
 					SessionRecipients:      ns.SessionRecipients,
@@ -99,7 +99,7 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 		}
 	}
 	if len(dsReplicationStatus.DBs) > 0 {
-		status.DSReplication.DBs = make([]crdv2.DSDBReplicationStatus, len(dsReplicationStatus.DBs))
+		status.DSReplication.DBs = make([]crd.DSDBReplicationStatus, len(dsReplicationStatus.DBs))
 	}
 	for i, db := range dsReplicationStatus.DBs {
 		minReplicas := 0
@@ -122,7 +122,7 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 				}
 			}
 		}
-		status.DSReplication.DBs[i] = crdv2.DSDBReplicationStatus{
+		status.DSReplication.DBs[i] = crd.DSDBReplicationStatus{
 			Name:              db.Name,
 			NumShards:         int32(len(db.Shards)),
 			NumShardReplicas:  int32(numShardReplicas),
@@ -143,15 +143,15 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 }
 
 // evaluateStatusConditions evaluates all conditions independently from current state.
-func evaluateStatusConditions(s *reconcileState, instance *crdv2.EMQX) {
+func evaluateStatusConditions(s *reconcileState, instance *crd.EMQX) {
 	evaluateCoreNodesProgressing(s, instance)
 	evaluateReplicantNodesProgressing(s, instance)
 	evaluateAvailable(s, instance)
 	evaluateReady(s, instance)
 }
 
-func evaluateCoreNodesProgressing(s *reconcileState, instance *crdv2.EMQX) {
-	cond := crdv2.CoreNodesProgressing
+func evaluateCoreNodesProgressing(s *reconcileState, instance *crd.EMQX) {
+	cond := crd.CoreNodesProgressing
 	status := &instance.Status
 
 	coreSet := s.coreSet()
@@ -180,19 +180,19 @@ func evaluateCoreNodesProgressing(s *reconcileState, instance *crdv2.EMQX) {
 	}
 }
 
-func forceCoreNodesProgressing(instance *crdv2.EMQX) {
-	instance.Status.SetCondition(crdv2.CoreNodesProgressing, metav1.ConditionTrue, "RollingUpdate",
+func forceCoreNodesProgressing(instance *crd.EMQX) {
+	instance.Status.SetCondition(crd.CoreNodesProgressing, metav1.ConditionTrue, "RollingUpdate",
 		"0 core pods updated")
-	instance.Status.SetCondition(crdv2.Ready, metav1.ConditionFalse, "CoreNodesProgressing",
+	instance.Status.SetCondition(crd.Ready, metav1.ConditionFalse, "CoreNodesProgressing",
 		"Core nodes are progressing")
 }
 
-func evaluateReplicantNodesProgressing(s *reconcileState, instance *crdv2.EMQX) {
-	cond := crdv2.ReplicantNodesProgressing
+func evaluateReplicantNodesProgressing(s *reconcileState, instance *crd.EMQX) {
+	cond := crd.ReplicantNodesProgressing
 	status := &instance.Status
 
 	if !instance.Spec.HasReplicants() {
-		status.RemoveCondition(crdv2.ReplicantNodesProgressing)
+		status.RemoveCondition(crd.ReplicantNodesProgressing)
 		return
 	}
 
@@ -224,15 +224,15 @@ func evaluateReplicantNodesProgressing(s *reconcileState, instance *crdv2.EMQX) 
 	}
 }
 
-func forceReplicantNodesProgressing(instance *crdv2.EMQX) {
-	instance.Status.SetCondition(crdv2.ReplicantNodesProgressing, metav1.ConditionTrue, "RollingUpdate",
+func forceReplicantNodesProgressing(instance *crd.EMQX) {
+	instance.Status.SetCondition(crd.ReplicantNodesProgressing, metav1.ConditionTrue, "RollingUpdate",
 		"0 replicant pods updated")
-	instance.Status.SetCondition(crdv2.Ready, metav1.ConditionFalse, "ReplicantNodesProgressing",
+	instance.Status.SetCondition(crd.Ready, metav1.ConditionFalse, "ReplicantNodesProgressing",
 		"Replicant nodes are progressing")
 }
 
-func evaluateAvailable(s *reconcileState, instance *crdv2.EMQX) {
-	cond := crdv2.Available
+func evaluateAvailable(s *reconcileState, instance *crd.EMQX) {
+	cond := crd.Available
 	status := &instance.Status
 	if instance.Spec.HasReplicants() {
 		replicantSet := s.updateReplicantSet(instance)
@@ -265,11 +265,11 @@ func evaluateAvailable(s *reconcileState, instance *crdv2.EMQX) {
 	}
 }
 
-func evaluateReady(s *reconcileState, instance *crdv2.EMQX) {
+func evaluateReady(s *reconcileState, instance *crd.EMQX) {
 	status := &instance.Status
 
 	if !evaluateCoresReady(s, instance) {
-		status.SetCondition(crdv2.Ready, metav1.ConditionFalse,
+		status.SetCondition(crd.Ready, metav1.ConditionFalse,
 			"CoreNodesProgressing",
 			"Core nodes are progressing",
 		)
@@ -278,7 +278,7 @@ func evaluateReady(s *reconcileState, instance *crdv2.EMQX) {
 
 	if instance.Spec.HasReplicants() {
 		if !evaluateReplicantsReady(s, instance) {
-			status.SetCondition(crdv2.Ready, metav1.ConditionFalse,
+			status.SetCondition(crd.Ready, metav1.ConditionFalse,
 				"ReplicantNodesProgressing",
 				"Replicant nodes are progressing",
 			)
@@ -287,17 +287,17 @@ func evaluateReady(s *reconcileState, instance *crdv2.EMQX) {
 	}
 
 	if !instance.Status.DSReplication.IsStable() {
-		status.SetCondition(crdv2.Ready, metav1.ConditionFalse,
+		status.SetCondition(crd.Ready, metav1.ConditionFalse,
 			"DSReplicationProgressing",
 			"Durable storage membership transitions are in progress",
 		)
 		return
 	}
 
-	status.SetCondition(crdv2.Ready, metav1.ConditionTrue, "Ready", "Cluster is ready")
+	status.SetCondition(crd.Ready, metav1.ConditionTrue, "Ready", "Cluster is ready")
 }
 
-func evaluateCoresReady(r *reconcileState, instance *crdv2.EMQX) bool {
+func evaluateCoresReady(r *reconcileState, instance *crd.EMQX) bool {
 	desired := instance.Spec.NumCoreReplicas()
 	coreSet := r.coreSet()
 	coresReady := int32(0)
@@ -314,7 +314,7 @@ func evaluateCoresReady(r *reconcileState, instance *crdv2.EMQX) bool {
 		nodesTotal == desired && nodesReady == desired
 }
 
-func evaluateReplicantsReady(s *reconcileState, instance *crdv2.EMQX) bool {
+func evaluateReplicantsReady(s *reconcileState, instance *crd.EMQX) bool {
 	desired := instance.Spec.NumReplicantReplicas()
 	replicantSet := s.updateReplicantSet(instance)
 	replicantsTotal := int32(0)
@@ -331,7 +331,7 @@ func evaluateReplicantsReady(s *reconcileState, instance *crdv2.EMQX) bool {
 
 func switchReplicantSet(
 	r *reconcileRound,
-	instance *crdv2.EMQX,
+	instance *crd.EMQX,
 ) (*appsv1.ReplicaSet, *appsv1.ReplicaSet) {
 	current := r.state.currentReplicantSet(instance)
 	update := r.state.updateReplicantSet(instance)
@@ -351,15 +351,15 @@ func switchReplicantSet(
 		}
 	}
 	if current != nil {
-		instance.Status.ReplicantNodesStatus.CurrentRevision = current.Labels[crdv2.LabelPodTemplateHash]
+		instance.Status.ReplicantNodesStatus.CurrentRevision = current.Labels[crd.LabelPodTemplateHash]
 	}
 	return current, update
 }
 
-func (u *updateStatus) updateEMQXNodesStatus(r *reconcileRound, instance *crdv2.EMQX, nodes []api.EMQXNode) {
+func (u *updateStatus) updateEMQXNodesStatus(r *reconcileRound, instance *crd.EMQX, nodes []api.EMQXNode) {
 	status := &instance.Status
-	status.CoreNodes = []crdv2.EMQXNode{}
-	status.ReplicantNodes = []crdv2.EMQXNode{}
+	status.CoreNodes = []crd.EMQXNode{}
+	status.ReplicantNodes = []crd.EMQXNode{}
 	slices.SortFunc(nodes, func(a, b api.EMQXNode) int {
 		// Use seconds granularity to avoid jitter in ordering
 		asec := a.Uptime / 1000
@@ -370,7 +370,7 @@ func (u *updateStatus) updateEMQXNodesStatus(r *reconcileRound, instance *crdv2.
 		return cmp.Compare(asec, bsec)
 	})
 	for _, n := range nodes {
-		node := crdv2.EMQXNode{
+		node := crd.EMQXNode{
 			Name:        n.Node,
 			Status:      n.NodeStatus,
 			OTPRelease:  n.OTPRelease,

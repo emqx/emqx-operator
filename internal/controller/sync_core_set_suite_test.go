@@ -1,7 +1,7 @@
 package controller
 
 import (
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
-	var instance *crdv2.EMQX
+	var instance *crd.EMQX
 
 	var round *reconcileRound
 	var coreSet *appsv1.StatefulSet
@@ -40,7 +40,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 	})
 
 	BeforeEach(func() {
-		coreLabels := emqx.DefaultLabelsWith(crdv2.CoreLabels())
+		coreLabels := emqx.DefaultLabelsWith(crd.CoreLabels())
 		coreSet = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      emqx.Name + "-core",
@@ -75,9 +75,9 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 				Name:      coreSet.Name + "-0",
 				Namespace: ns.Name,
 				Labels: map[string]string{
-					crdv2.LabelInstance:                   "emqx",
-					crdv2.LabelManagedBy:                  "emqx-operator",
-					crdv2.LabelDBRole:                     "core",
+					crd.LabelInstance:                     "emqx",
+					crd.LabelManagedBy:                    "emqx-operator",
+					crd.LabelDBRole:                       "core",
 					appsv1.ControllerRevisionHashLabelKey: currentRevision,
 				},
 				OwnerReferences: ownerReferences(coreSet),
@@ -109,7 +109,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
-		instance.Status.CoreNodes = []crdv2.EMQXNode{
+		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: "emqx@" + pod0.Name, PodName: pod0.Name, Status: "running"},
 			{Name: "emqx@" + pod1.Name, PodName: pod1.Name, Status: "running"},
 		}
@@ -139,7 +139,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 	})
 
 	It("waits while a node evacuation is still in progress", func() {
-		instance.Status.NodeEvacuations = []crdv2.NodeEvacuationStatus{
+		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 			{NodeName: "emqx@" + pod1.Name, State: "evicting_sessions"},
 		}
 		admission := checkCorePodRemoval(round, instance, pod1, false)
@@ -160,7 +160,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 	It("single node session > 0", func() {
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Status.CoreNodes = []crdv2.EMQXNode{
+		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: "emqx@" + pod0.Name, PodName: pod0.Name, Status: "running", Sessions: 99999},
 		}
 		admission := checkCorePodRemoval(round, instance, pod0, false)
@@ -180,12 +180,12 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 	When("replicant replicaSet updating", func() {
 		BeforeEach(func() {
-			instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
-				Spec: crdv2.EMQXReplicantTemplateSpec{
+			instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+				Spec: crd.EMQXReplicantTemplateSpec{
 					Replicas: ptr.To(int32(3)),
 				},
 			}
-			instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
+			instance.Status.ReplicantNodesStatus = crd.ReplicantNodesStatus{
 				UpdateRevision:  updateRevision,
 				CurrentRevision: currentRevision,
 			}
@@ -217,7 +217,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 	It("DS replication site blocks scale-down", func() {
 		pod1.Status.Conditions = []corev1.PodCondition{
-			{Type: crdv2.DSReplicationSite, Status: corev1.ConditionTrue},
+			{Type: crd.DSReplicationSite, Status: corev1.ConditionTrue},
 		}
 		admission := checkCorePodRemoval(round, instance, pod1, true)
 		Expect(admission).To(And(
@@ -228,7 +228,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 
 	It("DS replication site does not block rolling update", func() {
 		pod1.Status.Conditions = []corev1.PodCondition{
-			{Type: crdv2.DSReplicationSite, Status: corev1.ConditionTrue},
+			{Type: crd.DSReplicationSite, Status: corev1.ConditionTrue},
 		}
 		admission := checkCorePodRemoval(round, instance, pod1, false)
 		Expect(admission).To(

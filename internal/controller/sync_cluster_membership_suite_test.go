@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -18,7 +18,7 @@ import (
 
 var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 	var ns *corev1.Namespace
-	var instance *crdv2.EMQX
+	var instance *crd.EMQX
 	var round *reconcileRound
 	var coreSet *appsv1.StatefulSet
 	var replicantSet *appsv1.ReplicaSet
@@ -52,7 +52,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 	})
 
 	BeforeEach(func() {
-		coreLabels := emqx.DefaultLabelsWith(crdv2.CoreLabels())
+		coreLabels := emqx.DefaultLabelsWith(crd.CoreLabels())
 		coreSet = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      emqx.Name + "-core",
@@ -83,9 +83,9 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 				Name:      coreSet.Name + "-0",
 				Namespace: ns.Name,
 				Labels: map[string]string{
-					crdv2.LabelInstance:                   "emqx",
-					crdv2.LabelManagedBy:                  "emqx-operator",
-					crdv2.LabelDBRole:                     "core",
+					crd.LabelInstance:                     "emqx",
+					crd.LabelManagedBy:                    "emqx-operator",
+					crd.LabelDBRole:                       "core",
 					appsv1.ControllerRevisionHashLabelKey: updateRevision,
 				},
 				OwnerReferences: ownerReferences(coreSet),
@@ -97,8 +97,8 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 		Expect(k8sClient.Create(ctx, corePod0)).Should(Succeed())
 
 		replicantLabels := emqx.DefaultLabelsWith(
-			crdv2.ReplicantLabels(),
-			map[string]string{crdv2.LabelPodTemplateHash: "rev1"},
+			crd.ReplicantLabels(),
+			map[string]string{crd.LabelPodTemplateHash: "rev1"},
 		)
 		replicantSet = &appsv1.ReplicaSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -156,7 +156,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 		instance.Namespace = ns.Name
 		instance.Spec.ClusterDomain = "local"
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{}
+		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{}
 		instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(1))
 		round = newReconcileRoundWithRequester(mockRequester)
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
@@ -170,7 +170,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 	})
 
 	It("force-leaves scaled-down node whose pod is gone", func() {
-		instance.Status.CoreNodes = []crdv2.EMQXNode{
+		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
 			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "stopped"},
 			{Name: emqxNodeName(coreSet.Name + "-10"), PodName: "", Status: "stopped"},
@@ -186,7 +186,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 	It("does NOT force-leave stopped node whose pod still exists", func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-		instance.Status.CoreNodes = []crdv2.EMQXNode{
+		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "stopped"},
 			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: coreSet.Name + "-1", Status: "stopped"},
 		}
@@ -200,7 +200,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Status.CoreNodes = []crdv2.EMQXNode{
+		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
 			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "running"},
 		}
@@ -214,10 +214,10 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Status.CoreNodes = []crdv2.EMQXNode{
+		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
 		}
-		instance.Status.ReplicantNodes = []crdv2.EMQXNode{
+		instance.Status.ReplicantNodes = []crd.EMQXNode{
 			{Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped", Role: "replicant"},
 			{Name: "emqx@10.0.0.11", PodName: "", Status: "stopped", Role: "replicant"},
 		}
@@ -230,10 +230,10 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Status.CoreNodes = []crdv2.EMQXNode{
+		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
 		}
-		instance.Status.ReplicantNodes = []crdv2.EMQXNode{
+		instance.Status.ReplicantNodes = []crd.EMQXNode{
 			{Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped", Role: "replicant"},
 		}
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
@@ -246,10 +246,10 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Status.CoreNodes = []crdv2.EMQXNode{
+		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
 		}
-		instance.Status.ReplicantNodes = []crdv2.EMQXNode{
+		instance.Status.ReplicantNodes = []crd.EMQXNode{
 			{Name: "emqx@10.0.0.99", PodName: "", Status: "running", Role: "replicant"},
 		}
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())

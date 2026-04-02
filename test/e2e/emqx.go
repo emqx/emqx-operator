@@ -1,7 +1,7 @@
 package e2e
 
 import (
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	. "github.com/emqx/emqx-operator/test/util"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -25,8 +25,8 @@ func checkEMQXReady(g Gomega, afterTime ...metav1.Time) {
 }
 
 func checkEMQXStatus(g Gomega, coreReplicas int) {
-	var status crdv2.CoreNodesStatus
-	var nodes []crdv2.EMQXNode
+	var status crd.CoreNodesStatus
+	var nodes []crd.EMQXNode
 	var podList corev1.PodList
 	var pvcList corev1.PersistentVolumeClaimList
 	g.Expect(KubectlOut("get", "pod",
@@ -62,7 +62,7 @@ func checkEMQXStatus(g Gomega, coreReplicas int) {
 		"EMQX cluster contains nodes without pods",
 	)
 	g.Expect(KubectlOut("get", "pvc",
-		"--selector", crdv2.LabelDBRole+"=core,"+crdv2.LabelManagedBy+"=emqx-operator",
+		"--selector", crd.LabelDBRole+"=core,"+crd.LabelManagedBy+"=emqx-operator",
 		"-o", "json",
 	)).To(UnmarshalInto(&pvcList), "Failed to list core PVCs")
 	g.Expect(pvcList.Items).To(
@@ -85,7 +85,7 @@ func checkNoReplicants(g Gomega) {
 }
 
 func checkReplicantStatus(g Gomega, replicantReplicas int) {
-	var status crdv2.ReplicantNodesStatus
+	var status crd.ReplicantNodesStatus
 	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus}")).
 		To(UnmarshalInto(&status), "Failed to get EMQX replicant nodes status")
 	g.Expect(status).To(
@@ -99,7 +99,7 @@ func checkReplicantStatus(g Gomega, replicantReplicas int) {
 	checkReplicantNodesStatusRevision(g, status, replicantReplicas)
 }
 
-func checkReplicantNodesStatusRevision(g Gomega, status crdv2.ReplicantNodesStatus, replicas int) {
+func checkReplicantNodesStatusRevision(g Gomega, status crd.ReplicantNodesStatus, replicas int) {
 	var podList corev1.PodList
 	g.Expect(status).To(
 		And(
@@ -113,7 +113,7 @@ func checkReplicantNodesStatusRevision(g Gomega, status crdv2.ReplicantNodesStat
 		"EMQX replicant nodes current and update revisions are different",
 	)
 	g.Expect(KubectlOut("get", "pods",
-		"--selector", crdv2.LabelPodTemplateHash+"="+status.CurrentRevision,
+		"--selector", crd.LabelPodTemplateHash+"="+status.CurrentRevision,
 		"--field-selector", "status.phase==Running",
 		"-o", "json",
 	)).To(UnmarshalInto(&podList), "Failed to list replicant pods")
@@ -124,7 +124,7 @@ func checkReplicantNodesStatusRevision(g Gomega, status crdv2.ReplicantNodesStat
 }
 
 func checkDSReplicationStatus(g Gomega, coreReplicas int) {
-	status := &crdv2.DSReplicationStatus{}
+	status := &crd.DSReplicationStatus{}
 	replicationFactor := min(3, coreReplicas)
 	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.dsReplication}")).
 		To(UnmarshalInto(&status), "Failed to get emqx status")
@@ -134,7 +134,7 @@ func checkDSReplicationStatus(g Gomega, coreReplicas int) {
 			HaveField("Name", Not(BeEmpty())),
 			HaveField("NumShards", Not(BeZero())),
 			HaveField("NumShardReplicas", Not(BeZero())),
-			Satisfy(func(db crdv2.DSDBReplicationStatus) bool {
+			Satisfy(func(db crd.DSDBReplicationStatus) bool {
 				return db.NumShardReplicas == db.NumShards*int32(replicationFactor)
 			}),
 			HaveField("LostShardReplicas", BeEquivalentTo(0)),

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	api "github.com/emqx/emqx-operator/internal/emqx/api"
 )
@@ -15,7 +15,7 @@ type dsUpdateReplicaSets struct {
 	*EMQXReconciler
 }
 
-func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// If DS cluster state is not loaded, skip the reconciliation.
 	if r.dsCluster == nil || r.dsReplication == nil {
 		return subResult{}

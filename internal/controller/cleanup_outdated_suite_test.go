@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -17,7 +17,7 @@ import (
 var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 	var s *cleanupOutdatedSets
 
-	var instance *crdv2.EMQX = &crdv2.EMQX{}
+	var instance *crd.EMQX = &crd.EMQX{}
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var round *reconcileRound
 
@@ -41,10 +41,10 @@ var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.RevisionHistoryLimit = 3
-		instance.Status = crdv2.EMQXStatus{
+		instance.Status = crd.EMQXStatus{
 			Conditions: []metav1.Condition{
 				{
-					Type:               crdv2.Ready,
+					Type:               crd.Ready,
 					Status:             metav1.ConditionTrue,
 					LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
 				},
@@ -63,23 +63,23 @@ var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 					Name:      name,
 					Namespace: instance.Namespace,
 					Labels: instance.DefaultLabelsWith(
-						crdv2.ReplicantLabels(),
-						map[string]string{crdv2.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
+						crd.ReplicantLabels(),
+						map[string]string{crd.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
 					),
 				},
 				Spec: appsv1.ReplicaSetSpec{
 					Replicas: ptr.To(int32(0)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: instance.DefaultLabelsWith(
-							crdv2.ReplicantLabels(),
-							map[string]string{crdv2.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
+							crd.ReplicantLabels(),
+							map[string]string{crd.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
 						),
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: instance.DefaultLabelsWith(
-								crdv2.ReplicantLabels(),
-								map[string]string{crdv2.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
+								crd.ReplicantLabels(),
+								map[string]string{crd.LabelPodTemplateHash: fmt.Sprintf("fake-%d", i)},
 							),
 						},
 						Spec: corev1.PodSpec{
@@ -103,7 +103,7 @@ var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 			list := &appsv1.ReplicaSetList{}
 			_ = k8sClient.List(ctx, list,
 				client.InNamespace(instance.Namespace),
-				client.MatchingLabels(instance.DefaultLabelsWith(crdv2.ReplicantLabels())),
+				client.MatchingLabels(instance.DefaultLabelsWith(crd.ReplicantLabels())),
 			)
 			return list
 		}).

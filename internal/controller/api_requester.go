@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
@@ -56,7 +56,7 @@ func (f *managedByFilter) filter(pod *corev1.Pod) bool {
 }
 
 type emqxVersionFilter struct {
-	instance *crdv2.EMQX
+	instance *crd.EMQX
 	prefix   string
 }
 

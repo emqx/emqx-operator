@@ -3,7 +3,7 @@ package e2e
 import (
 	"fmt"
 
-	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	crd "github.com/emqx/emqx-operator/api/v2beta1"
 	. "github.com/emqx/emqx-operator/test/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -11,8 +11,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// NOTE: Rebalance controller is disabled in this release. See api/v3alpha1/rebalance_types.go.
+
 //nolint:errcheck
-var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
+var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, Pending, func() {
+
 	BeforeAll(func() {
 		By("create manager namespace")
 		Expect(Kubectl("create", "ns", namespace)).To(Succeed())
@@ -56,10 +59,10 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 		By("wait for Rebalance to be failed")
 		Eventually(RebalanceStatus).Should(
 			And(
-				HaveField("Phase", Equal(appsv2beta1.RebalancePhaseFailed)),
+				HaveField("Phase", Equal(crd.RebalancePhaseFailed)),
 				HaveField("RebalanceStates", BeEmpty()),
 				HaveRebalanceCondition(
-					appsv2beta1.RebalanceConditionFailed,
+					crd.RebalanceConditionFailed,
 					HaveField("Status", Equal(corev1.ConditionTrue)),
 				),
 			),
@@ -80,10 +83,10 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 
 		By("wait for Rebalance to become failed")
 		Eventually(RebalanceStatus).Should(And(
-			HaveField("Phase", Equal(appsv2beta1.RebalancePhaseFailed)),
+			HaveField("Phase", Equal(crd.RebalancePhaseFailed)),
 			HaveField("RebalanceStates", BeEmpty()),
 			HaveRebalanceCondition(
-				appsv2beta1.RebalanceConditionFailed,
+				crd.RebalanceConditionFailed,
 				HaveField("Status", Equal(corev1.ConditionTrue)),
 			),
 		))
@@ -120,21 +123,21 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 
 		By("check Rebalance CR state")
 		Eventually(RebalanceStatus).Should(And(
-			HaveField("Phase", Equal(appsv2beta1.RebalancePhaseProcessing)),
+			HaveField("Phase", Equal(crd.RebalancePhaseProcessing)),
 			HaveField("RebalanceStates", Not(BeEmpty())),
 		))
 		Eventually(RebalanceStatus).Should(And(
-			HaveField("Phase", Equal(appsv2beta1.RebalancePhaseCompleted)),
+			HaveField("Phase", Equal(crd.RebalancePhaseCompleted)),
 			HaveRebalanceCondition(
-				appsv2beta1.RebalanceConditionCompleted,
+				crd.RebalanceConditionCompleted,
 				HaveField("Status", Equal(corev1.ConditionTrue)),
 			),
 		))
 	})
 })
 
-func RebalanceStatus(g Gomega) appsv2beta1.RebalanceStatus {
-	var status appsv2beta1.RebalanceStatus
+func RebalanceStatus(g Gomega) crd.RebalanceStatus {
+	var status crd.RebalanceStatus
 	out, err := KubectlOut("get", "rebalance", "rebalance", "-o", "jsonpath={.status}")
 	g.Expect(err).NotTo(HaveOccurred(), "Failed to get rebalance status")
 	g.Expect(out).To(UnmarshalInto(&status))
@@ -142,11 +145,11 @@ func RebalanceStatus(g Gomega) appsv2beta1.RebalanceStatus {
 }
 
 func HaveRebalanceCondition(
-	conditionType appsv2beta1.RebalanceConditionType,
+	conditionType crd.RebalanceConditionType,
 	matcher types.GomegaMatcher,
 ) types.GomegaMatcher {
 	return WithTransform(
-		func(s appsv2beta1.RebalanceStatus) *appsv2beta1.RebalanceCondition {
+		func(s crd.RebalanceStatus) *crd.RebalanceCondition {
 			for _, c := range s.Conditions {
 				if c.Type == conditionType {
 					return &c

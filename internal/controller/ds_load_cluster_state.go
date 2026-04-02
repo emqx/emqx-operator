@@ -2,7 +2,7 @@ package controller
 
 import (
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 )
 
@@ -12,7 +12,7 @@ type dsLoadClusterState struct {
 	*EMQXReconciler
 }
 
-func (c *dsLoadClusterState) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (c *dsLoadClusterState) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Instantiate API requester for a node that is part of the core StatefulSet.
 	// Prefer EMQX 6.x requester first: EMQX starting from 6.1.0 has separate cluster view.
 	req := r.requester.forOldestCore(r.state, &emqxVersionFilter{instance: instance, prefix: "6."})

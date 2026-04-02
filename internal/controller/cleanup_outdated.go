@@ -1,7 +1,7 @@
 package controller
 
 import (
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
@@ -11,9 +11,9 @@ type cleanupOutdatedSets struct {
 	*EMQXReconciler
 }
 
-func (s *cleanupOutdatedSets) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (s *cleanupOutdatedSets) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Postpone cleanups until the instance is ready:
-	if !instance.Status.IsConditionTrue(crdv2.Ready) {
+	if !instance.Status.IsConditionTrue(crd.Ready) {
 		return subResult{}
 	}
 

@@ -3,7 +3,7 @@ package controller
 import (
 	"testing"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestGetNewStatefulSet(t *testing.T) {
-	instance := &crdv2.EMQX{
+	instance := &crd.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
@@ -25,7 +25,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 				"emqx-annotation-key": "emqx-annotation-value",
 			},
 		},
-		Spec: crdv2.EMQXSpec{
+		Spec: crd.EMQXSpec{
 			Image:         "emqx/emqx:5.1",
 			ClusterDomain: "cluster.local",
 		},
@@ -47,9 +47,9 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 		assert.Equal(t, emqx.Spec.CoreTemplate.Annotations, got.Annotations)
 		assert.Equal(t, "core-label-value", got.Labels["core-label-key"])
-		assert.Equal(t, "emqx", got.Labels[crdv2.LabelInstance])
-		assert.Equal(t, "emqx-operator", got.Labels[crdv2.LabelManagedBy])
-		assert.Equal(t, "core", got.Labels[crdv2.LabelDBRole])
+		assert.Equal(t, "emqx", got.Labels[crd.LabelInstance])
+		assert.Equal(t, "emqx-operator", got.Labels[crd.LabelManagedBy])
+		assert.Equal(t, "core", got.Labels[crd.LabelDBRole])
 		// Single StatefulSet: name is deterministic, no hash suffix.
 		assert.Equal(t, "emqx-core", got.Name)
 		assert.Equal(t, emqx.Namespace, got.Namespace)
@@ -61,16 +61,16 @@ func TestGetNewStatefulSet(t *testing.T) {
 		got := newStatefulSet(emqx, conf)
 		assert.Equal(t, emqx.Spec.CoreTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
-			crdv2.LabelInstance:  "emqx",
-			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "core",
-			"core-label-key":     "core-label-value",
+			crd.LabelInstance:  "emqx",
+			crd.LabelManagedBy: "emqx-operator",
+			crd.LabelDBRole:    "core",
+			"core-label-key":   "core-label-value",
 		}, got.Spec.Template.Labels)
 
 		assert.EqualValues(t, map[string]string{
-			crdv2.LabelInstance:  "emqx",
-			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "core",
+			crd.LabelInstance:  "emqx",
+			crd.LabelManagedBy: "emqx-operator",
+			crd.LabelDBRole:    "core",
 		}, got.Spec.Selector.MatchLabels)
 	})
 
@@ -171,9 +171,9 @@ func TestGetNewStatefulSet(t *testing.T) {
 					Name:      "emqx-core-data",
 					Namespace: "emqx",
 					Labels: map[string]string{
-						crdv2.LabelDBRole:    "core",
-						crdv2.LabelInstance:  "emqx",
-						crdv2.LabelManagedBy: "emqx-operator",
+						crd.LabelDBRole:    "core",
+						crd.LabelInstance:  "emqx",
+						crd.LabelManagedBy: "emqx-operator",
 					},
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
@@ -218,9 +218,9 @@ func TestGetNewStatefulSet(t *testing.T) {
 					Name:      "emqx-core-data",
 					Namespace: "emqx",
 					Labels: map[string]string{
-						crdv2.LabelDBRole:    "core",
-						crdv2.LabelInstance:  "emqx",
-						crdv2.LabelManagedBy: "emqx-operator",
+						crd.LabelDBRole:    "core",
+						crd.LabelInstance:  "emqx",
+						crd.LabelManagedBy: "emqx-operator",
 					},
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{

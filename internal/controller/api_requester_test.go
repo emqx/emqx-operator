@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,18 +18,18 @@ func TestRequesterFilter(t *testing.T) {
 	var coreSetName string = "emqx-core"
 	var coreSetUID types.UID = "123"
 
-	instance := &crdv2.EMQX{
+	instance := &crd.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Status: crdv2.EMQXStatus{
-			CoreNodesStatus: crdv2.CoreNodesStatus{},
-			ReplicantNodesStatus: crdv2.ReplicantNodesStatus{
+		Status: crd.EMQXStatus{
+			CoreNodesStatus: crd.CoreNodesStatus{},
+			ReplicantNodesStatus: crd.ReplicantNodesStatus{
 				CurrentRevision: "cur",
 				UpdateRevision:  "upd",
 			},
-			CoreNodes: []crdv2.EMQXNode{
+			CoreNodes: []crd.EMQXNode{
 				{
 					PodName:     coreSetName + "-0",
 					Name:        "emqx@core-0",
@@ -51,7 +51,7 @@ func TestRequesterFilter(t *testing.T) {
 					Connections: 0,
 				},
 			},
-			ReplicantNodes: []crdv2.EMQXNode{},
+			ReplicantNodes: []crd.EMQXNode{},
 		},
 	}
 
@@ -81,7 +81,7 @@ func TestRequesterFilter(t *testing.T) {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              coreSetName + "-0",
-					Labels:            crdv2.CoreLabels(),
+					Labels:            crd.CoreLabels(),
 					CreationTimestamp: metav1.NewTime(time.Now().Add(-1 * time.Minute)),
 					OwnerReferences:   []metav1.OwnerReference{coreOwnerReference},
 				},
@@ -94,7 +94,7 @@ func TestRequesterFilter(t *testing.T) {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              coreSetName + "-1",
-					Labels:            crdv2.CoreLabels(),
+					Labels:            crd.CoreLabels(),
 					CreationTimestamp: metav1.NewTime(time.Now().Add(-1 * time.Second)),
 					OwnerReferences:   []metav1.OwnerReference{coreOwnerReference},
 				},

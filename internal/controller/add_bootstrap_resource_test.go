@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	"github.com/emqx/emqx-operator/internal/handler"
@@ -16,7 +16,7 @@ import (
 )
 
 func TestGenerateNodeCookieSecret(t *testing.T) {
-	instance := &crdv2.EMQX{
+	instance := &crd.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
@@ -61,13 +61,13 @@ func TestGenerateBootstrapAPIKeySecret(t *testing.T) {
 	// Create a context
 	ctx := ctx
 
-	instance := &crdv2.EMQX{
+	instance := &crd.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: crdv2.EMQXSpec{
-			BootstrapAPIKeys: []crdv2.BootstrapAPIKey{
+		Spec: crd.EMQXSpec{
+			BootstrapAPIKeys: []crd.BootstrapAPIKey{
 				{
 					Key:    "test_key",
 					Secret: "test_secret",
@@ -145,20 +145,20 @@ func TestGenerateBootstrapAPIKeySecretWithSecretRef(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	instance := &crdv2.EMQX{
+	instance := &crd.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: crdv2.EMQXSpec{
-			BootstrapAPIKeys: []crdv2.BootstrapAPIKey{
+		Spec: crd.EMQXSpec{
+			BootstrapAPIKeys: []crd.BootstrapAPIKey{
 				{
-					SecretRef: &crdv2.SecretRef{
-						Key: crdv2.KeyRef{
+					SecretRef: &crd.SecretRef{
+						Key: crd.KeyRef{
 							SecretName: "test-key-secret",
 							SecretKey:  "key",
 						},
-						Secret: crdv2.KeyRef{
+						Secret: crd.KeyRef{
 							SecretName: "test-value-secret",
 							SecretKey:  "secret",
 						},
@@ -220,7 +220,7 @@ func TestReadSecret(t *testing.T) {
 	}
 
 	// Create a context
-	instance := &crdv2.EMQX{
+	instance := &crd.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "default",

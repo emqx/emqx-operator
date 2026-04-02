@@ -3,7 +3,7 @@ package controller
 import (
 	"time"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +17,7 @@ import (
 
 var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
-	var instance *crdv2.EMQX = &crdv2.EMQX{}
+	var instance *crd.EMQX = &crd.EMQX{}
 	var coreSet *appsv1.StatefulSet
 	var corePod0, corePod1 *corev1.Pod
 	var a *addReplicantSet
@@ -44,14 +44,14 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
-		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
-			Spec: crdv2.EMQXReplicantTemplateSpec{
+		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+			Spec: crd.EMQXReplicantTemplateSpec{
 				Replicas: ptr.To(int32(3)),
 			},
 		}
 		Expect(k8sClient.Create(ctx, instance)).To(Succeed())
 		// Simulate core nodes readiness:
-		coreLabels := instance.DefaultLabelsWith(crdv2.CoreLabels())
+		coreLabels := instance.DefaultLabelsWith(crd.CoreLabels())
 		coreSet = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      instance.Name + "-core",
@@ -197,8 +197,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			Expect(result.err).ToNot(HaveOccurred())
 			// Status conditions should reset:
 			Expect(actualObject(instance)).To(And(
-				HaveCondition(crdv2.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
-				HaveCondition(crdv2.ReplicantNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),
+				HaveCondition(crd.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
+				HaveCondition(crd.ReplicantNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),
 			))
 			// ReplicaSet should be updated in place:
 			Expect(replicantSets(instance)).To(ConsistOf(
@@ -232,8 +232,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			Expect(result.err).ToNot(HaveOccurred())
 			// Status conditions should reset:
 			Expect(actualObject(instance)).To(And(
-				HaveCondition(crdv2.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
-				HaveCondition(crdv2.ReplicantNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),
+				HaveCondition(crd.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
+				HaveCondition(crd.ReplicantNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),
 			))
 			// ReplicaSet should be updated:
 			Expect(replicantSets(instance)).To(ConsistOf(
@@ -274,7 +274,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Update revision should differ from current revision (new RS created):
 			Expect(actualObject(instance)).To(
 				HaveField("Status.ReplicantNodesStatus", WithTransform(
-					func(s crdv2.ReplicantNodesStatus) bool {
+					func(s crd.ReplicantNodesStatus) bool {
 						return s.UpdateRevision != "" && s.UpdateRevision != s.CurrentRevision
 					},
 					BeTrue(),
@@ -288,16 +288,16 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 
 })
 
-func replicantSets(instance *crdv2.EMQX) []appsv1.ReplicaSet {
+func replicantSets(instance *crd.EMQX) []appsv1.ReplicaSet {
 	list := &appsv1.ReplicaSetList{}
 	_ = k8sClient.List(ctx, list,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.DefaultLabelsWith(crdv2.ReplicantLabels())),
+		client.MatchingLabels(instance.DefaultLabelsWith(crd.ReplicantLabels())),
 	)
 	return list.Items
 }
 
-func cleanupReplicantSets(instance *crdv2.EMQX) {
+func cleanupReplicantSets(instance *crd.EMQX) {
 	replicantSets := replicantSets(instance)
 	for _, rs := range replicantSets {
 		_ = k8sClient.Delete(ctx, &rs)

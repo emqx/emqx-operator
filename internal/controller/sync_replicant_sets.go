@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,7 +21,7 @@ type scaleDownReplicant struct {
 	Reason string
 }
 
-func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	updateRs := r.state.updateReplicantSet(instance)
 	currentRs := r.state.currentReplicantSet(instance)
 	if updateRs == nil || currentRs == nil {
@@ -36,7 +36,7 @@ func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crdv2.EMQX) s
 // Orchestrates gradual scale down of the old replicaSet, by migrating workloads to the new replicaSet.
 func (s *syncReplicantSets) migrateSet(
 	r *reconcileRound,
-	instance *crdv2.EMQX,
+	instance *crd.EMQX,
 	current *appsv1.ReplicaSet,
 ) subResult {
 	admission, err := s.chooseScaleDownReplicant(r, instance, current)
@@ -70,11 +70,11 @@ func (s *syncReplicantSets) migrateSet(
 
 func (s *syncReplicantSets) chooseScaleDownReplicant(
 	r *reconcileRound,
-	instance *crdv2.EMQX,
+	instance *crd.EMQX,
 	current *appsv1.ReplicaSet,
 ) (scaleDownReplicant, error) {
 	var scaleDownPod *corev1.Pod
-	var scaleDownNode *crdv2.EMQXNode
+	var scaleDownNode *crd.EMQXNode
 	status := &instance.Status
 
 	// Disallow scaling down the replicaSet if replicants just recently became ready.
@@ -134,7 +134,7 @@ func (s *syncReplicantSets) chooseScaleDownReplicant(
 
 	// Disallow scaling down the pod that is still a DS replication site.
 	// While replicants are not supposed to be DS replication sites, check it for safety.
-	dsCondition := util.FindPodCondition(scaleDownPod, crdv2.DSReplicationSite)
+	dsCondition := util.FindPodCondition(scaleDownPod, crd.DSReplicationSite)
 	if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
 		return scaleDownReplicant{Reason: fmt.Sprintf("pod %s is still a DS replication site", scaleDownPod.Name)}, nil
 	}

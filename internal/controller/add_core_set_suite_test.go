@@ -1,7 +1,7 @@
 package controller
 
 import (
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	. "github.com/emqx/emqx-operator/test/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 	var ns *corev1.Namespace
-	var instance *crdv2.EMQX
+	var instance *crd.EMQX
 	var a *addCoreSet
 	var round *reconcileRound
 
@@ -56,8 +56,8 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 		result := a.reconcile(round, instance)
 		Expect(result.err).ToNot(HaveOccurred())
 		Expect(actualObject(instance)).To(And(
-			HaveCondition(crdv2.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
-			HaveCondition(crdv2.CoreNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),
+			HaveCondition(crd.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
+			HaveCondition(crd.CoreNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),
 		))
 		Expect(coreSets(instance)).To(ConsistOf(
 			HaveField("Spec.Template.Spec.Containers", ConsistOf(
@@ -71,11 +71,11 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 	})
 })
 
-func coreSets(instance *crdv2.EMQX) []appsv1.StatefulSet {
+func coreSets(instance *crd.EMQX) []appsv1.StatefulSet {
 	list := &appsv1.StatefulSetList{}
 	_ = k8sClient.List(ctx, list,
 		client.InNamespace(instance.Namespace),
-		client.MatchingLabels(instance.DefaultLabelsWith(crdv2.CoreLabels())),
+		client.MatchingLabels(instance.DefaultLabelsWith(crd.CoreLabels())),
 	)
 	return list.Items
 }

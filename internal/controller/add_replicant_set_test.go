@@ -3,7 +3,7 @@ package controller
 import (
 	"testing"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetNewReplicaSet(t *testing.T) {
-	instance := &crdv2.EMQX{
+	instance := &crd.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
@@ -23,12 +23,12 @@ func TestGetNewReplicaSet(t *testing.T) {
 				"emqx-annotation-key": "emqx-annotation-value",
 			},
 		},
-		Spec: crdv2.EMQXSpec{
+		Spec: crd.EMQXSpec{
 			Image:         "emqx/emqx:5.1",
 			ClusterDomain: "cluster.local",
 		},
 	}
-	instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{
+	instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"repl-label-key": "repl-label-value",
@@ -37,11 +37,11 @@ func TestGetNewReplicaSet(t *testing.T) {
 				"repl-annotation-key": "repl-annotation-value",
 			},
 		},
-		Spec: crdv2.EMQXReplicantTemplateSpec{
+		Spec: crd.EMQXReplicantTemplateSpec{
 			Replicas: ptr.To(int32(3)),
 		},
 	}
-	instance.Status.ReplicantNodesStatus = crdv2.ReplicantNodesStatus{
+	instance.Status.ReplicantNodesStatus = crd.ReplicantNodesStatus{
 		CollisionCount: ptr.To(int32(0)),
 	}
 
@@ -52,10 +52,10 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Annotations, got.Annotations)
 		assert.Equal(t, "repl-label-value", got.Labels["repl-label-key"])
-		assert.Equal(t, "emqx", got.Labels[crdv2.LabelInstance])
-		assert.Equal(t, "emqx-operator", got.Labels[crdv2.LabelManagedBy])
-		assert.Equal(t, "replicant", got.Labels[crdv2.LabelDBRole])
-		assert.Equal(t, "emqx-replicant-"+got.Labels[crdv2.LabelPodTemplateHash], got.Name)
+		assert.Equal(t, "emqx", got.Labels[crd.LabelInstance])
+		assert.Equal(t, "emqx-operator", got.Labels[crd.LabelManagedBy])
+		assert.Equal(t, "replicant", got.Labels[crd.LabelDBRole])
+		assert.Equal(t, "emqx-replicant-"+got.Labels[crd.LabelPodTemplateHash], got.Name)
 		assert.Equal(t, emqx.Namespace, got.Namespace)
 		assert.EqualValues(t, int32(0), got.Spec.MinReadySeconds)
 	})
@@ -67,19 +67,19 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
-			crdv2.LabelInstance:        "emqx",
-			crdv2.LabelManagedBy:       "emqx-operator",
-			crdv2.LabelDBRole:          "replicant",
-			crdv2.LabelPodTemplateHash: got.Labels[crdv2.LabelPodTemplateHash],
-			"repl-label-key":           "repl-label-value",
+			crd.LabelInstance:        "emqx",
+			crd.LabelManagedBy:       "emqx-operator",
+			crd.LabelDBRole:          "replicant",
+			crd.LabelPodTemplateHash: got.Labels[crd.LabelPodTemplateHash],
+			"repl-label-key":         "repl-label-value",
 		}, got.Spec.Template.Labels)
 
 		assert.EqualValues(t, map[string]string{
-			crdv2.LabelInstance:        "emqx",
-			crdv2.LabelManagedBy:       "emqx-operator",
-			crdv2.LabelDBRole:          "replicant",
-			crdv2.LabelPodTemplateHash: got.Labels[crdv2.LabelPodTemplateHash],
-			"repl-label-key":           "repl-label-value",
+			crd.LabelInstance:        "emqx",
+			crd.LabelManagedBy:       "emqx-operator",
+			crd.LabelDBRole:          "replicant",
+			crd.LabelPodTemplateHash: got.Labels[crd.LabelPodTemplateHash],
+			"repl-label-key":         "repl-label-value",
 		}, got.Spec.Selector.MatchLabels)
 	})
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -50,7 +50,7 @@ func ClusterEvacuationStatus(req req.RequesterInterface) ([]NodeEvacuationStatus
 
 func StartEvacuation(
 	r req.RequesterInterface,
-	strategy crdv2.EvacuationStrategy,
+	strategy crd.EvacuationStrategy,
 	migrateTo []string,
 	nodeName string,
 ) error {

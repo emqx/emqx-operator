@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
@@ -18,7 +18,7 @@ type syncConfig struct {
 	*EMQXReconciler
 }
 
-func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Fetch desired / applied configuration.
 	confSpec := instance.Spec.Config.Data
 	confLast := lastAppliedConfig(instance)
@@ -151,23 +151,23 @@ func stripNonChangeableConfig(confDesired string, confLast string) (string, []st
 	return confDesired, stripped
 }
 
-func reflectLastAppliedConfig(instance *crdv2.EMQX, confStr string) {
+func reflectLastAppliedConfig(instance *crd.EMQX, confStr string) {
 	if instance.Annotations == nil {
 		instance.Annotations = map[string]string{}
 	}
-	instance.Annotations[crdv2.AnnotationLastEMQXConfig] = confStr
+	instance.Annotations[crd.AnnotationLastEMQXConfig] = confStr
 }
 
-func lastAppliedConfig(instance *crdv2.EMQX) *string {
+func lastAppliedConfig(instance *crd.EMQX) *string {
 	if instance.Annotations != nil {
-		if confStr := instance.Annotations[crdv2.AnnotationLastEMQXConfig]; confStr != "" {
+		if confStr := instance.Annotations[crd.AnnotationLastEMQXConfig]; confStr != "" {
 			return &confStr
 		}
 	}
 	return nil
 }
 
-func applicableConfig(instance *crdv2.EMQX) string {
+func applicableConfig(instance *crd.EMQX) string {
 	// If the annotation is set, use it: most of the time it's the config currently in use.
 	if confStr := lastAppliedConfig(instance); confStr != nil {
 		return config.WithDefaults(*confStr)
