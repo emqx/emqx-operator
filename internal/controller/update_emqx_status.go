@@ -210,8 +210,12 @@ func evaluateReplicantNodesProgressing(s *reconcileState, instance *crd.EMQX) {
 	switch {
 	case currentRevision != updateRevision:
 		currentSet := s.currentReplicantSet(instance)
+		currentReplicas := total
+		if currentSet != nil && currentSet.Spec.Replicas != nil {
+			currentReplicas = *currentSet.Spec.Replicas
+		}
 		status.SetCondition(cond, metav1.ConditionTrue, "RollingUpdate",
-			fmt.Sprintf("%d/%d replicant pods updated", total-*currentSet.Spec.Replicas, total))
+			fmt.Sprintf("%d/%d replicant pods updated", total-currentReplicas, total))
 	case total > desired:
 		status.SetCondition(cond, metav1.ConditionTrue, "ScalingDown",
 			fmt.Sprintf("%d/%d replicant pods", total, desired))
