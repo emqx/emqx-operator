@@ -65,6 +65,7 @@ rules:
   resources:
   - pods
   verbs:
+  - delete
   - get
   - list
   - update
@@ -104,14 +105,12 @@ rules:
   - apps.emqx.io
   resources:
   - emqxes/finalizers
-  - rebalances/finalizers
   verbs:
   - update
 - apiGroups:
   - apps.emqx.io
   resources:
   - emqxes/status
-  - rebalances/status
   verbs:
   - get
   - patch

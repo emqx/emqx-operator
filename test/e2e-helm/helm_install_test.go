@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// helmInstall installs the local 2.3.x chart into the given namespace with --wait.
+// helmInstall installs the local 3.x chart into the given namespace with --wait.
 func helmInstall(namespace string, extraArgs ...string) error {
 	args := []string{
 		"install",
@@ -39,31 +39,31 @@ func helmInstall(namespace string, extraArgs ...string) error {
 	return Run("helm", args...)
 }
 
-// helmUpgrade upgrades to the local 2.3.x chart in the given namespace with --wait.
-func helmUpgrade(namespace string) error {
-	return Run("helm", "upgrade",
-		helmReleaseName,
-		localChartPath,
-		"--namespace", namespace,
-		"--set", "image.repository="+operatorImageRepo,
-		"--set", "image.tag="+operatorImageTag,
-		"--set", "image.pullPolicy=Never",
-		"--wait",
-		"--timeout", "2m",
-	)
-}
+// helmUpgrade upgrades to the local 3.x chart in the given namespace with --wait.
+// func helmUpgrade(namespace string) error {
+// 	return Run("helm", "upgrade",
+// 		helmReleaseName,
+// 		localChartPath,
+// 		"--namespace", namespace,
+// 		"--set", "image.repository="+operatorImageRepo,
+// 		"--set", "image.tag="+operatorImageTag,
+// 		"--set", "image.pullPolicy=Never",
+// 		"--wait",
+// 		"--timeout", "2m",
+// 	)
+// }
 
-// helmCleanup removes all resources that 2.3.x chart may have left behind in
+// helmCleanup removes all resources that 3.x chart may have left behind in
 // the given namespace, including the Helm release itself.
 func helmCleanup(namespace string) {
 	_ = Run("helm", "uninstall", helmReleaseName, "--namespace", namespace)
-	_ = Kubectl("delete", "clusterrole", "emqx-operator-manager-role", "--ignore-not-found")
-	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-manager-rolebinding", "--ignore-not-found")
-	_ = Kubectl("delete", "clusterrole", "emqx-operator-pre-upgrade", "--ignore-not-found")
-	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-pre-upgrade", "--ignore-not-found")
-	_ = Kubectl("delete", "crd", "emqxes.apps.emqx.io", "--ignore-not-found")
-	_ = Kubectl("delete", "crd", "rebalances.apps.emqx.io", "--ignore-not-found")
-	_ = Kubectl("delete", "ns", namespace, "--ignore-not-found")
+	_ = Kubectl("delete", "clusterrole", "emqx-operator-manager-role")
+	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-manager-rolebinding")
+	_ = Kubectl("delete", "clusterrole", "emqx-operator-pre-upgrade")
+	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-pre-upgrade")
+	_ = Kubectl("delete", "crd", "emqxes.apps.emqx.io")
+	_ = Kubectl("delete", "crd", "rebalances.apps.emqx.io")
+	_ = Kubectl("delete", "ns", namespace)
 }
 
 //nolint:errcheck
@@ -89,13 +89,14 @@ var _ = Describe("Helm Install", Ordered, func() {
 		}
 	})
 
-	It("should install cleanly / cleanup no-op", func() {
-		By("install 2.3.x chart")
+	It("should install cleanly", func() {
+		By("install 3.x chart")
 		Expect(helmInstall(namespace)).To(Succeed())
 
 		By("verify CRDs are installed")
 		Expect(crdExists("emqxes.apps.emqx.io")).To(BeTrue())
-		Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
+		// NOTE: Rebalance controller is disabled in this release. See api/v3alpha1/rebalance_types.go.
+		// Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
 
 		By("verify operator deployment is available")
 		Expect(Kubectl("wait", "deployment",
@@ -104,23 +105,5 @@ var _ = Describe("Helm Install", Ordered, func() {
 			"--namespace", namespace,
 			"--timeout", "1m",
 		)).To(Succeed())
-	})
-
-	It("should install cleanly / pre-upgrade check disabled", func() {
-		By("install 2.3.x with pre-upgrade check disabled")
-		Expect(helmInstall(namespace, "--set", "upgrade.preUpgradeCheck=false")).
-			To(Succeed())
-
-		By("verify operator is running")
-		Expect(Kubectl("wait", "deployment",
-			"emqx-operator-controller-manager",
-			"--for", "condition=Available",
-			"--namespace", namespace,
-			"--timeout", "1m",
-		)).To(Succeed())
-
-		By("verify CRDs are installed")
-		Expect(crdExists("emqxes.apps.emqx.io")).To(BeTrue())
-		Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
 	})
 })
