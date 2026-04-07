@@ -14,6 +14,7 @@ import (
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	"github.com/davecgh/go-spew/spew"
 	crd "github.com/emqx/emqx-operator/api/v3alpha1"
+	util "github.com/emqx/emqx-operator/internal/controller/util"
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -115,6 +116,14 @@ func sortByCreationTimestamp[T client.Object](list []T) {
 func sortByName[T client.Object](list []T) {
 	slices.SortFunc(list, func(a, b T) int {
 		return compareName(a, b)
+	})
+}
+
+// sortByOrdinal sorts pods by their StatefulSet ordinal (numeric suffix) ascending.
+// Pods whose names do not end in a number get ordinal -1 and sort first.
+func sortByOrdinal(list []*corev1.Pod) {
+	slices.SortFunc(list, func(a, b *corev1.Pod) int {
+		return cmp.Compare(util.PodOrdinal(a.Name), util.PodOrdinal(b.Name))
 	})
 }
 

@@ -73,9 +73,9 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult
 // rollingUpdate detects outdated core pods and replaces them one at a time,
 // starting from the highest ordinal. Each pod is evacuated before deletion.
 func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crd.EMQX) subResult {
-	// Sort outdated pods by name descending to delete highest ordinal first.
+	// Sort outdated pods by ordinal ascending; pick highest ordinal last.
 	outdated := listOutdatedPods(r)
-	sortByName(outdated)
+	sortByOrdinal(outdated)
 
 	if len(outdated) == 0 {
 		return subResult{}
