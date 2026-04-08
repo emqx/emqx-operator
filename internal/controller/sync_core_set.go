@@ -239,7 +239,7 @@ func checkCorePodRemoval(
 
 	// Disallow removing pod if other cores just recently became ready.
 	numAvailableCores := int32(0)
-	for _, p := range r.state.podsManagedBy(r.state.coreSet()) {
+	for _, p := range r.state.listPods(podsManagedBy{r.state.coreSet()}, podsAlive{}) {
 		if p.GetUID() != pod.GetUID() && util.IsPodAvailable(p, instance.Spec.CoreTemplate.Spec.MinReadySeconds) {
 			numAvailableCores++
 		}
@@ -261,13 +261,7 @@ func checkCorePodRemoval(
 		}
 	}
 
-	var nodeInfo *crd.EMQXNode
-	for _, node := range status.CoreNodes {
-		if node.PodName == pod.Name {
-			nodeInfo = &node
-			break
-		}
-	}
+	nodeInfo := status.FindNodeByPodName(pod.Name, roleCore)
 
 	if nodeInfo == nil {
 		return coreAdmission{Action: admissionRemove, Reason: "node is out of cluster"}
@@ -294,7 +288,6 @@ func checkCorePodRemoval(
 }
 
 // onCoreAdmission performs the side effects implied by a coreAdmission.
-// Currently this only handles coreAdmitEvacuate by calling the evacuation API.
 func (s *syncCoreSet) onCoreAdmission(
 	r *reconcileRound,
 	instance *crd.EMQX,
@@ -341,7 +334,7 @@ func (s *syncCoreSet) startEvacuation(
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 ) error {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, "core")
 	if nodeInfo == nil {
 		return emperror.New("no corresponding node in cluster status")
 	}

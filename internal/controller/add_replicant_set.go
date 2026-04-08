@@ -47,6 +47,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subRe
 	rsHash := rs.Labels[crd.LabelPodTemplateHash]
 
 	needCreate := false
+	rollingUpdate := false
 	updateReplicantSet := r.state.updateReplicantSet(instance)
 	if updateReplicantSet == nil {
 		r.log.Info("creating new replicaSet",
@@ -63,11 +64,16 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subRe
 				"patch", string(patchResult.Patch),
 			)
 			needCreate = true
+			rollingUpdate = true
 		}
 	}
 
 	if needCreate {
 		_ = ctrl.SetControllerReference(instance, rs, a.Scheme)
+		// New ReplicaSet is created at 0 replicas; `syncReplicantSets` scales it within maxSurge budget.
+		if rollingUpdate {
+			rs.Spec.Replicas = ptr.To(int32(0))
+		}
 		if err := a.Handler.Create(r.ctx, rs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				if !instance.Status.IsConditionTrue(crd.Ready) {

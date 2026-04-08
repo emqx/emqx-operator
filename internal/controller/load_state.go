@@ -12,10 +12,41 @@ import (
 	k8s "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	roleCore      = "core"
+	roleReplicant = "replicant"
+)
+
 type reconcileState struct {
 	coreSets      []*appsv1.StatefulSet
 	replicantSets []*appsv1.ReplicaSet
 	pods          []*corev1.Pod
+}
+
+type reconcileStatePodFilter interface {
+	passes(pod *corev1.Pod) bool
+}
+
+type podsManagedBy struct {
+	metav1.Object
+}
+
+func (self podsManagedBy) passes(pod *corev1.Pod) bool {
+	return self.Object != nil && util.IsPodManagedBy(pod, self.Object)
+}
+
+type podsWithRole struct {
+	string
+}
+
+func (self podsWithRole) passes(pod *corev1.Pod) bool {
+	return pod.Labels[crd.LabelDBRole] == self.string
+}
+
+type podsAlive struct{}
+
+func (self podsAlive) passes(pod *corev1.Pod) bool {
+	return pod.DeletionTimestamp == nil
 }
 
 func (r *reconcileState) podWithName(name string) *corev1.Pod {
@@ -27,24 +58,20 @@ func (r *reconcileState) podWithName(name string) *corev1.Pod {
 	return nil
 }
 
-func (r *reconcileState) podsWithRole(role string) []*corev1.Pod {
-	var list []*corev1.Pod
-	for _, pod := range r.pods {
-		if pod.Labels[crd.LabelDBRole] == role {
-			list = append(list, pod)
-		}
-	}
-	return list
+func (r *reconcileState) podsManagedBy(object metav1.Object) []*corev1.Pod {
+	return r.listPods(podsManagedBy{object})
 }
 
-func (r *reconcileState) podsManagedBy(object metav1.Object) []*corev1.Pod {
-	var list []*corev1.Pod
-	if object == nil {
-		return list
-	}
+func (r *reconcileState) listPods(filters ...reconcileStatePodFilter) []*corev1.Pod {
+	list := []*corev1.Pod{}
 	for _, pod := range r.pods {
-		if util.IsPodManagedBy(pod, object) {
+		passes := true
+		for _, f := range filters {
+			passes = passes && f.passes(pod)
+		}
+		if passes {
 			list = append(list, pod)
+
 		}
 	}
 	return list
@@ -133,16 +160,46 @@ func (r *reconcileState) partOfUpdateReplicantSet(pod *corev1.Pod, instance *crd
 	return false
 }
 
-func (r *reconcileState) areReplicantsAvailable(instance *crd.EMQX) bool {
-	desired := instance.Spec.NumReplicantReplicas()
-	if desired == 0 {
-		return true
+// outdatedReplicantReplicaSets returns all replicant ReplicaSets except the update revision set,
+// sorted by creation timestamp (oldest first).
+func (r *reconcileState) outdatedReplicantSets(instance *crd.EMQX) []*appsv1.ReplicaSet {
+	updateRs := r.updateReplicantSet(instance)
+	if updateRs == nil {
+		return nil
 	}
-	replicantSet := r.updateReplicantSet(instance)
-	if replicantSet == nil {
-		return false
+	out := []*appsv1.ReplicaSet{}
+	for _, rs := range r.replicantSets {
+		if rs.UID == updateRs.UID {
+			continue
+		}
+		out = append(out, rs)
 	}
-	return replicantSet.Status.AvailableReplicas >= desired
+	sortByCreationTimestamp(out)
+	return out
+}
+
+// outdatedReplicantPodsSorted lists pods owned by any outdated replicant ReplicaSet (all except the
+// update revision), de-duplicated by name and sorted by name for deterministic drain order.
+func (r *reconcileState) outdatedReplicantPods(instance *crd.EMQX) []*corev1.Pod {
+	out := []*corev1.Pod{}
+	outdatedRs := r.outdatedReplicantSets(instance)
+	if outdatedRs == nil {
+		return nil
+	}
+	for _, rs := range outdatedRs {
+		outdatedPods := r.podsManagedBy(rs)
+		sortByName(outdatedPods)
+		out = append(out, outdatedPods...)
+	}
+	return out
+}
+
+func (r *reconcileState) numAvailableReplicants() int32 {
+	out := int32(0)
+	for _, rs := range r.replicantSets {
+		out += rs.Status.AvailableReplicas
+	}
+	return out
 }
 
 type loadState struct {
@@ -215,11 +272,6 @@ func loadReconcileState(
 	}
 
 	for _, pod := range podList.Items {
-		// Disregard pods that are being deleted.
-		if pod.GetDeletionTimestamp() != nil {
-			continue
-		}
-
 		// Disregard pods that are not controlled by any controller.
 		controllerRef := metav1.GetControllerOf(&pod)
 		if controllerRef == nil {

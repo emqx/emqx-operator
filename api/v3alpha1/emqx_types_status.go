@@ -132,15 +132,39 @@ func (s EMQXStatus) FindNode(node string) *EMQXNode {
 	return nil
 }
 
-func (s EMQXStatus) FindNodeByPodName(pod string) *EMQXNode {
-	for _, n := range s.CoreNodes {
-		if n.PodName == pod {
-			return &n
+func (s EMQXStatus) FindNodeByPodName(pod string, roles ...string) *EMQXNode {
+	scanCores := false
+	scanReplicants := false
+	if len(roles) == 0 {
+		scanCores = true
+		scanReplicants = true
+	} else {
+		for _, r := range roles {
+			scanCores = scanCores || r == "core"
+			scanReplicants = scanReplicants || r == "replicant"
 		}
 	}
-	for _, n := range s.ReplicantNodes {
-		if n.PodName == pod {
-			return &n
+	if scanCores {
+		for _, n := range s.CoreNodes {
+			if n.PodName == pod {
+				return &n
+			}
+		}
+	}
+	if scanReplicants {
+		for _, n := range s.ReplicantNodes {
+			if n.PodName == pod {
+				return &n
+			}
+		}
+	}
+	return nil
+}
+
+func (s EMQXStatus) FindNodeEvacuation(node string) *NodeEvacuationStatus {
+	for _, e := range s.NodeEvacuations {
+		if e.NodeName == node {
+			return &e
 		}
 	}
 	return nil
