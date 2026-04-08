@@ -24,6 +24,12 @@ type replicantAdmission struct {
 	Reason string
 }
 
+// replicantPodAdmission pairs a pod with its admission decision, preserving iteration order.
+type replicantPodAdmission struct {
+	Admission replicantAdmission
+	Pod       *corev1.Pod
+}
+
 func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	updateRs := r.state.updateReplicantSet(instance)
 	currentRs := r.state.currentReplicantSet(instance)
@@ -53,8 +59,8 @@ func (s *syncReplicantSets) migrateSet(
 	// Phase 2:
 	// Start migrating outdated replicants up to maxUnavailable allowance.
 	admissions := s.topmostReplicantAdmissions(r, instance)
-	for pod, admission := range admissions {
-		err = s.onReplicantAdmission(r, instance, pod, admission)
+	for _, pa := range admissions {
+		err = s.onReplicantAdmission(r, instance, pa.Pod, pa.Admission)
 		if err != nil {
 			return reconcileError(err)
 		}
@@ -169,8 +175,8 @@ func (s *syncReplicantSets) scaleDownReplicantSets(r *reconcileRound, instance *
 func (s *syncReplicantSets) topmostReplicantAdmissions(
 	r *reconcileRound,
 	instance *crd.EMQX,
-) map[*corev1.Pod]replicantAdmission {
-	batch := map[*corev1.Pod]replicantAdmission{}
+) []replicantPodAdmission {
+	var batch []replicantPodAdmission
 
 	specReplicas := instance.Spec.NumReplicantReplicas()
 	maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
@@ -188,7 +194,10 @@ func (s *syncReplicantSets) topmostReplicantAdmissions(
 		if len(batch) >= numAllowedUnavailable {
 			break
 		}
-		batch[pod] = checkReplicantPodRemoval(instance, pod)
+		batch = append(batch, replicantPodAdmission{
+			Pod:       pod,
+			Admission: checkReplicantPodRemoval(instance, pod),
+		})
 	}
 
 	return batch
