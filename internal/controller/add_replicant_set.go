@@ -106,6 +106,9 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subRe
 		rs,
 		patch.IgnoreStatusFields(),
 		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
+		// Ignore if number of replicas has changed.
+		// Reconciler `syncReplicantSets` will handle scaling of the statefulSet.
+		ignoreField([]string{"spec", "replicas"}),
 	)
 	if !patchResult.IsEmpty() {
 		// Update replicaSet

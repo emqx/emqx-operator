@@ -39,6 +39,87 @@ func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crd.EMQX) sub
 	if updateRs.UID != currentRs.UID {
 		return s.migrateSet(r, instance, updateRs)
 	}
+
+	// Steady state: handle scale-up and scale-down.
+	desiredReplicas := instance.Spec.NumReplicantReplicas()
+	currentReplicas := ptr.Deref(updateRs.Spec.Replicas, 0)
+
+	if currentReplicas < desiredReplicas {
+		r.log.V(1).Info("scaling up replicantSet",
+			"replicaSet", klog.KObj(updateRs),
+			"from", currentReplicas,
+			"to", desiredReplicas,
+		)
+		return s.scaleUp(r, updateRs, desiredReplicas)
+	}
+
+	if currentReplicas > desiredReplicas {
+		r.log.V(1).Info("scaling down replicantSet",
+			"replicaSet", klog.KObj(updateRs),
+			"from", currentReplicas,
+			"to", desiredReplicas,
+		)
+		return s.scaleDown(r, instance, updateRs, currentReplicas, desiredReplicas)
+	}
+
+	return subResult{}
+}
+
+// scaleUp sets the update ReplicaSet replica count to the desired value.
+func (s *syncReplicantSets) scaleUp(
+	r *reconcileRound,
+	rs *appsv1.ReplicaSet,
+	desiredReplicas int32,
+) subResult {
+	rs.Spec.Replicas = ptr.To(desiredReplicas)
+	err := s.Client.Update(r.ctx, rs)
+	if err != nil {
+		return subResult{err: emperror.Wrap(err, "failed to scale up replicantSet")}
+	}
+	return subResult{}
+}
+
+// scaleDown removes up to maxUnavailable excess replicant pods per reconcile iteration
+// with evacuation gating, then decrements the ReplicaSet replica count.
+func (s *syncReplicantSets) scaleDown(
+	r *reconcileRound,
+	instance *crd.EMQX,
+	updateRs *appsv1.ReplicaSet,
+	currentReplicas int32,
+	desiredReplicas int32,
+) subResult {
+	pods := r.state.podsManagedBy(updateRs)
+	sortByName(pods)
+
+	// Phase 1: admit up to maxUnavailable candidates for removal.
+	// At least 1 removal should be allowed if MaxUnavailable is 0.
+	excessReplicas := max(0, currentReplicas-desiredReplicas)
+	maxUnavailable := max(1, instance.Spec.NumMaxUnavailableReplicantReplicas())
+	excessUnavailable := max(0, desiredReplicas-updateRs.Status.AvailableReplicas)
+	maxAdmissions := max(0, min(maxUnavailable-excessUnavailable, excessReplicas))
+	admissions := s.evaluateReplicantAdmissions(instance, pods, int(maxAdmissions))
+	for _, pa := range admissions {
+		err := s.onReplicantAdmission(r, instance, pa.Pod, pa.Admission)
+		if err != nil {
+			return reconcileError(err)
+		}
+	}
+
+	// Phase 2: set replicas to the count of non-removed pods, but no less than desired number.
+	activeReplicas := int32(0)
+	for _, pod := range pods {
+		if s.podIsActiveReplicant(pod) {
+			activeReplicas += 1
+		}
+	}
+	newReplicas := max(activeReplicas, instance.Spec.NumReplicantReplicas())
+	if newReplicas < currentReplicas {
+		updateRs.Spec.Replicas = ptr.To(newReplicas)
+		if err := s.Client.Update(r.ctx, updateRs); err != nil {
+			return reconcileError(emperror.Wrap(err, "failed to scale down replicantSet"))
+		}
+	}
+
 	return subResult{}
 }
 
@@ -58,7 +139,7 @@ func (s *syncReplicantSets) migrateSet(
 
 	// Phase 2:
 	// Start migrating outdated replicants up to maxUnavailable allowance.
-	admissions := s.topmostReplicantAdmissions(r, instance)
+	admissions := s.outdatedReplicantAdmissions(r, instance)
 	for _, pa := range admissions {
 		err = s.onReplicantAdmission(r, instance, pa.Pod, pa.Admission)
 		if err != nil {
@@ -68,7 +149,7 @@ func (s *syncReplicantSets) migrateSet(
 
 	// Phase 3:
 	// Scale down affected outdated replicant sets.
-	err = s.scaleDownReplicantSets(r, instance)
+	err = s.scaleDownOutdatedReplicantSets(r, instance)
 	if err != nil {
 		return reconcileError(err)
 	}
@@ -137,9 +218,9 @@ func (s *syncReplicantSets) onReplicantAdmission(
 	return nil
 }
 
-// scaleDownReplicantSets subtracts one replica per pod scheduled for removal from that
+// scaleDownOutdatedReplicantSets subtracts one replica per pod scheduled for removal from that
 // pod's owning ReplicaSet.
-func (s *syncReplicantSets) scaleDownReplicantSets(r *reconcileRound, instance *crd.EMQX) error {
+func (s *syncReplicantSets) scaleDownOutdatedReplicantSets(r *reconcileRound, instance *crd.EMQX) error {
 	for _, rs := range r.state.outdatedReplicantSets(instance) {
 		numReplicas := int32(0)
 		specReplicas := ptr.Deref(rs.Spec.Replicas, 0)
@@ -147,13 +228,9 @@ func (s *syncReplicantSets) scaleDownReplicantSets(r *reconcileRound, instance *
 			continue
 		}
 		for _, pod := range r.state.podsManagedBy(rs) {
-			if pod.DeletionTimestamp != nil {
-				continue
+			if s.podIsActiveReplicant(pod) {
+				numReplicas += 1
 			}
-			if _, ok := pod.Annotations[corev1.PodDeletionCost]; ok {
-				continue
-			}
-			numReplicas += 1
 		}
 		if numReplicas < specReplicas {
 			rs.Spec.Replicas = ptr.To(numReplicas)
@@ -170,28 +247,37 @@ func (s *syncReplicantSets) scaleDownReplicantSets(r *reconcileRound, instance *
 	return nil
 }
 
-// topmostReplicantAdmissions returns up to maxUnavailable admissions for the oldest eligible
-// outdated replicant pods (evacuate and/or remove).
-func (s *syncReplicantSets) topmostReplicantAdmissions(
+// outdatedReplicantAdmissions returns admissions, up to a budget allowed by maxUnavailable, for
+// the topmost outdated pods.
+func (s *syncReplicantSets) outdatedReplicantAdmissions(
 	r *reconcileRound,
 	instance *crd.EMQX,
 ) []replicantPodAdmission {
-	var batch []replicantPodAdmission
-
 	specReplicas := instance.Spec.NumReplicantReplicas()
 	maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
 	extraAvailable := r.state.numAvailableReplicants() - specReplicas
 	numAllowedUnavailable := int(maxUnavailable + extraAvailable)
+	outdatedPods := r.state.outdatedReplicantPods(instance)
+	return s.evaluateReplicantAdmissions(instance, outdatedPods, numAllowedUnavailable)
+}
 
-	// No budget left, wait for better times.
-	if numAllowedUnavailable <= 0 {
+// evaluateReplicantAdmissions returns up to maxUnavailable admissions for the given
+// candidate pods (evacuate and/or remove).
+// Candidates are evaluated in order, the caller controls which pods to consider:
+// * outdated pods for migration,
+// * "update" set's replicant pods for scale-down, etc.
+func (s *syncReplicantSets) evaluateReplicantAdmissions(
+	instance *crd.EMQX,
+	candidates []*corev1.Pod,
+	maxAdmissions int,
+) []replicantPodAdmission {
+	var batch []replicantPodAdmission
+	if maxAdmissions <= 0 {
 		return batch
 	}
-
-	outdatedPods := r.state.outdatedReplicantPods(instance)
-	for _, pod := range outdatedPods {
-		// Batch contains enough admissions to fit into maxUnavailable allowance.
-		if len(batch) >= numAllowedUnavailable {
+	for _, pod := range candidates {
+		// Batch contains enough admissions to fit into maxAdmissions allowance.
+		if len(batch) >= maxAdmissions {
 			break
 		}
 		batch = append(batch, replicantPodAdmission{
@@ -199,8 +285,19 @@ func (s *syncReplicantSets) topmostReplicantAdmissions(
 			Admission: checkReplicantPodRemoval(instance, pod),
 		})
 	}
-
 	return batch
+}
+
+// podIsActiveReplicant returns `false` if a pod is in the process of or going to be deleted,
+// e.g. assigned a pod deletion cost.
+func (*syncReplicantSets) podIsActiveReplicant(pod *corev1.Pod) bool {
+	if pod.DeletionTimestamp != nil {
+		return false
+	}
+	if _, ok := pod.Annotations[corev1.PodDeletionCost]; ok {
+		return false
+	}
+	return true
 }
 
 // checkReplicantPodRemoval decides whether an outdated replicant pod may be removed or needs evacuation.
@@ -234,10 +331,6 @@ func checkReplicantPodRemoval(instance *crd.EMQX, pod *corev1.Pod) replicantAdmi
 	if nodeInfo == nil {
 		return replicantAdmission{Action: admissionRemove, Reason: "node is out of cluster"}
 	}
-
-	// if scaleDownNode == nil {
-	// 	return replicantAdmission{}, emperror.Errorf("node is missing for pod %s", scaleDownPod.Name)
-	// }
 
 	if nodeInfo.Status == api.NodeStatusStopped {
 		return replicantAdmission{Action: admissionRemove, Reason: "node is already stopped"}
