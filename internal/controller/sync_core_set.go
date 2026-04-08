@@ -12,6 +12,26 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// Responsibilities:
+// - Scaling the core set up according to specified number of replicas.
+// - Scaling the core set down safely according to specified number of replicas.
+//   - Safety: availability is maintained.
+//     Loss of availability of a single, next-in-line replica is tolerated.
+//   - Safety: connections and sessions are evacuated first.
+//   - Safety: existing DS shard replicas prevent scaling until all replicas are migrated.
+//     See `dsUpdateReplicaSets` reconciler.
+//
+// - Conducting safe pod-by-pod in-place rolling update of the core set.
+//   - Safety: availability is maintained.
+//   - Safety: connections and sessions are evacuated first.
+//
+// - Terminating evacuations on updated cores.
+//
+// NOTE
+// As evacuation state is expected to survive pod recreation, evacuations need to be
+// terminated manually. Currently, this reconciler can not tell the difference between
+// evacuations started by itself and manually by the user, latter will be stopped on the
+// next reconcile.
 type syncCoreSet struct {
 	*EMQXReconciler
 }
