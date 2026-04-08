@@ -85,6 +85,54 @@ func filterStatefulSetReplicasField(obj []byte) ([]byte, error) {
 	return obj, nil
 }
 
+func ignoreField(path []string) patch.CalculateOption {
+	return func(current, modified []byte) ([]byte, []byte, error) {
+		current, err := deleteFieldPath(current, path)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
+		}
+
+		modified, err = deleteFieldPath(modified, path)
+		if err != nil {
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
+		}
+
+		return current, modified, nil
+	}
+}
+
+func deleteFieldPath(obj []byte, path []string) ([]byte, error) {
+	var objectMap map[string]interface{}
+	err := json.Unmarshal(obj, &objectMap)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
+	}
+	pathLen := len(path)
+	if pathLen == 0 {
+		return obj, nil
+	}
+	innerObject := objectMap
+	for _, k := range path[:pathLen-1] {
+		innerNext, ok := innerObject[k]
+		if !ok {
+			return obj, nil
+		}
+		switch innerNext := innerNext.(type) {
+		case map[string]interface{}:
+			innerObject = innerNext
+		default:
+			return obj, nil
+		}
+	}
+	delete(innerObject, path[pathLen-1])
+	obj, err = json.Marshal(objectMap)
+	if err != nil {
+		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
+	}
+
+	return obj, nil
+}
+
 func compareCreationTimestamp(a, b client.Object) int {
 	atime := a.GetCreationTimestamp()
 	btime := b.GetCreationTimestamp()
