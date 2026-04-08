@@ -2,7 +2,7 @@ package controller
 
 import (
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -12,14 +12,14 @@ type addHeadlessService struct {
 	*EMQXReconciler
 }
 
-func (a *addHeadlessService) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (a *addHeadlessService) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	if err := a.CreateOrUpdate(r.ctx, a.Scheme, r.log, instance, generateHeadlessService(instance)); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to create or update services")}
 	}
 	return subResult{}
 }
 
-func generateHeadlessService(instance *crdv2.EMQX) *corev1.Service {
+func generateHeadlessService(instance *crd.EMQX) *corev1.Service {
 	headlessSvc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -35,7 +35,7 @@ func generateHeadlessService(instance *crdv2.EMQX) *corev1.Service {
 			ClusterIP:                corev1.ClusterIPNone,
 			SessionAffinity:          corev1.ServiceAffinityNone,
 			PublishNotReadyAddresses: true,
-			Selector:                 instance.DefaultLabelsWith(crdv2.CoreLabels()),
+			Selector:                 instance.DefaultLabelsWith(crd.CoreLabels()),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "erlang-dist",

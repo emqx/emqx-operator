@@ -1,4 +1,4 @@
-apiVersion: apps.emqx.io/v2
+apiVersion: apps.emqx.io/v3alpha1
 kind: EMQX
 metadata:
   name: emqx
@@ -8,7 +8,10 @@ spec:
   config:
     data: |
       license { key = "evaluation" }
+  coreTemplate:
+    spec:
+      minReadySeconds: 3
   updateStrategy:
     evacuationStrategy:
       waitTakeover: 5 # seconds
-      waitHealthCheck: 10 # seconds
+      waitHealthCheck: 5 # seconds

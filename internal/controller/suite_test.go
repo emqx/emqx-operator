@@ -29,13 +29,16 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	ginkgotypes "github.com/onsi/ginkgo/v2/types"
+	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -43,8 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
-	crdv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	// +kubebuilder:scaffold:imports
@@ -64,16 +66,16 @@ var timeout, interval time.Duration
 
 var emqxReconciler *EMQXReconciler
 var emqxConf *config.EMQX
-var emqx *crdv2.EMQX = &crdv2.EMQX{
+var emqx *crd.EMQX = &crd.EMQX{
 	ObjectMeta: metav1.ObjectMeta{
 		UID:  "fake-1234567890",
 		Name: "emqx",
 		Labels: map[string]string{
-			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelInstance:  "emqx",
+			crd.LabelManagedBy: "emqx-operator",
+			crd.LabelInstance:  "emqx",
 		},
 	},
-	Spec: crdv2.EMQXSpec{
+	Spec: crd.EMQXSpec{
 		Image: "emqx",
 	},
 }
@@ -88,6 +90,9 @@ func TestControllers(t *testing.T) {
 var _ = BeforeSuite(func() {
 	timeout = time.Second * 10
 	interval = time.Second
+
+	gomega.SetDefaultEventuallyTimeout(timeout)
+	gomega.SetDefaultEventuallyPollingInterval(interval)
 
 	logger = zap.New(
 		zap.WriteTo(GinkgoWriter),
@@ -118,10 +123,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = crdv2.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = crdv2beta1.AddToScheme(scheme.Scheme)
+	err = crd.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
@@ -158,6 +160,33 @@ var _ = AfterSuite(func() {
 	// Expect(err).NotTo(HaveOccurred())
 })
 
+func actualObject[Object client.Object](o Object) (Object, error) {
+	err := k8sClient.Get(ctx, client.ObjectKeyFromObject(o), o)
+	return o, err
+}
+
+func ownerReferences(owner client.Object) []metav1.OwnerReference {
+	var apiVersion, kind string
+	switch owner.(type) {
+	case *appsv1.StatefulSet:
+		apiVersion = "apps/v1"
+		kind = "StatefulSet"
+	case *appsv1.ReplicaSet:
+		apiVersion = "apps/v1"
+		kind = "ReplicaSet"
+	}
+	return []metav1.OwnerReference{
+		{
+			APIVersion:         apiVersion,
+			Kind:               kind,
+			Name:               owner.GetName(),
+			UID:                owner.GetUID(),
+			BlockOwnerDeletion: ptr.To(true),
+			Controller:         ptr.To(true),
+		},
+	}
+}
+
 func newReconcileRound() *reconcileRound {
 	req := req.NewMockRequester(
 		func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
@@ -187,4 +216,15 @@ func (b *apiRequesterOverride) forOldestCore(_ *reconcileState, _ ...podRequeste
 
 func (b *apiRequesterOverride) forPod(_ *corev1.Pod) req.RequesterInterface {
 	return b.requester
+}
+
+type apiRequesterUnavailable struct {
+}
+
+func (b *apiRequesterUnavailable) forOldestCore(_ *reconcileState, _ ...podRequesterFilter) req.RequesterInterface {
+	return nil
+}
+
+func (b *apiRequesterUnavailable) forPod(_ *corev1.Pod) req.RequesterInterface {
+	return nil
 }

@@ -8,29 +8,20 @@ import (
 	"hash"
 	"hash/fnv"
 	"slices"
-	"time"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
 	"github.com/davecgh/go-spew/spew"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
+	util "github.com/emqx/emqx-operator/internal/controller/util"
 	"github.com/tidwall/gjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func checkInitialDelaySecondsReady(instance *crdv2.EMQX) bool {
-	_, condition := instance.Status.GetCondition(crdv2.Available)
-	if condition == nil || condition.Status != metav1.ConditionTrue {
-		return false
-	}
-	delay := time.Since(condition.LastTransitionTime.Time).Seconds()
-	return delay > float64(instance.Spec.UpdateStrategy.InitialDelaySeconds)
-}
 
 // JustCheckPodTemplate will check only the differences between the podTemplate of the two statefulSets
 func justCheckPodTemplate() patch.CalculateOption {
@@ -40,7 +31,7 @@ func justCheckPodTemplate() patch.CalculateOption {
 		_ = json.Unmarshal([]byte(podTemplateSpecJson.String()), podTemplateSpec)
 
 		// Remove the podTemplateHashLabelKey from the podTemplateSpec
-		delete(podTemplateSpec.Labels, crdv2.LabelPodTemplateHash)
+		delete(podTemplateSpec.Labels, crd.LabelPodTemplateHash)
 
 		emptyRs := &appsv1.ReplicaSet{}
 		emptyRs.Spec.Template = *podTemplateSpec
@@ -128,6 +119,14 @@ func sortByName[T client.Object](list []T) {
 	})
 }
 
+// sortByOrdinal sorts pods by their StatefulSet ordinal (numeric suffix) ascending.
+// Pods whose names do not end in a number get ordinal -1 and sort first.
+func sortByOrdinal(list []*corev1.Pod) {
+	slices.SortFunc(list, func(a, b *corev1.Pod) int {
+		return cmp.Compare(util.PodOrdinal(a.Name), util.PodOrdinal(b.Name))
+	})
+}
+
 // ComputeHash returns a hash value calculated from pod template and
 // a collisionCount to avoid hash collision. The hash will be safe encoded to
 // avoid bad words.
@@ -157,4 +156,27 @@ func deepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 		SpewKeys:       true,
 	}
 	_, _ = printer.Fprintf(hasher, "%#v", objectToWrite)
+}
+
+type nodeName struct {
+	name     string
+	hostName string
+	podName  string
+}
+
+func parseNodeName(s string, instance *crd.EMQX) *nodeName {
+	// Example: emqx@emqx-core-557c8b7684-0.emqx-headless.default.svc.cluster.local
+	// Example: emqx@10.244.0.23
+	var parsed nodeName
+	nameParts := strings.Split(s, "@")
+	if len(nameParts) != 2 {
+		return nil
+	}
+	parsed.name = nameParts[0]
+	parsed.hostName = nameParts[1]
+	hostParts := strings.Split(nameParts[1], instance.HeadlessServiceNamespacedName().Name)
+	if len(hostParts) > 1 {
+		parsed.podName = strings.TrimRight(hostParts[0], ".")
+	}
+	return &parsed
 }

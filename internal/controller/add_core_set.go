@@ -2,128 +2,85 @@ package controller
 
 import (
 	"fmt"
-	"reflect"
 	"slices"
+	"time"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type addCoreSet struct {
 	*EMQXReconciler
 }
 
-func (a *addCoreSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
-	sts := newStatefulSet(instance, r.conf)
-	stsHash := sts.Labels[crdv2.LabelPodTemplateHash]
+func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
+	existing := r.state.coreSet()
+	coreSet := newStatefulSet(instance, r.conf)
+	_ = ctrl.SetControllerReference(instance, coreSet, a.Scheme)
 
-	needCreate := false
-	updateCoreSet := r.state.updateCoreSet(instance)
-	if updateCoreSet == nil {
-		r.log.Info("creating new statefulSet",
-			"statefulSet", klog.KObj(sts),
+	if existing == nil {
+		// No StatefulSet exists yet.
+		r.log.Info("creating statefulSet",
+			"statefulSet", klog.KObj(coreSet),
 			"reason", "no existing statefulSet",
 		)
-		needCreate = true
-	} else {
-		patchResult, _ := a.Patcher.Calculate(updateCoreSet, sts, justCheckPodTemplate())
-		if !patchResult.IsEmpty() {
-			r.log.Info("creating new statefulSet",
-				"statefulSet", klog.KObj(sts),
-				"reason", "pod template has changed",
-				"patch", string(patchResult.Patch),
-			)
-			needCreate = true
-		}
-	}
-
-	if needCreate {
-		_ = ctrl.SetControllerReference(instance, sts, a.Scheme)
-		if err := a.Handler.Create(r.ctx, sts); err != nil {
+		if err := a.Handler.Create(r.ctx, coreSet); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
-				cond := instance.Status.GetLastTrueCondition()
-				if cond != nil && cond.Type != crdv2.Available && cond.Type != crdv2.Ready {
-					// Sometimes the updated statefulSet will not be ready, because the EMQX node can not be started.
-					// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new statefulSet.
-					// But the new statefulSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
-					if stsHash == instance.Status.CoreNodesStatus.CurrentRevision {
-						_ = a.updateEMQXStatus(r, instance, "RevertStatefulSet", stsHash)
-						return subResult{}
-					}
-				}
-				if instance.Status.CoreNodesStatus.CollisionCount == nil {
-					instance.Status.CoreNodesStatus.CollisionCount = ptr.To(int32(0))
-				}
-				*instance.Status.CoreNodesStatus.CollisionCount++
-				_ = a.Client.Status().Update(r.ctx, instance)
-				return subResult{result: ctrl.Result{Requeue: true}}
+				return reconcileRequeue()
 			}
-			return subResult{err: emperror.Wrap(err, "failed to create statefulSet")}
+			return reconcileError(emperror.Wrap(err, "failed to create statefulSet"))
 		}
-		updateResult := a.updateEMQXStatus(r, instance, "CreateNewStatefulSet", stsHash)
-		return subResult{err: updateResult}
+		// Force Requeue to give StatefulSet controller time to reflect status.
+		return reconcileRequeueAfter(time.Second)
 	}
 
-	sts.ObjectMeta = updateCoreSet.ObjectMeta
-	sts.Spec.Template.ObjectMeta = updateCoreSet.Spec.Template.ObjectMeta
-	sts.Spec.Selector = updateCoreSet.Spec.Selector
+	// StatefulSet exists.
+	// Update it in place if the spec has changed.
+	// With OnDelete strategy, updating the spec does not restart pods.
 	patchResult, _ := a.Patcher.Calculate(
-		updateCoreSet,
-		sts,
-		// Ignore Status fields and VolumeClaimTemplate stuff.
+		existing,
+		coreSet,
 		patch.IgnoreStatusFields(),
 		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
 		// Ignore if number of replicas has changed.
-		// Reconciler `syncCoreSets` will handle scaling up and down of the existing statefulSet.
+		// Reconciler `syncCoreSets` will handle scaling of the statefulSet.
 		ignoreStatefulSetReplicas(),
 	)
 	if !patchResult.IsEmpty() {
-		// Update statefulSet
 		r.log.Info("updating statefulSet",
-			"statefulSet", klog.KObj(sts),
-			"reason", "statefulSet has changed",
+			"statefulSet", klog.KObj(coreSet),
+			"reason", "spec has changed",
 			"patch", string(patchResult.Patch),
 		)
-		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			storage := &appsv1.StatefulSet{}
-			_ = a.Client.Get(r.ctx, client.ObjectKeyFromObject(sts), storage)
-			sts.ResourceVersion = storage.ResourceVersion
-			return a.Handler.Update(r.ctx, sts)
-		}); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update statefulSet")}
+		// NOTE
+		// Conflicts are expected as StatefulSet contoller may act concurrently on the resource.
+		// Conflicts are handled on `EMQXReconciler` level.
+		err := a.Handler.Update(r.ctx, coreSet)
+		if err != nil {
+			return reconcileError(emperror.Wrap(err, "failed to update statefulSet"))
 		}
-		updateResult := a.updateEMQXStatus(r, instance, "UpdateStatefulSet", stsHash)
-		return subResult{err: updateResult}
+		forceCoreNodesProgressing(instance)
+		updateResult := a.Client.Status().Update(r.ctx, instance)
+		// Force Requeue to give StatefulSet controller time to reflect status.
+		return subResult{err: updateResult, immediateResult: &ctrl.Result{RequeueAfter: time.Second}}
 	}
+
 	return subResult{}
 }
 
-func (a *addCoreSet) updateEMQXStatus(r *reconcileRound, instance *crdv2.EMQX, reason, podTemplateHash string) error {
-	instance.Status.ResetConditions(reason)
-	instance.Status.CoreNodesStatus.UpdateRevision = podTemplateHash
-	return a.Client.Status().Update(r.ctx, instance)
-}
-
-func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet {
+func newStatefulSet(instance *crd.EMQX, conf *config.EMQX) *appsv1.StatefulSet {
 	sts := generateStatefulSet(instance)
-	podTemplateHash := computeHash(sts.Spec.Template.DeepCopy(), instance.Status.CoreNodesStatus.CollisionCount)
-	sts.Name = sts.Name + "-" + podTemplateHash
-	sts.Labels[crdv2.LabelPodTemplateHash] = podTemplateHash
-	sts.Spec.Template.Labels[crdv2.LabelPodTemplateHash] = podTemplateHash
-	sts.Spec.Selector = util.CloneSelectorAndAddLabel(sts.Spec.Selector, crdv2.LabelPodTemplateHash, podTemplateHash)
 	sts.Spec.Template.Spec.Containers[0].Ports = util.MergeContainerPorts(
 		sts.Spec.Template.Spec.Containers[0].Ports,
 		util.MapServicePortsToContainerPorts(conf.GetDashboardServicePorts()),
@@ -131,25 +88,33 @@ func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet
 	return sts
 }
 
-func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
-	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
-	// This is especially important when DS Raft is enabled, otherwise there will be a
-	// lot of leftover records in the DS cluster metadata.
-	lifecycle := instance.Spec.CoreTemplate.Spec.Lifecycle
-	if lifecycle == nil {
-		lifecycle = &corev1.Lifecycle{}
-	} else {
-		lifecycle = lifecycle.DeepCopy()
-	}
-	lifecycle.PreStop = &corev1.LifecycleHandler{
-		Exec: &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", "emqx ctl cluster leave"},
-		},
-	}
+func generateStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
+	template := &instance.Spec.CoreTemplate
 
 	cookie := resources.Cookie(instance)
 	bootstrapAPIKeys := resources.BootstrapAPIKey(instance)
 	config := resources.EMQXConfig(instance)
+
+	// Use OnDelete update strategy so the operator controls pod replacement.
+	updateStrategy := appsv1.StatefulSetUpdateStrategy{
+		Type: appsv1.OnDeleteStatefulSetStrategyType,
+	}
+
+	// Requires K8s >= 1.27 and the StatefulSetAutoDeletePVC feature gate (stable since K8s 1.32).
+	pvcRetentionPolicy := appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+		WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+		WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+	}
+
+	readinessProbe := resources.EvacuationReadinessProbe()
+
+	// Prefer evacuation-aware probe over older-version defaults.
+	if template.Spec.ReadinessProbe != nil {
+		if template.Spec.ReadinessProbe.HTTPGet != nil &&
+			template.Spec.ReadinessProbe.HTTPGet.Path != "/status" {
+			readinessProbe = template.Spec.ReadinessProbe.DeepCopy()
+		}
+	}
 
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -159,44 +124,42 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
 			Name:        instance.CoreNamespacedName().Name,
-			Annotations: instance.Spec.CoreTemplate.DeepCopy().Annotations,
+			Annotations: util.CloneAnnotations(template.Annotations),
 			Labels:      statefulSetLabels(instance),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: instance.HeadlessServiceNamespacedName().Name,
-			Replicas:    instance.Spec.CoreTemplate.Spec.Replicas,
+			ServiceName:                          instance.HeadlessServiceNamespacedName().Name,
+			Replicas:                             template.Spec.Replicas,
+			MinReadySeconds:                      instance.Spec.CoreTemplate.Spec.MinReadySeconds,
+			UpdateStrategy:                       updateStrategy,
+			PodManagementPolicy:                  appsv1.ParallelPodManagement,
+			PersistentVolumeClaimRetentionPolicy: &pvcRetentionPolicy,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: statefulSetLabels(instance),
+				MatchLabels: statefulSetSelectorLabels(instance),
 			},
-			PodManagementPolicy: appsv1.ParallelPodManagement,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: instance.Spec.CoreTemplate.DeepCopy().Annotations,
+					Annotations: util.CloneAnnotations(template.Annotations),
 					Labels:      statefulSetLabels(instance),
 				},
 				Spec: corev1.PodSpec{
-					ReadinessGates: []corev1.PodReadinessGate{
-						{
-							ConditionType: crdv2.PodOnServing,
-						},
-					},
 					ImagePullSecrets:          instance.Spec.ImagePullSecrets,
 					ServiceAccountName:        instance.Spec.ServiceAccountName,
-					SecurityContext:           instance.Spec.CoreTemplate.Spec.PodSecurityContext,
-					Affinity:                  instance.Spec.CoreTemplate.Spec.Affinity,
-					Tolerations:               instance.Spec.CoreTemplate.Spec.Tolerations,
-					TopologySpreadConstraints: instance.Spec.CoreTemplate.Spec.TopologySpreadConstraints,
-					NodeName:                  instance.Spec.CoreTemplate.Spec.NodeName,
-					NodeSelector:              instance.Spec.CoreTemplate.Spec.NodeSelector,
-					InitContainers:            instance.Spec.CoreTemplate.Spec.InitContainers,
+					SecurityContext:           template.Spec.PodSecurityContext,
+					Affinity:                  template.Spec.Affinity,
+					Tolerations:               template.Spec.Tolerations,
+					TopologySpreadConstraints: template.Spec.TopologySpreadConstraints,
+					NodeName:                  template.Spec.NodeName,
+					NodeSelector:              template.Spec.NodeSelector,
+					InitContainers:            template.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
-							Name:            crdv2.DefaultContainerName,
+							Name:            crd.DefaultContainerName,
 							Image:           instance.Spec.Image,
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
-							Command:         instance.Spec.CoreTemplate.Spec.Command,
-							Args:            instance.Spec.CoreTemplate.Spec.Args,
-							Ports:           instance.Spec.CoreTemplate.Spec.Ports,
+							Command:         template.Spec.Command,
+							Args:            template.Spec.Args,
+							Ports:           template.Spec.Ports,
 							Env: append([]corev1.EnvVar{
 								{
 									Name: "POD_NAME",
@@ -232,14 +195,14 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 								},
 								cookie.EnvVar(),
 								bootstrapAPIKeys.EnvVar(),
-							}, instance.Spec.CoreTemplate.Spec.Env...),
-							EnvFrom:         instance.Spec.CoreTemplate.Spec.EnvFrom,
-							Resources:       instance.Spec.CoreTemplate.Spec.Resources,
-							SecurityContext: instance.Spec.CoreTemplate.Spec.ContainerSecurityContext,
-							LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
-							ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
-							StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
-							Lifecycle:       lifecycle,
+							}, template.Spec.Env...),
+							EnvFrom:         template.Spec.EnvFrom,
+							Resources:       template.Spec.Resources,
+							SecurityContext: template.Spec.ContainerSecurityContext,
+							LivenessProbe:   template.Spec.LivenessProbe,
+							ReadinessProbe:  readinessProbe,
+							StartupProbe:    template.Spec.StartupProbe,
+							Lifecycle:       template.Spec.Lifecycle,
 							VolumeMounts: slices.Concat(
 								[]corev1.VolumeMount{
 									{
@@ -253,10 +216,10 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 									bootstrapAPIKeys.VolumeMount(),
 								},
 								config.VolumeMounts(),
-								instance.Spec.CoreTemplate.Spec.ExtraVolumeMounts,
+								template.Spec.ExtraVolumeMounts,
 							),
 						},
-					}, instance.Spec.CoreTemplate.Spec.ExtraContainers...),
+					}, template.Spec.ExtraContainers...),
 					Volumes: append([]corev1.Volume{
 						config.Volume(),
 						bootstrapAPIKeys.Volume(),
@@ -266,44 +229,55 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
-					}, instance.Spec.CoreTemplate.Spec.ExtraVolumes...),
+					}, template.Spec.ExtraVolumes...),
 				},
 			},
 		},
 	}
 
-	if !reflect.ValueOf(instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates).IsZero() {
-		volumeClaimTemplates := instance.Spec.CoreTemplate.Spec.VolumeClaimTemplates.DeepCopy()
-		if volumeClaimTemplates.VolumeMode == nil {
-			// Wait https://github.com/cisco-open/k8s-objectmatcher/issues/51 fixed
-			fs := corev1.PersistentVolumeFilesystem
-			volumeClaimTemplates.VolumeMode = &fs
-		}
-		sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      instance.CoreNamespacedName().Name + "-data",
-					Namespace: instance.Namespace,
-					Labels:    statefulSetLabels(instance),
-				},
-				Spec: *volumeClaimTemplates,
+	sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      instance.CoreNamespacedName().Name + "-data",
+				Namespace: instance.Namespace,
+				// TODO
+				// Labels from the core template are currently not attached to PVCs.
+				// This is deliberate, as it simplifies StatefulSet management.
+				// If this is needed, care must be taken to propagate the core template
+				// changes correctly: updating PVC template (if only just labels) inside
+				// the StatefulSet spec is explicitly forbidden by K8S API server.
+				Labels: instance.DefaultLabelsWith(crd.CoreLabels()),
 			},
-		}
-	} else {
-		sts.Spec.Template.Spec.Volumes = append([]corev1.Volume{
-			{
-				Name: instance.CoreNamespacedName().Name + "-data",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			},
-		}, sts.Spec.Template.Spec.Volumes...)
+			Spec: coreDataVolumeClaimSpec(template),
+		},
 	}
 
 	return sts
 }
 
 // Combine instance labels, core labels and template labels.
-func statefulSetLabels(instance *crdv2.EMQX) map[string]string {
-	return instance.DefaultLabelsWith(crdv2.CoreLabels(), instance.Spec.CoreTemplate.Labels)
+func statefulSetLabels(instance *crd.EMQX) map[string]string {
+	return instance.DefaultLabelsWith(crd.CoreLabels(), instance.Spec.CoreTemplate.Labels)
+}
+
+// Combine just instance labels and core labels.
+// Should be stable across EMQX spec changes.
+func statefulSetSelectorLabels(instance *crd.EMQX) map[string]string {
+	return instance.DefaultLabelsWith(crd.CoreLabels())
+}
+
+func coreDataVolumeClaimSpec(template *crd.EMQXCoreTemplate) corev1.PersistentVolumeClaimSpec {
+	spec := template.Spec.PersistentVolumeClaimSpec.DeepCopy()
+	if len(spec.AccessModes) == 0 {
+		spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+	}
+	if spec.Resources.Requests == nil {
+		spec.Resources.Requests = corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("500Mi")}
+	}
+	if spec.VolumeMode == nil {
+		// https://github.com/cisco-open/k8s-objectmatcher/issues/51
+		fs := corev1.PersistentVolumeFilesystem
+		spec.VolumeMode = &fs
+	}
+	return *spec
 }

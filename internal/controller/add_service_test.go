@@ -3,7 +3,7 @@ package controller
 import (
 	"testing"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -16,11 +16,10 @@ func loadConf(data string) *config.EMQX {
 	conf, _ := config.EMQXConfigWithDefaults(data)
 	return conf
 }
-
 func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check metadata", func(t *testing.T) {
-		emqx := &crdv2.EMQX{
+		emqx := &crd.EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "emqx",
 				Namespace: "emqx",
@@ -31,8 +30,8 @@ func TestGenerateDashboardService(t *testing.T) {
 					"emqx-annotation-key": "emqx",
 				},
 			},
-			Spec: crdv2.EMQXSpec{
-				DashboardServiceTemplate: &crdv2.ServiceTemplate{
+			Spec: crd.EMQXSpec{
+				DashboardServiceTemplate: &crd.ServiceTemplate{
 					Enabled: ptr.To(true),
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -63,8 +62,8 @@ func TestGenerateDashboardService(t *testing.T) {
 	})
 
 	t.Run("check disabled", func(t *testing.T) {
-		emqx := &crdv2.EMQX{}
-		emqx.Spec.DashboardServiceTemplate = &crdv2.ServiceTemplate{
+		emqx := &crd.EMQX{}
+		emqx.Spec.DashboardServiceTemplate = &crd.ServiceTemplate{
 			Enabled: ptr.To(false),
 		}
 		got := generateDashboardService(emqx, loadConf(""))
@@ -72,21 +71,21 @@ func TestGenerateDashboardService(t *testing.T) {
 	})
 
 	t.Run("check selector", func(t *testing.T) {
-		emqx := &crdv2.EMQX{
+		emqx := &crd.EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "emqx",
 			},
 		}
 		got := generateDashboardService(emqx, loadConf(""))
 		assert.Equal(t, map[string]string{
-			crdv2.LabelInstance:  "emqx",
-			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "core",
+			crd.LabelInstance:  "emqx",
+			crd.LabelManagedBy: "emqx-operator",
+			crd.LabelDBRole:    "core",
 		}, got.Spec.Selector)
 	})
 
 	t.Run("check http ports", func(t *testing.T) {
-		emqx := &crdv2.EMQX{}
+		emqx := &crd.EMQX{}
 		got := generateDashboardService(emqx, loadConf(`
 		dashboard.listeners.http.bind = 18083
 		`))
@@ -101,7 +100,7 @@ func TestGenerateDashboardService(t *testing.T) {
 	})
 
 	t.Run("check https ports", func(t *testing.T) {
-		emqx := &crdv2.EMQX{}
+		emqx := &crd.EMQX{}
 		got := generateDashboardService(emqx, loadConf(`
 		dashboard.listeners.http.bind = 0
 		dashboard.listeners.https.bind = 18084
@@ -117,7 +116,7 @@ func TestGenerateDashboardService(t *testing.T) {
 	})
 
 	t.Run("check http and https ports", func(t *testing.T) {
-		emqx := &crdv2.EMQX{}
+		emqx := &crd.EMQX{}
 		got := generateDashboardService(emqx, loadConf(`
 		dashboard.listeners.http.bind = 18083
 		dashboard.listeners.https.bind = 18084
@@ -139,7 +138,7 @@ func TestGenerateDashboardService(t *testing.T) {
 	})
 
 	t.Run("check empty ports", func(t *testing.T) {
-		emqx := &crdv2.EMQX{}
+		emqx := &crd.EMQX{}
 		got := generateDashboardService(emqx, loadConf(`
 		dashboard.listeners.http.bind = 0
 		dashboard.listeners.https.bind = 0
@@ -150,7 +149,7 @@ func TestGenerateDashboardService(t *testing.T) {
 
 func TestGenerateListenersService(t *testing.T) {
 	t.Run("check metadata", func(t *testing.T) {
-		emqx := &crdv2.EMQX{
+		emqx := &crd.EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "emqx",
 				Namespace: "emqx",
@@ -161,8 +160,8 @@ func TestGenerateListenersService(t *testing.T) {
 					"emqx-annotation-key": "emqx",
 				},
 			},
-			Spec: crdv2.EMQXSpec{
-				ListenersServiceTemplate: &crdv2.ServiceTemplate{
+			Spec: crd.EMQXSpec{
+				ListenersServiceTemplate: &crd.ServiceTemplate{
 					Enabled: ptr.To(true),
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -175,7 +174,7 @@ func TestGenerateListenersService(t *testing.T) {
 				},
 			},
 		}
-		got := generateListenerService(emqx, loadConf(""))
+		got := generateListenerService(newReconcileRound(), emqx, loadConf(""))
 		assert.Equal(t, metav1.ObjectMeta{
 			Name:      "emqx-listeners",
 			Namespace: "emqx",
@@ -191,57 +190,31 @@ func TestGenerateListenersService(t *testing.T) {
 	})
 
 	t.Run("check disabled", func(t *testing.T) {
-		emqx := &crdv2.EMQX{}
-		emqx.Spec.ListenersServiceTemplate = &crdv2.ServiceTemplate{
+		emqx := &crd.EMQX{}
+		emqx.Spec.ListenersServiceTemplate = &crd.ServiceTemplate{
 			Enabled: ptr.To(false),
 		}
-		got := generateListenerService(emqx, loadConf(""))
+		got := generateListenerService(newReconcileRound(), emqx, loadConf(""))
 		assert.Nil(t, got)
 	})
 
-	t.Run("should selector core pods", func(t *testing.T) {
-		emqx := &crdv2.EMQX{
+	t.Run("check core pod selector by default", func(t *testing.T) {
+		emqx := &crd.EMQX{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "emqx",
 			},
 		}
-		got := generateListenerService(emqx, loadConf(""))
+		got := generateListenerService(newReconcileRound(), emqx, loadConf(""))
 		assert.Equal(t, map[string]string{
-			crdv2.LabelInstance:  "emqx",
-			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "core",
-		}, got.Spec.Selector)
-	})
-
-	t.Run("should selector replicant pods", func(t *testing.T) {
-		emqx := &crdv2.EMQX{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "emqx",
-			},
-			Spec: crdv2.EMQXSpec{
-				ReplicantTemplate: &crdv2.EMQXReplicantTemplate{
-					Spec: crdv2.EMQXReplicantTemplateSpec{
-						Replicas: ptr.To(int32(3)),
-					},
-				},
-			},
-			Status: crdv2.EMQXStatus{
-				ReplicantNodesStatus: crdv2.EMQXNodesStatus{
-					ReadyReplicas: 3,
-				},
-			},
-		}
-		got := generateListenerService(emqx, loadConf(""))
-		assert.Equal(t, map[string]string{
-			crdv2.LabelInstance:  "emqx",
-			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "replicant",
+			crd.LabelInstance:  "emqx",
+			crd.LabelManagedBy: "emqx-operator",
+			crd.LabelDBRole:    "core",
 		}, got.Spec.Selector)
 	})
 
 	t.Run("check default ports", func(t *testing.T) {
-		emqx := &crdv2.EMQX{}
-		got := generateListenerService(emqx, loadConf(""))
+		emqx := &crd.EMQX{}
+		got := generateListenerService(newReconcileRound(), emqx, loadConf(""))
 		assert.ElementsMatch(t, []corev1.ServicePort{
 			{
 				Name:       "tcp-default",
@@ -271,11 +244,11 @@ func TestGenerateListenersService(t *testing.T) {
 	})
 
 	t.Run("check ports", func(t *testing.T) {
-		emqx := &crdv2.EMQX{}
+		emqx := &crd.EMQX{}
 		conf, _ := config.EMQXConfigWithDefaults(`
 		gateway.lwm2m.listeners.udp.default.bind = 5783
 		`)
-		got := generateListenerService(emqx, conf)
+		got := generateListenerService(newReconcileRound(), emqx, conf)
 		assert.ElementsMatch(t, []corev1.ServicePort{
 			{
 				Name:       "lwm2m-udp-default",

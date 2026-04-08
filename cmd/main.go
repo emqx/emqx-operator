@@ -37,8 +37,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
-	crdv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	"github.com/emqx/emqx-operator/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
@@ -51,8 +50,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(crdv2.AddToScheme(scheme))
-	utilruntime.Must(crdv2beta1.AddToScheme(scheme))
+	utilruntime.Must(crd.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -60,7 +58,7 @@ func init() {
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;delete
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;update;delete
 // +kubebuilder:rbac:groups="",resources=pods/status,verbs=patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update
@@ -168,10 +166,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = controller.NewRebalanceReconciler(mgr).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Rebalance")
-		os.Exit(1)
-	}
+	// NOTE: Rebalance controller is disabled in this release. See api/v3alpha1/rebalance_types.go.
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

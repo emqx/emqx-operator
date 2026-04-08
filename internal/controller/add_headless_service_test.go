@@ -3,7 +3,7 @@ package controller
 import (
 	"testing"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,13 +11,13 @@ import (
 )
 
 func TestGenerateHeadlessSVC(t *testing.T) {
-	instance := &crdv2.EMQX{
+	instance := &crd.EMQX{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "emqx",
 			Namespace: "emqx",
 		},
-		Spec: crdv2.EMQXSpec{
-			CoreTemplate: crdv2.EMQXCoreTemplate{
+		Spec: crd.EMQXSpec{
+			CoreTemplate: crd.EMQXCoreTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{"test": "label"},
 				},
@@ -55,7 +55,7 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 					TargetPort: intstr.FromInt(5369),
 				},
 			},
-			Selector: instance.DefaultLabelsWith(crdv2.CoreLabels()),
+			Selector: instance.DefaultLabelsWith(crd.CoreLabels()),
 		},
 	}
 	assert.Equal(t, expect, generateHeadlessService(instance))

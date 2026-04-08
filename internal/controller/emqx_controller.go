@@ -28,8 +28,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	req "github.com/emqx/emqx-operator/internal/requester"
@@ -56,18 +57,38 @@ type reconcileRound struct {
 }
 
 // Instantiate default API requester for a core node.
+// Picks oldest core node that is considered ready: up and running, not evacuating.
 func (r *reconcileRound) oldestCoreRequester() req.RequesterInterface {
-	return r.requester.forOldestCore(r.state)
+	return r.requester.forOldestCore(r.state, &podConditionFilter{cond: corev1.ContainersReady})
 }
 
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
-	err    error
-	result ctrl.Result
+	err error
+	// If `true`, short timeout requeue is needed:
+	needRequeue bool
+	// Immediately report controller `Result` if not nil:
+	immediateResult *ctrl.Result
+}
+
+func reconcileError(err error) subResult {
+	return subResult{err: err}
+}
+
+func reconcileRequeue() subResult {
+	return subResult{immediateResult: &ctrl.Result{Requeue: true}}
+}
+
+func reconcileRequeueAfter(duration time.Duration) subResult {
+	return subResult{immediateResult: &ctrl.Result{RequeueAfter: duration}}
+}
+
+func reconcilePostpone() subResult {
+	return subResult{needRequeue: true}
 }
 
 type subReconciler interface {
-	reconcile(*reconcileRound, *crdv2.EMQX) subResult
+	reconcile(*reconcileRound, *crd.EMQX) subResult
 }
 
 func subReconcilerName(s subReconciler) string {
@@ -100,7 +121,7 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	instance := &crdv2.EMQX{}
+	instance := &crd.EMQX{}
 	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -114,6 +135,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	logger := log.FromContext(ctx)
 	round := reconcileRound{ctx: ctx, log: logger}
+	needRequeue := false
 
 	for _, subReconciler := range []subReconciler{
 		// Load EMQX configuration defined in the spec.config.data:
@@ -126,7 +148,6 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&setupAPIRequester{r},
 		// Perform reconciliation steps:
 		&updateStatus{r},
-		&updatePodConditions{r},
 		&syncConfig{r},
 		&addHeadlessService{r},
 		&addCoreSet{r},
@@ -134,18 +155,17 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addPdb{r},
 		&addService{r},
 		&dsLoadClusterState{r},
+		&dsCleanupSites{r},
 		&dsUpdateReplicaSets{r},
 		&dsReflectPodCondition{r},
+		&syncCoreSet{r},
 		&syncReplicantSets{r},
-		&syncCoreSets{r},
+		&syncClusterMembership{r},
 		&cleanupOutdatedSets{r},
-		&dsCleanupSites{r},
 	} {
 		round.log = logger.WithValues("reconciler", subReconcilerName(subReconciler))
 		subResult := subReconciler.reconcile(&round, instance)
-		if !subResult.result.IsZero() {
-			return subResult.result, nil
-		}
+		needRequeue = needRequeue || subResult.needRequeue
 		if subResult.err != nil {
 			if errors.IsCommonError(subResult.err) {
 				round.log.Info("reconciler requeue", "reason", subResult.err)
@@ -157,19 +177,23 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			)
 			return ctrl.Result{}, subResult.err
 		}
+		if subResult.immediateResult != nil {
+			return *subResult.immediateResult, nil
+		}
 	}
 
-	isStable := instance.Status.IsConditionTrue(crdv2.Ready) && instance.Status.DSReplication.IsStable()
-	if !isStable {
+	if !instance.Status.IsConditionTrue(crd.Ready) || needRequeue {
 		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
+
 	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&crdv2.EMQX{}).
+		For(&crd.EMQX{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Named("emqx").
 		Complete(r)
 }

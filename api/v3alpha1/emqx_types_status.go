@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2
+package v3alpha1
 
 import (
 	"slices"
@@ -32,15 +32,15 @@ type EMQXStatus struct {
 	// Status of each core node in the cluster.
 	CoreNodes []EMQXNode `json:"coreNodes,omitempty"`
 	// Summary status of the set of core nodes.
-	CoreNodesStatus EMQXNodesStatus `json:"coreNodesStatus,omitempty"`
+	CoreNodesStatus CoreNodesStatus `json:"coreNodesStatus,omitempty"`
 
 	// Status of each replicant node in the cluster.
 	ReplicantNodes []EMQXNode `json:"replicantNodes,omitempty"`
 	// Summary status of the set of replicant nodes.
-	ReplicantNodesStatus EMQXNodesStatus `json:"replicantNodesStatus,omitempty"`
+	ReplicantNodesStatus ReplicantNodesStatus `json:"replicantNodesStatus,omitempty"`
 
 	// Status of active node evacuations in the cluster.
-	NodeEvacuationsStatus []NodeEvacuationStatus `json:"nodeEvacuationsStatus,omitempty"`
+	NodeEvacuations []NodeEvacuationStatus `json:"nodeEvacuations,omitempty"`
 	// Status of EMQX Durable Storage replication.
 	DSReplication DSReplicationStatus `json:"dsReplication,omitempty"`
 }
@@ -65,30 +65,40 @@ type NodeEvacuationStatus struct {
 	InitialConnections int32 `json:"initialConnections,omitempty"`
 }
 
-type EMQXNodesStatus struct {
-	// Total number of replicas.
-	Replicas int32 `json:"replicas,omitempty"`
+// CoreNodesStatus is the summary status of core nodes managed by a single StatefulSet.
+type CoreNodesStatus struct {
 	// Number of ready replicas.
-	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
-	// Current revision of the respective core or replicant set.
+	ReadyReplicas int32 `json:"readyReplicas"`
+	// Number of replicas already updated to the desired pod template.
+	UpdatedReplicas int32 `json:"updatedReplicas"`
+	// Number of replicas still running the previous pod template.
+	CurrentReplicas int32 `json:"currentReplicas"`
+}
+
+// ReplicantNodesStatus is the summary status of the set of replicant nodes.
+// The multi-ReplicaSet pattern requires revision tracking at the CR level.
+type ReplicantNodesStatus struct {
+	// Number of ready replicas.
+	ReadyReplicas int32 `json:"readyReplicas"`
+	// Current revision of the replicant set.
 	CurrentRevision string `json:"currentRevision,omitempty"`
 	// Number of replicas running current revision.
-	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
-	// Update revision of the respective core or replicant set.
+	CurrentReplicas int32 `json:"currentReplicas"`
+	// Update revision of the replicant set.
 	// When different from the current revision, the set is being updated.
 	UpdateRevision string `json:"updateRevision,omitempty"`
 	// Number of replicas running update revision.
-	UpdateReplicas int32 `json:"updateReplicas,omitempty"`
+	UpdateReplicas int32 `json:"updateReplicas"`
 
 	CollisionCount *int32 `json:"collisionCount,omitempty"`
 }
 
 type EMQXNode struct {
 	// Node name
-	// +kubebuilder:example="emqx@emqx-core-557c8b7684-0.emqx-headless.default.svc.cluster.local"
+	// +kubebuilder:example="emqx@emqx-core-0.emqx-headless.default.svc.cluster.local"
 	Name string `json:"name,omitempty"`
 	// Corresponding pod name
-	// +kubebuilder:example="emqx-core-557c8b7684-0"
+	// +kubebuilder:example="emqx-core-0"
 	PodName string `json:"podName,omitempty"`
 	// Node status
 	// +kubebuilder:example=running
@@ -103,9 +113,9 @@ type EMQXNode struct {
 	// +kubebuilder:example=core
 	Role string `json:"role,omitempty"`
 	// Number of MQTT sessions
-	Sessions int64 `json:"sessions,omitempty"`
+	Sessions int64 `json:"sessions"`
 	// Number of connected MQTT clients
-	Connections int64 `json:"connections,omitempty"`
+	Connections int64 `json:"connections"`
 }
 
 func (s EMQXStatus) FindNode(node string) *EMQXNode {
@@ -162,57 +172,29 @@ type DSDBReplicationStatus struct {
 }
 
 const (
-	Initialized               string = "Initialized"
 	CoreNodesProgressing      string = "CoreNodesProgressing"
-	CoreNodesReady            string = "CoreNodesReady"
 	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
-	ReplicantNodesReady       string = "ReplicantNodesReady"
 	Available                 string = "Available"
 	Ready                     string = "Ready"
 )
 
-func (s *EMQXStatus) ResetConditions(reason string) {
-	conditionTypes := []string{}
-	for _, c := range s.Conditions {
-		if c.Type != Initialized && c.Status == metav1.ConditionTrue {
-			conditionTypes = append(conditionTypes, c.Type)
-		}
+func (s *EMQXStatus) SetCondition(ty string, status metav1.ConditionStatus, reason, message string) {
+	_, existing := s.GetCondition(ty)
+	if existing != nil &&
+		existing.Status == status &&
+		existing.Reason == reason &&
+		existing.Message == message {
+		return
 	}
-	for _, conditionType := range conditionTypes {
-		s.SetFalseCondition(conditionType, reason)
+	s.RemoveCondition(ty)
+	c := metav1.Condition{
+		Type:               ty,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: metav1.Now(),
 	}
-}
-
-func (s *EMQXStatus) SetCondition(c metav1.Condition) {
-	s.RemoveCondition(c.Type)
-	c.LastTransitionTime = metav1.Now()
-	s.Conditions = slices.Insert(s.Conditions, 0, c)
-}
-
-func (s *EMQXStatus) SetTrueCondition(conditionType string) {
-	s.SetCondition(metav1.Condition{
-		Type:   conditionType,
-		Status: metav1.ConditionTrue,
-		Reason: conditionType,
-	})
-}
-
-func (s *EMQXStatus) SetFalseCondition(conditionType string, reason string) {
-	s.SetCondition(metav1.Condition{
-		Type:   conditionType,
-		Status: metav1.ConditionFalse,
-		Reason: reason,
-	})
-}
-
-func (s *EMQXStatus) GetLastTrueCondition() *metav1.Condition {
-	for i := range s.Conditions {
-		c := s.Conditions[i]
-		if c.Status == metav1.ConditionTrue {
-			return &c
-		}
-	}
-	return nil
+	s.Conditions = append(s.Conditions, c)
 }
 
 func (s *EMQXStatus) GetCondition(conditionType string) (int, *metav1.Condition) {

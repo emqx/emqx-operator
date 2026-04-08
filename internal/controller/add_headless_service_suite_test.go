@@ -1,7 +1,7 @@
 package controller
 
 import (
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("Reconciler addHeadlessService", Ordered, func() {
 	var a *addHeadlessService
-	var instance *crdv2.EMQX = &crdv2.EMQX{}
+	var instance *crd.EMQX = &crd.EMQX{}
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
 	BeforeEach(func() {
@@ -28,9 +28,9 @@ var _ = Describe("Reconciler addHeadlessService", Ordered, func() {
 
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-		instance.Spec.CoreTemplate = crdv2.EMQXCoreTemplate{
+		instance.Spec.CoreTemplate = crd.EMQXCoreTemplate{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: instance.DefaultLabelsWith(crdv2.CoreLabels()),
+				Labels: instance.DefaultLabelsWith(crd.CoreLabels()),
 			},
 		}
 	})

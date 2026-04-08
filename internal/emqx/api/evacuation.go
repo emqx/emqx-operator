@@ -6,10 +6,14 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	req "github.com/emqx/emqx-operator/internal/requester"
-	corev1 "k8s.io/api/core/v1"
 )
+
+// EMQX node evacuation state values reported by the API.
+const EvacuationStateProhibiting = "prohibiting"
+
+const URLAvailabilityCheck = "api/v5/load_rebalance/availability_check"
 
 type nodeEvacuationStatusResponse struct {
 	Evacuations []NodeEvacuationStatus `json:"evacuations"`
@@ -48,7 +52,7 @@ func ClusterEvacuationStatus(req req.RequesterInterface) ([]NodeEvacuationStatus
 
 func StartEvacuation(
 	r req.RequesterInterface,
-	strategy crdv2.EvacuationStrategy,
+	strategy crd.EvacuationStrategy,
 	migrateTo []string,
 	nodeName string,
 ) error {
@@ -83,13 +87,20 @@ func StartEvacuation(
 	return nil
 }
 
-func AvailabilityCheck(req req.RequesterInterface) corev1.ConditionStatus {
-	_, err := get(req, "api/v5/load_rebalance/availability_check")
-	if err != nil && emperror.Is(err, ErrorServiceUnavailable) {
-		return corev1.ConditionFalse
+func StopEvacuation(
+	r req.RequesterInterface,
+	nodeName string,
+) error {
+	path := fmt.Sprintf("api/v5/load_rebalance/%s/evacuation/stop", nodeName)
+	_, err := post(r, path, []byte{})
+	var apiErr apiError
+	if ok := emperror.As(err, &apiErr); ok {
+		if apiErr.StatusCode == 400 && strings.Contains(apiErr.Message, "not_started") {
+			return nil
+		}
 	}
 	if err != nil {
-		return corev1.ConditionUnknown
+		return err
 	}
-	return corev1.ConditionTrue
+	return nil
 }

@@ -1,9 +1,7 @@
 package controller
 
 import (
-	"time"
-
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	. "github.com/emqx/emqx-operator/test/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -16,7 +14,7 @@ import (
 
 var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 	var ns *corev1.Namespace
-	var instance *crdv2.EMQX
+	var instance *crd.EMQX
 	var a *addCoreSet
 	var round *reconcileRound
 
@@ -24,7 +22,7 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 		// Create namespace:
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-v2beta1-add-emqx-core-test",
+				Name: "controller-add-emqx-core-test",
 				Labels: map[string]string{
 					"test": "e2e",
 				},
@@ -38,83 +36,32 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 	})
 
 	BeforeEach(func() {
-		// Mock instance status:
-		instance.Status.Conditions = []metav1.Condition{
-			{
-				Type:               crdv2.Ready,
-				Status:             metav1.ConditionTrue,
-				Reason:             crdv2.Ready,
-				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
-			},
-			{
-				Type:               crdv2.CoreNodesReady,
-				Status:             metav1.ConditionTrue,
-				Reason:             crdv2.CoreNodesReady,
-				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -1)},
-			},
-			{
-				Type:               crdv2.Initialized,
-				Status:             metav1.ConditionTrue,
-				Reason:             crdv2.Initialized,
-				LastTransitionTime: metav1.Time{Time: time.Now().AddDate(0, 0, -10)},
-			},
-		}
 		// Instantiate reconciler:
 		a = &addCoreSet{emqxReconciler}
 		round = newReconcileRound()
-		round.state = loadReconcileState(ctx, k8sClient, instance)
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 	})
 
 	It("should create statefulSet", func() {
-		Eventually(a.reconcile).WithArguments(round, instance).
-			WithTimeout(timeout).
-			WithPolling(interval).
-			Should(Equal(subResult{}))
-
-		Eventually(func() []appsv1.StatefulSet {
-			list := &appsv1.StatefulSetList{}
-			_ = k8sClient.List(ctx, list,
-				client.InNamespace(instance.Namespace),
-				client.MatchingLabels(instance.DefaultLabelsWith(crdv2.CoreLabels())),
-			)
-			return list.Items
-		}).Should(ConsistOf(
-			HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal(instance.Spec.Image)))),
+		result := a.reconcile(round, instance)
+		Expect(result.err).ToNot(HaveOccurred())
+		Expect(coreSets(instance)).To(ConsistOf(
+			HaveField("Spec.Template.Spec.Containers", ConsistOf(
+				HaveField("Image", Equal(instance.Spec.Image)))),
 		))
 	})
 
-	It("change image creates new statefulSet", func() {
+	It("change image updates existing statefulSet in place", func() {
 		instance.Spec.Image = "emqx/emqx"
-		instance.Spec.UpdateStrategy.InitialDelaySeconds = int32(999999999)
-		Eventually(a.reconcile).WithArguments(round, instance).
-			WithTimeout(timeout).
-			WithPolling(interval).
-			Should(Equal(subResult{}))
-
-		Eventually(func() []appsv1.StatefulSet {
-			list := &appsv1.StatefulSetList{}
-			_ = k8sClient.List(ctx, list,
-				client.InNamespace(instance.Namespace),
-				client.MatchingLabels(instance.DefaultLabelsWith(crdv2.CoreLabels())),
-			)
-			return list.Items
-		}).WithTimeout(timeout).WithPolling(interval).Should(ConsistOf(
-			HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal("emqx")))),
-			HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal("emqx/emqx")))),
+		result := a.reconcile(round, instance)
+		Expect(result.err).ToNot(HaveOccurred())
+		Expect(actualObject(instance)).To(And(
+			HaveCondition(crd.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
+			HaveCondition(crd.CoreNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),
 		))
-
-		Eventually(func() *crdv2.EMQX {
-			_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)
-			return instance
-		}).Should(And(
-			WithTransform(
-				func(emqx *crdv2.EMQX) *metav1.Condition {
-					return emqx.Status.GetLastTrueCondition()
-				},
-				HaveField("Type", Equal(crdv2.Initialized)),
-			),
-			HaveCondition(crdv2.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
-			HaveCondition(crdv2.CoreNodesReady, HaveField("Status", Equal(metav1.ConditionFalse))),
+		Expect(coreSets(instance)).To(ConsistOf(
+			HaveField("Spec.Template.Spec.Containers", ConsistOf(
+				HaveField("Image", Equal("emqx/emqx")))),
 		))
 	})
 
@@ -123,3 +70,12 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
 	})
 })
+
+func coreSets(instance *crd.EMQX) []appsv1.StatefulSet {
+	list := &appsv1.StatefulSetList{}
+	_ = k8sClient.List(ctx, list,
+		client.InNamespace(instance.Namespace),
+		client.MatchingLabels(instance.DefaultLabelsWith(crd.CoreLabels())),
+	)
+	return list.Items
+}

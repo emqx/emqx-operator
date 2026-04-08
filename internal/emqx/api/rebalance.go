@@ -6,17 +6,17 @@ import (
 	"strconv"
 
 	emperror "emperror.dev/errors"
-	appsv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
+	crd "github.com/emqx/emqx-operator/api/v2beta1"
 	req "github.com/emqx/emqx-operator/internal/requester"
 )
 
 const ApiRebalanceV5 = "api/v5/load_rebalance"
 
 type rebalanceStatus struct {
-	Rebalances []appsv2beta1.RebalanceState `json:"rebalances"`
+	Rebalances []crd.RebalanceState `json:"rebalances"`
 }
 
-func StartRebalance(req req.RequesterInterface, strategy appsv2beta1.RebalanceStrategy, nodes []string) error {
+func StartRebalance(req req.RequesterInterface, strategy crd.RebalanceStrategy, nodes []string) error {
 	path := fmt.Sprintf("api/v5/load_rebalance/%s/start", nodes[0])
 	request := map[string]interface{}{
 		"conn_evict_rate":    strategy.ConnEvictRate,
@@ -40,7 +40,7 @@ func StartRebalance(req req.RequesterInterface, strategy appsv2beta1.RebalanceSt
 	return err
 }
 
-func GetRebalanceStatus(req req.RequesterInterface) ([]appsv2beta1.RebalanceState, error) {
+func GetRebalanceStatus(req req.RequesterInterface) ([]crd.RebalanceState, error) {
 	body, err := get(req, "api/v5/load_rebalance/global_status")
 	if err != nil {
 		return nil, err

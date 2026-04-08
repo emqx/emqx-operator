@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2
+package v3alpha1
 
 import corev1 "k8s.io/api/core/v1"
 
@@ -36,6 +36,4 @@ const (
 const (
 	// Whether the pod is responsible for DS replication
 	DSReplicationSite corev1.PodConditionType = "apps.emqx.io/ds-replication-site"
-	// https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate
-	PodOnServing corev1.PodConditionType = "apps.emqx.io/on-serving"
 )

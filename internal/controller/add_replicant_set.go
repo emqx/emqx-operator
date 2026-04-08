@@ -3,10 +3,11 @@ package controller
 import (
 	"fmt"
 	"slices"
+	"time"
 
 	emperror "emperror.dev/errors"
 	"github.com/cisco-open/k8s-objectmatcher/patch"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
@@ -14,30 +15,36 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type addReplicantSet struct {
 	*EMQXReconciler
 }
 
-func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Cluster w/o replicants, skip this step.
 	if instance.Spec.ReplicantTemplate == nil {
 		return subResult{}
 	}
 
 	// Core nodes are still spinning up, wait for them to be ready.
-	if !instance.Status.IsConditionTrue(crdv2.CoreNodesReady) {
-		return subResult{}
+	coreSet := r.state.coreSet()
+	if coreSet == nil || coreSet.Status.AvailableReplicas == 0 {
+		return reconcilePostpone()
+	}
+
+	// Postpone until at least one core of newest revision.
+	// If there's a rolling update involving version upgrade, replicants should be
+	// able to connect to at least one core.
+	if r.state.numCoresRevision(coreSet.Status.UpdateRevision) == 0 {
+		return reconcilePostpone()
 	}
 
 	rs := newReplicaSet(instance, r.conf)
-	rsHash := rs.Labels[crdv2.LabelPodTemplateHash]
+	rsHash := rs.Labels[crd.LabelPodTemplateHash]
 
 	needCreate := false
 	updateReplicantSet := r.state.updateReplicantSet(instance)
@@ -63,14 +70,13 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 		_ = ctrl.SetControllerReference(instance, rs, a.Scheme)
 		if err := a.Handler.Create(r.ctx, rs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
-				cond := instance.Status.GetLastTrueCondition()
-				if cond != nil && cond.Type != crdv2.Available && cond.Type != crdv2.Ready {
-					// Sometimes the updated replicaSet will not be ready, because the EMQX node can not be started.
-					// And then we will rollback EMQX CR spec, the EMQX operator controller will create a new replicaSet.
-					// But the new replicaSet will be the same as the previous one, so we didn't need to create it, just change the EMQX status.
+				if !instance.Status.IsConditionTrue(crd.Ready) {
+					// The updated replicaSet may not be ready because the EMQX node can not be started.
+					// If the user reverts the CR spec, the desired RS matches the current revision —
+					// just update the status instead of creating a duplicate.
 					if rsHash == instance.Status.ReplicantNodesStatus.CurrentRevision {
-						_ = a.updateEMQXStatus(r, instance, "RevertReplicaSet", rsHash)
-						return subResult{}
+						updateResult := a.updateEMQXStatus(r, instance, rsHash)
+						return subResult{err: updateResult}
 					}
 				}
 				if instance.Status.ReplicantNodesStatus.CollisionCount == nil {
@@ -78,56 +84,57 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crdv2.EMQX) sub
 				}
 				*instance.Status.ReplicantNodesStatus.CollisionCount++
 				_ = a.Client.Status().Update(r.ctx, instance)
-				return subResult{result: ctrl.Result{Requeue: true}}
+				return reconcileRequeue()
 			}
-			return subResult{err: emperror.Wrap(err, "failed to create replicaSet")}
+			return reconcileError(emperror.Wrap(err, "failed to create replicaSet"))
 		}
-		updateResult := a.updateEMQXStatus(r, instance, "CreateReplicaSet", rsHash)
-		return subResult{err: updateResult}
+		updateResult := a.updateEMQXStatus(r, instance, rsHash)
+		return subResult{err: updateResult, immediateResult: &ctrl.Result{RequeueAfter: time.Second}}
 	}
 
 	rs.ObjectMeta = updateReplicantSet.ObjectMeta
 	rs.Spec.Template.ObjectMeta = updateReplicantSet.Spec.Template.ObjectMeta
 	rs.Spec.Selector = updateReplicantSet.Spec.Selector
-	if patchResult, _ := a.Patcher.Calculate(
+	patchResult, _ := a.Patcher.Calculate(
 		updateReplicantSet,
 		rs,
 		patch.IgnoreStatusFields(),
 		patch.IgnoreVolumeClaimTemplateTypeMetaAndStatus(),
-	); !patchResult.IsEmpty() {
+	)
+	if !patchResult.IsEmpty() {
 		// Update replicaSet
 		r.log.Info("updating replicaSet",
 			"replicaSet", klog.KObj(rs),
 			"reason", "replicaSet has changed",
 			"patch", string(patchResult.Patch),
 		)
-		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			storage := &appsv1.ReplicaSet{}
-			_ = a.Client.Get(r.ctx, client.ObjectKeyFromObject(rs), storage)
-			rs.ResourceVersion = storage.ResourceVersion
-			return a.Handler.Update(r.ctx, rs)
-		}); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to update replicaSet")}
+		// NOTE
+		// Conflicts are expected as ReplicaSet contoller may act concurrently on the resource.
+		// Conflicts are handled on `EMQXReconciler` level.
+		err := a.Handler.Update(r.ctx, rs)
+		if err != nil {
+			return reconcileError(emperror.Wrap(err, "failed to update replicaSet"))
 		}
-		updateResult := a.updateEMQXStatus(r, instance, "UpdateReplicaSet", rsHash)
-		return subResult{err: updateResult}
+		updateResult := a.updateEMQXStatus(r, instance, rsHash)
+		return subResult{err: updateResult, immediateResult: &ctrl.Result{RequeueAfter: time.Second}}
 	}
+
 	return subResult{}
 }
 
-func (a *addReplicantSet) updateEMQXStatus(r *reconcileRound, instance *crdv2.EMQX, reason, podTemplateHash string) error {
-	instance.Status.ResetConditions(reason)
+func (a *addReplicantSet) updateEMQXStatus(r *reconcileRound, instance *crd.EMQX, podTemplateHash string) error {
 	instance.Status.ReplicantNodesStatus.UpdateRevision = podTemplateHash
+	forceReplicantNodesProgressing(instance)
 	return a.Client.Status().Update(r.ctx, instance)
 }
 
-func newReplicaSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.ReplicaSet {
+func newReplicaSet(instance *crd.EMQX, conf *config.EMQX) *appsv1.ReplicaSet {
 	rs := generateReplicaSet(instance)
 	podTemplateHash := computeHash(rs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
 	rs.Name = rs.Name + "-" + podTemplateHash
-	rs.Labels[crdv2.LabelPodTemplateHash] = podTemplateHash
-	rs.Spec.Template.Labels[crdv2.LabelPodTemplateHash] = podTemplateHash
-	rs.Spec.Selector = util.CloneSelectorAndAddLabel(rs.Spec.Selector, crdv2.LabelPodTemplateHash, podTemplateHash)
+	rs.Labels[crd.LabelPodTemplateHash] = podTemplateHash
+	rs.Spec.Template.Labels[crd.LabelPodTemplateHash] = podTemplateHash
+	rs.Spec.Selector = util.CloneSelectorAndAddLabel(rs.Spec.Selector, crd.LabelPodTemplateHash, podTemplateHash)
 	rs.Spec.Template.Spec.Containers[0].Ports = util.MergeContainerPorts(
 		rs.Spec.Template.Spec.Containers[0].Ports,
 		util.MapServicePortsToContainerPorts(conf.GetDashboardServicePorts()),
@@ -135,20 +142,30 @@ func newReplicaSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.ReplicaSet {
 	return rs
 }
 
-func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
+func generateReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
+	template := instance.Spec.ReplicantTemplate
+
 	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
 	// This is especially important when DS Raft is enabled, otherwise there will be a
 	// lot of leftover records in the DS cluster metadata.
-	lifecycle := instance.Spec.ReplicantTemplate.Spec.Lifecycle
-	if lifecycle == nil {
-		lifecycle = &corev1.Lifecycle{}
-	} else {
-		lifecycle = lifecycle.DeepCopy()
+	lifecycle := &corev1.Lifecycle{}
+	if template.Spec.Lifecycle != nil {
+		lifecycle = template.Spec.Lifecycle.DeepCopy()
 	}
 	lifecycle.PreStop = &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{
 			Command: []string{"/bin/sh", "-c", "emqx ctl cluster leave"},
 		},
+	}
+
+	readinessProbe := resources.EvacuationReadinessProbe()
+
+	// Prefer evacuation-aware probe over older-version defaults.
+	if template.Spec.ReadinessProbe != nil {
+		if template.Spec.ReadinessProbe.HTTPGet != nil &&
+			template.Spec.ReadinessProbe.HTTPGet.Path != "/status" {
+			readinessProbe = template.Spec.ReadinessProbe.DeepCopy()
+		}
 	}
 
 	cookie := resources.Cookie(instance)
@@ -162,42 +179,38 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   instance.Namespace,
 			Name:        instance.ReplicantNamespacedName().Name,
-			Annotations: instance.Spec.ReplicantTemplate.DeepCopy().Annotations,
+			Annotations: util.CloneAnnotations(template.Annotations),
 			Labels:      replicaSetLabels(instance),
 		},
 		Spec: appsv1.ReplicaSetSpec{
-			Replicas: instance.Spec.ReplicantTemplate.Spec.Replicas,
+			Replicas:        template.Spec.Replicas,
+			MinReadySeconds: instance.Spec.ReplicantTemplate.Spec.MinReadySeconds,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: replicaSetLabels(instance),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: instance.Spec.ReplicantTemplate.DeepCopy().Annotations,
+					Annotations: util.CloneAnnotations(template.Annotations),
 					Labels:      replicaSetLabels(instance),
 				},
 				Spec: corev1.PodSpec{
-					ReadinessGates: []corev1.PodReadinessGate{
-						{
-							ConditionType: crdv2.PodOnServing,
-						},
-					},
 					ImagePullSecrets:          instance.Spec.ImagePullSecrets,
 					ServiceAccountName:        instance.Spec.ServiceAccountName,
-					SecurityContext:           instance.Spec.ReplicantTemplate.Spec.PodSecurityContext,
-					Affinity:                  instance.Spec.ReplicantTemplate.Spec.Affinity,
-					Tolerations:               instance.Spec.ReplicantTemplate.Spec.Tolerations,
-					TopologySpreadConstraints: instance.Spec.ReplicantTemplate.Spec.TopologySpreadConstraints,
-					NodeName:                  instance.Spec.ReplicantTemplate.Spec.NodeName,
-					NodeSelector:              instance.Spec.ReplicantTemplate.Spec.NodeSelector,
-					InitContainers:            instance.Spec.ReplicantTemplate.Spec.InitContainers,
+					SecurityContext:           template.Spec.PodSecurityContext,
+					Affinity:                  template.Spec.Affinity,
+					Tolerations:               template.Spec.Tolerations,
+					TopologySpreadConstraints: template.Spec.TopologySpreadConstraints,
+					NodeName:                  template.Spec.NodeName,
+					NodeSelector:              template.Spec.NodeSelector,
+					InitContainers:            template.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{
-							Name:            crdv2.DefaultContainerName,
+							Name:            crd.DefaultContainerName,
 							Image:           instance.Spec.Image,
 							ImagePullPolicy: instance.Spec.ImagePullPolicy,
-							Command:         instance.Spec.ReplicantTemplate.Spec.Command,
-							Args:            instance.Spec.ReplicantTemplate.Spec.Args,
-							Ports:           instance.Spec.ReplicantTemplate.Spec.Ports,
+							Command:         template.Spec.Command,
+							Args:            template.Spec.Args,
+							Ports:           template.Spec.Ports,
 							Env: append([]corev1.EnvVar{
 								{
 									Name:  "EMQX_CLUSTER__DISCOVERY_STRATEGY",
@@ -228,13 +241,13 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 									Value: "replicant",
 								},
 								cookie.EnvVar(),
-							}, instance.Spec.ReplicantTemplate.Spec.Env...),
-							EnvFrom:         instance.Spec.ReplicantTemplate.Spec.EnvFrom,
-							Resources:       instance.Spec.ReplicantTemplate.Spec.Resources,
-							SecurityContext: instance.Spec.ReplicantTemplate.Spec.ContainerSecurityContext,
-							LivenessProbe:   instance.Spec.ReplicantTemplate.Spec.LivenessProbe,
-							ReadinessProbe:  instance.Spec.ReplicantTemplate.Spec.ReadinessProbe,
-							StartupProbe:    instance.Spec.ReplicantTemplate.Spec.StartupProbe,
+							}, template.Spec.Env...),
+							EnvFrom:         template.Spec.EnvFrom,
+							Resources:       template.Spec.Resources,
+							SecurityContext: template.Spec.ContainerSecurityContext,
+							LivenessProbe:   template.Spec.LivenessProbe,
+							ReadinessProbe:  readinessProbe,
+							StartupProbe:    template.Spec.StartupProbe,
 							Lifecycle:       lifecycle,
 							VolumeMounts: slices.Concat(
 								[]corev1.VolumeMount{
@@ -248,10 +261,10 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 									},
 								},
 								config.VolumeMounts(),
-								instance.Spec.ReplicantTemplate.Spec.ExtraVolumeMounts,
+								template.Spec.ExtraVolumeMounts,
 							),
 						},
-					}, instance.Spec.ReplicantTemplate.Spec.ExtraContainers...),
+					}, template.Spec.ExtraContainers...),
 					Volumes: append([]corev1.Volume{
 						config.Volume(),
 						{
@@ -266,7 +279,7 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
-					}, instance.Spec.ReplicantTemplate.Spec.ExtraVolumes...),
+					}, template.Spec.ExtraVolumes...),
 				},
 			},
 		},
@@ -274,6 +287,6 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 }
 
 // Combine instance labels, replicant labels and template labels.
-func replicaSetLabels(instance *crdv2.EMQX) map[string]string {
-	return instance.DefaultLabelsWith(crdv2.ReplicantLabels(), instance.Spec.ReplicantTemplate.Labels)
+func replicaSetLabels(instance *crd.EMQX) map[string]string {
+	return instance.DefaultLabelsWith(crd.ReplicantLabels(), instance.Spec.ReplicantTemplate.Labels)
 }

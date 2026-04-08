@@ -3,7 +3,7 @@ package controller
 import (
 	"fmt"
 
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -13,18 +13,18 @@ const DefaultBootstrapAPIKey string = "emqx-operator-controller"
 const boostrapApiKeysVolumeName = "bootstrap-api-keys"
 
 type cookieResource struct {
-	*crdv2.EMQX
+	*crd.EMQX
 }
 
 type bootstrapAPIKeyResource struct {
-	*crdv2.EMQX
+	*crd.EMQX
 }
 
-func BootstrapAPIKey(instance *crdv2.EMQX) bootstrapAPIKeyResource {
+func BootstrapAPIKey(instance *crd.EMQX) bootstrapAPIKeyResource {
 	return bootstrapAPIKeyResource{instance}
 }
 
-func Cookie(instance *crdv2.EMQX) cookieResource {
+func Cookie(instance *crd.EMQX) cookieResource {
 	return cookieResource{instance}
 }
 

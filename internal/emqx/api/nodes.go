@@ -8,6 +8,9 @@ import (
 	req "github.com/emqx/emqx-operator/internal/requester"
 )
 
+// EMQX node status values reported by the API.
+const NodeStatusStopped = "stopped"
+
 type EMQXNode struct {
 	// EMQX node name, example: emqx@127.0.0.1
 	Node string `json:"node,omitempty"`
@@ -44,6 +47,17 @@ func NodeInfo(req req.RequesterInterface, nodeName string) (*EMQXNode, error) {
 		return nil, emperror.Wrap(err, "unexpected node info format")
 	}
 	return nodeInfo, nil
+}
+
+// ForceLeave removes a node from the EMQX cluster.
+// DELETE /api/v5/cluster/{node}/force_leave
+func ForceLeave(req req.RequesterInterface, nodeName string) error {
+	path := fmt.Sprintf("api/v5/cluster/%s/force_leave", nodeName)
+	_, err := delete(req, path)
+	if emperror.Is(err, ErrorNotFound) {
+		return nil
+	}
+	return err
 }
 
 func Nodes(req req.RequesterInterface) ([]EMQXNode, error) {

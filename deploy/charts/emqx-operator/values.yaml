@@ -12,9 +12,9 @@ singleNamespace: false
 # Development configures the logger to use a Zap development config
 # (stacktraces on warnings, no sampling), otherwise a Zap production
 # config will be used (stacktraces on errors, sampling).
-# NOTE: On by default for 2.3.0 as it changes a lot, a higher risk of
+# NOTE: On by default for 3.0.0 as it changes a lot, a higher risk of
 #       bug reports. Impact is tolerable, usually not much debug output.
-# TODO: Switch off by default in 2.3.1.
+# TODO: Switch off by default in 3.1.0.
 development: true
 
 replicaCount: 1
@@ -65,27 +65,3 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-## Upgrade settings.
-## A pre-install/pre-upgrade Job runs automatically to ensure a smooth
-## upgrade from earlier chart versions:
-##   1. Checks for legacy custom resources (emqxbrokers, emqxenterprises,
-##      emqxplugins) and blocks the upgrade if any exist, because Helm
-##      will delete those CRDs (and their CRs) during the upgrade.
-##   2. Patches CRD conversion webhooks to strategy "None" so the API
-##      server does not fail while the old operator is being replaced.
-##
-## The Job is fully idempotent and becomes a no-op on fresh installs.
-upgrade:
-  ## Run the pre-upgrade compatibility check Job.
-  ## Enabled by default so that upgrades from 2.2.x work out of the box.
-  ## Set to false to skip the Job entirely (e.g. in air-gapped
-  ## environments where pulling the kubectl image is not possible).
-  preUpgradeCheck: true
-
-  ## Image used for the pre-upgrade cleanup Job.
-  ## Must include kubectl and sh.
-  image:
-    repository: alpine/k8s
-    tag: "1.31.4"
-    pullPolicy: IfNotPresent

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2
+package v3alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +23,7 @@ import (
 )
 
 // EMQXSpec defines the desired state of EMQX.
+// +kubebuilder:validation:XValidation:rule="!has(self.replicantTemplate) || !has(self.replicantTemplate.spec.replicas) || self.replicantTemplate.spec.replicas == 0 || self.coreTemplate.spec.replicas >= 2",message="Core-replicant clusters require at least 2 core replicas for rolling updates."
 type EMQXSpec struct {
 	// EMQX container image.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
@@ -58,11 +59,11 @@ type EMQXSpec struct {
 	RevisionHistoryLimit int32 `json:"revisionHistoryLimit,omitempty"`
 
 	// Cluster upgrade strategy settings.
-	// +kubebuilder:default={type:Recreate}
+	// +kubebuilder:default={type:RollingUpdate}
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// Template for Pods running EMQX core nodes.
-	// +kubebuilder:default={spec:{replicas:2}}
+	// +kubebuilder:default={spec:{replicas:2,persistentVolumeClaimSpec:{accessModes:{"ReadWriteOnce"},resources:{requests:{storage:"500Mi"}}}}}
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 
 	// Template for Pods running EMQX replicant nodes.
@@ -118,14 +119,10 @@ type Config struct {
 
 type UpdateStrategy struct {
 	// Determines how cluster upgrade is performed.
-	// * `Recreate`: Perform blue-green upgrade.
-	// +kubebuilder:validation:Enum=Recreate
-	// +kubebuilder:default=Recreate
+	// * `RollingUpdate`: Perform a rolling upgrade, updating pods one at a time.
+	// +kubebuilder:validation:Enum=RollingUpdate
+	// +kubebuilder:default=RollingUpdate
 	Type string `json:"type,omitempty"`
-	// Number of seconds before connection evacuation starts.
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=10
-	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty"`
 	// Evacuation strategy settings.
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 }
@@ -177,8 +174,7 @@ type EMQXCoreTemplateSpec struct {
 	EMQXReplicantTemplateSpec `json:",inline"`
 
 	// PVC specification for a core node data storage.
-	// Note: this field named inconsistently, it is actually just a `PersistentVolumeClaimSpec`.
-	VolumeClaimTemplates corev1.PersistentVolumeClaimSpec `json:"volumeClaimTemplates,omitempty"`
+	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
 }
 
 type EMQXReplicantTemplateSpec struct {
@@ -215,6 +211,12 @@ type EMQXReplicantTemplateSpec struct {
 	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
 	// +kubebuilder:validation:XIntOrString
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	// MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.
+	// For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);
+	// for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).
+	// Omitted or zero matches the apps/v1 default (0).
+	// +kubebuilder:validation:Minimum=0
+	MinReadySeconds int32 `json:"minReadySeconds,omitempty"`
 
 	// Entrypoint array. Not executed within a shell.
 	// The container image's ENTRYPOINT is used if this is not provided.
@@ -285,8 +287,10 @@ type EMQXReplicantTemplateSpec struct {
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 	// Periodic probe of container service readiness.
 	// Container will be removed from service endpoints if the probe fails.
+	// Strongly advised to keep the current default: it takes into account ongoing node evacuations managed
+	// by the Operator as part of scaling operations and rolling updates.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	// +kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,failureThreshold:12,httpGet: {path:/status, port:"dashboard"}}
+	// +kubebuilder:default={initialDelaySeconds:10,periodSeconds:5,timeoutSeconds:3,failureThreshold:1,httpGet:{path:"/api/v5/load_rebalance/availability_check", port:"dashboard"}}
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 	// StartupProbe indicates that the Pod has successfully initialized.
 	// If specified, no other probes are executed until this completes successfully.
@@ -317,4 +321,18 @@ func (spec *EMQXSpec) HasReplicants() bool {
 
 func (s *ServiceTemplate) IsEnabled() bool {
 	return s.Enabled != nil && *s.Enabled
+}
+
+func (spec *EMQXSpec) NumCoreReplicas() int32 {
+	if spec.CoreTemplate.Spec.Replicas != nil {
+		return *spec.CoreTemplate.Spec.Replicas
+	}
+	return 1
+}
+
+func (spec *EMQXSpec) NumReplicantReplicas() int32 {
+	if spec.ReplicantTemplate != nil && spec.ReplicantTemplate.Spec.Replicas != nil {
+		return *spec.ReplicantTemplate.Spec.Replicas
+	}
+	return 0
 }

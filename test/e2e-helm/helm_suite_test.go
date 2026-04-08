@@ -31,7 +31,7 @@ const (
 	// helmReleaseName is the Helm release name used across all Helm upgrade tests.
 	helmReleaseName = "emqx-operator"
 
-	// localChartPath is the path to the local 2.3.x chart being tested.
+	// localChartPath is the path to the local 3.x chart being tested.
 	localChartPath = "deploy/charts/emqx-operator"
 
 	// operatorImage is the operator image which should already be built and available.
@@ -69,11 +69,6 @@ var _ = BeforeSuite(func() {
 // crdExists checks whether a CRD exists in the cluster.
 func crdExists(name string) bool {
 	return Kubectl("get", "crd", name) == nil
-}
-
-// resourceExists checks whether a cluster-scoped resource exists.
-func resourceExists(kind, name string) bool {
-	return Kubectl("get", kind, name) == nil
 }
 
 // dumpHelmDiagnostics writes debug info for the given namespace to GinkgoWriter.

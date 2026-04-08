@@ -2,7 +2,7 @@ package controller
 
 import (
 	emperror "emperror.dev/errors"
-	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 )
 
@@ -12,7 +12,7 @@ type dsCleanupSites struct {
 	*EMQXReconciler
 }
 
-func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// If DS cluster state is not loaded, skip the reconciliation.
 	if r.dsCluster == nil {
 		return subResult{}
@@ -22,7 +22,7 @@ func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crdv2.EMQX) subR
 	// Required API operation is available only since EMQX 6.0.0.
 	req := r.requester.forOldestCore(r.state, &emqxVersionFilter{instance: instance, prefix: "6."})
 
-	lostSites := []string{}
+	lostSites := []*api.DSSite{}
 	for _, site := range r.dsCluster.Sites {
 		if site.Up || (len(site.Shards) > 0) {
 			continue
@@ -31,7 +31,7 @@ func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crdv2.EMQX) subR
 		if node != nil {
 			continue
 		}
-		lostSites = append(lostSites, site.ID)
+		lostSites = append(lostSites, &site)
 	}
 
 	if len(lostSites) == 0 {
@@ -45,9 +45,11 @@ func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crdv2.EMQX) subR
 	}
 
 	for _, site := range lostSites {
-		err := api.ForgetDSSite(req, site)
-		if err != nil {
-			return subResult{err: emperror.Wrapf(err, "failed to forget DS site %s", site)}
+		err := api.ForgetDSSite(req, site.ID)
+		if err == nil {
+			r.log.V(1).Info("cleaned up lost DS site", "site", site)
+		} else {
+			return subResult{err: emperror.Wrapf(err, "failed to forget DS site %s", site.ID)}
 		}
 	}
 

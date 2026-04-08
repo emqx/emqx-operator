@@ -15,15 +15,6 @@ resources:
   domain: emqx.io
   group: apps
   kind: EMQX
-  path: github.com/emqx/emqx-operator/api/v2
-  version: v2
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: emqx.io
-  group: apps
-  kind: Rebalance
-  path: github.com/emqx/emqx-operator/api/v2beta1
-  version: v2beta1
+  path: github.com/emqx/emqx-operator/api/v3alpha1
+  version: v3alpha1
 version: "3"

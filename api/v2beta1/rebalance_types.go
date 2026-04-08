@@ -16,6 +16,14 @@ limitations under the License.
 
 package v2beta1
 
+// NOTE: The Rebalance CRD is currently NOT FUNCTIONAL.
+// The type definitions are retained for future use but the CRD is not registered
+// with the scheme and no controller reconciles it. Do not create Rebalance custom
+// resources — they will be ignored by the operator.
+//
+// To re-enable, uncomment the init() function at the bottom of this file and
+// wire up a corresponding controller in cmd/main.go.
+
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -44,6 +52,7 @@ type RebalanceList struct {
 	Items           []Rebalance `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&Rebalance{}, &RebalanceList{})
-}
+// NOT FUNCTIONAL — Rebalance CRD is disabled. Uncomment to re-enable.
+// func init() {
+// 	SchemeBuilder.Register(&Rebalance{}, &RebalanceList{})
+// }
