@@ -147,15 +147,12 @@ func (r *reconcileState) updateReplicantSet(instance *crd.EMQX) *appsv1.ReplicaS
 	return nil
 }
 
-// partOfUpdateReplicantSet checks if a pod belongs to the update (newest) ReplicaSet.
-func (r *reconcileState) partOfUpdateReplicantSet(pod *corev1.Pod, instance *crd.EMQX) bool {
-	controllerRef := metav1.GetControllerOf(pod)
-	if controllerRef == nil {
-		return false
-	}
-	updateReplicantSet := r.updateReplicantSet(instance)
-	if updateReplicantSet != nil && controllerRef.UID == updateReplicantSet.UID {
-		return true
+// partOfReplicantSets checks if a pod belongs to any replicant ReplicaSet.
+func (r *reconcileState) partOfReplicantSet(pod *corev1.Pod) bool {
+	for _, rs := range r.replicantSets {
+		if util.IsPodManagedBy(pod, rs) {
+			return true
+		}
 	}
 	return false
 }
