@@ -108,6 +108,9 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subRe
 			"reason", "replicaSet has changed",
 			"patch", string(patchResult.Patch),
 		)
+		// NOTE
+		// Conflicts are expected as ReplicaSet contoller may act concurrently on the resource.
+		// Conflicts are handled on `EMQXReconciler` level.
 		err := a.Handler.Update(r.ctx, rs)
 		if err != nil {
 			return reconcileError(emperror.Wrap(err, "failed to update replicaSet"))

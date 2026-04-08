@@ -63,6 +63,9 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 			"reason", "spec has changed",
 			"patch", string(patchResult.Patch),
 		)
+		// NOTE
+		// Conflicts are expected as StatefulSet contoller may act concurrently on the resource.
+		// Conflicts are handled on `EMQXReconciler` level.
 		err := a.Handler.Update(r.ctx, coreSet)
 		if err != nil {
 			return reconcileError(emperror.Wrap(err, "failed to update statefulSet"))
