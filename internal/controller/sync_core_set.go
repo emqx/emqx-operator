@@ -138,8 +138,10 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentRe
 			return subResult{err: emperror.Wrap(err, "failed to decrement coreSet replicas")}
 		}
 	}
-
-	return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
+	if candidate != nil {
+		return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
+	}
+	return subResult{}
 }
 
 // Stops evacuation on nodes that are no longer need to evacuate anything:
