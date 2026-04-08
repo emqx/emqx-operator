@@ -19,7 +19,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -51,38 +50,6 @@ func justCheckPodTemplate() patch.CalculateOption {
 
 		return current, modified, nil
 	}
-}
-
-// IgnoreStatefulSetReplicas will ignore the `Replicas` field of the statefulSet
-func ignoreStatefulSetReplicas() patch.CalculateOption {
-	return func(current, modified []byte) ([]byte, []byte, error) {
-		current, err := filterStatefulSetReplicasField(current)
-		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not filter replicas field from current byte sequence")
-		}
-
-		modified, err = filterStatefulSetReplicasField(modified)
-		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not filter replicas field from modified byte sequence")
-		}
-
-		return current, modified, nil
-	}
-}
-
-func filterStatefulSetReplicasField(obj []byte) ([]byte, error) {
-	sts := appsv1.StatefulSet{}
-	err := json.Unmarshal(obj, &sts)
-	if err != nil {
-		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
-	}
-	sts.Spec.Replicas = ptr.To(int32(1))
-	obj, err = json.Marshal(sts)
-	if err != nil {
-		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
-	}
-
-	return obj, nil
 }
 
 func ignoreField(path []string) patch.CalculateOption {

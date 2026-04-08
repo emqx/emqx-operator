@@ -7,17 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// JSON assertions in this file use assert.JSONEq: both operands are parsed as JSON
-// and compared semantically, so key order and insignificant whitespace in the
-// expected string do not affect the result.
-//
-// deleteFieldPath re-serializes with encoding/json.Marshal. For maps (including
-// map[string]interface{} from json.Unmarshal), Marshal emits object keys in
-// lexicographic sorted order, so output is stable for a given value. That is
-// the usual way to get deterministic JSON strings in Go tests when comparing
-// raw marshal output byte-for-byte; here we prefer JSONEq so expectations stay
-// readable without matching Marshal’s exact key order.
-
+// JSON checks use assert.JSONEq: both sides are parsed as JSON and compared
+// semantically, so key order and whitespace in the expected literal do not matter.
 func TestDeleteFieldPath(t *testing.T) {
 	t.Run("empty path preserves original bytes", func(t *testing.T) {
 		in := []byte(`{"a":1,"b":{"c":2}}`)
