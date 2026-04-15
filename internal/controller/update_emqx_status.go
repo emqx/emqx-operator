@@ -25,12 +25,14 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 	coreSet := r.state.coreSet()
 	status.CoreNodesStatus.UpdatedReplicas = 0
 	status.CoreNodesStatus.CurrentReplicas = 0
-	for _, pod := range r.state.podsManagedBy(r.state.coreSet()) {
-		if r.state.partOfCoreSetRevision(pod, coreSet.Status.UpdateRevision) {
-			status.CoreNodesStatus.UpdatedReplicas++
-		}
-		if r.state.partOfCoreSetRevision(pod, coreSet.Status.CurrentRevision) {
-			status.CoreNodesStatus.CurrentReplicas++
+	if coreSet != nil {
+		for _, pod := range r.state.podsManagedBy(coreSet) {
+			if r.state.partOfCoreSetRevision(pod, coreSet.Status.UpdateRevision) {
+				status.CoreNodesStatus.UpdatedReplicas++
+			}
+			if r.state.partOfCoreSetRevision(pod, coreSet.Status.CurrentRevision) {
+				status.CoreNodesStatus.CurrentReplicas++
+			}
 		}
 	}
 
