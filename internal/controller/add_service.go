@@ -146,31 +146,11 @@ func generateListenerService(r *reconcileRound, instance *crd.EMQX, conf *config
 // listenerServiceSelector chooses Service endpoints for MQTT/TLS listeners.
 // ReplicaSet readiness uses Status.ReadyReplicas only (not EMQX node status).
 //  1. No replicants in spec -> cores serve.
-//  2. If the "update" replicant set has Ready replicas, its pods serve.
-//  3. While the "update" replicant set is not ready yet, the "current" replicant set serves if
-//     it has ready pods.
-//  4. If no replicant sets can serve traffic, cores serve.
-//
-// Criteria are intentionally lax (ReadyReplicas > 0):
-// during replicant restarts or scale-up, both ReplicaSets can sit below desired ready
-// for a while; requiring ReadyReplicas >= desired would send traffic to cores and drop
-// listener sessions. Prefer routing to whichever revision still has ready pods.
+//  2. If there are ready replicants, pods belonging to all replicant sets serve.
+//  3. If no replicants can serve traffic, cores serve.
 func listenerServiceSelector(r *reconcileRound, instance *crd.EMQX) map[string]string {
-	if instance.Spec.HasReplicants() {
-		updateRs := r.state.updateReplicantSet(instance)
-		currentRs := r.state.currentReplicantSet(instance)
-		if updateRs != nil && updateRs.Status.ReadyReplicas > 0 {
-			return instance.DefaultLabelsWith(
-				crd.ReplicantLabels(),
-				map[string]string{crd.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.UpdateRevision},
-			)
-		}
-		if currentRs != nil && currentRs.Status.ReadyReplicas > 0 {
-			return instance.DefaultLabelsWith(
-				crd.ReplicantLabels(),
-				map[string]string{crd.LabelPodTemplateHash: instance.Status.ReplicantNodesStatus.CurrentRevision},
-			)
-		}
+	if instance.Spec.HasReplicants() && r.state.numReadyReplicants() > 0 {
+		return instance.DefaultLabelsWith(crd.ReplicantLabels())
 	}
 	return instance.DefaultLabelsWith(crd.CoreLabels())
 }
