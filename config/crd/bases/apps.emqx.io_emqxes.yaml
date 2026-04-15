@@ -16193,6 +16193,13 @@ spec:
                 - readyReplicas
                 - updatedReplicas
                 type: object
+              coreReplicas:
+                description: Observed replica count for the core set.
+                format: int32
+                type: integer
+              coreSelector:
+                description: Serialized label selector matching core pods.
+                type: string
               dsReplication:
                 description: Status of EMQX Durable Storage replication.
                 properties:
@@ -16351,12 +16358,27 @@ spec:
                 - readyReplicas
                 - updateReplicas
                 type: object
+              replicantReplicas:
+                description: |-
+                  Observed replica count for the replicant set pods.
+                  Used by the scale subresource.
+                format: int32
+                type: integer
+              replicantSelector:
+                description: |-
+                  Serialized label selector matching replicant pods.
+                  Used by the scale subresource for HPA pod discovery.
+                type: string
+            required:
+            - coreReplicas
+            - replicantReplicas
             type: object
         type: object
     served: true
     storage: true
     subresources:
       scale:
+        labelSelectorPath: .status.replicantSelector
         specReplicasPath: .spec.replicantTemplate.spec.replicas
-        statusReplicasPath: .status.replicantNodeReplicas
+        statusReplicasPath: .status.replicantReplicas
       status: {}

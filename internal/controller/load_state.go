@@ -195,6 +195,14 @@ func (r *reconcileState) outdatedReplicantPods(instance *crd.EMQX) []*corev1.Pod
 	return out
 }
 
+func (r *reconcileState) numReplicants() int32 {
+	out := int32(0)
+	for _, rs := range r.replicantSets {
+		out += rs.Status.Replicas
+	}
+	return out
+}
+
 func (r *reconcileState) numReadyReplicants() int32 {
 	out := int32(0)
 	for _, rs := range r.replicantSets {

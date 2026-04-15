@@ -29,6 +29,20 @@ type EMQXStatus struct {
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
+	// Observed replica count for the core set.
+	CoreReplicas int32 `json:"coreReplicas"`
+
+	// Serialized label selector matching core pods.
+	CoreSelector string `json:"coreSelector,omitempty"`
+
+	// Observed replica count for the replicant set pods.
+	// Used by the scale subresource.
+	ReplicantReplicas int32 `json:"replicantReplicas"`
+
+	// Serialized label selector matching replicant pods.
+	// Used by the scale subresource for HPA pod discovery.
+	ReplicantSelector string `json:"replicantSelector,omitempty"`
+
 	// Status of each core node in the cluster.
 	CoreNodes []EMQXNode `json:"coreNodes,omitempty"`
 	// Summary status of the set of core nodes.

@@ -11,6 +11,7 @@ import (
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 )
 
@@ -23,6 +24,8 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 
 	// Core: count pods on each revision for rolling update progress.
 	coreSet := r.state.coreSet()
+	status.CoreReplicas = 0
+	status.CoreSelector = labels.Set(instance.DefaultLabelsWith(crd.CoreLabels())).String()
 	status.CoreNodesStatus.UpdatedReplicas = 0
 	status.CoreNodesStatus.CurrentReplicas = 0
 	if coreSet != nil {
@@ -34,6 +37,13 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 				status.CoreNodesStatus.CurrentReplicas++
 			}
 		}
+	}
+
+	status.ReplicantReplicas = 0
+	status.ReplicantSelector = ""
+	if instance.Spec.HasReplicants() {
+		status.ReplicantReplicas = r.state.numReplicants()
+		status.ReplicantSelector = labels.Set(instance.DefaultLabelsWith(crd.ReplicantLabels())).String()
 	}
 
 	// Replicant: multi-ReplicaSet pattern retained.
