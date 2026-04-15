@@ -21,7 +21,10 @@ This operator is compatible with the following EMQX releases:
 - EMQX 5.10
 - EMQX 6.x
 
-Requires Kubernetes >= 1.27. PVC auto-cleanup for core nodes (on scale-down and CR deletion) relies on the `StatefulSetAutoDeletePVC` feature gate, which is stable and enabled by default since Kubernetes 1.32.
+Requires Kubernetes >= 1.27, with following features:
+- Feature gate `StatefulSetAutoDeletePVC`.
+  * Graduated to stable in Kubernetes 1.32 and is enabled by default.
+  * On Kubernetes 1.27 through 1.31, the feature gate exists but may need to be explicitly enabled.
 
 ## Installation
 
@@ -32,6 +35,38 @@ kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" --
 ```
 
 This will install both the CRDs, the controller manager and relevant resources into the cluster. The controller manager will be deployed in the `emqx-operator-system` namespace.
+
+## Operation
+
+### PVC Lifecycle
+
+Core nodes are managed by a single StatefulSet with deterministic names (`{name}-core-0`, `{name}-core-1`, ...). Each core pod has a PersistentVolumeClaim named `{name}-core-data-{name}-core-{ordinal}`. PVC names are stable across image updates and rolling upgrades because the StatefulSet name never changes.
+
+The StatefulSet is configured with `PersistentVolumeClaimRetentionPolicy`:
+
+```yaml
+persistentVolumeClaimRetentionPolicy:
+  whenScaled: Delete
+  whenDeleted: Delete
+```
+
+This means:
+- **Scale-down:** PVCs for removed pods are deleted automatically by the StatefulSet controller. For example, scaling from 5 to 3 core replicas deletes PVCs for ordinals 3 and 4.
+- **CR deletion:** Deleting the EMQX CR deletes the StatefulSet, which in turn deletes all associated PVCs.
+- **Rolling updates:** PVCs are preserved. The StatefulSet name and pod ordinals do not change during image updates, so PVCs remain bound to the same pods.
+
+This policy relies on the `StatefulSetAutoDeletePVC` feature gate; if it is not enabled the retention policy is silently ignored and PVCs are never auto-deleted, requiring manual cleanup after scale-down or CR deletion.
+
+### Data safety
+
+When a pod is going to be removed due to scaling down, EMQX Operator:
+1. Evacuates MQTT connections and sessions.
+2. Asks EMQX Durable Storage replication to "rebalance away" shards residing on the pod.
+3. Wait until EMQX Durable Storage rebalance activites finish.
+
+In short, Operator proceeds with scaling down once pod no longer contributes to availability and data persistence.
+
+If a PVC is manually deleted or becomes orphaned, the StatefulSet controller will create a fresh PVC when the pod is recreated. The new PVC starts empty; the EMQX node will rejoin the cluster and participate in EMQX Durable Storage replication to recover data from peers.
 
 ## Upgrading
 
