@@ -31,6 +31,10 @@ const (
 const (
 	// annotations
 	AnnotationLastEMQXConfig string = "apps.emqx.io/last-emqx-configuration"
+	// AnnotationScalingDown marks a pod that the operator has committed to removing.
+	// Pods with this annotation bypass the maxUnavailable budget on subsequent reconcile
+	// iterations, preventing deadlocks when evacuation makes the pod unavailable.
+	AnnotationScalingDown string = "apps.emqx.io/scaling-down"
 )
 
 const (

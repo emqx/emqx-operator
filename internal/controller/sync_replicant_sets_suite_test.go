@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	crd "github.com/emqx/emqx-operator/api/v3alpha1"
+	util "github.com/emqx/emqx-operator/internal/controller/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -475,7 +476,6 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crd.EMQX
 
-	var round *reconcileRound
 	var current *appsv1.ReplicaSet
 	var update *appsv1.ReplicaSet
 	var currentPod *corev1.Pod
@@ -496,7 +496,13 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+	})
 
+	AfterAll(func() {
+		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
+	})
+
+	BeforeEach(func() {
 		// Create "current" (old) RS with a known hash label.
 		currentLabels := emqx.DefaultLabelsWith(
 			crd.ReplicantLabels(),
@@ -597,13 +603,8 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		update.Status.ReadyReplicas = 1
 		update.Status.AvailableReplicas = 1
 		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
-	})
 
-	AfterAll(func() {
-		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
-	})
-
-	BeforeEach(func() {
+		// Create EMQX instance:
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
@@ -616,20 +617,76 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		instance.Status.ReplicantNodes = []crd.EMQXNode{
 			{Name: "emqx@10.0.0.1", PodName: currentPod.Name, Status: "running"},
 		}
-		round = newReconcileRound()
-		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(update), update)).Should(Succeed())
-		update.Status.AvailableReplicas = 1
-		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
-		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		for _, o := range []client.Object{updatePod, currentPod, update, current} {
+			_ = k8sClient.Delete(ctx, o)
+		}
 	})
 
 	It("replicants not available", func() {
+		round := newReconcileRound()
 		update.Status.AvailableReplicas = 0
 		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		s := &syncReplicantSets{emqxReconciler}
 		admissions := s.outdatedReplicantAdmissions(round, instance)
 		Expect(admissions).Should(BeEmpty())
+	})
+
+	It("evacuating pod admitted even when budget is exhausted", func() {
+		// Preconditions:
+		// 1. Previous reconcile iteration committed to this pod.
+		// 2. Pod is now mid-evacuation which makes it unavailable, exhausting
+		//    the maxUnavailable budget.
+		// The controller must still include the pod in admissions because it has
+		// the annotation.
+		_ = util.AttachPodAnnotation(currentPod, crd.AnnotationScalingDown, "true")
+		Expect(k8sClient.Update(ctx, currentPod)).Should(Succeed())
+		update.Status.AvailableReplicas = 0
+		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
+		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
+			{NodeName: "emqx@10.0.0.1", State: "evicting_conns"},
+		}
+		round := newReconcileRound()
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		s := &syncReplicantSets{emqxReconciler}
+		admissions := s.outdatedReplicantAdmissions(round, instance)
+		// Pod should still be admitted (as admissionWait) despite zero budget,
+		// because it has the scaling-down annotation from a previous iteration.
+		Expect(admissions).Should(HaveLen(1))
+		Expect(admissions[0].Admission).Should(And(
+			HaveField("Action", Equal(admissionWait)),
+			HaveField("Reason", ContainSubstring("evacuation")),
+		))
+	})
+
+	It("evacuated pod removed even when budget is exhausted", func() {
+		// Preconditions:
+		// 1. Previous reconcile iteration committed to this pod.
+		// 2. Evacuation reached prohibiting state (sessions drained), pod has 0 sessions.
+		//    Budget is 0 but the annotation lets it bypass the budget.
+		// The controller must still include the pod in admissions (because it has
+		// the annotation) and allow it to be scheduled for removal.
+		_ = util.AttachPodAnnotation(currentPod, crd.AnnotationScalingDown, "true")
+		Expect(k8sClient.Update(ctx, currentPod)).Should(Succeed())
+		// Make update RS unavailable so budget = 0.
+		update.Status.AvailableReplicas = 0
+		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
+		instance.Status.ReplicantNodes[0].Sessions = 0
+		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
+			{NodeName: "emqx@10.0.0.1", State: "prohibiting"},
+		}
+		round := newReconcileRound()
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		s := &syncReplicantSets{emqxReconciler}
+		admissions := s.outdatedReplicantAdmissions(round, instance)
+		Expect(admissions).Should(HaveLen(1))
+		Expect(admissions[0].Admission).Should(And(
+			HaveField("Action", Equal(admissionRemove)),
+			HaveField("Reason", ContainSubstring("safe to stop")),
+		))
 	})
 
 	It("node evacuation in progress", func() {

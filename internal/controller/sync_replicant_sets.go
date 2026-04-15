@@ -37,6 +37,10 @@ func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crd.EMQX) sub
 		return subResult{}
 	}
 	if updateRs.UID != currentRs.UID {
+		r.log.V(1).Info("rolling replicantSet update",
+			"replicaSet", klog.KObj(updateRs),
+			"outdatedPods", len(r.state.outdatedReplicantPods(instance)),
+		)
 		return s.migrateSet(r, instance, updateRs)
 	}
 
@@ -96,8 +100,8 @@ func (s *syncReplicantSets) scaleDown(
 	excessReplicas := max(0, currentReplicas-desiredReplicas)
 	maxUnavailable := max(1, instance.Spec.NumMaxUnavailableReplicantReplicas())
 	excessUnavailable := max(0, desiredReplicas-updateRs.Status.AvailableReplicas)
-	maxAdmissions := max(0, min(maxUnavailable-excessUnavailable, excessReplicas))
-	admissions := s.evaluateReplicantAdmissions(instance, pods, int(maxAdmissions))
+	budget := max(0, min(maxUnavailable-excessUnavailable, excessReplicas))
+	admissions := s.evaluateReplicantAdmissions(instance, pods, budget)
 	for _, pa := range admissions {
 		err := s.onReplicantAdmission(r, instance, pa.Pod, pa.Admission)
 		if err != nil {
@@ -182,30 +186,40 @@ func (s *syncReplicantSets) surgeScaleSet(
 }
 
 // onReplicantAdmission performs the side effects implied by a replicantAdmission.
+// Every admitted pod is marked with AnnotationScalingDown so that on subsequent
+// reconcile iterations it bypasses the maxUnavailable budget.
 func (s *syncReplicantSets) onReplicantAdmission(
 	r *reconcileRound,
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 	admission replicantAdmission,
 ) error {
+	annotationsDirty := util.AttachPodAnnotation(pod, crd.AnnotationScalingDown, "true")
 	switch admission.Action {
 	case admissionRemove:
 		r.log.V(1).Info("scheduling replicant pod removal",
 			"reason", admission.Reason,
 			"pod", klog.KObj(pod),
 		)
-		if pod.Annotations == nil {
-			pod.Annotations = make(map[string]string)
-		}
-		pod.Annotations[corev1.PodDeletionCost] = "-99999"
-		if err := s.Client.Update(r.ctx, pod); err != nil {
-			return emperror.Wrap(err, "failed to annotate replicant pod")
-		}
+		annotationsDirty = util.AttachPodAnnotation(pod, corev1.PodDeletionCost, "-99999") || annotationsDirty
 	case admissionWait:
 		r.log.V(1).Info("removal of replicant pod postponed",
 			"reason", admission.Reason,
 			"pod", klog.KObj(pod),
 		)
+	case admissionEvacuate:
+		r.log.V(1).Info("starting replicant pod evacuation",
+			"reason", admission.Reason,
+			"pod", klog.KObj(pod),
+		)
+	}
+	// 1. Commit the pod annotations.
+	err := s.updatePodAnnotations(r, pod, annotationsDirty)
+	if err != nil {
+		return err
+	}
+	// 2. Run any side effects.
+	switch admission.Action {
 	case admissionEvacuate:
 		err := s.startEvacuation(r, instance, pod)
 		if err != nil {
@@ -213,6 +227,17 @@ func (s *syncReplicantSets) onReplicantAdmission(
 				"failed to start node evacuation",
 				"pod", klog.KObj(pod),
 			)
+		}
+	default:
+	}
+	return nil
+}
+
+func (s *syncReplicantSets) updatePodAnnotations(r *reconcileRound, pod *corev1.Pod, dirty bool) error {
+	if dirty {
+		err := s.Client.Update(r.ctx, pod)
+		if err != nil {
+			return emperror.Wrap(err, "failed to annotate replicant pod")
 		}
 	}
 	return nil
@@ -256,34 +281,45 @@ func (s *syncReplicantSets) outdatedReplicantAdmissions(
 	specReplicas := instance.Spec.NumReplicantReplicas()
 	maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
 	extraAvailable := r.state.numAvailableReplicants() - specReplicas
-	numAllowedUnavailable := int(maxUnavailable + extraAvailable)
+	budget := maxUnavailable + extraAvailable
 	outdatedPods := r.state.outdatedReplicantPods(instance)
-	return s.evaluateReplicantAdmissions(instance, outdatedPods, numAllowedUnavailable)
+	return s.evaluateReplicantAdmissions(instance, outdatedPods, budget)
 }
 
-// evaluateReplicantAdmissions returns up to maxUnavailable admissions for the given
-// candidate pods (evacuate and/or remove).
+// evaluateReplicantAdmissions returns admissions for the given candidate pods.
+// Pods already annotated with scaling-down bypass the budget: they were committed
+// to in a previous reconcile iteration. The budget only limits how many *unannotated*
+// pods can be admitted per iteration.
 // Candidates are evaluated in order, the caller controls which pods to consider:
 // * outdated pods for migration,
 // * "update" set's replicant pods for scale-down, etc.
 func (s *syncReplicantSets) evaluateReplicantAdmissions(
 	instance *crd.EMQX,
 	candidates []*corev1.Pod,
-	maxAdmissions int,
+	budget int32,
 ) []replicantPodAdmission {
-	var batch []replicantPodAdmission
-	if maxAdmissions <= 0 {
-		return batch
-	}
+	batch := []replicantPodAdmission{}
+	budgetUsed := int32(0)
 	for _, pod := range candidates {
-		// Batch contains enough admissions to fit into maxAdmissions allowance.
-		if len(batch) >= maxAdmissions {
-			break
-		}
-		batch = append(batch, replicantPodAdmission{
+		// Evaluate admission:
+		admission := replicantPodAdmission{
 			Pod:       pod,
 			Admission: checkReplicantPodRemoval(instance, pod),
-		})
+		}
+		// Consume the budget:
+		budgetUsed += 1
+		if _, ok := pod.Annotations[crd.AnnotationScalingDown]; ok {
+			// Pod was already committed to in a previous reconcile.
+			// Including it so the controller can progress it toward removal.
+			batch = append(batch, admission)
+			continue
+		}
+		// Otherwise, see if we have budget left:
+		if budgetUsed > budget {
+			continue
+		}
+		// If we do, include the admission:
+		batch = append(batch, admission)
 	}
 	return batch
 }
