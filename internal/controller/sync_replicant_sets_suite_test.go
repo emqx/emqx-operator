@@ -184,7 +184,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 		})
 
 		It("drains up to maxUnavailable old pods in one reconcile", func() {
-			instance.Spec.UpdateStrategy.MaxUnavailable = ptr.To(intstr.FromInt(3))
+			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(3))}
 			s := &syncReplicantSets{emqxReconciler}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
@@ -200,7 +200,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 		})
 
 		It("drains no pods if maxUnavailable reached", func() {
-			instance.Spec.UpdateStrategy.MaxUnavailable = ptr.To(intstr.FromInt(3))
+			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(3))}
 			Expect(actualObject(current)).To(Not(BeNil()))
 			current.Status.AvailableReplicas = 0
 			Expect(k8sClient.Status().Update(ctx, current)).Should(Succeed())
@@ -219,7 +219,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 		})
 
 		It("surges the update RS gradually with maxSurge", func() {
-			instance.Spec.UpdateStrategy.MaxSurge = ptr.To(intstr.FromInt(2))
+			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxSurge: ptr.To(intstr.FromInt(2))}
 			s := &syncReplicantSets{emqxReconciler}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
@@ -377,7 +377,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 
 		It("scales down replicant set up to maxUnavailable pods at a time", func() {
 			// Allow 2 maxUnavailable replicas
-			instance.Spec.UpdateStrategy.MaxUnavailable = ptr.To(intstr.FromInt(2))
+			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(2))}
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 
 			s := &syncReplicantSets{emqxReconciler}
@@ -400,7 +400,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 		})
 
 		It("respects maxUnavailable budget during scale-down", func() {
-			instance.Spec.UpdateStrategy.MaxUnavailable = ptr.To(intstr.FromInt(1))
+			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(1))}
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 			instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
 			rs.Status.AvailableReplicas = 0

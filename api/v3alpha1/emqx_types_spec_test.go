@@ -34,7 +34,9 @@ func TestRolloutMaxUnavailable(t *testing.T) {
 	}
 	assert.Equal(t, int32(1), emqx.Spec.NumMaxUnavailableReplicantReplicas())
 
-	emqx.Spec.UpdateStrategy.MaxUnavailable = ptr.To(intstr.FromString("50%"))
+	emqx.Spec.UpdateStrategy.Replicants = &ReplicantsUpdateStrategy{
+		MaxUnavailable: ptr.To(intstr.FromString("50%")),
+	}
 	assert.Equal(t, int32(5), emqx.Spec.NumMaxUnavailableReplicantReplicas())
 }
 
@@ -48,6 +50,8 @@ func TestRolloutMaxSurge(t *testing.T) {
 	}
 	assert.Equal(t, int32(0), emqx.Spec.NumMaxSurgeReplicantReplicas())
 
-	emqx.Spec.UpdateStrategy.MaxSurge = ptr.To(intstr.FromInt(2))
+	emqx.Spec.UpdateStrategy.Replicants = &ReplicantsUpdateStrategy{
+		MaxSurge: ptr.To(intstr.FromInt(2)),
+	}
 	assert.Equal(t, int32(2), emqx.Spec.NumMaxSurgeReplicantReplicas())
 }
