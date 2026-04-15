@@ -155,8 +155,6 @@ func generateReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 	template := instance.Spec.ReplicantTemplate
 
 	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
-	// This is especially important when DS Raft is enabled, otherwise there will be a
-	// lot of leftover records in the DS cluster metadata.
 	lifecycle := &corev1.Lifecycle{}
 	if template.Spec.Lifecycle != nil {
 		lifecycle = template.Spec.Lifecycle.DeepCopy()
@@ -167,9 +165,8 @@ func generateReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 		},
 	}
 
-	readinessProbe := resources.EvacuationReadinessProbe()
-
 	// Prefer evacuation-aware probe over older-version defaults.
+	readinessProbe := resources.EvacuationReadinessProbe()
 	if template.Spec.ReadinessProbe != nil {
 		if template.Spec.ReadinessProbe.HTTPGet != nil &&
 			template.Spec.ReadinessProbe.HTTPGet.Path != "/status" {
