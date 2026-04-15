@@ -69,7 +69,7 @@ func (b *apiRequesterBuilder) forOldestCore(
 	state *reconcileState,
 	filter ...podRequesterFilter,
 ) req.RequesterInterface {
-	pods := state.podsWithRole("core")
+	pods := state.listPods(podsWithRole{roleCore})
 	sortByCreationTimestamp(pods)
 outer:
 	for _, pod := range pods {

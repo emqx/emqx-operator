@@ -239,12 +239,8 @@ func evaluateAvailable(s *reconcileState, instance *crd.EMQX) {
 	cond := crd.Available
 	status := &instance.Status
 	if instance.Spec.HasReplicants() {
-		replicantSet := s.updateReplicantSet(instance)
 		desired := instance.Spec.NumReplicantReplicas()
-		available := int32(0)
-		if replicantSet != nil {
-			available = replicantSet.Status.AvailableReplicas
-		}
+		available := s.numAvailableReplicants()
 		if available >= desired {
 			status.SetCondition(cond, metav1.ConditionTrue, "ReplicantPodsAvailable",
 				fmt.Sprintf("%d/%d replicant pods available", available, desired))

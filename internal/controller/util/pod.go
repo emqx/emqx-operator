@@ -49,6 +49,19 @@ func UpdatePodCondition(
 	return k8sClient.Status().Patch(ctx, pod, patch)
 }
 
+func AttachPodAnnotation(pod *corev1.Pod, name string, value string) bool {
+	dirty := false
+	if pod.Annotations == nil {
+		pod.Annotations = make(map[string]string)
+	}
+	valueWas, present := pod.Annotations[name]
+	if !present || valueWas != value {
+		pod.Annotations[name] = value
+		dirty = true
+	}
+	return dirty
+}
+
 func PodReadyDuration(pod *corev1.Pod) time.Duration {
 	cond := FindPodCondition(pod, corev1.PodReady)
 	if cond == nil || cond.Status != corev1.ConditionTrue {

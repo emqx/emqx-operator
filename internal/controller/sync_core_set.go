@@ -231,15 +231,9 @@ func checkCorePodRemoval(
 ) coreAdmission {
 	status := &instance.Status
 
-	if len(status.NodeEvacuations) > 0 {
-		if status.NodeEvacuations[0].State != api.EvacuationStateProhibiting {
-			return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
-		}
-	}
-
 	// Disallow removing pod if other cores just recently became ready.
 	numAvailableCores := int32(0)
-	for _, p := range r.state.podsManagedBy(r.state.coreSet()) {
+	for _, p := range r.state.listPods(podsManagedBy{r.state.coreSet()}, podsAlive{}) {
 		if p.GetUID() != pod.GetUID() && util.IsPodAvailable(p, instance.Spec.CoreTemplate.Spec.MinReadySeconds) {
 			numAvailableCores++
 		}
@@ -261,13 +255,7 @@ func checkCorePodRemoval(
 		}
 	}
 
-	var nodeInfo *crd.EMQXNode
-	for _, node := range status.CoreNodes {
-		if node.PodName == pod.Name {
-			nodeInfo = &node
-			break
-		}
-	}
+	nodeInfo := status.FindNodeByPodName(pod.Name, roleCore)
 
 	if nodeInfo == nil {
 		return coreAdmission{Action: admissionRemove, Reason: "node is out of cluster"}
@@ -275,6 +263,11 @@ func checkCorePodRemoval(
 
 	if nodeInfo.Status == api.NodeStatusStopped {
 		return coreAdmission{Action: admissionRemove, Reason: "node is already stopped"}
+	}
+
+	evacuation := status.FindNodeEvacuation(nodeInfo.Name)
+	if evacuation != nil && evacuation.State != api.EvacuationStateProhibiting {
+		return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
 	}
 
 	if nodeInfo.Sessions > 0 {
@@ -294,7 +287,6 @@ func checkCorePodRemoval(
 }
 
 // onCoreAdmission performs the side effects implied by a coreAdmission.
-// Currently this only handles coreAdmitEvacuate by calling the evacuation API.
 func (s *syncCoreSet) onCoreAdmission(
 	r *reconcileRound,
 	instance *crd.EMQX,
@@ -341,7 +333,7 @@ func (s *syncCoreSet) startEvacuation(
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 ) error {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, "core")
 	if nodeInfo == nil {
 		return emperror.New("no corresponding node in cluster status")
 	}
@@ -375,21 +367,37 @@ func (s *syncCoreSet) startEvacuation(
 }
 
 // migrationTargetNodes returns the list of EMQX nodes to migrate workloads to.
-// For cores, targets are pods on the current (update) revision. For replicants,
-// targets are pods in the update ReplicaSet.
+// * In core-only cluster, targets are pods of the core set.
+// * In core-replicant cluster, targets are:
+//   - pods in the "update" replicant set, if it has at least 1 ready replica,
+//   - pods in any replicant set otherwise.
 func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 	targets := []string{}
 	if instance.Spec.HasReplicants() {
+		updateReplicantSet := r.state.updateReplicantSet(instance)
+		if updateReplicantSet == nil {
+			return targets
+		}
+		updateReady := updateReplicantSet.Status.ReadyReplicas > 0
 		for _, node := range instance.Status.ReplicantNodes {
 			pod := r.state.podWithName(node.PodName)
-			if pod != nil && r.state.partOfUpdateReplicantSet(pod, instance) {
+			if pod == nil {
+				continue
+			}
+			if updateReady && util.IsPodManagedBy(pod, updateReplicantSet) {
+				targets = append(targets, node.Name)
+			}
+			if r.state.partOfReplicantSet(pod) {
 				targets = append(targets, node.Name)
 			}
 		}
 	} else {
 		for _, node := range instance.Status.CoreNodes {
 			pod := r.state.podWithName(node.PodName)
-			if pod != nil && r.state.partOfCoreSet(pod) {
+			if pod == nil {
+				continue
+			}
+			if r.state.partOfCoreSet(pod) {
 				targets = append(targets, node.Name)
 			}
 		}

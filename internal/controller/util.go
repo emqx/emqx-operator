@@ -19,7 +19,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -53,31 +52,47 @@ func justCheckPodTemplate() patch.CalculateOption {
 	}
 }
 
-// IgnoreStatefulSetReplicas will ignore the `Replicas` field of the statefulSet
-func ignoreStatefulSetReplicas() patch.CalculateOption {
+func ignoreField(path []string) patch.CalculateOption {
 	return func(current, modified []byte) ([]byte, []byte, error) {
-		current, err := filterStatefulSetReplicasField(current)
+		current, err := deleteFieldPath(current, path)
 		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not filter replicas field from current byte sequence")
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from current byte sequence")
 		}
 
-		modified, err = filterStatefulSetReplicasField(modified)
+		modified, err = deleteFieldPath(modified, path)
 		if err != nil {
-			return []byte{}, []byte{}, emperror.Wrap(err, "could not filter replicas field from modified byte sequence")
+			return []byte{}, []byte{}, emperror.Wrap(err, "could not delete the field from modified byte sequence")
 		}
 
 		return current, modified, nil
 	}
 }
 
-func filterStatefulSetReplicasField(obj []byte) ([]byte, error) {
-	sts := appsv1.StatefulSet{}
-	err := json.Unmarshal(obj, &sts)
+func deleteFieldPath(obj []byte, path []string) ([]byte, error) {
+	var objectMap map[string]interface{}
+	err := json.Unmarshal(obj, &objectMap)
 	if err != nil {
 		return []byte{}, emperror.Wrap(err, "could not unmarshal byte sequence")
 	}
-	sts.Spec.Replicas = ptr.To(int32(1))
-	obj, err = json.Marshal(sts)
+	pathLen := len(path)
+	if pathLen == 0 {
+		return obj, nil
+	}
+	innerObject := objectMap
+	for _, k := range path[:pathLen-1] {
+		innerNext, ok := innerObject[k]
+		if !ok {
+			return obj, nil
+		}
+		switch innerNext := innerNext.(type) {
+		case map[string]interface{}:
+			innerObject = innerNext
+		default:
+			return obj, nil
+		}
+	}
+	delete(innerObject, path[pathLen-1])
+	obj, err = json.Marshal(objectMap)
 	if err != nil {
 		return []byte{}, emperror.Wrap(err, "could not marshal byte sequence")
 	}

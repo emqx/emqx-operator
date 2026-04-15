@@ -125,6 +125,29 @@ type UpdateStrategy struct {
 	Type string `json:"type,omitempty"`
 	// Evacuation strategy settings.
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
+	// Replicants configures the rolling update parameters for replicant ReplicaSet rollouts.
+	// Core StatefulSet rollouts are not affected by these settings.
+	Replicants *ReplicantsUpdateStrategy `json:"replicants,omitempty"`
+}
+
+// ReplicantsUpdateStrategy controls the pace of replicant ReplicaSet rollouts.
+// Semantics mirror `apps/v1 Deployment.spec.strategy.rollingUpdate`.
+// +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && has(self.maxSurge) && (type(self.maxUnavailable) == int ? self.maxUnavailable == 0 : self.maxUnavailable == '0%') && (type(self.maxSurge) == int ? self.maxSurge == 0 : self.maxSurge == '0%'))",message="maxUnavailable and maxSurge cannot both be zero"
+// +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && (type(self.maxUnavailable) == string && self.maxUnavailable == '100%') && (!has(self.maxSurge) || (type(self.maxSurge) == int ? self.maxSurge == 0 : self.maxSurge == '0%')))",message="maxSurge must be greater than zero when maxUnavailable is 100%"
+type ReplicantsUpdateStrategy struct {
+	// MaxUnavailable is the maximum number of old replicant pods that may be drained (evacuating,
+	// terminating, or marked for deletion) at once during a replicant ReplicaSet rollout.
+	// Integers are absolute counts; strings are percentages of desired replicant replicas (e.g. "25%").
+	// Defaults to 1 (serial drain).
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:XValidation:rule="type(self) == int ? self >= 0 : true",message="maxUnavailable must be non-negative when specified as an integer"
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	// MaxSurge is the number of extra replicant pods allowed above the desired replica count on the
+	// new ReplicaSet during a template rollout. Integers are absolute; strings are percentages of desired replicas.
+	// Defaults to 0.
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:XValidation:rule="type(self) == int ? self >= 0 : true",message="maxSurge must be non-negative when specified as an integer"
+	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty"`
 }
 
 type EvacuationStrategy struct {
@@ -335,4 +358,36 @@ func (spec *EMQXSpec) NumReplicantReplicas() int32 {
 		return *spec.ReplicantTemplate.Spec.Replicas
 	}
 	return 0
+}
+
+func (spec *EMQXSpec) NumMaxUnavailableReplicantReplicas() int32 {
+	numReplicas := int(spec.NumReplicantReplicas())
+	r := spec.UpdateStrategy.Replicants
+	if r == nil || r.MaxUnavailable == nil {
+		return 1
+	}
+	v, err := intstr.GetScaledValueFromIntOrPercent(r.MaxUnavailable, numReplicas, true)
+	if err != nil {
+		return 1
+	}
+	if v < 0 {
+		v = 0
+	}
+	return int32(v)
+}
+
+func (spec *EMQXSpec) NumMaxSurgeReplicantReplicas() int32 {
+	numReplicas := int(spec.NumReplicantReplicas())
+	r := spec.UpdateStrategy.Replicants
+	if r == nil || r.MaxSurge == nil {
+		return 0
+	}
+	v, err := intstr.GetScaledValueFromIntOrPercent(r.MaxSurge, numReplicas, true)
+	if err != nil {
+		return 0
+	}
+	if v < 0 {
+		v = 0
+	}
+	return int32(v)
 }

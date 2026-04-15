@@ -97,16 +97,11 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(crd.CoreLabels())))
 	})
 
-	It("points the Listeners Service at current-revision replicants when recent revision not ready", func() {
+	It("points the Listeners Service at replicants when any are available", func() {
 		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
 			Spec: crd.EMQXReplicantTemplateSpec{
-				Replicas: ptr.To(int32(1)),
+				Replicas: ptr.To(int32(2)),
 			},
-		}
-		instance.Status.ReplicantNodesStatus = crd.ReplicantNodesStatus{
-			ReadyReplicas:   1,
-			UpdateRevision:  "rev-update",
-			CurrentRevision: "rev-current",
 		}
 		round.state.replicantSets = []*appsv1.ReplicaSet{
 			{
@@ -130,49 +125,7 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 
 		listeners := &corev1.Service{}
 		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
-		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(
-			crd.ReplicantLabels(),
-			map[string]string{crd.LabelPodTemplateHash: "rev-current"},
-		)))
-	})
-
-	It("points the Listeners Service at recent-revision replicants when ready", func() {
-		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
-			Spec: crd.EMQXReplicantTemplateSpec{
-				Replicas: ptr.To(int32(1)),
-			},
-		}
-		instance.Status.ReplicantNodesStatus = crd.ReplicantNodesStatus{
-			ReadyReplicas:   1,
-			UpdateRevision:  "rev-update",
-			CurrentRevision: "rev-current",
-		}
-		round.state.replicantSets = []*appsv1.ReplicaSet{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "emqx-rev-current",
-					Labels: map[string]string{crd.LabelPodTemplateHash: "rev-current"},
-				},
-				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
-			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "emqx-rev-update",
-					Labels: map[string]string{crd.LabelPodTemplateHash: "rev-update"},
-				},
-				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
-			},
-		}
-
-		Eventually(a.reconcile).WithArguments(round, instance).
-			Should(Equal(subResult{}))
-
-		listeners := &corev1.Service{}
-		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
-		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(
-			crd.ReplicantLabels(),
-			map[string]string{crd.LabelPodTemplateHash: "rev-update"},
-		)))
+		Expect(listeners.Spec.Selector).To(Equal(instance.DefaultLabelsWith(crd.ReplicantLabels())))
 	})
 
 	It("does not create the Dashboard Service when the template is disabled", func() {
