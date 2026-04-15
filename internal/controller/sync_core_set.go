@@ -231,12 +231,6 @@ func checkCorePodRemoval(
 ) coreAdmission {
 	status := &instance.Status
 
-	if len(status.NodeEvacuations) > 0 {
-		if status.NodeEvacuations[0].State != api.EvacuationStateProhibiting {
-			return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
-		}
-	}
-
 	// Disallow removing pod if other cores just recently became ready.
 	numAvailableCores := int32(0)
 	for _, p := range r.state.listPods(podsManagedBy{r.state.coreSet()}, podsAlive{}) {
@@ -269,6 +263,11 @@ func checkCorePodRemoval(
 
 	if nodeInfo.Status == api.NodeStatusStopped {
 		return coreAdmission{Action: admissionRemove, Reason: "node is already stopped"}
+	}
+
+	evacuation := status.FindNodeEvacuation(nodeInfo.Name)
+	if evacuation != nil && evacuation.State != api.EvacuationStateProhibiting {
+		return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
 	}
 
 	if nodeInfo.Sessions > 0 {
