@@ -66,6 +66,12 @@ func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crd.EMQX) sub
 		return s.scaleDown(r, instance, updateRs, currentReplicas, desiredReplicas)
 	}
 
+	// Steady state: clean up stale artifacts.
+	err := s.ensureConsistency(r, instance, updateRs)
+	if err != nil {
+		return reconcileError(emperror.Wrap(err, "failed to restore replicant consistency"))
+	}
+
 	return subResult{}
 }
 
@@ -125,6 +131,91 @@ func (s *syncReplicantSets) scaleDown(
 	}
 
 	return subResult{}
+}
+
+// ensureConsistency removes stale scale-down artifacts from "update" replicant set pods
+// when no scale-down is active. This handles the case where a scale-down was interrupted
+// by the user scaling back up: pods may still carry AnnotationScalingDown and PodDeletionCost
+// annotations, and replicant evacuations may still be running.
+func (s *syncReplicantSets) ensureConsistency(
+	r *reconcileRound,
+	instance *crd.EMQX,
+	updateRs *appsv1.ReplicaSet,
+) error {
+	for _, pod := range r.state.podsManagedBy(updateRs) {
+		// 1. Check if pod has stale scale-down annotations.
+		dirty := s.removeStaleReplicantAnnotations(pod)
+		if !dirty {
+			continue
+		}
+
+		// 2. Stop any ongoing node evacuation.
+		stopped, err := s.stopStaleReplicantEvacuation(r, instance, pod)
+		if err != nil {
+			return err
+		}
+		if stopped {
+			r.log.V(1).Info("stopped stale replicant node evacuation",
+				"replicaSet", klog.KObj(updateRs),
+				"pod", klog.KObj(pod),
+			)
+		}
+
+		// 3. Remove stale annotations.
+		err = s.Client.Update(r.ctx, pod)
+		if err == nil {
+			r.log.V(1).Info("removed stale replicant pod annotations",
+				"replicaSet", klog.KObj(updateRs),
+				"pod", klog.KObj(pod),
+			)
+		} else {
+			return emperror.Wrap(err, "failed to remove stale replicant pod annotations")
+		}
+	}
+	return nil
+}
+
+// removeStaleReplicantAnnotations strips AnnotationScalingDown and PodDeletionCost from
+// pod that was marked during a now-cancelled scale-down.
+func (s *syncReplicantSets) removeStaleReplicantAnnotations(pod *corev1.Pod) bool {
+	dirty := false
+	if _, ok := pod.Annotations[crd.AnnotationScalingDown]; ok {
+		delete(pod.Annotations, crd.AnnotationScalingDown)
+		dirty = true
+	}
+	if _, ok := pod.Annotations[corev1.PodDeletionCost]; ok {
+		delete(pod.Annotations, corev1.PodDeletionCost)
+		dirty = true
+	}
+	return dirty
+}
+
+// stopStaleReplicantEvacuation stops evacuations on replicant node belonging
+// to the specified pod.
+func (s *syncReplicantSets) stopStaleReplicantEvacuation(
+	r *reconcileRound,
+	instance *crd.EMQX,
+	pod *corev1.Pod,
+) (bool, error) {
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, roleReplicant)
+	if nodeInfo == nil {
+		return false, emperror.Errorf("missing replicant %s node information", pod.Name)
+	}
+	if evacuation := instance.Status.FindNodeEvacuation(nodeInfo.Name); evacuation != nil {
+		err := api.StopEvacuation(r.oldestCoreRequester(), nodeInfo.Name)
+		if err == nil {
+			s.EventRecorder.Event(
+				instance,
+				corev1.EventTypeNormal,
+				"NodeEvacuation",
+				fmt.Sprintf("Node %s evacuation stopped", nodeInfo.Name),
+			)
+			return true, nil
+		} else {
+			return true, err
+		}
+	}
+	return false, nil
 }
 
 // migrateSet drives a replicant template migration: surge capacity on the new ReplicaSet,

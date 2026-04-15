@@ -2,10 +2,13 @@ package controller
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
 	"slices"
 
 	crd "github.com/emqx/emqx-operator/api/v3alpha1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
+	req "github.com/emqx/emqx-operator/internal/requester"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -161,7 +164,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 		AfterEach(func() {
 			slices.Reverse(resources)
 			for _, r := range resources {
-				k8sClient.Delete(ctx, r)
+				_ = k8sClient.Delete(ctx, r)
 			}
 		})
 
@@ -357,7 +360,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 		AfterEach(func() {
 			slices.Reverse(resources)
 			for _, r := range resources {
-				k8sClient.Delete(ctx, r)
+				_ = k8sClient.Delete(ctx, r)
 			}
 		})
 
@@ -468,6 +471,106 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			Expect(actualObject(rs)).To(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(3))),
 			)
+		})
+
+		It("removes stale scale-down annotations when returning to steady state", func() {
+			// Preconditions:
+			// 1. Pod `pod-0` has stale annotations from an interrupted scale-down that was
+			//    cancelled by scaling back up.
+			// 2. No scaling is requested.
+			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
+			_ = util.AttachPodAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
+			_ = util.AttachPodAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
+			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
+
+			s := &syncReplicantSets{emqxReconciler}
+			round := newReconcileRound()
+			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+
+			// Stale annotations must be gone.
+			Expect(actualObject(replicants[0])).To(And(
+				Not(BeNil()),
+				Not(HaveField("Annotations", HaveKey(crd.AnnotationScalingDown))),
+				Not(HaveField("Annotations", HaveKey(corev1.PodDeletionCost))),
+			))
+
+			// Other pods are untouched.
+			for _, p := range replicants[1:] {
+				Expect(actualObject(p)).To(And(
+					Not(BeNil()),
+					Not(HaveField("Annotations", HaveKey(crd.AnnotationScalingDown))),
+				))
+			}
+		})
+
+		It("stops stale replicant evacuations when returning to steady state", func() {
+			// Preconditions:
+			// 1. Pod `pod-0` has stale annotations from an interrupted scale-down that was
+			//    cancelled by scaling back up.
+			// 2. Evacuation is in progress.
+			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
+			instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
+				{NodeName: "emqx@10.0.0.1", State: "evicting_conns"},
+			}
+			_ = util.AttachPodAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
+			_ = util.AttachPodAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
+			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
+
+			// Use a requester that accepts the stop-evacuation POST.
+			round := newReconcileRoundWithRequester(req.NewMockRequester(
+				func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
+					if u.Path == "api/v5/load_rebalance/emqx@10.0.0.1/evacuation/stop" {
+						return &http.Response{StatusCode: 200}, []byte("{}"), nil
+					}
+					return &http.Response{StatusCode: 501}, []byte{}, nil
+				},
+			))
+			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+
+			s := &syncReplicantSets{emqxReconciler}
+			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+
+			// Stale annotations must be gone.
+			Expect(actualObject(replicants[0])).To(And(
+				Not(BeNil()),
+				Not(HaveField("Annotations", HaveKey(crd.AnnotationScalingDown))),
+				Not(HaveField("Annotations", HaveKey(corev1.PodDeletionCost))),
+			))
+		})
+
+		It("preserves annotations if unable to stop stale replicant evacuations", func() {
+			// Preconditions:
+			// 1. Pod `pod-0` has stale annotations from an interrupted scale-down that was
+			//    cancelled by scaling back up.
+			// 2. Evacuation is in progress.
+			// 3. EMQX API is unavailable.
+			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
+			instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
+				{NodeName: "emqx@10.0.0.1", State: "evicting_conns"},
+			}
+			_ = util.AttachPodAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
+			_ = util.AttachPodAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
+			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
+
+			// Use a requester that accepts the stop-evacuation POST.
+			round := newReconcileRoundWithRequester(req.NewMockRequester(
+				func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
+					return &http.Response{StatusCode: 503}, []byte{}, nil
+				},
+			))
+			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+
+			s := &syncReplicantSets{emqxReconciler}
+			result := s.reconcile(round, instance)
+			Expect(result.err).To(HaveOccurred())
+
+			// Stale annotations must still be there.
+			Expect(actualObject(replicants[0])).To(And(
+				Not(BeNil()),
+				HaveField("Annotations", HaveKey(crd.AnnotationScalingDown)),
+				HaveField("Annotations", HaveKey(corev1.PodDeletionCost)),
+			))
 		})
 	})
 })
