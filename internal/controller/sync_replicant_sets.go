@@ -153,6 +153,8 @@ func (s *syncReplicantSets) ensureConsistency(
 		}
 
 		// 2. Stop any ongoing node evacuation.
+		// This is attempted irrespective of whether Node Evacuation is enabled or not,
+		// to avoid ending up in transient state if it was disabled mid-update.
 		stopped, err := s.stopStaleReplicantEvacuation(r, instance, pod)
 		if err != nil {
 			return err
@@ -474,7 +476,7 @@ func checkReplicantPodRemoval(instance *crd.EMQX, pod *corev1.Pod) replicantAdmi
 		}
 	}
 
-	if nodeInfo.Sessions > 0 {
+	if nodeInfo.Sessions > 0 && instance.Spec.IsEvacuationEnabled() {
 		if instance.Spec.NumReplicantReplicas() == 1 && instance.Spec.NumMaxSurgeReplicantReplicas() == 0 {
 			return replicantAdmission{
 				Action: admissionRemove,

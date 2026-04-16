@@ -15986,6 +15986,13 @@ spec:
                         format: int32
                         minimum: 1
                         type: integer
+                      type:
+                        default: NodeEvacuation
+                        description: Type of the evacuation policy.
+                        enum:
+                        - NodeEvacuation
+                        - Disabled
+                        type: string
                       waitHealthCheck:
                         default: 60
                         description: |-
@@ -16002,6 +16009,8 @@ spec:
                         format: int32
                         minimum: 0
                         type: integer
+                    required:
+                    - type
                     type: object
                   replicants:
                     description: |-

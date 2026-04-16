@@ -170,6 +170,15 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 		))
 	})
 
+	It("node session > 0 & node evacuation is disabled", func() {
+		instance.Spec.UpdateStrategy.EvacuationStrategy.Type = crd.DisabledEvacuationStrategy
+		instance.Status.CoreNodes[1].Sessions = 99999
+		admission := checkCorePodRemoval(round, instance, pod1, false)
+		Expect(admission).Should(And(
+			HaveField("Action", Equal(admissionRemove)),
+		))
+	})
+
 	It("node session is 0", func() {
 		instance.Status.CoreNodes[1].Sessions = 0
 		admission := checkCorePodRemoval(round, instance, pod1, false)
