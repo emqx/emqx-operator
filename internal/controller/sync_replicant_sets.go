@@ -45,31 +45,34 @@ func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crd.EMQX) sub
 	}
 
 	// Steady state: handle scale-up and scale-down.
+	specReplicas := ptr.Deref(updateRs.Spec.Replicas, 0)
 	desiredReplicas := instance.Spec.NumReplicantReplicas()
-	currentReplicas := ptr.Deref(updateRs.Spec.Replicas, 0)
+	currentReplicas := updateRs.Status.Replicas
 
-	if currentReplicas < desiredReplicas {
+	if specReplicas < desiredReplicas {
 		r.log.V(1).Info("scaling up replicantSet",
 			"replicaSet", klog.KObj(updateRs),
-			"from", currentReplicas,
+			"from", specReplicas,
 			"to", desiredReplicas,
 		)
 		return s.scaleUp(r, updateRs, desiredReplicas)
 	}
 
-	if currentReplicas > desiredReplicas {
+	if specReplicas > desiredReplicas {
 		r.log.V(1).Info("scaling down replicantSet",
 			"replicaSet", klog.KObj(updateRs),
-			"from", currentReplicas,
+			"from", specReplicas,
 			"to", desiredReplicas,
 		)
-		return s.scaleDown(r, instance, updateRs, currentReplicas, desiredReplicas)
+		return s.scaleDown(r, instance, updateRs, specReplicas, desiredReplicas)
 	}
 
 	// Steady state: clean up stale artifacts.
-	err := s.ensureConsistency(r, instance, updateRs)
-	if err != nil {
-		return reconcileError(emperror.Wrap(err, "failed to restore replicant consistency"))
+	if currentReplicas == specReplicas {
+		err := s.ensureConsistency(r, instance, updateRs)
+		if err != nil {
+			return reconcileError(emperror.Wrap(err, "failed to restore replicant consistency"))
+		}
 	}
 
 	return subResult{}
@@ -142,7 +145,7 @@ func (s *syncReplicantSets) ensureConsistency(
 	instance *crd.EMQX,
 	updateRs *appsv1.ReplicaSet,
 ) error {
-	for _, pod := range r.state.podsManagedBy(updateRs) {
+	for _, pod := range r.state.listPods(podsManagedBy{updateRs}, podsAlive{}) {
 		// 1. Check if pod has stale scale-down annotations.
 		dirty := s.removeStaleReplicantAnnotations(pod)
 		if !dirty {
