@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"reflect"
 
 	emperror "emperror.dev/errors"
 	crd "github.com/emqx/emqx-operator/api/v3alpha1"
@@ -28,11 +29,14 @@ type reconcileStatePodFilter interface {
 }
 
 type podsManagedBy struct {
-	metav1.Object
+	manager metav1.Object
 }
 
 func (self podsManagedBy) passes(pod *corev1.Pod) bool {
-	return self.Object != nil && util.IsPodManagedBy(pod, self.Object)
+	if self.manager == nil && reflect.ValueOf(self.manager).IsNil() {
+		return false
+	}
+	return util.IsPodManagedBy(pod, self.manager)
 }
 
 type podsWithRole struct {
@@ -187,6 +191,14 @@ func (r *reconcileState) outdatedReplicantPods(instance *crd.EMQX) []*corev1.Pod
 		outdatedPods := r.podsManagedBy(rs)
 		sortByName(outdatedPods)
 		out = append(out, outdatedPods...)
+	}
+	return out
+}
+
+func (r *reconcileState) numReplicants() int32 {
+	out := int32(0)
+	for _, rs := range r.replicantSets {
+		out += rs.Status.Replicas
 	}
 	return out
 }

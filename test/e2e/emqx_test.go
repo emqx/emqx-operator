@@ -12,6 +12,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,6 +29,16 @@ func withReplicants(numReplicas int) []byte {
 	return fmt.Appendf(nil,
 		`{"spec": {"replicantTemplate": {"spec": {"minReadySeconds": 3, "replicas": %d}}}}`,
 		numReplicas,
+	)
+}
+
+func withReplicantResources(cpuRequest, memRequest, cpuLimit, memLimit string) []byte {
+	return fmt.Appendf(nil,
+		`{"spec": {"replicantTemplate": {"spec": {"resources": {
+			"requests": {"cpu": "%s", "memory": "%s"},
+			"limits": {"cpu": "%s", "memory": "%s"}
+		}}}}}`,
+		cpuRequest, memRequest, cpuLimit, memLimit,
 	)
 }
 
@@ -689,6 +701,150 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 		})
 
 		It("delete EMQX cluster", func() {
+			Expect(Kubectl("delete", "emqx", "emqx")).To(Succeed())
+			Expect(Kubectl("get", "emqx", "emqx")).To(HaveOccurred(), "EMQX cluster still exists")
+		})
+
+	})
+
+	Context("EMQX Cluster Scaling / HPA", Label("scale", "hpa"), func() {
+		// Initial number of core and replicant replicas:
+		var coreReplicas int = 2
+		var replicantReplicas int = 2
+
+		const (
+			hpaName = "emqx-replicant"
+		)
+
+		It("deploy core-replicant cluster", func() {
+			By("create EMQX cluster with resource requests for HPA")
+			emqxCR := PatchDocument(
+				FromYAMLFile(emqxCRBasic),
+				withImage(emqxImage),
+				withCores(coreReplicas),
+				withReplicants(replicantReplicas),
+				withReplicantResources("500m", "512Mi", "1", "2Gi"),
+				withConfig(),
+				// Make EMQX react to scaling decisions quicker:
+				[]byte(`
+                {"spec": {"updateStrategy": {
+                    "replicants": {"maxUnavailable": 3, "maxSurge": 1}
+                }}}`),
+			)
+			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+			By("wait for EMQX cluster to be ready")
+			Eventually(checkEMQXReady).Should(Succeed())
+			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+		})
+
+		It("scale subresource reports correct replica counts and selector", func() {
+			By("read the scale subresource via kubectl")
+			var scale autoscalingv1.Scale
+			Eventually(KubectlOut).WithArguments(
+				"get", "--raw", "/apis/apps.emqx.io/v3alpha1/namespaces/default/emqxes/emqx/scale",
+			).Should(BeUnmarshalledAs(&scale, And(
+				HaveField("Spec.Replicas", BeEquivalentTo(replicantReplicas)),
+				HaveField("Status.Replicas", BeEquivalentTo(replicantReplicas)),
+				HaveField("Status.Selector", Not(BeEmpty())),
+			)), "Scale subresource should report replicant replica counts and a non-empty selector")
+
+			By("verify the selector matches replicant pods")
+			Expect(scale.Status.Selector).To(
+				ContainSubstring(crd.LabelDBRole+"=replicant"),
+				"Scale selector should include the replicant role label",
+			)
+			Expect(scale.Status.Selector).To(
+				ContainSubstring(crd.LabelInstance+"=emqx"),
+				"Scale selector should include the instance label",
+			)
+
+			By("verify replicant pods match the scale selector")
+			var podList corev1.PodList
+			Expect(KubectlOut("get", "pods",
+				"--selector", scale.Status.Selector,
+				"-o", "json",
+			)).To(UnmarshalInto(&podList), "Failed to list pods matching scale selector")
+			Expect(podList.Items).To(
+				HaveLen(replicantReplicas),
+				"Scale selector should match exactly %d replicant pods", replicantReplicas,
+			)
+		})
+
+		It("kubectl scale changes replicant replica count", func() {
+			newReplicas := 4
+			By("scale replicants via kubectl scale")
+			Expect(Kubectl("scale", "emqx", "emqx", "--replicas="+fmt.Sprint(newReplicas))).
+				To(Succeed(), "kubectl scale should succeed")
+
+			By("wait for EMQX cluster to be ready after scaling")
+			Eventually(checkEMQXReady).Should(Succeed())
+			Eventually(checkReplicantStatus).WithArguments(newReplicas).Should(Succeed())
+
+			By("verify scale subresource reflects the new replica count")
+			var scale autoscalingv1.Scale
+			Eventually(KubectlOut).WithArguments(
+				"get", "--raw", "/apis/apps.emqx.io/v3alpha1/namespaces/default/emqxes/emqx/scale",
+			).Should(BeUnmarshalledAs(&scale, And(
+				HaveField("Spec.Replicas", BeEquivalentTo(newReplicas)),
+				HaveField("Status.Replicas", BeEquivalentTo(newReplicas)),
+			)), "Scale subresource should reflect the new replica count after kubectl scale")
+
+			replicantReplicas = newReplicas
+		})
+
+		It("create HPA targeting replicants", func() {
+			By("create a HorizontalPodAutoscaler")
+			hpaCreatedAt := metav1.Now()
+			minReplicas := 1
+			maxReplicas := 6
+			hpa := FromYAMLString(`
+			apiVersion: autoscaling/v2
+			kind: HorizontalPodAutoscaler
+			metadata:
+			  name: ` + hpaName + `
+			spec:
+			  minReplicas: ` + fmt.Sprint(minReplicas) + `
+			  maxReplicas: ` + fmt.Sprint(maxReplicas) + `
+			  scaleTargetRef:
+			    apiVersion: apps.emqx.io/v3alpha1
+			    kind: EMQX
+			    name: emqx
+			  metrics:
+			  - type: Resource
+			    resource:
+			      name: cpu
+			      target:
+			        averageUtilization: 80
+			        type: Utilization
+			  behavior:
+			    scaleUp:
+				  stabilizationWindowSeconds: 0
+			    scaleDown:
+				  stabilizationWindowSeconds: 30
+			`)
+			Expect(KubectlStdin(hpa, "apply", "-f", "-")).To(Succeed(), "Failed to create HPA")
+
+			By("verify HPA can read the scale subresource")
+			var hpaOut autoscalingv2.HorizontalPodAutoscaler
+			Eventually(KubectlOut).WithArguments("get", "hpa", hpaName, "-o", "json").
+				Should(BeUnmarshalledAs(&hpaOut, And(
+					HaveField("Status.DesiredReplicas", BeEquivalentTo(replicantReplicas)),
+					HaveField("Status.CurrentReplicas", BeEquivalentTo(replicantReplicas)),
+				)), "HPA should observe current replicant replica count via scale subresource")
+
+			By("verify HPA eventually scales replicants down")
+			Eventually(KubectlOut).WithArguments("get", "hpa", hpaName, "-o", "json").
+				Should(BeUnmarshalledAs(&hpaOut,
+					HaveField("Status.CurrentReplicas", BeEquivalentTo(minReplicas)),
+				), "HPA should scale replicant set down")
+
+			Eventually(checkEMQXReady).WithArguments(hpaCreatedAt).Should(Succeed())
+			Eventually(checkReplicantStatus).WithArguments(minReplicas).Should(Succeed())
+		})
+
+		It("delete cluster and HPA", func() {
+			Expect(Kubectl("delete", "hpa", hpaName)).To(Succeed())
 			Expect(Kubectl("delete", "emqx", "emqx")).To(Succeed())
 			Expect(Kubectl("get", "emqx", "emqx")).To(HaveOccurred(), "EMQX cluster still exists")
 		})

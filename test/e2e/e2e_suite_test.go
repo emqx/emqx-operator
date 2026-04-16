@@ -85,32 +85,26 @@ var _ = BeforeSuite(func() {
 	By("load emqx-operator docker image into kind cluster")
 	Expect(util.LoadImageToKindClusterWithName(projectImage)).To(Succeed())
 
+	By("install Metrics Server")
+	Expect(util.InstallMetricsServer()).To(Succeed())
+
 	// The tests-e2e are intended to run on a temporary cluster that is created and destroyed for testing.
 	// To prevent errors when tests run in environments with Prometheus or CertManager already installed,
 	// we check for their presence before execution.
-	// Setup Prometheus and CertManager before the suite if not skipped and if not already installed
 	if !skipPrometheusInstall {
-		if !util.IsPrometheusCRDsInstalled() {
-			By("install Prometheus Operator")
-			Expect(util.InstallPrometheusOperator()).To(Succeed())
-			isPrometheusInstalled = true
-		} else {
-			GinkgoWriter.Println("WARNING: Prometheus Operator is already installed, skipping installation.")
-		}
+		By("install Prometheus Operator")
+		Expect(util.InstallPrometheusOperator()).To(Succeed())
+		isPrometheusInstalled = true
 	}
 	if !skipCertManagerInstall {
-		if !util.IsCertManagerCRDsInstalled() {
-			By("install CertManager")
-			Expect(util.InstallCertManager()).To(Succeed())
-			isCertManagerInstalled = true
-		} else {
-			GinkgoWriter.Println("WARNING: CertManager is already installed, skipping installation.")
-		}
+		By("install CertManager")
+		Expect(util.InstallCertManager()).To(Succeed())
+		isCertManagerInstalled = true
 	}
 })
 
 var _ = AfterSuite(func() {
-	// Teardown Prometheus and CertManager after the suite if not skipped and if they were not already installed
+	util.UnnstallMetricsServer()
 	if !skipPrometheusInstall && isPrometheusInstalled {
 		By("uninstall Prometheus Operator")
 		util.UninstallPrometheusOperator()
