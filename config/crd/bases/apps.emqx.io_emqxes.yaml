@@ -15970,7 +15970,7 @@ spec:
                   evacuationStrategy:
                     description: Evacuation strategy settings.
                     properties:
-                      connEvictRate:
+                      connectionEvictionRate:
                         default: 1000
                         description: |-
                           Client disconnect rate (number per second).
@@ -15978,7 +15978,7 @@ spec:
                         format: int32
                         minimum: 1
                         type: integer
-                      sessEvictRate:
+                      sessionEvictionRate:
                         default: 1000
                         description: |-
                           Session evacuation rate (number per second).

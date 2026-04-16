@@ -155,12 +155,12 @@ type EvacuationStrategy struct {
 	// Same as `conn-evict-rate` in [EMQX Node Evacuation](https://docs.emqx.com/en/emqx/v5.10/deploy/cluster/rebalancing.html#node-evacuation).
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1000
-	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
+	ConnEvictRate int32 `json:"connectionEvictionRate,omitempty"`
 	// Session evacuation rate (number per second).
 	// Same as `sess-evict-rate` in [EMQX Node Evacuation](https://docs.emqx.com/en/emqx/v5.10/deploy/cluster/rebalancing.html#node-evacuation).
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1000
-	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
+	SessEvictRate int32 `json:"sessionEvictionRate,omitempty"`
 	// Amount of time (in seconds) to wait before starting session evacuation.
 	// Same as `wait-takeover` in [EMQX Node Evacuation](https://docs.emqx.com/en/emqx/v5.10/deploy/cluster/rebalancing.html#node-evacuation).
 	// +kubebuilder:validation:Minimum=0
