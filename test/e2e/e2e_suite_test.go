@@ -85,6 +85,9 @@ var _ = BeforeSuite(func() {
 	By("load emqx-operator docker image into kind cluster")
 	Expect(util.LoadImageToKindClusterWithName(projectImage)).To(Succeed())
 
+	By("install Metrics Server")
+	Expect(util.InstallMetricsServer()).To(Succeed())
+
 	// The tests-e2e are intended to run on a temporary cluster that is created and destroyed for testing.
 	// To prevent errors when tests run in environments with Prometheus or CertManager already installed,
 	// we check for their presence before execution.
@@ -101,7 +104,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	// Teardown Prometheus and CertManager after the suite if not skipped and if they were not already installed
+	util.UnnstallMetricsServer()
 	if !skipPrometheusInstall && isPrometheusInstalled {
 		By("uninstall Prometheus Operator")
 		util.UninstallPrometheusOperator()

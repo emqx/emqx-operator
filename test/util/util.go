@@ -27,11 +27,14 @@ import (
 	"strings"
 
 	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 	"sigs.k8s.io/yaml"
 )
 
 const (
+	metricsServerYAML = "test/e2e/files/resources/metrics-server.yaml"
+
 	prometheusOperatorVersion = "v0.77.1"
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
 		"releases/download/" + prometheusOperatorVersion + "/bundle.yaml"
@@ -114,6 +117,12 @@ func FromYAMLFile(filePath string) []byte {
 	return FromYAML(document)
 }
 
+func FromYAMLString(document string) []byte {
+	document = strings.ReplaceAll(document, "\t", "    ")
+	document = dedent.Dedent(document)
+	return FromYAML([]byte(document))
+}
+
 func FromYAML(document []byte) []byte {
 	json, err := yaml.YAMLToJSON(document)
 	if err != nil {
@@ -136,6 +145,25 @@ func PatchDocument(document []byte, patches ...[]byte) []byte {
 		}
 	}
 	return patched
+}
+
+func InstallMetricsServer() error {
+	err := Kubectl("apply", "-f", metricsServerYAML)
+	if err != nil {
+		return err
+	}
+	return Kubectl("wait", "deployment", "metrics-server",
+		"--for", "condition=Available",
+		"--namespace", "kube-system",
+		"--timeout", "1m",
+	)
+}
+
+func UnnstallMetricsServer() {
+	err := Kubectl("delete", "-f", metricsServerYAML)
+	if err != nil {
+		warnError(err)
+	}
 }
 
 // InstallPrometheusOperator installs the prometheus Operator to be used to export the enabled metrics.
