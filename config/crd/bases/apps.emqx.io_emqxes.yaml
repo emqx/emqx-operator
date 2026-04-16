@@ -15952,8 +15952,7 @@ spec:
                 type: object
               revisionHistoryLimit:
                 default: 3
-                description: Number of old ReplicaSets, old StatefulSets and old PersistentVolumeClaims
-                  to retain to allow rollback.
+                description: Number of old ReplicaSets to retain to allow rollback.
                 format: int32
                 type: integer
               serviceAccountName:
@@ -16013,9 +16012,8 @@ spec:
                     - type
                     type: object
                   replicants:
-                    description: |-
-                      Replicants configures the rolling update parameters for replicant ReplicaSet rollouts.
-                      Core StatefulSet rollouts are not affected by these settings.
+                    description: Parameters of the rolling update for replicant ReplicaSet
+                      rollouts.
                     properties:
                       maxSurge:
                         anyOf:
@@ -16061,7 +16059,9 @@ spec:
                     default: RollingUpdate
                     description: |-
                       Determines how cluster upgrade is performed.
-                      * `RollingUpdate`: Perform a rolling upgrade, updating pods one at a time.
+                      * `RollingUpdate`: Perform a rolling upgrade, updating pods gradually; core pods are
+                         always updated one at a time, updating of replicants is controlled by `replicants`
+                         strategy.
                     enum:
                     - RollingUpdate
                     type: string
