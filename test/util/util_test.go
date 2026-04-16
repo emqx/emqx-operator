@@ -33,7 +33,7 @@ func TestFromYAMLString(t *testing.T) {
 			  minReplicas: 1
 			  maxReplicas: 42
 			  scaleTargetRef:
-			    apiVersion: apps.emqx.io/v3alpha1
+			    apiVersion: apps.emqx.io/v3beta1
 			    kind: EMQX
 			    name: emqx
 			  metrics:

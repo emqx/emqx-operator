@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	crd "github.com/emqx/emqx-operator/api/v3alpha1"
+	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	. "github.com/emqx/emqx-operator/test/util"
 	"github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo/v2"
@@ -742,7 +742,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			By("read the scale subresource via kubectl")
 			var scale autoscalingv1.Scale
 			Eventually(KubectlOut).WithArguments(
-				"get", "--raw", "/apis/apps.emqx.io/v3alpha1/namespaces/default/emqxes/emqx/scale",
+				"get", "--raw", "/apis/apps.emqx.io/v3beta1/namespaces/default/emqxes/emqx/scale",
 			).Should(BeUnmarshalledAs(&scale, And(
 				HaveField("Spec.Replicas", BeEquivalentTo(replicantReplicas)),
 				HaveField("Status.Replicas", BeEquivalentTo(replicantReplicas)),
@@ -784,7 +784,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			By("verify scale subresource reflects the new replica count")
 			var scale autoscalingv1.Scale
 			Eventually(KubectlOut).WithArguments(
-				"get", "--raw", "/apis/apps.emqx.io/v3alpha1/namespaces/default/emqxes/emqx/scale",
+				"get", "--raw", "/apis/apps.emqx.io/v3beta1/namespaces/default/emqxes/emqx/scale",
 			).Should(BeUnmarshalledAs(&scale, And(
 				HaveField("Spec.Replicas", BeEquivalentTo(newReplicas)),
 				HaveField("Status.Replicas", BeEquivalentTo(newReplicas)),
@@ -807,7 +807,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			  minReplicas: ` + fmt.Sprint(minReplicas) + `
 			  maxReplicas: ` + fmt.Sprint(maxReplicas) + `
 			  scaleTargetRef:
-			    apiVersion: apps.emqx.io/v3alpha1
+			    apiVersion: apps.emqx.io/v3beta1
 			    kind: EMQX
 			    name: emqx
 			  metrics:

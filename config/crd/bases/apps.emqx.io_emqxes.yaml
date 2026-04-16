@@ -23,7 +23,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v3alpha1
+    name: v3beta1
     schema:
       openAPIV3Schema:
         description: Custom Resource representing an EMQX cluster.

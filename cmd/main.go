@@ -37,7 +37,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	crd "github.com/emqx/emqx-operator/api/v3alpha1"
+	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	"github.com/emqx/emqx-operator/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
@@ -166,7 +166,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// NOTE: Rebalance controller is disabled in this release. See api/v3alpha1/rebalance_types.go.
+	// NOTE: Rebalance controller is disabled in this release. See api/v2beta1/rebalance_types.go.
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

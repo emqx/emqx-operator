@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
-	crd "github.com/emqx/emqx-operator/api/v3alpha1"
+	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	req "github.com/emqx/emqx-operator/internal/requester"
 )
 
