@@ -15970,7 +15970,7 @@ spec:
                   evacuationStrategy:
                     description: Evacuation strategy settings.
                     properties:
-                      connEvictRate:
+                      connectionEvictionRate:
                         default: 1000
                         description: |-
                           Client disconnect rate (number per second).
@@ -15978,7 +15978,7 @@ spec:
                         format: int32
                         minimum: 1
                         type: integer
-                      sessEvictRate:
+                      sessionEvictionRate:
                         default: 1000
                         description: |-
                           Session evacuation rate (number per second).
@@ -15986,6 +15986,13 @@ spec:
                         format: int32
                         minimum: 1
                         type: integer
+                      type:
+                        default: NodeEvacuation
+                        description: Type of the evacuation policy.
+                        enum:
+                        - NodeEvacuation
+                        - Disabled
+                        type: string
                       waitHealthCheck:
                         default: 60
                         description: |-
@@ -16002,6 +16009,8 @@ spec:
                         format: int32
                         minimum: 0
                         type: integer
+                    required:
+                    - type
                     type: object
                   replicants:
                     description: |-

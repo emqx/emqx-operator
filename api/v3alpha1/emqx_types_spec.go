@@ -150,17 +150,29 @@ type ReplicantsUpdateStrategy struct {
 	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty"`
 }
 
+type EvacuationStrategyType string
+
+const (
+	NodeEvacuationStrategy     EvacuationStrategyType = "NodeEvacuation"
+	DisabledEvacuationStrategy EvacuationStrategyType = "Disabled"
+)
+
 type EvacuationStrategy struct {
+	// Type of the evacuation policy.
+	// +kubebuilder:validation:Enum=NodeEvacuation;Disabled
+	// +kubebuilder:default=NodeEvacuation
+	Type EvacuationStrategyType `json:"type"`
+
 	// Client disconnect rate (number per second).
 	// Same as `conn-evict-rate` in [EMQX Node Evacuation](https://docs.emqx.com/en/emqx/v5.10/deploy/cluster/rebalancing.html#node-evacuation).
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1000
-	ConnEvictRate int32 `json:"connEvictRate,omitempty"`
+	ConnEvictRate int32 `json:"connectionEvictionRate,omitempty"`
 	// Session evacuation rate (number per second).
 	// Same as `sess-evict-rate` in [EMQX Node Evacuation](https://docs.emqx.com/en/emqx/v5.10/deploy/cluster/rebalancing.html#node-evacuation).
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1000
-	SessEvictRate int32 `json:"sessEvictRate,omitempty"`
+	SessEvictRate int32 `json:"sessionEvictionRate,omitempty"`
 	// Amount of time (in seconds) to wait before starting session evacuation.
 	// Same as `wait-takeover` in [EMQX Node Evacuation](https://docs.emqx.com/en/emqx/v5.10/deploy/cluster/rebalancing.html#node-evacuation).
 	// +kubebuilder:validation:Minimum=0
@@ -340,6 +352,10 @@ type ServiceTemplate struct {
 
 func (spec *EMQXSpec) HasReplicants() bool {
 	return spec.ReplicantTemplate != nil && spec.ReplicantTemplate.Spec.Replicas != nil && *spec.ReplicantTemplate.Spec.Replicas > 0
+}
+
+func (spec *EMQXSpec) IsEvacuationEnabled() bool {
+	return spec.UpdateStrategy.EvacuationStrategy.Type != DisabledEvacuationStrategy
 }
 
 func (s *ServiceTemplate) IsEnabled() bool {

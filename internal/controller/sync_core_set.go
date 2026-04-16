@@ -81,6 +81,9 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult
 		return s.scaleDown(r, instance, currentReplicas)
 	}
 
+	// Stop evacuations of any updated pods.
+	// This is done irrespective of whether Node Evacuation is enabled or not,
+	// to avoid ending up in transient state if it was disabled mid-update.
 	err := s.updateEvacuationState(r, instance)
 	if err != nil {
 		return reconcileError(emperror.Wrap(err, "failed to update evacuation state"))
@@ -270,7 +273,7 @@ func checkCorePodRemoval(
 		return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
 	}
 
-	if nodeInfo.Sessions > 0 {
+	if nodeInfo.Sessions > 0 && instance.Spec.IsEvacuationEnabled() {
 		if instance.Spec.NumCoreReplicas() == 1 && !instance.Spec.HasReplicants() {
 			return coreAdmission{
 				Action: admissionRemove,

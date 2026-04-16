@@ -93,7 +93,7 @@ func configListener(ty string, name string, enabled bool, bind string) string {
 }
 
 //nolint:errcheck
-var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
+var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	const (
 		emqxCRBasic      = "test/e2e/files/resources/emqx.yaml"

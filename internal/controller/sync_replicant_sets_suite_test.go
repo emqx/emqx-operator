@@ -824,6 +824,16 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		))
 	})
 
+	It("node session > 0 & evacuation is disabled", func() {
+		instance.Spec.UpdateStrategy.EvacuationStrategy.Type = crd.DisabledEvacuationStrategy
+		instance.Status.ReplicantNodes[0].Sessions = 99999
+		admission := checkReplicantPodRemoval(instance, currentPod)
+		Expect(admission).Should(And(
+			HaveField("Action", Equal(admissionRemove)),
+			HaveField("Reason", ContainSubstring("safe to stop")),
+		))
+	})
+
 	It("node session is 0", func() {
 		instance.Status.ReplicantNodes[0].Sessions = 0
 		admission := checkReplicantPodRemoval(instance, currentPod)

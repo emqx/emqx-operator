@@ -77,6 +77,12 @@ var emqx *crd.EMQX = &crd.EMQX{
 	},
 	Spec: crd.EMQXSpec{
 		Image: "emqx",
+		UpdateStrategy: crd.UpdateStrategy{
+			Type: "RollingUpdate",
+			EvacuationStrategy: crd.EvacuationStrategy{
+				Type: "NodeEvacuation",
+			},
+		},
 	},
 }
 
