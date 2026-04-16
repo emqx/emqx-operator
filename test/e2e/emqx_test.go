@@ -725,6 +725,11 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 				withReplicants(replicantReplicas),
 				withReplicantResources("500m", "512Mi", "1", "2Gi"),
 				withConfig(),
+				// Make EMQX react to scaling decisions quicker:
+				[]byte(`
+                {"spec": {"updateStrategy": {
+                    "replicants": {"maxUnavailable": 3, "maxSurge": 1}
+                }}}`),
 			)
 			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 			By("wait for EMQX cluster to be ready")
