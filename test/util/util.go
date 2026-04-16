@@ -34,10 +34,11 @@ import (
 const (
 	prometheusOperatorVersion = "v0.77.1"
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
-		"releases/download/%s/bundle.yaml"
+		"releases/download/" + prometheusOperatorVersion + "/bundle.yaml"
 
 	certmanagerVersion = "v1.16.0"
-	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
+	certmanagerURL     = "https://github.com/jetstack/cert-manager/" +
+		"releases/download/" + certmanagerVersion + "/cert-manager.yaml"
 )
 
 func warnError(err error) {
@@ -139,49 +140,12 @@ func PatchDocument(document []byte, patches ...[]byte) []byte {
 
 // InstallPrometheusOperator installs the prometheus Operator to be used to export the enabled metrics.
 func InstallPrometheusOperator() error {
-	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
-	return Kubectl("create", "-f", url)
+	return Kubectl("create", "-f", prometheusOperatorURL)
 }
 
 // UninstallPrometheusOperator uninstalls the prometheus
 func UninstallPrometheusOperator() {
-	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
-	err := Kubectl("delete", "-f", url)
-	if err != nil {
-		warnError(err)
-	}
-}
-
-// IsPrometheusCRDsInstalled checks if any Prometheus CRDs are installed
-// by verifying the existence of key CRDs related to Prometheus.
-func IsPrometheusCRDsInstalled() bool {
-	// List of common Prometheus CRDs
-	prometheusCRDs := []string{
-		"prometheuses.monitoring.coreos.com",
-		"prometheusrules.monitoring.coreos.com",
-		"prometheusagents.monitoring.coreos.com",
-	}
-
-	output, err := KubectlOut("get", "crds", "-o", "custom-columns=NAME:.metadata.name")
-	if err != nil {
-		return false
-	}
-	crdList := GetNonEmptyLines(output)
-	for _, crd := range prometheusCRDs {
-		for _, line := range crdList {
-			if strings.Contains(line, crd) {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
-// UninstallCertManager uninstalls the cert manager
-func UninstallCertManager() {
-	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
-	err := Kubectl("delete", "-f", url)
+	err := Kubectl("delete", "-f", prometheusOperatorURL)
 	if err != nil {
 		warnError(err)
 	}
@@ -189,8 +153,7 @@ func UninstallCertManager() {
 
 // InstallCertManager installs the cert manager bundle.
 func InstallCertManager() error {
-	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
-	err := Kubectl("apply", "-f", url)
+	err := Kubectl("apply", "-f", certmanagerURL)
 	if err != nil {
 		return err
 	}
@@ -203,36 +166,12 @@ func InstallCertManager() error {
 	)
 }
 
-// IsCertManagerCRDsInstalled checks if any Cert Manager CRDs are installed
-// by verifying the existence of key CRDs related to Cert Manager.
-func IsCertManagerCRDsInstalled() bool {
-	// List of common Cert Manager CRDs
-	certManagerCRDs := []string{
-		"certificates.cert-manager.io",
-		"issuers.cert-manager.io",
-		"clusterissuers.cert-manager.io",
-		"certificaterequests.cert-manager.io",
-		"orders.acme.cert-manager.io",
-		"challenges.acme.cert-manager.io",
-	}
-
-	// Execute the kubectl command to get all CRDs
-	output, err := KubectlOut("get", "crds")
+// UninstallCertManager uninstalls the cert manager
+func UninstallCertManager() {
+	err := Kubectl("delete", "-f", certmanagerURL)
 	if err != nil {
-		return false
+		warnError(err)
 	}
-
-	// Check if any of the Cert Manager CRDs are present
-	crdList := GetNonEmptyLines(output)
-	for _, crd := range certManagerCRDs {
-		for _, line := range crdList {
-			if strings.Contains(line, crd) {
-				return true
-			}
-		}
-	}
-
-	return false
 }
 
 // LoadImageToKindClusterWithName loads a local docker image to the kind cluster
