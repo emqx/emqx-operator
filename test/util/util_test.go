@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ func TestFromYAMLString(t *testing.T) {
 			  minReplicas: 1
 			  maxReplicas: 42
 			  scaleTargetRef:
-			    apiVersion: apps.emqx.io/v3alpha1
+			    apiVersion: apps.emqx.io/v3beta1
 			    kind: EMQX
 			    name: emqx
 			  metrics:

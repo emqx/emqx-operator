@@ -129,14 +129,14 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/main.go
 
 .PHONY: doc
-doc: crd-ref-docs manifests doc-crd-v2 ## Generate documentation for the CRDs.
+doc: crd-ref-docs manifests doc-crd-v3 ## Generate documentation for the CRDs.
 
-.PHONY: doc-crd-v2
-doc-crd-v2: ## Generate documentation for the `apps.emqx.io/v2` CRD.
+.PHONY: doc-crd-v3
+doc-crd-v3: ## Generate documentation for the `apps.emqx.io/v3beta1` CRD.
 	$(CRD_REF_DOCS) \
-		--source-path=api/v2 \
+		--source-path=api/v3beta1 \
 		--config=crd-ref-docs-config.yaml \
-		--output-path=docs/en_US/reference/v2-reference.md \
+		--output-path=docs/en_US/reference/v3beta1-reference.md \
 		--renderer=markdown
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.

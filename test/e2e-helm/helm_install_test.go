@@ -95,7 +95,7 @@ var _ = Describe("Helm Install", Ordered, func() {
 
 		By("verify CRDs are installed")
 		Expect(crdExists("emqxes.apps.emqx.io")).To(BeTrue())
-		// NOTE: Rebalance controller is disabled in this release. See api/v3alpha1/rebalance_types.go.
+		// NOTE: Rebalance controller is disabled in this release. See api/v2beta1/rebalance_types.go.
 		// Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
 
 		By("verify operator deployment is available")

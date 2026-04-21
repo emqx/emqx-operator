@@ -15,6 +15,6 @@ resources:
   domain: emqx.io
   group: apps
   kind: EMQX
-  path: github.com/emqx/emqx-operator/api/v3alpha1
-  version: v3alpha1
+  path: github.com/emqx/emqx-operator/api/v3beta1
+  version: v3beta1
 version: "3"

@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	emperror "emperror.dev/errors"
-	crd "github.com/emqx/emqx-operator/api/v3alpha1"
+	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	corev1 "k8s.io/api/core/v1"

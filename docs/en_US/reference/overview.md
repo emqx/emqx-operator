@@ -1,4 +1,3 @@
 # API Reference
 
-+ [apps.emqx.io/v2](./v2-reference.md)
-+ [apps.emqx.io/v2beta1](./v2beta1-reference.md) (partially deprecated)
++ [apps.emqx.io/v3beta1](./v3beta1-reference.md)

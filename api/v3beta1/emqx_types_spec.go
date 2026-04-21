@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2025-2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v3alpha1
+package v3beta1
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -54,7 +54,7 @@ type EMQXSpec struct {
 	// +kubebuilder:default:="cluster.local"
 	ClusterDomain string `json:"clusterDomain,omitempty"`
 
-	// Number of old ReplicaSets, old StatefulSets and old PersistentVolumeClaims to retain to allow rollback.
+	// Number of old ReplicaSets to retain to allow rollback.
 	// +kubebuilder:default:=3
 	RevisionHistoryLimit int32 `json:"revisionHistoryLimit,omitempty"`
 
@@ -119,14 +119,15 @@ type Config struct {
 
 type UpdateStrategy struct {
 	// Determines how cluster upgrade is performed.
-	// * `RollingUpdate`: Perform a rolling upgrade, updating pods one at a time.
+	// * `RollingUpdate`: Perform a rolling upgrade, updating pods gradually; core pods are
+	//    always updated one at a time, updating of replicants is controlled by `replicants`
+	//    strategy.
 	// +kubebuilder:validation:Enum=RollingUpdate
 	// +kubebuilder:default=RollingUpdate
 	Type string `json:"type,omitempty"`
 	// Evacuation strategy settings.
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
-	// Replicants configures the rolling update parameters for replicant ReplicaSet rollouts.
-	// Core StatefulSet rollouts are not affected by these settings.
+	// Parameters of the rolling update for replicant ReplicaSet rollouts.
 	Replicants *ReplicantsUpdateStrategy `json:"replicants,omitempty"`
 }
 

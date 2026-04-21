@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// NOTE: Rebalance controller is disabled in this release. See api/v3alpha1/rebalance_types.go.
+// NOTE: Rebalance controller is disabled in this release. See api/v2beta1/rebalance_types.go.
 
 //nolint:errcheck
 var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, Pending, func() {
