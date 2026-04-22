@@ -39,9 +39,6 @@ var (
 	// re-installation and conflicts.
 	skipPrometheusInstall = os.Getenv("PROMETHEUS_INSTALL_SKIP") == "true"
 
-	// skipCertManagerInstall = os.Getenv("CERT_MANAGER_INSTALL_SKIP") == "true"
-	skipCertManagerInstall = true
-
 	// projectImage is the name of the image which will be build and loaded
 	// with the code source changes to be tested.
 	projectImage = "emqx/emqx-operator:0.0.1"
@@ -51,7 +48,6 @@ var (
 )
 
 var isPrometheusInstalled = false
-var isCertManagerInstalled = false
 
 // TestE2E runs the end-to-end (e2e) test suite for the project. These tests execute in an isolated,
 // temporary environment to validate project changes with the the purposed to be used in CI jobs.
@@ -96,11 +92,6 @@ var _ = BeforeSuite(func() {
 		Expect(util.InstallPrometheusOperator()).To(Succeed())
 		isPrometheusInstalled = true
 	}
-	if !skipCertManagerInstall {
-		By("install CertManager")
-		Expect(util.InstallCertManager()).To(Succeed())
-		isCertManagerInstalled = true
-	}
 })
 
 var _ = AfterSuite(func() {
@@ -108,10 +99,6 @@ var _ = AfterSuite(func() {
 	if !skipPrometheusInstall && isPrometheusInstalled {
 		By("uninstall Prometheus Operator")
 		util.UninstallPrometheusOperator()
-	}
-	if !skipCertManagerInstall && isCertManagerInstalled {
-		By("uninstall CertManager")
-		util.UninstallCertManager()
 	}
 })
 
