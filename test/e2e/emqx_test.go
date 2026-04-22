@@ -102,13 +102,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		By("create manager namespace")
-		Expect(Kubectl("create", "ns", namespace)).To(Succeed())
-
-		By("install CRDs")
-		Expect(Run("make", "install")).To(Succeed())
-
-		By("deploy emqx-operator")
+		By("deploy EMQX Operator")
 		Expect(Run("make", "deploy",
 			fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage),
 			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/manager"),
@@ -121,14 +115,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 	})
 
 	AfterAll(func() {
-		By("undeploy emqx-operator")
+		By("undeploy EMQX Operator")
 		_ = Run("make", "undeploy")
-
-		By("uninstall CRDs")
-		_ = Run("make", "uninstall")
-
-		By("delete manager namespace")
-		_ = Kubectl("delete", "ns", namespace)
 	})
 
 	AfterEach(func() {

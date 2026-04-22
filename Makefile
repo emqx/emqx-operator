@@ -140,11 +140,11 @@ doc-crd-v3: ## Generate documentation for the `apps.emqx.io/v3beta1` CRD.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
-docker-build: ## Build docker image with the manager.
+docker-build: generate ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${OPERATOR_IMAGE} .
 
 .PHONY: docker-build-coverage
-docker-build-coverage: Dockerfile.coverage ## Build docker image with the manager and code coverage enabled.
+docker-build-coverage: Dockerfile.coverage generate ## Build docker image with the manager and code coverage enabled.
 	$(CONTAINER_TOOL) build -t ${OPERATOR_IMAGE} -f Dockerfile.coverage .
 
 .PHONY: docker-push
@@ -159,7 +159,7 @@ docker-push: ## Push docker image with the manager.
 #   OPERATOR_IMAGE=<myregistry/image:<tag>> then the export will fail)
 PLATFORMS ?= linux/arm64,linux/amd64
 .PHONY: docker-buildx
-docker-buildx: Dockerfile.cross ## Build and push docker image for the manager for cross-platform support
+docker-buildx: Dockerfile.cross generate ## Build and push docker image for the manager for cross-platform support
 	- $(CONTAINER_TOOL) buildx create --name emqx-operator-builder
 	$(CONTAINER_TOOL) buildx use emqx-operator-builder
 	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${OPERATOR_IMAGE} -f Dockerfile.cross .

@@ -54,9 +54,6 @@ var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(time.Minute * 5)
 	SetDefaultEventuallyPollingInterval(time.Second * 3)
 
-	By("generate files")
-	Expect(util.Run("make", "generate")).To(Succeed())
-
 	By("generate manifests")
 	Expect(util.Run("make", "manifests")).To(Succeed())
 
