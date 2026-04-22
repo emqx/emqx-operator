@@ -32,13 +32,6 @@ import (
 )
 
 var (
-	// Optional Environment Variables:
-	// - PROMETHEUS_INSTALL_SKIP=true: Skips Prometheus Operator installation during test setup.
-	// - CERT_MANAGER_INSTALL_SKIP=true: Skips CertManager installation during test setup.
-	// These variables are useful if Prometheus or CertManager is already installed, avoiding
-	// re-installation and conflicts.
-	skipPrometheusInstall = os.Getenv("PROMETHEUS_INSTALL_SKIP") == "true"
-
 	// projectImage is the name of the image which will be build and loaded
 	// with the code source changes to be tested.
 	projectImage = "emqx/emqx-operator:0.0.1"
@@ -47,12 +40,9 @@ var (
 	diagnosticReportPath = util.Env("TEST_E2E_DIAGNOSTIC_REPORT_PATH", "test/_reports")
 )
 
-var isPrometheusInstalled = false
-
 // TestE2E runs the end-to-end (e2e) test suite for the project. These tests execute in an isolated,
 // temporary environment to validate project changes with the the purposed to be used in CI jobs.
-// The default setup requires Kind, builds/loads the Manager Docker image locally, and installs
-// CertManager and Prometheus.
+// The default setup requires Kind, builds/loads the Manager Docker image locally.
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 	_, _ = fmt.Fprintf(GinkgoWriter, "Starting emqx-operator integration test suite\n")
@@ -63,9 +53,6 @@ var _ = BeforeSuite(func() {
 	// Set the default timeout and interval for async assertions
 	SetDefaultEventuallyTimeout(time.Minute * 5)
 	SetDefaultEventuallyPollingInterval(time.Second * 3)
-
-	By("ensure Prometheus is enabled")
-	_ = util.UncommentCode("config/default/kustomization.yaml", "#- ../prometheus", "#")
 
 	By("generate files")
 	Expect(util.Run("make", "generate")).To(Succeed())
@@ -83,23 +70,10 @@ var _ = BeforeSuite(func() {
 
 	By("install Metrics Server")
 	Expect(util.InstallMetricsServer()).To(Succeed())
-
-	// The tests-e2e are intended to run on a temporary cluster that is created and destroyed for testing.
-	// To prevent errors when tests run in environments with Prometheus or CertManager already installed,
-	// we check for their presence before execution.
-	if !skipPrometheusInstall {
-		By("install Prometheus Operator")
-		Expect(util.InstallPrometheusOperator()).To(Succeed())
-		isPrometheusInstalled = true
-	}
 })
 
 var _ = AfterSuite(func() {
-	util.UnnstallMetricsServer()
-	if !skipPrometheusInstall && isPrometheusInstalled {
-		By("uninstall Prometheus Operator")
-		util.UninstallPrometheusOperator()
-	}
+	util.UnistallMetricsServer()
 })
 
 func PrintDiagnosticReport(namespace string) {

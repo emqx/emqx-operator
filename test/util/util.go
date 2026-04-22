@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"os"
@@ -159,7 +158,7 @@ func InstallMetricsServer() error {
 	)
 }
 
-func UnnstallMetricsServer() {
+func UnistallMetricsServer() {
 	err := Kubectl("delete", "-f", metricsServerYAML)
 	if err != nil {
 		warnError(err)
@@ -211,20 +210,6 @@ func LoadImageToKindClusterWithName(name string) error {
 	return Run("kind", "load", "docker-image", name, "--name", cluster)
 }
 
-// GetNonEmptyLines converts given command output string into individual objects
-// according to line breakers, and ignores the empty elements in it.
-func GetNonEmptyLines(output string) []string {
-	var res []string
-	elements := strings.Split(output, "\n")
-	for _, element := range elements {
-		if element != "" {
-			res = append(res, element)
-		}
-	}
-
-	return res
-}
-
 // GetProjectDir will return the directory where the project is.
 // It walks up from the current working directory until it finds a go.mod file.
 func GetProjectDir() (string, error) {
@@ -244,53 +229,4 @@ func GetProjectDir() (string, error) {
 		}
 		dir = parent
 	}
-}
-
-// UncommentCode searches for target in the file and remove the comment prefix
-// of the target content. The target content may span multiple lines.
-func UncommentCode(filename, target, prefix string) error {
-	// false positive
-	// nolint:gosec
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-	strContent := string(content)
-
-	idx := strings.Index(strContent, target)
-	if idx < 0 {
-		return fmt.Errorf("unable to find the code %s to be uncomment", target)
-	}
-
-	out := new(bytes.Buffer)
-	_, err = out.Write(content[:idx])
-	if err != nil {
-		return err
-	}
-
-	scanner := bufio.NewScanner(bytes.NewBufferString(target))
-	if !scanner.Scan() {
-		return nil
-	}
-	for {
-		_, err := out.WriteString(strings.TrimPrefix(scanner.Text(), prefix))
-		if err != nil {
-			return err
-		}
-		// Avoid writing a newline in case the previous line was the last in target.
-		if !scanner.Scan() {
-			break
-		}
-		if _, err := out.WriteString("\n"); err != nil {
-			return err
-		}
-	}
-
-	_, err = out.Write(content[idx+len(target):])
-	if err != nil {
-		return err
-	}
-	// false positive
-	// nolint:gosec
-	return os.WriteFile(filename, out.Bytes(), 0644)
 }

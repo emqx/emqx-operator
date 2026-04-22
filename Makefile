@@ -86,11 +86,8 @@ TEST_E2E_UPGRADE_IMAGE_UPGRADE ?= emqx/emqx:6.1.0
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v $$(go list ./... | grep -v /e2e) -coverprofile ./cover.out
 
-# TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
-# The default setup assumes Kind is pre-installed and builds/loads the Manager Docker image locally.
-# Prometheus and CertManager are installed by default; skip with:
-# - PROMETHEUS_INSTALL_SKIP=true
-# - CERT_MANAGER_INSTALL_SKIP=true
+# Prometheus is installed by default; skip with:
+# - TEST_E2E_SKIP_PROMETHEUS_INSTALL=true
 .PHONY: test-e2e
 test-e2e: manifests generate e2e-test-cluster ## Run general E2E tests. Expected an isolated environment using Kind.
 	go test ./test/e2e/ -v -ginkgo.v -timeout 60m
