@@ -30,9 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// namespace where the project is deployed in
-const namespace = "emqx-operator-system"
-
 var (
 	// Optional Environment Variables:
 	// - TEST_E2E_SKIP_PROMETHEUS_INSTALL=true:

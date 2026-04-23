@@ -93,7 +93,7 @@ test-e2e: manifests generate e2e-test-cluster ## Run general E2E tests. Expected
 	go test ./test/e2e/ -v -ginkgo.v -timeout 60m
 
 test-e2e-upgrade: manifests generate e2e-test-cluster ## Run E2E upgrade tests. Expected an isolated environment using Kind.
-	go test ./test/e2e/ -v -ginkgo.v -timeout 20m -ginkgo.focus="EMQX Upgrade Test" \
+	go test ./test/e2e/upgrade -v -ginkgo.v -timeout 20m \
 		-emqx-image-initial=$(TEST_E2E_UPGRADE_IMAGE_INITIAL) \
 		-emqx-image-upgrade=$(TEST_E2E_UPGRADE_IMAGE_UPGRADE)
 

@@ -17,27 +17,23 @@ limitations under the License.
 package e2e
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 
 	"github.com/emqx/emqx-operator/test/util"
 )
 
-var (
+const (
 	// projectImage is the name of the image which will be build and loaded
 	// with the code source changes to be tested.
 	projectImage = "emqx/emqx-operator:0.0.1"
 
-	// diagnosticReportPath is the path to dump the diagnostic report on failure
-	diagnosticReportPath = util.Env("TEST_E2E_DIAGNOSTIC_REPORT_PATH", "test/_reports")
+	// namespace where the project is deployed in
+	namespace = Namespace
 )
 
 // TestE2E runs the end-to-end (e2e) test suite for the project. These tests execute in an isolated,
@@ -45,15 +41,14 @@ var (
 // The default setup requires Kind, builds/loads the Manager Docker image locally.
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
-	_, _ = fmt.Fprintf(GinkgoWriter, "Starting emqx-operator integration test suite\n")
+	// Set the default timeout and interval for async assertions
+	SetDefaultEventuallyTimeout(time.Minute * 5)
+	SetDefaultEventuallyPollingInterval(time.Second * 3)
+	// Run tests
 	RunSpecs(t, "e2e suite")
 }
 
 var _ = BeforeSuite(func() {
-	// Set the default timeout and interval for async assertions
-	SetDefaultEventuallyTimeout(time.Minute * 5)
-	SetDefaultEventuallyPollingInterval(time.Second * 3)
-
 	By("generate manifests")
 	Expect(util.Run("make", "manifests")).To(Succeed())
 
@@ -70,130 +65,5 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	util.UnistallMetricsServer()
+	util.UninstallMetricsServer()
 })
-
-func PrintDiagnosticReport(namespace string) {
-	controllerLogs, err := util.KubectlOut("logs",
-		"--selector", "control-plane=controller-manager",
-		"--namespace", namespace,
-		"--tail", "-1")
-	if err == nil {
-		GinkgoWriter.Print("Controller logs:\n", controllerLogs)
-	} else {
-		GinkgoWriter.Printf("Failed to get Controller logs: %s", err)
-	}
-	resources, err := util.KubectlOut("get", "all",
-		"--selector", "apps.emqx.io/managed-by=emqx-operator")
-	if err == nil {
-		GinkgoWriter.Print("Managed EMQX resources:\n", resources)
-	} else {
-		GinkgoWriter.Printf("Failed to list managed resources: %s", err)
-	}
-	emqxCR, err := util.KubectlOut("get", "emqx", "emqx", "--output", "yaml")
-	if err == nil {
-		GinkgoWriter.Print("EMQX CR:\n", emqxCR)
-	} else {
-		GinkgoWriter.Printf("Failed to get EMQX CR: %s", err)
-	}
-	emqxLogs, err := util.KubectlOut("logs",
-		"--selector", "apps.emqx.io/instance=emqx,apps.emqx.io/managed-by=emqx-operator")
-	if err == nil {
-		GinkgoWriter.Print("EMQX logs:\n", emqxLogs)
-	} else {
-		GinkgoWriter.Printf("Failed to get EMQX logs: %s", err)
-	}
-	eventsOutput, err := util.KubectlOut("get", "events", "--sort-by=.lastTimestamp")
-	if err == nil {
-		GinkgoWriter.Print("Kubernetes events:\n", eventsOutput)
-	} else {
-		GinkgoWriter.Printf("Failed to get Kubernetes events: %s", err)
-	}
-}
-
-func DumpDiagnosticReport(namespace string, name string, time time.Time) {
-	path := filepath.Join(diagnosticReportPath, name, time.Format("20060102150405"))
-	err := os.MkdirAll(path, 0755)
-	if err != nil {
-		GinkgoWriter.Printf("Failed to create diagnostic report path: %s", err)
-		return
-	}
-
-	GinkgoWriter.Println("Dumping diagnostic report: ", path)
-
-	controllerLogs, err := util.KubectlOut("logs",
-		"--selector", "control-plane=controller-manager",
-		"--namespace", namespace,
-		"--tail", "-1")
-	if err == nil {
-		_ = dumpString(path, "controller.log", controllerLogs)
-	} else {
-		GinkgoWriter.Println("Failed to get Controller logs:", err)
-	}
-
-	operatorManagedLabel := "apps.emqx.io/managed-by=emqx-operator"
-	resources, err := util.KubectlOut("get", "all", "--selector", operatorManagedLabel)
-	if err == nil {
-		_ = dumpString(path, "resources", resources)
-	} else {
-		GinkgoWriter.Println("Failed to list managed resources:", err)
-	}
-
-	emqxCRs, err := util.KubectlOut("get", "emqx", "--output", "yaml")
-	if err == nil {
-		_ = dumpString(path, "emqx-crs.yaml", emqxCRs)
-	} else {
-		GinkgoWriter.Println("Failed to list EMQX CRs:", err)
-	}
-
-	emqxPods, err := util.KubectlOut("get", "pod", "--selector", operatorManagedLabel, "-o", "yaml")
-	if err == nil {
-		_ = dumpString(path, "emqx-pods.yaml", emqxPods)
-	} else {
-		GinkgoWriter.Println("Failed to list EMQX pods:", err)
-	}
-
-	emqxStatefulSets, err := util.KubectlOut("get", "statefulset", "--selector", operatorManagedLabel, "-o", "yaml")
-	if err == nil {
-		_ = dumpString(path, "emqx-statefulsets.yaml", emqxStatefulSets)
-	} else {
-		GinkgoWriter.Println("Failed to list EMQX StatefulSets:", err)
-	}
-
-	emqxReplicaSets, err := util.KubectlOut("get", "replicaset", "--selector", operatorManagedLabel, "-o", "yaml")
-	if err == nil {
-		_ = dumpString(path, "emqx-replicasets.yaml", emqxReplicaSets)
-	} else {
-		GinkgoWriter.Println("Failed to list EMQX ReplicaSets:", err)
-	}
-
-	var podList corev1.PodList
-	err = json.Unmarshal(util.FromYAML([]byte(emqxPods)), &podList)
-	if err != nil {
-		GinkgoWriter.Println("Failed to unmarshal EMQX pods:", err)
-	}
-	for _, pod := range podList.Items {
-		logs, err := util.KubectlOut("logs", pod.Name, "--tail", "-1")
-		if err == nil {
-			_ = dumpString(path, pod.Name+".log", logs)
-		} else {
-			GinkgoWriter.Println("Failed to get logs for pod: %s", pod.Name, err)
-		}
-	}
-
-	dsInfo, _ := util.KubectlOut("exec", "service/emqx-listeners", "--", "emqx", "ctl", "ds", "info")
-	if dsInfo != "" {
-		_ = dumpString(path, "emqx.ctl.ds-info", dsInfo)
-	}
-
-	events, err := util.KubectlOut("get", "events", "--sort-by=.lastTimestamp")
-	if err == nil {
-		_ = dumpString(path, "events", events)
-	} else {
-		GinkgoWriter.Println("Failed to get Kubernetes events:", err)
-	}
-}
-
-func dumpString(path string, name string, content string) error {
-	return os.WriteFile(filepath.Join(path, name), []byte(content), 0644)
-}

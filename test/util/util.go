@@ -158,7 +158,7 @@ func InstallMetricsServer() error {
 	)
 }
 
-func UnistallMetricsServer() {
+func UninstallMetricsServer() {
 	err := Kubectl("delete", "-f", metricsServerYAML)
 	if err != nil {
 		warnError(err)
