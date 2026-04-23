@@ -82,6 +82,10 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 TEST_E2E_UPGRADE_IMAGE_INITIAL ?= emqx/emqx:5.10.2
 TEST_E2E_UPGRADE_IMAGE_UPGRADE ?= emqx/emqx:6.1.0
 
+TEST_E2E_STRESS_STEPS ?= 8
+TEST_E2E_STRESS_STEP_INTERVAL ?= 5s
+TEST_E2E_STRESS_IMAGE ?= emqx/emqx:6.1.0
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v $$(go list ./... | grep -v /e2e) -coverprofile ./cover.out
@@ -96,6 +100,12 @@ test-e2e-upgrade: manifests generate e2e-test-cluster ## Run E2E upgrade tests. 
 	go test ./test/e2e/upgrade -v -ginkgo.v -timeout 20m \
 		-emqx-image-initial=$(TEST_E2E_UPGRADE_IMAGE_INITIAL) \
 		-emqx-image-upgrade=$(TEST_E2E_UPGRADE_IMAGE_UPGRADE)
+
+test-e2e-stress: manifests generate e2e-test-cluster ## Run E2E stress tests. Expected an isolated environment using Kind.
+	go test ./test/e2e/stress -v -ginkgo.v -timeout 20m \
+		-stress-steps=$(TEST_E2E_STRESS_STEPS) \
+		-step-interval=$(TEST_E2E_STRESS_STEP_INTERVAL) \
+		-emqx-image=$(TEST_E2E_STRESS_IMAGE)
 
 .PHONY: test-e2e-helm
 test-e2e-helm: e2e-test-cluster ## Run Helm chart E2E tests. Expected an isolated environment using Kind.
