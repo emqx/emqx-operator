@@ -43,10 +43,6 @@ type EMQXSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/security/service-accounts
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// Bootstrap API keys to access EMQX API.
-	// Cannot be updated.
-	BootstrapAPIKeys []BootstrapAPIKey `json:"bootstrapAPIKeys,omitempty"`
-
 	// EMQX Configuration.
 	Config Config `json:"config,omitempty"`
 
@@ -77,31 +73,6 @@ type EMQXSpec struct {
 	// Listeners Service points to the set of EMQX replicant nodes if they are enabled and exist.
 	// Otherwise, it points to the set of EMQX core nodes.
 	ListenersServiceTemplate *ServiceTemplate `json:"listenersServiceTemplate,omitempty"`
-}
-
-type BootstrapAPIKey struct {
-	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d-_]+$`
-	Key string `json:"key,omitempty"`
-	// +kubebuilder:validation:MinLength:=3
-	// +kubebuilder:validation:MaxLength:=128
-	Secret string `json:"secret,omitempty"`
-	// Reference to a Secret entry containing the EMQX API Key.
-	SecretRef *SecretRef `json:"secretRef,omitempty"`
-}
-
-type SecretRef struct {
-	// Reference to a Secret entry containing the EMQX API Key.
-	Key KeyRef `json:"key"`
-	// Reference to a Secret entry containing the EMQX API Key's secret.
-	Secret KeyRef `json:"secret"`
-}
-
-type KeyRef struct {
-	// Name of the Secret object.
-	SecretName string `json:"secretName"`
-	// Entry within the Secret data.
-	// +kubebuilder:validation:Pattern:=`^[a-zA-Z\d-_]+$`
-	SecretKey string `json:"secretKey"`
 }
 
 type Config struct {

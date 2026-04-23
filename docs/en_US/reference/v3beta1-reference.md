@@ -13,24 +13,6 @@ Package v3beta1 contains API Schema definitions for the apps.emqx.io v3beta1 API
 
 
 
-#### BootstrapAPIKey
-
-
-
-
-
-
-
-_Appears in:_
-- [EMQXSpec](#emqxspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `key` _string_ |  |  | Pattern: `^[a-zA-Z\d-_]+$` <br /> |
-| `secret` _string_ |  |  | MaxLength: 128 <br />MinLength: 3 <br /> |
-| `secretRef` _[SecretRef](#secretref)_ | Reference to a Secret entry containing the EMQX API Key. |  |  |
-
-
 #### Config
 
 
@@ -279,7 +261,6 @@ _Appears in:_
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#pullpolicy-v1-core)_ | Container image pull policy.<br />One of `Always`, `Never`, `IfNotPresent`.<br />Defaults to `Always` if `:latest` tag is specified, or `IfNotPresent` otherwise.<br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  |  |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#localobjectreference-v1-core) array_ | ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.<br />If specified, these secrets will be passed to individual puller implementations for them to use.<br />More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |  |  |
 | `serviceAccountName` _string_ | ServiceAccount name.<br />Managed ReplicaSets and StatefulSets are associated with the specified ServiceAccount for authentication purposes.<br />More info: https://kubernetes.io/docs/concepts/security/service-accounts |  |  |
-| `bootstrapAPIKeys` _[BootstrapAPIKey](#bootstrapapikey) array_ | Bootstrap API keys to access EMQX API.<br />Cannot be updated. |  |  |
 | `config` _[Config](#config)_ | EMQX Configuration. |  |  |
 | `clusterDomain` _string_ | Kubernetes cluster domain. | cluster.local |  |
 | `revisionHistoryLimit` _integer_ | Number of old ReplicaSets to retain to allow rollback. | 3 |  |
@@ -353,23 +334,6 @@ _Appears in:_
 | `Disabled` |  |
 
 
-#### KeyRef
-
-
-
-
-
-
-
-_Appears in:_
-- [SecretRef](#secretref)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `secretName` _string_ | Name of the Secret object. |  |  |
-| `secretKey` _string_ | Entry within the Secret data. |  | Pattern: `^[a-zA-Z\d-_]+$` <br /> |
-
-
 #### NodeEvacuationStatus
 
 
@@ -430,23 +394,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `maxUnavailable` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#intorstring-intstr-util)_ | MaxUnavailable is the maximum number of old replicant pods that may be drained (evacuating,<br />terminating, or marked for deletion) at once during a replicant ReplicaSet rollout.<br />Integers are absolute counts; strings are percentages of desired replicant replicas (e.g. "25%").<br />Defaults to 1 (serial drain). |  | XIntOrString: \{\} <br /> |
 | `maxSurge` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#intorstring-intstr-util)_ | MaxSurge is the number of extra replicant pods allowed above the desired replica count on the<br />new ReplicaSet during a template rollout. Integers are absolute; strings are percentages of desired replicas.<br />Defaults to 0. |  | XIntOrString: \{\} <br /> |
-
-
-#### SecretRef
-
-
-
-
-
-
-
-_Appears in:_
-- [BootstrapAPIKey](#bootstrapapikey)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `key` _[KeyRef](#keyref)_ | Reference to a Secret entry containing the EMQX API Key. |  |  |
-| `secret` _[KeyRef](#keyref)_ | Reference to a Secret entry containing the EMQX API Key's secret. |  |  |
 
 
 #### ServiceTemplate
