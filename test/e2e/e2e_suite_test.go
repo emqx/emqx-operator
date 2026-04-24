@@ -63,10 +63,17 @@ func TestE2E(t *testing.T) {
 	RunSpecs(t, "e2e suite")
 }
 
+const (
+	defaultEventualTimeout = time.Minute * 5
+	defaultPollingInterval = time.Second * 3
+
+	shortEventualTimeout = defaultEventualTimeout / 4
+)
+
 var _ = BeforeSuite(func() {
 	// Set the default timeout and interval for async assertions
-	SetDefaultEventuallyTimeout(time.Minute * 5)
-	SetDefaultEventuallyPollingInterval(time.Second * 3)
+	SetDefaultEventuallyTimeout(defaultEventualTimeout)
+	SetDefaultEventuallyPollingInterval(defaultPollingInterval)
 
 	By("ensure Prometheus is enabled")
 	_ = util.UncommentCode("config/default/kustomization.yaml", "#- ../prometheus", "#")

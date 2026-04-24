@@ -29,10 +29,18 @@ func init() {
 var _ = Describe("EMQX Upgrade Test", Ordered, func() {
 
 	const emqxCRBasic = "test/e2e/files/resources/emqx.yaml"
+	var emqxCR []byte
+
+	var workaround *upgradeWorkaround
 
 	BeforeAll(func() {
 		if emqxImageInitial == "" || emqxImageUpgrade == "" {
 			Skip("Both `-emqx-image-initial` and `-emqx-image-upgrade` should be set")
+		}
+
+		workaround = resolvePlaybook(emqxImageInitial, emqxImageUpgrade)
+		if workaround != nil {
+			GinkgoWriter.Printf("upgrade workaround: %s\n", workaround.Description)
 		}
 
 		By("create manager namespace")
@@ -66,7 +74,7 @@ var _ = Describe("EMQX Upgrade Test", Ordered, func() {
 
 	It("deploy cluster", func() {
 		By("create EMQX cluster")
-		emqxCR := PatchDocument(
+		emqxCR = PatchDocument(
 			FromYAMLFile(emqxCRBasic),
 			withImage(emqxImageInitial),
 			withCores(coreReplicas),
@@ -92,12 +100,35 @@ var _ = Describe("EMQX Upgrade Test", Ordered, func() {
 			"--timeout=1m",
 		)).To(Succeed(), "Timed out waiting for MQTTX to be ready")
 
+		emqxCR = PatchDocument(emqxCR, withImage(emqxImageUpgrade))
+		if workaround != nil && workaround.Prepare != nil {
+			By("prepare upgrade workaround")
+			Expect(workaround.Prepare(&emqxCR)).To(Succeed())
+		}
+
 		By("change EMQX image")
 		changingTime := metav1.Now()
-		Expect(Kubectl("patch", "emqx", "emqx",
-			"--type", "json",
-			"--patch", `[{"op": "replace", "path": "/spec/image", "value": "`+emqxImageUpgrade+`"}]`)).
-			To(Succeed())
+		Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+
+		if workaround != nil {
+			By("wait upgrade either completes or gets stuck")
+			failure := InterceptGomegaFailure(func() {
+				Eventually(checkEMQXReady).WithArguments(changingTime).
+					WithTimeout(defaultEventualTimeout / 2).
+					Should(Succeed())
+			})
+			if failure == nil {
+				By("upgrade proceeds without manual intervention")
+			} else {
+				Eventually(workaround.Precondition).WithArguments("emqx").
+					WithTimeout(shortEventualTimeout).
+					ShouldNot(Equal(metav1.ConditionUnknown))
+				By(fmt.Sprintf("applying upgrade workaround: %s", workaround.Description))
+				Eventually(workaround.Remediate).WithArguments("emqx").
+					WithTimeout(shortEventualTimeout).
+					Should(Succeed())
+			}
+		}
 
 		By("wait for EMQX cluster to be ready again")
 		Eventually(checkEMQXReady).WithArguments(changingTime).Should(Succeed())
