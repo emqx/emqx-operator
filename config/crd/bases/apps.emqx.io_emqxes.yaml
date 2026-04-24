@@ -48,59 +48,6 @@ spec:
           spec:
             description: Specification of the desired state of the EMQX cluster.
             properties:
-              bootstrapAPIKeys:
-                description: |-
-                  Bootstrap API keys to access EMQX API.
-                  Cannot be updated.
-                items:
-                  properties:
-                    key:
-                      pattern: ^[a-zA-Z\d-_]+$
-                      type: string
-                    secret:
-                      maxLength: 128
-                      minLength: 3
-                      type: string
-                    secretRef:
-                      description: Reference to a Secret entry containing the EMQX
-                        API Key.
-                      properties:
-                        key:
-                          description: Reference to a Secret entry containing the
-                            EMQX API Key.
-                          properties:
-                            secretKey:
-                              description: Entry within the Secret data.
-                              pattern: ^[a-zA-Z\d-_]+$
-                              type: string
-                            secretName:
-                              description: Name of the Secret object.
-                              type: string
-                          required:
-                          - secretKey
-                          - secretName
-                          type: object
-                        secret:
-                          description: Reference to a Secret entry containing the
-                            EMQX API Key's secret.
-                          properties:
-                            secretKey:
-                              description: Entry within the Secret data.
-                              pattern: ^[a-zA-Z\d-_]+$
-                              type: string
-                            secretName:
-                              description: Name of the Secret object.
-                              type: string
-                          required:
-                          - secretKey
-                          - secretName
-                          type: object
-                      required:
-                      - key
-                      - secret
-                      type: object
-                  type: object
-                type: array
               clusterDomain:
                 default: cluster.local
                 description: Kubernetes cluster domain.
