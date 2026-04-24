@@ -1,3 +1,19 @@
+/*
+Copyright 2026.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package e2e
 
 import (
@@ -8,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func checkEMQXReady(g Gomega, afterTime ...metav1.Time) {
+func EMQXReady(g Gomega, afterTime ...metav1.Time) {
 	var cond metav1.Condition
 	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.conditions[?(@.type==\"Ready\")]}")).
 		To(UnmarshalInto(&cond), "Failed to get emqx status")
@@ -24,7 +40,7 @@ func checkEMQXReady(g Gomega, afterTime ...metav1.Time) {
 	}
 }
 
-func checkEMQXStatus(g Gomega, coreReplicas int) {
+func CoresStable(g Gomega, coreReplicas int) {
 	var status crd.CoreNodesStatus
 	var nodes []crd.EMQXNode
 	var podList corev1.PodList
@@ -75,7 +91,7 @@ func checkEMQXStatus(g Gomega, coreReplicas int) {
 	)
 }
 
-func checkNoReplicants(g Gomega) {
+func NoReplicants(g Gomega) {
 	g.Expect(KubectlOut("get", "emqx", "emqx",
 		"-o", "jsonpath={.status.replicantNodesStatus.currentReplicas}",
 	)).To(Equal("0"), "EMQX cluster status has replicant replicas")
@@ -84,7 +100,7 @@ func checkNoReplicants(g Gomega) {
 	)).To(BeEmpty(), "EMQX cluster status lists replicant nodes")
 }
 
-func checkReplicantStatus(g Gomega, replicantReplicas int) {
+func ReplicantsStable(g Gomega, replicantReplicas int) {
 	var status crd.ReplicantNodesStatus
 	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodesStatus}")).
 		To(UnmarshalInto(&status), "Failed to get EMQX replicant nodes status")
@@ -96,10 +112,6 @@ func checkReplicantStatus(g Gomega, replicantReplicas int) {
 		),
 		"EMQX status does not have expected number of replicant nodes",
 	)
-	checkReplicantNodesStatusRevision(g, status, replicantReplicas)
-}
-
-func checkReplicantNodesStatusRevision(g Gomega, status crd.ReplicantNodesStatus, replicas int) {
 	var podList corev1.PodList
 	g.Expect(status).To(
 		And(
@@ -118,12 +130,12 @@ func checkReplicantNodesStatusRevision(g Gomega, status crd.ReplicantNodesStatus
 		"-o", "json",
 	)).To(UnmarshalInto(&podList), "Failed to list replicant pods")
 	g.Expect(podList.Items).To(
-		HaveLen(replicas),
-		"EMQX cluster does not have %d current revision replicant pods", replicas,
+		HaveLen(replicantReplicas),
+		"EMQX cluster does not have %d current revision replicant pods", replicantReplicas,
 	)
 }
 
-func checkDSReplicationStatus(g Gomega, coreReplicas int) {
+func DSReplicationStable(g Gomega, coreReplicas int) {
 	status := &crd.DSReplicationStatus{}
 	replicationFactor := min(3, coreReplicas)
 	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.dsReplication}")).
@@ -146,7 +158,7 @@ func checkDSReplicationStatus(g Gomega, coreReplicas int) {
 	)
 }
 
-func checkDSReplicationHealthy(g Gomega) {
+func DSReplicationHealthy(g Gomega) {
 	g.Expect(KubectlOut("exec", "service/emqx-listeners", "--", "emqx", "ctl", "ds", "info")).
 		NotTo(
 			ContainSubstring("(!)"),

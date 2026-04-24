@@ -1,14 +1,26 @@
+/*
+Copyright 2025-2026.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package e2e
 
 import (
-	"encoding/json"
 	"fmt"
-	"slices"
-	"strings"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	. "github.com/emqx/emqx-operator/test/util"
-	"github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,20 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func withCores(numReplicas int) []byte {
-	return fmt.Appendf(nil,
-		`{"spec": {"coreTemplate": {"spec": {"replicas": %d}}}}`,
-		numReplicas,
-	)
-}
-
-func withReplicants(numReplicas int) []byte {
-	return fmt.Appendf(nil,
-		`{"spec": {"replicantTemplate": {"spec": {"minReadySeconds": 3, "replicas": %d}}}}`,
-		numReplicas,
-	)
-}
-
 func withReplicantResources(cpuRequest, memRequest, cpuLimit, memLimit string) []byte {
 	return fmt.Appendf(nil,
 		`{"spec": {"replicantTemplate": {"spec": {"resources": {
@@ -40,46 +38,6 @@ func withReplicantResources(cpuRequest, memRequest, cpuLimit, memLimit string) [
 		}}}}}`,
 		cpuRequest, memRequest, cpuLimit, memLimit,
 	)
-}
-
-func withImage(image string) []byte {
-	return fmt.Appendf(nil, `{"spec": {"image": "%s"}}`, image)
-}
-
-func withConfig(snippets ...string) []byte {
-	defaults := []string{configLicense(), configConsoleLog("info")}
-	config := slices.Concat(defaults, snippets)
-	return fmt.Appendf(nil, `{"spec": {"config": {"data": %s}}}`, intoJsonString(config...))
-}
-
-func intoJsonString(snippets ...string) []byte {
-	configStr := dedent.Dedent(strings.Join(snippets, ""))
-	jsonStr, _ := json.Marshal(configStr)
-	return jsonStr
-}
-
-func configLicense() string {
-	return `
-		license { key = "evaluation" }
-	`
-}
-
-func configConsoleLog(level string) string {
-	return `
-		log.console { level = "` + level + `" }
-	`
-}
-
-func configDS() string {
-	return `
-		durable_sessions { enable = true }
-		durable_storage { 
-			messages {
-				backend = builtin_raft
-				n_shards = 8
-			}
-		}
-	`
 }
 
 //nolint:unparam
@@ -102,13 +60,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		By("create manager namespace")
-		Expect(Kubectl("create", "ns", namespace)).To(Succeed())
-
-		By("install CRDs")
-		Expect(Run("make", "install")).To(Succeed())
-
-		By("deploy emqx-operator")
+		By("deploy EMQX Operator")
 		Expect(Run("make", "deploy",
 			fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage),
 			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/manager"),
@@ -121,14 +73,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 	})
 
 	AfterAll(func() {
-		By("undeploy emqx-operator")
+		By("undeploy EMQX Operator")
 		_ = Run("make", "undeploy")
-
-		By("uninstall CRDs")
-		_ = Run("make", "uninstall")
-
-		By("delete manager namespace")
-		_ = Kubectl("delete", "ns", namespace)
 	})
 
 	AfterEach(func() {
@@ -151,9 +97,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)
 			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 			By("wait for EMQX cluster to be ready")
-			Eventually(checkEMQXReady).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			checkNoReplicants(Default)
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(NoReplicants).Should(Succeed())
 		})
 
 		It("scale cluster up", func() {
@@ -166,9 +112,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 					coreReplicas,
 				),
 			)).To(Succeed(), "Failed to scale up EMQX cluster")
-			Eventually(checkEMQXReady).WithArguments(scaleupStartedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			checkNoReplicants(Default)
+			Eventually(EMQXReady).WithArguments(scaleupStartedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(NoReplicants).Should(Succeed())
 		})
 
 		It("scale cluster down", func() {
@@ -181,9 +127,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 					coreReplicas,
 				),
 			)).To(Succeed(), "Failed to scale down EMQX cluster")
-			Eventually(checkEMQXReady).WithArguments(scaledownStartedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			checkNoReplicants(Default)
+			Eventually(EMQXReady).WithArguments(scaledownStartedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(NoReplicants).Should(Succeed())
 		})
 
 		It("change image to trigger rolling update", func() {
@@ -217,9 +163,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status.nodeEvacuations}").
 				Should(BeEmpty())
 
-			Eventually(checkEMQXReady).WithArguments(changedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			checkNoReplicants(Default)
+			Eventually(EMQXReady).WithArguments(changedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(NoReplicants).Should(Succeed())
 
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
@@ -253,7 +199,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				"--patch", `[{"op": "replace", "path": "/spec/config/data", "value": `+configChange+`}]`)).
 				To(Succeed())
 			By("wait for EMQX cluster to be ready")
-			Eventually(checkEMQXReady).Should(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
 			By("wait for services to be updated")
 			var servicePorts []corev1.ServicePort
 			Eventually(KubectlOut).WithArguments("get", "service", "emqx-listeners", "-o", "jsonpath={.spec.ports}").
@@ -296,8 +242,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)
 			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 			By("wait for EMQX cluster to be ready")
-			Eventually(checkEMQXReady).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
 		})
 
 		It("trigger botched rolling updates", func() {
@@ -312,7 +258,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 			By("lookup initial EMQX status")
 			var statusInitial crd.CoreNodesStatus
-			Eventually(checkEMQXReady).Should(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
 				To(UnmarshalInto(&statusInitial))
 
@@ -324,7 +270,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 					{"op": "replace", "path": "/spec/image", "value": "emqx/emqx:5.Y.ZZZ"}
 				]`)).
 				To(Succeed())
-			Consistently(checkEMQXReady, "30s", "3s").WithArguments(changedAt1).Should(Not(Succeed()))
+			Consistently(EMQXReady, "30s", "3s").WithArguments(changedAt1).Should(Not(Succeed()))
 
 			By("specify broken EMQX config")
 			changedAt2 := metav1.Now()
@@ -336,7 +282,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 					{"op": "replace", "path": "/spec/image", "value": "`+emqxImageUpgrade+`"},
 				]`)).
 				To(Succeed())
-			Consistently(checkEMQXReady, "30s", "3s").WithArguments(changedAt2).Should(Not(Succeed()))
+			Consistently(EMQXReady, "30s", "3s").WithArguments(changedAt2).Should(Not(Succeed()))
 
 			var status crd.CoreNodesStatus
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.coreNodesStatus}")).
@@ -357,8 +303,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 					{"op": "replace", "path": "/spec/image", "value": "`+imageForceChange+`"},
 				]`)).
 				To(Succeed())
-			Eventually(checkEMQXReady).WithArguments(changedAt3).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(changedAt3).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
 		})
 
 		It("delete cluster", func() {
@@ -382,9 +328,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)
 			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 			By("wait for EMQX cluster to be ready")
-			Eventually(checkEMQXReady).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
 		})
 
 		It("scale cluster up", func() {
@@ -402,9 +348,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				"--patch", `[{"op": "replace", "path": "/spec/replicantTemplate/spec/replicas", "value": 3}]`)).
 				To(Succeed(), "Failed to scale emqx cluster")
 			By("wait for EMQX cluster to be ready after scaling")
-			Eventually(checkEMQXReady).WithArguments(scaleupStartedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(scaleupStartedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
 		})
 
 		It("scale cluster down", func() {
@@ -422,9 +368,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				"--patch", `[{"op": "replace", "path": "/spec/replicantTemplate/spec/replicas", "value": 2}]`)).
 				To(Succeed(), "Failed to scale emqx cluster")
 			By("wait for EMQX cluster to be ready after scaling")
-			Eventually(checkEMQXReady).WithArguments(scaledownStartedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(scaledownStartedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
 		})
 
 		It("change image to trigger rolling update", func() {
@@ -468,9 +414,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				ShouldNot(ContainSubstring("connection_eviction_rate"))
 
 			By("wait for EMQX cluster to be ready again")
-			Eventually(checkEMQXReady).WithArguments(changingTime).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(changingTime).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
 
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
@@ -512,16 +458,16 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				withImage(emqxImage),
 				withCores(coreReplicas),
 				withReplicants(replicantReplicas),
-				withConfig(configDS()),
+				withConfig(ConfigDS()),
 			)
 			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 
 			By("wait for EMQX cluster to be ready")
-			Eventually(checkEMQXReady).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
-			Eventually(checkDSReplicationStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkDSReplicationHealthy).Should(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(DSReplicationStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(DSReplicationHealthy).Should(Succeed())
 
 			By("verify EMQX pods have relevant conditions")
 			var pods corev1.PodList
@@ -555,11 +501,11 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				"--patch", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 4}]`,
 			)).To(Succeed())
 			By("wait for EMQX cluster to be ready after scaling")
-			Eventually(checkEMQXReady).WithArguments(scaleStartedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
-			Eventually(checkDSReplicationStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkDSReplicationHealthy).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(scaleStartedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(DSReplicationStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(DSReplicationHealthy).Should(Succeed())
 		})
 
 		It("scale down core EMQX cluster", func() {
@@ -571,12 +517,12 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				"--patch", `[{"op": "replace", "path": "/spec/coreTemplate/spec/replicas", "value": 2}]`,
 			)).To(Succeed())
 			By("wait for EMQX cluster to be ready after scaling")
-			Eventually(checkEMQXReady).WithArguments(scaleStartedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
-			Eventually(checkDSReplicationStatus).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(scaleStartedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(DSReplicationStable).WithArguments(coreReplicas).Should(Succeed())
 			// EMQX 5.10.1: Lost sites are expected to hang around.
-			// Eventually(checkDSReplicationHealthy).Should(Succeed())
+			// Eventually(DSReplicationHealthy).Should(Succeed())
 		})
 
 		It("perform a rolling update", func() {
@@ -600,9 +546,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)).To(Succeed())
 
 			By("wait for EMQX cluster to be ready again")
-			Eventually(checkEMQXReady).WithArguments(changedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(changedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
 
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
@@ -621,9 +567,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)
 
 			By("wait for DS replication status to be stable")
-			Eventually(checkDSReplicationStatus).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(DSReplicationStable).WithArguments(coreReplicas).Should(Succeed())
 			// EMQX 5.10.1: Lost sites are expected to hang around.
-			// Eventually(checkDSReplicationHealthy).Should(Succeed())
+			// Eventually(DSReplicationHealthy).Should(Succeed())
 		})
 
 		It("delete core-replicant EMQX cluster", func() {
@@ -652,14 +598,14 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 
 			By("wait for EMQX cluster to be ready")
-			Eventually(checkEMQXReady).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
 		})
 
 		It("enable DS replication", func() {
 			By("change config + add label to trigger rolling update")
-			configDs := string(intoJsonString(configDS()))
+			configDs := string(intoJsonString(ConfigDS()))
 			changedAt := metav1.Now()
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
@@ -670,12 +616,12 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)).To(Succeed())
 
 			By("wait for EMQX cluster to become ready again")
-			Eventually(checkEMQXReady).WithArguments(changedAt).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
-			Eventually(checkDSReplicationStatus).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(changedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(DSReplicationStable).WithArguments(coreReplicas).Should(Succeed())
 			// EMQX 5.10.1: Initial cluster's sites are expected to hang around.
-			// Eventually(checkDSReplicationHealthy).Should(Succeed())
+			// Eventually(DSReplicationHealthy).Should(Succeed())
 
 			By("verify EMQX pods have relevant conditions")
 			var pods corev1.PodList
@@ -733,9 +679,9 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)
 			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 			By("wait for EMQX cluster to be ready")
-			Eventually(checkEMQXReady).Should(Succeed())
-			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
 		})
 
 		It("scale subresource reports correct replica counts and selector", func() {
@@ -778,8 +724,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				To(Succeed(), "kubectl scale should succeed")
 
 			By("wait for EMQX cluster to be ready after scaling")
-			Eventually(checkEMQXReady).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(newReplicas).Should(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(newReplicas).Should(Succeed())
 
 			By("verify scale subresource reflects the new replica count")
 			var scale autoscalingv1.Scale
@@ -839,8 +785,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 					HaveField("Status.CurrentReplicas", BeEquivalentTo(minReplicas)),
 				), "HPA should scale replicant set down")
 
-			Eventually(checkEMQXReady).WithArguments(hpaCreatedAt).Should(Succeed())
-			Eventually(checkReplicantStatus).WithArguments(minReplicas).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(hpaCreatedAt).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(minReplicas).Should(Succeed())
 		})
 
 		It("delete cluster and HPA", func() {

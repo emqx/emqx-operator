@@ -58,6 +58,52 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
+  test-stress:
+    name: E2E Stress Tests
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - profile: short
+            steps: 5
+            interval: 5s
+          - profile: long
+            steps: 15
+            interval: 10s
+
+    runs-on: ubuntu-latest
+    env:
+      TEST_E2E_DIAGNOSTIC_REPORT_PATH: ${{ github.workspace }}/test-report
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - run: go mod tidy
+
+      - run: make test-e2e-stress
+        env:
+          TEST_E2E_STRESS_STEPS: ${{ matrix.steps }}
+          TEST_E2E_STRESS_STEP_INTERVAL: ${{ matrix.interval }}
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-report-stress-${{ matrix.profile }}
+          path: ${{ env.TEST_E2E_DIAGNOSTIC_REPORT_PATH }}
+          if-no-files-found: ignore
+
+      - run: go tool covdata textfmt -i /tmp/kind/data/emqx-operator-system/test-e2e-coverage -o ${{ github.workspace }}/cover.stress.out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverprofile-stress-${{ matrix.profile }}
+          path: ${{ github.workspace }}/cover.stress.out
+          if-no-files-found: ignore
+          retention-days: 1
+
   test-upgrade:
     name: E2E Upgrade Tests - ${{ matrix.profile }}
     strategy:

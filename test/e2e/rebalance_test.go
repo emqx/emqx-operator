@@ -74,7 +74,7 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, Pending, func() 
 		Expect(Kubectl("apply", "-f", "test/e2e/files/resources/emqx.yaml")).To(Succeed())
 		defer Kubectl("delete", "-f", "test/e2e/files/resources/emqx.yaml")
 		By("wait for EMQX to be ready")
-		Eventually(checkEMQXReady).Should(Succeed())
+		Eventually(EMQXReady).Should(Succeed())
 
 		By("create Rebalance CR")
 		Expect(Kubectl("apply", "-f", "test/e2e/files/resources/rebalance.yaml")).
@@ -96,7 +96,7 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, Pending, func() 
 		By("create EMQX CR")
 		Expect(Kubectl("apply", "-f", "test/e2e/files/resources/emqx.yaml")).To(Succeed())
 		defer Kubectl("delete", "emqx", "emqx")
-		Eventually(checkEMQXReady).Should(Succeed())
+		Eventually(EMQXReady).Should(Succeed())
 
 		By("create MQTTX client workload")
 		Expect(Kubectl("apply", "-f", "test/e2e/files/resources/mqttx.yaml")).To(Succeed())
@@ -114,8 +114,8 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, Pending, func() 
 		)).To(Succeed())
 
 		By("wait for EMQX to be ready after scaling")
-		Eventually(checkEMQXReady).Should(Succeed())
-		Eventually(checkEMQXStatus).WithArguments(3).Should(Succeed())
+		Eventually(EMQXReady).Should(Succeed())
+		Eventually(CoresStable).WithArguments(3).Should(Succeed())
 
 		By("create Rebalance CR")
 		Expect(Kubectl("apply", "-f", "test/e2e/files/resources/rebalance.yaml")).To(Succeed())

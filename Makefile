@@ -82,23 +82,30 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 TEST_E2E_UPGRADE_IMAGE_INITIAL ?= emqx/emqx:5.10.2
 TEST_E2E_UPGRADE_IMAGE_UPGRADE ?= emqx/emqx:6.1.0
 
+TEST_E2E_STRESS_STEPS ?= 8
+TEST_E2E_STRESS_STEP_INTERVAL ?= 5s
+TEST_E2E_STRESS_IMAGE ?= emqx/emqx:6.1.0
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v $$(go list ./... | grep -v /e2e) -coverprofile ./cover.out
 
-# TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
-# The default setup assumes Kind is pre-installed and builds/loads the Manager Docker image locally.
-# Prometheus and CertManager are installed by default; skip with:
-# - PROMETHEUS_INSTALL_SKIP=true
-# - CERT_MANAGER_INSTALL_SKIP=true
+# Prometheus is installed by default; skip with:
+# - TEST_E2E_SKIP_PROMETHEUS_INSTALL=true
 .PHONY: test-e2e
 test-e2e: manifests generate e2e-test-cluster ## Run general E2E tests. Expected an isolated environment using Kind.
 	go test ./test/e2e/ -v -ginkgo.v -timeout 60m
 
 test-e2e-upgrade: manifests generate e2e-test-cluster ## Run E2E upgrade tests. Expected an isolated environment using Kind.
-	go test ./test/e2e/ -v -ginkgo.v -timeout 20m -ginkgo.focus="EMQX Upgrade Test" \
+	go test ./test/e2e/upgrade -v -ginkgo.v -timeout 20m \
 		-emqx-image-initial=$(TEST_E2E_UPGRADE_IMAGE_INITIAL) \
 		-emqx-image-upgrade=$(TEST_E2E_UPGRADE_IMAGE_UPGRADE)
+
+test-e2e-stress: manifests generate e2e-test-cluster ## Run E2E stress tests. Expected an isolated environment using Kind.
+	go test ./test/e2e/stress -v -ginkgo.v -timeout 20m \
+		-stress-steps=$(TEST_E2E_STRESS_STEPS) \
+		-step-interval=$(TEST_E2E_STRESS_STEP_INTERVAL) \
+		-emqx-image=$(TEST_E2E_STRESS_IMAGE)
 
 .PHONY: test-e2e-helm
 test-e2e-helm: e2e-test-cluster ## Run Helm chart E2E tests. Expected an isolated environment using Kind.
@@ -143,11 +150,11 @@ doc-crd-v3: ## Generate documentation for the `apps.emqx.io/v3beta1` CRD.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
-docker-build: ## Build docker image with the manager.
+docker-build: generate ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${OPERATOR_IMAGE} .
 
 .PHONY: docker-build-coverage
-docker-build-coverage: Dockerfile.coverage ## Build docker image with the manager and code coverage enabled.
+docker-build-coverage: Dockerfile.coverage generate ## Build docker image with the manager and code coverage enabled.
 	$(CONTAINER_TOOL) build -t ${OPERATOR_IMAGE} -f Dockerfile.coverage .
 
 .PHONY: docker-push
@@ -162,7 +169,7 @@ docker-push: ## Push docker image with the manager.
 #   OPERATOR_IMAGE=<myregistry/image:<tag>> then the export will fail)
 PLATFORMS ?= linux/arm64,linux/amd64
 .PHONY: docker-buildx
-docker-buildx: Dockerfile.cross ## Build and push docker image for the manager for cross-platform support
+docker-buildx: Dockerfile.cross generate ## Build and push docker image for the manager for cross-platform support
 	- $(CONTAINER_TOOL) buildx create --name emqx-operator-builder
 	$(CONTAINER_TOOL) buildx use emqx-operator-builder
 	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${OPERATOR_IMAGE} -f Dockerfile.cross .

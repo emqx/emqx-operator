@@ -151,16 +151,6 @@ func (r *reconcileState) updateReplicantSet(instance *crd.EMQX) *appsv1.ReplicaS
 	return nil
 }
 
-// partOfReplicantSets checks if a pod belongs to any replicant ReplicaSet.
-func (r *reconcileState) partOfReplicantSet(pod *corev1.Pod) bool {
-	for _, rs := range r.replicantSets {
-		if util.IsPodManagedBy(pod, rs) {
-			return true
-		}
-	}
-	return false
-}
-
 // outdatedReplicantReplicaSets returns all replicant ReplicaSets except the update revision set,
 // sorted by creation timestamp (oldest first).
 func (r *reconcileState) outdatedReplicantSets(instance *crd.EMQX) []*appsv1.ReplicaSet {

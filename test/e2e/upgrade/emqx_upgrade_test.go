@@ -1,18 +1,17 @@
-package e2e
+package upgrade
 
 import (
 	"flag"
 	"fmt"
+	"testing"
+	"time"
 
+	. "github.com/emqx/emqx-operator/test/e2e"
 	. "github.com/emqx/emqx-operator/test/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// Number of core and replicant replicas:
-var coreReplicas int = 2
-var replicantReplicas int = 2
 
 // Initial EMQX image:
 var emqxImageInitial string
@@ -25,21 +24,48 @@ func init() {
 	flag.StringVar(&emqxImageUpgrade, "emqx-image-upgrade", "", "EMQX image to upgrade to")
 }
 
-//nolint:errcheck
-var _ = Describe("EMQX Upgrade Test", Ordered, func() {
+const (
+	// projectImage is the name of the image which will be build and loaded
+	// with the code source changes to be tested.
+	projectImage = "emqx/emqx-operator:0.0.1"
+
+	// namespace where the project is deployed in
+	namespace = Namespace
+)
+
+func TestUpgrade(t *testing.T) {
+	RegisterFailHandler(Fail)
+	// Set the default timeout and interval for async assertions
+	SetDefaultEventuallyTimeout(time.Minute * 5)
+	SetDefaultEventuallyPollingInterval(time.Second * 3)
+	// Run tests
+	RunSpecs(t, "Upgrade")
+}
+
+var _ = BeforeSuite(func() {
+	By("generate manifests")
+	Expect(Run("make", "manifests")).To(Succeed())
+
+	By("build emqx-operator docker image")
+	Expect(Run("make", "docker-build-coverage",
+		fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage),
+	)).To(Succeed())
+
+	By("load emqx-operator docker image into kind cluster")
+	Expect(LoadImageToKindClusterWithName(projectImage)).To(Succeed())
+})
+
+var _ = Describe("EMQX Upgrade", Ordered, func() {
+	// Number of core and replicant replicas:
+	var coreReplicas int = 2
+	var replicantReplicas int = 2
 
 	const emqxCRBasic = "test/e2e/files/resources/emqx.yaml"
 
 	BeforeAll(func() {
 		if emqxImageInitial == "" || emqxImageUpgrade == "" {
-			Skip("Both `-emqx-image-initial` and `-emqx-image-upgrade` should be set")
+			Fail("Both `-emqx-image-initial` and `-emqx-image-upgrade` should be set")
 		}
-
-		By("create manager namespace")
-		Expect(Kubectl("create", "ns", namespace)).To(Succeed())
-
-		By("install CRDs")
-		Expect(Run("make", "install")).To(Succeed())
 
 		By("deploy emqx-operator")
 		Expect(Run("make", "deploy",
@@ -66,26 +92,25 @@ var _ = Describe("EMQX Upgrade Test", Ordered, func() {
 
 	It("deploy cluster", func() {
 		By("create EMQX cluster")
-		emqxCR := PatchDocument(
-			FromYAMLFile(emqxCRBasic),
-			withImage(emqxImageInitial),
-			withCores(coreReplicas),
-			withReplicants(replicantReplicas),
-			withConfig(configDS()),
-		)
+		emqxCR := SpecFromYAMLFile(emqxCRBasic).
+			WithImage(emqxImageInitial).
+			WithCores(coreReplicas).
+			WithReplicants(replicantReplicas).
+			WithConfig(ConfigDS()).
+			ToJSONDocument()
 		Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 		By("wait for EMQX cluster to be ready")
-		Eventually(checkEMQXReady).Should(Succeed())
-		Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-		Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
-		Eventually(checkDSReplicationStatus).WithArguments(coreReplicas).Should(Succeed())
-		Eventually(checkDSReplicationHealthy).Should(Succeed())
+		Eventually(EMQXReady).Should(Succeed())
+		Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+		Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
+		Eventually(DSReplicationStable).WithArguments(coreReplicas).Should(Succeed())
+		Eventually(DSReplicationHealthy).Should(Succeed())
 	})
 
 	It("upgrade EMQX version", func() {
 		By("create client workload")
 		Expect(Kubectl("apply", "-f", "test/e2e/files/resources/mqttx.yaml")).To(Succeed())
-		defer Kubectl("delete", "-f", "test/e2e/files/resources/mqttx.yaml")
+		defer Kubectl("delete", "-f", "test/e2e/files/resources/mqttx.yaml") // nolint:errcheck
 		Expect(Kubectl("wait", "pod",
 			"--selector=app=mqttx",
 			"--for=condition=Ready",
@@ -100,11 +125,11 @@ var _ = Describe("EMQX Upgrade Test", Ordered, func() {
 			To(Succeed())
 
 		By("wait for EMQX cluster to be ready again")
-		Eventually(checkEMQXReady).WithArguments(changingTime).Should(Succeed())
-		Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
-		Eventually(checkReplicantStatus).WithArguments(replicantReplicas).Should(Succeed())
-		Eventually(checkDSReplicationStatus).WithArguments(coreReplicas).Should(Succeed())
-		Eventually(checkDSReplicationHealthy).Should(Succeed())
+		Eventually(EMQXReady).WithArguments(changingTime).Should(Succeed())
+		Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+		Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
+		Eventually(DSReplicationStable).WithArguments(coreReplicas).Should(Succeed())
+		Eventually(DSReplicationHealthy).Should(Succeed())
 	})
 
 	AfterEach(func() {

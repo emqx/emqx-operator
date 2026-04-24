@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2025-2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,37 +23,47 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/emqx/emqx-operator/test/util"
 	. "github.com/emqx/emqx-operator/test/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 )
 
-// namespace where the project is deployed in
-const namespace = "emqx-operator-system"
-
-// serviceAccountName created for the project
-const serviceAccountName = "emqx-operator-controller-manager"
-
-// metricsServiceName is the name of the metrics service of the project
-const metricsServiceName = "emqx-operator-controller-manager-metrics-service"
-
-// metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
-const metricsRoleBindingName = "emqx-operator-metrics-binding"
+var (
+	// Optional Environment Variables:
+	// - TEST_E2E_SKIP_PROMETHEUS_INSTALL=true:
+	//   Skips Prometheus Operator installation during test setup.
+	//   Useful if applications are already installed, avoiding re-installation and conflicts.
+	skipPrometheusInstall = os.Getenv("TEST_E2E_SKIP_PROMETHEUS_INSTALL") == "true"
+	isPrometheusInstalled = false
+)
 
 var _ = Describe("Manager", Ordered, func() {
-	var controllerPodName string
+	const (
+		// Kustomize manifest defining Service Monitor
+		serviceMonitorManifest = "test/e2e/files/prometheus"
+
+		// serviceAccountName created for the project
+		serviceAccountName = "emqx-operator-controller-manager"
+
+		// metricsServiceName is the name of the metrics service of the project
+		metricsServiceName = "emqx-operator-controller-manager-metrics-service"
+
+		// metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
+		metricsRoleBindingName = "emqx-operator-metrics-binding"
+	)
 
 	// Before running the tests, set up the environment by creating the namespace,
 	// installing CRDs, and deploying the controller.
 	BeforeAll(func() {
-		By("create manager namespace")
-		Expect(Kubectl("create", "ns", namespace)).To(Succeed())
+		if !skipPrometheusInstall {
+			By("install Prometheus Operator")
+			Expect(util.InstallPrometheusOperator()).To(Succeed())
+			isPrometheusInstalled = true
+		}
 
-		By("install CRDs")
-		Expect(Run("make", "install")).To(Succeed())
-
-		By("deploy emqx-operator")
+		By("deploy EMQX Operator")
 		Expect(Run("make", "deploy",
 			fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage),
 			fmt.Sprintf("KUSTOMIZATION_FILE_PATH=%s", "test/e2e/files/manager"),
@@ -68,14 +78,12 @@ var _ = Describe("Manager", Ordered, func() {
 	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
 	// and deleting the namespace.
 	AfterAll(func() {
-		By("undeploy emqx-operator")
+		By("undeploy EMQX Operator")
 		_ = Run("make", "undeploy")
-
-		By("uninstall CRDs")
-		_ = Run("make", "uninstall")
-
-		By("delete manager namespace")
-		_ = Kubectl("delete", "ns", namespace)
+		if !skipPrometheusInstall && isPrometheusInstalled {
+			By("uninstall Prometheus Operator")
+			util.UninstallPrometheusOperator()
+		}
 	})
 
 	// After each test, check for failures and collect logs, events,
@@ -87,21 +95,17 @@ var _ = Describe("Manager", Ordered, func() {
 	})
 
 	It("emqx-operator pod should run successfully", func() {
-		Eventually(func(g Gomega) {
-			// Get the name of the controller-manager pod
-			var podList corev1.PodList
-			g.Expect(KubectlOut("get", "pods",
-				"--namespace", namespace,
-				"--selector", "control-plane=controller-manager",
-				"-o", "json",
-			)).To(UnmarshalInto(&podList), "Failed to list controller-manager pods")
-			g.Expect(podList.Items).To(HaveLen(1), "expected 1 controller pod running")
-			g.Expect(podList.Items[0]).To(And(
-				HaveField("Name", ContainSubstring("controller-manager")),
-				HaveField("Status.Phase", Equal(corev1.PodRunning)),
-			))
-			controllerPodName = podList.Items[0].Name
-		}).Should(Succeed())
+		Eventually(KubectlOut).WithArguments("get", "pods",
+			"--namespace", namespace,
+			"--selector", "control-plane=controller-manager",
+			"-o", "json",
+		).Should(
+			BeUnmarshalledAs(&corev1.PodList{}, HaveField("Items", ConsistOf(
+				And(
+					HaveField("Name", ContainSubstring("controller-manager")),
+					HaveField("Status.Phase", Equal(corev1.PodRunning)),
+				)),
+			)))
 	})
 
 	It("metrics endpoint should be serving metrics", func() {
@@ -110,15 +114,18 @@ var _ = Describe("Manager", Ordered, func() {
 			"--clusterrole=emqx-operator-metrics-reader",
 			fmt.Sprintf("--serviceaccount=%s:%s", namespace, serviceAccountName),
 		)).To(Succeed())
+		defer Kubectl("delete", "clusterrolebinding", metricsRoleBindingName) // nolint:errcheck
 
 		By("verify metrics service is available")
 		Expect(Kubectl("get", "service", metricsServiceName, "--namespace", namespace)).To(Succeed())
 
-		By("verify Prometheus ServiceMonitor is deployed in the namespace")
+		By("deploy Prometheus ServiceMonitor")
+		Expect(Kubectl("apply", "-k", serviceMonitorManifest)).To(Succeed())
 		Expect(Kubectl("get", "ServiceMonitor", "--namespace", namespace)).To(Succeed())
+		defer Kubectl("delete", "-k", serviceMonitorManifest) // nolint:errcheck
 
 		By("fetch service account token")
-		token, err := serviceAccountToken()
+		token, err := serviceAccountToken(serviceAccountName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(token).NotTo(BeEmpty())
 
@@ -126,11 +133,6 @@ var _ = Describe("Manager", Ordered, func() {
 		Eventually(KubectlOut).
 			WithArguments("get", "endpoints", metricsServiceName, "--namespace", namespace).
 			Should(ContainSubstring("8443"))
-
-		By("verify emqx-operator is serving metrics")
-		Eventually(KubectlOut).
-			WithArguments("logs", controllerPodName, "--namespace", namespace).
-			Should(ContainSubstring("controller-runtime.metrics\tServing metrics server"))
 
 		By("create curl-metrics pod to access the metrics endpoint")
 		Expect(Kubectl("run", "curl-metrics", "--restart=Never",
@@ -157,7 +159,7 @@ var _ = Describe("Manager", Ordered, func() {
 // serviceAccountToken returns a token for the specified service account in the given namespace.
 // It uses the Kubernetes TokenRequest API to generate a token by directly sending a request
 // and parsing the resulting token from the API response.
-func serviceAccountToken() (string, error) {
+func serviceAccountToken(serviceAccountName string) (string, error) {
 	const tokenRequestRawString = `{
 		"apiVersion": "authentication.k8s.io/v1",
 		"kind": "TokenRequest"

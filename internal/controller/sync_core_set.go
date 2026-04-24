@@ -372,27 +372,28 @@ func (s *syncCoreSet) startEvacuation(
 // migrationTargetNodes returns the list of EMQX nodes to migrate workloads to.
 // * In core-only cluster, targets are pods of the core set.
 // * In core-replicant cluster, targets are:
-//   - pods in the "update" replicant set, if it has at least 1 ready replica,
+//   - pods in the "update" replicant set, if it has at least 1 node up and running,
 //   - pods in any replicant set otherwise.
 func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 	targets := []string{}
+	fallback := []string{}
 	if instance.Spec.HasReplicants() {
 		updateReplicantSet := r.state.updateReplicantSet(instance)
 		if updateReplicantSet == nil {
 			return targets
 		}
-		updateReady := updateReplicantSet.Status.ReadyReplicas > 0
 		for _, node := range instance.Status.ReplicantNodes {
 			pod := r.state.podWithName(node.PodName)
 			if pod == nil {
 				continue
 			}
-			if updateReady && util.IsPodManagedBy(pod, updateReplicantSet) {
+			if util.IsPodManagedBy(pod, updateReplicantSet) {
 				targets = append(targets, node.Name)
 			}
-			if r.state.partOfReplicantSet(pod) {
-				targets = append(targets, node.Name)
-			}
+			fallback = append(fallback, node.Name)
+		}
+		if len(targets) == 0 {
+			return fallback
 		}
 	} else {
 		for _, node := range instance.Status.CoreNodes {
