@@ -103,8 +103,8 @@ func GetDSReplicationStatus(requester req.RequesterInterface) (DSReplicationStat
 		return status, emperror.Wrap(err, "failed to retrieve DS DBs")
 	}
 
-	dbStatus := DSDBReplicationStatus{}
 	for _, db := range dsDatabases {
+		dbStatus := DSDBReplicationStatus{}
 		path := fmt.Sprintf("api/v5/ds/storages/%s", db)
 		body, err := get(requester, path)
 		if err != nil {
