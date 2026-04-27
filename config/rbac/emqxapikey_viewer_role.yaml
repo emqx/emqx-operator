@@ -1,0 +1,23 @@
+# permissions for end users to view emqxapikeys.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: emqx-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: emqxapikey-viewer-role
+rules:
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxapikeys
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.emqx.io
+  resources:
+  - emqxapikeys/status
+  verbs:
+  - get

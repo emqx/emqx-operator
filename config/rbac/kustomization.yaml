@@ -24,6 +24,8 @@ resources:
 # if you do not want those helpers be installed with your Project.
 - rebalance_editor_role.yaml
 - rebalance_viewer_role.yaml
+- emqxapikey_editor_role.yaml
+- emqxapikey_viewer_role.yaml
 - emqx_editor_role.yaml
 - emqx_viewer_role.yaml
 
