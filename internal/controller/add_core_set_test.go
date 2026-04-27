@@ -166,6 +166,18 @@ func TestGetNewStatefulSet(t *testing.T) {
 		)
 	})
 
+	t.Run("check dnsConfig propagation", func(t *testing.T) {
+		emqx := instance.DeepCopy()
+		emqx.Spec.CoreTemplate.Spec.DNSConfig = &corev1.PodDNSConfig{
+			Nameservers: []string{"1.1.1.1"},
+			Options: []corev1.PodDNSConfigOption{
+				{Name: "ndots", Value: ptr.To("3")},
+			},
+		}
+		got := generateStatefulSet(emqx)
+		assert.Equal(t, emqx.Spec.CoreTemplate.Spec.DNSConfig, got.Spec.Template.Spec.DNSConfig)
+	})
+
 	t.Run("check default volume claim templates", func(t *testing.T) {
 		emqx := instance.DeepCopy()
 
