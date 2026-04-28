@@ -70,6 +70,10 @@ jobs:
           - initial: "emqx/emqx:6.0.2"
             upgrade: "emqx/emqx:6.1.0"
             profile: "6.0.2-6.1.0"
+          # Broken update: testing workaround.
+          - initial: "emqx/emqx:6.1.0"
+            upgrade: "emqx/emqx:6.2.0"
+            profile: "6.1.0-6.2.0"
 
     runs-on: ubuntu-latest
     env:
