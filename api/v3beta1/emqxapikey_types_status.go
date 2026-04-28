@@ -16,7 +16,10 @@ limitations under the License.
 
 package v3beta1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // EMQXAPIKeyStatus defines the observed state of an EMQX API key.
 type EMQXAPIKeyStatus struct {
@@ -24,4 +27,35 @@ type EMQXAPIKeyStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+const (
+	EMQXAPIKeyReady   string = "Ready"
+	EMQXAPIKeyIssuing string = "Issuing"
+	EMQXAPIKeyExpired string = "Expired"
+)
+
+func (s *EMQXAPIKeyStatus) SetCondition(
+	ty string,
+	status metav1.ConditionStatus,
+	observedGeneration int64,
+	reason,
+	message string,
+) bool {
+	return meta.SetStatusCondition(&s.Conditions, metav1.Condition{
+		Type:               ty,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: observedGeneration,
+	})
+}
+
+func (s *EMQXAPIKeyStatus) GetCondition(conditionType string) *metav1.Condition {
+	return meta.FindStatusCondition(s.Conditions, conditionType)
+}
+
+func (s *EMQXAPIKeyStatus) IsConditionTrue(conditionType string) bool {
+	condition := s.GetCondition(conditionType)
+	return condition != nil && condition.Status == metav1.ConditionTrue
 }

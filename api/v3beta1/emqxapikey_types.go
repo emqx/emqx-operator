@@ -16,7 +16,11 @@ limitations under the License.
 
 package v3beta1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -45,6 +49,20 @@ type EMQXAPIKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []EMQXAPIKey `json:"items"`
+}
+
+func (a *EMQXAPIKey) SetCondition(ty string, status metav1.ConditionStatus, reason, message string) bool {
+	return a.Status.SetCondition(ty, status, a.Generation, reason, message)
+}
+
+func (a *EMQXAPIKey) AttachOwnerReference(owner metav1.Object, scheme *runtime.Scheme) bool {
+	for _, o := range a.GetOwnerReferences() {
+		if o.UID == owner.GetUID() {
+			return false
+		}
+	}
+	_ = controllerutil.SetOwnerReference(owner, a, scheme)
+	return true
 }
 
 func init() {
