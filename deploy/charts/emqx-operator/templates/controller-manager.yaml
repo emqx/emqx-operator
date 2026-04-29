@@ -35,6 +35,9 @@ spec:
         - --leader-elect
         - --health-probe-bind-address=:8081
         - --zap-devel={{ .Values.development }}
+        {{- if .Values.singleNamespace }}
+        - --single-namespace={{ .Release.Namespace }}
+        {{- end }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: manager

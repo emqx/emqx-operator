@@ -5,8 +5,8 @@
 # If true, CRDs will not be installed.
 skipCRDs: false
 
-# If true, the operator will watch only the namespace where it is deployed.
-# If false, the operator will watch all namespaces.
+# If true, the operator watches only the namespace where it is deployed.
+# If false, the operator watches all namespaces.
 singleNamespace: false
 
 # Development configures the logger to use a Zap development config
