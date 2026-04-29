@@ -104,6 +104,15 @@ var _ = Describe("Helm Install", Ordered, func() {
 			"--namespace", namespace,
 			"--timeout", "1m",
 		)).To(Succeed())
+
+		By("verify operator logs do not show errors")
+		Consistently(KubectlOut, "20s", "5s").
+			WithArguments("logs", "-n", namespace,
+				"deployment/emqx-operator-controller-manager", "--tail=50",
+			).ShouldNot(Or(
+			ContainSubstring("ERROR"),
+			ContainSubstring("Error"),
+		))
 	})
 
 	It("should install cleanly / pre-upgrade check disabled", func() {
@@ -122,5 +131,48 @@ var _ = Describe("Helm Install", Ordered, func() {
 		By("verify CRDs are installed")
 		Expect(crdExists("emqxes.apps.emqx.io")).To(BeTrue())
 		Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
+
+		By("verify operator logs do not show errors")
+		Consistently(KubectlOut, "20s", "5s").
+			WithArguments("logs", "-n", namespace,
+				"deployment/emqx-operator-controller-manager", "--tail=50",
+			).ShouldNot(Or(
+			ContainSubstring("ERROR"),
+			ContainSubstring("Error"),
+		))
+	})
+
+	It("should install cleanly / single namespace", func() {
+		By("install 2.3.x chart with singleNamespace=true")
+		Expect(helmInstall(namespace,
+			"--set", "singleNamespace=true",
+			"--set", "upgrade.preUpgradeCheck=false",
+		)).To(Succeed())
+
+		By("verify operator deployment is available")
+		Expect(Kubectl("wait", "deployment",
+			"emqx-operator-controller-manager",
+			"--for", "condition=Available",
+			"--namespace", namespace,
+			"--timeout", "1m",
+		)).To(Succeed())
+
+		By("verify CRDs are installed")
+		Expect(crdExists("emqxes.apps.emqx.io")).To(BeTrue())
+		Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
+
+		By("verify no ClusterRoles exists for the manager")
+		Expect(Kubectl("get", "role", "emqx-operator-manager-role",
+			"-n", namespace)).To(Succeed())
+		Expect(resourceExists("clusterrole", "emqx-operator-manager-role")).To(BeFalse())
+
+		By("verify operator logs do not show errors")
+		Consistently(KubectlOut, "30s", "5s").
+			WithArguments("logs", "-n", namespace,
+				"deployment/emqx-operator-controller-manager", "--tail=50",
+			).ShouldNot(Or(
+			ContainSubstring("ERROR"),
+			ContainSubstring("Error"),
+		))
 	})
 })
