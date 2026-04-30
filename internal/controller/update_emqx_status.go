@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 )
 
 type updateStatus struct {
@@ -20,9 +21,9 @@ type updateStatus struct {
 func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
 	status := &instance.Status
 
-	status.CoreNodesStatus.Replicas = *instance.Spec.CoreTemplate.Spec.Replicas
+	status.CoreNodesStatus.Replicas = ptr.Deref(instance.Spec.CoreTemplate.Spec.Replicas, 1)
 	if instance.Spec.ReplicantTemplate != nil {
-		status.ReplicantNodesStatus.Replicas = *instance.Spec.ReplicantTemplate.Spec.Replicas
+		status.ReplicantNodesStatus.Replicas = ptr.Deref(instance.Spec.ReplicantTemplate.Spec.Replicas, 1)
 	}
 
 	currentCoreSet, updateCoreSet := switchCoreSet(r, instance)
