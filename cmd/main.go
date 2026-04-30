@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"os"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -75,6 +76,7 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var singleNamespace string
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -86,6 +88,9 @@ func main() {
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.StringVar(&singleNamespace, "single-namespace", "",
+		"If set, restrict the client cache to this namespace only. Leave unset to watch all namespaces. "+
+			"Set to the respective namespace if manager is running with namespace-scoped RBAC roles.")
 	opts := zap.Options{
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
 	}
@@ -135,6 +140,8 @@ func main() {
 		// this setup is not recommended for production.
 	}
 
+	singleNamespace = strings.TrimSpace(singleNamespace)
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
@@ -155,7 +162,7 @@ func main() {
 		// LeaderElectionReleaseOnCancel: true,
 
 		Cache: cache.Options{
-			DefaultNamespaces: getWatchNamespace(),
+			DefaultNamespaces: defaultNamespacesForCache(singleNamespace),
 		},
 	})
 	if err != nil {
@@ -187,15 +194,11 @@ func main() {
 	}
 }
 
-// getWatchNamespace returns the Namespace the operator should be watching for changes
-func getWatchNamespace() map[string]cache.Config {
-	var watchNamespaceEnvVar = "WATCH_NAMESPACE"
-
-	ns, found := os.LookupEnv(watchNamespaceEnvVar)
-	if found {
-		return map[string]cache.Config{
-			ns: {},
-		}
+// defaultNamespacesForCache maps controller-runtime's cache to one namespace when
+// --single-namespace is set, so list/watch requests stay namespaced (cluster Role is not required).
+func defaultNamespacesForCache(singleNamespace string) map[string]cache.Config {
+	if singleNamespace != "" {
+		return map[string]cache.Config{singleNamespace: {}}
 	}
 	return nil
 }
