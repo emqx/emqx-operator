@@ -36,6 +36,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
@@ -164,6 +165,54 @@ var _ = AfterSuite(func() {
 	_ = testEnv.Stop()
 	// err := testEnv.Stop()
 	// Expect(err).NotTo(HaveOccurred())
+})
+
+var _ = Describe("CRD Defaults", Ordered, func() {
+	var ns *corev1.Namespace
+
+	BeforeAll(func() {
+		ns = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "api-defaults-test-ns",
+			},
+		}
+		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+	})
+
+	AfterAll(func() {
+		Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
+	})
+
+	It("defaults coreTemplate.spec when spec is missing", func() {
+		instance := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": crd.GroupVersion.String(),
+				"kind":       "EMQX",
+				"metadata": map[string]interface{}{
+					"name":      "emqx",
+					"namespace": ns.Name,
+				},
+				"spec": map[string]interface{}{
+					"image": "emqx",
+					"coreTemplate": map[string]interface{}{
+						"metadata": map[string]interface{}{},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, instance)).To(Succeed())
+
+		actual := &crd.EMQX{}
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "emqx"}, actual)).To(Succeed())
+		Expect(actual.Spec.CoreTemplate.Spec).To(HaveField("Replicas", And(
+			Not(BeNil()),
+			HaveValue(BeEquivalentTo(2)),
+		)))
+		Expect(actual.Spec.CoreTemplate.Spec).To(HaveField("PodSecurityContext", And(
+			Not(BeNil()),
+			HaveValue(HaveField("RunAsUser", HaveValue(BeEquivalentTo(1000)))),
+		)))
+	})
 })
 
 func actualObject[Object client.Object](o Object) (Object, error) {
