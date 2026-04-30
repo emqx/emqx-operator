@@ -28,6 +28,9 @@ var (
 	// GroupVersion is group version used to register these objects.
 	GroupVersion = schema.GroupVersion{Group: "apps.emqx.io", Version: "v2"}
 
+	// Fully-qualified kind of EMQX CRs.
+	EMQXResourceKind = "emqxes." + GroupVersion.Group
+
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
 
