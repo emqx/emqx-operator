@@ -268,6 +268,9 @@ func (c *EMQX) GetListenersServicePorts() []corev1.ServicePort {
 			continue
 		}
 		for name, lc := range listener.(hocon.Object) {
+			if lc == nil || lc.Type() != hocon.ObjectType {
+				continue
+			}
 			lconf := lc.(hocon.Object)
 			// Compatible with "enable" and "enabled"
 			// the default value of them both is true
