@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
       - name: conn
-        image: emqx/mqttx-cli
+        image: emqx/mqttx-cli:v1.13.0
+        imagePullPolicy: IfNotPresent
         command:
         - /bin/sh 
         - -c
