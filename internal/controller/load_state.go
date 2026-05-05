@@ -279,13 +279,6 @@ func loadReconcileState(
 	}
 
 	for _, pod := range podList.Items {
-		// Disregard pods that are not controlled by any controller.
-		controllerRef := metav1.GetControllerOf(&pod)
-		if controllerRef == nil {
-			continue
-		}
-
-		// Add the pod to the list of pods.
 		pod := pod.DeepCopy()
 		state.pods = append(state.pods, pod)
 	}
