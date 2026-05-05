@@ -24,6 +24,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -98,15 +99,17 @@ func subReconcilerName(s subReconciler) string {
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
 	*handler.Handler
-	Clientset     *kubernetes.Clientset
+	RESTConfig    *rest.Config
 	Scheme        *runtime.Scheme
 	EventRecorder record.EventRecorder
 }
 
 func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
+	restConfig := mgr.GetConfig()
+	_ = kubernetes.NewForConfigOrDie(restConfig)
 	return &EMQXReconciler{
 		Handler:       handler.NewHandler(mgr),
-		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		RESTConfig:    restConfig,
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}
