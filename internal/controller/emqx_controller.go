@@ -59,7 +59,7 @@ type reconcileRound struct {
 // Instantiate default API requester for a core node.
 // Picks oldest core node that is considered ready: up and running, not evacuating.
 func (r *reconcileRound) oldestCoreRequester() req.RequesterInterface {
-	return r.requester.forOldestCore(r.state, &podConditionFilter{cond: corev1.ContainersReady})
+	return r.requester.forOldestCore(r.state, &podsWithCondition{corev1.ContainersReady})
 }
 
 // subResult provides a wrapper around different results from a subreconciler.

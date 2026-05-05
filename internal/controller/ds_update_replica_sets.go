@@ -28,8 +28,8 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crd.EMQX) s
 	}
 
 	// Instantiate API requester for a node that is part of the core StatefulSet.
-	// Prefer EMQX 6.x requester first: EMQX starting from 6.1.0 has separate cluster view.
-	req := r.requester.forOldestCore(r.state, &emqxVersionFilter{instance: instance, prefix: "6."})
+	// Prefer EMQX 6.x requester first: EMQX starting from 6.0.0 has separate cluster view.
+	req := r.requester.forOldestCore(r.state, &podsWithEMQXVersion{instance: instance, prefix: "6."})
 	if req == nil {
 		req = r.oldestCoreRequester()
 	}

@@ -216,7 +216,7 @@ type apiRequesterOverride struct {
 	requester req.RequesterInterface
 }
 
-func (b *apiRequesterOverride) forOldestCore(_ *reconcileState, _ ...podRequesterFilter) req.RequesterInterface {
+func (b *apiRequesterOverride) forOldestCore(_ *reconcileState, _ ...reconcileStatePodFilter) req.RequesterInterface {
 	return b.requester
 }
 
@@ -227,7 +227,7 @@ func (b *apiRequesterOverride) forPod(_ *corev1.Pod) req.RequesterInterface {
 type apiRequesterUnavailable struct {
 }
 
-func (b *apiRequesterUnavailable) forOldestCore(_ *reconcileState, _ ...podRequesterFilter) req.RequesterInterface {
+func (b *apiRequesterUnavailable) forOldestCore(_ *reconcileState, _ ...reconcileStatePodFilter) req.RequesterInterface {
 	return nil
 }
 

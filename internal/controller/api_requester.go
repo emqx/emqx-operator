@@ -2,18 +2,14 @@ package controller
 
 import (
 	"net"
-	"reflect"
 	"strconv"
 	"strings"
 
 	emperror "emperror.dev/errors"
-	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
-	util "github.com/emqx/emqx-operator/internal/controller/util"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type apiRequesterBuilder struct {
@@ -24,50 +20,13 @@ type apiRequesterBuilder struct {
 }
 
 type apiRequester interface {
-	forOldestCore(state *reconcileState, filter ...podRequesterFilter) req.RequesterInterface
+	forOldestCore(state *reconcileState, filter ...reconcileStatePodFilter) req.RequesterInterface
 	forPod(pod *corev1.Pod) req.RequesterInterface
-}
-
-type podRequesterFilter interface {
-	filter(pod *corev1.Pod) bool
-}
-
-type podConditionFilter struct {
-	cond corev1.PodConditionType
-}
-
-func (f *podConditionFilter) filter(pod *corev1.Pod) bool {
-	return util.IsPodConditionTrue(pod, f.cond)
-}
-
-type managedByFilter struct {
-	manager metav1.Object
-}
-
-func (f *managedByFilter) filter(pod *corev1.Pod) bool {
-	controller := metav1.GetControllerOf(pod)
-	if controller == nil {
-		return false
-	}
-	if f.manager == nil || reflect.ValueOf(f.manager).IsNil() {
-		return false
-	}
-	return controller.UID == f.manager.GetUID()
-}
-
-type emqxVersionFilter struct {
-	instance *crd.EMQX
-	prefix   string
-}
-
-func (f *emqxVersionFilter) filter(pod *corev1.Pod) bool {
-	node := f.instance.Status.FindNodeByPodName(pod.Name)
-	return node != nil && strings.HasPrefix(node.Version, f.prefix)
 }
 
 func (b *apiRequesterBuilder) forOldestCore(
 	state *reconcileState,
-	filter ...podRequesterFilter,
+	filter ...reconcileStatePodFilter,
 ) req.RequesterInterface {
 	pods := state.listPods(podsWithRole{roleCore})
 	sortByCreationTimestamp(pods)
@@ -78,7 +37,7 @@ outer:
 			continue
 		}
 		for _, f := range filter {
-			if !f.filter(pod) {
+			if !f.passes(pod) {
 				continue outer
 			}
 		}
