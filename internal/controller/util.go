@@ -195,3 +195,15 @@ func parseNodeName(s string, instance *crd.EMQX) *nodeName {
 	}
 	return &parsed
 }
+
+func constructNodeName(podName string, instance *crd.EMQX) string {
+	return fmt.Sprintf("emqx@%s.%s", podName, clusterDNSName(instance))
+}
+
+func clusterDNSName(instance *crd.EMQX) string {
+	return fmt.Sprintf("%s.%s.svc.%s",
+		instance.HeadlessServiceNamespacedName().Name,
+		instance.Namespace,
+		instance.Spec.ClusterDomain,
+	)
+}
