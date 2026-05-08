@@ -4,6 +4,8 @@ import (
 	emperror "emperror.dev/errors"
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
+	"github.com/emqx/emqx-operator/internal/emqx/ctl"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Responsibilities:
@@ -18,9 +20,14 @@ func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 		return subResult{}
 	}
 
+	coreSet := r.state.coreSet()
+	if coreSet == nil {
+		return subResult{}
+	}
+
 	// Instantiate API requester for a node that is part of update StatefulSet.
 	// Required API operation is available only since EMQX 6.0.0.
-	req := r.requester.forOldestCore(r.state, &emqxVersionFilter{instance: instance, prefix: "6."})
+	req := r.requester.forOldestCore(r.state, &podsWithEMQXVersion{instance: instance, prefix: "6."})
 
 	lostSites := []*api.DSSite{}
 	for _, site := range r.dsCluster.Sites {
@@ -38,14 +45,25 @@ func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 		return subResult{}
 	}
 
-	// If there's no suitable EMQX API to query, skip the reconciliation.
+	forgetSite := func(site *api.DSSite) error {
+		return api.ForgetDSSite(req, site.ID)
+	}
+
+	// If there's no suitable EMQX API to query, switch to `emqx ctl`.
 	if req == nil {
-		r.log.V(1).Info("skipping DS site cleanup", "reason", "no suitable API", "lostSites", lostSites)
-		return subResult{}
+		pods := r.state.listPods(&podsManagedBy{coreSet}, &podsWithCondition{corev1.ContainersReady})
+		sortByCreationTimestamp(pods)
+		if len(pods) == 0 {
+			r.log.V(1).Info("skipping DS site cleanup", "reason", "no core pods")
+			return reconcilePostpone()
+		}
+		forgetSite = func(site *api.DSSite) error {
+			return ctl.Ctl(r.ctx, c.RESTConfig, pods[0], "ds", "forget", site.ID)
+		}
 	}
 
 	for _, site := range lostSites {
-		err := api.ForgetDSSite(req, site.ID)
+		err := forgetSite(site)
 		if err == nil {
 			r.log.V(1).Info("cleaned up lost DS site", "site", site)
 		} else {

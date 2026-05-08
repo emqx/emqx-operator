@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"reflect"
+	"strings"
 
 	emperror "emperror.dev/errors"
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
@@ -51,6 +52,24 @@ type podsAlive struct{}
 
 func (self podsAlive) passes(pod *corev1.Pod) bool {
 	return pod.DeletionTimestamp == nil
+}
+
+type podsWithCondition struct {
+	cond corev1.PodConditionType
+}
+
+func (self podsWithCondition) passes(pod *corev1.Pod) bool {
+	return util.IsPodConditionTrue(pod, self.cond)
+}
+
+type podsWithEMQXVersion struct {
+	instance *crd.EMQX
+	prefix   string
+}
+
+func (self podsWithEMQXVersion) passes(pod *corev1.Pod) bool {
+	node := self.instance.Status.FindNodeByPodName(pod.Name)
+	return node != nil && strings.HasPrefix(node.Version, self.prefix)
 }
 
 func (r *reconcileState) podWithName(name string) *corev1.Pod {
@@ -279,13 +298,6 @@ func loadReconcileState(
 	}
 
 	for _, pod := range podList.Items {
-		// Disregard pods that are not controlled by any controller.
-		controllerRef := metav1.GetControllerOf(&pod)
-		if controllerRef == nil {
-			continue
-		}
-
-		// Add the pod to the list of pods.
 		pod := pod.DeepCopy()
 		state.pods = append(state.pods, pod)
 	}

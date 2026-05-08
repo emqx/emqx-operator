@@ -127,14 +127,14 @@ func TestRequesterFilter(t *testing.T) {
 	assert.NotNil(t, requester)
 
 	// Filter by the single core StatefulSet:
-	requester = builder.forOldestCore(state, &managedByFilter{state.coreSet()})
+	requester = builder.forOldestCore(state, &podsManagedBy{state.coreSet()})
 	assert.NotNil(t, requester)
 	assert.Equal(t, state.pods[1].Name, requester.GetDescription())
 
-	requester = builder.forOldestCore(state, &emqxVersionFilter{instance, "5.10."})
+	requester = builder.forOldestCore(state, &podsWithEMQXVersion{instance, "5.10."})
 	assert.NotNil(t, requester)
 
-	requester = builder.forOldestCore(state, &emqxVersionFilter{instance, "6."})
+	requester = builder.forOldestCore(state, &podsWithEMQXVersion{instance, "6."})
 	assert.Nil(t, requester)
 
 }

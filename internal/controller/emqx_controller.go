@@ -24,6 +24,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -59,7 +60,7 @@ type reconcileRound struct {
 // Instantiate default API requester for a core node.
 // Picks oldest core node that is considered ready: up and running, not evacuating.
 func (r *reconcileRound) oldestCoreRequester() req.RequesterInterface {
-	return r.requester.forOldestCore(r.state, &podConditionFilter{cond: corev1.ContainersReady})
+	return r.requester.forOldestCore(r.state, &podsWithCondition{corev1.ContainersReady})
 }
 
 // subResult provides a wrapper around different results from a subreconciler.
@@ -98,15 +99,17 @@ func subReconcilerName(s subReconciler) string {
 // EMQXReconciler reconciles a EMQX object
 type EMQXReconciler struct {
 	*handler.Handler
-	Clientset     *kubernetes.Clientset
+	RESTConfig    *rest.Config
 	Scheme        *runtime.Scheme
 	EventRecorder record.EventRecorder
 }
 
 func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
+	restConfig := mgr.GetConfig()
+	_ = kubernetes.NewForConfigOrDie(restConfig)
 	return &EMQXReconciler{
 		Handler:       handler.NewHandler(mgr),
-		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		RESTConfig:    restConfig,
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),
 	}
@@ -161,6 +164,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&syncCoreSet{r},
 		&syncReplicantSets{r},
 		&syncClusterMembership{r},
+		&retireCorePods{r},
 		&cleanupOutdatedSets{r},
 	} {
 		round.log = logger.WithValues("reconciler", subReconcilerName(subReconciler))

@@ -23,16 +23,27 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 		return reconcilePostpone()
 	}
 
+	desiredReplicas := int(instance.Spec.NumCoreReplicas())
 	staleNodes := []*crd.EMQXNode{}
 	for _, node := range instance.Status.CoreNodes {
-		// Running cores / cores still having respective pods should not be force-left:
-		if node.Status != api.NodeStatusStopped || node.PodName != "" || r.state.podWithName(node.PodName) != nil {
+		// Skip: node is running.
+		if node.Status != api.NodeStatusStopped {
 			continue
 		}
-		// Cores with node name having pod ordinal under desired number of replicas should not be force-left:
+		pod := r.state.podWithName(node.PodName)
 		nodeName := parseNodeName(node.Name, instance)
-		ordinal := util.PodOrdinal(nodeName.podName)
-		if ordinal < int(instance.Spec.NumCoreReplicas()) {
+		retiring := pod != nil && isPodScaleDownRetiring(pod)
+		ordinal := util.PodOrdinal(node.PodName)
+		if ordinal < 0 && nodeName != nil {
+			ordinal = util.PodOrdinal(nodeName.podName)
+		}
+		// Skip: running non-retiring cores should not be force-left.
+		if !retiring && pod != nil {
+			continue
+		}
+		// Skip: non-retiring cores with pod ordinal under desired number of replicas should not
+		// be force-left. If ordinal is -1, stay on the safe side and let the user decide.
+		if !retiring && ordinal < desiredReplicas {
 			continue
 		}
 		// Cores having higher pod ordinals should be force-left:
@@ -41,7 +52,11 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 
 	for _, node := range instance.Status.ReplicantNodes {
 		// Running replicants / replicants still having respective pods should not be force-left:
-		if node.Status != api.NodeStatusStopped || node.PodName != "" || r.state.podWithName(node.PodName) != nil {
+		if node.Status != api.NodeStatusStopped {
+			continue
+		}
+		pod := r.state.podWithName(node.PodName)
+		if pod != nil {
 			continue
 		}
 		// Stopped replicants w/o respective pods should be force-left:

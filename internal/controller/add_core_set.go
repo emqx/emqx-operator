@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"slices"
 	"time"
 
@@ -179,7 +178,7 @@ func generateStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
 								},
 								{
 									Name:  "EMQX_CLUSTER__DNS__NAME",
-									Value: fmt.Sprintf("%s.%s.svc.%s", instance.HeadlessServiceNamespacedName().Name, instance.Namespace, instance.Spec.ClusterDomain),
+									Value: clusterDNSName(instance),
 								},
 								{
 									Name:  "EMQX_HOST",

@@ -28,8 +28,8 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crd.EMQX) s
 	}
 
 	// Instantiate API requester for a node that is part of the core StatefulSet.
-	// Prefer EMQX 6.x requester first: EMQX starting from 6.1.0 has separate cluster view.
-	req := r.requester.forOldestCore(r.state, &emqxVersionFilter{instance: instance, prefix: "6."})
+	// Prefer EMQX 6.x requester first: EMQX starting from 6.0.0 has separate cluster view.
+	req := r.requester.forOldestCore(r.state, &podsWithEMQXVersion{instance: instance, prefix: "6."})
 	if req == nil {
 		req = r.oldestCoreRequester()
 	}
@@ -58,13 +58,25 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crd.EMQX) s
 	for _, site := range r.dsCluster.Sites {
 		nodeName := parseNodeName(site.Node, instance)
 		if nodeName == nil {
-			return subResult{err: emperror.Errorf("unrecognized DS site node name: %s", site.Node)}
+			return reconcileError(emperror.Errorf("unrecognized DS site node name: %s", site.Node))
 		}
-		if strings.HasPrefix(nodeName.podName, instance.CoreName()) {
-			ordinal := util.PodOrdinal(nodeName.podName)
-			if ordinal >= 0 && ordinal < int(desiredReplicas) {
-				targetSites = append(targetSites, site.ID)
-			}
+		// Exclude non-core nodes:
+		if !strings.HasPrefix(nodeName.podName, instance.CoreName()) {
+			continue
+		}
+		// Exclude retiring core nodes:
+		pod := r.state.podWithName(nodeName.podName)
+		ordinal := util.PodOrdinal(nodeName.podName)
+		if pod != nil && isPodScaleDownRetiring(pod) {
+			continue
+		}
+		// Exclude unrecognizable core pods:
+		if ordinal < 0 {
+			continue
+		}
+		// Include core nodes matching desired number of replicas:
+		if ordinal < int(desiredReplicas) {
+			targetSites = append(targetSites, site.ID)
 		}
 	}
 

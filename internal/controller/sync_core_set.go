@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Responsibilities:
@@ -39,17 +42,47 @@ type syncCoreSet struct {
 type admissionAction int
 
 const (
-	// Pod may be removed right now.
-	admissionRemove admissionAction = iota
 	// Pod removal blocked; reason explains why.
-	admissionWait
+	admissionWait admissionAction = iota
+	// Pod may be removed right now.
+	admissionRemove
 	// Pod needs evacuation before it can be removed.
 	admissionEvacuate
+)
+
+type admissionCause string
+
+const (
+	coreScaleDown     admissionCause = "scale down"
+	coreRollingUpdate admissionCause = "rolling update"
 )
 
 type coreAdmission struct {
 	Action admissionAction
 	Reason string
+	Cause  admissionCause
+}
+
+func (a coreAdmission) wait(reason string, args ...any) coreAdmission {
+	return a.withActionReason(admissionWait, reason, args...)
+}
+
+func (a coreAdmission) remove(reason string, args ...any) coreAdmission {
+	return a.withActionReason(admissionRemove, reason, args...)
+}
+
+func (a coreAdmission) evacuate(reason string, args ...any) coreAdmission {
+	return a.withActionReason(admissionEvacuate, reason, args...)
+}
+
+func (a coreAdmission) withActionReason(action admissionAction, reason string, args ...any) coreAdmission {
+	a.Action = action
+	if len(args) > 0 {
+		a.Reason = fmt.Sprintf(reason, args...)
+	} else {
+		a.Reason = reason
+	}
+	return a
 }
 
 func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
@@ -116,13 +149,16 @@ func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crd.EMQX) subRe
 		// ReplicantSet is in the process of update.
 		// Keep at least one old-version core alive so current-revision replicants can rejoin.
 		if len(outdated) == 1 {
-			admission := coreAdmission{Action: admissionWait, Reason: "current replicantSet still migrating"}
-			return s.onCoreAdmission(r, instance, candidate, admission, "rollingUpdate")
+			return s.onCoreAdmission(r, instance, candidate, coreAdmission{
+				Action: admissionWait,
+				Reason: "current replicantSet still migrating",
+				Cause:  coreRollingUpdate,
+			})
 		}
 	}
 
-	admission := checkCorePodRemoval(r, instance, candidate, false)
-	return s.onCoreAdmission(r, instance, candidate, admission, "rollingUpdate")
+	admission := checkCorePodRemoval(r, instance, candidate, coreRollingUpdate)
+	return s.onCoreAdmission(r, instance, candidate, admission)
 }
 
 func (s *syncCoreSet) scaleUp(r *reconcileRound, desiredReplicas int32) subResult {
@@ -145,10 +181,14 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentRe
 	candidate := r.state.podWithName(candidateName)
 
 	var admission coreAdmission
-	if candidate == nil {
-		admission = coreAdmission{Action: admissionRemove, Reason: "already terminated"}
+	if candidate != nil {
+		admission = checkCorePodRemoval(r, instance, candidate, coreScaleDown)
 	} else {
-		admission = checkCorePodRemoval(r, instance, candidate, true)
+		admission = coreAdmission{
+			Action: admissionRemove,
+			Reason: "already terminated",
+			Cause:  coreScaleDown,
+		}
 	}
 
 	if admission.Action == admissionRemove {
@@ -162,7 +202,7 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentRe
 		}
 	}
 	if candidate != nil {
-		return s.onCoreAdmission(r, instance, candidate, admission, "scaleDown")
+		return s.onCoreAdmission(r, instance, candidate, admission)
 	}
 	return subResult{}
 }
@@ -222,17 +262,16 @@ func listOutdatedPods(r *reconcileRound) []*corev1.Pod {
 // be safely removed. It inspects instance status and pod state but performs no
 // side effects.
 //
-// When isPermanent is true, the pod is being permanently removed:
-// data would be lost so there are extra safety checks (e.g. DS replication site).
-// When isPermanent is false (rolling update), the replacement pod inherits the
-// data: blocking on DS site condition would stall the rollout indefinitely.
+// When cause is coreScaleDown, the pod is being permanently removed: data would
+// be lost so there are extra safety checks (e.g. DS replication site).
 func checkCorePodRemoval(
 	r *reconcileRound,
 	instance *crd.EMQX,
 	pod *corev1.Pod,
-	isPermanent bool,
+	cause admissionCause,
 ) coreAdmission {
 	status := &instance.Status
+	admission := coreAdmission{Cause: cause}
 
 	// Disallow removing pod if other cores just recently became ready.
 	numAvailableCores := int32(0)
@@ -242,51 +281,45 @@ func checkCorePodRemoval(
 		}
 	}
 	if numAvailableCores < instance.Spec.NumCoreReplicas()-1 {
-		return coreAdmission{Action: admissionWait, Reason: "cores are not available yet"}
+		return admission.wait("cores are not available yet")
 	}
 
 	// If a pod is already being deleted, return it.
 	if pod.DeletionTimestamp != nil {
-		return coreAdmission{Action: admissionWait, Reason: fmt.Sprintf("pod %s deletion in progress", pod.Name)}
+		return admission.wait("pod %s deletion in progress", pod.Name)
 	}
 
 	// Disallow permanently removing the pod that is still a DS replication site.
-	if isPermanent {
+	if cause == coreScaleDown {
 		dsCondition := util.FindPodCondition(pod, crd.DSReplicationSite)
 		if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
-			return coreAdmission{Action: admissionWait, Reason: fmt.Sprintf("pod %s is still a DS replication site", pod.Name)}
+			return admission.wait("pod %s is still a DS replication site", pod.Name)
 		}
 	}
 
 	nodeInfo := status.FindNodeByPodName(pod.Name, roleCore)
 
 	if nodeInfo == nil {
-		return coreAdmission{Action: admissionRemove, Reason: "node is out of cluster"}
+		return admission.remove("node is out of cluster")
 	}
 
 	if nodeInfo.Status == api.NodeStatusStopped {
-		return coreAdmission{Action: admissionRemove, Reason: "node is already stopped"}
+		return admission.remove("node is already stopped")
 	}
 
 	evacuation := status.FindNodeEvacuation(nodeInfo.Name)
 	if evacuation != nil && evacuation.State != api.EvacuationStateProhibiting {
-		return coreAdmission{Action: admissionWait, Reason: "node evacuation is still in progress"}
+		return admission.wait("node evacuation in progress")
 	}
 
 	if nodeInfo.Sessions > 0 && instance.Spec.IsEvacuationEnabled() {
 		if instance.Spec.NumCoreReplicas() == 1 && !instance.Spec.HasReplicants() {
-			return coreAdmission{
-				Action: admissionRemove,
-				Reason: fmt.Sprintf("node %s has active sessions nowhere to evacuate", nodeInfo.Name),
-			}
+			return admission.remove("node %s has active sessions nowhere to evacuate", nodeInfo.Name)
 		}
-		return coreAdmission{
-			Action: admissionEvacuate,
-			Reason: fmt.Sprintf("node %s has active sessions", nodeInfo.Name),
-		}
+		return admission.evacuate("node %s has active sessions", nodeInfo.Name)
 	}
 
-	return coreAdmission{Action: admissionRemove, Reason: "node is safe to stop"}
+	return admission.remove("node is safe to stop")
 }
 
 // onCoreAdmission performs the side effects implied by a coreAdmission.
@@ -295,7 +328,6 @@ func (s *syncCoreSet) onCoreAdmission(
 	instance *crd.EMQX,
 	candidate *corev1.Pod,
 	admission coreAdmission,
-	cause string,
 ) subResult {
 	switch admission.Action {
 	case admissionRemove:
@@ -303,17 +335,22 @@ func (s *syncCoreSet) onCoreAdmission(
 			"reason", admission.Reason,
 			"pod", klog.KObj(candidate),
 			"statefulSet", klog.KObj(r.state.coreSet()),
-			"cause", cause,
+			"cause", admission.Cause,
 		)
+		if admission.Cause == coreScaleDown {
+			if err := attachScaleDownRetirementFinalizer(r.ctx, s.Client, candidate); err != nil {
+				return reconcileError(err)
+			}
+		}
 		if err := s.Client.Delete(r.ctx, candidate); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to delete core pod")}
+			return reconcileError(emperror.Wrap(err, "failed to delete core pod"))
 		}
 	case admissionWait:
 		r.log.V(1).Info("removal of core pod postponed",
 			"reason", admission.Reason,
 			"pod", klog.KObj(candidate),
 			"statefulSet", klog.KObj(r.state.coreSet()),
-			"cause", cause,
+			"cause", admission.Cause,
 		)
 	case admissionEvacuate:
 		err := s.startEvacuation(r, instance, candidate)
@@ -322,7 +359,7 @@ func (s *syncCoreSet) onCoreAdmission(
 				"failed to start node evacuation",
 				"pod", klog.KObj(candidate),
 				"statefulSet", klog.KObj(r.state.coreSet()),
-				"cause", cause,
+				"cause", admission.Cause,
 			)}
 		}
 	}
@@ -407,4 +444,27 @@ func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 		}
 	}
 	return targets
+}
+
+func attachScaleDownRetirementFinalizer(ctx context.Context, k8sClient client.Client, pod *corev1.Pod) error {
+	if controllerutil.AddFinalizer(pod, crd.FinalizerScaleDownRetirement) {
+		if err := k8sClient.Update(ctx, pod); err != nil {
+			return emperror.Wrap(err, "failed to attach retirement finalizer")
+		}
+	}
+	return nil
+}
+
+func removeScaleDownRetirementFinalizer(ctx context.Context, k8sClient client.Client, pod *corev1.Pod) error {
+	if controllerutil.RemoveFinalizer(pod, crd.FinalizerScaleDownRetirement) {
+		if err := k8sClient.Update(ctx, pod); err != nil {
+			return emperror.Wrap(err, "failed to remove retirement finalizer")
+		}
+	}
+	return nil
+}
+
+func isPodScaleDownRetiring(pod *corev1.Pod) bool {
+	return pod.DeletionTimestamp != nil &&
+		controllerutil.ContainsFinalizer(pod, crd.FinalizerScaleDownRetirement)
 }
