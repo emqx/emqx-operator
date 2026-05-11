@@ -163,6 +163,7 @@ type EMQXCoreTemplate struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired state of a core node.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	// +kubebuilder:default={}
 	Spec EMQXCoreTemplateSpec `json:"spec,omitempty"`
 }
 
