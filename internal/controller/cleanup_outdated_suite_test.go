@@ -50,7 +50,7 @@ var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 				},
 			},
 		}
-		s = &cleanupOutdatedSets{emqxReconciler}
+		s = &cleanupOutdatedSets{emqxReconciler.withTransientErrors(1)}
 		round = newReconcileRound()
 	})
 
@@ -97,7 +97,8 @@ var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 			round.state.replicantSets = append(round.state.replicantSets, rs)
 		}
 
-		Expect(s.reconcile(round, instance)).Should(Equal(subResult{}))
+		Eventually(s.reconcile).WithArguments(round, instance).
+			Should(BeSuccessfulReconcile())
 
 		Eventually(func() *appsv1.ReplicaSetList {
 			list := &appsv1.ReplicaSetList{}

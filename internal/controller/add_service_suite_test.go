@@ -57,7 +57,7 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 				Labels: map[string]string{"test": "label"},
 			},
 		}
-		a = &addService{emqxReconciler}
+		a = &addService{emqxReconciler.withTransientErrors(1)}
 		round = newReconcileRoundWithRequester(mockConfigsRequester(validConfig))
 	})
 
@@ -86,7 +86,7 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 
 	It("creates Dashboard and Listeners Services from EMQX config", func() {
 		Eventually(a.reconcile).WithArguments(round, instance).
-			Should(Equal(subResult{}))
+			Should(BeSuccessfulReconcile())
 
 		dashboard := &corev1.Service{}
 		Expect(k8sClient.Get(ctx, instance.DashboardServiceNamespacedName(), dashboard)).To(Succeed())
@@ -121,7 +121,7 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 		}
 
 		Eventually(a.reconcile).WithArguments(round, instance).
-			Should(Equal(subResult{}))
+			Should(BeSuccessfulReconcile())
 
 		listeners := &corev1.Service{}
 		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
@@ -135,7 +135,8 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 		}
 
 		r := newReconcileRoundWithRequester(mockConfigsRequester(validConfig))
-		Expect(a.reconcile(r, instance)).To(Equal(subResult{}))
+		Eventually(a.reconcile).WithArguments(r, instance).
+			Should(BeSuccessfulReconcile())
 
 		err := k8sClient.Get(ctx, instance.DashboardServiceNamespacedName(), &corev1.Service{})
 		Expect(k8sErrors.IsNotFound(err)).To(BeTrue())

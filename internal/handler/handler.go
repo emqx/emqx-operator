@@ -15,7 +15,6 @@ import (
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
@@ -43,10 +42,10 @@ func newPatcher() *Patcher {
 	return patcher
 }
 
-func NewHandler(mgr manager.Manager) *Handler {
+func NewHandler(client client.Client) *Handler {
 	return &Handler{
 		Patcher: newPatcher(),
-		Client:  mgr.GetClient(),
+		Client:  client,
 	}
 }
 

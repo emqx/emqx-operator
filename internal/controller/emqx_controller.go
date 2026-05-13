@@ -108,7 +108,7 @@ func NewEMQXReconciler(mgr manager.Manager) *EMQXReconciler {
 	restConfig := mgr.GetConfig()
 	_ = kubernetes.NewForConfigOrDie(restConfig)
 	return &EMQXReconciler{
-		Handler:       handler.NewHandler(mgr),
+		Handler:       handler.NewHandler(mgr.GetClient()),
 		RESTConfig:    restConfig,
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("emqx-controller"),

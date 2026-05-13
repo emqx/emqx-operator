@@ -201,9 +201,9 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 		})
 
 		It("should allow rolling update with multiple old cores", func() {
-			s := &syncCoreSet{emqxReconciler}
-			result := s.rollingUpdate(round, instance)
-			Expect(result).To(Equal(subResult{}))
+			s := &syncCoreSet{emqxReconciler.withTransientErrors(1)}
+			Eventually(s.rollingUpdate).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			_, err := actualObject(pod1)
 			Expect(k8sErrors.IsNotFound(err)).To(BeTrue(), "highest-ordinal outdated pod should be deleted first")
 		})
@@ -213,9 +213,9 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 			pod1.Labels[appsv1.ControllerRevisionHashLabelKey] = coreSet.Status.UpdateRevision
 			Expect(k8sClient.Update(ctx, pod1)).Should(Succeed())
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			s := &syncCoreSet{emqxReconciler}
-			result := s.rollingUpdate(round, instance)
-			Expect(result).To(Equal(subResult{}))
+			s := &syncCoreSet{emqxReconciler.withTransientErrors(1)}
+			Eventually(s.rollingUpdate).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(actualObject(pod0)).To(
 				Not(BeNil()),
 				"sole remaining outdated core must stay up while replicant ReplicaSet migrates",

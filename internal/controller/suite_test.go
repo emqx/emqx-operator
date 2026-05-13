@@ -31,24 +31,26 @@ import (
 	ginkgotypes "github.com/onsi/ginkgo/v2/types"
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	"go.uber.org/zap/zapcore"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	controllerlog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
+	"github.com/emqx/emqx-operator/internal/handler"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	// +kubebuilder:scaffold:imports
 )
@@ -56,14 +58,12 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
-var k8sClient client.Client
-var k8sManager ctrl.Manager
+var restConfig *rest.Config
+var k8sClient client.WithWatch
 var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 var logger logr.Logger
-var timeout, interval time.Duration
 
 var emqxReconciler *EMQXReconciler
 var emqxConf *config.EMQX
@@ -89,24 +89,20 @@ var emqx *crd.EMQX = &crd.EMQX{
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
+	gomega.SetDefaultEventuallyTimeout(time.Second * 10)
+	gomega.SetDefaultEventuallyPollingInterval(time.Second)
 	RunSpecs(t, "Controller Suite", ginkgotypes.ReporterConfig{
 		Verbose: true,
 	})
 }
 
 var _ = BeforeSuite(func() {
-	timeout = time.Second * 10
-	interval = time.Second
-
-	gomega.SetDefaultEventuallyTimeout(timeout)
-	gomega.SetDefaultEventuallyPollingInterval(interval)
-
 	logger = zap.New(
 		zap.WriteTo(GinkgoWriter),
 		zap.UseDevMode(true),
 		zap.Level(zapcore.DebugLevel),
 	)
-	logf.SetLogger(logger)
+	controllerlog.SetLogger(logger)
 
 	ctx, cancel = context.WithCancel(context.TODO())
 
@@ -125,35 +121,26 @@ var _ = BeforeSuite(func() {
 	}
 
 	var err error
-	// cfg is defined in this file globally.
-	cfg, err = testEnv.Start()
+	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
-	Expect(cfg).NotTo(BeNil())
+	Expect(restConfig).NotTo(BeNil())
 
 	err = crd.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	k8sClient, err = client.NewWithWatch(restConfig, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
-		Metrics: metricsserver.Options{
-			BindAddress: "0",
-		},
-	})
-	Expect(err).ToNot(HaveOccurred())
+	emqxReconciler = &EMQXReconciler{
+		Handler:       handler.NewHandler(k8sClient),
+		RESTConfig:    restConfig,
+		Scheme:        scheme.Scheme,
+		EventRecorder: &eventLogger{logger},
+	}
 
-	go func() {
-		defer GinkgoRecover()
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
-		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
-	}()
-
-	emqxReconciler = NewEMQXReconciler(k8sManager)
 	emqxConf, err = config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(emqxConf).ToNot(BeNil())
@@ -261,6 +248,13 @@ func newReconcileRoundWithRequester(requester req.RequesterInterface) *reconcile
 	}
 }
 
+// withTransientErrors attaches a transiently failing k8s client to the reconciler.
+func (r *EMQXReconciler) withTransientErrors(numErrors int) *EMQXReconciler {
+	r.Client = newTransientErrorClient(k8sClient, numErrors)
+	return r
+}
+
+// apiRequesterOverride always provides the given fixed API requester.
 type apiRequesterOverride struct {
 	requester req.RequesterInterface
 }
@@ -273,8 +267,8 @@ func (b *apiRequesterOverride) forPod(_ *corev1.Pod) req.RequesterInterface {
 	return b.requester
 }
 
-type apiRequesterUnavailable struct {
-}
+// apiRequesterUnavailable simulates apiRequester for completely unavailable cluser.
+type apiRequesterUnavailable struct{}
 
 func (b *apiRequesterUnavailable) forOldestCore(_ *reconcileState, _ ...reconcileStatePodFilter) req.RequesterInterface {
 	return nil
@@ -282,4 +276,46 @@ func (b *apiRequesterUnavailable) forOldestCore(_ *reconcileState, _ ...reconcil
 
 func (b *apiRequesterUnavailable) forPod(_ *corev1.Pod) req.RequesterInterface {
 	return nil
+}
+
+// eventLogger is an EventRecorder that simply redirects events into the specified logger instance.
+type eventLogger struct {
+	logger logr.Logger
+}
+
+func (el *eventLogger) writeEvent(object apiruntime.Object, annotations map[string]string, eventtype, reason, message string) {
+	kvs := []any{
+		"type", eventtype,
+		"reason", reason,
+		"message", message,
+	}
+	gvk, err := apiutil.GVKForObject(object, scheme.Scheme)
+	if err == nil {
+		kvs = append(kvs, "gv", gvk.GroupVersion())
+	}
+	if annotations != nil {
+		kvs = append(kvs, "annotations", annotations)
+	}
+	el.logger.Info("controller-event", kvs...)
+}
+
+func (el *eventLogger) Event(object apiruntime.Object, eventtype, reason, message string) {
+	el.writeEvent(object, nil, eventtype, reason, message)
+}
+
+func (el *eventLogger) Eventf(object apiruntime.Object, eventtype, reason, messageFmt string, args ...interface{}) {
+	el.writeEvent(object, nil, eventtype, reason, fmt.Sprintf(messageFmt, args...))
+}
+
+func (el *eventLogger) AnnotatedEventf(object apiruntime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+	el.writeEvent(object, annotations, eventtype, reason, fmt.Sprintf(messageFmt, args...))
+}
+
+func BeSuccessfulReconcile() gomegatypes.GomegaMatcher {
+	return WithTransform(
+		func(in subResult) error {
+			return in.err
+		},
+		Succeed(),
+	)
 }

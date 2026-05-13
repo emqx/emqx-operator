@@ -50,9 +50,9 @@ var _ = Describe("Reconciler addBootstrap", Ordered, func() {
 	})
 
 	It("should create bootstrap secrets", func() {
-		a := &addBootstrap{emqxReconciler}
-		result := a.reconcile(newReconcileRound(), instance)
-		Expect(result.err).NotTo(HaveOccurred())
+		a := &addBootstrap{emqxReconciler.withTransientErrors(1)}
+		Eventually(a.reconcile).WithArguments(newReconcileRound(), instance).
+			Should(BeSuccessfulReconcile())
 
 		cookieSecret := &corev1.Secret{}
 		Expect(k8sClient.Get(ctx, instance.NodeCookieNamespacedName(), cookieSecret)).

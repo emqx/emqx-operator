@@ -15,7 +15,7 @@ var _ = Describe("Reconciler addHeadlessService", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
 	BeforeEach(func() {
-		a = &addHeadlessService{emqxReconciler}
+		a = &addHeadlessService{emqxReconciler.withTransientErrors(1)}
 
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -43,7 +43,7 @@ var _ = Describe("Reconciler addHeadlessService", Ordered, func() {
 		Eventually(a.reconcile).WithArguments(newReconcileRound(), instance).
 			WithTimeout(timeout).
 			WithPolling(interval).
-			Should(Equal(subResult{}))
+			Should(BeSuccessfulReconcile())
 		Eventually(func() *corev1.Service {
 			svc := &corev1.Service{}
 			_ = k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "emqx-headless"}, svc)

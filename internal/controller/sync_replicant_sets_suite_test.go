@@ -172,7 +172,8 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			s := &syncReplicantSets{emqxReconciler}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			// Pod should be annotated with deletion cost:
 			Expect(actualObject(currentReplicants[0])).To(
 				HaveField("Annotations", HaveKey("controller.kubernetes.io/pod-deletion-cost")),
@@ -188,7 +189,8 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			s := &syncReplicantSets{emqxReconciler}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			for _, p := range currentReplicants {
 				Expect(actualObject(p)).To(
 					HaveField("Annotations", HaveKey("controller.kubernetes.io/pod-deletion-cost")),
@@ -207,7 +209,8 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			s := &syncReplicantSets{emqxReconciler}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			for _, p := range currentReplicants {
 				Expect(actualObject(p)).To(Not(
 					HaveField("Annotations", HaveKey("controller.kubernetes.io/pod-deletion-cost")),
@@ -225,7 +228,8 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 
 			// Phase 2: numAllowedReplicas = min(3 + 2 - 3, 3) = 2
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(actualObject(update)).To(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(2))),
 			)
@@ -243,7 +247,8 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			// Phase 2: numAllowedReplicas = min(3 + 2 - 2, 3) = 2
 			round = newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(actualObject(update)).To(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(3))),
 			)
@@ -261,7 +266,8 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			// Phase 3: numAllowedReplicas = min(3 + 2 - 1, 3) = still 3
 			round = newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(actualObject(update)).To(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(3))),
 			)
@@ -369,7 +375,8 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			s := &syncReplicantSets{emqxReconciler}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(actualObject(rs)).To(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(5))),
 			)
@@ -383,7 +390,8 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			s := &syncReplicantSets{emqxReconciler}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 
 			numAnnotated := 0
 			for _, p := range replicants {
@@ -406,10 +414,11 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			rs.Status.AvailableReplicas = 0
 			Expect(k8sClient.Status().Update(ctx, rs)).Should(Succeed())
 
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 
 			numAnnotated := 0
 			for _, p := range replicants {
@@ -429,10 +438,11 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 
 		It("is a no-op at desired replica count", func() {
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 
 			// No pods annotated.
 			for _, p := range replicants {
@@ -483,10 +493,11 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			_ = util.AttachPodAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
 			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
 
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 
 			// Stale annotations must be gone.
 			Expect(actualObject(replicants[0])).To(And(
@@ -528,8 +539,9 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 
-			s := &syncReplicantSets{emqxReconciler}
-			Expect(s.reconcile(round, instance)).To(Equal(subResult{}))
+			s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 
 			// Stale annotations must be gone.
 			Expect(actualObject(replicants[0])).To(And(
@@ -733,7 +745,7 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		update.Status.AvailableReplicas = 0
 		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-		s := &syncReplicantSets{emqxReconciler}
+		s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
 		admissions := s.outdatedReplicantAdmissions(round, instance)
 		Expect(admissions).Should(BeEmpty())
 	})
@@ -754,7 +766,7 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		}
 		round := newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-		s := &syncReplicantSets{emqxReconciler}
+		s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
 		admissions := s.outdatedReplicantAdmissions(round, instance)
 		// Pod should still be admitted (as admissionWait) despite zero budget,
 		// because it has the scaling-down annotation from a previous iteration.
@@ -783,7 +795,7 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		}
 		round := newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-		s := &syncReplicantSets{emqxReconciler}
+		s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
 		admissions := s.outdatedReplicantAdmissions(round, instance)
 		Expect(admissions).Should(HaveLen(1))
 		Expect(admissions[0].Admission).Should(And(
