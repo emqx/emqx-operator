@@ -108,8 +108,6 @@ var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 			)
 			return list
 		}).
-			WithTimeout(timeout).
-			WithPolling(interval).
 			Should(HaveField("Items", HaveLen(int(instance.Spec.RevisionHistoryLimit))))
 	})
 })

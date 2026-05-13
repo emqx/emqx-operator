@@ -41,8 +41,6 @@ var _ = Describe("Reconciler addHeadlessService", Ordered, func() {
 
 	It("generate headless svc", func() {
 		Eventually(a.reconcile).WithArguments(newReconcileRound(), instance).
-			WithTimeout(timeout).
-			WithPolling(interval).
 			Should(BeSuccessfulReconcile())
 		Eventually(func() *corev1.Service {
 			svc := &corev1.Service{}

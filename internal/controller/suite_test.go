@@ -29,7 +29,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	ginkgotypes "github.com/onsi/ginkgo/v2/types"
-	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	"go.uber.org/zap/zapcore"
@@ -89,8 +88,8 @@ var emqx *crd.EMQX = &crd.EMQX{
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	gomega.SetDefaultEventuallyTimeout(time.Second * 10)
-	gomega.SetDefaultEventuallyPollingInterval(time.Second)
+	SetDefaultEventuallyTimeout(time.Second * 10)
+	SetDefaultEventuallyPollingInterval(time.Second)
 	RunSpecs(t, "Controller Suite", ginkgotypes.ReporterConfig{
 		Verbose: true,
 	})
