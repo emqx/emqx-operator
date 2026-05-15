@@ -23,19 +23,36 @@ This operator is compatible with the following EMQX releases:
 
 ## Installation
 
-Here's the simplest way to install the operator.
+### Release Manifest
+
+The simplest way to install the operator is to apply the release manifest.
 ```sh
-kubectl apply --server-side=true -f https://github.com/emqx/emqx-operator/releases/download/v2.3.0/install.yaml
+kubectl apply --server-side=true -f https://github.com/emqx/emqx-operator/releases/download/v2.3.1/install.yaml
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" --namespace emqx-operator-system
 ```
 
 This will install both the CRDs, the controller manager and relevant resources into the cluster. The controller manager will be deployed in the `emqx-operator-system` namespace.
 
+### Helm
+
+You can also install the operator from the EMQX Helm chart repository.
+```sh
+helm repo add emqx https://repos.emqx.io/charts
+helm repo update
+helm install emqx-operator emqx/emqx-operator \
+  --namespace emqx-operator-system \
+  --create-namespace \
+  --version 2.3.1 \
+  --wait
+```
+
+This installs the same CRDs, controller manager and relevant resources into the `emqx-operator-system` namespace.
+
 ## Upgrading
 
 ### From 2.2.x
 
-To upgrade from 2.2.x to 2.3.0, you need to patch the existing CRDs first to explicitly remove the conversion webhook.
+To upgrade from 2.2.x to 2.3.x, you need to patch the existing CRDs first to explicitly remove the conversion webhook.
 ```sh
 kubectl patch crd emqxes.apps.emqx.io     --type=json -p='[{"op":"replace", "path":"/spec/conversion", "value":{"strategy":"None"}}]'
 kubectl patch crd rebalances.apps.emqx.io --type=json -p='[{"op":"replace", "path":"/spec/conversion", "value":{"strategy":"None"}}]'
