@@ -122,10 +122,11 @@ func printObject(o hocon.Object, root bool) string {
 func printArray(a hocon.Array) string {
 	var builder strings.Builder
 	builder.WriteString("[")
-	builder.WriteString(a[0].String())
-	for _, value := range a[1:] {
-		builder.WriteString(", ")
-		builder.WriteString(value.String())
+	for i, value := range a {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(printValue(value))
 	}
 	builder.WriteString("]")
 	return builder.String()
