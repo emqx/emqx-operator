@@ -69,6 +69,14 @@ Alternatively, if EMQX resources fail to reach `Ready` status condition, consult
 kubectl logs -l "control-plane=controller-manager" --tail=-1 --namespace emqx-operator-system
 ```
 
+For Helm installations, the chart defaults to production logging. Enable the `development` flag to turn debug logging on.
+```sh
+helm upgrade emqx-operator emqx/emqx-operator \
+  --namespace emqx-operator-system \
+  --reuse-values \
+  --set development=true
+```
+
 ## Development
 
 ### Prerequisites
