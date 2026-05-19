@@ -97,12 +97,12 @@ spec:
         - /bin/sh
         - -ec
         - |
-          echo "=== EMQX Operator pre-upgrade cleanup (2.2.x -> 2.3.0) ==="
+          echo "=== EMQX Operator pre-upgrade cleanup (2.2.x -> 2.3.x) ==="
 
           # Step 1: Check for existing legacy custom resources.
           #
           # Legacy CRDs (emqxbrokers, emqxenterprises, emqxplugins) are present in
-          # 2.2.x chart templates but absent from 2.3.0, so Helm will delete them
+          # 2.2.x chart templates but absent from 2.3.x, so Helm will delete them
           # during upgrade. If any CRs exist under those CRDs they would be silently
           # destroyed. Abort early and ask the user to migrate first.
           BLOCKED=""
@@ -134,7 +134,7 @@ spec:
           if [ -n "$BLOCKED" ]; then
             echo ""
             echo "Upgrade BLOCKED: legacy custom resources still exist ($BLOCKED)."
-            echo "These CRDs will be removed by the 2.3.0 chart, which would destroy the CRs."
+            echo "These CRDs will be removed by the 2.3.x chart, which would destroy the CRs."
             echo "Please migrate or delete these resources before upgrading."
             echo "See: https://github.com/emqx/emqx-operator/blob/main-2.3/README.md#from-22x"
             exit 1

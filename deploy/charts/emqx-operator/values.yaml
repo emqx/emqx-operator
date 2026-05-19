@@ -12,10 +12,7 @@ singleNamespace: false
 # Development configures the logger to use a Zap development config
 # (stacktraces on warnings, no sampling), otherwise a Zap production
 # config will be used (stacktraces on errors, sampling).
-# NOTE: On by default for 2.3.0 as it changes a lot, a higher risk of
-#       bug reports. Impact is tolerable, usually not much debug output.
-# TODO: Switch off by default in 2.3.1.
-development: true
+development: false
 
 replicaCount: 1
 
