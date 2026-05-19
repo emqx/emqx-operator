@@ -315,6 +315,13 @@ func TestPrint(t *testing.T) {
 		assert.Equal(t, "", got)
 	})
 
+	t.Run("empty object", func(t *testing.T) {
+		config, err := EMQXConfig("cluster {}")
+		assert.Nil(t, err)
+		got := config.Print()
+		assert.Equal(t, "cluster {}", got)
+	})
+
 	t.Run("arrays", func(t *testing.T) {
 		config, err := EMQXConfig(`
 			node.name = "emqx@127.0.0.1"
@@ -323,6 +330,50 @@ func TestPrint(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Print()
 		expected := `cluster {core_nodes = ["emqx@node1.emqx.io", "emqx@node2.emqx.io"]}, node {name = "emqx@127.0.0.1"}`
+		assert.Equal(t, expected, got)
+	})
+
+	t.Run("empty arrays", func(t *testing.T) {
+		config, err := EMQXConfig(`
+			cluster.core_nodes = []
+		`)
+		assert.Nil(t, err)
+		got := config.Print()
+		expected := `cluster {core_nodes = []}`
+		assert.Equal(t, expected, got)
+	})
+
+	t.Run("non-empty scalar arrays", func(t *testing.T) {
+		config, err := EMQXConfig(`
+			authentication.mechanisms = ["password_based", "jwt"]
+			authorization.cache_ttl = [1, 5, 10]
+		`)
+		assert.Nil(t, err)
+		got := config.Print()
+		expected := `authentication {mechanisms = ["password_based", jwt]}, authorization {cache_ttl = [1, 5, 10]}`
+		assert.Equal(t, expected, got)
+	})
+
+	t.Run("nested arrays", func(t *testing.T) {
+		config, err := EMQXConfig(`
+			cluster.seed_nodes = [["emqx@node1.emqx.io"], []]
+		`)
+		assert.Nil(t, err)
+		got := config.Print()
+		expected := `cluster {seed_nodes = [["emqx@node1.emqx.io"], []]}`
+		assert.Equal(t, expected, got)
+	})
+
+	t.Run("array objects", func(t *testing.T) {
+		config, err := EMQXConfig(`
+			authentication = [
+				{mechanism = password_based, backend = built_in_database},
+				{mechanism = jwt}
+			]
+		`)
+		assert.Nil(t, err)
+		got := config.Print()
+		expected := `authentication = [{backend = "built_in_database", mechanism = "password_based"}, {mechanism = jwt}]`
 		assert.Equal(t, expected, got)
 	})
 
