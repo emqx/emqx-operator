@@ -315,6 +315,13 @@ func TestPrint(t *testing.T) {
 		assert.Equal(t, "", got)
 	})
 
+	t.Run("empty object", func(t *testing.T) {
+		config, err := EMQXConfig("cluster {}")
+		assert.Nil(t, err)
+		got := config.Print()
+		assert.Equal(t, "cluster {}", got)
+	})
+
 	t.Run("arrays", func(t *testing.T) {
 		config, err := EMQXConfig(`
 			node.name = "emqx@127.0.0.1"
