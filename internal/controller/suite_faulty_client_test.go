@@ -2,11 +2,11 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"math/rand"
 	"reflect"
 	"sync"
 
+	emperror "emperror.dev/errors"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -82,8 +82,9 @@ func (f *faultEmitter) err() error {
 	}
 	f.remainingEvents--
 	if faultRandomFloat64() < f.probability {
-		logger.Error(errors.New("injected k8s client error"), "injecting error")
-		return errors.New("injected k8s client error")
+		err := emperror.WithStackDepth(emperror.NewPlain("injected k8s client error"), 3)
+		logger.Info("injecting fault", "error", err)
+		return err
 	}
 	return nil
 }
