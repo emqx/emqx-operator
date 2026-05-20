@@ -79,6 +79,8 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 
 ##@ Tests
 
+KUBEBUILDER_ASSETS = $(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)
+
 TEST_E2E_UPGRADE_IMAGE_INITIAL ?= emqx/emqx:5.10.2
 TEST_E2E_UPGRADE_IMAGE_UPGRADE ?= emqx/emqx:6.1.0
 
@@ -88,7 +90,11 @@ TEST_E2E_STRESS_IMAGE ?= emqx/emqx:6.1.0
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v $$(go list ./... | grep -v /e2e) -coverprofile ./cover.out
+	env KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test -v $$(go list ./... | grep -v /e2e) -coverprofile ./cover.out
+
+.PHONY: smoke-test-controller
+smoke-test-controller: manifests generate fmt vet envtest ## Run smoke tests.
+	env KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test -v ./internal/controller -ginkgo.v -ginkgo.label-filter "smoke" -coverprofile ./cover.out
 
 # Prometheus is installed by default; skip with:
 # - TEST_E2E_SKIP_PROMETHEUS_INSTALL=true
