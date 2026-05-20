@@ -16,8 +16,12 @@ type faultEmitter struct {
 	mu              sync.Mutex
 	remainingEvents int
 	probability     float64
-	rng             *rand.Rand
 }
+
+var (
+	faultRandomMu sync.Mutex
+	faultRandom   *rand.Rand
+)
 
 func newFaultyClient(
 	base client.WithWatch,
@@ -67,7 +71,6 @@ func newFaultEmitter(numEvents int, faultProbability float64) *faultEmitter {
 	return &faultEmitter{
 		remainingEvents: numEvents,
 		probability:     faultProbability,
-		rng:             rand.New(rand.NewSource(ginkgo.GinkgoRandomSeed())),
 	}
 }
 
@@ -78,11 +81,20 @@ func (f *faultEmitter) err() error {
 		return nil
 	}
 	f.remainingEvents--
-	if f.rng.Float64() < f.probability {
+	if faultRandomFloat64() < f.probability {
 		logger.Error(errors.New("injected k8s client error"), "injecting error")
 		return errors.New("injected k8s client error")
 	}
 	return nil
+}
+
+func faultRandomFloat64() float64 {
+	faultRandomMu.Lock()
+	defer faultRandomMu.Unlock()
+	if faultRandom == nil {
+		faultRandom = rand.New(rand.NewSource(ginkgo.GinkgoRandomSeed()))
+	}
+	return faultRandom.Float64()
 }
 
 func restoreObject(ctx context.Context, c client.Client, obj client.Object) {
