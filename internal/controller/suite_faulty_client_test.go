@@ -3,20 +3,31 @@ package controller
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"reflect"
 	"sync"
 
+	ginkgo "github.com/onsi/ginkgo/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
-type transientErrorClient struct {
-	mu        sync.Mutex
-	remaining int
+type faultEmitter struct {
+	mu              sync.Mutex
+	remainingEvents int
+	probability     float64
+	rng             *rand.Rand
 }
 
-func newTransientErrorClient(base client.WithWatch, numErrors int) client.Client {
-	fault := &transientErrorClient{remaining: numErrors}
+func newFaultyClient(
+	base client.WithWatch,
+	numEvents int,
+	faultProbability float64,
+) client.Client {
+	fault := newFaultEmitter(numEvents, faultProbability)
+	if fault == nil {
+		return base
+	}
 	return interceptor.NewClient(base, interceptor.Funcs{
 		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 			if err := fault.err(); err != nil {
@@ -43,26 +54,35 @@ func newTransientErrorClient(base client.WithWatch, numErrors int) client.Client
 			}
 			return c.Update(ctx, obj, opts...)
 		},
-		SubResourceUpdate: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, opts ...client.SubResourceUpdateOption) error {
-			if err := fault.err(); err != nil {
-				restoreObject(ctx, c, obj)
-				return err
-			}
-			return c.SubResource(subResourceName).Update(ctx, obj, opts...)
-		},
 	})
 }
 
-func (f *transientErrorClient) err() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.remaining == 0 {
+func newFaultEmitter(numEvents int, faultProbability float64) *faultEmitter {
+	if numEvents <= 0 {
 		return nil
 	}
-	f.remaining--
-	err := errors.New("injected k8s client error")
-	// logger.WithCallDepth(3).Error(err, "injected error", "remaining", f.remaining)
-	return err
+	if faultProbability <= 0 {
+		return nil
+	}
+	return &faultEmitter{
+		remainingEvents: numEvents,
+		probability:     faultProbability,
+		rng:             rand.New(rand.NewSource(ginkgo.GinkgoRandomSeed())),
+	}
+}
+
+func (f *faultEmitter) err() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.remainingEvents == 0 {
+		return nil
+	}
+	f.remainingEvents--
+	if f.rng.Float64() < f.probability {
+		logger.Error(errors.New("injected k8s client error"), "injecting error")
+		return errors.New("injected k8s client error")
+	}
+	return nil
 }
 
 func restoreObject(ctx context.Context, c client.Client, obj client.Object) {

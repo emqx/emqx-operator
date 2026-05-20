@@ -15,7 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, func() {
 	var ns *corev1.Namespace
 	var instance *crd.EMQX
 	var round *reconcileRound
@@ -35,8 +35,8 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "controller-sync-cluster-test",
-				Labels: map[string]string{"test": "e2e"},
+				GenerateName: "controller-sync-cluster-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
@@ -181,7 +181,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "stopped"},
 			{Name: emqxNodeName(coreSet.Name + "-10"), PodName: "", Status: "stopped"},
 		}
-		s := &syncClusterMembership{emqxReconciler.withTransientErrors(1)}
+		s := &syncClusterMembership{emqxReconciler()}
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
@@ -196,7 +196,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "stopped"},
 			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: coreSet.Name + "-1", Status: "stopped"},
 		}
-		s := &syncClusterMembership{emqxReconciler.withTransientErrors(1)}
+		s := &syncClusterMembership{emqxReconciler()}
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
@@ -208,7 +208,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
 			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "running"},
 		}
-		s := &syncClusterMembership{emqxReconciler.withTransientErrors(1)}
+		s := &syncClusterMembership{emqxReconciler()}
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
@@ -223,7 +223,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 			{Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped", Role: "replicant"},
 			{Name: "emqx@10.0.0.11", PodName: "", Status: "stopped", Role: "replicant"},
 		}
-		s := &syncClusterMembership{emqxReconciler.withTransientErrors(1)}
+		s := &syncClusterMembership{emqxReconciler()}
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
@@ -238,7 +238,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 		instance.Status.ReplicantNodes = []crd.EMQXNode{
 			{Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped", Role: "replicant"},
 		}
-		s := &syncClusterMembership{emqxReconciler.withTransientErrors(1)}
+		s := &syncClusterMembership{emqxReconciler()}
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
@@ -252,7 +252,7 @@ var _ = Describe("Reconciler syncClusterMembership", Ordered, func() {
 		instance.Status.ReplicantNodes = []crd.EMQXNode{
 			{Name: "emqx@10.0.0.99", PodName: "", Status: "running", Role: "replicant"},
 		}
-		s := &syncClusterMembership{emqxReconciler.withTransientErrors(1)}
+		s := &syncClusterMembership{emqxReconciler()}
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())

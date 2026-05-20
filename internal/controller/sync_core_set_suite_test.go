@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crd.EMQX
 
@@ -28,8 +28,8 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   "controller-sync-core-set-test",
-				Labels: map[string]string{"test": "e2e"},
+				GenerateName: "controller-sync-core-set-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
@@ -201,7 +201,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 		})
 
 		It("should allow rolling update with multiple old cores", func() {
-			s := &syncCoreSet{emqxReconciler.withTransientErrors(1)}
+			s := &syncCoreSet{emqxReconciler()}
 			Eventually(s.rollingUpdate).WithArguments(round, instance).
 				Should(BeSuccessfulReconcile())
 			_, err := actualObject(pod1)
@@ -213,7 +213,7 @@ var _ = Describe("Reconciler syncCoreSet", Ordered, func() {
 			pod1.Labels[appsv1.ControllerRevisionHashLabelKey] = coreSet.Status.UpdateRevision
 			Expect(k8sClient.Update(ctx, pod1)).Should(Succeed())
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-			s := &syncCoreSet{emqxReconciler.withTransientErrors(1)}
+			s := &syncCoreSet{emqxReconciler()}
 			Eventually(s.rollingUpdate).WithArguments(round, instance).
 				Should(BeSuccessfulReconcile())
 			Expect(actualObject(pod0)).To(

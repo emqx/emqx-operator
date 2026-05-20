@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Reconciler addCoreSet", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler addCoreSet", Ordered, func() {
 	var ns *corev1.Namespace
 	var instance *crd.EMQX
 	var a *addCoreSet
@@ -22,10 +22,8 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 		// Create namespace:
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-add-emqx-core-test",
-				Labels: map[string]string{
-					"test": "e2e",
-				},
+				GenerateName: "controller-add-emqx-core-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
@@ -37,7 +35,7 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 
 	BeforeEach(func() {
 		// Instantiate reconciler:
-		a = &addCoreSet{emqxReconciler.withTransientErrors(1)}
+		a = &addCoreSet{emqxReconciler()}
 		round = newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 	})

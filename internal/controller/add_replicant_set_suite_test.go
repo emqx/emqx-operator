@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler addReplicantSet", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crd.EMQX = &crd.EMQX{}
 	var coreSet *appsv1.StatefulSet
@@ -26,10 +26,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-add-emqx-repl-test",
-				Labels: map[string]string{
-					"test": "e2e",
-				},
+				GenerateName: "controller-add-emqx-repl-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
@@ -116,7 +114,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 		Expect(k8sClient.Status().Update(ctx, corePod0)).To(Succeed())
 		Expect(k8sClient.Status().Update(ctx, corePod1)).To(Succeed())
 		// Instantiate reconciler and reconcile round:
-		a = &addReplicantSet{emqxReconciler.withTransientErrors(1)}
+		a = &addReplicantSet{emqxReconciler()}
 		round = newReconcileRound()
 		round.state, _ = loadReconcileState(ctx, k8sClient, instance)
 	})

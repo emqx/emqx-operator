@@ -18,17 +18,18 @@ package controller
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
-	ginkgotypes "github.com/onsi/ginkgo/v2/types"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	"go.uber.org/zap/zapcore"
@@ -39,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -57,14 +57,12 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var restConfig *rest.Config
 var k8sClient client.WithWatch
 var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 var logger logr.Logger
 
-var emqxReconciler *EMQXReconciler
 var emqxConf *config.EMQX
 var emqx *crd.EMQX = &crd.EMQX{
 	ObjectMeta: metav1.ObjectMeta{
@@ -86,13 +84,53 @@ var emqx *crd.EMQX = &crd.EMQX{
 	},
 }
 
+const (
+	clientFaultModeNone   = "none"
+	clientFaultModeFixed  = "fixed"
+	clientFaultModeRandom = "random"
+)
+
+var (
+	clientFaultMode         string
+	clientFaultRandomEvents = flag.Int(
+		"client-fault-events",
+		10,
+		"number of fault events evaluated when random client faults are simulated",
+	)
+	clientFaultRandomProbability = flag.Float64(
+		"client-fault-probability",
+		0.25,
+		"probability that each random event emits a client fault",
+	)
+)
+
+var baseReconciler *EMQXReconciler
+
+func emqxReconciler() *EMQXReconciler {
+	switch clientFaultMode {
+	case clientFaultModeFixed:
+		r := *baseReconciler
+		r.Handler = handler.NewHandler(newFaultyClient(k8sClient, 1, 1))
+		return &r
+	case clientFaultModeRandom:
+		r := *baseReconciler
+		r.Handler = handler.NewHandler(newFaultyClient(
+			k8sClient,
+			*clientFaultRandomEvents,
+			*clientFaultRandomProbability,
+		))
+		return &r
+	default:
+		r := *baseReconciler
+		return &r
+	}
+}
+
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
 	SetDefaultEventuallyTimeout(time.Second * 10)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	RunSpecs(t, "Controller Suite", ginkgotypes.ReporterConfig{
-		Verbose: true,
-	})
+	RunSpecs(t, "Controller Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -119,8 +157,7 @@ var _ = BeforeSuite(func() {
 			fmt.Sprintf("1.31.0-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 
-	var err error
-	restConfig, err = testEnv.Start()
+	restConfig, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
 
@@ -133,16 +170,16 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	emqxReconciler = &EMQXReconciler{
+	emqxConf, err = config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(emqxConf).ToNot(BeNil())
+
+	baseReconciler = &EMQXReconciler{
 		Handler:       handler.NewHandler(k8sClient),
 		RESTConfig:    restConfig,
 		Scheme:        scheme.Scheme,
 		EventRecorder: &eventLogger{logger},
 	}
-
-	emqxConf, err = config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(emqxConf).ToNot(BeNil())
 })
 
 var _ = AfterSuite(func() {
@@ -247,12 +284,6 @@ func newReconcileRoundWithRequester(requester req.RequesterInterface) *reconcile
 	}
 }
 
-// withTransientErrors attaches a transiently failing k8s client to the reconciler.
-func (r *EMQXReconciler) withTransientErrors(numErrors int) *EMQXReconciler {
-	r.Client = newTransientErrorClient(k8sClient, numErrors)
-	return r
-}
-
 // apiRequesterOverride always provides the given fixed API requester.
 type apiRequesterOverride struct {
 	requester req.RequesterInterface
@@ -309,6 +340,40 @@ func (el *eventLogger) Eventf(object apiruntime.Object, eventtype, reason, messa
 func (el *eventLogger) AnnotatedEventf(object apiruntime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
 	el.writeEvent(object, annotations, eventtype, reason, fmt.Sprintf(messageFmt, args...))
 }
+
+// Ginkgo helpers
+
+func DescribeClientFaultMatrix(text string, args ...interface{}) bool {
+	var testf func() = nil
+	var nodeArgs []interface{}
+
+	nodeArgs = append(nodeArgs, Offset(1))
+	for _, arg := range args {
+		if reflect.TypeOf(arg).Kind() == reflect.Func {
+			testf = arg.(func())
+		} else {
+			nodeArgs = append(nodeArgs, arg)
+		}
+	}
+
+	return Describe(text, Ordered, func() {
+		var contextArgs []interface{}
+
+		contextArgs = append(nodeArgs, Label("smoke"), func() {
+			BeforeAll(func() { clientFaultMode = clientFaultModeNone })
+			testf()
+		})
+		Context("client", contextArgs...)
+
+		contextArgs = append(nodeArgs, func() {
+			BeforeAll(func() { clientFaultMode = clientFaultModeRandom })
+			testf()
+		})
+		Context("faulty client", contextArgs...)
+	})
+}
+
+// Gomega helpers
 
 func BeSuccessfulReconcile() gomegatypes.GomegaMatcher {
 	return WithTransform(

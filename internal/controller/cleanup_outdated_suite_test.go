@@ -14,20 +14,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
-	var s *cleanupOutdatedSets
-
-	var instance *crd.EMQX = &crd.EMQX{}
-	var ns *corev1.Namespace = &corev1.Namespace{}
-	var round *reconcileRound
+var _ = DescribeClientFaultMatrix("Reconciler cleanupOutdatedSets", Ordered, func() {
+	var instance *crd.EMQX
+	var ns *corev1.Namespace
 
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-cleanup-outdated-test",
-				Labels: map[string]string{
-					"test": "e2e",
-				},
+				GenerateName: "controller-cleanup-outdated-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
@@ -50,8 +45,6 @@ var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 				},
 			},
 		}
-		s = &cleanupOutdatedSets{emqxReconciler.withTransientErrors(1)}
-		round = newReconcileRound()
 	})
 
 	It("should delete outdated replicant sets", func() {
@@ -93,10 +86,12 @@ var _ = Describe("Reconciler cleanupOutdatedSets", Ordered, func() {
 			Expect(k8sClient.Create(ctx, rs.DeepCopy())).Should(Succeed())
 			rs.Status.Replicas = 0
 			rs.Status.ObservedGeneration = 1
-			Expect(k8sClient.Status().Patch(ctx, rs.DeepCopy(), client.Merge)).Should(Succeed())
-			round.state.replicantSets = append(round.state.replicantSets, rs)
+			Expect(k8sClient.Status().Update(ctx, rs)).Should(Succeed())
 		}
 
+		s := &cleanupOutdatedSets{emqxReconciler()}
+		round := newReconcileRound()
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 

@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crd.EMQX
 
@@ -41,7 +41,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-sync-replicant-sets-suite-test",
+				GenerateName: "controller-sync-replicant-sets-suite-test",
 				Labels: map[string]string{
 					"test": "e2e",
 				},
@@ -169,7 +169,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 		})
 
 		It("should scale down current replicant set and annotate pod", func() {
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			Eventually(s.reconcile).WithArguments(round, instance).
@@ -186,7 +186,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 
 		It("drains up to maxUnavailable old pods in one reconcile", func() {
 			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(3))}
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			Eventually(s.reconcile).WithArguments(round, instance).
@@ -206,7 +206,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			Expect(actualObject(current)).To(Not(BeNil()))
 			current.Status.AvailableReplicas = 0
 			Expect(k8sClient.Status().Update(ctx, current)).Should(Succeed())
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			Eventually(s.reconcile).WithArguments(round, instance).
@@ -223,7 +223,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 
 		It("surges the update RS gradually with maxSurge", func() {
 			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxSurge: ptr.To(intstr.FromInt(2))}
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 
@@ -372,7 +372,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 
 		It("scales up replicant set when desired > current", func() {
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(5))
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			Eventually(s.reconcile).WithArguments(round, instance).
@@ -387,7 +387,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(2))}
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			Eventually(s.reconcile).WithArguments(round, instance).
@@ -414,7 +414,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			rs.Status.AvailableReplicas = 0
 			Expect(k8sClient.Status().Update(ctx, rs)).Should(Succeed())
 
-			s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			Eventually(s.reconcile).WithArguments(round, instance).
@@ -438,7 +438,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 
 		It("is a no-op at desired replica count", func() {
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
-			s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			Eventually(s.reconcile).WithArguments(round, instance).
@@ -462,7 +462,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			for i := range instance.Status.ReplicantNodes {
 				instance.Status.ReplicantNodes[i].Sessions = 100
 			}
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 
@@ -493,7 +493,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			_ = util.AttachPodAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
 			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
 
-			s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
+			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			Eventually(s.reconcile).WithArguments(round, instance).
@@ -539,7 +539,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 
-			s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
+			s := &syncReplicantSets{emqxReconciler()}
 			Eventually(s.reconcile).WithArguments(round, instance).
 				Should(BeSuccessfulReconcile())
 
@@ -573,7 +573,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 
-			s := &syncReplicantSets{emqxReconciler}
+			s := &syncReplicantSets{emqxReconciler()}
 			result := s.reconcile(round, instance)
 			Expect(result.err).To(HaveOccurred())
 
@@ -587,7 +587,7 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 	})
 })
 
-var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crd.EMQX
 
@@ -604,7 +604,7 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-sync-replicant-sets-admission-test",
+				GenerateName: "controller-sync-replicant-sets-admission-test",
 				Labels: map[string]string{
 					"test": "e2e",
 				},
@@ -745,7 +745,7 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		update.Status.AvailableReplicas = 0
 		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-		s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
+		s := &syncReplicantSets{emqxReconciler()}
 		admissions := s.outdatedReplicantAdmissions(round, instance)
 		Expect(admissions).Should(BeEmpty())
 	})
@@ -766,7 +766,7 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		}
 		round := newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-		s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
+		s := &syncReplicantSets{emqxReconciler()}
 		admissions := s.outdatedReplicantAdmissions(round, instance)
 		// Pod should still be admitted (as admissionWait) despite zero budget,
 		// because it has the scaling-down annotation from a previous iteration.
@@ -795,7 +795,7 @@ var _ = Describe("Reconciler syncReplicantSets admission", Ordered, func() {
 		}
 		round := newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
-		s := &syncReplicantSets{emqxReconciler.withTransientErrors(1)}
+		s := &syncReplicantSets{emqxReconciler()}
 		admissions := s.outdatedReplicantAdmissions(round, instance)
 		Expect(admissions).Should(HaveLen(1))
 		Expect(admissions[0].Admission).Should(And(

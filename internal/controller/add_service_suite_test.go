@@ -18,32 +18,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func mockConfigsRequester(configBody string) req.RequesterInterface {
-	return req.NewMockRequester(
+var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
+	var instance *crd.EMQX
+	var ns *corev1.Namespace
+
+	validConfig := config.WithDefaults("")
+	validConfigRequester := req.NewMockRequester(
 		func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
 			if method == "GET" && strings.Contains(u.Path, "api/v5/configs") {
-				return &http.Response{StatusCode: http.StatusOK}, []byte(configBody), nil
+				return &http.Response{StatusCode: http.StatusOK}, []byte(validConfig), nil
 			}
 			return &http.Response{StatusCode: http.StatusNotImplemented}, nil, nil
 		},
 	)
-}
-
-var _ = Describe("Reconciler addService", Ordered, func() {
-	var a *addService
-	var instance *crd.EMQX
-	var ns *corev1.Namespace
-	var round *reconcileRound
-
-	validConfig := config.WithDefaults("")
 
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-add-service-test",
-				Labels: map[string]string{
-					"test": "e2e",
-				},
+				GenerateName: "controller-add-service-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
@@ -57,16 +50,11 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 				Labels: map[string]string{"test": "label"},
 			},
 		}
-		a = &addService{emqxReconciler.withTransientErrors(1)}
-		round = newReconcileRoundWithRequester(mockConfigsRequester(validConfig))
 	})
 
 	AfterEach(func() {
-		var serviceList corev1.ServiceList
-		Expect(k8sClient.List(ctx, &serviceList, client.InNamespace(ns.Name))).To(Succeed())
-		for _, service := range serviceList.Items {
-			_ = k8sClient.Delete(ctx, &service)
-		}
+		Expect(k8sClient.DeleteAllOf(ctx, &corev1.Service{}, client.InNamespace(ns.Name))).
+			To(Succeed())
 	})
 
 	AfterAll(func() {
@@ -74,17 +62,15 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 	})
 
 	It("postpones when there is no usable API requester yet", func() {
-		r := &reconcileRound{
-			ctx:       ctx,
-			log:       logger,
-			conf:      emqxConf,
-			requester: &apiRequesterUnavailable{},
-			state:     &reconcileState{},
-		}
+		r := newReconcileRound()
+		r.requester = &apiRequesterUnavailable{}
+		a := &addService{emqxReconciler()}
 		Expect(a.reconcile(r, instance)).To(Equal(subResult{needRequeue: true}))
 	})
 
 	It("creates Dashboard and Listeners Services from EMQX config", func() {
+		a := &addService{emqxReconciler()}
+		round := newReconcileRoundWithRequester(validConfigRequester)
 		Eventually(a.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 
@@ -103,6 +89,8 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 				Replicas: ptr.To(int32(2)),
 			},
 		}
+
+		round := newReconcileRoundWithRequester(validConfigRequester)
 		round.state.replicantSets = []*appsv1.ReplicaSet{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -120,6 +108,7 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 			},
 		}
 
+		a := &addService{emqxReconciler()}
 		Eventually(a.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 
@@ -129,13 +118,13 @@ var _ = Describe("Reconciler addService", Ordered, func() {
 	})
 
 	It("does not create the Dashboard Service when the template is disabled", func() {
-		disabled := false
 		instance.Spec.DashboardServiceTemplate = &crd.ServiceTemplate{
-			Enabled: &disabled,
+			Enabled: ptr.To(false),
 		}
 
-		r := newReconcileRoundWithRequester(mockConfigsRequester(validConfig))
-		Eventually(a.reconcile).WithArguments(r, instance).
+		a := &addService{emqxReconciler()}
+		round := newReconcileRoundWithRequester(validConfigRequester)
+		Eventually(a.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 
 		err := k8sClient.Get(ctx, instance.DashboardServiceNamespacedName(), &corev1.Service{})
