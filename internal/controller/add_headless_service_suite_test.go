@@ -9,23 +9,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Reconciler addHeadlessService", Ordered, func() {
-	var a *addHeadlessService
+var _ = DescribeClientFaultMatrix("Reconciler addHeadlessService", Ordered, func() {
 	var instance *crd.EMQX = &crd.EMQX{}
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
-	BeforeEach(func() {
-		a = &addHeadlessService{emqxReconciler}
-
+	BeforeAll(func() {
+		// Create namespace:
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-v2beta1-add-svc-test",
-				Labels: map[string]string{
-					"test": "e2e",
-				},
+				GenerateName: "controller-add-service-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
+		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+	})
 
+	AfterAll(func() {
+		Expect(k8sClient.Delete(ctx, ns)).Should(Succeed())
+	})
+
+	BeforeEach(func() {
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate = crd.EMQXCoreTemplate{
@@ -35,15 +38,10 @@ var _ = Describe("Reconciler addHeadlessService", Ordered, func() {
 		}
 	})
 
-	It("create namespace", func() {
-		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
-	})
-
-	It("generate headless svc", func() {
+	It("generates headless service", func() {
+		a := addHeadlessService{emqxReconciler()}
 		Eventually(a.reconcile).WithArguments(newReconcileRound(), instance).
-			WithTimeout(timeout).
-			WithPolling(interval).
-			Should(Equal(subResult{}))
+			Should(BeSuccessfulReconcile())
 		Eventually(func() *corev1.Service {
 			svc := &corev1.Service{}
 			_ = k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "emqx-headless"}, svc)

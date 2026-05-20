@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Reconciler addCoreSet", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler addCoreSet", Ordered, func() {
 	var ns *corev1.Namespace
 	var instance *crd.EMQX
 	var a *addCoreSet
@@ -22,10 +22,8 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 		// Create namespace:
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-add-emqx-core-test",
-				Labels: map[string]string{
-					"test": "e2e",
-				},
+				GenerateName: "controller-add-emqx-core-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
@@ -37,14 +35,14 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 
 	BeforeEach(func() {
 		// Instantiate reconciler:
-		a = &addCoreSet{emqxReconciler}
+		a = &addCoreSet{emqxReconciler()}
 		round = newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 	})
 
 	It("should create statefulSet", func() {
-		result := a.reconcile(round, instance)
-		Expect(result.err).ToNot(HaveOccurred())
+		Eventually(a.reconcile).WithArguments(round, instance).
+			Should(BeSuccessfulReconcile())
 		Expect(coreSets(instance)).To(ConsistOf(
 			HaveField("Spec.Template.Spec.Containers", ConsistOf(
 				HaveField("Image", Equal(instance.Spec.Image)))),
@@ -53,8 +51,8 @@ var _ = Describe("Reconciler addCoreSet", Ordered, func() {
 
 	It("change image updates existing statefulSet in place", func() {
 		instance.Spec.Image = "emqx/emqx"
-		result := a.reconcile(round, instance)
-		Expect(result.err).ToNot(HaveOccurred())
+		Eventually(a.reconcile).WithArguments(round, instance).
+			Should(BeSuccessfulReconcile())
 		Expect(actualObject(instance)).To(And(
 			HaveCondition(crd.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
 			HaveCondition(crd.CoreNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),

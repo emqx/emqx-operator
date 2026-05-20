@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler addReplicantSet", Ordered, func() {
 	var ns *corev1.Namespace = &corev1.Namespace{}
 	var instance *crd.EMQX = &crd.EMQX{}
 	var coreSet *appsv1.StatefulSet
@@ -26,10 +26,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-add-emqx-repl-test",
-				Labels: map[string]string{
-					"test": "e2e",
-				},
+				GenerateName: "controller-add-emqx-repl-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
@@ -116,7 +114,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 		Expect(k8sClient.Status().Update(ctx, corePod0)).To(Succeed())
 		Expect(k8sClient.Status().Update(ctx, corePod1)).To(Succeed())
 		// Instantiate reconciler and reconcile round:
-		a = &addReplicantSet{emqxReconciler}
+		a = &addReplicantSet{emqxReconciler()}
 		round = newReconcileRound()
 		round.state, _ = loadReconcileState(ctx, k8sClient, instance)
 	})
@@ -133,8 +131,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Clear replicant template:
 			instance.Spec.ReplicantTemplate = nil
 			// Reconciliation step should do nothing and succeed:
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(replicantSets(instance)).To(BeEmpty())
 		})
 	})
@@ -154,16 +152,16 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			Expect(k8sClient.Status().Update(ctx, coreSet)).To(Succeed())
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed but not create any RS:
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(replicantSets(instance)).To(BeEmpty())
 		})
 	})
 
 	When("core nodes are ready", func() {
 		It("should create replicaSet", func() {
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Template.Spec.Containers", ConsistOf(
 					HaveField("Image", Equal(instance.Spec.Image)),
@@ -181,8 +179,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Start with 3 replicas:
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
 			// Run the reconcile to create replicantSet:
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(3))),
 			))
@@ -193,8 +191,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed:
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			// Status conditions should reset:
 			Expect(actualObject(instance)).To(And(
 				HaveCondition(crd.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
@@ -216,8 +214,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Start with 1 replicas:
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(1))
 			// Run the reconcile to create replicantSet:
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(1))),
 			))
@@ -228,8 +226,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(4))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed:
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			// Status conditions should reset:
 			Expect(actualObject(instance)).To(And(
 				HaveCondition(crd.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
@@ -251,8 +249,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			// Start with 1 replicas:
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(1))
 			// Run the reconcile to create replicantSet:
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(1))),
 			))
@@ -264,8 +262,8 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			Expect(k8sClient.Update(ctx, instance)).To(Succeed())
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed:
-			result := a.reconcile(round, instance)
-			Expect(result.err).ToNot(HaveOccurred())
+			Eventually(a.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
 			// There should be two replicaSets soon:
 			Expect(replicantSets(instance)).To(ConsistOf(
 				HaveField("Spec.Template.Spec.Containers", ConsistOf(HaveField("Image", Equal(emqx.Spec.Image)))),

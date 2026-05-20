@@ -3,25 +3,22 @@ package controller
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Reconciler addBootstrap", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler addBootstrap", Ordered, func() {
 	var instance *crd.EMQX = &crd.EMQX{}
 	var ns *corev1.Namespace = &corev1.Namespace{}
 
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "controller-add-emqx-bootstrap-test",
-				Labels: map[string]string{
-					"test": "e2e",
-				},
+				GenerateName: "controller-add-emqx-bootstrap-test",
+				Labels:       map[string]string{"test": "e2e"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
@@ -37,22 +34,14 @@ var _ = Describe("Reconciler addBootstrap", Ordered, func() {
 	})
 
 	AfterEach(func() {
-		bootstrapSecret := &corev1.Secret{}
-		err := k8sClient.Get(ctx, client.ObjectKey{
-			Namespace: ns.Name,
-			Name:      instance.BootstrapAPIKeyNamespacedName().Name,
-		}, bootstrapSecret)
-		if err == nil {
-			Expect(k8sClient.Delete(ctx, bootstrapSecret)).Should(Succeed())
-		} else if !errors.IsNotFound(err) {
-			Expect(err).NotTo(HaveOccurred())
-		}
+		Expect(k8sClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(ns.Name))).
+			Should(Succeed())
 	})
 
-	It("should create bootstrap secrets", func() {
-		a := &addBootstrap{emqxReconciler}
-		result := a.reconcile(newReconcileRound(), instance)
-		Expect(result.err).NotTo(HaveOccurred())
+	It("creates bootstrap secrets", func() {
+		a := &addBootstrap{emqxReconciler()}
+		Eventually(a.reconcile).WithArguments(newReconcileRound(), instance).
+			Should(BeSuccessfulReconcile())
 
 		cookieSecret := &corev1.Secret{}
 		Expect(k8sClient.Get(ctx, instance.NodeCookieNamespacedName(), cookieSecret)).

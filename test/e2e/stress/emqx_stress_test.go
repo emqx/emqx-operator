@@ -40,7 +40,6 @@ import (
 // across different seeds / sequence lengths without recompilation.
 var (
 	stressSteps  int
-	randomSeed   int64
 	stepInterval time.Duration
 	emqxImage    string
 )
@@ -48,8 +47,6 @@ var (
 func init() {
 	flag.IntVar(&stressSteps, "stress-steps", 8,
 		"Number of individual mutations to apply in sequence")
-	flag.Int64Var(&randomSeed, "random-seed", 0,
-		"Seed for the pseudo-random mutation sequence. Defaults to the Ginkgo random seed when unset.")
 	flag.DurationVar(&stepInterval, "step-interval", 5*time.Second,
 		"Delay between individual changes. Tight intervals are deliberate: "+
 			"they stack changes on the reconciler while previous rollouts are "+
@@ -183,16 +180,10 @@ var _ = Describe("EMQX Cluster / Stress Testing", Label("emqx", "stress"), Order
 
 	const emqxCRBase = "test/e2e/files/resources/emqx.yaml"
 
-	seed := GinkgoRandomSeed()
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "random-seed" {
-			seed = randomSeed
-		}
-	})
-
 	// The plan is captured up-front so the test reports can show the exact
 	// sequence that was exercised, which is crucial for reproducing failures
 	// discovered by a given seed.
+	seed := GinkgoRandomSeed()
 	plan := planStress(seed, stressSteps)
 	initial := clusterState{cores: 2, replicants: 2}
 
