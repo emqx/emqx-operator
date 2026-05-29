@@ -379,6 +379,37 @@ func intoValue(node any) Value {
 	return nil
 }
 
+// deepValue marks a Value that needs to be deeply copied during substitution.
+type deepValue interface {
+	deepCopy() Value
+}
+
+func (o Object) deepCopy() Value {
+	out := Object{}
+	for k, v := range o {
+		out[k] = deepCopy(v)
+	}
+	return out
+}
+
+func (a Array) deepCopy() Value {
+	out := make(Array, 0, len(a))
+	for _, v := range a {
+		out = append(out, deepCopy(v))
+	}
+	return out
+}
+
+func deepCopy(v Value) Value {
+	if v == nil {
+		return nil
+	}
+	if dv, ok := v.(deepValue); ok {
+		return dv.deepCopy()
+	}
+	return v
+}
+
 // Evaluation context
 
 type context struct {
@@ -447,6 +478,10 @@ func (c concatOf) Type() Type     { return intermediateType }
 func (m mergeOf) Type() Type      { return intermediateType }
 func (m missingValue) Type() Type { return intermediateType }
 func (v errorValue) Type() Type   { return intermediateType }
+
+func (v errorValue) deepCopy() Value {
+	return errorValue{err: v.err, inner: deepCopy(v.inner)}
+}
 
 type lookupResult int
 
@@ -700,7 +735,7 @@ func reduceValue(ctx context, v Value) Value {
 	case valueRef:
 		r, refValue := ctx.resolve(v)
 		if r == valueFound {
-			return refValue
+			return deepCopy(refValue)
 		}
 		return v
 	case concatOf:
@@ -739,7 +774,7 @@ func (c concatOf) reduce(ctx context) Value {
 				resolves += 1
 				// If value is missing, exclude it from the reduced concat:
 				if _, missing := refValue.(missingValue); !missing {
-					out.inner = append(out.inner, refValue)
+					out.inner = append(out.inner, deepCopy(refValue))
 				}
 			default:
 				out.inner = append(out.inner, ref)
