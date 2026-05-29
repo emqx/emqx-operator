@@ -59,7 +59,7 @@ func TestParse(t *testing.T) {
 		))
 	})
 
-	t.Run("overrides", func(t *testing.T) {
+	t.Run("partials merge correctly", func(t *testing.T) {
 		g := NewWithT(t)
 		doc, err := ParseDocument(`
 		object { c = [1 2 3 true]
@@ -84,7 +84,7 @@ func TestParse(t *testing.T) {
 		))
 	})
 
-	t.Run("selfrefs", func(t *testing.T) {
+	t.Run("selfrefs evaluate correctly", func(t *testing.T) {
 		g := NewWithT(t)
 		doc, err := ParseDocument(`object { c = [1 2 3 true] }
 		object.a = [
@@ -119,7 +119,7 @@ func TestParse(t *testing.T) {
 		))
 	})
 
-	t.Run("selfref undefined", func(t *testing.T) {
+	t.Run("selfref with no existing value is unresolvable", func(t *testing.T) {
 		g := NewWithT(t)
 		doc, err := ParseDocument(`a = ${a}`)
 		g.Expect(err).To(Succeed())
@@ -128,6 +128,13 @@ func TestParse(t *testing.T) {
 		g.Expect(errors.Is(err, ErrUnresolvable)).To(BeTrue())
 		g.Expect(err.Error()).To(ContainSubstring("config evaluation failed at: a"))
 		g.Expect(err.Error()).To(ContainSubstring("unresolvable"))
+	})
+
+	t.Run("mixed immediate partials are parse errors", func(t *testing.T) {
+		g := NewWithT(t)
+		_, err := ParseDocument(`a = [] "x"`)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring(ErrMixedPartials.Error()))
 	})
 }
 
@@ -217,6 +224,28 @@ func TestSubstitution(t *testing.T) {
 		g.Expect(err).To(HaveOccurred())
 		g.Expect(errors.Is(err, ErrMixedPartials)).To(BeTrue())
 		g.Expect(strings.Count(err.Error(), "config evaluation failed")).To(Equal(1))
+	})
+
+	t.Run("mixed partials after substitution is unresolvable", func(t *testing.T) {
+		g := NewWithT(t)
+		doc, err := ParseDocument(`base = {x = 1}
+								   a = ${base} [2]`)
+		g.Expect(err).To(Succeed())
+		_, err = doc.Evaluate()
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(errors.Is(err, ErrMixedPartials)).To(BeTrue())
+		g.Expect(err.Error()).To(ContainSubstring("config evaluation failed at: a"))
+	})
+
+	t.Run("substitution path through non-object is unresolvable", func(t *testing.T) {
+		g := NewWithT(t)
+		doc, err := ParseDocument(`a = 1
+								   b = ${a.x}`)
+		g.Expect(err).To(Succeed())
+		_, err = doc.Evaluate()
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(errors.Is(err, ErrUnresolvable)).To(BeTrue())
+		g.Expect(err.Error()).To(ContainSubstring("config evaluation failed at: b"))
 	})
 
 	t.Run("out of bounds array index update is forbidden", func(t *testing.T) {
