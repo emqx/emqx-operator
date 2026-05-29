@@ -268,6 +268,8 @@ const (
 	fragmentIndeterminate
 )
 
+type path []string
+
 func (p partial) fragType() fragmentType {
 	switch p.fragment.(type) {
 	case propertyList:
@@ -280,11 +282,11 @@ func (p partial) fragType() fragmentType {
 	return fragmentIndeterminate
 }
 
-func (ref valueRef) to() []string {
-	return strings.Split(ref.path, ".")
+func (ref valueRef) to() path {
+	return asPath(ref.path)
 }
 
-func (ref valueRef) refersTo(path []string) bool {
+func (ref valueRef) refersTo(path path) bool {
 	return slices.Equal(ref.to(), path)
 }
 
@@ -306,17 +308,24 @@ func (slit stringLit) string() string {
 	return s
 }
 
+func asPath(pathString string) path {
+	return slices.DeleteFunc(
+		strings.Split(pathString, "."),
+		func(comp string) bool { return comp == "" },
+	)
+}
+
 // Value representation
 
 func (pl propertyList) intoValue() Value {
 	v := Object{}
 	for _, p := range pl {
-		v.mergeWith(nestValue(strings.Split(p.path, "."), p.v))
+		v.mergeWith(nestValue(asPath(p.path), p.v))
 	}
 	return v
 }
 
-func nestValue(path []string, node parseValue) Object {
+func nestValue(path path, node parseValue) Object {
 	out := Object{}
 	if len(path) == 1 {
 		out[path[0]] = intoValue(node)
@@ -414,23 +423,23 @@ func deepCopy(v Value) Value {
 
 type context struct {
 	root     Object
-	rootPath []string
+	rootPath path
 	level    int
 	resolved *int
 }
 
 func newContext(root Object) context {
 	resolved := 0
-	return context{root, []string{}, -1, &resolved}
+	return context{root, path{}, -1, &resolved}
 }
 
-func (c context) path() []string {
+func (c context) path() path {
 	return c.rootPath[0 : c.level+1]
 }
 
 func (c context) drillInto(subpath string) context {
 	out := c
-	out.rootPath = append(out.rootPath, strings.Split(subpath, ".")...)
+	out.rootPath = append(out.rootPath, asPath(subpath)...)
 	out.level += 1
 	return out
 }
@@ -492,7 +501,7 @@ const (
 	valueIndeterminate
 )
 
-func (o Object) lookup(path []string) (lookupResult, Value) {
+func (o Object) lookup(path path) (lookupResult, Value) {
 	if v, ok := o[path[0]]; ok {
 		switch v := v.(type) {
 		case valueRef, concatOf, mergeOf:

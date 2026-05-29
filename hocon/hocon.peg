@@ -15,14 +15,9 @@ func toAnySlice(v any) []any {
 }
 
 func validatePath(path string) error {
-    components := strings.Split(path, ".")
+    components := asPath(path)
     if len(components) == 0 {
         return ErrInvalidPath
-    }
-    for _, c := range components {
-        if c == "" {
-            return ErrInvalidPath
-        }
     }
     return nil
 }
