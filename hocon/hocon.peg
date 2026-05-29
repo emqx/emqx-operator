@@ -135,11 +135,15 @@ Integer ← ( '0' / NonZeroDecimalDigit DecimalDigit* ) {
 NonZeroDecimalDigit ← [1-9]
 DecimalDigit ← [0-9]
 
-Ident ← [a-z]i [a-z0-9_.@%-]i* {
+Ident ← slit:StringUnquoted   { return slit.(stringLit).string(), nil }
+    / slit:StringTripleQuoted { return slit.(stringLit).string(), nil }
+    / slit:StringQuoted       { return slit.(stringLit).string(), nil }
+
+IdentUnquoted ← StringUnquoted {
     return string(c.text), nil
 }
 
-Reference ← '$' '{' opt:'?'? path:Ident '}' {
+Reference ← '$' '{' opt:'?'? path:IdentUnquoted '}' {
     err := validatePath(path.(string))
     return valueRef{path: path.(string), optional: opt != nil}, err
 }
@@ -148,7 +152,7 @@ String ← s:( StringUnquoted / StringTripleQuoted / StringQuoted ) _ ![:={] {
     return s, nil
 }
 
-StringUnquoted ← Ident {
+StringUnquoted ← [a-z]i [a-z0-9_.@%-]i* {
     s := string(c.text)
     return stringLit{raw: s, form: unqouted}, nil
 }
