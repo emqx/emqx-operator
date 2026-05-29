@@ -218,6 +218,17 @@ func TestSubstitution(t *testing.T) {
 		g.Expect(errors.Is(err, ErrMixedPartials)).To(BeTrue())
 		g.Expect(strings.Count(err.Error(), "config evaluation failed")).To(Equal(1))
 	})
+
+	t.Run("out of bounds array index update is forbidden", func(t *testing.T) {
+		g := NewWithT(t)
+		doc, err := ParseDocument(`a = [1, 2, {d: 42}], a.42.x = foo`)
+		g.Expect(err).To(Succeed())
+		_, err = doc.Evaluate()
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(errors.Is(err, ErrBadArrayIndex)).To(BeTrue())
+		g.Expect(err.Error()).To(ContainSubstring(`config evaluation failed at: a`))
+		g.Expect(err.Error()).To(ContainSubstring(`out of bounds`))
+	})
 }
 
 func TestStrings(t *testing.T) {
