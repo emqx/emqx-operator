@@ -173,6 +173,7 @@ var (
 	ErrUnresolvable  = errors.New("unresolvable reference")
 	ErrUndefined     = errors.New("reference points to undefined value")
 	ErrMixedPartials = errors.New("concatenation of mixed-type partials")
+	ErrBadArrayIndex = errors.New("out of bounds array index update")
 )
 
 type EvaluationError struct {
@@ -521,12 +522,12 @@ func (s1 String) tryConcat(node concatableValue) Value {
 	return nil
 }
 
-func rewriteIndices(a Array, t Object) Array {
+func rewriteIndices(a Array, t Object) Value {
 	for k, v := range t {
 		pos, err := strconv.ParseInt(k, 10, 32)
 		idx := int(pos - 1)
 		if err != nil || idx < 0 || idx > len(a) {
-			return nil
+			return errorValue{ErrBadArrayIndex, t}
 		}
 		if idx < len(a) {
 			a[idx] = v
@@ -596,10 +597,7 @@ func mergeValue(ctx context, n1, n2 Value) Value {
 	}
 	if a1, ok := n1.(Array); ok {
 		if t2, ok := n2.(Object); ok {
-			am := rewriteIndices(a1, t2)
-			if am != nil {
-				return am
-			}
+			return rewriteIndices(a1, t2)
 		}
 	}
 	return n2

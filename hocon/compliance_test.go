@@ -161,6 +161,8 @@ func classifyComplianceEvalError(err error) string {
 		return ""
 	}
 	switch {
+	case errors.Is(err, ErrBadArrayIndex):
+		return "bad_array_index"
 	case errors.Is(err, ErrUndefined), errors.Is(err, ErrUnresolvable):
 		return "resolve_error"
 	case errors.Is(err, ErrMixedPartials):
