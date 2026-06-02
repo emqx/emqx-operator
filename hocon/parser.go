@@ -109,9 +109,28 @@ type Object map[string]Value
 
 func (o Object) Type() Type { return ObjectType }
 
+func (o Object) Lookup(path string) Value {
+	p := asPath(path)
+	if len(p) == 0 {
+		return nil
+	}
+	result, v := o.lookup(p)
+	if result != valueFound {
+		return nil
+	}
+	return v
+}
+
+func (o Object) DeepCopy() Object {
+	return o.deepCopy().(Object)
+}
+
 // Object represents a complete object described in a HOCON document.
 type Array []Value
 
+func (a Array) DeepCopy() Array {
+	return a.deepCopy().(Array)
+}
 func (a Array) Type() Type { return ArrayType }
 
 type StringValue interface {
