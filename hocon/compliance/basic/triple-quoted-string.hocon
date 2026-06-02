@@ -1,0 +1,9 @@
+# @expect ok
+# @expect-json {"a":"hello","b":"hello\nworld","c":"hello\\nworld","d":" \"hello\" ","e":"foo\"\"bar"}
+# @source sample-configs/equiv05/triple-quotes.conf
+a : """hello"""
+b : """hello
+world"""
+c : """hello\nworld"""
+d : """ "hello" """
+e : """foo""bar"""

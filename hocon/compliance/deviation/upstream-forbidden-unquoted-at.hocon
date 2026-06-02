@@ -1,0 +1,5 @@
+# @expect ok
+# @expect-json {"a":"foo@bar"}
+# Upstream excludes several reserved characters from unquoted strings; this parser allows
+# @ in its unquoted token.
+a = foo@bar

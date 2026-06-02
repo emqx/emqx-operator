@@ -1,0 +1,2 @@
+# @expect error cycle
+include "include-cycle.hocon"

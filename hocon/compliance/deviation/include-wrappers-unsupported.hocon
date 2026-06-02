@@ -1,0 +1,4 @@
+# @expect error scan_error
+# Upstream supports include wrappers such as file(), url(), and classpath(); this parser
+# only accepts a bare quoted/unquoted include target.
+include file("missing.conf")

@@ -1,0 +1,10 @@
+# @expect ok
+# @expect-json {"a":[1,2,3],"b":["abc"]}
+# Upstream treats newlines as separators in arrays; this parser also separates numeric
+# elements, but adjacent string elements are concatenated into one string.
+a = [1 2 3]
+b = [
+  "a"
+  "b"
+  "c"
+]

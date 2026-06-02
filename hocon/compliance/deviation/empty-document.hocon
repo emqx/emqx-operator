@@ -1,0 +1,4 @@
+# @expect ok
+# @expect-json {}
+# Upstream requires a document to contain an object, array, or value; this parser accepts
+# an empty document as an empty root object.

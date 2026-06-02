@@ -1,0 +1,5 @@
+# @expect error scan_error
+# @source sample-configs/test02.conf
+# Upstream allows quoted path elements in substitutions; this parser only scans
+# substitutions whose path is a single unquoted token.
+a = ${a.b."42"}

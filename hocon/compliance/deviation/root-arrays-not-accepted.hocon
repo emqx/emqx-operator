@@ -1,0 +1,4 @@
+# @expect error parse_error
+# Upstream JSON-compatible documents may be arrays at the root; this parser's root symbol
+# accepts only object-like field lists.
+[1,2]

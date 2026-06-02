@@ -1,0 +1,15 @@
+# @expect ok
+# @expect-json {"a":"line1\nline2","b":"  line1\nline2\n","c":"line1\n\nline2"}
+a = """~
+    line1
+    line2~"""
+
+b = """~
+      line1
+    line2
+    ~"""
+
+c = """~
+    line1
+    
+    line2~"""

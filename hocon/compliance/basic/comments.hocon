@@ -1,0 +1,6 @@
+# @expect ok
+# @expect-json {"a":1,"b":2,"c":"# not a comment","d":"// not a comment"}
+a = 1 # line comment
+b = 2 // line comment
+c = "# not a comment"
+d = "// not a comment"
