@@ -2,6 +2,8 @@ package hocon
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -293,5 +295,185 @@ func TestStrings(t *testing.T) {
 		g := NewWithT(t)
 		g.Expect(PercentString(`0%`).AsFloat()).To(Equal(0.0))
 		g.Expect(PercentString(`99%`).AsFloat()).To(Equal(0.99))
+	})
+}
+
+func TestInclude(t *testing.T) {
+	t.Run("string document includes from provided directory", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		g.Expect(os.WriteFile(filepath.Join(dir, "child.hocon"), []byte(`b = 2`), 0o600)).To(Succeed())
+		doc, err := ParseDocument(`
+			include "child.hocon"
+			a = 1`,
+			dir,
+		)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{"a": Int(1), "b": Int(2)}))
+	})
+
+	t.Run("optional missing include is ignored", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		doc, err := ParseDocument(`
+			include "missing.conf"
+			a = 1`,
+			dir,
+		)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{"a": Int(1)}))
+	})
+
+	t.Run("optional missing include keeps surrounding object", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		doc, err := ParseDocument(`a { include "missing.conf" }`, dir)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{"a": Object{}}))
+	})
+
+	t.Run("required missing include fails", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		doc, err := ParseDocument(`
+			a = 1
+			include required("missing.conf")
+			b = 2`,
+			dir,
+		)
+		g.Expect(err).To(Succeed())
+		_, err = doc.Evaluate()
+		g.Expect(errors.Is(err, ErrIncludeFailed)).To(BeTrue())
+		g.Expect(errors.Is(err, os.ErrNotExist)).To(BeTrue())
+	})
+
+	t.Run("include cycle fails", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		path := filepath.Join(dir, "cycle.hocon")
+		g.Expect(os.WriteFile(path, []byte(`include "cycle.hocon"`), 0o600)).To(Succeed())
+		doc, err := ParseDocumentFile(path)
+		g.Expect(err).To(Succeed())
+		_, err = doc.Evaluate()
+		g.Expect(errors.Is(err, ErrIncludeCycle)).To(BeTrue())
+	})
+
+	t.Run("included parse error uses included file name", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		childPath := filepath.Join(dir, "child.hocon")
+		g.Expect(os.WriteFile(childPath, []byte(`[1,2,3]`), 0o600)).To(Succeed())
+
+		doc, err := ParseDocument(`include required("child.hocon")`, dir)
+		g.Expect(err).To(Succeed())
+		_, err = doc.Evaluate()
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(errors.Is(err, ErrIncludeFailed)).To(BeTrue())
+		g.Expect(err.Error()).To(ContainSubstring("child.hocon"))
+
+		doc, err = ParseDocument(`include "child.hocon"`, dir)
+		g.Expect(err).To(Succeed())
+		_, err = doc.Evaluate()
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(errors.Is(err, ErrIncludeFailed)).To(BeTrue())
+		g.Expect(err.Error()).To(ContainSubstring("child.hocon"))
+	})
+
+	t.Run("nested include rebases substitutions", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		rootPath := filepath.Join(dir, "root.hocon")
+		childPath := filepath.Join(dir, "child.hocon")
+		g.Expect(os.WriteFile(
+			childPath,
+			[]byte(`x = 10
+					y = ${x}
+					n { x = 20, y = ${x}, z = ${n.x} }`),
+			0o600,
+		)).To(Succeed())
+		g.Expect(os.WriteFile(
+			rootPath,
+			[]byte(`a { include "child.hocon" }, a.x = 42`),
+			0o600,
+		)).To(Succeed())
+		doc, err := ParseDocumentFile(rootPath)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{
+			"a": Object{
+				"x": Int(42),
+				"y": Int(42),
+				"n": Object{
+					"x": Int(20),
+					"y": Int(42),
+					"z": Int(20),
+				},
+			},
+		}))
+	})
+
+	t.Run("root include substitutions see final root object", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		rootPath := filepath.Join(dir, "root.hocon")
+		childPath := filepath.Join(dir, "child.hocon")
+		g.Expect(os.WriteFile(childPath, []byte(`x = 10, y = ${x}`), 0o600)).To(Succeed())
+		g.Expect(os.WriteFile(
+			rootPath,
+			[]byte(`include "child.hocon"
+					x = 42`),
+			0o600,
+		)).To(Succeed())
+		doc, err := ParseDocumentFile(rootPath)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{
+			"x": Int(42),
+			"y": Int(42),
+		}))
+	})
+
+	t.Run("nested include resolves relative to included file", func(t *testing.T) {
+		g := NewWithT(t)
+		dir := t.TempDir()
+		childDir := filepath.Join(dir, "child")
+		g.Expect(os.Mkdir(childDir, 0o700)).To(Succeed())
+		rootPath := filepath.Join(dir, "root.hocon")
+		childPath := filepath.Join(childDir, "child.hocon")
+		grandchildPath := filepath.Join(childDir, "grandchild.hocon")
+		g.Expect(os.WriteFile(
+			rootPath,
+			[]byte(`a { include "child/child.hocon" }`),
+			0o600,
+		)).To(Succeed())
+		g.Expect(os.WriteFile(
+			childPath,
+			[]byte(`include "grandchild.hocon"
+					y = ${x}`),
+			0o600,
+		)).To(Succeed())
+		g.Expect(os.WriteFile(
+			grandchildPath,
+			[]byte(`x = 7`),
+			0o600,
+		)).To(Succeed())
+		doc, err := ParseDocumentFile(rootPath)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{
+			"a": Object{
+				"x": Int(7),
+				"y": Int(7),
+			},
+		}))
 	})
 }

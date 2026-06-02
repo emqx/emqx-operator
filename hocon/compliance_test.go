@@ -30,9 +30,7 @@ func TestHOCONCompliance(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			input, err := os.ReadFile(tc.path)
-			g.Expect(err).To(Succeed())
-			doc, parseErr := ParseDocument(string(input))
+			doc, parseErr := ParseDocumentFile(tc.path)
 			root, evalErr := doc.Evaluate()
 			switch {
 			case tc.expectErr != "":
@@ -167,6 +165,10 @@ func classifyComplianceEvalError(err error) string {
 		return "resolve_error"
 	case errors.Is(err, ErrMixedPartials):
 		return "concat_error"
+	case errors.Is(err, ErrIncludeCycle):
+		return "cycle"
+	case errors.Is(err, ErrIncludeFailed) && errors.Is(err, os.ErrNotExist):
+		return "enoent"
 	default:
 		return "eval_error"
 	}
