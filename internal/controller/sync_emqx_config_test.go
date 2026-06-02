@@ -70,7 +70,17 @@ func TestStripNonChangeableConfig(t *testing.T) {
 			"dashboard.listeners { http.bind = 18883, https.bind = 18884 }",
 			"dashboard.listeners { http.bind = 18083, https.bind = 18084 }",
 		)
-		assert.Equal(t, "dashboard {listeners {https {bind = 18884}}}", config)
+		assert.JSONEq(t, `{"dashboard":{"listeners":{"https":{"bind":18884}}}}`, config)
 		assert.Equal(t, []string{"dashboard.listeners.http.bind"}, stripped)
 	})
+
+	t.Run("http port unchanged but different type", func(t *testing.T) {
+		config, stripped := stripNonChangeableConfig(
+			`dashboard.listeners.http.bind = 18083`,
+			`dashboard.listeners.http.bind = "18083"`,
+		)
+		assert.Equal(t, "dashboard.listeners.http.bind = 18083", config)
+		assert.Equal(t, []string{}, stripped)
+	})
+
 }
