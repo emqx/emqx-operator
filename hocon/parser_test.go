@@ -121,6 +121,23 @@ func TestMarshalJSON(t *testing.T) {
 	})
 }
 
+func TestObjectLookup(t *testing.T) {
+	g := NewWithT(t)
+	root := Object{
+		"a": Object{
+			"b": Int(42),
+			"c": nil,
+		},
+		"scalar": String("value"),
+	}
+
+	g.Expect(root.Lookup("a.b")).To(Equal(Int(42)))
+	g.Expect(root.Lookup("a.c")).To(BeNil())
+	g.Expect(root.Lookup("missing")).To(BeNil())
+	g.Expect(root.Lookup("scalar.child")).To(BeNil())
+	g.Expect(root.Lookup("")).To(BeNil())
+}
+
 func TestSelfref(t *testing.T) {
 	t.Run("selfrefs evaluate correctly", func(t *testing.T) {
 		g := NewWithT(t)
