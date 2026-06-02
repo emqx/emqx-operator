@@ -1,6 +1,7 @@
 package hocon
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -91,6 +92,32 @@ func TestParse(t *testing.T) {
 		_, err := ParseDocument(`a = [] "x"`)
 		g.Expect(err).To(HaveOccurred())
 		g.Expect(err.Error()).To(ContainSubstring(ErrMixedPartials.Error()))
+	})
+}
+
+func TestMarshalJSON(t *testing.T) {
+	t.Run("evaluated values marshal with default json encoding", func(t *testing.T) {
+		g := NewWithT(t)
+		out, err := json.Marshal(Object{
+			"array": Array{String("value"), Int(42), Float(1.5), Bool(true), nil},
+			"typed": Object{
+				"duration": DurationString("1d"),
+				"bytesize": BytesizeString("512KB"),
+				"percent":  PercentString("99%"),
+			},
+		})
+		g.Expect(err).To(Succeed())
+		g.Expect(out).To(MatchJSON(`{
+			"array":["value",42,1.5,true,null],
+			"typed":{"duration":"1d","bytesize":"512KB","percent":"99%"}
+		}`))
+	})
+
+	t.Run("intermediate values fail to marshal", func(t *testing.T) {
+		g := NewWithT(t)
+		_, err := json.Marshal(Object{"a": valueRef{path: "b"}})
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring("intermediate HOCON value"))
 	})
 }
 
