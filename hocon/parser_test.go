@@ -86,20 +86,29 @@ func TestParse(t *testing.T) {
 		))
 	})
 
+	t.Run("mixed immediate partials are parse errors", func(t *testing.T) {
+		g := NewWithT(t)
+		_, err := ParseDocument(`a = [] "x"`)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring(ErrMixedPartials.Error()))
+	})
+}
+
+func TestSelfref(t *testing.T) {
 	t.Run("selfrefs evaluate correctly", func(t *testing.T) {
 		g := NewWithT(t)
 		doc, err := ParseDocument(`object { c = [1 2 3 true] }
-		object.a = [
-		  {x: 0.0} ${object.y}
-		  {x: 1.0, y: -17.1}
-		  {x: 2.0, y: -17.9}
-		  {x: 3.0, y: -22.1}
-		]
-    	object.x = "hello"
-    	object.x = ${object.x} "world"
-    	object.x = ${object.x} "wide web"
-    	object.xx = "'" ${object.x} "'"
-		object.y { f1: 42, f2: ${object.c}, f3: ${object.y.f1} }`)
+			object.a = [
+			  {x: 0.0} ${object.y}
+			  {x: 1.0, y: -17.1}
+			  {x: 2.0, y: -17.9}
+			  {x: 3.0, y: -22.1}
+			]
+	    	object.x = "hello"
+	    	object.x = ${object.x} "world"
+	    	object.x = ${object.x} "wide web"
+	    	object.xx = "'" ${object.x} "'"
+			object.y { f1: 42, f2: ${object.c}, f3: ${object.y.f1} }`)
 		g.Expect(err).To(Succeed())
 		root, err := doc.Evaluate()
 		g.Expect(err).To(Succeed())
@@ -132,15 +141,6 @@ func TestParse(t *testing.T) {
 		g.Expect(err.Error()).To(ContainSubstring("unresolvable"))
 	})
 
-	t.Run("mixed immediate partials are parse errors", func(t *testing.T) {
-		g := NewWithT(t)
-		_, err := ParseDocument(`a = [] "x"`)
-		g.Expect(err).To(HaveOccurred())
-		g.Expect(err.Error()).To(ContainSubstring(ErrMixedPartials.Error()))
-	})
-}
-
-func TestSubstitution(t *testing.T) {
 	t.Run("selfref substitution", func(t *testing.T) {
 		g := NewWithT(t)
 		doc, err := ParseDocument(`
@@ -161,6 +161,36 @@ func TestSubstitution(t *testing.T) {
 		root, err := doc.Evaluate()
 		g.Expect(err).To(Succeed())
 		g.Expect(root).To(BeComparableTo(Object{"a": String("12")}))
+	})
+
+	t.Run("object merge skips trailing self reference", func(t *testing.T) {
+		g := NewWithT(t)
+		doc, err := ParseDocument(`
+			a = { x = 1 }
+			a = { y = 2 } ${a}`)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{
+			"a": Object{
+				"x": Int(1),
+				"y": Int(2),
+			},
+		}))
+	})
+}
+
+func TestSubstitution(t *testing.T) {
+	t.Run("missing optional substitution is ignored", func(t *testing.T) {
+		g := NewWithT(t)
+		doc, err := ParseDocument(`obj {
+			a = 42
+			b = ${?missing} 
+			c = ${?missing1} ${?missing2} ${?missing3} }`)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{"obj": Object{"a": Int(42)}}))
 	})
 
 	t.Run("missing optional substitution preserves previous value", func(t *testing.T) {
@@ -259,6 +289,19 @@ func TestSubstitution(t *testing.T) {
 		g.Expect(errors.Is(err, ErrBadArrayIndex)).To(BeTrue())
 		g.Expect(err.Error()).To(ContainSubstring(`config evaluation failed at: a`))
 		g.Expect(err.Error()).To(ContainSubstring(`out of bounds`))
+	})
+
+	t.Run("array concat accepts object index update", func(t *testing.T) {
+		g := NewWithT(t)
+		doc, err := ParseDocument(`
+			a = [1, 2] ${?missing}
+			a { "2" = rewritten, "3" = appended }`)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(err).To(Succeed())
+		g.Expect(root).To(BeComparableTo(Object{
+			"a": Array{Int(1), String("rewritten"), String("appended")},
+		}))
 	})
 }
 
@@ -394,7 +437,8 @@ func TestInclude(t *testing.T) {
 			childPath,
 			[]byte(`x = 10
 					y = ${x}
-					n { x = 20, y = ${x}, z = ${n.x} }`),
+					n { x = 20, y = ${x}, z = ${n.x} }
+					arr: [ ${x}, ${y} ]`),
 			0o600,
 		)).To(Succeed())
 		g.Expect(os.WriteFile(
@@ -415,6 +459,7 @@ func TestInclude(t *testing.T) {
 					"y": Int(42),
 					"z": Int(20),
 				},
+				"arr": Array{Int(42), Int(42)},
 			},
 		}))
 	})
