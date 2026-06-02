@@ -395,8 +395,9 @@ func (pl propertyList) intoValue() Value {
 	if len(concat.inner) == 0 {
 		return current
 	}
-	// Preserve possibly empty object, so reduce won't collapse it into missingValue:
-	concat.inner = append(concat.inner, current)
+	if len(current) > 0 {
+		concat.inner = append(concat.inner, current)
+	}
 	return concat
 }
 
@@ -874,14 +875,13 @@ func (i includeOf) reduce(ctx context) Value {
 	}
 	parsed, err := ParseFile(target)
 	if err != nil {
-		pathErr := &os.PathError{}
-		if !errors.As(err, &pathErr) {
+		if !errors.Is(err, os.ErrNotExist) {
 			return errorValue{IncludeError{Path: target, Err: err}, i}
 		}
 		if i.required {
 			return errorValue{IncludeError{Path: target, Err: err}, i}
 		}
-		return missingValue{}
+		return Object{}
 	}
 	includedRoot := parsed.(propertyList).intoValue()
 	includedValue := rebaseValueReferences(includedRoot, ctx.path())
@@ -908,9 +908,7 @@ func (c concatOf) reduce(ctx context) Value {
 			if err, ok := reduced.(errorValue); ok {
 				return err
 			}
-			if _, missing := reduced.(missingValue); !missing {
-				out.inner = append(out.inner, reduced)
-			}
+			out.inner = append(out.inner, reduced)
 		}
 	}
 	// All references and/or includes resolved to missing values, reduce whole concat to missing value:
