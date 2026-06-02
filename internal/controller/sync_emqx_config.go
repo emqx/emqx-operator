@@ -134,13 +134,13 @@ func stripNonChangeableConfig(confDesired string, confLast string) (string, []st
 	cl, _ := config.EMQXConfig(confLast)
 	if cd != nil && cl != nil {
 		for _, path := range dashboardConfigPaths {
-			vd := cd.Get(path)
-			vl := cl.Get(path)
+			vd, vdOk := cd.GetString(path)
+			vl, vlOk := cl.GetString(path)
 			// Disallow changing if following conditions are met:
 			// * Desired is configured and was configured previously (but not "0", i.e. disabled)
 			// * Desired is different from previous value
 			// Otherwise, listener is being enabled, which should be allowed.
-			if vd != nil && vl != nil && vl.String() != "0" && vd.String() != vl.String() {
+			if vdOk && vlOk && vd != "" && vl != "" && vl != "0" && vd != vl {
 				_ = cd.Strip(path)
 				stripped = append(stripped, path)
 				return cd.Print(), stripped
