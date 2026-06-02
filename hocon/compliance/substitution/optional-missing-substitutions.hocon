@@ -1,0 +1,3 @@
+# @expect ok
+# @expect-json {"a":[1,3],"b":"left-right"}
+a = [1, ${?missing}, 3], b = left-${?missing}right

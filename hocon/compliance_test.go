@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const complianceSpecDir = "hocon-compliance-cases"
+const complianceSpecDir = "compliance"
 
 type complianceCase struct {
 	name       string
@@ -22,7 +22,6 @@ type complianceCase struct {
 	expect     string
 	expectErr  string
 	expectJSON string
-	convert    string
 }
 
 func TestHOCONCompliance(t *testing.T) {
@@ -117,12 +116,6 @@ func readComplianceCase(root, relPath string) (*complianceCase, error) {
 				}
 				tc.expectErr = fields[2]
 			}
-		case strings.HasPrefix(header, "@convert "):
-			fields := strings.Fields(header)
-			if len(fields) != 2 {
-				return nil, fmt.Errorf("%s: malformed @convert header", relPath)
-			}
-			tc.convert = fields[1]
 		}
 	}
 	if tc.expect == "" {

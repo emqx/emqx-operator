@@ -1,0 +1,4 @@
+# @expect error scan_error
+# Upstream path grammar can describe empty quoted keys, but this parser's unquoted
+# scanner does not accept a path made only of dots.
+. = 1

@@ -1,0 +1,8 @@
+# @expect ok
+# @expect-json {"10":"42","-10":"-42","foo-bar":"bar-baz","---":"------","a-":"b-"}
+# @source sample-configs/test11.conf
+"10" = "42"
+"-10" = "-42"
+foo-bar = bar-baz
+"---" = "------"
+a- = b-

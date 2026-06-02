@@ -1,0 +1,2 @@
+# @expect error concat_error
+a = [1,2], b = {x=1}${a}

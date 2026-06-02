@@ -1,0 +1,3 @@
+# @expect error scan_error
+# @source sample-configs/test05.conf
+%test.application.mode = dev
