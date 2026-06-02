@@ -56,13 +56,21 @@ const (
 	ObjectType Type = iota
 	ArrayType
 	StringType
-	DurationType
 	IntegerType
 	FloatType
 	BooleanType
 	NullType
 	// Internal
 	intermediateType
+)
+
+type StringContentType int
+
+const (
+	StringGeneric StringContentType = iota
+	StringDuration
+	StringBytesize
+	StringPercent
 )
 
 // Object represents a complete object described in a HOCON document.
@@ -75,15 +83,78 @@ type Array []Value
 
 func (a Array) Type() Type { return ArrayType }
 
+type StringValue interface {
+	ContentType() StringContentType
+	String() string
+}
+
 // String represents a string value
 type String string
+type DurationString string
+type BytesizeString string
+type PercentString string
 
-func (s String) Type() Type { return StringType }
+func (s String) Type() Type         { return StringType }
+func (s DurationString) Type() Type { return StringType }
+func (s BytesizeString) Type() Type { return StringType }
+func (s PercentString) Type() Type  { return StringType }
 
-// Duration represents a span of time
-type Duration time.Duration
+func (s String) ContentType() StringContentType         { return StringGeneric }
+func (s DurationString) ContentType() StringContentType { return StringDuration }
+func (s BytesizeString) ContentType() StringContentType { return StringBytesize }
+func (s PercentString) ContentType() StringContentType  { return StringPercent }
 
-func (s Duration) Type() Type { return DurationType }
+func (s String) String() string         { return string(s) }
+func (s DurationString) String() string { return string(s) }
+func (s BytesizeString) String() string { return string(s) }
+func (s PercentString) String() string  { return string(s) }
+
+func (ps PercentString) AsFloat() float64 {
+	digits := strings.Split(string(ps), "%")
+	parsed, _ := strconv.ParseInt(digits[0], 10, 64)
+	return float64(parsed) / 100
+}
+
+func (ds DurationString) AsDuration() time.Duration {
+	s := string(ds)
+	if strings.HasSuffix(s, "d") || strings.HasSuffix(s, "D") {
+		days, _ := strconv.ParseInt(s[:len(s)-1], 10, 64)
+		return time.Duration(days) * 24 * time.Hour
+	}
+	duration, _ := time.ParseDuration(strings.ToLower(s))
+	return duration
+}
+
+func (bs BytesizeString) AsInteger() int64 {
+	s := strings.ToLower(string(bs))
+	l := len(s)
+	mult := 1
+	suffix := 0
+	switch {
+	case l == 0:
+		return 0
+	case s[l-1] != 'b':
+		break
+	case l == 1:
+		return 1
+	case s[l-2] == 'k':
+		suffix = 2
+		mult = 1024
+	case s[l-2] == 'm':
+		suffix = 2
+		mult = 1024 * 1024
+	case s[l-2] == 'g':
+		suffix = 2
+		mult = 1024 * 1024 * 1024
+	default:
+		suffix = 1
+	}
+	num := int64(1)
+	if l-suffix > 0 {
+		num, _ = strconv.ParseInt(s[:l-suffix], 10, 64)
+	}
+	return num * int64(mult)
+}
 
 type Int int64
 
@@ -176,11 +247,7 @@ type stringLit struct {
 
 type duration string
 type percent string
-
-type bytesize struct {
-	n    int
-	unit string
-}
+type bytesize string
 
 type stringForm int
 
@@ -283,27 +350,15 @@ func (sl stringLit) intoValue() Value {
 }
 
 func (p percent) intoValue() Value {
-	digits := strings.Split(string(p), "%")
-	parsed, _ := strconv.ParseInt(digits[0], 10, 64)
-	return Float(float64(parsed) / 100)
+	return PercentString(p)
 }
 
 func (d duration) intoValue() Value {
-	parsed, _ := time.ParseDuration(string(d))
-	return Duration(parsed)
+	return DurationString(d)
 }
 
 func (bs bytesize) intoValue() Value {
-	mult := 1024
-	switch bs.unit {
-	case "kb", "KB":
-		return Int(bs.n * mult)
-	case "mb", "MB":
-		return Int(bs.n * mult * mult)
-	case "gb", "GB":
-		return Int(bs.n * mult * mult * mult)
-	}
-	return Int(bs.n)
+	return BytesizeString(bs)
 }
 
 func intoValue(node any) Value {

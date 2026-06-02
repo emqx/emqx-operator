@@ -1,9 +1,8 @@
 {
 
-package config
+package hocon
 
 import (
-    "time"
     "strings"
     "reflect"
 )
@@ -115,16 +114,12 @@ Percent ← DecimalDigit+ '%' {
     return percent(c.text), nil
 }
 
-Bytesize ← DecimalDigit+ unit:( "kb" / "KB" / "mb" / "MB" / "gb" / "GB" ) {
-	unitBs := unit.([]byte)
-    ns := string(bytes.Replace(c.text, unitBs, []byte{}, -1))
-    n, err := strconv.ParseInt(ns, 10, 64)
-    return bytesize{int(n), string(unitBs)}, err
+Bytesize ← DecimalDigit+ ( "kb" / "KB" / "mb" / "MB" / "gb" / "GB" ) {
+    return bytesize(c.text), nil
 }
 
-Duration ← DecimalDigit+ ( 'd' / 'D' / 'h' / 'H' / 'm' / 'M' / 's' / 'S' / "ms" / "MS" ) {
-    _, err := time.ParseDuration(string(c.text))
-    return duration(c.text), err
+Duration ← DecimalDigit+ ( "ms" / "MS" / 'd' / 'D' / 'h' / 'H' / 'm' / 'M' / 's' / 'S' ) {
+    return duration(c.text), nil
 }
 
 Float ← [+-]? Integer '.' DecimalDigit+ Exponent? {

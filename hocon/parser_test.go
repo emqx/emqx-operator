@@ -48,9 +48,9 @@ func TestParse(t *testing.T) {
 				"c":          Array{Float(1), Float(-2), Float(3), Bool(true)},
 				"d":          String("quoted\nstring"),
 				"e":          nil,
-				"f":          Duration(time.Minute * 30),
-				"g":          Float(0.99),
-				"h":          Int(524288),
+				"f":          DurationString("30m"),
+				"g":          PercentString("99%"),
+				"h":          BytesizeString("512KB"),
 				"part_empty": Object{},
 				"part": Object{
 					"s": String("multi\nline\nstring"),
@@ -217,5 +217,41 @@ func TestSubstitution(t *testing.T) {
 		g.Expect(err).To(HaveOccurred())
 		g.Expect(errors.Is(err, ErrMixedPartials)).To(BeTrue())
 		g.Expect(strings.Count(err.Error(), "config evaluation failed")).To(Equal(1))
+	})
+}
+
+func TestStrings(t *testing.T) {
+	t.Run("string values expose raw string", func(t *testing.T) {
+		g := NewWithT(t)
+		g.Expect(String("plain").String()).To(Equal("plain"))
+		g.Expect(DurationString("1d").String()).To(Equal("1d"))
+		g.Expect(BytesizeString("512KB").String()).To(Equal("512KB"))
+		g.Expect(PercentString("99%").String()).To(Equal("99%"))
+	})
+
+	t.Run("bytesize strings", func(t *testing.T) {
+		g := NewWithT(t)
+		g.Expect(BytesizeString(`42`).AsInteger()).To(Equal(int64(42)))
+		g.Expect(BytesizeString(`42b`).AsInteger()).To(Equal(int64(42)))
+		g.Expect(BytesizeString(`1GB`).AsInteger()).To(Equal(int64(1 * 1024 * 1024 * 1024)))
+		g.Expect(BytesizeString(`-10Mb`).AsInteger()).To(Equal(int64(-10 * 1024 * 1024)))
+		g.Expect(BytesizeString(`42kb`).AsInteger()).To(Equal(int64(42 * 1024)))
+		// parser fallbacks
+		g.Expect(BytesizeString(`MB`).AsInteger()).To(Equal(int64(1024 * 1024)))
+		g.Expect(BytesizeString(`b`).AsInteger()).To(Equal(int64(1)))
+		g.Expect(BytesizeString(``).AsInteger()).To(Equal(int64(0)))
+	})
+
+	t.Run("duration strings", func(t *testing.T) {
+		g := NewWithT(t)
+		g.Expect(DurationString(`1d`).AsDuration()).To(Equal(24 * time.Hour))
+		g.Expect(DurationString(`2D`).AsDuration()).To(Equal(48 * time.Hour))
+		g.Expect(DurationString(`120s`).AsDuration()).To(Equal(120 * time.Second))
+	})
+
+	t.Run("percent strings", func(t *testing.T) {
+		g := NewWithT(t)
+		g.Expect(PercentString(`0%`).AsFloat()).To(Equal(0.0))
+		g.Expect(PercentString(`99%`).AsFloat()).To(Equal(0.99))
 	})
 }
