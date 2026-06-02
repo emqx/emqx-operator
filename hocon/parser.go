@@ -644,9 +644,6 @@ func (a1 Array) tryConcat(node concatableValue) Value {
 	if vs, ok := node.(Array); ok {
 		return slices.Concat(a1, vs)
 	}
-	if o2, ok := node.(Object); ok {
-		return rewriteIndices(a1, o2)
-	}
 	return nil
 }
 
@@ -746,64 +743,19 @@ func wrapConcat(node Value) concatOf {
 }
 
 func mergeConcat(ctx context, c1, c2 concatOf) Value {
-	ty1 := c1.innerType()
-	ty2 := c2.innerType()
-	if ty1 == fragmentObject && (ty2 == ty1 || ty2 == fragmentIndeterminate) {
-		// Merge of concatenation of objects with concatenation of objects / substitutions:
-		// Preserve `c1` as objects should be merged; drop any self-references from `c2` as they
-		// are now pointless.
-		merged := c1.inner
-		for _, n2 := range c2.inner {
-			if ref, ok := n2.(valueRef); ok && ref.refersTo(ctx.path()) {
-				continue
-			}
-			merged = append(merged, n2)
+	c2vs := make([]Value, 0, len(c2.inner))
+	for _, n2 := range c2.inner {
+		if ref, ok := n2.(valueRef); ok && ref.refersTo(ctx.path()) {
+			*ctx.resolved += 1
+			c2vs = append(c2vs, c1.inner...)
+			continue
 		}
-		cn := concatOf{merged}
-		return cn.minimize()
+		c2vs = append(c2vs, n2)
 	}
-	if ty1 == fragmentArray && ty2 == fragmentObject {
-		// Merge of concatenation of arrays with concatenation of objects:
-		// Preserve both as it could be evaluated as array elements rewrite, see `rewriteIndices`.
-		merged := c1.inner
-		merged = append(merged, c2.inner...)
-		cn := concatOf{merged}
-		return cn.minimize()
-	}
-	if ty1 == ty2 || ty1 == fragmentIndeterminate || ty2 == fragmentIndeterminate {
-		// Merge of concatenation of arrays-or-substitutions with arrays-or-substitutions, or same
-		// combinations with strings:
-		// Should overwrite `c1` unless there's self-ref in `c2`, in this case splice `c1` in place
-		// of self-ref.
-		merged := []Value{}
-		for _, n2 := range c2.inner {
-			if ref, ok := n2.(valueRef); ok && ref.refersTo(ctx.path()) {
-				merged = append(merged, c1.inner...)
-				continue
-			}
-			merged = append(merged, n2)
-		}
-		cn := concatOf{merged}
-		return cn.minimize()
-	}
-	// Inconcatenable, arrays with strings / strings with arrays:
-	// Overwrite `c1`.
-	return c2.minimize()
-}
-
-func (c concatOf) innerType() fragmentType {
-	ty := fragmentIndeterminate
-	for _, v := range c.inner {
-		switch v.(type) {
-		case Object:
-			return fragmentObject
-		case Array:
-			return fragmentArray
-		case String:
-			return fragmentString
-		}
-	}
-	return ty
+	c2n := concatOf{c2vs}
+	v1 := c1.minimize()
+	v2 := c2n.minimize()
+	return mergeOf{v1, v2}
 }
 
 func (t Object) reduce(ctx context) {
