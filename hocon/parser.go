@@ -579,6 +579,17 @@ func (i includeOf) Type() Type    { return intermediateType }
 func (m missingValue) Type() Type { return intermediateType }
 func (v errorValue) Type() Type   { return intermediateType }
 
+func (v valueRef) MarshalJSON() ([]byte, error)     { return unmarshallableValue(v) }
+func (c concatOf) MarshalJSON() ([]byte, error)     { return unmarshallableValue(c) }
+func (m mergeOf) MarshalJSON() ([]byte, error)      { return unmarshallableValue(m) }
+func (i includeOf) MarshalJSON() ([]byte, error)    { return unmarshallableValue(i) }
+func (m missingValue) MarshalJSON() ([]byte, error) { return unmarshallableValue(m) }
+func (v errorValue) MarshalJSON() ([]byte, error)   { return unmarshallableValue(v) }
+
+func unmarshallableValue(v Value) ([]byte, error) {
+	return nil, fmt.Errorf("intermediate HOCON value %T", v)
+}
+
 func (v errorValue) deepCopy() Value {
 	return errorValue{err: v.err, inner: deepCopy(v.inner)}
 }
