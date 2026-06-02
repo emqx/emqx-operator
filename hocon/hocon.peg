@@ -14,8 +14,8 @@ func toAnySlice(v any) []any {
     return v.([]any)
 }
 
-func validatePath(path string) error {
-    components := asPath(path)
+func validatePath(path any) error {
+    components := asPath(path.(string))
     if len(components) == 0 {
         return ErrInvalidPath
     }
@@ -40,11 +40,6 @@ func validatePartials(ps partials) error {
     return nil
 }
 
-func mkProperty(path string, v any) (property, error) {
-    err := validatePath(path)
-    return property{path, v}, err
-}
-
 }
 
 Root ← _ ps:( Object / Properties ) _ EOF {
@@ -55,7 +50,7 @@ Value ← v:( Percent / Bytesize / Duration / Float / Integer / Bool / Null / Pa
     return parseValue(v), nil
 }
 
-Partials ← v:Partial vs:( WS Partial )* {
+Partials ← v:Partial vs:( WSLine Partial )* {
     out := partials{v.(partial)}
     for _, v := range toAnySlice(vs) {
         p := toAnySlice(v)[1]
@@ -72,25 +67,39 @@ Object ← '{' _ ps:Properties _ '}' {
     return ps, nil
 }
 
-Properties ← ps:( Property _ ','? ( _ Property _ ','? )* )? {
+Properties ← ps:( Entry _ ','? ( _ Entry _ ','? )* )? {
     out := propertyList{}
     psSlice := toAnySlice(ps)
     if len(psSlice) == 0 {
         return out, nil
     }
-    out = append(out, psSlice[0].(property))
+    out = append(out, psSlice[0])
     for _, v := range toAnySlice(psSlice[3]) {
         vSlice := toAnySlice(v)
-        out = append(out, vSlice[1].(property))
+        out = append(out, vSlice[1])
     }
     return out, nil
 }
 
-Property ← path:Ident _ [:=] _ v:Value {
-    return mkProperty(path.(string), v)
-} / path:Ident _ &'{' v:Partials {
-    return mkProperty(path.(string), v)
+Entry ←
+      i:Include { return i, nil }
+    / p:Property { return p, nil }
+
+Include ← "include" WS _ inc:( RequiredInclude / OptionalInclude ) {
+    return inc, nil
 }
+
+RequiredInclude ← "required" _ '(' _ target:StringQuoted _ ')' {
+    return includeOf{path: target.(stringLit).string(), required: true}, nil
+}
+
+OptionalInclude ← target:StringQuoted {
+    return includeOf{path: target.(stringLit).string()}, nil
+}
+
+Property ←
+      path:Ident _ [:=] _ v:Value { return property{path.(string), v}, validatePath(path) }
+    / path:Ident _ &'{' v:Partials { return property{path.(string), v}, validatePath(path) }
 
 Array ← '[' _ vs:( Value _ ','? ( _ Value _ ','? )* )? _ ']' {
     vsSlice := toAnySlice(vs)
@@ -130,7 +139,8 @@ Integer ← ( '0' / NonZeroDecimalDigit DecimalDigit* ) {
 NonZeroDecimalDigit ← [1-9]
 DecimalDigit ← [0-9]
 
-Ident ← slit:StringUnquoted   { return slit.(stringLit).string(), nil }
+Ident ←
+      slit:StringUnquoted   { return slit.(stringLit).string(), nil }
     / slit:StringTripleQuoted { return slit.(stringLit).string(), nil }
     / slit:StringQuoted       { return slit.(stringLit).string(), nil }
 
@@ -175,13 +185,13 @@ Bool ← "true" { return true, nil } / "false" { return false, nil }
 
 Null ← "null" { return nil, nil }
 
-_ "whitespace and comments" ← ( Comment / Whitespace )*
-WS "non-line-breaking whitespace" ← WhitespaceSingleLine*
+_ "whitespace or comments" ← ( Comment / WS )*
 
+WSLine "non-line-breaking whitespace" ← WSNoLinebreak*
 Comment ← ( '#' / "//" ) ( !Linebreak . )* Linebreak
 
-Whitespace ← [ \t\v\f\r\n\u2028\u2029]
-WhitespaceSingleLine ← [ \t\v\f]
+WS ← [ \t\v\f\r\n\u2028\u2029]
+WSNoLinebreak ← [ \t\v\f]
 Linebreak ← [\r\n\u2028\u2029]
 
 EOF ← !.

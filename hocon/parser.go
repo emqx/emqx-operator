@@ -3,6 +3,8 @@ package hocon
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -13,33 +15,62 @@ import (
 
 // Document describes HOCON parse tree
 type Document struct {
-	root propertyList
+	root           propertyList
+	includeBaseDir string
+	includeStack   []string
 }
 
-func ParseDocument(s string) (Document, error) {
-	parsed, err := Parse("root", []byte(s), Debug(false))
+func ParseDocument(s string, includeDir ...string) (Document, error) {
+	baseDir := ""
+	if len(includeDir) > 0 {
+		baseDir = includeDir[0]
+	}
+	parsed, err := Parse("<input>", []byte(s))
 	if err != nil {
 		return Document{}, err
 	}
-	return Document{parsed.(propertyList)}, nil
+	doc := Document{
+		root:           parsed.(propertyList),
+		includeBaseDir: baseDir,
+		includeStack:   []string{},
+	}
+	return doc, nil
+}
+
+func ParseDocumentFile(filename string) (Document, error) {
+	absPath, err := filepath.Abs(filename)
+	if err != nil {
+		return Document{}, err
+	}
+	absPath = filepath.Clean(absPath)
+	parsed, err := ParseFile(absPath)
+	if err != nil {
+		return Document{}, err
+	}
+	doc := Document{
+		root:           parsed.(propertyList),
+		includeBaseDir: filepath.Dir(absPath),
+		includeStack:   []string{absPath},
+	}
+	return doc, nil
 }
 
 func (d Document) Evaluate() (Object, error) {
 	// Construct intrmediate object tree:
 	rootValue := d.root.intoValue()
-	root := rootValue.(Object)
 	// Reduce until no more reductions are possible:
 	// 1. Either because everything was successfully resolved / merged / concatenated.
 	// 2. Or because there are unresolvable values / undefined references / invalid concatenations.
 	for {
-		ctx := newContext(root)
-		root.reduce(ctx)
+		ctx := newContext(rootValue, d.includeBaseDir, d.includeStack)
+		rootValue = reduceValue(ctx, rootValue)
 		if *ctx.resolved == 0 {
 			break
 		}
 	}
 	// Convert intermediate values (errors / merge nodes) into `EvaluationError`s, if any.
-	err := evaluationErrorAt([]string{}, root)
+	err := evaluationErrorAt([]string{}, rootValue)
+	root, _ := rootValue.(Object)
 	return root, err
 }
 
@@ -174,7 +205,22 @@ var (
 	ErrUndefined     = errors.New("reference points to undefined value")
 	ErrMixedPartials = errors.New("concatenation of mixed-type partials")
 	ErrBadArrayIndex = errors.New("out of bounds array index update")
+	ErrIncludeCycle  = errors.New("include cycle")
+	ErrIncludeFailed = errors.New("could not process include")
 )
+
+type IncludeError struct {
+	Path string
+	Err  error
+}
+
+func (e IncludeError) Error() string {
+	return fmt.Sprintf("%v %q: %v", ErrIncludeFailed, e.Path, e.Err)
+}
+
+func (e IncludeError) Unwrap() error {
+	return errors.Join(ErrIncludeFailed, e.Err)
+}
 
 type EvaluationError struct {
 	Path  string
@@ -208,7 +254,7 @@ func evaluationErrorAt(path []string, v Value) error {
 		return errors.Join(errs...)
 	case errorValue:
 		return EvaluationError{Path: strings.Join(path, "."), Cause: v.err, Value: v.inner}
-	case valueRef, concatOf, mergeOf, missingValue:
+	case valueRef, concatOf, mergeOf, includeOf, missingValue:
 		return EvaluationError{Path: strings.Join(path, "."), Cause: ErrUnresolvable, Value: v}
 	default:
 		return nil
@@ -228,12 +274,21 @@ type partial struct {
 	fragment parseNode
 }
 
-type propertyList []property
+type propertyList []propertyListEntry
+
 type nodeList []parseValue
+
+// Either property or includeNode:
+type propertyListEntry any
 
 type property struct {
 	path string
 	v    parseValue
+}
+
+type includeOf struct {
+	path     string
+	required bool
 }
 
 type valueRef struct {
@@ -315,14 +370,34 @@ func asPath(pathString string) path {
 	)
 }
 
+func appendPath(prefix path, suffix path) path {
+	out := slices.Clone(prefix)
+	return append(out, suffix...)
+}
+
 // Value representation
 
 func (pl propertyList) intoValue() Value {
-	v := Object{}
-	for _, p := range pl {
-		v.mergeWith(nestValue(asPath(p.path), p.v))
+	current := Object{}
+	concat := concatOf{}
+	for _, entry := range pl {
+		switch entry := entry.(type) {
+		case property:
+			current.mergeWith(nestValue(asPath(entry.path), entry.v))
+		case includeOf:
+			if len(current) > 0 {
+				concat.inner = append(concat.inner, current)
+				current = Object{}
+			}
+			concat.inner = append(concat.inner, entry)
+		}
 	}
-	return v
+	if len(concat.inner) == 0 {
+		return current
+	}
+	// Preserve possibly empty object, so reduce won't collapse it into missingValue:
+	concat.inner = append(concat.inner, current)
+	return concat
 }
 
 func nestValue(path path, node parseValue) Object {
@@ -422,15 +497,17 @@ func deepCopy(v Value) Value {
 // Evaluation context
 
 type context struct {
-	root     Object
+	root     Value
 	rootPath path
 	level    int
 	resolved *int
+	baseDir  string
+	stack    []string
 }
 
-func newContext(root Object) context {
+func newContext(root Value, baseDir string, stack []string) context {
 	resolved := 0
-	return context{root, path{}, -1, &resolved}
+	return context{root: root, rootPath: path{}, level: -1, resolved: &resolved, baseDir: baseDir, stack: stack}
 }
 
 func (c context) path() path {
@@ -444,8 +521,20 @@ func (c context) drillInto(subpath string) context {
 	return out
 }
 
+func (c context) withIncludeFile(filename string) context {
+	out := c
+	out.baseDir = filepath.Dir(filename)
+	out.stack = append(slices.Clone(c.stack), filename)
+	return out
+}
+
 func (c context) resolve(ref valueRef) (lookupResult, Value) {
-	r, v := c.root.lookup(ref.to())
+	// If root is not an object (i.e. a concatOf), postpone resolution:
+	root, ok := c.root.(Object)
+	if !ok {
+		return valueIndeterminate, c.root
+	}
+	r, v := root.lookup(ref.to())
 	if (r == valueUndefined || r == valueUnresolvable) && ref.optional {
 		r = valueFound
 		v = missingValue{}
@@ -485,6 +574,7 @@ type errorValue struct {
 func (v valueRef) Type() Type     { return intermediateType }
 func (c concatOf) Type() Type     { return intermediateType }
 func (m mergeOf) Type() Type      { return intermediateType }
+func (i includeOf) Type() Type    { return intermediateType }
 func (m missingValue) Type() Type { return intermediateType }
 func (v errorValue) Type() Type   { return intermediateType }
 
@@ -504,7 +594,7 @@ const (
 func (o Object) lookup(path path) (lookupResult, Value) {
 	if v, ok := o[path[0]]; ok {
 		switch v := v.(type) {
-		case valueRef, concatOf, mergeOf:
+		case valueRef, concatOf, mergeOf, includeOf:
 			return valueIndeterminate, v
 		case Object:
 			if len(path) == 1 {
@@ -561,7 +651,7 @@ func (a1 Array) tryConcat(node concatableValue) Value {
 
 func (s1 String) tryConcat(node concatableValue) Value {
 	if s2, ok := node.(String); ok {
-		return String(s1 + s2)
+		return s1 + s2
 	}
 	return nil
 }
@@ -751,6 +841,8 @@ func reduceValue(ctx context, v Value) Value {
 		return v.reduce(ctx)
 	case mergeOf:
 		return v.reduce(ctx)
+	case includeOf:
+		return v.reduce(ctx)
 	}
 	return v
 }
@@ -770,31 +862,97 @@ func (m mergeOf) reduce(ctx context) Value {
 	return mergeValue(ctx, left, right)
 }
 
+func (i includeOf) reduce(ctx context) Value {
+	*ctx.resolved += 1
+	target := i.path
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(ctx.baseDir, target)
+	}
+	target = filepath.Clean(target)
+	if slices.Contains(ctx.stack, target) {
+		return errorValue{ErrIncludeCycle, i}
+	}
+	parsed, err := ParseFile(target)
+	if err != nil {
+		pathErr := &os.PathError{}
+		if !errors.As(err, &pathErr) {
+			return errorValue{IncludeError{Path: target, Err: err}, i}
+		}
+		if i.required {
+			return errorValue{IncludeError{Path: target, Err: err}, i}
+		}
+		return missingValue{}
+	}
+	includedRoot := parsed.(propertyList).intoValue()
+	includedValue := rebaseValueReferences(includedRoot, ctx.path())
+	return reduceValue(ctx.withIncludeFile(target), includedValue)
+}
+
 func (c concatOf) reduce(ctx context) Value {
 	out := concatOf{}
-	refs := 0
-	resolves := 0
 	for _, node := range c.inner {
-		if ref, ok := node.(valueRef); ok {
-			refs += 1
-			r, refValue := ctx.resolve(ref)
+		switch node := node.(type) {
+		case valueRef:
+			r, refValue := ctx.resolve(node)
 			switch r {
 			case valueFound:
-				resolves += 1
 				// If value is missing, exclude it from the reduced concat:
 				if _, missing := refValue.(missingValue); !missing {
 					out.inner = append(out.inner, deepCopy(refValue))
 				}
 			default:
-				out.inner = append(out.inner, ref)
+				out.inner = append(out.inner, node)
 			}
-		} else {
-			out.inner = append(out.inner, node)
+		default:
+			reduced := reduceValue(ctx, node)
+			if err, ok := reduced.(errorValue); ok {
+				return err
+			}
+			if _, missing := reduced.(missingValue); !missing {
+				out.inner = append(out.inner, reduced)
+			}
 		}
 	}
-	// All references resolved to missing values, reduce whole concat to missing value:
-	if refs > 0 && len(out.inner) == 0 {
+	// All references and/or includes resolved to missing values, reduce whole concat to missing value:
+	if len(out.inner) == 0 {
 		return missingValue{}
 	}
 	return out.minimize()
+}
+
+func rebaseValueReferences(v Value, prefix path) Value {
+	if len(prefix) == 0 {
+		return v
+	}
+	switch v := v.(type) {
+	case valueRef:
+		rebased := appendPath(prefix, asPath(v.path))
+		v.path = strings.Join(rebased, ".")
+		return v
+	case Object:
+		out := Object{}
+		for k, v := range v {
+			out[k] = rebaseValueReferences(v, prefix)
+		}
+		return out
+	case Array:
+		out := make(Array, 0, len(v))
+		for _, node := range v {
+			out = append(out, rebaseValueReferences(node, prefix))
+		}
+		return out
+	case concatOf:
+		out := concatOf{}
+		for _, node := range v.inner {
+			out.inner = append(out.inner, rebaseValueReferences(node, prefix))
+		}
+		return out
+	case mergeOf:
+		return mergeOf{
+			left:  rebaseValueReferences(v.left, prefix),
+			right: rebaseValueReferences(v.right, prefix),
+		}
+	default:
+		return v
+	}
 }
