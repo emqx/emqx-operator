@@ -58,8 +58,14 @@ build-crd: manifests kustomize ## Generate CRD manifests into the Helm chart dat
 	$(KUSTOMIZE) build config/crd > $(CRD_TARGET_DIR)/crds.yaml
 
 .PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: controller-gen generate-hocon ## Generate code containing DeepCopy, DeepCopyInto, DeepCopyObject, and parser implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+.PHONY: generate-hocon
+generate-hocon: hocon/hocon.peg.go ## Generate HOCON parser from PEG grammar.
+
+hocon/hocon.peg.go: hocon/hocon.peg pigeon
+	$(PIGEON) -o $@ $<
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -221,6 +227,7 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
+PIGEON ?= $(LOCALBIN)/pigeon
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.5.0
@@ -228,6 +235,7 @@ CONTROLLER_TOOLS_VERSION ?= v0.18.0
 ENVTEST_VERSION ?= release-0.19
 GOLANGCI_LINT_VERSION ?= v1.64.8
 CRD_REF_DOCS_VERSION ?= latest
+PIGEON_VERSION ?= v1.3.0
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -253,6 +261,11 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
 $(CRD_REF_DOCS): $(LOCALBIN)
 	$(call go-install-tool,$(CRD_REF_DOCS),github.com/elastic/crd-ref-docs,$(CRD_REF_DOCS_VERSION))
+
+.PHONY: pigeon
+pigeon: $(PIGEON) ## Download pigeon locally if necessary.
+$(PIGEON): $(LOCALBIN)
+	$(call go-install-tool,$(PIGEON),github.com/mna/pigeon,$(PIGEON_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
