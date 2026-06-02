@@ -303,6 +303,45 @@ func TestSubstitution(t *testing.T) {
 			"a": Array{Int(1), String("rewritten"), String("appended")},
 		}))
 	})
+
+	t.Run("mixed partials after substitution", func(t *testing.T) {
+		g := NewWithT(t)
+		doc, err := ParseDocument(`a = {x = 1}
+								   arr = [42]
+								   a.y = ["{"] ${arr} ["}"]
+								   obj = { foo: bar }
+								   a.z = {} ${obj} {}
+								   a = { y: ${a.y} ${a.z} }`)
+		g.Expect(err).To(Succeed())
+		_, err = doc.Evaluate()
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring(`config evaluation failed at: a.y`))
+		g.Expect(err.Error()).To(ContainSubstring(`mixed-type partials`))
+	})
+
+	t.Run("incompatible values after substitution overwrite", func(t *testing.T) {
+		g := NewWithT(t)
+		doc, err := ParseDocument(`a = {x = 1}
+								   arr = [42]
+								   a.y = ["{"] ${arr} ["}"]
+								   obj = { foo: bar }
+								   a.z = {} ${obj} {}
+								   a = { y: ${a.y} }
+								   a = { y: ${a.z} }`)
+		g.Expect(err).To(Succeed())
+		root, err := doc.Evaluate()
+		g.Expect(root).To(BeComparableTo(Object{
+			"arr": Array{Int(42)},
+			"obj": Object{"foo": String("bar")},
+			"a": Object{
+				"x": Int(1),
+				"y": Object{"foo": String("bar")},
+				"z": Object{"foo": String("bar")},
+			},
+		}))
+		g.Expect(err).To(Succeed())
+	})
+
 }
 
 func TestStrings(t *testing.T) {
