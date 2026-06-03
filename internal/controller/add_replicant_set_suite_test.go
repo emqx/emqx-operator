@@ -176,7 +176,7 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 			)
 		})
 
-		It("should update replicaSet", func() {
+		It("should do nothing", func() {
 			// Set replicas count to 0:
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 			// Reconciliation step should succeed:
@@ -185,10 +185,10 @@ var _ = Describe("Reconciler addReplicantSet", Ordered, func() {
 				WithTimeout(timeout).
 				WithPolling(interval).
 				Should(Equal(subResult{}))
-			// ReplicaSet should be updated in place:
+			// ReplicaSet scaling is handled by syncReplicantSets:
 			Eventually(replicantSets).WithArguments(instance).
 				Should(ConsistOf(
-					HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))),
+					HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(3))),
 				))
 		})
 
