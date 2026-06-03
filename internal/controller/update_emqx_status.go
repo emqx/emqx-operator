@@ -362,15 +362,15 @@ func (u *updateStatus) updateEMQXNodesStatus(
 		}
 		list := &status.CoreNodes
 		host := extractHostname(n.Node)
-		if node.Role == "replicant" {
+		if node.Role == crdv2.RoleReplicant {
 			list = &status.ReplicantNodes
 		}
 		for _, pod := range r.state.pods {
-			if node.Role == "core" && strings.HasPrefix(host, pod.Name) {
+			if node.Role == crdv2.RoleCore && strings.HasPrefix(host, pod.Name) {
 				node.PodName = pod.Name
 				break
 			}
-			if node.Role == "replicant" && host == pod.Status.PodIP {
+			if node.Role == crdv2.RoleReplicant && host == pod.Status.PodIP {
 				node.PodName = pod.Name
 				break
 			}

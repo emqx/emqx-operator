@@ -96,7 +96,7 @@ func (r *reconcileState) hasReplicants() bool {
 		}
 	}
 	for _, pod := range r.pods {
-		if pod.Labels[crdv2.LabelDBRole] == "replicant" {
+		if pod.Labels[crdv2.LabelDBRole] == crdv2.RoleReplicant {
 			return true
 		}
 	}
