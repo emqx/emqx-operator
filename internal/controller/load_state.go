@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	k8s "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -163,6 +164,20 @@ func (r *reconcileState) updateReplicantSet(instance *crd.EMQX) *appsv1.ReplicaS
 		}
 	}
 	return nil
+}
+
+func (r *reconcileState) hasReplicants() bool {
+	for _, rs := range r.replicantSets {
+		if rs.Status.Replicas > 0 || ptr.Deref(rs.Spec.Replicas, 1) > 0 {
+			return true
+		}
+	}
+	for _, pod := range r.pods {
+		if pod.Labels[crd.LabelMriaRole] == crd.RoleReplicant {
+			return true
+		}
+	}
+	return false
 }
 
 // outdatedReplicantReplicaSets returns all replicant ReplicaSets except the update revision set,

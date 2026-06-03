@@ -21,7 +21,7 @@ type updateStatus struct {
 
 func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	status := u.inheritStatus(instance)
-	hasReplicants := instance.Spec.HasReplicants()
+	hasReplicants := instance.Spec.HasReplicants() || r.state.hasReplicants()
 
 	// Core: count pods on each revision for rolling update progress.
 	coreSet := r.state.coreSet()
@@ -244,8 +244,7 @@ func evaluateReplicantNodesProgressing(s *reconcileState, instance *crd.EMQX) {
 	cond := crd.ReplicantNodesProgressing
 	status := &instance.Status
 
-	if !instance.Spec.HasReplicants() {
-		status.RemoveCondition(crd.ReplicantNodesProgressing)
+	if !instance.Spec.HasReplicants() && !s.hasReplicants() {
 		return
 	}
 
@@ -329,7 +328,7 @@ func evaluateReady(s *reconcileState, instance *crd.EMQX) {
 		return
 	}
 
-	if instance.Spec.HasReplicants() {
+	if instance.Spec.HasReplicants() || s.hasReplicants() {
 		if !evaluateReplicantsReady(s, instance) {
 			status.SetCondition(crd.Ready, metav1.ConditionFalse,
 				"ReplicantNodesProgressing",
