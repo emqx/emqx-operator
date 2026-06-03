@@ -20,7 +20,7 @@ type updateStatus struct {
 
 func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
 	status := u.inheritStatus(instance)
-	hasReplicants := instance.Spec.HasReplicants()
+	hasReplicants := instance.Spec.HasReplicants() || r.state.hasReplicants()
 
 	currentCoreSet, updateCoreSet := switchCoreSet(r, instance)
 	var currentReplicantSet, updateReplicantSet *appsv1.ReplicaSet
