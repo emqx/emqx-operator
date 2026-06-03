@@ -23,6 +23,19 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+)
+
+var (
+	emqxLabels = labels.Set(map[string]string{
+		crd.LabelInstance:  "emqx",
+		crd.LabelManagedBy: "emqx-operator",
+	})
+	emqxReplicantLabels = labels.Set(map[string]string{
+		crd.LabelInstance:  "emqx",
+		crd.LabelManagedBy: "emqx-operator",
+		crd.LabelMriaRole:  "replicant",
+	})
 )
 
 func EMQXReady(g Gomega, afterTime ...metav1.Time) {
@@ -63,7 +76,7 @@ func CoresStable(g Gomega, coreReplicas int) {
 	)
 
 	g.Expect(KubectlOut("get", "pod",
-		"--selector", "apps.emqx.io/instance=emqx,apps.emqx.io/managed-by=emqx-operator",
+		"--selector", emqxLabels.String(),
 		"-o", "json",
 	)).To(
 		BeUnmarshalledAs(&corev1.PodList{}, HaveField("Items",
@@ -96,6 +109,12 @@ func NoReplicants(g Gomega) {
 	g.Expect(KubectlOut("get", "emqx", "emqx",
 		"-o", "jsonpath={.status.replicantNodes}",
 	)).To(BeEmpty(), "EMQX cluster status lists replicant nodes")
+	g.Expect(KubectlOut("get", "pods",
+		"--selector", emqxReplicantLabels.String(),
+		"-o", "json",
+	)).To(BeUnmarshalledAs(&corev1.PodList{},
+		HaveField("Items", BeEmpty()),
+	))
 }
 
 func ReplicantsStable(g Gomega, replicantReplicas int) {
