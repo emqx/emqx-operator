@@ -77,7 +77,7 @@ func (c *EMQX) Copy() *EMQX {
 	}
 }
 
-func (c *EMQX) Print() string {
+func (c *EMQX) JSON() string {
 	if len(c.Config) == 0 {
 		return ""
 	}

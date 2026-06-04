@@ -25,7 +25,7 @@ import (
 )
 
 func TestCopy(t *testing.T) {
-	t.Run("empty config", func(t *testing.T) {
+	t.Run("copy config", func(t *testing.T) {
 		config, err := EMQXConfig(`
 		durable_sessions.enable = true
 		listeners.tcp.default.bind = 11883
@@ -34,7 +34,7 @@ func TestCopy(t *testing.T) {
 		got := config.Copy()
 		assert.NotSame(t, config.Config, got.Config)
 		got.StripReadOnlyConfig()
-		assert.NotEqual(t, config.Print(), got.Print())
+		assert.NotEqual(t, config.JSON(), got.JSON())
 	})
 }
 
@@ -312,11 +312,11 @@ func TestGetListenersServicePorts(t *testing.T) {
 	})
 }
 
-func TestPrint(t *testing.T) {
+func TestJSON(t *testing.T) {
 	t.Run("empty config", func(t *testing.T) {
 		config, err := EMQXConfig("")
 		assert.Nil(t, err)
-		got := config.Print()
+		got := config.JSON()
 		assert.Equal(t, "", got)
 	})
 
@@ -326,7 +326,7 @@ func TestPrint(t *testing.T) {
 			cluster.core_nodes = ["emqx@node1.emqx.io", "emqx@node2.emqx.io"]
 		`)
 		assert.Nil(t, err)
-		got := config.Print()
+		got := config.JSON()
 		expected := `{"cluster":{"core_nodes":["emqx@node1.emqx.io","emqx@node2.emqx.io"]},"node":{"name":"emqx@127.0.0.1"}}`
 		assert.JSONEq(t, expected, got)
 	})
@@ -334,7 +334,7 @@ func TestPrint(t *testing.T) {
 	t.Run("empty arrays", func(t *testing.T) {
 		config, err := EMQXConfig(`cluster.core_nodes = []`)
 		assert.Nil(t, err)
-		got := config.Print()
+		got := config.JSON()
 		expected := `{"cluster":{"core_nodes":[]}}`
 		assert.Equal(t, expected, got)
 	})
@@ -342,7 +342,7 @@ func TestPrint(t *testing.T) {
 	t.Run("nested arrays", func(t *testing.T) {
 		config, err := EMQXConfig(`cluster.seed_nodes = [["emqx@node1.emqx.io"], []]`)
 		assert.Nil(t, err)
-		got := config.Print()
+		got := config.JSON()
 		expected := `{"cluster":{"seed_nodes":[["emqx@node1.emqx.io"],[]]}}`
 		assert.Equal(t, expected, got)
 	})
@@ -354,7 +354,7 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.listeners.http.bind")
 		assert.Equal(t, got, false)
-		assert.Equal(t, config.Print(), "")
+		assert.Equal(t, config.JSON(), "")
 	})
 
 	t.Run("delete non-existent key", func(t *testing.T) {
@@ -364,7 +364,7 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.config.file")
 		assert.Equal(t, got, false)
-		assert.JSONEq(t, `{"dashboard":{"listeners":{"http":{"bind":18083}}}}`, config.Print())
+		assert.JSONEq(t, `{"dashboard":{"listeners":{"http":{"bind":18083}}}}`, config.JSON())
 	})
 
 	t.Run("delete whole root", func(t *testing.T) {
@@ -374,7 +374,7 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard")
 		assert.Equal(t, got, true)
-		assert.Equal(t, config.Print(), "")
+		assert.Equal(t, config.JSON(), "")
 	})
 
 	t.Run("delete empty leftover objects", func(t *testing.T) {
@@ -384,6 +384,6 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.listeners.https.bind")
 		assert.Equal(t, got, true)
-		assert.JSONEq(t, `{"dashboard":{"listeners":{"http":{"bind":18083}}}}`, config.Print())
+		assert.JSONEq(t, `{"dashboard":{"listeners":{"http":{"bind":18083}}}}`, config.JSON())
 	})
 }
