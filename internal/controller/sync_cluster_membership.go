@@ -64,11 +64,6 @@ func (*syncClusterMembership) keepCoreNode(r *reconcileRound, instance *crdv2.EM
 			podName = parsed.podName
 		}
 	}
-	// Determine pod ordinal, be conservative if pod has no ordinal:
-	ordinal := util.PodOrdinal(podName)
-	if ordinal < 0 {
-		return true
-	}
 	// Find out correspoding core set:
 	var owningCoreSet *appsv1.StatefulSet
 	for _, coreSet := range r.state.coreSets {
@@ -78,10 +73,11 @@ func (*syncClusterMembership) keepCoreNode(r *reconcileRound, instance *crdv2.EM
 			}
 		}
 	}
-	// Be conservative if no correspoding core set:
+	// Force-leave if no correspoding core set:
 	if owningCoreSet == nil {
-		return true
+		return false
 	}
 	// Keep node if it is in the range of desired number of replicas:
+	ordinal := util.PodOrdinal(podName)
 	return ordinal < ptr.Deref(owningCoreSet.Spec.Replicas, 1)
 }
