@@ -467,7 +467,7 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			By("fetch existing replicant ReplicaSets")
 			var rsBefore appsv1.ReplicaSetList
 			Expect(KubectlOut("get", "replicaset",
-				"--selector", crdv2.LabelInstance+"=emqx,"+crdv2.LabelDBRole+"=replicant",
+				"--selector", crdv2.LabelInstance+"=emqx,"+crdv2.LabelMriaRole+"=replicant",
 				"-o", "json",
 			)).To(UnmarshalInto(&rsBefore), "Failed to list replicant ReplicaSets")
 			Expect(rsBefore.Items).NotTo(BeEmpty(), "No replicant ReplicaSets were present before scaling down")
@@ -538,13 +538,13 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			)).To(UnmarshalInto(&pods), "Failed to list EMQX pods")
 			Expect(pods.Items).To(HaveLen(4), "EMQX cluster does not have 4 pods")
 			for _, pod := range pods.Items {
-				if pod.Labels[crdv2.LabelDBRole] == "core" {
+				if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleCore {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crdv2.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionTrue)),
 					)))
 				}
-				if pod.Labels[crdv2.LabelDBRole] == "replicant" {
+				if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleReplicant {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crdv2.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionFalse)),
@@ -686,13 +686,13 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			)).To(UnmarshalInto(&pods), "Failed to list EMQX pods")
 			Expect(pods.Items).To(HaveLen(4))
 			for _, pod := range pods.Items {
-				if pod.Labels[crdv2.LabelDBRole] == "core" {
+				if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleCore {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crdv2.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionTrue)),
 					)))
 				}
-				if pod.Labels[crdv2.LabelDBRole] == "replicant" {
+				if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleReplicant {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crdv2.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionFalse)),

@@ -36,9 +36,9 @@ func (instance *EMQX) DefaultLabelsWith(extraLabels ...map[string]string) map[st
 }
 
 func CoreLabels() map[string]string {
-	return map[string]string{LabelDBRole: RoleCore}
+	return map[string]string{LabelMriaRole: RoleCore}
 }
 
 func ReplicantLabels() map[string]string {
-	return map[string]string{LabelDBRole: RoleReplicant}
+	return map[string]string{LabelMriaRole: RoleReplicant}
 }

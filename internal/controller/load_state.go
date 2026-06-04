@@ -29,7 +29,7 @@ func (r *reconcileState) podWithName(name string) *corev1.Pod {
 func (r *reconcileState) podsWithRole(role string) []*corev1.Pod {
 	var list []*corev1.Pod
 	for _, pod := range r.pods {
-		if pod.Labels[crdv2.LabelDBRole] == role {
+		if pod.Labels[crdv2.LabelMriaRole] == role {
 			list = append(list, pod)
 		}
 	}
@@ -96,7 +96,7 @@ func (r *reconcileState) hasReplicants() bool {
 		}
 	}
 	for _, pod := range r.pods {
-		if pod.Labels[crdv2.LabelDBRole] == crdv2.RoleReplicant {
+		if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleReplicant {
 			return true
 		}
 	}

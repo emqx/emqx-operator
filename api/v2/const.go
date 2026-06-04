@@ -29,7 +29,7 @@ const (
 	// labels
 	LabelInstance        string = "apps.emqx.io/instance"   // my-emqx
 	LabelManagedBy       string = "apps.emqx.io/managed-by" // emqx-operator
-	LabelDBRole          string = "apps.emqx.io/db-role"    // core, replicant
+	LabelMriaRole        string = "apps.emqx.io/db-role"    // core, replicant
 	LabelPodTemplateHash string = "apps.emqx.io/pod-template-hash"
 )
 

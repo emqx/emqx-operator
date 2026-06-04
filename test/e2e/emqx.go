@@ -17,7 +17,7 @@ var (
 	emqxReplicantLabels = labels.Set(map[string]string{
 		crdv2.LabelInstance:  "emqx",
 		crdv2.LabelManagedBy: "emqx-operator",
-		crdv2.LabelDBRole:    "replicant",
+		crdv2.LabelMriaRole:  crdv2.RoleReplicant,
 	})
 )
 

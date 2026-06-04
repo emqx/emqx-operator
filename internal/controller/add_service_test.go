@@ -81,7 +81,7 @@ func TestGenerateDashboardService(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			crdv2.LabelInstance:  "emqx",
 			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "core",
+			crdv2.LabelMriaRole:  "core",
 		}, got.Spec.Selector)
 	})
 
@@ -209,7 +209,7 @@ func TestGenerateListenersService(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			crdv2.LabelInstance:  "emqx",
 			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "core",
+			crdv2.LabelMriaRole:  "core",
 		}, got.Spec.Selector)
 	})
 
@@ -235,7 +235,7 @@ func TestGenerateListenersService(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			crdv2.LabelInstance:  "emqx",
 			crdv2.LabelManagedBy: "emqx-operator",
-			crdv2.LabelDBRole:    "replicant",
+			crdv2.LabelMriaRole:  "replicant",
 		}, got.Spec.Selector)
 	})
 
