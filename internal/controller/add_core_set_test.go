@@ -51,7 +51,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 		assert.Equal(t, "core-label-value", got.Labels["core-label-key"])
 		assert.Equal(t, "emqx", got.Labels[crdv2.LabelInstance])
 		assert.Equal(t, "emqx-operator", got.Labels[crdv2.LabelManagedBy])
-		assert.Equal(t, "core", got.Labels[crdv2.LabelDBRole])
+		assert.Equal(t, "core", got.Labels[crdv2.LabelMriaRole])
 		assert.Equal(t, "emqx-core-"+got.Labels[crdv2.LabelPodTemplateHash], got.Name)
 		assert.Equal(t, emqx.Namespace, got.Namespace)
 	})
@@ -64,7 +64,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 		assert.EqualValues(t, map[string]string{
 			crdv2.LabelInstance:        "emqx",
 			crdv2.LabelManagedBy:       "emqx-operator",
-			crdv2.LabelDBRole:          "core",
+			crdv2.LabelMriaRole:        "core",
 			crdv2.LabelPodTemplateHash: got.Labels[crdv2.LabelPodTemplateHash],
 			"core-label-key":           "core-label-value",
 		}, got.Spec.Template.Labels)
@@ -72,7 +72,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 		assert.EqualValues(t, map[string]string{
 			crdv2.LabelInstance:        "emqx",
 			crdv2.LabelManagedBy:       "emqx-operator",
-			crdv2.LabelDBRole:          "core",
+			crdv2.LabelMriaRole:        "core",
 			crdv2.LabelPodTemplateHash: got.Labels[crdv2.LabelPodTemplateHash],
 			"core-label-key":           "core-label-value",
 		}, got.Spec.Selector.MatchLabels)
@@ -168,7 +168,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 					Name:      "emqx-core-data",
 					Namespace: "emqx",
 					Labels: map[string]string{
-						crdv2.LabelDBRole:    "core",
+						crdv2.LabelMriaRole:  "core",
 						crdv2.LabelInstance:  "emqx",
 						crdv2.LabelManagedBy: "emqx-operator",
 						"core-label-key":     "core-label-value",

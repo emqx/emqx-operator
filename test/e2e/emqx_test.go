@@ -457,6 +457,50 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			Expect(out).To(Equal("0"))
 		})
 
+		It("scale replicants down to zero", func() {
+			By("fetch current replicant nodes")
+			var replicantNodes []crdv2.EMQXNode
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodes}")).
+				To(UnmarshalInto(&replicantNodes), "Failed to get EMQX replicant nodes")
+			Expect(replicantNodes).NotTo(BeEmpty(), "No replicant nodes were present before scaling down")
+
+			By("fetch existing replicant ReplicaSets")
+			var rsBefore appsv1.ReplicaSetList
+			Expect(KubectlOut("get", "replicaset",
+				"--selector", crdv2.LabelInstance+"=emqx,"+crdv2.LabelMriaRole+"=replicant",
+				"-o", "json",
+			)).To(UnmarshalInto(&rsBefore), "Failed to list replicant ReplicaSets")
+			Expect(rsBefore.Items).NotTo(BeEmpty(), "No replicant ReplicaSets were present before scaling down")
+
+			By("scale replicants to zero and constrain revision history")
+			const revisionHistoryLimit = 1
+			replicantReplicas = 0
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "json",
+				"--patch", `[
+						{"op": "replace", "path": "/spec/replicantTemplate/spec/replicas", "value": 0},
+						{"op": "replace", "path": "/spec/revisionHistoryLimit", "value": `+fmt.Sprint(revisionHistoryLimit)+`}
+					]`,
+			)).To(Succeed(), "Failed to scale replicants down to 0")
+
+			By("wait for EMQX to stabilize without replicants")
+			Eventually(checkEMQXReady).Should(Succeed())
+			Eventually(checkEMQXStatus).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(checkNoReplicants).Should(Succeed())
+
+			By("verify replicant ReplicaSets are retained according to revisionHistoryLimit")
+			Eventually(KubectlOut).WithArguments("get", "replicaset",
+				"--selector", emqxReplicantLabels.String(),
+				"-o", "json",
+			).Should(BeUnmarshalledAs(&appsv1.ReplicaSetList{}, HaveField("Items", And(
+				HaveLen(revisionHistoryLimit),
+				HaveEach(And(
+					HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))),
+					HaveField("Status.Replicas", BeEquivalentTo(0)),
+				)),
+			))))
+		})
+
 		It("delete cluster", func() {
 			Expect(Kubectl("delete", "emqx", "emqx")).To(Succeed())
 			Expect(Kubectl("get", "emqx", "emqx")).To(HaveOccurred(), "EMQX cluster still exists")
@@ -494,13 +538,13 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			)).To(UnmarshalInto(&pods), "Failed to list EMQX pods")
 			Expect(pods.Items).To(HaveLen(4), "EMQX cluster does not have 4 pods")
 			for _, pod := range pods.Items {
-				if pod.Labels[crdv2.LabelDBRole] == "core" {
+				if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleCore {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crdv2.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionTrue)),
 					)))
 				}
-				if pod.Labels[crdv2.LabelDBRole] == "replicant" {
+				if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleReplicant {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crdv2.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionFalse)),
@@ -642,13 +686,13 @@ var _ = Describe("EMQX Test", Label("emqx"), Ordered, func() {
 			)).To(UnmarshalInto(&pods), "Failed to list EMQX pods")
 			Expect(pods.Items).To(HaveLen(4))
 			for _, pod := range pods.Items {
-				if pod.Labels[crdv2.LabelDBRole] == "core" {
+				if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleCore {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crdv2.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionTrue)),
 					)))
 				}
-				if pod.Labels[crdv2.LabelDBRole] == "replicant" {
+				if pod.Labels[crdv2.LabelMriaRole] == crdv2.RoleReplicant {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crdv2.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionFalse)),

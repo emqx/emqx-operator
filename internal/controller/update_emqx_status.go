@@ -19,30 +19,32 @@ type updateStatus struct {
 }
 
 func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
-	status := &instance.Status
-
-	status.CoreNodesStatus.Replicas = ptr.Deref(instance.Spec.CoreTemplate.Spec.Replicas, 1)
-	if instance.Spec.ReplicantTemplate != nil {
-		status.ReplicantNodesStatus.Replicas = ptr.Deref(instance.Spec.ReplicantTemplate.Spec.Replicas, 1)
-	}
+	status := u.inheritStatus(instance)
+	hasReplicants := instance.Spec.HasReplicants() || r.state.hasReplicants()
 
 	currentCoreSet, updateCoreSet := switchCoreSet(r, instance)
-	currentReplicantSet, updateReplicantSet := switchReplicantSet(r, instance)
+	var currentReplicantSet, updateReplicantSet *appsv1.ReplicaSet
+	if hasReplicants {
+		currentReplicantSet, updateReplicantSet = switchReplicantSet(r, instance)
+	}
 
-	status.CoreNodesStatus.ReadyReplicas = 0
 	if currentCoreSet != nil {
+		status.CoreNodesStatus.CurrentRevision = currentCoreSet.Labels[crdv2.LabelPodTemplateHash]
 		status.CoreNodesStatus.CurrentReplicas = currentCoreSet.Status.Replicas
 	}
 	if updateCoreSet != nil {
+		status.CoreNodesStatus.UpdateRevision = updateCoreSet.Labels[crdv2.LabelPodTemplateHash]
 		status.CoreNodesStatus.UpdateReplicas = updateCoreSet.Status.Replicas
 	}
-
-	status.ReplicantNodesStatus.ReadyReplicas = 0
-	if currentReplicantSet != nil {
-		status.ReplicantNodesStatus.CurrentReplicas = currentReplicantSet.Status.Replicas
-	}
-	if updateReplicantSet != nil {
-		status.ReplicantNodesStatus.UpdateReplicas = updateReplicantSet.Status.Replicas
+	if hasReplicants {
+		if currentReplicantSet != nil {
+			status.ReplicantNodesStatus.CurrentRevision = currentReplicantSet.Labels[crdv2.LabelPodTemplateHash]
+			status.ReplicantNodesStatus.CurrentReplicas = currentReplicantSet.Status.Replicas
+		}
+		if updateReplicantSet != nil {
+			status.ReplicantNodesStatus.UpdateRevision = updateReplicantSet.Labels[crdv2.LabelPodTemplateHash]
+			status.ReplicantNodesStatus.UpdateReplicas = updateReplicantSet.Status.Replicas
+		}
 	}
 
 	req := r.oldestCoreRequester()
@@ -53,23 +55,23 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to get node status")}
 		}
-		u.updateEMQXNodesStatus(r, instance, nodes)
+		u.updateEMQXNodesStatus(r, &status, nodes)
 	}
 	for _, node := range status.CoreNodes {
 		if node.Status == "running" {
 			status.CoreNodesStatus.ReadyReplicas++
 		}
 	}
-	for _, node := range status.ReplicantNodes {
-		if node.Status == "running" {
-			status.ReplicantNodesStatus.ReadyReplicas++
+	if hasReplicants {
+		for _, node := range status.ReplicantNodes {
+			if node.Status == "running" {
+				status.ReplicantNodesStatus.ReadyReplicas++
+			}
 		}
 	}
-
 	if req != nil {
 		clusterEvacuationsStatus, err := api.ClusterEvacuationStatus(req)
 		if err == nil {
-			status.NodeEvacuationsStatus = []crdv2.NodeEvacuationStatus{}
 			for _, ns := range clusterEvacuationsStatus {
 				status.NodeEvacuationsStatus = append(status.NodeEvacuationsStatus, crdv2.NodeEvacuationStatus{
 					NodeName:               ns.Node,
@@ -132,12 +134,47 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 	}
 
 	// update status condition
+	instance.Status = status
 	u.updateStatusCondition(r, instance)
 
 	if err := u.Client.Status().Update(r.ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}
 	}
 	return subResult{}
+}
+
+// inheritStatus builds a minimal EMQXStatus with information that has to be
+// preserved across reconcile rounds.
+func (u *updateStatus) inheritStatus(instance *crdv2.EMQX) crdv2.EMQXStatus {
+	status := crdv2.EMQXStatus{
+		Conditions: u.inheritConditions(instance),
+		CoreNodesStatus: crdv2.EMQXNodesStatus{
+			Replicas:       ptr.Deref(instance.Spec.CoreTemplate.Spec.Replicas, 1),
+			CollisionCount: instance.Status.CoreNodesStatus.CollisionCount,
+		},
+	}
+	if instance.Spec.HasReplicants() {
+		status.ReplicantNodesStatus = crdv2.EMQXNodesStatus{
+			Replicas:       ptr.Deref(instance.Spec.ReplicantTemplate.Spec.Replicas, 1),
+			CollisionCount: instance.Status.ReplicantNodesStatus.CollisionCount,
+		}
+	}
+	return status
+}
+
+func (*updateStatus) inheritConditions(instance *crdv2.EMQX) []metav1.Condition {
+	hasReplicants := instance.Spec.HasReplicants()
+	if hasReplicants {
+		return instance.Status.Conditions
+	}
+	next := make([]metav1.Condition, 0, len(instance.Status.Conditions))
+	for _, condition := range instance.Status.Conditions {
+		if condition.Type == crdv2.ReplicantNodesProgressing || condition.Type == crdv2.ReplicantNodesReady {
+			continue
+		}
+		next = append(next, condition)
+	}
+	return next
 }
 
 func (u *updateStatus) updateStatusCondition(r *reconcileRound, instance *crdv2.EMQX) {
@@ -238,10 +275,6 @@ func (u *updateStatus) resetConditions(
 	instance *crdv2.EMQX,
 	reason string,
 ) {
-	if !instance.Spec.HasReplicants() {
-		instance.Status.RemoveCondition(crdv2.ReplicantNodesProgressing)
-		instance.Status.RemoveCondition(crdv2.ReplicantNodesReady)
-	}
 	instance.Status.ResetConditions(reason)
 	u.updateStatusCondition(r, instance)
 }
@@ -276,9 +309,6 @@ func switchCoreSet(
 			current = update
 		}
 	}
-	if current != nil {
-		instance.Status.CoreNodesStatus.CurrentRevision = current.Labels[crdv2.LabelPodTemplateHash]
-	}
 	return current, update
 }
 
@@ -303,16 +333,14 @@ func switchReplicantSet(
 			current = update
 		}
 	}
-	if current != nil {
-		instance.Status.ReplicantNodesStatus.CurrentRevision = current.Labels[crdv2.LabelPodTemplateHash]
-	}
 	return current, update
 }
 
-func (u *updateStatus) updateEMQXNodesStatus(r *reconcileRound, instance *crdv2.EMQX, nodes []api.EMQXNode) {
-	status := &instance.Status
-	status.CoreNodes = []crdv2.EMQXNode{}
-	status.ReplicantNodes = []crdv2.EMQXNode{}
+func (u *updateStatus) updateEMQXNodesStatus(
+	r *reconcileRound,
+	status *crdv2.EMQXStatus,
+	nodes []api.EMQXNode,
+) {
 	slices.SortFunc(nodes, func(a, b api.EMQXNode) int {
 		// Use seconds granularity to avoid jitter in ordering
 		asec := a.Uptime / 1000
@@ -334,15 +362,15 @@ func (u *updateStatus) updateEMQXNodesStatus(r *reconcileRound, instance *crdv2.
 		}
 		list := &status.CoreNodes
 		host := extractHostname(n.Node)
-		if node.Role == "replicant" {
+		if node.Role == crdv2.RoleReplicant {
 			list = &status.ReplicantNodes
 		}
 		for _, pod := range r.state.pods {
-			if node.Role == "core" && strings.HasPrefix(host, pod.Name) {
+			if node.Role == crdv2.RoleCore && strings.HasPrefix(host, pod.Name) {
 				node.PodName = pod.Name
 				break
 			}
-			if node.Role == "replicant" && host == pod.Status.PodIP {
+			if node.Role == crdv2.RoleReplicant && host == pod.Status.PodIP {
 				node.PodName = pod.Name
 				break
 			}

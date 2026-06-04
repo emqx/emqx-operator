@@ -30,7 +30,7 @@ func (s *syncCoreSets) reconcile(r *reconcileRound, instance *crdv2.EMQX) subRes
 	if updateSts.UID != currentSts.UID {
 		return s.migrateSet(r, instance, currentSts)
 	}
-	return s.scaleDownSet(r, instance, currentSts)
+	return s.scaleSet(r, instance, currentSts)
 }
 
 // Orchestrates gradual scale down of the old statefulSet, by migrating workloads to the new statefulSet.
@@ -58,7 +58,7 @@ func (s *syncCoreSets) migrateSet(
 }
 
 // Scale up or down the existing statefulSet.
-func (s *syncCoreSets) scaleDownSet(
+func (s *syncCoreSets) scaleSet(
 	r *reconcileRound,
 	instance *crdv2.EMQX,
 	current *appsv1.StatefulSet,

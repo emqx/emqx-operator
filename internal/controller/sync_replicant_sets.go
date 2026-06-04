@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 )
 
 type syncReplicantSets struct {
@@ -22,6 +23,10 @@ type scaleDownReplicant struct {
 }
 
 func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResult {
+	if !instance.Spec.HasReplicants() {
+		return s.scaleReplicantSetsDownToZero(r)
+	}
+
 	updateRs := r.state.updateReplicantSet(instance)
 	currentRs := r.state.currentReplicantSet(instance)
 	if updateRs == nil || currentRs == nil {
@@ -29,6 +34,23 @@ func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crdv2.EMQX) s
 	}
 	if updateRs.UID != currentRs.UID {
 		return s.migrateSet(r, instance, currentRs)
+	}
+	return subResult{}
+}
+
+func (s *syncReplicantSets) scaleReplicantSetsDownToZero(r *reconcileRound) subResult {
+	for _, rs := range r.state.replicantSets {
+		if ptr.Deref(rs.Spec.Replicas, 1) == 0 {
+			continue
+		}
+		r.log.Info("scaling down replicantSet",
+			"replicaSet", klog.KObj(rs),
+			"reason", "replicant replicas set to zero",
+		)
+		rs.Spec.Replicas = ptr.To(int32(0))
+		if err := s.Client.Update(r.ctx, rs); err != nil {
+			return subResult{err: emperror.Wrap(err, "failed to scale down replicantSet")}
+		}
 	}
 	return subResult{}
 }

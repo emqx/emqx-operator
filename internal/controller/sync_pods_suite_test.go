@@ -576,4 +576,16 @@ var _ = Describe("Reconciler syncReplicantSets", Ordered, func() {
 			HaveField("Pod", Not(BeNil())),
 		))
 	})
+
+	It("scales replicant sets down to zero when replicants are disabled", func() {
+		instance.Spec.ReplicantTemplate = &crdv2.EMQXReplicantTemplate{}
+		instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
+		instance.Status.ReplicantNodesStatus = crdv2.EMQXNodesStatus{}
+		Expect(s.reconcile(round, instance)).Should(Equal(subResult{}))
+		Eventually(actualize).WithArguments(current).
+			WithTimeout(timeout).WithPolling(interval).
+			Should(
+				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))),
+			)
+	})
 })
