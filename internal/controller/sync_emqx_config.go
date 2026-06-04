@@ -94,7 +94,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 			return reconcileError(emperror.Wrap(err, "failed to parse .spec.config.data"))
 		}
 		strippedReadonly := c.StripReadOnlyConfig()
-		confRuntime := c.Print()
+		confRuntime := c.JSON()
 
 		// Update the config through API
 		r.log.V(1).Info("applying runtime config", "config", confRuntime)
@@ -144,7 +144,7 @@ func stripNonChangeableConfig(confDesired string, confLast string) (string, []st
 			if vdOk && vlOk && vd != "" && vl != "" && vl != "0" && vd != vl {
 				_ = cd.Strip(path)
 				stripped = append(stripped, path)
-				return cd.Print(), stripped
+				return cd.JSON(), stripped
 			}
 		}
 	}
