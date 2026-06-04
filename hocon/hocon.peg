@@ -1,0 +1,197 @@
+{
+
+package hocon
+
+import (
+    "strings"
+    "reflect"
+)
+
+func toAnySlice(v any) []any {
+    if v == nil {
+        return nil
+    }
+    return v.([]any)
+}
+
+func validatePath(path any) error {
+    components := asPath(path.(string))
+    if len(components) == 0 {
+        return ErrInvalidPath
+    }
+    return nil
+}
+
+func validatePartials(ps partials) error {
+    ty := fragmentIndeterminate
+    for _, p := range ps {
+        if p.fragType() == fragmentIndeterminate {
+            continue
+        }
+        if p.fragType() == ty {
+            continue
+        }
+        if ty == fragmentIndeterminate {
+            ty = p.fragType()
+            continue
+        }
+        return ErrMixedPartials 
+    }
+    return nil
+}
+
+}
+
+Root ← _ ps:( Object / Properties ) _ EOF {
+    return ps, nil
+}
+
+Value ← v:( Percent / Bytesize / Duration / Float / Integer / Bool / Null / Partials / Reference ) {
+    return parseValue(v), nil
+}
+
+Partials ← v:Partial vs:( WSLine Partial )* {
+    out := partials{v.(partial)}
+    for _, v := range toAnySlice(vs) {
+        p := toAnySlice(v)[1]
+        out = append(out, p.(partial))
+    }
+    return out, validatePartials(out)
+}
+
+Partial ← v:( Object / Array / Reference / String ) {
+    return partial{v.(parseNode)}, nil
+}
+
+Object ← '{' _ ps:Properties _ '}' {
+    return ps, nil
+}
+
+Properties ← ps:( Entry _ ','? ( _ Entry _ ','? )* )? {
+    out := propertyList{}
+    psSlice := toAnySlice(ps)
+    if len(psSlice) == 0 {
+        return out, nil
+    }
+    out = append(out, psSlice[0])
+    for _, v := range toAnySlice(psSlice[3]) {
+        vSlice := toAnySlice(v)
+        out = append(out, vSlice[1])
+    }
+    return out, nil
+}
+
+Entry ←
+      i:Include { return i, nil }
+    / p:Property { return p, nil }
+
+Include ← "include" WS _ inc:( RequiredInclude / OptionalInclude ) {
+    return inc, nil
+}
+
+RequiredInclude ← "required" _ '(' _ target:StringQuoted _ ')' {
+    return includeOf{path: target.(stringLit).string(), required: true}, nil
+}
+
+OptionalInclude ← target:StringQuoted {
+    return includeOf{path: target.(stringLit).string()}, nil
+}
+
+Property ←
+      path:Ident _ [:=] _ v:Value { return property{path.(string), v}, validatePath(path) }
+    / path:Ident _ &'{' v:Partials { return property{path.(string), v}, validatePath(path) }
+
+Array ← '[' _ vs:( Value _ ','? ( _ Value _ ','? )* )? _ ']' {
+    vsSlice := toAnySlice(vs)
+    if len(vsSlice) == 0 {
+        return nodeList{}, nil
+    }
+    out := nodeList{vsSlice[0]}
+    for _, v := range toAnySlice(vsSlice[3]) {
+        vSlice := toAnySlice(v)
+        out = append(out, vSlice[1])
+    }
+    return out, nil
+}
+
+Percent ← DecimalDigit+ '%' {
+    return percent(c.text), nil
+}
+
+Bytesize ← DecimalDigit+ ( "kb" / "KB" / "mb" / "MB" / "gb" / "GB" ) {
+    return bytesize(c.text), nil
+}
+
+Duration ← DecimalDigit+ ( "ms" / "MS" / 'd' / 'D' / 'h' / 'H' / 'm' / 'M' / 's' / 'S' ) {
+    return duration(c.text), nil
+}
+
+Float ← [+-]? Integer '.' DecimalDigit+ Exponent? {
+    return strconv.ParseFloat(string(c.text), 64)
+}
+
+Exponent ← 'e'i [+-]? DecimalDigit+
+
+Integer ← ( '0' / NonZeroDecimalDigit DecimalDigit* ) {
+    return strconv.ParseInt(string(c.text), 10, 64)
+}
+
+NonZeroDecimalDigit ← [1-9]
+DecimalDigit ← [0-9]
+
+Ident ←
+      slit:StringUnquoted   { return slit.(stringLit).string(), nil }
+    / slit:StringTripleQuoted { return slit.(stringLit).string(), nil }
+    / slit:StringQuoted       { return slit.(stringLit).string(), nil }
+
+IdentUnquoted ← StringUnquoted {
+    return string(c.text), nil
+}
+
+Reference ← '$' '{' opt:'?'? path:IdentUnquoted '}' {
+    err := validatePath(path.(string))
+    return valueRef{path: path.(string), optional: opt != nil}, err
+}
+
+String ← s:( StringUnquoted / StringTripleQuoted / StringQuoted ) _ ![:={] {
+    return s, nil
+}
+
+StringUnquoted ← [a-z]i [a-z0-9_.@%-]i* {
+    s := string(c.text)
+    return stringLit{raw: s, form: unqouted}, nil
+}
+
+StringQuoted ← '"' ( !CharNeedEscape . / '\\' SingleCharEscape / '\\' UnicodeEscape )* '"' {
+    s, err := strconv.Unquote(string(c.text))
+    return stringLit{raw: s, form: quoted}, err
+}
+
+StringTripleQuoted ← TripleQuote ( !TripleQuote . )* TripleQuote {
+    s := string(bytes.Replace(c.text, []byte(`"""`), []byte(""), -1))
+    return stringLit{raw: s, form: triplequoted}, nil
+}
+
+CharNeedEscape ← [\x00-\x1f"\\]
+
+SingleCharEscape ← ["\\/bfnrt]
+UnicodeEscape ← 'u' HexDigit HexDigit HexDigit HexDigit
+
+HexDigit ← [0-9a-f]i
+
+TripleQuote ← '"' '"' '"'
+
+Bool ← "true" { return true, nil } / "false" { return false, nil }
+
+Null ← "null" { return nil, nil }
+
+_ "whitespace or comments" ← ( Comment / WS )*
+
+WSLine "non-line-breaking whitespace" ← WSNoLinebreak*
+Comment ← ( '#' / "//" ) ( !Linebreak . )* Linebreak
+
+WS ← [ \t\v\f\r\n\u2028\u2029]
+WSNoLinebreak ← [ \t\v\f]
+Linebreak ← [\r\n\u2028\u2029]
+
+EOF ← !.

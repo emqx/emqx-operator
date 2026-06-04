@@ -1,0 +1,5 @@
+# @expect error parse_error
+# @source sample-configs/test01.conf
+# Upstream allows mixed primitive concatenation to form strings; this parser does not
+# allow a null token to participate in string concatenation.
+a = null bar

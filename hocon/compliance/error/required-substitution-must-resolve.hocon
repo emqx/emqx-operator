@@ -1,0 +1,2 @@
+# @expect error resolve_error
+a = ${missing}

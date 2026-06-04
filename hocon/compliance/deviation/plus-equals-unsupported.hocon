@@ -1,0 +1,3 @@
+# @expect error scan_error
+# Upstream supports += as array append sugar; this parser has no += token.
+a += b

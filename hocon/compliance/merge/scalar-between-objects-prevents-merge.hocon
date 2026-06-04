@@ -1,0 +1,3 @@
+# @expect ok
+# @expect-json {"a":{"d":4}}
+a = {b = 1}, a = null, a = {d = 4}

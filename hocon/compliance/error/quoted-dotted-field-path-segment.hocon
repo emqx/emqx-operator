@@ -1,0 +1,5 @@
+# @expect error parse_error
+# @source sample-configs/equiv01/path-keys.conf
+# Upstream allows quoted path elements inside dotted keys; this parser only supports
+# completely quoted keys or completely unquoted dotted paths.
+arrays."empty" = []

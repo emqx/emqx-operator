@@ -1,0 +1,3 @@
+# @expect ok
+# @expect-json {"path":["/bin","/usr/bin"]}
+path = ["/bin"], path = ${path} ["/usr/bin"]

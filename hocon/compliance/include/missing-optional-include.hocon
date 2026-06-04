@@ -1,0 +1,4 @@
+# @expect ok
+# @expect-json {"a":1}
+include "missing.conf"
+a = 1

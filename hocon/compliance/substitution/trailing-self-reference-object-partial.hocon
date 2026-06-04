@@ -1,0 +1,9 @@
+# @expect ok
+# @expect-json {"a":{"x":1,"y":1,"z":3},"b":{"x":1,"y":1,"z":3}}
+# A trailing self-reference inside object concatenation resolves to the previous
+# effective value and is then merged as the last object partial, so old keys win
+# conflicts with earlier partials in the same value.
+
+a = { x = 1, y = 1 }
+a = { y = 2, z = 3 } ${a}
+b = ${a}

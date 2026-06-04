@@ -1,0 +1,11 @@
+# @expect ok
+# @expect-json {"x":"foo","y":"bar","z":"baz","m":{"a":"foobarbaz","b":"foo"},"nested":{"a":"foobarbaz","b":"foo"}}
+# @source sample-configs/variable-subst.conf
+x = "foo"
+y = bar
+z = "baz"
+m = {
+  a = ${x}${y}${z}
+  b = ${x}
+}
+nested = ${m}

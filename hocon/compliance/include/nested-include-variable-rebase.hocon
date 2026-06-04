@@ -1,0 +1,4 @@
+# @expect ok
+# @expect-json {"a":{"x":42,"y":42}}
+a { include "child.hocon" }
+a.x = 42

@@ -1,0 +1,10 @@
+# @expect ok
+# @expect-json {"a":{"b":3},"x":3,"y":3,"z":3}
+# Upstream preserves path elements according to its path grammar; this parser tokenizes
+# unquoted dotted paths with string:tokens/2, so empty middle/trailing segments are dropped.
+a..b = 1
+a....b = 2
+a.b. = 3
+x = ${a..b}
+y = ${a....b}
+z = ${a.b.}

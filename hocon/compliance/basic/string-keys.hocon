@@ -1,0 +1,9 @@
+# @expect ok
+# @expect-json {"x":{"a\nb":42,"a\tb":43,"a\"b":44,"literal\nkey":45}}
+x = {
+  "a\nb": 42
+  "a\tb": 43
+  "a\"b": 44
+  """literal
+key""": 45
+}

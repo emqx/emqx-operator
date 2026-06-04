@@ -1,0 +1,5 @@
+# @expect error scan_error
+# @source sample-configs/equiv01/properties-style.conf
+# Upstream allows quoted path elements inside dotted keys; this parser rejects a dot
+# immediately following a quoted key token.
+"booleans"."falseAgain" = false
