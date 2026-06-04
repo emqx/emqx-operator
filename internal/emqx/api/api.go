@@ -52,6 +52,10 @@ func post(req req.RequesterInterface, path string, body []byte) ([]byte, error) 
 	return request(req, "POST", path, body, nil)
 }
 
+func delete(req req.RequesterInterface, path string) ([]byte, error) {
+	return request(req, "DELETE", path, nil, nil)
+}
+
 func request(req req.RequesterInterface, method string, path string, body []byte, header http.Header) ([]byte, error) {
 	if req == nil {
 		return nil, emperror.New("no requester")

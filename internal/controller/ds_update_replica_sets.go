@@ -3,11 +3,10 @@ package controller
 import (
 	"reflect"
 	"sort"
-	"strconv"
-	"strings"
 
 	emperror "emperror.dev/errors"
 	crdv2 "github.com/emqx/emqx-operator/api/v2"
+	util "github.com/emqx/emqx-operator/internal/controller/util"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 )
 
@@ -53,7 +52,7 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 			if site == nil {
 				return subResult{err: emperror.Errorf("no site for node %s", node.Name)}
 			}
-			if getPodIndex(node.PodName) < desiredReplicas {
+			if util.PodOrdinal(node.PodName) < desiredReplicas {
 				targetSites = append(targetSites, site.ID)
 			}
 		}
@@ -79,17 +78,4 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crdv2.EMQX)
 	}
 
 	return subResult{}
-}
-
-func getPodIndex(podName string) int32 {
-	parts := strings.Split(podName, "-")
-	if len(parts) < 2 {
-		return -1
-	}
-	indexPart := parts[len(parts)-1]
-	index, err := strconv.Atoi(indexPart)
-	if err != nil {
-		return -1
-	}
-	return int32(index)
 }

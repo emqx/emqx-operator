@@ -8,6 +8,7 @@ import (
 	"hash"
 	"hash/fnv"
 	"slices"
+	"strings"
 	"time"
 
 	emperror "emperror.dev/errors"
@@ -157,4 +158,37 @@ func deepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 		SpewKeys:       true,
 	}
 	_, _ = printer.Fprintf(hasher, "%#v", objectToWrite)
+}
+
+type nodeName struct {
+	name     string
+	hostName string
+	podName  string
+}
+
+func parseNodeName(s string, instance *crdv2.EMQX) *nodeName {
+	var parsed nodeName
+	nameParts := strings.Split(s, "@")
+	if len(nameParts) != 2 {
+		return nil
+	}
+	parsed.name = nameParts[0]
+	parsed.hostName = nameParts[1]
+	hostParts := strings.Split(nameParts[1], instance.HeadlessServiceNamespacedName().Name)
+	if len(hostParts) > 1 {
+		parsed.podName = strings.TrimRight(hostParts[0], ".")
+	}
+	return &parsed
+}
+
+func constructNodeName(podName string, instance *crdv2.EMQX) string {
+	return fmt.Sprintf("emqx@%s.%s", podName, clusterDNSName(instance))
+}
+
+func clusterDNSName(instance *crdv2.EMQX) string {
+	return fmt.Sprintf("%s.%s.svc.%s",
+		instance.HeadlessServiceNamespacedName().Name,
+		instance.Namespace,
+		instance.Spec.ClusterDomain,
+	)
 }

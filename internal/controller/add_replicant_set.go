@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"slices"
 
 	emperror "emperror.dev/errors"
@@ -136,9 +135,11 @@ func newReplicaSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.ReplicaSet {
 }
 
 func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
-	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
-	// This is especially important when DS Raft is enabled, otherwise there will be a
-	// lot of leftover records in the DS cluster metadata.
+	cookie := resources.Cookie(instance)
+	config := resources.EMQXConfig(instance)
+
+	// Replicants should leave the cluster while still alive. Once stopped, EMQX
+	// normally no longer sees them as cluster nodes to force-leave.
 	lifecycle := instance.Spec.ReplicantTemplate.Spec.Lifecycle
 	if lifecycle == nil {
 		lifecycle = &corev1.Lifecycle{}
@@ -150,9 +151,6 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 			Command: []string{"/bin/sh", "-c", "emqx ctl cluster leave"},
 		},
 	}
-
-	cookie := resources.Cookie(instance)
-	config := resources.EMQXConfig(instance)
 
 	return &appsv1.ReplicaSet{
 		TypeMeta: metav1.TypeMeta{
@@ -209,7 +207,7 @@ func generateReplicaSet(instance *crdv2.EMQX) *appsv1.ReplicaSet {
 								},
 								{
 									Name:  "EMQX_CLUSTER__DNS__NAME",
-									Value: fmt.Sprintf("%s.%s.svc.%s", instance.HeadlessServiceNamespacedName().Name, instance.Namespace, instance.Spec.ClusterDomain),
+									Value: clusterDNSName(instance),
 								},
 								{
 									Name: "EMQX_HOST",
