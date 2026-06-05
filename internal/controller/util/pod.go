@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,4 +46,16 @@ func UpdatePodCondition(
 	})
 	patch := client.RawPatch(types.StrategicMergePatchType, patchBytes)
 	return k8sClient.Status().Patch(ctx, pod, patch)
+}
+
+func PodOrdinal(podName string) int32 {
+	parts := strings.Split(podName, "-")
+	if len(parts) < 2 {
+		return -1
+	}
+	index, err := strconv.ParseInt(parts[len(parts)-1], 10, 32)
+	if err != nil {
+		return -1
+	}
+	return int32(index)
 }

@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"reflect"
 	"slices"
 
@@ -132,21 +131,6 @@ func newStatefulSet(instance *crdv2.EMQX, conf *config.EMQX) *appsv1.StatefulSet
 }
 
 func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
-	// Add a PreStop hook to leave the cluster when the pod is asked to stop.
-	// This is especially important when DS Raft is enabled, otherwise there will be a
-	// lot of leftover records in the DS cluster metadata.
-	lifecycle := instance.Spec.CoreTemplate.Spec.Lifecycle
-	if lifecycle == nil {
-		lifecycle = &corev1.Lifecycle{}
-	} else {
-		lifecycle = lifecycle.DeepCopy()
-	}
-	lifecycle.PreStop = &corev1.LifecycleHandler{
-		Exec: &corev1.ExecAction{
-			Command: []string{"/bin/sh", "-c", "emqx ctl cluster leave"},
-		},
-	}
-
 	cookie := resources.Cookie(instance)
 	bootstrapAPIKeys := resources.BootstrapAPIKey(instance)
 	config := resources.EMQXConfig(instance)
@@ -216,7 +200,7 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 								},
 								{
 									Name:  "EMQX_CLUSTER__DNS__NAME",
-									Value: fmt.Sprintf("%s.%s.svc.%s", instance.HeadlessServiceNamespacedName().Name, instance.Namespace, instance.Spec.ClusterDomain),
+									Value: clusterDNSName(instance),
 								},
 								{
 									Name:  "EMQX_HOST",
@@ -239,7 +223,7 @@ func generateStatefulSet(instance *crdv2.EMQX) *appsv1.StatefulSet {
 							LivenessProbe:   instance.Spec.CoreTemplate.Spec.LivenessProbe,
 							ReadinessProbe:  instance.Spec.CoreTemplate.Spec.ReadinessProbe,
 							StartupProbe:    instance.Spec.CoreTemplate.Spec.StartupProbe,
-							Lifecycle:       lifecycle,
+							Lifecycle:       instance.Spec.CoreTemplate.Spec.Lifecycle,
 							VolumeMounts: slices.Concat(
 								[]corev1.VolumeMount{
 									{

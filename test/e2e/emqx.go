@@ -65,6 +65,7 @@ func checkEMQXStatus(g Gomega, coreReplicas int) {
 		"EMQX status does not have expected number of core nodes",
 	)
 	checkNodesStatusRevision(g, status, "core", coreReplicas)
+	checkNoStoppedNodes(g, "coreNodes", "core")
 }
 
 func checkNoReplicants(g Gomega) {
@@ -94,6 +95,19 @@ func checkReplicantStatus(g Gomega, replicantReplicas int) {
 		"EMQX status does not have expected number of replicant nodes",
 	)
 	checkNodesStatusRevision(g, status, "replicant", replicantReplicas)
+	checkNoStoppedNodes(g, "replicantNodes", "replicant")
+}
+
+func checkNoStoppedNodes(g Gomega, statusField, role string) {
+	var nodes []crdv2.EMQXNode
+	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status."+statusField+"}")).
+		To(UnmarshalInto(&nodes), "Failed to get EMQX %s nodes", role)
+	g.Expect(nodes).To(
+		HaveEach(Not(HaveField("Status", Equal("stopped")))),
+		"EMQX %s nodes status lists stopped nodes: %+v",
+		role,
+		nodes,
+	)
 }
 
 func checkNodesStatusRevision(g Gomega, status crdv2.EMQXNodesStatus, role string, replicas int) {
