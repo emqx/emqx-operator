@@ -19,6 +19,7 @@ package config
 import (
 	"testing"
 
+	"github.com/emqx/emqx-operator/hocon"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -345,6 +346,105 @@ func TestJSON(t *testing.T) {
 		got := config.JSON()
 		expected := `{"cluster":{"seed_nodes":[["emqx@node1.emqx.io"],[]]}}`
 		assert.Equal(t, expected, got)
+	})
+
+	t.Run("complex", func(t *testing.T) {
+		confString := `
+			license {
+				key = "file:///emqx.license"
+			}
+			log.console.level = error
+			log.console.formatter = json
+			log.console.timestamp_format = rfc3339
+			listeners.tcp.default {
+				bind = "0.0.0.0:1883"
+				enable = true
+				enable_authn = true
+				proxy_protocol = true
+				proxy_protocol_timeout = 5s
+				max_conn_rate = "4000/s"
+				tcp_options {
+				send_timeout = 15s
+				keepalive = "7200,75,9"
+				}
+			}
+			listeners.tcp.internal {
+				bind = "0.0.0.0:1884"
+				enable = true
+				enable_authn = true
+				proxy_protocol = false
+				max_conn_rate = "1000/s"
+				tcp_options {
+				send_timeout = 15s
+				keepalive = "7200,75,9"
+				}
+			}
+			listeners.ssl.default.enable = false
+			listeners.ws.default.enable = false
+			listeners.wss.default.enable = false
+			# cluster.autoclean: how long after a node becomes unreachable before
+			# it's removed from cluster membership. EMQX's default is 24h (!).
+			cluster.autoclean = 60s
+			authorization {
+				cache {
+				enable = true
+				max_size = 32
+				ttl = 60m
+				}
+				deny_action = disconnect
+				no_match = deny
+				sources = [
+				{
+					enable = true
+					path = "data/authz/acl.conf"
+					type = file
+				}
+				]
+			}
+			rule_engine {
+				ignore_sys_message = true
+				jq_function_default_timeout = "10s"
+				rules {
+				test_rule {
+					actions = [
+					{
+						args {
+						direct_dispatch = false
+						mqtt_properties {}
+						payload = ""
+						qos = 0
+						retain = false
+						topic = "${clientid}/cmds/test"
+						user_properties = ""
+						}
+						function = republish
+					}
+					]
+					description = ""
+					enable = true
+					metadata {last_modified_at = 1779340531269}
+					sql = """~
+					SELECT
+						clientid,
+						payload,
+						topic
+					FROM "+/+/t/test"~"""
+				}
+				}
+			}
+		`
+		// Configuration parses correctly:
+		config, err := EMQXConfig(confString)
+		assert.Nil(t, err)
+		assert.Equal(t,
+			hocon.String("SELECT\n\tclientid,\n\tpayload,\n\ttopic\nFROM \"+/+/t/test\""),
+			config.Get("rule_engine.rules.test_rule.sql"),
+		)
+		confJSON := config.JSON()
+		// JSON roundtrip preserves configuration:
+		config, err = EMQXConfig(confJSON)
+		assert.Nil(t, err)
+		assert.JSONEq(t, confJSON, config.JSON())
 	})
 }
 
