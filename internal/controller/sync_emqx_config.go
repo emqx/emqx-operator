@@ -35,7 +35,8 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	confWithDefaults := config.WithDefaults(conf)
 	configMap := &corev1.ConfigMap{}
 	err := s.Client.Get(r.ctx, instance.ConfigsNamespacedName(), configMap)
-	if err != nil && k8sErrors.IsNotFound(err) {
+	switch {
+	case err != nil && k8sErrors.IsNotFound(err):
 		configMap = resource.ConfigMap(confWithDefaults)
 		if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
@@ -44,21 +45,14 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		if err := s.Client.Create(r.ctx, configMap); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to create configMap")}
 		}
-		return subResult{}
-	}
-	if err != nil {
+	case err != nil:
 		return subResult{err: emperror.Wrap(err, "failed to get configMap")}
-	}
-
-	// If the config is different, update the config right away.
-	// Assuming the config is valid, otherwise master controller would bail out.
-	if configMap.Data[resources.BaseConfigFile] != confWithDefaults {
+	case configMap.Data[resources.BaseConfigFile] != confWithDefaults:
+		// If the config is different, update the config right away.
+		// Assuming the config is valid, otherwise master controller would bail out.
 		desired := resource.ConfigMap(confWithDefaults)
 		configMap.Labels = desired.Labels
 		configMap.Data = desired.Data
-		if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
-		}
 		r.log.V(1).Info("updating config resource", "configMap", klog.KObj(configMap))
 		if err := s.Client.Update(r.ctx, configMap); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update configMap")}
