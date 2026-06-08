@@ -70,7 +70,7 @@ func TestStripNonChangeableConfig(t *testing.T) {
 			"dashboard.listeners { http.bind = 18883, https.bind = 18884 }",
 			"dashboard.listeners { http.bind = 18083, https.bind = 18084 }",
 		)
-		assert.JSONEq(t, `{"dashboard":{"listeners":{"https":{"bind":18884}}}}`, config)
+		assert.Equal(t, `"dashboard" {"listeners":{"https":{"bind":18884}}}`+"\n", config)
 		assert.Equal(t, []string{"dashboard.listeners.http.bind"}, stripped)
 	})
 

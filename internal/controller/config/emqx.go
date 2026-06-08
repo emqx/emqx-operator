@@ -77,12 +77,21 @@ func (c *EMQX) Copy() *EMQX {
 	}
 }
 
-func (c *EMQX) JSON() string {
-	if len(c.Config) == 0 {
-		return ""
+func (c *EMQX) String() string {
+	var sb strings.Builder
+	roots := make([]string, 0, len(c.Config))
+	for r := range c.Config {
+		roots = append(roots, r)
 	}
-	out, _ := json.Marshal(c.Config)
-	return string(out)
+	sort.Strings(roots)
+	for _, root := range roots {
+		sb.WriteString(strconv.Quote(root))
+		sb.WriteString(" ")
+		json, _ := json.Marshal(c.Config[root])
+		sb.Write(json)
+		sb.WriteString("\n")
+	}
+	return sb.String()
 }
 
 func (c *EMQX) StripReadOnlyConfig() []string {
