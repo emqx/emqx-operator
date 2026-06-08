@@ -24,22 +24,22 @@ import (
 
 func TestStripNonChangeableConfig(t *testing.T) {
 	t.Run("empty configs", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig("", "")
+		config, stripped := preserveNonChangeableConfig("", "")
 		assert.Equal(t, "", config)
 		assert.Equal(t, []string{}, stripped)
 	})
 
 	t.Run("http port changed", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
+		config, stripped := preserveNonChangeableConfig(
 			"dashboard.listeners.http.bind = 18083",
 			"dashboard.listeners.http.bind = 18084",
 		)
-		assert.Equal(t, "", config)
+		assert.Equal(t, `"dashboard" {"listeners":{"http":{"bind":18084}}}`+"\n", config)
 		assert.Equal(t, []string{"dashboard.listeners.http.bind"}, stripped)
 	})
 
 	t.Run("http port unchanged", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
+		config, stripped := preserveNonChangeableConfig(
 			"dashboard.listeners.http.bind = 18083",
 			"dashboard.listeners.http.bind = 18083",
 		)
@@ -48,16 +48,16 @@ func TestStripNonChangeableConfig(t *testing.T) {
 	})
 
 	t.Run("https port changed", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
+		config, stripped := preserveNonChangeableConfig(
 			"dashboard.listeners.https.bind = 18083",
 			"dashboard.listeners.https.bind = 18084",
 		)
-		assert.Equal(t, "", config)
+		assert.Equal(t, `"dashboard" {"listeners":{"https":{"bind":18084}}}`+"\n", config)
 		assert.Equal(t, []string{"dashboard.listeners.https.bind"}, stripped)
 	})
 
 	t.Run("https port enabled", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
+		config, stripped := preserveNonChangeableConfig(
 			"dashboard.listeners.https.bind = 18883",
 			"dashboard.listeners.https.bind = 0",
 		)
@@ -66,16 +66,16 @@ func TestStripNonChangeableConfig(t *testing.T) {
 	})
 
 	t.Run("both ports changed", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
+		config, stripped := preserveNonChangeableConfig(
 			"dashboard.listeners { http.bind = 18883, https.bind = 18884 }",
 			"dashboard.listeners { http.bind = 18083, https.bind = 18084 }",
 		)
-		assert.Equal(t, `"dashboard" {"listeners":{"https":{"bind":18884}}}`+"\n", config)
+		assert.Equal(t, `"dashboard" {"listeners":{"http":{"bind":18083},"https":{"bind":18884}}}`+"\n", config)
 		assert.Equal(t, []string{"dashboard.listeners.http.bind"}, stripped)
 	})
 
 	t.Run("http port unchanged but different type", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
+		config, stripped := preserveNonChangeableConfig(
 			`dashboard.listeners.http.bind = 18083`,
 			`dashboard.listeners.http.bind = "18083"`,
 		)

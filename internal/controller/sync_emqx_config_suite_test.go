@@ -132,7 +132,7 @@ var _ = Describe("Reconciler syncConfig", Ordered, func() {
 		configMap := actualConfigMap(instance)
 		conf, err := config.EMQXConfig(configMap.Data[resources.BaseConfigFile])
 		Expect(err).NotTo(HaveOccurred())
-		Expect(conf.Get("dashboard.listeners.https.bind")).To(BeNil())
+		Expect(configStringAt(conf, "dashboard.listeners.https.bind")).To(Equal("18084"))
 		Expect(configStringAt(conf, "listeners.tcp.default.bind")).To(Equal("0.0.0.0:1884"))
 	})
 
