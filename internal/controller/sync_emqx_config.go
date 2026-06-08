@@ -27,7 +27,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	conf := confSpec
 	stripped := []string{}
 	if confLast != nil {
-		conf, stripped = stripNonChangeableConfig(confSpec, config.WithDefaults(*confLast))
+		conf, stripped = preserveNonChangeableConfig(confSpec, config.WithDefaults(*confLast))
 	}
 
 	// Make sure the config map exists
@@ -116,7 +116,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	return subResult{}
 }
 
-func stripNonChangeableConfig(confDesired string, confLast string) (string, []string) {
+func preserveNonChangeableConfig(confDesired string, confLast string) (string, []string) {
 	// Operator relies on Dashboard listener to access EMQX API.
 	// Changing the dashboard listener port is too finicky to allow it, so we strip
 	// any changes to previously configured dashboard listener port, either `http` or
@@ -139,7 +139,7 @@ func stripNonChangeableConfig(confDesired string, confLast string) (string, []st
 			// * Desired is different from previous value
 			// Otherwise, listener is being enabled, which should be allowed.
 			if vdExists && vlExists && sl != "0" && sd != sl {
-				_ = cd.Strip(path)
+				cd.Replace(path, vl)
 				stripped = append(stripped, path)
 				return cd.String(), stripped
 			}

@@ -157,25 +157,24 @@ func (c *EMQX) StripReadOnlyConfig() []string {
 func (c *EMQX) Strip(path string) bool {
 	object := c.Config
 	keys := strings.Split(path, ".")
-	l := len(keys)
-	if l > 0 {
-		return stripRecursive(object, keys, 0, l)
+	if len(keys) > 0 {
+		return stripRecursive(object, keys)
 	}
 	return false
 }
 
-func stripRecursive(object hocon.Object, keys []string, i int, l int) bool {
-	key := keys[i]
+func stripRecursive(object hocon.Object, keys []string) bool {
+	key := keys[0]
 	val, ok := object[key]
 	if !ok {
 		return false
 	}
-	if i == l-1 {
+	if len(keys) == 1 {
 		delete(object, key)
 		return true
 	}
 	inner, ok := val.(hocon.Object)
-	if ok && stripRecursive(inner, keys, i+1, l) {
+	if ok && stripRecursive(inner, keys[1:]) {
 		if len(inner) == 0 {
 			delete(object, key)
 		}
@@ -184,12 +183,28 @@ func stripRecursive(object hocon.Object, keys []string, i int, l int) bool {
 	return false
 }
 
-func (c *EMQX) GetNodeCookie() string {
-	return toString(byDefault(c.Get("node.cookie"), hocon.String("")))
+func (c *EMQX) Replace(path string, with hocon.Value) {
+	object := c.Config
+	keys := strings.Split(path, ".")
+	l := len(keys)
+	if l > 0 {
+		replaceRecursive(object, keys, with)
+	}
 }
 
-func (c *EMQX) Get(path string) hocon.Value {
-	return c.Config.Lookup(path)
+func replaceRecursive(object hocon.Object, keys []string, with hocon.Value) {
+	k := keys[0]
+	v, ok := object[k]
+	switch {
+	case len(keys) == 1:
+		object[k] = with
+	case ok && v.Type() == hocon.ObjectType:
+		inner, _ := v.(hocon.Object)
+		replaceRecursive(inner, keys[1:], with)
+	default:
+		object[k] = hocon.Object{}
+		replaceRecursive(object, keys, with)
+	}
 }
 
 func (c *EMQX) GetNodeCookie() string {
