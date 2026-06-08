@@ -131,11 +131,25 @@ func TestObjectLookup(t *testing.T) {
 		"scalar": String("value"),
 	}
 
-	g.Expect(root.Lookup("a.b")).To(Equal(Int(42)))
-	g.Expect(root.Lookup("a.c")).To(BeNil())
-	g.Expect(root.Lookup("missing")).To(BeNil())
-	g.Expect(root.Lookup("scalar.child")).To(BeNil())
-	g.Expect(root.Lookup("")).To(BeNil())
+	v, ok := root.Lookup("a.b")
+	g.Expect(v).To(Equal(Int(42)))
+	g.Expect(ok).To(BeTrue())
+
+	v, ok = root.Lookup("a.c")
+	g.Expect(v).To(BeNil())
+	g.Expect(ok).To(BeTrue())
+
+	v, ok = root.Lookup("missing")
+	g.Expect(v).To(BeNil())
+	g.Expect(ok).To(BeFalse())
+
+	v, ok = root.Lookup("scalar.child")
+	g.Expect(v).To(BeNil())
+	g.Expect(ok).To(BeFalse())
+
+	v, ok = root.Lookup("")
+	g.Expect(v).To(Equal(root))
+	g.Expect(ok).To(BeTrue())
 }
 
 func TestSelfref(t *testing.T) {
