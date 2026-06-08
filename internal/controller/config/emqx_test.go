@@ -17,9 +17,11 @@ limitations under the License.
 package config
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/emqx/emqx-operator/hocon"
+	"github.com/lithammer/dedent"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -35,7 +37,7 @@ func TestCopy(t *testing.T) {
 		got := config.Copy()
 		assert.NotSame(t, config.Config, got.Config)
 		got.StripReadOnlyConfig()
-		assert.NotEqual(t, config.JSON(), got.JSON())
+		assert.NotEqual(t, config.String(), got.String())
 	})
 }
 
@@ -317,7 +319,7 @@ func TestJSON(t *testing.T) {
 	t.Run("empty config", func(t *testing.T) {
 		config, err := EMQXConfig("")
 		assert.Nil(t, err)
-		got := config.JSON()
+		got := config.String()
 		assert.Equal(t, "", got)
 	})
 
@@ -327,25 +329,32 @@ func TestJSON(t *testing.T) {
 			cluster.core_nodes = ["emqx@node1.emqx.io", "emqx@node2.emqx.io"]
 		`)
 		assert.Nil(t, err)
-		got := config.JSON()
-		expected := `{"cluster":{"core_nodes":["emqx@node1.emqx.io","emqx@node2.emqx.io"]},"node":{"name":"emqx@127.0.0.1"}}`
-		assert.JSONEq(t, expected, got)
+		got := config.String()
+		expected := dedent.Dedent(`
+			"cluster" {"core_nodes":["emqx@node1.emqx.io","emqx@node2.emqx.io"]}
+			"node" {"name":"emqx@127.0.0.1"}
+		`)
+		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
 
 	t.Run("empty arrays", func(t *testing.T) {
 		config, err := EMQXConfig(`cluster.core_nodes = []`)
 		assert.Nil(t, err)
-		got := config.JSON()
-		expected := `{"cluster":{"core_nodes":[]}}`
-		assert.Equal(t, expected, got)
+		got := config.String()
+		expected := dedent.Dedent(`
+			"cluster" {"core_nodes":[]}
+		`)
+		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
 
 	t.Run("nested arrays", func(t *testing.T) {
 		config, err := EMQXConfig(`cluster.seed_nodes = [["emqx@node1.emqx.io"], []]`)
 		assert.Nil(t, err)
-		got := config.JSON()
-		expected := `{"cluster":{"seed_nodes":[["emqx@node1.emqx.io"],[]]}}`
-		assert.Equal(t, expected, got)
+		got := config.String()
+		expected := dedent.Dedent(`
+			"cluster" {"seed_nodes":[["emqx@node1.emqx.io"],[]]}
+		`)
+		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
 
 	t.Run("complex", func(t *testing.T) {
@@ -440,11 +449,11 @@ func TestJSON(t *testing.T) {
 			hocon.String("SELECT\n\tclientid,\n\tpayload,\n\ttopic\nFROM \"+/+/t/test\""),
 			config.Get("rule_engine.rules.test_rule.sql"),
 		)
-		confJSON := config.JSON()
-		// JSON roundtrip preserves configuration:
-		config, err = EMQXConfig(confJSON)
+		// Roundtrip preserves configuration:
+		confString = config.String()
+		config, err = EMQXConfig(confString)
 		assert.Nil(t, err)
-		assert.JSONEq(t, confJSON, config.JSON())
+		assert.Equal(t, confString, config.String())
 	})
 }
 
@@ -454,7 +463,7 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.listeners.http.bind")
 		assert.Equal(t, got, false)
-		assert.Equal(t, config.JSON(), "")
+		assert.Equal(t, config.String(), "")
 	})
 
 	t.Run("delete non-existent key", func(t *testing.T) {
@@ -464,7 +473,10 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.config.file")
 		assert.Equal(t, got, false)
-		assert.JSONEq(t, `{"dashboard":{"listeners":{"http":{"bind":18083}}}}`, config.JSON())
+		assert.Equal(t,
+			`"dashboard" {"listeners":{"http":{"bind":18083}}}`+"\n",
+			config.String(),
+		)
 	})
 
 	t.Run("delete whole root", func(t *testing.T) {
@@ -474,7 +486,7 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard")
 		assert.Equal(t, got, true)
-		assert.Equal(t, config.JSON(), "")
+		assert.Equal(t, config.String(), "")
 	})
 
 	t.Run("delete empty leftover objects", func(t *testing.T) {
@@ -484,6 +496,9 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.listeners.https.bind")
 		assert.Equal(t, got, true)
-		assert.JSONEq(t, `{"dashboard":{"listeners":{"http":{"bind":18083}}}}`, config.JSON())
+		assert.Equal(t,
+			`"dashboard" {"listeners":{"http":{"bind":18083}}}`+"\n",
+			config.String(),
+		)
 	})
 }
