@@ -53,7 +53,9 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	// If the config is different, update the config right away.
 	// Assuming the config is valid, otherwise master controller would bail out.
 	if configMap.Data[resources.BaseConfigFile] != confWithDefaults {
-		configMap = resource.ConfigMap(confWithDefaults)
+		desired := resource.ConfigMap(confWithDefaults)
+		configMap.Labels = desired.Labels
+		configMap.Data = desired.Data
 		if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
 		}
