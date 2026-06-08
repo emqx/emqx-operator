@@ -190,11 +190,11 @@ var _ = Describe("Reconciler syncConfig", Ordered, func() {
 
 		runtimeConfig, err := config.EMQXConfig(calls[0].Body)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(runtimeConfig.Get("node")).To(BeNil())
-		Expect(runtimeConfig.Get("rpc")).To(BeNil())
-		Expect(runtimeConfig.Get("cluster.name")).To(BeNil())
-		Expect(runtimeConfig.Get("cluster.links")).NotTo(BeNil())
-		Expect(runtimeConfig.Get("listeners")).NotTo(BeNil())
+		Expect(runtimeConfig.Find("node")).To(BeNil())
+		Expect(runtimeConfig.Find("rpc")).To(BeNil())
+		Expect(runtimeConfig.Find("cluster.name")).To(BeNil())
+		Expect(runtimeConfig.Find("cluster.links")).NotTo(BeNil())
+		Expect(runtimeConfig.Find("listeners")).NotTo(BeNil())
 
 		Expect(actualInstance(instance).Annotations).To(HaveKeyWithValue(
 			crdv2.AnnotationLastEMQXConfig,
@@ -271,7 +271,9 @@ func actualConfigMap(instance *crdv2.EMQX) *corev1.ConfigMap {
 }
 
 func configStringAt(conf *config.EMQX, path string) string {
-	value, ok := conf.GetString(path)
+	v, ok := conf.Get(path)
+	s, err := config.AsString(v)
 	Expect(ok).To(BeTrue())
-	return value
+	Expect(err).To(Succeed())
+	return s
 }

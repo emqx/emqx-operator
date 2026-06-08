@@ -445,9 +445,10 @@ func TestJSON(t *testing.T) {
 		// Configuration parses correctly:
 		config, err := EMQXConfig(confString)
 		assert.Nil(t, err)
+		field, _ := config.Get("rule_engine.rules.test_rule.sql")
 		assert.Equal(t,
 			hocon.String("SELECT\n\tclientid,\n\tpayload,\n\ttopic\nFROM \"+/+/t/test\""),
-			config.Get("rule_engine.rules.test_rule.sql"),
+			field,
 		)
 		// Roundtrip preserves configuration:
 		confString = config.String()

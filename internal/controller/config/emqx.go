@@ -94,6 +94,33 @@ func (c *EMQX) String() string {
 	return sb.String()
 }
 
+func (c *EMQX) Get(path string) (hocon.Value, bool) {
+	return c.Config.Lookup(path)
+}
+
+func (c *EMQX) Find(path string) hocon.Value {
+	v, ok := c.Config.Lookup(path)
+	if ok {
+		return v
+	}
+	return nil
+}
+
+func AsString(v hocon.Value) (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	switch v.Type() {
+	case hocon.StringType:
+		return v.(hocon.StringValue).String(), nil
+	case hocon.BooleanType:
+		return strconv.FormatBool(bool(v.(hocon.Bool))), nil
+	case hocon.IntegerType:
+		return strconv.FormatInt(int64(v.(hocon.Int)), 10), nil
+	}
+	return "", fmt.Errorf("%T has no string representation", v)
+}
+
 func (c *EMQX) StripReadOnlyConfig() []string {
 	root := c.Config
 	stripped := []string{}
@@ -165,22 +192,19 @@ func (c *EMQX) Get(path string) hocon.Value {
 	return c.Config.Lookup(path)
 }
 
-func (c *EMQX) GetString(path string) (string, bool) {
-	v := c.Config.Lookup(path)
-	if v == nil {
-		return "", true
-	}
-	s := toString(v)
-	return s, s != ""
+func (c *EMQX) GetNodeCookie() string {
+	v, _ := c.Get("node.cookie")
+	cookie, _ := AsString(v)
+	return cookie
 }
 
 func (c *EMQX) GetDashboardPortMap() map[string]int {
 	portMap := make(map[string]int)
 	portMap["dashboard"] = 18083 // default port
 
-	httpBind := toString(c.Get("dashboard.listeners.http.bind"))
-	httpsBind := toString(c.Get("dashboard.listeners.https.bind"))
-	if httpBind != "" {
+	v, ok := c.Get("dashboard.listeners.http.bind")
+	httpBind, err := AsString(v)
+	if ok && err == nil {
 		port := extractPortNumber(httpBind)
 		if port > 0 {
 			portMap["dashboard"] = port
@@ -190,7 +214,10 @@ func (c *EMQX) GetDashboardPortMap() map[string]int {
 			delete(portMap, "dashboard")
 		}
 	}
-	if httpsBind != "" {
+
+	v, ok = c.Get("dashboard.listeners.https.bind")
+	httpsBind, err := AsString(v)
+	if ok && err == nil {
 		port := extractPortNumber(httpsBind)
 		if port > 0 {
 			portMap["dashboard-https"] = port
@@ -224,8 +251,8 @@ func (c *EMQX) GetListenersServicePorts() []corev1.ServicePort {
 	portList := []corev1.ServicePort{}
 
 	// May be empty
-	listeners := c.Get("listeners")
-	if listeners != nil && listeners.Type() == hocon.ObjectType {
+	listeners, ok := c.Get("listeners")
+	if ok && listeners != nil && listeners.Type() == hocon.ObjectType {
 		for t, listener := range listeners.(hocon.Object) {
 			if listener.Type() != hocon.ObjectType {
 				continue
@@ -235,7 +262,10 @@ func (c *EMQX) GetListenersServicePorts() []corev1.ServicePort {
 				if !ok || !isEnabled(lconf) {
 					continue
 				}
-				bind := toString(byDefault(lconf["bind"], hocon.String(":0")))
+				bind, err := AsString(byDefault(lconf["bind"], hocon.String(":0")))
+				if err != nil {
+					continue
+				}
 				port := extractPortNumber(bind)
 				protocol := corev1.ProtocolTCP
 				if t == "quic" {
@@ -251,8 +281,8 @@ func (c *EMQX) GetListenersServicePorts() []corev1.ServicePort {
 		}
 	}
 
-	gateways := c.Get("gateway")
-	if gateways != nil && gateways.Type() == hocon.ObjectType {
+	gateways, ok := c.Get("gateway")
+	if ok && gateways != nil && gateways.Type() == hocon.ObjectType {
 		for proto, gc := range gateways.(hocon.Object) {
 			gateway, ok := gc.(hocon.Object)
 			if !ok || !isEnabled(gateway) {
@@ -270,7 +300,10 @@ func (c *EMQX) GetListenersServicePorts() []corev1.ServicePort {
 					if !ok || !isEnabled(lconf) {
 						continue
 					}
-					bind := toString(byDefault(lconf["bind"], hocon.String(":0")))
+					bind, err := AsString(byDefault(lconf["bind"], hocon.String(":0")))
+					if err != nil {
+						continue
+					}
 					port := extractPortNumber(bind)
 					protocol := corev1.ProtocolTCP
 					if t == "udp" || t == "dtls" {
@@ -311,7 +344,11 @@ func extractPortNumber(bind string) int {
 
 func isEnabled(conf hocon.Object) bool {
 	// Compatible with "enable" and "enabled", default value of both is true.
-	return isTrue(byDefault(conf["enable"], byDefault(conf["enabled"], hocon.Bool(true))))
+	enabled := byDefault(conf["enable"], byDefault(conf["enabled"], hocon.Bool(true)))
+	if enabled.Type() == hocon.BooleanType {
+		return bool(enabled.(hocon.Bool))
+	}
+	return false
 }
 
 func byDefault(v hocon.Value, def hocon.Value) hocon.Value {
@@ -319,26 +356,4 @@ func byDefault(v hocon.Value, def hocon.Value) hocon.Value {
 		return def
 	}
 	return v
-}
-
-func isTrue(v hocon.Value) bool {
-	if v.Type() == hocon.BooleanType {
-		return bool(v.(hocon.Bool))
-	}
-	return false
-}
-
-func toString(v hocon.Value) string {
-	if v == nil {
-		return ""
-	}
-	switch v.Type() {
-	case hocon.StringType:
-		return v.(hocon.StringValue).String()
-	case hocon.BooleanType:
-		return strconv.FormatBool(bool(v.(hocon.Bool)))
-	case hocon.IntegerType:
-		return strconv.FormatInt(int64(v.(hocon.Int)), 10)
-	}
-	return ""
 }
