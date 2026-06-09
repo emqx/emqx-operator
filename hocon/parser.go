@@ -109,16 +109,16 @@ type Object map[string]Value
 
 func (o Object) Type() Type { return ObjectType }
 
-func (o Object) Lookup(path string) Value {
+func (o Object) Lookup(path string) (Value, bool) {
 	p := asPath(path)
 	if len(p) == 0 {
-		return nil
+		return o, true
 	}
 	result, v := o.lookup(p)
 	if result != valueFound {
-		return nil
+		return nil, false
 	}
-	return v
+	return v, true
 }
 
 func (o Object) DeepCopy() Object {

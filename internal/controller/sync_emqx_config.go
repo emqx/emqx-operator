@@ -27,7 +27,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	conf := confSpec
 	stripped := []string{}
 	if confLast != nil {
-		conf, stripped = stripNonChangeableConfig(confSpec, config.WithDefaults(*confLast))
+		conf, stripped = preserveNonChangeableConfig(confSpec, config.WithDefaults(*confLast))
 	}
 
 	// Make sure the config map exists
@@ -35,7 +35,8 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	confWithDefaults := config.WithDefaults(conf)
 	configMap := &corev1.ConfigMap{}
 	err := s.Client.Get(r.ctx, instance.ConfigsNamespacedName(), configMap)
-	if err != nil && k8sErrors.IsNotFound(err) {
+	switch {
+	case err != nil && k8sErrors.IsNotFound(err):
 		configMap = resource.ConfigMap(confWithDefaults)
 		if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
@@ -44,19 +45,14 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 		if err := s.Client.Create(r.ctx, configMap); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to create configMap")}
 		}
-		return subResult{}
-	}
-	if err != nil {
+	case err != nil:
 		return subResult{err: emperror.Wrap(err, "failed to get configMap")}
-	}
-
-	// If the config is different, update the config right away.
-	// Assuming the config is valid, otherwise master controller would bail out.
-	if configMap.Data[resources.BaseConfigFile] != confWithDefaults {
-		configMap = resource.ConfigMap(confWithDefaults)
-		if err := ctrl.SetControllerReference(instance, configMap, s.Scheme); err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to set controller reference for configMap")}
-		}
+	case configMap.Data[resources.BaseConfigFile] != confWithDefaults:
+		// If the config is different, update the config right away.
+		// Assuming the config is valid, otherwise master controller would bail out.
+		desired := resource.ConfigMap(confWithDefaults)
+		configMap.Labels = desired.Labels
+		configMap.Data = desired.Data
 		r.log.V(1).Info("updating config resource", "configMap", klog.KObj(configMap))
 		if err := s.Client.Update(r.ctx, configMap); err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to update configMap")}
@@ -93,7 +89,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 			return subResult{err: emperror.Wrap(err, "failed to parse .spec.config.data")}
 		}
 		strippedReadonly := c.StripReadOnlyConfig()
-		confRuntime := c.Print()
+		confRuntime := c.String()
 
 		// Update the config through API
 		r.log.V(1).Info("applying runtime config", "config", confRuntime)
@@ -120,7 +116,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crdv2.EMQX) subResul
 	return subResult{}
 }
 
-func stripNonChangeableConfig(confDesired string, confLast string) (string, []string) {
+func preserveNonChangeableConfig(confDesired string, confLast string) (string, []string) {
 	// Operator relies on Dashboard listener to access EMQX API.
 	// Changing the dashboard listener port is too finicky to allow it, so we strip
 	// any changes to previously configured dashboard listener port, either `http` or
@@ -134,16 +130,18 @@ func stripNonChangeableConfig(confDesired string, confLast string) (string, []st
 	cl, _ := config.EMQXConfig(confLast)
 	if cd != nil && cl != nil {
 		for _, path := range dashboardConfigPaths {
-			vd := cd.Get(path)
-			vl := cl.Get(path)
+			vd, vdExists := cd.Get(path)
+			vl, vlExists := cl.Get(path)
+			sd, _ := config.AsString(vd)
+			sl, _ := config.AsString(vl)
 			// Disallow changing if following conditions are met:
 			// * Desired is configured and was configured previously (but not "0", i.e. disabled)
 			// * Desired is different from previous value
 			// Otherwise, listener is being enabled, which should be allowed.
-			if vd != nil && vl != nil && vl.String() != "0" && vd.String() != vl.String() {
-				_ = cd.Strip(path)
+			if vdExists && vlExists && sl != "0" && sd != sl {
+				cd.Replace(path, vl)
 				stripped = append(stripped, path)
-				return cd.Print(), stripped
+				return cd.String(), stripped
 			}
 		}
 	}

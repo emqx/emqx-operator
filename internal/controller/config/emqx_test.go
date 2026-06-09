@@ -17,15 +17,18 @@ limitations under the License.
 package config
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/emqx/emqx-operator/hocon"
+	"github.com/lithammer/dedent"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestCopy(t *testing.T) {
-	t.Run("empty config", func(t *testing.T) {
+	t.Run("copy config", func(t *testing.T) {
 		config, err := EMQXConfig(`
 		durable_sessions.enable = true
 		listeners.tcp.default.bind = 11883
@@ -34,7 +37,7 @@ func TestCopy(t *testing.T) {
 		got := config.Copy()
 		assert.NotSame(t, config.Config, got.Config)
 		got.StripReadOnlyConfig()
-		assert.NotEqual(t, config.Print(), got.Print())
+		assert.NotEqual(t, config.String(), got.String())
 	})
 }
 
@@ -58,6 +61,16 @@ func TestNodeCookie(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.GetNodeCookie()
 		assert.Equal(t, "COOKIE #!@#$", got)
+	})
+
+	t.Run("triple-quoted cookie", func(t *testing.T) {
+		config, err := EMQXConfig(`node.cookie = """~
+			COOKIE
+			LONGER THAN
+			NEEDED~"""`)
+		assert.Nil(t, err)
+		got := config.GetNodeCookie()
+		assert.Equal(t, "COOKIE\nLONGER THAN\nNEEDED", got)
 	})
 }
 
@@ -89,6 +102,11 @@ func TestStripReadOnlyConfig(t *testing.T) {
 			"durable_sessions",
 		})
 	})
+
+	t.Run("wrong config", func(t *testing.T) {
+		_, err := EMQXConfig("hello world")
+		assert.Error(t, err)
+	})
 }
 
 func TestGetDashboardPortMap(t *testing.T) {
@@ -99,11 +117,6 @@ func TestGetDashboardPortMap(t *testing.T) {
 		assert.Equal(t, map[string]int{
 			"dashboard": 18083,
 		}, got)
-	})
-
-	t.Run("wrong config", func(t *testing.T) {
-		_, err := EMQXConfig("hello world")
-		assert.ErrorContains(t, err, "invalid config object")
 	})
 
 	t.Run("a single http port", func(t *testing.T) {
@@ -210,11 +223,6 @@ func TestGetDashboardServicePorts(t *testing.T) {
 		got := config.GetDashboardServicePorts()
 		assert.Equal(t, expect, got)
 	})
-
-	t.Run("wrong config", func(t *testing.T) {
-		_, err := EMQXConfig("hello world")
-		assert.ErrorContains(t, err, "invalid config object")
-	})
 }
 
 func TestGetListenersServicePorts(t *testing.T) {
@@ -307,11 +315,11 @@ func TestGetListenersServicePorts(t *testing.T) {
 	})
 }
 
-func TestPrint(t *testing.T) {
+func TestJSON(t *testing.T) {
 	t.Run("empty config", func(t *testing.T) {
 		config, err := EMQXConfig("")
 		assert.Nil(t, err)
-		got := config.Print()
+		got := config.String()
 		assert.Equal(t, "", got)
 	})
 
@@ -321,69 +329,132 @@ func TestPrint(t *testing.T) {
 			cluster.core_nodes = ["emqx@node1.emqx.io", "emqx@node2.emqx.io"]
 		`)
 		assert.Nil(t, err)
-		got := config.Print()
-		expected := `cluster {core_nodes = ["emqx@node1.emqx.io", "emqx@node2.emqx.io"]}, node {name = "emqx@127.0.0.1"}`
-		assert.Equal(t, expected, got)
+		got := config.String()
+		expected := dedent.Dedent(`
+			"cluster" {"core_nodes":["emqx@node1.emqx.io","emqx@node2.emqx.io"]}
+			"node" {"name":"emqx@127.0.0.1"}
+		`)
+		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
 
 	t.Run("empty arrays", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			cluster.core_nodes = []
-		`)
+		config, err := EMQXConfig(`cluster.core_nodes = []`)
 		assert.Nil(t, err)
-		got := config.Print()
-		expected := `cluster {core_nodes = []}`
-		assert.Equal(t, expected, got)
-	})
-
-	t.Run("non-empty scalar arrays", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			authentication.mechanisms = ["password_based", "jwt"]
-			authorization.cache_ttl = [1, 5, 10]
+		got := config.String()
+		expected := dedent.Dedent(`
+			"cluster" {"core_nodes":[]}
 		`)
-		assert.Nil(t, err)
-		got := config.Print()
-		expected := `authentication {mechanisms = ["password_based", jwt]}, authorization {cache_ttl = [1, 5, 10]}`
-		assert.Equal(t, expected, got)
+		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
 
 	t.Run("nested arrays", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			cluster.seed_nodes = [["emqx@node1.emqx.io"], []]
-		`)
+		config, err := EMQXConfig(`cluster.seed_nodes = [["emqx@node1.emqx.io"], []]`)
 		assert.Nil(t, err)
-		got := config.Print()
-		expected := `cluster {seed_nodes = [["emqx@node1.emqx.io"], []]}`
-		assert.Equal(t, expected, got)
+		got := config.String()
+		expected := dedent.Dedent(`
+			"cluster" {"seed_nodes":[["emqx@node1.emqx.io"],[]]}
+		`)
+		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
 
-	t.Run("array objects", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			authentication = [
-				{mechanism = password_based, backend = built_in_database},
-				{mechanism = jwt}
-			]
-		`)
+	t.Run("complex", func(t *testing.T) {
+		confString := `
+			license {
+				key = "file:///emqx.license"
+			}
+			log.console.level = error
+			log.console.formatter = json
+			log.console.timestamp_format = rfc3339
+			listeners.tcp.default {
+				bind = "0.0.0.0:1883"
+				enable = true
+				enable_authn = true
+				proxy_protocol = true
+				proxy_protocol_timeout = 5s
+				max_conn_rate = "4000/s"
+				tcp_options {
+				send_timeout = 15s
+				keepalive = "7200,75,9"
+				}
+			}
+			listeners.tcp.internal {
+				bind = "0.0.0.0:1884"
+				enable = true
+				enable_authn = true
+				proxy_protocol = false
+				max_conn_rate = "1000/s"
+				tcp_options {
+				send_timeout = 15s
+				keepalive = "7200,75,9"
+				}
+			}
+			listeners.ssl.default.enable = false
+			listeners.ws.default.enable = false
+			listeners.wss.default.enable = false
+			# cluster.autoclean: how long after a node becomes unreachable before
+			# it's removed from cluster membership. EMQX's default is 24h (!).
+			cluster.autoclean = 60s
+			authorization {
+				cache {
+				enable = true
+				max_size = 32
+				ttl = 60m
+				}
+				deny_action = disconnect
+				no_match = deny
+				sources = [
+				{
+					enable = true
+					path = "data/authz/acl.conf"
+					type = file
+				}
+				]
+			}
+			rule_engine {
+				ignore_sys_message = true
+				jq_function_default_timeout = "10s"
+				rules {
+				test_rule {
+					actions = [
+					{
+						args {
+						direct_dispatch = false
+						mqtt_properties {}
+						payload = ""
+						qos = 0
+						retain = false
+						topic = "${clientid}/cmds/test"
+						user_properties = ""
+						}
+						function = republish
+					}
+					]
+					description = ""
+					enable = true
+					metadata {last_modified_at = 1779340531269}
+					sql = """~
+					SELECT
+						clientid,
+						payload,
+						topic
+					FROM "+/+/t/test"~"""
+				}
+				}
+			}
+		`
+		// Configuration parses correctly:
+		config, err := EMQXConfig(confString)
 		assert.Nil(t, err)
-		got := config.Print()
-		expected := `authentication = [{backend = "built_in_database", mechanism = "password_based"}, {mechanism = jwt}]`
-		assert.Equal(t, expected, got)
-	})
-
-	t.Run("complex nested structure", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			durable_sessions.enable = true
-			gateway.coap.listeners.udp.default.bind = 5683
-			gateway.coap.listeners.dtls.default.bind = 5684
-			listeners.tcp.default.bind = 1883
-			listeners.ssl.default.bind = 8883
-			dashboard.listeners.http.bind = 18083
-			dashboard.listeners.https.bind = 18084
-		`)
+		field, _ := config.Get("rule_engine.rules.test_rule.sql")
+		assert.Equal(t,
+			hocon.String("SELECT\n\tclientid,\n\tpayload,\n\ttopic\nFROM \"+/+/t/test\""),
+			field,
+		)
+		// Roundtrip preserves configuration:
+		confString = config.String()
+		config, err = EMQXConfig(confString)
 		assert.Nil(t, err)
-		got := config.Print()
-		expected := `dashboard {listeners {http {bind = 18083}, https {bind = 18084}}}, durable_sessions {enable = true}, gateway {coap {listeners {dtls {default {bind = 5684}}, udp {default {bind = 5683}}}}}, listeners {ssl {default {bind = 8883}}, tcp {default {bind = 1883}}}`
-		assert.Equal(t, expected, got)
+		assert.Equal(t, confString, config.String())
 	})
 }
 
@@ -393,7 +464,7 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.listeners.http.bind")
 		assert.Equal(t, got, false)
-		assert.Equal(t, config.Print(), "")
+		assert.Equal(t, config.String(), "")
 	})
 
 	t.Run("delete non-existent key", func(t *testing.T) {
@@ -403,7 +474,10 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.config.file")
 		assert.Equal(t, got, false)
-		assert.Equal(t, config.Print(), `dashboard {listeners {http {bind = 18083}}}`)
+		assert.Equal(t,
+			`"dashboard" {"listeners":{"http":{"bind":18083}}}`+"\n",
+			config.String(),
+		)
 	})
 
 	t.Run("delete whole root", func(t *testing.T) {
@@ -413,7 +487,7 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard")
 		assert.Equal(t, got, true)
-		assert.Equal(t, config.Print(), "")
+		assert.Equal(t, config.String(), "")
 	})
 
 	t.Run("delete empty leftover objects", func(t *testing.T) {
@@ -423,6 +497,9 @@ func TestStrip(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.Strip("dashboard.listeners.https.bind")
 		assert.Equal(t, got, true)
-		assert.Equal(t, config.Print(), `dashboard {listeners {http {bind = 18083}}}`)
+		assert.Equal(t,
+			`"dashboard" {"listeners":{"http":{"bind":18083}}}`+"\n",
+			config.String(),
+		)
 	})
 }
