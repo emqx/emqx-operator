@@ -82,17 +82,13 @@ spec:
       restartPolicy: OnFailure
       serviceAccountName: {{ include "emqx-operator.fullname" . }}-pre-upgrade
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 65534
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
       - name: cleanup
         image: "{{ .Values.upgrade.image.repository }}:{{ .Values.upgrade.image.tag }}"
         imagePullPolicy: {{ .Values.upgrade.image.pullPolicy }}
         securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - "ALL"
+          {{- toYaml .Values.containerSecurityContext | nindent 12 }}
         command:
         - /bin/sh
         - -ec
