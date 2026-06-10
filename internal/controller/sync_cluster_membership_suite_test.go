@@ -215,7 +215,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 		Expect(forceLeftNodes).To(BeEmpty())
 	})
 
-	It("force-leaves stale replicant nodes whose pods are gone", func() {
+	It("does NOT force-leave stopped replicant nodes whose pods are gone", func() {
 		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
 		}
@@ -227,7 +227,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
-		Expect(forceLeftNodes).To(ConsistOf("emqx@10.0.0.11"))
+		Expect(forceLeftNodes).To(BeEmpty())
 	})
 
 	It("does NOT force-leave stopped replicant whose pod still exists", func() {

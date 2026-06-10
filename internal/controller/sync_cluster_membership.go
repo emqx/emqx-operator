@@ -11,7 +11,6 @@ import (
 
 // Responsibilities:
 // - Removes EMQX cores from the cluster that should no longer be a member, because of scale-down.
-// - Removes EMQX replicants that no longer have a corresponding pod.
 type syncClusterMembership struct {
 	*EMQXReconciler
 }
@@ -47,19 +46,6 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 			continue
 		}
 		// Cores having higher pod ordinals should be force-left:
-		staleNodes = append(staleNodes, &node)
-	}
-
-	for _, node := range instance.Status.ReplicantNodes {
-		// Running replicants / replicants still having respective pods should not be force-left:
-		if node.Status != api.NodeStatusStopped {
-			continue
-		}
-		pod := r.state.podWithName(node.PodName)
-		if pod != nil {
-			continue
-		}
-		// Stopped replicants w/o respective pods should be force-left:
 		staleNodes = append(staleNodes, &node)
 	}
 
