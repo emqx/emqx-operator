@@ -315,7 +315,7 @@ func TestGetListenersServicePorts(t *testing.T) {
 	})
 }
 
-func TestJSON(t *testing.T) {
+func TestString(t *testing.T) {
 	t.Run("empty config", func(t *testing.T) {
 		config, err := EMQXConfig("")
 		assert.Nil(t, err)
@@ -326,8 +326,8 @@ func TestJSON(t *testing.T) {
 	t.Run("empty object", func(t *testing.T) {
 		config, err := EMQXConfig("cluster {}")
 		assert.Nil(t, err)
-		got := config.Print()
-		assert.Equal(t, "cluster {}", got)
+		got := config.String()
+		assert.Equal(t, "\"cluster\" = {}\n", got)
 	})
 
 	t.Run("arrays", func(t *testing.T) {
@@ -338,8 +338,8 @@ func TestJSON(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.String()
 		expected := dedent.Dedent(`
-			"cluster" {"core_nodes":["emqx@node1.emqx.io","emqx@node2.emqx.io"]}
-			"node" {"name":"emqx@127.0.0.1"}
+			"cluster" = {"core_nodes":["emqx@node1.emqx.io","emqx@node2.emqx.io"]}
+			"node" = {"name":"emqx@127.0.0.1"}
 		`)
 		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
@@ -349,7 +349,7 @@ func TestJSON(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.String()
 		expected := dedent.Dedent(`
-			"cluster" {"core_nodes":[]}
+			"cluster" = {"core_nodes":[]}
 		`)
 		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
@@ -359,7 +359,7 @@ func TestJSON(t *testing.T) {
 		assert.Nil(t, err)
 		got := config.String()
 		expected := dedent.Dedent(`
-			"cluster" {"seed_nodes":[["emqx@node1.emqx.io"],[]]}
+			"cluster" = {"seed_nodes":[["emqx@node1.emqx.io"],[]]}
 		`)
 		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
@@ -417,6 +417,14 @@ func TestJSON(t *testing.T) {
 				}
 				]
 			}
+			authentication = [
+			{
+				backend = built_in_database
+				mechanism = password_based
+				password_hash_algorithm {name = sha256, salt_position = suffix}
+				user_id_type = username
+			},
+			]
 			rule_engine {
 				ignore_sys_message = true
 				jq_function_default_timeout = "10s"
@@ -482,7 +490,7 @@ func TestStrip(t *testing.T) {
 		got := config.Strip("dashboard.config.file")
 		assert.Equal(t, got, false)
 		assert.Equal(t,
-			`"dashboard" {"listeners":{"http":{"bind":18083}}}`+"\n",
+			`"dashboard" = {"listeners":{"http":{"bind":18083}}}`+"\n",
 			config.String(),
 		)
 	})
@@ -505,7 +513,7 @@ func TestStrip(t *testing.T) {
 		got := config.Strip("dashboard.listeners.https.bind")
 		assert.Equal(t, got, true)
 		assert.Equal(t,
-			`"dashboard" {"listeners":{"http":{"bind":18083}}}`+"\n",
+			`"dashboard" = {"listeners":{"http":{"bind":18083}}}`+"\n",
 			config.String(),
 		)
 	})

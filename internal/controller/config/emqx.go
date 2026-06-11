@@ -86,7 +86,7 @@ func (c *EMQX) String() string {
 	sort.Strings(roots)
 	for _, root := range roots {
 		sb.WriteString(strconv.Quote(root))
-		sb.WriteString(" ")
+		sb.WriteString(" = ")
 		json, _ := json.Marshal(c.Config[root])
 		sb.Write(json)
 		sb.WriteString("\n")
