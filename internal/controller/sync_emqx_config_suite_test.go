@@ -190,6 +190,7 @@ var _ = Describe("Reconciler syncConfig", Ordered, func() {
 		Expect(intercept.listCaptured()).To(ConsistOf(And(
 			HaveField("Method", Equal(http.MethodPut)),
 			HaveField("URL.Path", Equal("api/v5/configs")),
+			HaveField("URL.RawQuery", Equal("ignore_readonly=true&mode=replace")),
 			HaveField("Header", HaveKeyWithValue("Content-Type", ConsistOf(Equal("text/plain")))),
 		)))
 

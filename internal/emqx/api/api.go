@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"syscall"
 
 	emperror "emperror.dev/errors"
@@ -56,18 +57,27 @@ func delete(req req.RequesterInterface, path string) ([]byte, error) {
 	return request(req, "DELETE", path, nil, nil)
 }
 
-func request(req req.RequesterInterface, method string, path string, body []byte, header http.Header) ([]byte, error) {
+func request(req req.RequesterInterface, method string, path string, body []byte, header http.Header, query ...string) ([]byte, error) {
 	if req == nil {
 		return nil, emperror.New("no requester")
 	}
-	url := req.GetURL(path)
-	resp, body, err := req.Request(method, url, body, header)
+	reqUrl := req.GetURL(path)
+	values := url.Values{}
+	for i := 0; i < len(query); i += 2 {
+		value := ""
+		if i+1 < len(query) {
+			value = query[i+1]
+		}
+		values.Add(query[i], value)
+	}
+	reqUrl.RawQuery = values.Encode()
+	resp, body, err := req.Request(method, reqUrl, body, header)
 	if err != nil {
-		return nil, emperror.Wrapf(err, "error accessing %s API %s", req.GetDescription(), url.String())
+		return nil, emperror.Wrapf(err, "error accessing %s API %s", req.GetDescription(), reqUrl.String())
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		err := apiError{StatusCode: resp.StatusCode, Message: string(body)}
-		return nil, emperror.Wrapf(err, "error accessing %s API %s", req.GetDescription(), url.String())
+		return nil, emperror.Wrapf(err, "error accessing %s API %s", req.GetDescription(), reqUrl.String())
 	}
 	return body, nil
 }

@@ -16,7 +16,7 @@ type HeaderOpt struct {
 }
 
 type RequesterInterface interface {
-	GetURL(path string, query ...string) url.URL
+	GetURL(path string) url.URL
 	GetHost() string
 	GetUsername() string
 	GetPassword() string
@@ -55,20 +55,12 @@ func (requester *Requester) GetDescription() string {
 	return requester.Description
 }
 
-func (requester *Requester) GetURL(path string, query ...string) url.URL {
-	url := url.URL{
+func (requester *Requester) GetURL(path string) url.URL {
+	return url.URL{
 		Scheme: requester.GetSchema(),
 		Host:   requester.GetHost(),
 		Path:   path,
 	}
-	for _, q := range query {
-		if url.RawQuery == "" {
-			url.RawQuery = q
-			continue
-		}
-		url.RawQuery += "&" + q
-	}
-	return url
 }
 
 var httpClient = &http.Client{
@@ -133,12 +125,12 @@ func NewMockRequester(mockFunc MockRequesterFunc) *MockRequester {
 	return &MockRequester{mockFunc: mockFunc}
 }
 
-func (f *MockRequester) GetURL(path string, query ...string) url.URL { return url.URL{Path: path} }
-func (f *MockRequester) GetSchema() string                           { return "http" }
-func (f *MockRequester) GetHost() string                             { return "" }
-func (f *MockRequester) GetUsername() string                         { return "" }
-func (f *MockRequester) GetPassword() string                         { return "" }
-func (f *MockRequester) GetDescription() string                      { return "MockRequester" }
+func (f *MockRequester) GetURL(path string) url.URL { return url.URL{Path: path} }
+func (f *MockRequester) GetSchema() string          { return "http" }
+func (f *MockRequester) GetHost() string            { return "" }
+func (f *MockRequester) GetUsername() string        { return "" }
+func (f *MockRequester) GetPassword() string        { return "" }
+func (f *MockRequester) GetDescription() string     { return "MockRequester" }
 
 func (f *MockRequester) Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
 	return f.mockFunc(method, url, body, header)
