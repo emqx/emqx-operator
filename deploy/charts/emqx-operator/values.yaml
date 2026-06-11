@@ -86,3 +86,11 @@ upgrade:
     repository: alpine/k8s
     tag: "1.31.4"
     pullPolicy: IfNotPresent
+
+  ## Optional pod security context overrides for the pre-upgrade Job.
+  ## Defaults to podSecurityContext, with runAsUser=65534 added when no UID is set.
+  podSecurityContext: {}
+
+  ## Optional container security context overrides for the pre-upgrade Job.
+  ## Defaults to containerSecurityContext.
+  containerSecurityContext: {}

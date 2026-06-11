@@ -1,4 +1,12 @@
 {{- if .Values.upgrade.preUpgradeCheck }}
+{{- $podSecurityContext := mergeOverwrite
+                            (dict "runAsUser" 65534)
+                            (.Values.podSecurityContext)
+                            (.Values.upgrade.podSecurityContext | default (dict)) }}
+{{- $containerSecurityContext := mergeOverwrite
+                            (dict)
+                            (.Values.containerSecurityContext)
+                            (.Values.upgrade.containerSecurityContext | default (dict)) }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -82,13 +90,13 @@ spec:
       restartPolicy: OnFailure
       serviceAccountName: {{ include "emqx-operator.fullname" . }}-pre-upgrade
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml $podSecurityContext | nindent 8 }}
       containers:
       - name: cleanup
         image: "{{ .Values.upgrade.image.repository }}:{{ .Values.upgrade.image.tag }}"
         imagePullPolicy: {{ .Values.upgrade.image.pullPolicy }}
         securityContext:
-          {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          {{- toYaml $containerSecurityContext | nindent 12 }}
         command:
         - /bin/sh
         - -ec
