@@ -23,7 +23,7 @@ import (
 )
 
 // helmInstall installs the local 2.3.x chart into the given namespace with --wait.
-func helmInstall(namespace string, extraArgs ...string) error {
+func helmInstall(namespace string, extraArgs ...string) error { //nolint:unparam
 	args := []string{
 		"install",
 		helmReleaseName,
@@ -165,6 +165,68 @@ var _ = Describe("Helm Install", Ordered, func() {
 		Expect(Kubectl("get", "role", "emqx-operator-manager-role",
 			"-n", namespace)).To(Succeed())
 		Expect(resourceExists("clusterrole", "emqx-operator-manager-role")).To(BeFalse())
+
+		By("verify operator logs do not show errors")
+		Consistently(KubectlOut, "30s", "5s").
+			WithArguments("logs", "-n", namespace,
+				"deployment/emqx-operator-controller-manager", "--tail=50",
+			).ShouldNot(Or(
+			ContainSubstring("ERROR"),
+			ContainSubstring("Error"),
+		))
+	})
+
+	It("should install cleanly / single namespace and watch namespaces", func() {
+		watchNamespaces := []string{
+			"emqx-operator-watch-a",
+			"emqx-operator-watch-b",
+		}
+		DeferCleanup(func() {
+			for _, ns := range watchNamespaces {
+				_ = Kubectl("delete", "ns", ns, "--ignore-not-found")
+			}
+		})
+
+		By("create watched namespaces")
+		for _, ns := range watchNamespaces {
+			_ = Kubectl("delete", "ns", ns, "--ignore-not-found")
+			Expect(Kubectl("create", "ns", ns)).To(Succeed())
+		}
+
+		By("install 2.3.x chart with singleNamespace and watchNamespaces")
+		Expect(helmInstall(namespace,
+			"--set", "singleNamespace=true",
+			"--set-json", `watchNamespaces=["emqx-operator-watch-a","emqx-operator-watch-b"]`,
+			"--set", "upgrade.preUpgradeCheck=false",
+		)).To(Succeed())
+
+		By("verify operator deployment is available")
+		Expect(Kubectl("wait", "deployment",
+			"emqx-operator-controller-manager",
+			"--for", "condition=Available",
+			"--namespace", namespace,
+			"--timeout", "1m",
+		)).To(Succeed())
+
+		By("verify CRDs are installed")
+		Expect(crdExists("emqxes.apps.emqx.io")).To(BeTrue())
+		Expect(crdExists("rebalances.apps.emqx.io")).To(BeTrue())
+
+		By("verify no ClusterRoles exists for the manager")
+		Expect(resourceExists("clusterrole", "emqx-operator-manager-role")).To(BeFalse())
+		Expect(resourceExists("clusterrolebinding", "emqx-operator-manager-rolebinding")).To(BeFalse())
+
+		By("verify effective watch namespaces have manager RBAC")
+		Expect(Kubectl("get", "role", "emqx-operator-manager-role",
+			"-n", namespace)).To(Succeed())
+		Expect(Kubectl("get", "rolebinding", "emqx-operator-manager-rolebinding",
+			"-n", namespace)).To(Succeed())
+		for _, ns := range watchNamespaces {
+			Expect(Kubectl("get", "role", "emqx-operator-manager-role",
+				"-n", ns)).To(Succeed())
+			Expect(Kubectl("get", "rolebinding", "emqx-operator-manager-rolebinding",
+				"-n", ns)).To(Succeed())
+		}
 
 		By("verify operator logs do not show errors")
 		Consistently(KubectlOut, "30s", "5s").
