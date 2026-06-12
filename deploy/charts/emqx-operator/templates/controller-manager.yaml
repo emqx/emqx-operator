@@ -1,7 +1,4 @@
 {{- $watchNamespaces := default (list) .Values.watchNamespaces -}}
-{{- if .Values.singleNamespace -}}
-{{- $watchNamespaces = append $watchNamespaces .Release.Namespace -}}
-{{- end -}}
 {{- $watchNamespaces = $watchNamespaces | uniq -}}
 apiVersion: apps/v1
 kind: Deployment

@@ -5,14 +5,8 @@
 # If true, CRDs will not be installed.
 skipCRDs: false
 
-# If true, the operator watches only the namespace where it is deployed.
-# If false, the operator watches all namespaces.
-# If watchNamespaces is also set, the operator watches both those and its
-# own and namespace.
-singleNamespace: false
-
-# Namespaces the operator watches. Leave empty for cluster-wide watch unless
-# singleNamespace is true.
+# Namespaces the operator watches. Leave empty for cluster-wide watch.
+# To watch only the release namespace, set this to the release namespace.
 watchNamespaces: []
 
 # Development configures the logger to use a Zap development config
