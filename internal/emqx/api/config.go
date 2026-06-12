@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	req "github.com/emqx/emqx-operator/internal/requester"
 )
@@ -17,9 +18,13 @@ func Configs(req req.RequesterInterface) (string, error) {
 }
 
 func UpdateConfigs(req req.RequesterInterface, mode, config string) error {
+	query := []string{"ignore_readonly", "true"}
+	if mode != "" {
+		query = append(query, "mode", strings.ToLower(mode))
+	}
 	header := http.Header{}
 	header.Set("Content-Type", "text/plain")
-	_, err := request(req, "PUT", "api/v5/configs", []byte(config), header)
+	_, err := request(req, "PUT", "api/v5/configs", []byte(config), header, query...)
 	if err != nil {
 		return err
 	}

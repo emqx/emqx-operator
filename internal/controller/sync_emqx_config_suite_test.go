@@ -171,6 +171,7 @@ var _ = Describe("Reconciler syncConfig", Ordered, func() {
 			cluster.links.remote.server = "remote:1883"
 			listeners.tcp.default.bind = "0.0.0.0:1884"
 		`)
+		instance.Spec.Config.Mode = "Replace"
 		instance = establishConfig(s, instance, lastConfig)
 		instance = updateSpecConfig(instance, nextConfig)
 		instance.Status.SetTrueCondition(crdv2.CoreNodesReady)
@@ -184,7 +185,8 @@ var _ = Describe("Reconciler syncConfig", Ordered, func() {
 
 		Expect(calls).To(ConsistOf(And(
 			HaveField("Method", Equal(http.MethodPut)),
-			HaveField("Path", Equal("api/v5/configs")),
+			HaveField("URL.Path", Equal("api/v5/configs")),
+			HaveField("URL.RawQuery", Equal("ignore_readonly=true&mode=replace")),
 			HaveField("Header", HaveKeyWithValue("Content-Type", ConsistOf(Equal("text/plain")))),
 		)))
 
@@ -228,17 +230,17 @@ var _ = Describe("Reconciler syncConfig", Ordered, func() {
 
 type syncConfigAPIRequest struct {
 	Method string
-	Path   string
+	URL    url.URL
 	Body   string
 	Header http.Header
 }
 
 func newSyncConfigRound(calls *[]syncConfigAPIRequest, statusCode int) *reconcileRound {
 	requester := req.NewMockRequester(
-		func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
+		func(method string, url url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
 			*calls = append(*calls, syncConfigAPIRequest{
 				Method: method,
-				Path:   u.Path,
+				URL:    url,
 				Body:   string(body),
 				Header: header,
 			})
