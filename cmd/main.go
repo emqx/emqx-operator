@@ -21,7 +21,10 @@ import (
 	"crypto/tls"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
+	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -36,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -76,7 +80,7 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
-	var singleNamespace string
+	var namespaces namespaceList
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -88,14 +92,20 @@ func main() {
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.StringVar(&singleNamespace, "single-namespace", "",
-		"If set, restrict the client cache to this namespace only. Leave unset to watch all namespaces. "+
-			"Set to the respective namespace if manager is running with namespace-scoped RBAC roles.")
+	flag.Var(&namespaces, "watch-namespace",
+		"If set, restrict the controller to this namespace. May be specified multiple times. "+
+			"Set to the respective namespace if manager is running with namespace-scoped RBAC roles. "+
+			"Leave unset to watch all namespaces.")
+	flag.Var(&namespaces, "single-namespace",
+		"Deprecated: use --watch-namespace instead.")
 	opts := zap.Options{
 		TimeEncoder: zapcore.RFC3339TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+
+	sort.Strings(namespaces)
+	namespaces = slices.Compact(namespaces)
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
@@ -146,8 +156,6 @@ func main() {
 	utilruntime.Must(crdv2beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
-	singleNamespace = strings.TrimSpace(singleNamespace)
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
@@ -168,7 +176,7 @@ func main() {
 		// LeaderElectionReleaseOnCancel: true,
 
 		Cache: cache.Options{
-			DefaultNamespaces: defaultNamespacesForCache(singleNamespace),
+			DefaultNamespaces: watchedNamespacesCache(namespaces),
 		},
 	})
 	if err != nil {
@@ -187,8 +195,8 @@ func main() {
 	err = wait.PollUntilContextTimeout(context.Background(), time.Second, time.Minute, true,
 		func(ctx context.Context) (bool, error) {
 			ns := "default"
-			if singleNamespace != "" {
-				ns = singleNamespace
+			if len(namespaces) > 0 {
+				ns = namespaces[0]
 			}
 			errUnregistered := &meta.NoKindMatchError{}
 			for name, o := range map[string]client.Object{
@@ -241,11 +249,43 @@ func bailOut(err error, msg string, keysAndValues ...any) {
 	os.Exit(1)
 }
 
-// defaultNamespacesForCache maps controller-runtime's cache to one namespace when
-// --single-namespace is set, so list/watch requests stay namespaced (cluster Role is not required).
-func defaultNamespacesForCache(singleNamespace string) map[string]cache.Config {
-	if singleNamespace != "" {
-		return map[string]cache.Config{singleNamespace: {}}
+type namespaceList []string
+
+func (n *namespaceList) String() string {
+	if n == nil {
+		return ""
+	}
+	return strings.Join(*n, ",")
+}
+
+func (n *namespaceList) Set(value string) error {
+	namespace := strings.TrimSpace(value)
+	if namespace == "" {
+		return errors.New("must be non-empty")
+	}
+	if err := validateNamespace(namespace); err != nil {
+		return err
+	}
+	*n = append(*n, namespace)
+	return nil
+}
+
+func validateNamespace(namespace string) error {
+	if errs := validation.IsDNS1123Label(namespace); len(errs) > 0 {
+		return fmt.Errorf("invalid namespace %q: %s", namespace, strings.Join(errs, "; "))
 	}
 	return nil
+}
+
+// watchedNamespacesCache maps controller-runtime's cache to specific namespaces,
+// so list/watch requests stay namespaced when namespace-scoped RBAC is used.
+func watchedNamespacesCache(namespaces []string) map[string]cache.Config {
+	if len(namespaces) == 0 {
+		return nil
+	}
+	defaultNamespaces := make(map[string]cache.Config, len(namespaces))
+	for _, namespace := range namespaces {
+		defaultNamespaces[namespace] = cache.Config{}
+	}
+	return defaultNamespaces
 }
