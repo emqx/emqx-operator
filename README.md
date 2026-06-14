@@ -27,7 +27,7 @@ This operator is compatible with the following EMQX releases:
 
 The simplest way to install the operator is to apply the release manifest.
 ```sh
-kubectl apply --server-side=true -f https://github.com/emqx/emqx-operator/releases/download/v2.3.1/install.yaml
+kubectl apply --server-side=true -f https://github.com/emqx/emqx-operator/releases/download/v2.3.2/install.yaml
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" --namespace emqx-operator-system
 ```
 
@@ -42,7 +42,7 @@ helm repo update
 helm install emqx-operator emqx/emqx-operator \
   --namespace emqx-operator-system \
   --create-namespace \
-  --version 2.3.1 \
+  --version 2.3.2 \
   --wait
 ```
 

@@ -11,7 +11,7 @@ on:
         required: true
         default: main-2.3
       tag:
-        description: 'Operator tag (e.g. 2.3.0). Empty = dry run.'
+        description: 'Operator tag (e.g. 2.3.2). Empty = dry run.'
         required: false
 
 permissions:
