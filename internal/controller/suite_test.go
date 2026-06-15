@@ -290,6 +290,51 @@ func newReconcileRoundWithRequester(requester req.RequesterInterface) *reconcile
 	}
 }
 
+// apiRequesterInterceptor keeps a track of API requests issued by reconcilers under test.
+// Use apiRequester() method to supply this interceptor into a reconcile round, keep in mind
+// that it essentially _mutates_ the round state so watch out for accidental reuse.
+type apiRequesterInterceptor struct {
+	capture *[]apiRequestCapture
+	inner   req.RequesterInterface
+}
+
+type apiRequestCapture struct {
+	Method string
+	URL    url.URL
+	Body   string
+	Header http.Header
+}
+
+func mkAPIRequesterInterceptor(requester req.RequesterInterface) apiRequesterInterceptor {
+	capture := ptr.To([]apiRequestCapture{})
+	return apiRequesterInterceptor{
+		capture: capture,
+		inner: req.NewMockRequester(
+			func(method string, url url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
+				*capture = append(*capture, apiRequestCapture{
+					Method: method,
+					URL:    url,
+					Body:   string(body),
+					Header: header,
+				})
+				return requester.Request(method, url, body, header)
+			}),
+	}
+}
+
+func (interceptor *apiRequesterInterceptor) apiRequester() apiRequester {
+	*interceptor.capture = []apiRequestCapture{}
+	return &apiRequesterOverride{interceptor.inner}
+}
+
+func (interceptor *apiRequesterInterceptor) listCaptured() []apiRequestCapture {
+	return *interceptor.capture
+}
+
+func (interceptor *apiRequesterInterceptor) captured(i int) apiRequestCapture {
+	return (*interceptor.capture)[i]
+}
+
 // apiRequesterOverride always provides the given fixed API requester.
 type apiRequesterOverride struct {
 	requester req.RequesterInterface
