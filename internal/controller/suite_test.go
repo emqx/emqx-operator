@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"testing"
 	"time"
 
@@ -41,6 +42,7 @@ import (
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -243,6 +245,10 @@ func actualObject[Object client.Object](o Object) (Object, error) {
 	return o, err
 }
 
+func actualize[Object client.Object](o Object) error {
+	return k8sClient.Get(ctx, client.ObjectKeyFromObject(o), o)
+}
+
 func ownerReferences(owner client.Object) []metav1.OwnerReference {
 	var apiVersion, kind string
 	switch owner.(type) {
@@ -377,9 +383,21 @@ func DescribeClientFaultMatrix(text string, args ...interface{}) bool {
 
 func BeSuccessfulReconcile() gomegatypes.GomegaMatcher {
 	return WithTransform(
-		func(in subResult) error {
-			return in.err
-		},
+		func(in subResult) error { return in.err },
 		Succeed(),
+	)
+}
+
+func BeReconcileError(err ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
+	matchers := slices.Concat([]gomegatypes.GomegaMatcher{HaveOccurred()}, err)
+	return And(
+		WithTransform(
+			func(in subResult) *ctrl.Result { return in.immediateResult },
+			BeNil(),
+		),
+		WithTransform(
+			func(in subResult) error { return in.err },
+			And(matchers...),
+		),
 	)
 }
