@@ -78,7 +78,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 
 	// Postpone runtime config updates until at least one core is available.
 	coreSet := r.state.coreSet()
-	if coreSet.Status.ReadyReplicas == 0 {
+	if coreSet == nil || coreSet.Status.ReadyReplicas == 0 {
 		return reconcilePostpone()
 	}
 
