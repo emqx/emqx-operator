@@ -317,6 +317,10 @@ func (spec *EMQXSpec) HasReplicants() bool {
 	return spec.ReplicantTemplate != nil && ptr.Deref(spec.ReplicantTemplate.Spec.Replicas, 1) > 0
 }
 
+func (spec *EMQXReplicantTemplateSpec) PodDisruptionBudgetEnabled() bool {
+	return spec.MinAvailable != nil || spec.MaxUnavailable != nil
+}
+
 func (s *ServiceTemplate) IsEnabled() bool {
 	return s.Enabled != nil && *s.Enabled
 }
