@@ -80,7 +80,12 @@ var httpClient = &http.Client{
 	},
 }
 
-func (requester *Requester) Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+func (requester *Requester) Request(
+	method string,
+	url url.URL,
+	body []byte,
+	header http.Header,
+) (resp *http.Response, respBody []byte, err error) {
 	if url.Scheme == "" {
 		url.Scheme = requester.GetSchema()
 	}
@@ -123,7 +128,12 @@ func (requester *Requester) Request(method string, url url.URL, body []byte, hea
 }
 
 // Mock
-type MockRequesterFunc func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error)
+type MockRequesterFunc func(
+	method string,
+	url url.URL,
+	body []byte,
+	header http.Header,
+) (resp *http.Response, respBody []byte, err error)
 
 type MockRequester struct {
 	mockFunc MockRequesterFunc
@@ -140,6 +150,11 @@ func (f *MockRequester) GetUsername() string                         { return ""
 func (f *MockRequester) GetPassword() string                         { return "" }
 func (f *MockRequester) GetDescription() string                      { return "MockRequester" }
 
-func (f *MockRequester) Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
+func (f *MockRequester) Request(
+	method string,
+	url url.URL,
+	body []byte,
+	header http.Header,
+) (resp *http.Response, respBody []byte, err error) {
 	return f.mockFunc(method, url, body, header)
 }

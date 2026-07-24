@@ -21,7 +21,7 @@ import (
 )
 
 var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func() {
-	var ns *corev1.Namespace = &corev1.Namespace{}
+	var ns *corev1.Namespace
 	var instance *crd.EMQX
 
 	const (
@@ -588,7 +588,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 })
 
 var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func() {
-	var ns *corev1.Namespace = &corev1.Namespace{}
+	var ns *corev1.Namespace
 	var instance *crd.EMQX
 
 	var current *appsv1.ReplicaSet

@@ -103,7 +103,7 @@ func deleteFieldPath(obj []byte, path []string) ([]byte, error) {
 func compareCreationTimestamp(a, b client.Object) int {
 	atime := a.GetCreationTimestamp()
 	btime := b.GetCreationTimestamp()
-	cmpTime := atime.Time.Compare(btime.Time)
+	cmpTime := atime.Compare(btime.Time)
 	// Use name as a tie breaker:
 	if cmpTime == 0 {
 		return cmp.Compare(a.GetName(), b.GetName())
@@ -117,7 +117,7 @@ func compareName(a, b client.Object) int {
 	if cmpName == 0 {
 		atime := a.GetCreationTimestamp()
 		btime := b.GetCreationTimestamp()
-		return atime.Time.Compare(btime.Time)
+		return atime.Compare(btime.Time)
 	}
 	return cmpName
 }

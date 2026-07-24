@@ -31,25 +31,27 @@ type Handler struct {
 	Client  client.Client
 }
 
-func newPatcher() *Patcher {
-	var patcher *Patcher = new(Patcher)
+func NewHandler(client client.Client) *Handler {
+	patcher := &Patcher{}
 	patcher.Annotator = patch.NewAnnotator(LastAppliedAnnotation)
 	patcher.Maker = patch.NewPatchMaker(
 		patcher.Annotator,
 		&patch.K8sStrategicMergePatcher{},
 		&patch.BaseJSONMergePatcher{},
 	)
-	return patcher
-}
-
-func NewHandler(client client.Client) *Handler {
 	return &Handler{
-		Patcher: newPatcher(),
+		Patcher: patcher,
 		Client:  client,
 	}
 }
 
-func (handler *Handler) CreateOrUpdateList(ctx context.Context, scheme *runtime.Scheme, logger logr.Logger, instance client.Object, resources []client.Object) error {
+func (handler *Handler) CreateOrUpdateList(
+	ctx context.Context,
+	scheme *runtime.Scheme,
+	logger logr.Logger,
+	instance client.Object,
+	resources []client.Object,
+) error {
 	for _, resource := range resources {
 		err := handler.CreateOrUpdate(ctx, scheme, logger, instance, resource)
 		if err != nil {
@@ -59,7 +61,13 @@ func (handler *Handler) CreateOrUpdateList(ctx context.Context, scheme *runtime.
 	return nil
 }
 
-func (handler *Handler) CreateOrUpdate(ctx context.Context, scheme *runtime.Scheme, logger logr.Logger, instance client.Object, obj client.Object) error {
+func (handler *Handler) CreateOrUpdate(
+	ctx context.Context,
+	scheme *runtime.Scheme,
+	logger logr.Logger,
+	instance client.Object,
+	obj client.Object,
+) error {
 	if err := ctrl.SetControllerReference(instance, obj, scheme); err != nil {
 		return err
 	}
@@ -125,7 +133,9 @@ func (handler *Handler) CreateOrUpdate(ctx context.Context, scheme *runtime.Sche
 
 	patchResult, err := handler.Patcher.Calculate(u, obj, opts...)
 	if err != nil {
-		return emperror.Wrapf(err, "failed to calculate patch for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
+		return emperror.Wrapf(err, "failed to calculate patch for %s %s",
+			obj.GetObjectKind().GroupVersionKind().Kind,
+			obj.GetName())
 	}
 	if !patchResult.IsEmpty() {
 		logger.V(1).Info("updating managed resource", "resource", klog.KObj(obj), "patch", string(patchResult.Patch))
@@ -136,7 +146,9 @@ func (handler *Handler) CreateOrUpdate(ctx context.Context, scheme *runtime.Sche
 
 func (handler *Handler) Create(ctx context.Context, obj client.Object) error {
 	if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
-		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
+		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s",
+			obj.GetObjectKind().GroupVersionKind().Kind,
+			obj.GetName())
 	}
 	if err := handler.Client.Create(ctx, obj); err != nil {
 		return emperror.Wrapf(err, "failed to create %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
@@ -146,7 +158,9 @@ func (handler *Handler) Create(ctx context.Context, obj client.Object) error {
 
 func (handler *Handler) Update(ctx context.Context, obj client.Object) error {
 	if err := handler.Patcher.SetLastAppliedAnnotation(obj); err != nil {
-		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
+		return emperror.Wrapf(err, "failed to set last applied annotation for %s %s",
+			obj.GetObjectKind().GroupVersionKind().Kind,
+			obj.GetName())
 	}
 
 	if err := handler.Client.Update(ctx, obj); err != nil {

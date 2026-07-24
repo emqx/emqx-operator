@@ -57,8 +57,8 @@ var _ = BeforeSuite(func() {
 
 var _ = Describe("EMQX Upgrade", Ordered, func() {
 	// Number of core and replicant replicas:
-	var coreReplicas int = 2
-	var replicantReplicas int = 2
+	var coreReplicas = 2
+	var replicantReplicas = 2
 
 	const emqxCRBasic = "test/e2e/files/resources/emqx.yaml"
 

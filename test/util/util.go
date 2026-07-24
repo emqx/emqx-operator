@@ -27,7 +27,7 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/lithammer/dedent"
-	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
+	ginkgo "github.com/onsi/ginkgo/v2"
 	"sigs.k8s.io/yaml"
 )
 
@@ -44,7 +44,7 @@ const (
 )
 
 func warnError(err error) {
-	GinkgoWriter.Printf("warning: %v\n", err)
+	ginkgo.GinkgoWriter.Printf("warning: %v\n", err)
 }
 
 // Kubectl runs a kubectl command, and returns an error if the command fails.
@@ -87,12 +87,12 @@ func run(cmd *exec.Cmd, stdin []byte) (string, error) {
 
 	cmd.Env = append(os.Environ(), "GO111MODULE=on")
 	command := strings.Join(cmd.Args, " ")
-	GinkgoWriter.Print("running: ", command)
+	ginkgo.GinkgoWriter.Print("running: ", command)
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
-		GinkgoWriter.Print(" < ", string(stdin))
+		ginkgo.GinkgoWriter.Print(" < ", string(stdin))
 	}
-	GinkgoWriter.Println()
+	ginkgo.GinkgoWriter.Println()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(output), fmt.Errorf("%s failed with error: (%v) %s", command, err, string(output))

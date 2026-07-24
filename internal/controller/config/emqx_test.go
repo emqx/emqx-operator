@@ -377,6 +377,7 @@ func TestPrint(t *testing.T) {
 		assert.Equal(t, expected, got)
 	})
 
+	//nolint:lll
 	t.Run("complex nested structure", func(t *testing.T) {
 		config, err := EMQXConfig(`
 			durable_sessions.enable = true

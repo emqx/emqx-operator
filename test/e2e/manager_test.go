@@ -23,7 +23,6 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/emqx/emqx-operator/test/util"
 	. "github.com/emqx/emqx-operator/test/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -59,7 +58,7 @@ var _ = Describe("Manager", Ordered, func() {
 	BeforeAll(func() {
 		if !skipPrometheusInstall {
 			By("install Prometheus Operator")
-			Expect(util.InstallPrometheusOperator()).To(Succeed())
+			Expect(InstallPrometheusOperator()).To(Succeed())
 			isPrometheusInstalled = true
 		}
 
@@ -82,7 +81,7 @@ var _ = Describe("Manager", Ordered, func() {
 		_ = Run("make", "undeploy")
 		if !skipPrometheusInstall && isPrometheusInstalled {
 			By("uninstall Prometheus Operator")
-			util.UninstallPrometheusOperator()
+			UninstallPrometheusOperator()
 		}
 	})
 

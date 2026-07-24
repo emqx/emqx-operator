@@ -65,7 +65,7 @@ func NewRebalanceReconciler(mgr manager.Manager) *RebalanceReconciler {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *RebalanceReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	var err error
-	var finalizer string = "apps.emqx.io/finalizer"
+	var finalizer = "apps.emqx.io/finalizer"
 	var req req.RequesterInterface
 
 	logger := log.FromContext(ctx)

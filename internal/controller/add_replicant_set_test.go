@@ -65,7 +65,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
 		got := newReplicaSet(emqx, conf)
 
-		assert.Equal(t, emqx.Spec.ReplicantTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
+		assert.Equal(t, emqx.Spec.ReplicantTemplate.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
 			crd.LabelInstance:        "emqx",
 			crd.LabelManagedBy:       "emqx-operator",

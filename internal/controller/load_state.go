@@ -33,24 +33,24 @@ type podsManagedBy struct {
 	manager metav1.Object
 }
 
-func (self podsManagedBy) passes(pod *corev1.Pod) bool {
-	if self.manager == nil && reflect.ValueOf(self.manager).IsNil() {
+func (filter podsManagedBy) passes(pod *corev1.Pod) bool {
+	if filter.manager == nil && reflect.ValueOf(filter.manager).IsNil() {
 		return false
 	}
-	return util.IsPodManagedBy(pod, self.manager)
+	return util.IsPodManagedBy(pod, filter.manager)
 }
 
 type podsWithRole struct {
 	string
 }
 
-func (self podsWithRole) passes(pod *corev1.Pod) bool {
-	return pod.Labels[crd.LabelDBRole] == self.string
+func (filter podsWithRole) passes(pod *corev1.Pod) bool {
+	return pod.Labels[crd.LabelDBRole] == filter.string
 }
 
 type podsAlive struct{}
 
-func (self podsAlive) passes(pod *corev1.Pod) bool {
+func (filter podsAlive) passes(pod *corev1.Pod) bool {
 	return pod.DeletionTimestamp == nil
 }
 
@@ -58,8 +58,8 @@ type podsWithCondition struct {
 	cond corev1.PodConditionType
 }
 
-func (self podsWithCondition) passes(pod *corev1.Pod) bool {
-	return util.IsPodConditionTrue(pod, self.cond)
+func (filter podsWithCondition) passes(pod *corev1.Pod) bool {
+	return util.IsPodConditionTrue(pod, filter.cond)
 }
 
 type podsWithEMQXVersion struct {
@@ -67,9 +67,9 @@ type podsWithEMQXVersion struct {
 	prefix   string
 }
 
-func (self podsWithEMQXVersion) passes(pod *corev1.Pod) bool {
-	node := self.instance.Status.FindNodeByPodName(pod.Name)
-	return node != nil && strings.HasPrefix(node.Version, self.prefix)
+func (filter podsWithEMQXVersion) passes(pod *corev1.Pod) bool {
+	node := filter.instance.Status.FindNodeByPodName(pod.Name)
+	return node != nil && strings.HasPrefix(node.Version, filter.prefix)
 }
 
 func (r *reconcileState) podWithName(name string) *corev1.Pod {

@@ -289,7 +289,10 @@ type apiRequesterOverride struct {
 	requester req.RequesterInterface
 }
 
-func (b *apiRequesterOverride) forOldestCore(_ *reconcileState, _ ...reconcileStatePodFilter) req.RequesterInterface {
+func (b *apiRequesterOverride) forOldestCore(
+	_ *reconcileState,
+	_ ...reconcileStatePodFilter,
+) req.RequesterInterface {
 	return b.requester
 }
 
@@ -300,7 +303,10 @@ func (b *apiRequesterOverride) forPod(_ *corev1.Pod) req.RequesterInterface {
 // apiRequesterUnavailable simulates apiRequester for completely unavailable cluser.
 type apiRequesterUnavailable struct{}
 
-func (b *apiRequesterUnavailable) forOldestCore(_ *reconcileState, _ ...reconcileStatePodFilter) req.RequesterInterface {
+func (b *apiRequesterUnavailable) forOldestCore(
+	_ *reconcileState,
+	_ ...reconcileStatePodFilter,
+) req.RequesterInterface {
 	return nil
 }
 
@@ -313,7 +319,13 @@ type eventLogger struct {
 	logger logr.Logger
 }
 
-func (el *eventLogger) writeEvent(object apiruntime.Object, annotations map[string]string, eventtype, reason, message string) {
+func (el *eventLogger) writeEvent(
+	object apiruntime.Object,
+	annotations map[string]string,
+	eventtype,
+	reason,
+	message string,
+) {
 	kvs := []any{
 		"type", eventtype,
 		"reason", reason,
@@ -337,7 +349,14 @@ func (el *eventLogger) Eventf(object apiruntime.Object, eventtype, reason, messa
 	el.writeEvent(object, nil, eventtype, reason, fmt.Sprintf(messageFmt, args...))
 }
 
-func (el *eventLogger) AnnotatedEventf(object apiruntime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+func (el *eventLogger) AnnotatedEventf(
+	object apiruntime.Object,
+	annotations map[string]string,
+	eventtype,
+	reason,
+	messageFmt string,
+	args ...interface{},
+) {
 	el.writeEvent(object, annotations, eventtype, reason, fmt.Sprintf(messageFmt, args...))
 }
 

@@ -16,20 +16,20 @@ limitations under the License.
 
 package e2e
 
+//nolint:staticcheck
 import (
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/emqx/emqx-operator/test/util"
 	. "github.com/emqx/emqx-operator/test/util"
 	. "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // diagnosticReportPath is the path to dump the diagnostic report on failure
-var diagnosticReportPath = util.Env("TEST_E2E_DIAGNOSTIC_REPORT_PATH", "test/_reports")
+var diagnosticReportPath = Env("TEST_E2E_DIAGNOSTIC_REPORT_PATH", "test/_reports")
 
 func PrintDiagnosticReport(namespace string) {
 	controllerLogs, err := KubectlOut("logs",

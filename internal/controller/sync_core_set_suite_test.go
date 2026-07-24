@@ -13,7 +13,7 @@ import (
 )
 
 var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
-	var ns *corev1.Namespace = &corev1.Namespace{}
+	var ns *corev1.Namespace
 	var instance *crd.EMQX
 
 	var round *reconcileRound
@@ -89,7 +89,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 			},
 		}
 		pod1 = pod0.DeepCopy()
-		pod1.ObjectMeta.Name = coreSet.Name + "-1"
+		pod1.Name = coreSet.Name + "-1"
 		Expect(k8sClient.Create(ctx, pod0)).Should(Succeed())
 		Expect(k8sClient.Create(ctx, pod1)).Should(Succeed())
 		pod0.Status.Conditions = []corev1.PodCondition{

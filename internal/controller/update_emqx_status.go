@@ -71,12 +71,12 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 
 	status.CoreNodesStatus.ReadyReplicas = 0
 	for _, node := range status.CoreNodes {
-		if node.Status == "running" {
+		if node.Status == api.NodeStatusRunning {
 			status.CoreNodesStatus.ReadyReplicas++
 		}
 	}
 	for _, node := range status.ReplicantNodes {
-		if node.Status == "running" {
+		if node.Status == api.NodeStatusRunning {
 			status.ReplicantNodesStatus.ReadyReplicas++
 		}
 	}
@@ -394,15 +394,15 @@ func (u *updateStatus) updateEMQXNodesStatus(r *reconcileRound, instance *crd.EM
 		}
 		list := &status.CoreNodes
 		host := parseNodeName(n.Node, instance).hostName
-		if node.Role == "replicant" {
+		if node.Role == roleReplicant {
 			list = &status.ReplicantNodes
 		}
 		for _, pod := range r.state.pods {
-			if node.Role == "core" && strings.HasPrefix(host, pod.Name) {
+			if node.Role == roleCore && strings.HasPrefix(host, pod.Name) {
 				node.PodName = pod.Name
 				break
 			}
-			if node.Role == "replicant" && host == pod.Status.PodIP {
+			if node.Role == roleReplicant && host == pod.Status.PodIP {
 				node.PodName = pod.Name
 				break
 			}

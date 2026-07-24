@@ -11,8 +11,8 @@ import (
 )
 
 var _ = DescribeClientFaultMatrix("Reconciler addBootstrap", Ordered, func() {
-	var instance *crd.EMQX = &crd.EMQX{}
-	var ns *corev1.Namespace = &corev1.Namespace{}
+	var ns *corev1.Namespace
+	var instance *crd.EMQX
 
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
