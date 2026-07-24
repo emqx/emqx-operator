@@ -173,12 +173,10 @@ type EMQXReplicantTemplate struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired state of a replicant node.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-	// +kubebuilder:validation:XValidation:rule="has(self.minAvailable) && has(self.maxUnavailable) ? false : true",message="minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget."
 	Spec EMQXReplicantTemplateSpec `json:"spec,omitempty"`
 }
 
 type EMQXCoreTemplateSpec struct {
-	// +kubebuilder:validation:XValidation:rule="has(self.minAvailable) && has(self.maxUnavailable) ? false : true",message="minAvailable cannot be set when maxUnavailable is specified. These fields are mutually exclusive in PodDisruptionBudget."
 	EMQXReplicantTemplateSpec `json:",inline"`
 
 	// PVC specification for a core node data storage.
@@ -207,18 +205,6 @@ type EMQXReplicantTemplateSpec struct {
 	// +kubebuilder:default:=2
 	// +kubebuilder:validation:Minimum=0
 	Replicas *int32 `json:"replicas,omitempty"`
-	// An eviction is allowed if at least "minAvailable" pods selected by
-	// "selector" will still be available after the eviction, i.e. even in the
-	// absence of the evicted pod.  So for example you can prevent all voluntary
-	// evictions by specifying "100%".
-	// +kubebuilder:validation:XIntOrString
-	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
-	// An eviction is allowed if at most "maxUnavailable" pods selected by
-	// "selector" are unavailable after the eviction, i.e. even in absence of
-	// the evicted pod. For example, one can prevent all voluntary evictions
-	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
-	// +kubebuilder:validation:XIntOrString
-	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 	// MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.
 	// For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);
 	// for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).

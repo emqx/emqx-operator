@@ -251,16 +251,6 @@ func (in *EMQXReplicantTemplateSpec) DeepCopyInto(out *EMQXReplicantTemplateSpec
 		*out = new(int32)
 		**out = **in
 	}
-	if in.MinAvailable != nil {
-		in, out := &in.MinAvailable, &out.MinAvailable
-		*out = new(intstr.IntOrString)
-		**out = **in
-	}
-	if in.MaxUnavailable != nil {
-		in, out := &in.MaxUnavailable, &out.MaxUnavailable
-		*out = new(intstr.IntOrString)
-		**out = **in
-	}
 	if in.Command != nil {
 		in, out := &in.Command, &out.Command
 		*out = make([]string, len(*in))

@@ -155,7 +155,6 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addHeadlessService{r},
 		&addCoreSet{r},
 		&addReplicantSet{r},
-		&addPdb{r},
 		&addService{r},
 		&dsLoadClusterState{r},
 		&dsCleanupSites{r},
