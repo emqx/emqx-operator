@@ -1,0 +1,5 @@
+# @expect error scan_error
+# @source sample-configs/equiv05/triple-quotes.conf
+# Upstream accepts several quote-edge cases inside triple-quoted strings; this parser
+# rejects this ambiguous four-closing-quotes form.
+a = """"hello""""

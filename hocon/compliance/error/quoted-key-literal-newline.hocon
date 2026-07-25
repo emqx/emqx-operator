@@ -1,0 +1,3 @@
+# @expect error scan_error
+x = {"a
+b": 42}

@@ -1,0 +1,5 @@
+# @expect ok
+# @expect-json {"a":"foobar"}
+# Upstream preserves one space when concatenating unquoted strings separated by whitespace;
+# this parser drops the whitespace and joins the fragments directly.
+a = foo bar

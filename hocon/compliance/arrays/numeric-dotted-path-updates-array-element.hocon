@@ -1,0 +1,3 @@
+# @expect ok
+# @expect-json {"a":{"c":[1,{"x":"foo"},{"d":42}]}}
+a { c = [1, 2, {d: 42}] }, a.c.2.x = foo

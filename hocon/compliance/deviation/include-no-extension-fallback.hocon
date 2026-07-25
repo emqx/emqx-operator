@@ -1,0 +1,7 @@
+# @expect ok
+# @expect-json {"after":1}
+# @source sample-configs/equiv03/includes.conf
+# Upstream include resolution tries extension fallbacks such as .conf/.json/.properties;
+# this parser only looks up the include string literally, so this missing include is ignored.
+include "no-extension-child"
+after = 1

@@ -1,0 +1,4 @@
+# @expect error scan_error
+# Empty middle/trailing unquoted path segments are dropped by this parser, but a leading
+# empty segment is rejected before path expansion because unquoted keys must start with a letter.
+..a = 1

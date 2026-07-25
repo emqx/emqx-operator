@@ -1,0 +1,2 @@
+# @expect error bad_array_index
+a = [1, 2, {d: 42}], a.42.x = foo

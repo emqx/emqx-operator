@@ -1,0 +1,2 @@
+# @expect error parse_error
+a = [1,,2]

@@ -1,0 +1,13 @@
+# @expect ok
+# @expect-json {"a":1,"b":2,"c":3,"d":{"foo":"bar"},"x":2,"y":{"foo":10,"hello":"world"}}
+# @source sample-configs/test06.conf
+a = 1
+b = 2
+c = 3
+d = { "foo" : "bar" }
+
+x = ${a}
+x = ${b}
+
+y = ${d}
+y = { "hello" : "world", "foo" : 10 }

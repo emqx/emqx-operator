@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"testing"
 	"time"
 
@@ -41,6 +42,7 @@ import (
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -243,6 +245,10 @@ func actualObject[Object client.Object](o Object) (Object, error) {
 	return o, err
 }
 
+func actualize[Object client.Object](o Object) error {
+	return k8sClient.Get(ctx, client.ObjectKeyFromObject(o), o)
+}
+
 func ownerReferences(owner client.Object) []metav1.OwnerReference {
 	var apiVersion, kind string
 	switch owner.(type) {
@@ -282,6 +288,51 @@ func newReconcileRoundWithRequester(requester req.RequesterInterface) *reconcile
 		requester: &apiRequesterOverride{requester},
 		state:     &reconcileState{},
 	}
+}
+
+// apiRequesterInterceptor keeps a track of API requests issued by reconcilers under test.
+// Use apiRequester() method to supply this interceptor into a reconcile round, keep in mind
+// that it essentially _mutates_ the round state so watch out for accidental reuse.
+type apiRequesterInterceptor struct {
+	capture *[]apiRequestCapture
+	inner   req.RequesterInterface
+}
+
+type apiRequestCapture struct {
+	Method string
+	URL    url.URL
+	Body   string
+	Header http.Header
+}
+
+func mkAPIRequesterInterceptor(requester req.RequesterInterface) apiRequesterInterceptor {
+	capture := ptr.To([]apiRequestCapture{})
+	return apiRequesterInterceptor{
+		capture: capture,
+		inner: req.NewMockRequester(
+			func(method string, url url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
+				*capture = append(*capture, apiRequestCapture{
+					Method: method,
+					URL:    url,
+					Body:   string(body),
+					Header: header,
+				})
+				return requester.Request(method, url, body, header)
+			}),
+	}
+}
+
+func (interceptor *apiRequesterInterceptor) apiRequester() apiRequester {
+	*interceptor.capture = []apiRequestCapture{}
+	return &apiRequesterOverride{interceptor.inner}
+}
+
+func (interceptor *apiRequesterInterceptor) listCaptured() []apiRequestCapture {
+	return *interceptor.capture
+}
+
+func (interceptor *apiRequesterInterceptor) captured(i int) apiRequestCapture {
+	return (*interceptor.capture)[i]
 }
 
 // apiRequesterOverride always provides the given fixed API requester.
@@ -377,9 +428,21 @@ func DescribeClientFaultMatrix(text string, args ...interface{}) bool {
 
 func BeSuccessfulReconcile() gomegatypes.GomegaMatcher {
 	return WithTransform(
-		func(in subResult) error {
-			return in.err
-		},
+		func(in subResult) error { return in.err },
 		Succeed(),
+	)
+}
+
+func BeReconcileError(err ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
+	matchers := slices.Concat([]gomegatypes.GomegaMatcher{HaveOccurred()}, err)
+	return And(
+		WithTransform(
+			func(in subResult) *ctrl.Result { return in.immediateResult },
+			BeNil(),
+		),
+		WithTransform(
+			func(in subResult) error { return in.err },
+			And(matchers...),
+		),
 	)
 }
