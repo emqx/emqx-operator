@@ -1073,10 +1073,6 @@ spec:
                           type: string
                         type: array
                       containerSecurityContext:
-                        default:
-                          runAsGroup: 1000
-                          runAsNonRoot: true
-                          runAsUser: 1000
                         description: |-
                           Security options the container should be run with.
                           If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
@@ -6829,9 +6825,8 @@ spec:
                           fsGroup: 1000
                           fsGroupChangePolicy: Always
                           runAsGroup: 1000
+                          runAsNonRoot: true
                           runAsUser: 1000
-                          supplementalGroups:
-                          - 1000
                         description: Pod-level security attributes and common container
                           settings.
                         properties:
@@ -9506,10 +9501,6 @@ spec:
                           type: string
                         type: array
                       containerSecurityContext:
-                        default:
-                          runAsGroup: 1000
-                          runAsNonRoot: true
-                          runAsUser: 1000
                         description: |-
                           Security options the container should be run with.
                           If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
@@ -15065,9 +15056,8 @@ spec:
                           fsGroup: 1000
                           fsGroupChangePolicy: Always
                           runAsGroup: 1000
+                          runAsNonRoot: true
                           runAsUser: 1000
-                          supplementalGroups:
-                          - 1000
                         description: Pod-level security attributes and common container
                           settings.
                         properties:
