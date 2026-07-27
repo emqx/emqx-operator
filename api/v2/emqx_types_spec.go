@@ -260,7 +260,7 @@ type EMQXReplicantTemplateSpec struct {
 	// Security options the container should be run with.
 	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
 	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
-	// +kubebuilder:default={runAsUser:1000,runAsGroup:1000,runAsNonRoot:true}
+	// +kubebuilder:default={runAsNonRoot:true}
 	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 	// List of initialization containers belonging to the pod.
 	// Init containers are executed in order prior to containers being started. If any

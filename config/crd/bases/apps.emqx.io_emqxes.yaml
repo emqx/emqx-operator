@@ -1121,9 +1121,7 @@ spec:
                         type: array
                       containerSecurityContext:
                         default:
-                          runAsGroup: 1000
                           runAsNonRoot: true
-                          runAsUser: 1000
                         description: |-
                           Security options the container should be run with.
                           If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
@@ -9512,9 +9510,7 @@ spec:
                         type: array
                       containerSecurityContext:
                         default:
-                          runAsGroup: 1000
                           runAsNonRoot: true
-                          runAsUser: 1000
                         description: |-
                           Security options the container should be run with.
                           If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
