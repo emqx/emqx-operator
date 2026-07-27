@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"slices"
 	"time"
 
@@ -74,7 +73,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subRe
 		if rollingUpdate {
 			rs.Spec.Replicas = ptr.To(int32(0))
 		}
-		if err := a.Handler.Create(r.ctx, rs); err != nil {
+		if err := a.Create(r.ctx, rs); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				if !instance.Status.IsConditionTrue(crd.Ready) {
 					// The updated replicaSet may not be ready because the EMQX node can not be started.
@@ -120,7 +119,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subRe
 		// NOTE
 		// Conflicts are expected as ReplicaSet contoller may act concurrently on the resource.
 		// Conflicts are handled on `EMQXReconciler` level.
-		err := a.Handler.Update(r.ctx, rs)
+		err := a.Update(r.ctx, rs)
 		if err != nil {
 			return reconcileError(emperror.Wrap(err, "failed to update replicaSet"))
 		}
@@ -228,7 +227,7 @@ func generateReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 								},
 								{
 									Name:  "EMQX_CLUSTER__DNS__NAME",
-									Value: fmt.Sprintf("%s.%s.svc.%s", instance.HeadlessServiceNamespacedName().Name, instance.Namespace, instance.Spec.ClusterDomain),
+									Value: clusterDNSName(instance),
 								},
 								{
 									Name: "EMQX_HOST",
@@ -244,7 +243,7 @@ func generateReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 								},
 								{
 									Name:  "EMQX_NODE__ROLE",
-									Value: "replicant",
+									Value: roleReplicant,
 								},
 								cookie.EnvVar(),
 							}, template.Spec.Env...),

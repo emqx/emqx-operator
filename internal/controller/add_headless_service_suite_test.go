@@ -10,8 +10,8 @@ import (
 )
 
 var _ = DescribeClientFaultMatrix("Reconciler addHeadlessService", Ordered, func() {
-	var instance *crd.EMQX = &crd.EMQX{}
-	var ns *corev1.Namespace = &corev1.Namespace{}
+	var ns *corev1.Namespace
+	var instance *crd.EMQX
 
 	BeforeAll(func() {
 		// Create namespace:

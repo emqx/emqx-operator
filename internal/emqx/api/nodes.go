@@ -10,6 +10,7 @@ import (
 
 // EMQX node status values reported by the API.
 const NodeStatusStopped = "stopped"
+const NodeStatusRunning = "running"
 
 type EMQXNode struct {
 	// EMQX node name, example: emqx@127.0.0.1

@@ -59,7 +59,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 		emqx := instance.DeepCopy()
 		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
 		got := newStatefulSet(emqx, conf)
-		assert.Equal(t, emqx.Spec.CoreTemplate.ObjectMeta.Annotations, got.Spec.Template.Annotations)
+		assert.Equal(t, emqx.Spec.CoreTemplate.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
 			crd.LabelInstance:  "emqx",
 			crd.LabelManagedBy: "emqx-operator",
@@ -87,8 +87,14 @@ func TestGetNewStatefulSet(t *testing.T) {
 		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
 		got := newStatefulSet(emqx, conf)
 		assert.NotNil(t, got.Spec.PersistentVolumeClaimRetentionPolicy)
-		assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, got.Spec.PersistentVolumeClaimRetentionPolicy.WhenScaled)
-		assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, got.Spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted)
+		assert.Equal(t,
+			appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+			got.Spec.PersistentVolumeClaimRetentionPolicy.WhenScaled,
+		)
+		assert.Equal(t,
+			appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+			got.Spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted,
+		)
 	})
 
 	t.Run("check bootstrap API keys", func(t *testing.T) {

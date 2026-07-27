@@ -241,8 +241,8 @@ func (c *EMQX) GetDashboardPortMap() map[string]int {
 }
 
 func (c *EMQX) GetDashboardServicePorts() []corev1.ServicePort {
-	portList := []corev1.ServicePort{}
 	portMap := c.GetDashboardPortMap()
+	portList := make([]corev1.ServicePort, 0, len(portMap))
 
 	for name, port := range portMap {
 		portList = append(portList, corev1.ServicePort{

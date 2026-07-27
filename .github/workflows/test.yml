@@ -10,19 +10,16 @@ concurrency:
 on:
   pull_request:
 
-env:
-  GO_VERSION: '~1.24'
-
 jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
 
       - run: go mod tidy
 
@@ -39,11 +36,11 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
 
       - run: go mod tidy
 
@@ -75,11 +72,11 @@ jobs:
     env:
       TEST_E2E_DIAGNOSTIC_REPORT_PATH: ${{ github.workspace }}/test-report
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
 
       - run: go mod tidy
 
@@ -125,11 +122,11 @@ jobs:
         with:
           docker-images: false
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
 
       - run: go mod tidy
 
@@ -158,11 +155,11 @@ jobs:
     name: E2E Helm Upgrade Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: 'go.mod'
 
       - run: go mod tidy
 

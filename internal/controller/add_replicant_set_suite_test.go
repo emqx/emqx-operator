@@ -16,8 +16,8 @@ import (
 )
 
 var _ = DescribeClientFaultMatrix("Reconciler addReplicantSet", Ordered, func() {
-	var ns *corev1.Namespace = &corev1.Namespace{}
-	var instance *crd.EMQX = &crd.EMQX{}
+	var ns *corev1.Namespace
+	var instance *crd.EMQX
 	var coreSet *appsv1.StatefulSet
 	var corePod0, corePod1 *corev1.Pod
 	var a *addReplicantSet
@@ -92,7 +92,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addReplicantSet", Ordered, func() 
 			},
 		}
 		corePod1 = corePod0.DeepCopy()
-		corePod1.ObjectMeta.Name = coreSet.Name + "-1"
+		corePod1.Name = coreSet.Name + "-1"
 		Expect(k8sClient.Create(ctx, corePod0)).To(Succeed())
 		Expect(k8sClient.Create(ctx, corePod1)).To(Succeed())
 		instance.Status.CoreNodesStatus.ReadyReplicas = 2

@@ -16,6 +16,7 @@ limitations under the License.
 
 package e2e
 
+//nolint:staticcheck
 import (
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	. "github.com/emqx/emqx-operator/test/util"

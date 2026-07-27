@@ -34,7 +34,7 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 			"statefulSet", klog.KObj(coreSet),
 			"reason", "no existing statefulSet",
 		)
-		if err := a.Handler.Create(r.ctx, coreSet); err != nil {
+		if err := a.Create(r.ctx, coreSet); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				return reconcileRequeue()
 			}
@@ -65,7 +65,7 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 		// NOTE
 		// Conflicts are expected as StatefulSet contoller may act concurrently on the resource.
 		// Conflicts are handled on `EMQXReconciler` level.
-		err := a.Handler.Update(r.ctx, coreSet)
+		err := a.Update(r.ctx, coreSet)
 		if err != nil {
 			return reconcileError(emperror.Wrap(err, "failed to update statefulSet"))
 		}
@@ -190,7 +190,7 @@ func generateStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
 								},
 								{
 									Name:  "EMQX_NODE__ROLE",
-									Value: "core",
+									Value: roleCore,
 								},
 								cookie.EnvVar(),
 								bootstrapAPIKeys.EnvVar(),

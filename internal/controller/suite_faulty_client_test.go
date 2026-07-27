@@ -33,30 +33,36 @@ func newFaultyClient(
 		return base
 	}
 	return interceptor.NewClient(base, interceptor.Funcs{
-		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+		Get: func(
+			ctx context.Context,
+			c client.WithWatch,
+			k client.ObjectKey,
+			o client.Object,
+			opts ...client.GetOption,
+		) error {
 			if err := fault.err(); err != nil {
 				return err
 			}
-			return c.Get(ctx, key, obj, opts...)
+			return c.Get(ctx, k, o, opts...)
 		},
-		Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+		Create: func(ctx context.Context, c client.WithWatch, o client.Object, opts ...client.CreateOption) error {
 			if err := fault.err(); err != nil {
 				return err
 			}
-			return c.Create(ctx, obj, opts...)
+			return c.Create(ctx, o, opts...)
 		},
-		Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+		Delete: func(ctx context.Context, c client.WithWatch, o client.Object, opts ...client.DeleteOption) error {
 			if err := fault.err(); err != nil {
 				return err
 			}
-			return c.Delete(ctx, obj, opts...)
+			return c.Delete(ctx, o, opts...)
 		},
-		Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+		Update: func(ctx context.Context, c client.WithWatch, o client.Object, opts ...client.UpdateOption) error {
 			if err := fault.err(); err != nil {
-				restoreObject(ctx, c, obj)
+				restoreObject(ctx, c, o)
 				return err
 			}
-			return c.Update(ctx, obj, opts...)
+			return c.Update(ctx, o, opts...)
 		},
 	})
 }

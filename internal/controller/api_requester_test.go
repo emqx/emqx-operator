@@ -15,7 +15,7 @@ import (
 )
 
 func TestRequesterFilter(t *testing.T) {
-	var coreSetName string = "emqx-core"
+	var coreSetName = "emqx-core"
 	var coreSetUID types.UID = "123"
 
 	instance := &crd.EMQX{

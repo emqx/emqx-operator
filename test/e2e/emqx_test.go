@@ -85,7 +85,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	Context("EMQX Cluster", func() {
 		// Initial number of core replicas:
-		var coreReplicas int = 2
+		var coreReplicas = 2
 
 		It("deploy cluster", func() {
 			By("create EMQX cluster")
@@ -176,7 +176,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 			Expect(stsList.Items).To(
 				ConsistOf(And(
-					HaveField("ObjectMeta.Name", Equal(stsBefore.ObjectMeta.Name)),
+					HaveField("ObjectMeta.Name", Equal(stsBefore.Name)),
 					HaveField("Status.UpdateRevision", Not(Equal(stsBefore.Status.UpdateRevision))),
 				)),
 				"Unexpected set of core StatefulSets",
@@ -230,7 +230,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	Context("EMQX Cluster / Botched Rolling Updates", func() {
 		// Initial number of core replicas:
-		var coreReplicas int = 2
+		var coreReplicas = 2
 
 		It("deploy cluster", func() {
 			By("create EMQX cluster")
@@ -314,8 +314,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	Context("EMQX Core-Replicant Cluster", func() {
 		// Initial number of core and replicant replicas:
-		var coreReplicas int = 2
-		var replicantReplicas int = 2
+		var coreReplicas = 2
+		var replicantReplicas = 2
 
 		It("deploy cluster", func() {
 			By("create EMQX cluster")
@@ -428,7 +428,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			stsBefore := stsListBefore.Items[0]
 			Expect(stsList.Items).To(
 				ConsistOf(And(
-					HaveField("ObjectMeta.Name", Equal(stsBefore.ObjectMeta.Name)),
+					HaveField("ObjectMeta.Name", Equal(stsBefore.Name)),
 					HaveField("Status.UpdateRevision", Not(Equal(stsBefore.Status.UpdateRevision))),
 				)),
 				"Unexpected set of core StatefulSets",
@@ -448,8 +448,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	Context("EMQX Core-Replicant DS-Enabled Cluster", func() {
 		// Initial number of core and replicant replicas:
-		var coreReplicas int = 2
-		var replicantReplicas int = 2
+		var coreReplicas = 2
+		var replicantReplicas = 2
 
 		It("deploy core-replicant EMQX cluster", func() {
 			By("create EMQX cluster")
@@ -560,7 +560,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			stsBefore := stsListBefore.Items[0]
 			Expect(stsList.Items).To(
 				ConsistOf(And(
-					HaveField("ObjectMeta.Name", Equal(stsBefore.ObjectMeta.Name)),
+					HaveField("ObjectMeta.Name", Equal(stsBefore.Name)),
 					HaveField("Status.UpdateRevision", Not(Equal(stsBefore.Status.UpdateRevision))),
 				)),
 				"Unexpected set of core StatefulSets",
@@ -581,8 +581,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	Context("EMQX Core-Replicant Cluster / Runtime-enabled DS Replication", func() {
 		// Initial number of core and replicant replicas:
-		var coreReplicas int = 2
-		var replicantReplicas int = 2
+		var coreReplicas = 2
+		var replicantReplicas = 2
 
 		const emqxImage = "emqx/emqx:5.10.2"
 
@@ -655,8 +655,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	Context("EMQX Cluster Scaling / HPA", Label("scale", "hpa"), func() {
 		// Initial number of core and replicant replicas:
-		var coreReplicas int = 2
-		var replicantReplicas int = 2
+		var coreReplicas = 2
+		var replicantReplicas = 2
 
 		const (
 			hpaName = "emqx-replicant"
