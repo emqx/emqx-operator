@@ -152,7 +152,7 @@ jobs:
           retention-days: 1
 
   test-e2e-helm:
-    name: E2E Helm Upgrade Tests
+    name: E2E Helm Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
