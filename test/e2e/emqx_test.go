@@ -80,6 +80,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 	AfterEach(func() {
 		if CurrentSpecReport().Failed() {
 			PrintDiagnosticReport(namespace)
+			DumpDiagnosticReport(namespace, "emqx", CurrentSpecReport().StartTime)
 		}
 	})
 
