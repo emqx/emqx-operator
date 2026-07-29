@@ -243,7 +243,7 @@ func generateReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 								},
 								{
 									Name:  "EMQX_NODE__ROLE",
-									Value: roleReplicant,
+									Value: crd.RoleReplicant,
 								},
 								cookie.EnvVar(),
 							}, template.Spec.Env...),

@@ -77,7 +77,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 				Labels: map[string]string{
 					crd.LabelInstance:                     "emqx",
 					crd.LabelManagedBy:                    "emqx-operator",
-					crd.LabelDBRole:                       "core",
+					crd.LabelMriaRole:                     "core",
 					appsv1.ControllerRevisionHashLabelKey: currentRevision,
 				},
 				OwnerReferences: ownerReferences(coreSet),

@@ -190,7 +190,7 @@ func generateStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
 								},
 								{
 									Name:  "EMQX_NODE__ROLE",
-									Value: roleCore,
+									Value: crd.RoleCore,
 								},
 								cookie.EnvVar(),
 								bootstrapAPIKeys.EnvVar(),

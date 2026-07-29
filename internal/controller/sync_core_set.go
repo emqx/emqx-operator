@@ -216,7 +216,7 @@ func (s *syncCoreSet) updateEvacuationState(r *reconcileRound, instance *crd.EMQ
 			continue
 		}
 		node := instance.Status.FindNode(evacuation.NodeName)
-		if node == nil || node.Role != roleCore || node.PodName == "" {
+		if node == nil || node.Role != crd.RoleCore || node.PodName == "" {
 			continue
 		}
 		pod := r.state.podWithName(node.PodName)
@@ -297,7 +297,7 @@ func checkCorePodRemoval(
 		}
 	}
 
-	nodeInfo := status.FindNodeByPodName(pod.Name, roleCore)
+	nodeInfo := status.FindNodeByPodName(pod.Name, crd.RoleCore)
 
 	if nodeInfo == nil {
 		return admission.remove("node is out of cluster")
@@ -373,7 +373,7 @@ func (s *syncCoreSet) startEvacuation(
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 ) error {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, roleCore)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleCore)
 	if nodeInfo == nil {
 		return emperror.New("no corresponding node in cluster status")
 	}

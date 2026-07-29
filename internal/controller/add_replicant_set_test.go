@@ -54,7 +54,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 		assert.Equal(t, "repl-label-value", got.Labels["repl-label-key"])
 		assert.Equal(t, "emqx", got.Labels[crd.LabelInstance])
 		assert.Equal(t, "emqx-operator", got.Labels[crd.LabelManagedBy])
-		assert.Equal(t, "replicant", got.Labels[crd.LabelDBRole])
+		assert.Equal(t, "replicant", got.Labels[crd.LabelMriaRole])
 		assert.Equal(t, "emqx-replicant-"+got.Labels[crd.LabelPodTemplateHash], got.Name)
 		assert.Equal(t, emqx.Namespace, got.Namespace)
 		assert.EqualValues(t, int32(0), got.Spec.MinReadySeconds)
@@ -69,7 +69,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 		assert.EqualValues(t, map[string]string{
 			crd.LabelInstance:        "emqx",
 			crd.LabelManagedBy:       "emqx-operator",
-			crd.LabelDBRole:          "replicant",
+			crd.LabelMriaRole:        "replicant",
 			crd.LabelPodTemplateHash: got.Labels[crd.LabelPodTemplateHash],
 			"repl-label-key":         "repl-label-value",
 		}, got.Spec.Template.Labels)
@@ -77,7 +77,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 		assert.EqualValues(t, map[string]string{
 			crd.LabelInstance:        "emqx",
 			crd.LabelManagedBy:       "emqx-operator",
-			crd.LabelDBRole:          "replicant",
+			crd.LabelMriaRole:        "replicant",
 			crd.LabelPodTemplateHash: got.Labels[crd.LabelPodTemplateHash],
 			"repl-label-key":         "repl-label-value",
 		}, got.Spec.Selector.MatchLabels)

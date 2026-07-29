@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	emperror "emperror.dev/errors"
+	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	req "github.com/emqx/emqx-operator/internal/requester"
@@ -28,7 +29,7 @@ func (b *apiRequesterBuilder) forOldestCore(
 	state *reconcileState,
 	filter ...reconcileStatePodFilter,
 ) req.RequesterInterface {
-	pods := state.listPods(podsWithRole{roleCore})
+	pods := state.listPods(podsWithRole{crd.RoleCore})
 	sortByCreationTimestamp(pods)
 outer:
 	for _, pod := range pods {

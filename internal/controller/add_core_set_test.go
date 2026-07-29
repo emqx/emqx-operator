@@ -49,7 +49,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 		assert.Equal(t, "core-label-value", got.Labels["core-label-key"])
 		assert.Equal(t, "emqx", got.Labels[crd.LabelInstance])
 		assert.Equal(t, "emqx-operator", got.Labels[crd.LabelManagedBy])
-		assert.Equal(t, "core", got.Labels[crd.LabelDBRole])
+		assert.Equal(t, "core", got.Labels[crd.LabelMriaRole])
 		// Single StatefulSet: name is deterministic, no hash suffix.
 		assert.Equal(t, "emqx-core", got.Name)
 		assert.Equal(t, emqx.Namespace, got.Namespace)
@@ -63,14 +63,14 @@ func TestGetNewStatefulSet(t *testing.T) {
 		assert.EqualValues(t, map[string]string{
 			crd.LabelInstance:  "emqx",
 			crd.LabelManagedBy: "emqx-operator",
-			crd.LabelDBRole:    "core",
+			crd.LabelMriaRole:  "core",
 			"core-label-key":   "core-label-value",
 		}, got.Spec.Template.Labels)
 
 		assert.EqualValues(t, map[string]string{
 			crd.LabelInstance:  "emqx",
 			crd.LabelManagedBy: "emqx-operator",
-			crd.LabelDBRole:    "core",
+			crd.LabelMriaRole:  "core",
 		}, got.Spec.Selector.MatchLabels)
 	})
 
@@ -177,7 +177,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 					Name:      "emqx-core-data",
 					Namespace: "emqx",
 					Labels: map[string]string{
-						crd.LabelDBRole:    "core",
+						crd.LabelMriaRole:  "core",
 						crd.LabelInstance:  "emqx",
 						crd.LabelManagedBy: "emqx-operator",
 					},
@@ -224,7 +224,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 					Name:      "emqx-core-data",
 					Namespace: "emqx",
 					Labels: map[string]string{
-						crd.LabelDBRole:    "core",
+						crd.LabelMriaRole:  "core",
 						crd.LabelInstance:  "emqx",
 						crd.LabelManagedBy: "emqx-operator",
 					},

@@ -14,11 +14,6 @@ import (
 	k8s "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	roleCore      = "core"
-	roleReplicant = "replicant"
-)
-
 type reconcileState struct {
 	coreSets      []*appsv1.StatefulSet
 	replicantSets []*appsv1.ReplicaSet
@@ -45,7 +40,7 @@ type podsWithRole struct {
 }
 
 func (filter podsWithRole) passes(pod *corev1.Pod) bool {
-	return pod.Labels[crd.LabelDBRole] == filter.string
+	return pod.Labels[crd.LabelMriaRole] == filter.string
 }
 
 type podsAlive struct{}

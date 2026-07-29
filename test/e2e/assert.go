@@ -78,7 +78,7 @@ func CoresStable(g Gomega, coreReplicas int) {
 	)
 
 	g.Expect(KubectlOut("get", "pvc",
-		"--selector", crd.LabelDBRole+"=core,"+crd.LabelManagedBy+"=emqx-operator",
+		"--selector", crd.LabelMriaRole+"=core,"+crd.LabelManagedBy+"=emqx-operator",
 		"-o", "json",
 	)).To(
 		BeUnmarshalledAs(&corev1.PersistentVolumeClaimList{}, HaveField("Items", And(

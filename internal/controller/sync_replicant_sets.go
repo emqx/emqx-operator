@@ -202,7 +202,7 @@ func (s *syncReplicantSets) stopStaleReplicantEvacuation(
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 ) (bool, error) {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, roleReplicant)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
 	if nodeInfo == nil {
 		return false, emperror.Errorf("missing replicant %s node information", pod.Name)
 	}
@@ -459,7 +459,7 @@ func checkReplicantPodRemoval(instance *crd.EMQX, pod *corev1.Pod) replicantAdmi
 		}
 	}
 
-	nodeInfo := status.FindNodeByPodName(pod.Name, roleReplicant)
+	nodeInfo := status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
 	if nodeInfo == nil {
 		return replicantAdmission{Action: admissionRemove, Reason: "node is out of cluster"}
 	}
@@ -494,7 +494,7 @@ func checkReplicantPodRemoval(instance *crd.EMQX, pod *corev1.Pod) replicantAdmi
 
 // startReplicantEvacuation calls the EMQX evacuation API for a replicant pod (side effect only).
 func (s *syncReplicantSets) startEvacuation(r *reconcileRound, instance *crd.EMQX, pod *corev1.Pod) error {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, roleReplicant)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
 	if nodeInfo == nil {
 		return emperror.New("no corresponding replicant node in cluster status")
 	}
