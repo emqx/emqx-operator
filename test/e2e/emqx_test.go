@@ -55,8 +55,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	const (
 		emqxCRBasic      = "test/e2e/files/resources/emqx.yaml"
-		emqxImage        = "emqx/emqx:5.10.0"
-		emqxImageUpgrade = "emqx/emqx:5.10.1"
+		emqxImage        = "emqx/emqx:6.2.1"
+		emqxImageUpgrade = "emqx/emqx:6.2.2"
 	)
 
 	BeforeAll(func() {
@@ -83,7 +83,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		}
 	})
 
-	Context("EMQX Cluster", func() {
+	Context("EMQX Cluster", Label("smoke"), func() {
 		// Initial number of core replicas:
 		var coreReplicas = 2
 
