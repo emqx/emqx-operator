@@ -8,7 +8,6 @@ rules:
   - ""
   resources:
   - configmaps
-  - persistentvolumes
   - secrets
   - services
   verbs:

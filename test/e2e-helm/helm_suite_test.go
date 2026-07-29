@@ -71,6 +71,10 @@ func crdExists(name string) bool {
 	return Kubectl("get", "crd", name) == nil
 }
 
+func resourceExists(kind, name string) bool {
+	return Kubectl("get", kind, name) == nil
+}
+
 // dumpHelmDiagnostics writes debug info for the given namespace to GinkgoWriter.
 func dumpHelmDiagnostics(namespace string) {
 	out, _ := Output("helm", "list", "--namespace", namespace)

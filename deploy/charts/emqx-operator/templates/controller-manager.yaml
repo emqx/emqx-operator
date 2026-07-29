@@ -1,3 +1,5 @@
+{{- $watchNamespaces := default (list) .Values.watchNamespaces -}}
+{{- $watchNamespaces = $watchNamespaces | uniq -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,8 +37,10 @@ spec:
         - --leader-elect
         - --health-probe-bind-address=:8081
         - --zap-devel={{ .Values.development }}
-        {{- if .Values.singleNamespace }}
-        - --single-namespace={{ .Release.Namespace }}
+        {{- if gt (len $watchNamespaces) 0 }}
+        {{- range $namespace := $watchNamespaces }}
+        - --watch-namespace={{ $namespace }}
+        {{- end }}
         {{- end }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
