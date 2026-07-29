@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 // EMQXSpec defines the desired state of EMQX.
@@ -309,7 +310,7 @@ type ServiceTemplate struct {
 }
 
 func (spec *EMQXSpec) HasReplicants() bool {
-	return spec.ReplicantTemplate != nil && spec.ReplicantTemplate.Spec.Replicas != nil && *spec.ReplicantTemplate.Spec.Replicas > 0
+	return spec.ReplicantTemplate != nil && ptr.Deref(spec.ReplicantTemplate.Spec.Replicas, 1) > 0
 }
 
 func (spec *EMQXSpec) IsEvacuationEnabled() bool {
