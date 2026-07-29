@@ -25,7 +25,7 @@ type addReplicantSet struct {
 
 func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Cluster w/o replicants, skip this step.
-	if instance.Spec.ReplicantTemplate == nil {
+	if !instance.Spec.HasReplicants() {
 		return subResult{}
 	}
 

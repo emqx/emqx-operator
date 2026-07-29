@@ -186,21 +186,16 @@ var _ = DescribeClientFaultMatrix("Reconciler addReplicantSet", Ordered, func() 
 			))
 		})
 
-		It("should scale down replicaSet", func() {
+		It("should do nothing", func() {
 			// Set replicas count to 0:
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			// Reconciliation step should succeed:
 			Eventually(a.reconcile).WithArguments(round, instance).
 				Should(BeSuccessfulReconcile())
-			// Status conditions should reset:
-			Expect(actualObject(instance)).To(And(
-				HaveCondition(crd.Ready, HaveField("Status", Equal(metav1.ConditionFalse))),
-				HaveCondition(crd.ReplicantNodesProgressing, HaveField("Status", Equal(metav1.ConditionTrue))),
-			))
-			// ReplicaSet should be updated in place:
+			// ReplicaSet scaling is handled by syncReplicantSets:
 			Expect(replicantSets(instance)).To(ConsistOf(
-				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))),
+				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(3))),
 			))
 		})
 
