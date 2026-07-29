@@ -15969,6 +15969,8 @@ spec:
                 description: Cluster upgrade strategy settings.
                 properties:
                   evacuationStrategy:
+                    default:
+                      type: NodeEvacuation
                     description: Evacuation strategy settings.
                     properties:
                       connectionEvictionRate:

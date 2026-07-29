@@ -98,6 +98,7 @@ type UpdateStrategy struct {
 	// +kubebuilder:default=RollingUpdate
 	Type string `json:"type,omitempty"`
 	// Evacuation strategy settings.
+	// +kubebuilder:default={type:NodeEvacuation}
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 	// Parameters of the rolling update for replicant ReplicaSet rollouts.
 	Replicants *ReplicantsUpdateStrategy `json:"replicants,omitempty"`
