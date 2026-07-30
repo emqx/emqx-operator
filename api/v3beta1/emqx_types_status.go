@@ -154,8 +154,8 @@ func (s EMQXStatus) FindNodeByPodName(pod string, roles ...string) *EMQXNode {
 		scanReplicants = true
 	} else {
 		for _, r := range roles {
-			scanCores = scanCores || r == "core"
-			scanReplicants = scanReplicants || r == "replicant"
+			scanCores = scanCores || r == RoleCore
+			scanReplicants = scanReplicants || r == RoleReplicant
 		}
 	}
 	if scanCores {

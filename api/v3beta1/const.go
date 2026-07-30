@@ -21,10 +21,15 @@ import corev1 "k8s.io/api/core/v1"
 const DefaultContainerName string = "emqx"
 
 const (
+	RoleCore      string = "core"
+	RoleReplicant string = "replicant"
+)
+
+const (
 	// labels
 	LabelInstance        string = "apps.emqx.io/instance"   // my-emqx
 	LabelManagedBy       string = "apps.emqx.io/managed-by" // emqx-operator
-	LabelDBRole          string = "apps.emqx.io/db-role"    // core, replicant
+	LabelMriaRole        string = "apps.emqx.io/db-role"    // core, replicant
 	LabelPodTemplateHash string = "apps.emqx.io/pod-template-hash"
 
 	// LabelForceRetirement is a label intended for users to force Operator to

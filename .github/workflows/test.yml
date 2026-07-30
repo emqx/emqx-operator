@@ -35,6 +35,8 @@ jobs:
   test-e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
+    env:
+      TEST_E2E_DIAGNOSTIC_REPORT_PATH: ${{ github.workspace }}/test-report
     steps:
       - uses: actions/checkout@v6
 
@@ -45,6 +47,13 @@ jobs:
       - run: go mod tidy
 
       - run: make test-e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-report-e2e
+          path: ${{ env.TEST_E2E_DIAGNOSTIC_REPORT_PATH }}
+          if-no-files-found: ignore
 
       - run: go tool covdata textfmt -i /tmp/kind/data/emqx-operator-system/test-e2e-coverage -o ${{ github.workspace }}/cover.e2e.out
 
@@ -152,7 +161,7 @@ jobs:
           retention-days: 1
 
   test-e2e-helm:
-    name: E2E Helm Upgrade Tests
+    name: E2E Helm Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

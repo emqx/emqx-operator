@@ -80,7 +80,7 @@ func TestGenerateDashboardService(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			crd.LabelInstance:  "emqx",
 			crd.LabelManagedBy: "emqx-operator",
-			crd.LabelDBRole:    "core",
+			crd.LabelMriaRole:  "core",
 		}, got.Spec.Selector)
 	})
 
@@ -208,7 +208,7 @@ func TestGenerateListenersService(t *testing.T) {
 		assert.Equal(t, map[string]string{
 			crd.LabelInstance:  "emqx",
 			crd.LabelManagedBy: "emqx-operator",
-			crd.LabelDBRole:    "core",
+			crd.LabelMriaRole:  "core",
 		}, got.Spec.Selector)
 	})
 

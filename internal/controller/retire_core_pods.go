@@ -66,7 +66,7 @@ func (*retireCorePods) corePodRetirementReady(r *reconcileRound, instance *crd.E
 		return true, "retirement forced"
 	}
 
-	node := instance.Status.FindNodeByPodName(pod.Name, roleCore)
+	node := instance.Status.FindNodeByPodName(pod.Name, crd.RoleCore)
 	if node != nil {
 		return false, fmt.Sprintf("node %s is still present in cluster status", node.Name)
 	}

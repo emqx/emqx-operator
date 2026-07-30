@@ -55,8 +55,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	const (
 		emqxCRBasic      = "test/e2e/files/resources/emqx.yaml"
-		emqxImage        = "emqx/emqx:5.10.0"
-		emqxImageUpgrade = "emqx/emqx:5.10.1"
+		emqxImage        = "emqx/emqx:6.2.1"
+		emqxImageUpgrade = "emqx/emqx:6.2.2"
 	)
 
 	BeforeAll(func() {
@@ -80,10 +80,11 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 	AfterEach(func() {
 		if CurrentSpecReport().Failed() {
 			PrintDiagnosticReport(namespace)
+			DumpDiagnosticReport(namespace, "emqx", CurrentSpecReport().StartTime)
 		}
 	})
 
-	Context("EMQX Cluster", func() {
+	Context("EMQX Cluster", Label("smoke"), func() {
 		// Initial number of core replicas:
 		var coreReplicas = 2
 
@@ -145,7 +146,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			By("fetch core StatefulSet")
 			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crd.LabelDBRole+"=core",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
 				"-o", "json",
 			)).To(UnmarshalInto(&stsListBefore))
 			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
@@ -170,7 +171,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crd.LabelDBRole+"=core",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
 				"-o", "json",
 			)).To(UnmarshalInto(&stsList))
 
@@ -386,7 +387,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			By("fetch core StatefulSet")
 			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crd.LabelDBRole+"=core",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
 				"-o", "json",
 			)).To(UnmarshalInto(&stsListBefore))
 			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
@@ -421,7 +422,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crd.LabelDBRole+"=core",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
 				"-o", "json",
 			)).To(UnmarshalInto(&stsList))
 
@@ -438,6 +439,51 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			Expect(KubectlOut("get", "replicaset", rsList.Items[0].Name,
 				"-o", "jsonpath={.status.replicas}",
 			)).To(Equal("0"))
+		})
+
+		It("scale replicants down to zero", func() {
+			By("fetch current replicant nodes")
+			var replicantNodes []crd.EMQXNode
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodes}")).
+				To(UnmarshalInto(&replicantNodes), "Failed to get EMQX replicant nodes")
+			Expect(replicantNodes).NotTo(BeEmpty(), "No replicant nodes were present before scaling down")
+
+			By("fetch existing replicant ReplicaSets")
+			var rsBefore appsv1.ReplicaSetList
+			Expect(KubectlOut("get", "replicaset",
+				"--selector", crd.LabelInstance+"=emqx,"+crd.LabelMriaRole+"="+crd.RoleReplicant,
+				"-o", "json",
+			)).To(UnmarshalInto(&rsBefore), "Failed to list replicant ReplicaSets")
+			Expect(rsBefore.Items).NotTo(BeEmpty(), "No replicant ReplicaSets were present before scaling down")
+
+			By("scale replicants to zero and constrain revision history")
+			const revisionHistoryLimit = 1
+			replicantReplicas = 0
+			changeTime := metav1.Now()
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "json",
+				"--patch", `[
+						{"op": "replace", "path": "/spec/replicantTemplate/spec/replicas", "value": 0},
+						{"op": "replace", "path": "/spec/revisionHistoryLimit", "value": `+fmt.Sprint(revisionHistoryLimit)+`}
+					]`,
+			)).To(Succeed(), "Failed to scale replicants down to 0")
+
+			By("wait for EMQX to stabilize without replicants")
+			Eventually(EMQXReady).WithArguments(changeTime).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(NoReplicants).Should(Succeed())
+
+			By("verify replicant ReplicaSets are retained according to revisionHistoryLimit")
+			Eventually(KubectlOut).WithArguments("get", "replicaset",
+				"--selector", emqxReplicantLabels.String(),
+				"-o", "json",
+			).Should(BeUnmarshalledAs(&appsv1.ReplicaSetList{}, HaveField("Items", And(
+				HaveLen(revisionHistoryLimit),
+				HaveEach(And(
+					HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))),
+					HaveField("Status.Replicas", BeEquivalentTo(0)),
+				)),
+			))))
 		})
 
 		It("delete cluster", func() {
@@ -477,13 +523,13 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)).To(UnmarshalInto(&pods), "Failed to list EMQX pods")
 			Expect(pods.Items).To(HaveLen(4), "EMQX cluster does not have 4 pods")
 			for _, pod := range pods.Items {
-				if pod.Labels[crd.LabelDBRole] == "core" {
+				if pod.Labels[crd.LabelMriaRole] == crd.RoleCore {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crd.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionTrue)),
 					)))
 				}
-				if pod.Labels[crd.LabelDBRole] == "replicant" {
+				if pod.Labels[crd.LabelMriaRole] == crd.RoleReplicant {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crd.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionFalse)),
@@ -529,7 +575,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			By("fetch core StatefulSet")
 			var stsListBefore appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crd.LabelDBRole+"=core",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
 				"-o", "json",
 			)).To(UnmarshalInto(&stsListBefore))
 			Expect(stsListBefore.Items).To(HaveLen(1), "More than one core StatefulSet")
@@ -553,7 +599,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			By("verify exactly one core StatefulSet was updated")
 			var stsList appsv1.StatefulSetList
 			Expect(KubectlOut("get", "statefulset",
-				"--selector", crd.LabelDBRole+"=core",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
 				"-o", "json",
 			)).To(UnmarshalInto(&stsList))
 
@@ -631,13 +677,13 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			)).To(UnmarshalInto(&pods), "Failed to list EMQX pods")
 			Expect(pods.Items).To(HaveLen(4))
 			for _, pod := range pods.Items {
-				if pod.Labels[crd.LabelDBRole] == "core" {
+				if pod.Labels[crd.LabelMriaRole] == crd.RoleCore {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crd.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionTrue)),
 					)))
 				}
-				if pod.Labels[crd.LabelDBRole] == "replicant" {
+				if pod.Labels[crd.LabelMriaRole] == crd.RoleReplicant {
 					Expect(pod.Status.Conditions).To(ContainElement(And(
 						HaveField("Type", Equal(crd.DSReplicationSite)),
 						HaveField("Status", Equal(corev1.ConditionFalse)),
@@ -697,7 +743,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 			By("verify the selector matches replicant pods")
 			Expect(scale.Status.Selector).To(
-				ContainSubstring(crd.LabelDBRole+"=replicant"),
+				ContainSubstring(crd.LabelMriaRole+"="+crd.RoleReplicant),
 				"Scale selector should include the replicant role label",
 			)
 			Expect(scale.Status.Selector).To(
