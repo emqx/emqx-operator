@@ -229,12 +229,44 @@ var _ = Describe("CRD Defaults", Ordered, func() {
 		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "emqx"}, actual)).To(Succeed())
 		Expect(actual.Spec.CoreTemplate.Spec).To(HaveField("Replicas", And(
 			Not(BeNil()),
-			HaveValue(BeEquivalentTo(2)),
+			HaveValue(BeEquivalentTo(1)),
 		)))
 		Expect(actual.Spec.CoreTemplate.Spec).To(HaveField("PodSecurityContext", And(
 			Not(BeNil()),
 			HaveValue(HaveField("RunAsUser", HaveValue(BeEquivalentTo(1000)))),
 		)))
+	})
+
+	It("defaults updateStrategy.evacuationStrategy for minimal instances", func() {
+		instance := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": crd.GroupVersion.String(),
+				"kind":       "EMQX",
+				"metadata": map[string]interface{}{
+					"name":      "emqx-update-strategy-defaults",
+					"namespace": ns.Name,
+				},
+				"spec": map[string]interface{}{
+					"image": "emqx",
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, instance)).To(Succeed())
+
+		actual := &crd.EMQX{}
+		key := client.ObjectKey{Namespace: ns.Name, Name: "emqx-update-strategy-defaults"}
+		Expect(k8sClient.Get(ctx, key, actual)).To(Succeed())
+		Expect(actual.Spec.UpdateStrategy.Type).To(Equal("RollingUpdate"))
+		Expect(actual.Spec.UpdateStrategy.EvacuationStrategy).To(Equal(crd.EvacuationStrategy{
+			Type:            crd.NodeEvacuationStrategy,
+			ConnEvictRate:   1000,
+			SessEvictRate:   1000,
+			WaitTakeover:    10,
+			WaitHealthCheck: 60,
+		}))
+
+		actual.Annotations = map[string]string{"apps.emqx.io/test": "updated"}
+		Expect(k8sClient.Update(ctx, actual)).To(Succeed())
 	})
 })
 

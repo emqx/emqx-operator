@@ -55,6 +55,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	const (
 		emqxCRBasic      = "test/e2e/files/resources/emqx.yaml"
+		emqxCRMinimal    = "test/e2e/files/resources/emqx-minimal.yaml"
 		emqxImage        = "emqx/emqx:6.2.1"
 		emqxImageUpgrade = "emqx/emqx:6.2.2"
 	)
@@ -82,6 +83,35 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			PrintDiagnosticReport(namespace)
 			DumpDiagnosticReport(namespace, "emqx", CurrentSpecReport().StartTime)
 		}
+	})
+
+	Context("EMQX Minimal", Label("smoke"), func() {
+
+		It("deploy minimal", func() {
+			By("create minimal EMQX")
+			emqxCR := FromYAMLFile(emqxCRMinimal)
+			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+			By("wait for minimal EMQX to be ready")
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(1).Should(Succeed())
+			Eventually(NoReplicants).Should(Succeed())
+		})
+
+		It("change image to trigger update", func() {
+			By("change EMQX image")
+			changedAt := metav1.Now()
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "json",
+				"--patch", `[{"op": "replace", "path": "/spec/image", "value": "`+emqxImageUpgrade+`"}]`)).
+				To(Succeed())
+			Eventually(EMQXReady).WithArguments(changedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(1).Should(Succeed())
+			Eventually(NoReplicants).Should(Succeed())
+		})
+
+		It("delete cluster", func() {
+			Expect(Kubectl("delete", "emqx", "emqx")).To(Succeed())
+		})
 	})
 
 	Context("EMQX Cluster", Label("smoke"), func() {

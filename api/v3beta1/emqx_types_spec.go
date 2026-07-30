@@ -60,7 +60,7 @@ type EMQXSpec struct {
 	UpdateStrategy UpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// Template for Pods running EMQX core nodes.
-	// +kubebuilder:default={spec:{replicas:2,persistentVolumeClaimSpec:{accessModes:{"ReadWriteOnce"},resources:{requests:{storage:"500Mi"}}}}}
+	// +kubebuilder:default={spec:{replicas:1,persistentVolumeClaimSpec:{accessModes:{"ReadWriteOnce"},resources:{requests:{storage:"500Mi"}}}}}
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 
 	// Template for Pods running EMQX replicant nodes.
@@ -98,6 +98,7 @@ type UpdateStrategy struct {
 	// +kubebuilder:default=RollingUpdate
 	Type string `json:"type,omitempty"`
 	// Evacuation strategy settings.
+	// +kubebuilder:default={type:NodeEvacuation}
 	EvacuationStrategy EvacuationStrategy `json:"evacuationStrategy,omitempty"`
 	// Parameters of the rolling update for replicant ReplicaSet rollouts.
 	Replicants *ReplicantsUpdateStrategy `json:"replicants,omitempty"`
@@ -203,7 +204,7 @@ type EMQXReplicantTemplateSpec struct {
 
 	// Desired number of instances.
 	// In case of core nodes, each instance has a consistent identity.
-	// +kubebuilder:default:=2
+	// +kubebuilder:default:=1
 	// +kubebuilder:validation:Minimum=0
 	Replicas *int32 `json:"replicas,omitempty"`
 	// MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.

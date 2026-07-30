@@ -1,0 +1,6 @@
+apiVersion: apps.emqx.io/v3beta1
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: emqx/emqx:6.2.1
