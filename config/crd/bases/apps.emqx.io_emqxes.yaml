@@ -81,7 +81,7 @@ spec:
                       resources:
                         requests:
                           storage: 500Mi
-                    replicas: 2
+                    replicas: 1
                 description: Template for Pods running EMQX core nodes.
                 properties:
                   metadata:
@@ -7273,7 +7273,7 @@ spec:
                             type: integer
                         type: object
                       replicas:
-                        default: 2
+                        default: 1
                         description: |-
                           Desired number of instances.
                           In case of core nodes, each instance has a consistent identity.
@@ -15504,7 +15504,7 @@ spec:
                             type: integer
                         type: object
                       replicas:
-                        default: 2
+                        default: 1
                         description: |-
                           Desired number of instances.
                           In case of core nodes, each instance has a consistent identity.

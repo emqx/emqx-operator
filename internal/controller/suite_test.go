@@ -229,7 +229,7 @@ var _ = Describe("CRD Defaults", Ordered, func() {
 		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "emqx"}, actual)).To(Succeed())
 		Expect(actual.Spec.CoreTemplate.Spec).To(HaveField("Replicas", And(
 			Not(BeNil()),
-			HaveValue(BeEquivalentTo(2)),
+			HaveValue(BeEquivalentTo(1)),
 		)))
 		Expect(actual.Spec.CoreTemplate.Spec).To(HaveField("PodSecurityContext", And(
 			Not(BeNil()),
