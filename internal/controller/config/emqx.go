@@ -17,7 +17,6 @@ limitations under the License.
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"sort"
@@ -25,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/emqx/emqx-operator/hocon"
+	json "github.com/json-iterator/go"
 	corev1 "k8s.io/api/core/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -78,6 +78,10 @@ func (c *EMQX) Copy() *EMQX {
 }
 
 func (c *EMQX) String() string {
+	var jsonc = json.Config{
+		EscapeHTML:  false,
+		SortMapKeys: true,
+	}.Froze()
 	var sb strings.Builder
 	roots := make([]string, 0, len(c.Config))
 	for r := range c.Config {
@@ -87,7 +91,7 @@ func (c *EMQX) String() string {
 	for _, root := range roots {
 		sb.WriteString(strconv.Quote(root))
 		sb.WriteString(" = ")
-		json, _ := json.Marshal(c.Config[root])
+		json, _ := jsonc.Marshal(c.Config[root])
 		sb.Write(json)
 		sb.WriteString("\n")
 	}

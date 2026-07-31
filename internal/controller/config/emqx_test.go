@@ -357,6 +357,20 @@ func TestString(t *testing.T) {
 		assert.Equal(t, strings.TrimPrefix(expected, "\n"), got)
 	})
 
+	t.Run("unicode strings", func(t *testing.T) {
+		config, err := EMQXConfig(`desc = "описание"`)
+		assert.Nil(t, err)
+		got := config.String()
+		assert.Equal(t, "\"desc\" = \"описание\"\n", got)
+	})
+
+	t.Run("HTML characters are not escaped", func(t *testing.T) {
+		config, err := EMQXConfig(`filter = "(& (objectClass=user) (sAMAccountName=${username}))"`)
+		assert.Nil(t, err)
+		got := config.String()
+		assert.Equal(t, "\"filter\" = \"(& (objectClass=user) (sAMAccountName=${username}))\"\n", got)
+	})
+
 	t.Run("complex", func(t *testing.T) {
 		confString := `
 			license {
