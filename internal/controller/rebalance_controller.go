@@ -130,7 +130,7 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		return ctrl.Result{}, emperror.New("failed to load reconcile round state")
 	}
 
-	req = requester.forOldestCore(state)
+	req = requester.forCore(state)
 	if req == nil {
 		return ctrl.Result{}, emperror.New("EMQX API requester unavailable")
 	}

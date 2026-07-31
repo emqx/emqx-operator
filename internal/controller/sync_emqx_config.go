@@ -98,7 +98,8 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 
 		// Update the config through API
 		r.log.V(1).Info("applying runtime config", "config", confRuntime)
-		if err := api.UpdateConfigs(r.oldestCoreRequester(), instance.Spec.Config.Mode, confRuntime); err != nil {
+		req := r.preferredCoreRequester()
+		if err := api.UpdateConfigs(req, instance.Spec.Config.Mode, confRuntime); err != nil {
 			return reconcileError(emperror.Wrap(err, "failed to update emqx config through API"))
 		}
 		if len(strippedReadonly) > 0 {

@@ -59,7 +59,7 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 		status.ReplicantNodesStatus.UpdateReplicas = updateReplicantSet.Status.Replicas
 	}
 
-	req := r.oldestCoreRequester()
+	req := r.preferredCoreRequester()
 
 	// check emqx node status
 	if req != nil {

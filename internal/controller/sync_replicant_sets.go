@@ -207,7 +207,7 @@ func (s *syncReplicantSets) stopStaleReplicantEvacuation(
 		return false, emperror.Errorf("missing replicant %s node information", pod.Name)
 	}
 	if evacuation := instance.Status.FindNodeEvacuation(nodeInfo.Name); evacuation != nil {
-		err := api.StopEvacuation(r.oldestCoreRequester(), nodeInfo.Name)
+		err := api.StopEvacuation(r.preferredCoreRequester(), nodeInfo.Name)
 		if err == nil {
 			s.EventRecorder.Event(
 				instance,
@@ -514,7 +514,7 @@ func (s *syncReplicantSets) startEvacuation(r *reconcileRound, instance *crd.EMQ
 		)
 		return nil
 	}
-	err := api.StartEvacuation(r.oldestCoreRequester(), strategy, migrateTo, nodeName)
+	err := api.StartEvacuation(r.preferredCoreRequester(), strategy, migrateTo, nodeName)
 	if err != nil {
 		return err
 	}
