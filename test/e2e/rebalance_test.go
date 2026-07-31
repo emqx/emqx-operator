@@ -98,9 +98,8 @@ var _ = Describe("Rebalance Test", Label("rebalance"), Ordered, func() {
 		By("create MQTTX client workload")
 		Expect(Kubectl("apply", "-f", "test/e2e/files/resources/mqttx.yaml")).To(Succeed())
 		defer Kubectl("delete", "-f", "test/e2e/files/resources/mqttx.yaml")
-		Expect(Kubectl("wait", "pod",
-			"--selector=app=mqttx",
-			"--for=condition=Ready",
+		Expect(Kubectl("wait", "deployment/mqttx",
+			"--for=condition=Available",
 			"--timeout=1m",
 		)).To(Succeed(), "Timed out waiting for MQTTX to be ready")
 
