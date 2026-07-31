@@ -11,7 +11,7 @@ on:
         required: true
         default: main-2.3
       tag:
-        description: 'Helm tag (e.g. helm-2.3.2). Empty = dry run.'
+        description: 'Helm tag (e.g. helm-2.3.3). Empty = dry run.'
         required: false
 
 permissions:
