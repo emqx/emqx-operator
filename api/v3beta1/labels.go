@@ -18,13 +18,27 @@ package v3beta1
 
 import (
 	"maps"
+
+	"k8s.io/apimachinery/pkg/labels"
 )
+
+const DefaultManagedBy = "emqx-operator"
 
 func (instance *EMQX) DefaultLabels() map[string]string {
 	labels := map[string]string{}
 	labels[LabelInstance] = instance.Name
-	labels[LabelManagedBy] = "emqx-operator"
+	labels[LabelManagedBy] = DefaultManagedBy
 	return labels
+}
+
+func DefaultCacheLabels() labels.Set {
+	return labels.Set{
+		LabelManagedBy: DefaultManagedBy,
+	}
+}
+
+func DefaultCacheSelector() labels.Selector {
+	return labels.SelectorFromSet(DefaultCacheLabels())
 }
 
 func (instance *EMQX) DefaultLabelsWith(extraLabels ...map[string]string) map[string]string {
