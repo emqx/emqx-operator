@@ -17,4 +17,13 @@ resources:
   kind: EMQX
   path: github.com/emqx/emqx-operator/api/v3beta1
   version: v3beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: emqx.io
+  group: apps
+  kind: EMQXAPIKey
+  path: github.com/emqx/emqx-operator/api/v3beta1
+  version: v3beta1
 version: "3"

@@ -231,6 +231,10 @@ func main() {
 	if err = controller.NewEMQXReconciler(mgr).SetupWithManager(mgr); err != nil {
 		bailOut(err, "unable to create controller", "controller", "EMQX")
 	}
+	if err = controller.NewEMQXAPIKeyReconciler(mgr).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EMQXAPIKey")
+		os.Exit(1)
+	}
 
 	// NOTE: Rebalance controller is disabled in this release. See api/v2beta1/rebalance_types.go.
 	// +kubebuilder:scaffold:builder

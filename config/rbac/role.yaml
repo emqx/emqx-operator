@@ -81,6 +81,7 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
+  - emqxapikeys
   - emqxes
   - rebalances
   verbs:
@@ -94,6 +95,7 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
+  - emqxapikeys/finalizers
   - emqxes/finalizers
   - rebalances/finalizers
   verbs:
@@ -101,6 +103,7 @@ rules:
 - apiGroups:
   - apps.emqx.io
   resources:
+  - emqxapikeys/status
   - emqxes/status
   - rebalances/status
   verbs:
