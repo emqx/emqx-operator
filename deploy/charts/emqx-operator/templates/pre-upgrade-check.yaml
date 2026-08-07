@@ -11,35 +11,32 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-check
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "emqx-operator.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-weight": "-20"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-check
   labels:
     {{- include "emqx-operator.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-weight": "-20"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 rules:
-# Patch CRDs to remove conversion webhooks
 - apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
   verbs:
   - get
-  - patch
-# List legacy CRs to check if any exist before upgrade
 - apiGroups:
   - apps.emqx.io
   resources:
@@ -52,32 +49,32 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-check
   labels:
     {{- include "emqx-operator.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-weight": "-20"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-check
 subjects:
 - kind: ServiceAccount
-  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-check
   namespace: {{ .Release.Namespace }}
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-check
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "emqx-operator.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-weight": "-15"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   backoffLimit: 3
@@ -88,11 +85,11 @@ spec:
         {{- include "emqx-operator.selectorLabels" . | nindent 8 }}
     spec:
       restartPolicy: OnFailure
-      serviceAccountName: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+      serviceAccountName: {{ include "emqx-operator.fullname" . }}-pre-upgrade-check
       securityContext:
         {{- toYaml $podSecurityContext | nindent 8 }}
       containers:
-      - name: cleanup
+      - name: check
         image: "{{ .Values.upgrade.image.repository }}:{{ .Values.upgrade.image.tag }}"
         imagePullPolicy: {{ .Values.upgrade.image.pullPolicy }}
         securityContext:
@@ -101,35 +98,39 @@ spec:
         - /bin/sh
         - -ec
         - |
-          echo "=== EMQX Operator pre-upgrade cleanup (2.2.x -> 2.3.x) ==="
+          echo "=== EMQX Operator pre-upgrade compatibility check (2.2.x -> 2.3.x) ==="
 
-          # Step 1: Check for existing legacy custom resources.
-          #
           # Legacy CRDs (emqxbrokers, emqxenterprises, emqxplugins) are present in
           # 2.2.x chart templates but absent from 2.3.x, so Helm will delete them
           # during upgrade. If any CRs exist under those CRDs they would be silently
           # destroyed. Abort early and ask the user to migrate first.
           BLOCKED=""
 
-          if kubectl get crd emqxbrokers.apps.emqx.io >/dev/null 2>&1; then
-            N=$(kubectl get emqxbrokers --all-namespaces --no-headers 2>/dev/null | wc -l)
-            if [ "$N" -gt 0 ]; then
+          CRD=$(kubectl get crd emqxbrokers.apps.emqx.io --ignore-not-found -o name)
+          if [ -n "$CRD" ]; then
+            CRS=$(kubectl get emqxbrokers --all-namespaces --no-headers)
+            if [ -n "$CRS" ]; then
+              N=$(printf '%s\n' "$CRS" | wc -l)
               echo "ERROR: Found $N EmqxBroker CR(s)."
               BLOCKED="emqxbrokers $BLOCKED"
             fi
           fi
 
-          if kubectl get crd emqxenterprises.apps.emqx.io >/dev/null 2>&1; then
-            N=$(kubectl get emqxenterprises --all-namespaces --no-headers 2>/dev/null | wc -l)
-            if [ "$N" -gt 0 ]; then
+          CRD=$(kubectl get crd emqxenterprises.apps.emqx.io --ignore-not-found -o name)
+          if [ -n "$CRD" ]; then
+            CRS=$(kubectl get emqxenterprises --all-namespaces --no-headers)
+            if [ -n "$CRS" ]; then
+              N=$(printf '%s\n' "$CRS" | wc -l)
               echo "ERROR: Found $N EmqxEnterprise CR(s)."
               BLOCKED="emqxenterprises $BLOCKED"
             fi
           fi
 
-          if kubectl get crd emqxplugins.apps.emqx.io >/dev/null 2>&1; then
-            N=$(kubectl get emqxplugins --all-namespaces --no-headers 2>/dev/null | wc -l)
-            if [ "$N" -gt 0 ]; then
+          CRD=$(kubectl get crd emqxplugins.apps.emqx.io --ignore-not-found -o name)
+          if [ -n "$CRD" ]; then
+            CRS=$(kubectl get emqxplugins --all-namespaces --no-headers)
+            if [ -n "$CRS" ]; then
+              N=$(printf '%s\n' "$CRS" | wc -l)
               echo "ERROR: Found $N EmqxPlugin CR(s)."
               BLOCKED="emqxplugins $BLOCKED"
             fi
@@ -144,26 +145,5 @@ spec:
             exit 1
           fi
 
-          # Step 2: Patch CRDs to remove conversion webhooks.
-          #
-          # The 2.2.x chart configures Webhook conversion on emqxes and rebalances
-          # CRDs, pointing at the operator's webhook endpoint. During upgrade Helm
-          # will tear down the old Deployment (and its Service) before applying the
-          # new CRD manifests. In the window between those two events the API server
-          # would fail to serve any request that triggers CRD conversion, because the
-          # webhook endpoint no longer exists. Patching the strategy to None *before*
-          # Helm starts the upgrade avoids this.
-          echo "--- Patching CRD emqxes.apps.emqx.io ..."
-          kubectl patch crd emqxes.apps.emqx.io \
-            --type=json \
-            -p='[{"op":"replace","path":"/spec/conversion","value":{"strategy":"None"}}]' \
-              || echo "*** not found or already patched, skipping."
-
-          echo "--- Patching CRD rebalances.apps.emqx.io ..."
-          kubectl patch crd rebalances.apps.emqx.io \
-            --type=json \
-            -p='[{"op":"replace","path":"/spec/conversion","value":{"strategy":"None"}}]' \
-              || echo "*** not found or already patched, skipping."
-
-          echo "=== Pre-upgrade cleanup complete ==="
+          echo "=== Pre-upgrade compatibility check complete ==="
 {{- end }}

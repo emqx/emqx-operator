@@ -104,16 +104,15 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 		Expect(helmUpgrade(namespace)).To(Succeed())
 
 		By("verify pre-upgrade completed successfully")
-		var jobList batchv1.JobList
 		Eventually(KubectlOut).
 			WithArguments("get", "jobs", "--namespace", namespace, "-o", "json").
 			Should(
 				// Hook jobs may be cleaned up already (hook-succeeded policy),
 				// which is fine: it means they completed successfully.
-				BeUnmarshalledAs(&jobList, HaveField("Items", Or(
+				BeUnmarshalledAs(&batchv1.JobList{}, HaveField("Items", Or(
 					BeEmpty(),
 					ContainElement(And(
-						HaveField("Name", Equal("pre-upgrade")),
+						HaveField("Name", Equal("emqx-operator-pre-upgrade-webhooks")),
 						HaveField("Status.Succeeded", BeNumerically(">=", 1)),
 					)),
 				))),
@@ -122,9 +121,8 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 
 		By("verify CRDs no longer have conversion webhooks")
 		for _, crdName := range []string{"emqxes.apps.emqx.io", "rebalances.apps.emqx.io"} {
-			var crd apiextv1.CustomResourceDefinition
 			Expect(KubectlOut("get", "crd", crdName, "-o", "json")).To(
-				BeUnmarshalledAs(&crd, Or(
+				BeUnmarshalledAs(&apiextv1.CustomResourceDefinition{}, Or(
 					HaveField("Spec.Conversion", BeNil()),
 					HaveField("Spec.Conversion.Strategy", Equal(apiextv1.NoneConverter)),
 				)),
@@ -139,14 +137,13 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 			"emqx-operator-validating-webhook-configuration")).To(BeFalse())
 
 		By("verify 2.3.x operator deployment is running")
-		var deployment appsv1.Deployment
 		Eventually(KubectlOut).
 			WithArguments("get", "deployment",
 				"emqx-operator-controller-manager",
 				"--namespace", namespace,
 				"-o", "json",
 			).
-			Should(BeUnmarshalledAs(&deployment,
+			Should(BeUnmarshalledAs(&appsv1.Deployment{},
 				HaveField("Status.AvailableReplicas", BeNumerically(">=", 1)),
 			))
 
@@ -157,6 +154,70 @@ var _ = Describe("Helm Upgrade / 2.2.x", Ordered, func() {
 			"emqxenterprises CRD should be removed after upgrade")
 		Expect(crdExists("emqxplugins.apps.emqx.io")).To(BeFalse(),
 			"emqxplugins CRD should be removed after upgrade")
+	})
+})
+
+//nolint:errcheck
+var _ = Describe("Helm Upgrade / 2.2.x / legacy check disabled", Ordered, func() {
+
+	const namespace = "emqx-operator-no-legacy-check"
+
+	BeforeAll(func() {
+		By("clean up any leftover resources from previous test runs")
+		helmCleanup(namespace)
+		cleanup22x()
+
+		By("create test namespace")
+		Expect(Kubectl("create", "ns", namespace)).To(Succeed())
+	})
+
+	AfterAll(func() {
+		helmCleanup(namespace)
+		cleanup22x()
+	})
+
+	AfterEach(func() {
+		if CurrentSpecReport().Failed() {
+			dumpHelmDiagnostics(namespace)
+		}
+	})
+
+	It("should always remove conversion webhooks", func() {
+		By("install emqx-operator 2.2.x from Helm repo")
+		Expect(helmInstall22x(namespace)).To(Succeed())
+
+		By("verify 2.2.x CRDs use conversion webhooks")
+		for _, crdName := range []string{"emqxes.apps.emqx.io", "rebalances.apps.emqx.io"} {
+			Expect(KubectlOut("get", "crd", crdName, "-o", "json")).To(
+				BeUnmarshalledAs(&apiextv1.CustomResourceDefinition{},
+					HaveField("Spec.Conversion.Strategy", Equal(apiextv1.WebhookConverter)),
+				),
+				"%s should use webhook conversion before upgrade", crdName,
+			)
+		}
+
+		By("upgrade to 2.3.x with only the legacy custom resource check disabled")
+		Expect(helmUpgrade(namespace, "--set", "upgrade.preUpgradeCheck=false")).To(Succeed())
+
+		By("verify only the dedicated webhook cleanup hook was rendered")
+		Expect(Output("helm", "get", "hooks", helmReleaseName, "--namespace", namespace)).To(
+			And(
+				ContainSubstring("name: emqx-operator-pre-upgrade-webhooks"),
+				ContainSubstring("kubectl patch crd emqxes.apps.emqx.io"),
+				ContainSubstring("kubectl patch crd rebalances.apps.emqx.io"),
+				Not(ContainSubstring("name: emqx-operator-pre-upgrade-check")),
+			))
+
+		By("verify CRDs no longer have conversion webhooks")
+		for _, crdName := range []string{"emqxes.apps.emqx.io", "rebalances.apps.emqx.io"} {
+			Expect(KubectlOut("get", "crd", crdName, "-o", "json")).To(
+				BeUnmarshalledAs(&apiextv1.CustomResourceDefinition{}, Or(
+					HaveField("Spec.Conversion", BeNil()),
+					HaveField("Spec.Conversion.Strategy", Equal(apiextv1.NoneConverter)),
+				)),
+				"%s should have None or no conversion strategy after upgrade", crdName,
+			)
+		}
 	})
 })
 

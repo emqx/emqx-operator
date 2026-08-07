@@ -1,0 +1,146 @@
+{{- $podSecurityContext := mergeOverwrite
+                            (dict "runAsUser" 65534)
+                            (.Values.podSecurityContext)
+                            (.Values.upgrade.podSecurityContext | default (dict)) }}
+{{- $containerSecurityContext := mergeOverwrite
+                            (dict)
+                            (.Values.containerSecurityContext)
+                            (.Values.upgrade.containerSecurityContext | default (dict)) }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-webhooks
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "emqx-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+  labels:
+    {{- include "emqx-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+  labels:
+    {{- include "emqx-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade
+subjects:
+- kind: ServiceAccount
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-webhooks
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "emqx-operator.fullname" . }}-pre-upgrade-webhooks
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "emqx-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "emqx-operator.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "emqx-operator.fullname" . }}-pre-upgrade-webhooks
+      securityContext:
+        {{- toYaml $podSecurityContext | nindent 8 }}
+      containers:
+      - name: cleanup
+        image: "{{ .Values.upgrade.image.repository }}:{{ .Values.upgrade.image.tag }}"
+        imagePullPolicy: {{ .Values.upgrade.image.pullPolicy }}
+        securityContext:
+          {{- toYaml $containerSecurityContext | nindent 12 }}
+        command:
+        - /bin/sh
+        - -ec
+        - |
+          echo "=== EMQX Operator conversion webhook cleanup (2.2.x -> 2.3.x) ==="
+
+          # The 2.2.x chart configures Webhook conversion on emqxes and rebalances
+          # CRDs, pointing at the operator's webhook endpoint. During upgrade Helm
+          # will tear down the old Deployment (and its Service) before applying the
+          # new CRD manifests. In the window between those two events the API server
+          # would fail to serve any request that triggers CRD conversion, because the
+          # webhook endpoint no longer exists. Patching the strategy to None *before*
+          # Helm starts the upgrade avoids this.
+          STRATEGY=$(kubectl get crd emqxes.apps.emqx.io \
+            --ignore-not-found \
+            -o jsonpath='{.spec.conversion.strategy}')
+          case "$STRATEGY" in
+            Webhook)
+              echo "--- Patching CRD emqxes.apps.emqx.io ..."
+              kubectl patch crd emqxes.apps.emqx.io \
+                --type=json \
+                -p='[{"op":"replace","path":"/spec/conversion","value":{"strategy":"None"}}]'
+              ;;
+            "")
+              echo "--- CRD emqxes.apps.emqx.io not found, skipping."
+              ;;
+            None)
+              echo "--- CRD emqxes.apps.emqx.io already up-to-date."
+              ;;
+            *)
+              echo "ERROR: CRD emqxes.apps.emqx.io has unexpected conversion strategy: $STRATEGY"
+              exit 1
+              ;;
+          esac
+
+          STRATEGY=$(kubectl get crd rebalances.apps.emqx.io \
+            --ignore-not-found \
+            -o jsonpath='{.spec.conversion.strategy}')
+          case "$STRATEGY" in
+            Webhook)
+              echo "--- Patching CRD rebalances.apps.emqx.io ..."
+              kubectl patch crd rebalances.apps.emqx.io \
+                --type=json \
+                -p='[{"op":"replace","path":"/spec/conversion","value":{"strategy":"None"}}]'
+              ;;
+            "")
+              echo "--- CRD rebalances.apps.emqx.io not found, skipping."
+              ;;
+            None)
+              echo "--- CRD rebalances.apps.emqx.io already up-to-date."
+              ;;
+            *)
+              echo "ERROR: CRD rebalances.apps.emqx.io has unexpected conversion strategy: $STRATEGY"
+              exit 1
+              ;;
+          esac
+
+          echo "=== Conversion webhook cleanup complete ==="
