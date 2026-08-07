@@ -30,7 +30,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 			ClusterDomain: "cluster.local",
 		},
 	}
-	instance.Spec.CoreTemplate.ObjectMeta = metav1.ObjectMeta{
+	instance.Spec.CoreTemplate.TemplateObjectMeta = crd.TemplateObjectMeta{
 		Labels: map[string]string{
 			"core-label-key": "core-label-value",
 		},

@@ -85,26 +85,17 @@ spec:
                 description: Template for Pods running EMQX core nodes.
                 properties:
                   metadata:
-                    description: |-
-                      Standard object metadata.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                    description: TemplateObjectMeta contains metadata propagated to
+                      objects created from a template.
                     properties:
                       annotations:
                         additionalProperties:
                           type: string
                         type: object
-                      finalizers:
-                        items:
-                          type: string
-                        type: array
                       labels:
                         additionalProperties:
                           type: string
                         type: object
-                      name:
-                        type: string
-                      namespace:
-                        type: string
                     type: object
                   spec:
                     default: {}
@@ -7731,26 +7722,17 @@ spec:
                     description: Specifies whether the Service should be created.
                     type: boolean
                   metadata:
-                    description: |-
-                      Standard object metadata.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                    description: TemplateObjectMeta contains metadata propagated to
+                      objects created from a template.
                     properties:
                       annotations:
                         additionalProperties:
                           type: string
                         type: object
-                      finalizers:
-                        items:
-                          type: string
-                        type: array
                       labels:
                         additionalProperties:
                           type: string
                         type: object
-                      name:
-                        type: string
-                      namespace:
-                        type: string
                     type: object
                   spec:
                     description: |-
@@ -8143,26 +8125,17 @@ spec:
                     description: Specifies whether the Service should be created.
                     type: boolean
                   metadata:
-                    description: |-
-                      Standard object metadata.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                    description: TemplateObjectMeta contains metadata propagated to
+                      objects created from a template.
                     properties:
                       annotations:
                         additionalProperties:
                           type: string
                         type: object
-                      finalizers:
-                        items:
-                          type: string
-                        type: array
                       labels:
                         additionalProperties:
                           type: string
                         type: object
-                      name:
-                        type: string
-                      namespace:
-                        type: string
                     type: object
                   spec:
                     description: |-
@@ -8514,26 +8487,17 @@ spec:
                 description: Template for Pods running EMQX replicant nodes.
                 properties:
                   metadata:
-                    description: |-
-                      Standard object metadata.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                    description: TemplateObjectMeta contains metadata propagated to
+                      objects created from a template.
                     properties:
                       annotations:
                         additionalProperties:
                           type: string
                         type: object
-                      finalizers:
-                        items:
-                          type: string
-                        type: array
                       labels:
                         additionalProperties:
                           type: string
                         type: object
-                      name:
-                        type: string
-                      namespace:
-                        type: string
                     type: object
                   spec:
                     description: |-

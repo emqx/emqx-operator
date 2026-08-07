@@ -52,13 +52,13 @@ func (a *addService) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 }
 
 func generateDashboardService(instance *crd.EMQX, conf *config.EMQX) *corev1.Service {
-	meta := &metav1.ObjectMeta{}
+	meta := &crd.TemplateObjectMeta{}
 	spec := &corev1.ServiceSpec{}
 	if instance.Spec.DashboardServiceTemplate != nil {
 		if !instance.Spec.DashboardServiceTemplate.IsEnabled() {
 			return nil
 		}
-		meta = instance.Spec.DashboardServiceTemplate.ObjectMeta.DeepCopy()
+		meta = instance.Spec.DashboardServiceTemplate.TemplateObjectMeta.DeepCopy()
 		spec = instance.Spec.DashboardServiceTemplate.Spec.DeepCopy()
 	}
 
@@ -86,13 +86,13 @@ func generateDashboardService(instance *crd.EMQX, conf *config.EMQX) *corev1.Ser
 }
 
 func generateListenerService(r *reconcileRound, instance *crd.EMQX, conf *config.EMQX) *corev1.Service {
-	meta := &metav1.ObjectMeta{}
+	meta := &crd.TemplateObjectMeta{}
 	spec := &corev1.ServiceSpec{}
 	if instance.Spec.ListenersServiceTemplate != nil {
 		if !instance.Spec.ListenersServiceTemplate.IsEnabled() {
 			return nil
 		}
-		meta = instance.Spec.ListenersServiceTemplate.ObjectMeta.DeepCopy()
+		meta = instance.Spec.ListenersServiceTemplate.TemplateObjectMeta.DeepCopy()
 		spec = instance.Spec.ListenersServiceTemplate.Spec.DeepCopy()
 	}
 

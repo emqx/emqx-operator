@@ -32,7 +32,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addHeadlessService", Ordered, func
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate = crd.EMQXCoreTemplate{
-			ObjectMeta: metav1.ObjectMeta{
+			TemplateObjectMeta: crd.TemplateObjectMeta{
 				Labels: instance.DefaultLabelsWith(crd.CoreLabels()),
 			},
 		}
