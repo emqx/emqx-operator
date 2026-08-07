@@ -18,7 +18,7 @@ func TestGenerateHeadlessSVC(t *testing.T) {
 		},
 		Spec: crd.EMQXSpec{
 			CoreTemplate: crd.EMQXCoreTemplate{
-				ObjectMeta: metav1.ObjectMeta{
+				TemplateObjectMeta: crd.TemplateObjectMeta{
 					Labels: map[string]string{"test": "label"},
 				},
 			},

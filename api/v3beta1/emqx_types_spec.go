@@ -18,7 +18,6 @@ package v3beta1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 )
@@ -159,10 +158,14 @@ type EvacuationStrategy struct {
 	WaitHealthCheck int32 `json:"waitHealthCheck,omitempty"`
 }
 
+// TemplateObjectMeta contains metadata propagated to objects created from a template.
+type TemplateObjectMeta struct {
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
 type EMQXCoreTemplate struct {
-	// Standard object metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	TemplateObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired state of a core node.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	// +kubebuilder:default={}
@@ -170,9 +173,7 @@ type EMQXCoreTemplate struct {
 }
 
 type EMQXReplicantTemplate struct {
-	// Standard object metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	TemplateObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired state of a replicant node.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	Spec EMQXReplicantTemplateSpec `json:"spec,omitempty"`
@@ -301,10 +302,8 @@ type EMQXReplicantTemplateSpec struct {
 type ServiceTemplate struct {
 	// Specifies whether the Service should be created.
 	// +kubebuilder:default:=true
-	Enabled *bool `json:"enabled,omitempty"`
-	// Standard object metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Enabled            *bool `json:"enabled,omitempty"`
+	TemplateObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired state of a Service.
 	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	Spec corev1.ServiceSpec `json:"spec,omitempty"`

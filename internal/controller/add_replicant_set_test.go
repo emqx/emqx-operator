@@ -29,7 +29,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 		},
 	}
 	instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
-		ObjectMeta: metav1.ObjectMeta{
+		TemplateObjectMeta: crd.TemplateObjectMeta{
 			Labels: map[string]string{
 				"repl-label-key": "repl-label-value",
 			},

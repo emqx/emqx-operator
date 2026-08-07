@@ -33,7 +33,7 @@ func TestGenerateDashboardService(t *testing.T) {
 			Spec: crd.EMQXSpec{
 				DashboardServiceTemplate: &crd.ServiceTemplate{
 					Enabled: ptr.To(true),
-					ObjectMeta: metav1.ObjectMeta{
+					TemplateObjectMeta: crd.TemplateObjectMeta{
 						Labels: map[string]string{
 							"dashboard-label-key": "dashboard",
 						},
@@ -163,7 +163,7 @@ func TestGenerateListenersService(t *testing.T) {
 			Spec: crd.EMQXSpec{
 				ListenersServiceTemplate: &crd.ServiceTemplate{
 					Enabled: ptr.To(true),
-					ObjectMeta: metav1.ObjectMeta{
+					TemplateObjectMeta: crd.TemplateObjectMeta{
 						Labels: map[string]string{
 							"dashboard-label-key": "listeners",
 						},
