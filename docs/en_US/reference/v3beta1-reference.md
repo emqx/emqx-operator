@@ -118,7 +118,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `metadata` _[TemplateObjectMeta](#templateobjectmeta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
 | `spec` _[EMQXCoreTemplateSpec](#emqxcoretemplatespec)_ | Specification of the desired state of a core node.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status | \{  \} |  |
 
 
@@ -197,7 +197,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `metadata` _[TemplateObjectMeta](#templateobjectmeta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
 | `spec` _[EMQXReplicantTemplateSpec](#emqxreplicanttemplatespec)_ | Specification of the desired state of a replicant node.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status |  |  |
 
 
@@ -406,8 +406,27 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | Specifies whether the Service should be created. | true |  |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `metadata` _[TemplateObjectMeta](#templateobjectmeta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
 | `spec` _[ServiceSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#servicespec-v1-core)_ | Specification of the desired state of a Service.<br />https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status |  |  |
+
+
+#### TemplateObjectMeta
+
+
+
+TemplateObjectMeta contains metadata propagated to objects created from a template.
+
+
+
+_Appears in:_
+- [EMQXCoreTemplate](#emqxcoretemplate)
+- [EMQXReplicantTemplate](#emqxreplicanttemplate)
+- [ServiceTemplate](#servicetemplate)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `labels` _object (keys:string, values:string)_ |  |  |  |
+| `annotations` _object (keys:string, values:string)_ |  |  |  |
 
 
 #### UpdateStrategy
