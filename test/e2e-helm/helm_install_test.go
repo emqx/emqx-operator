@@ -40,17 +40,20 @@ func helmInstall(namespace string, extraArgs ...string) error { //nolint:unparam
 }
 
 // helmUpgrade upgrades to the local 2.3.x chart in the given namespace with --wait.
-func helmUpgrade(namespace string) error {
-	return Run("helm", "upgrade",
+func helmUpgrade(namespace string, extraArgs ...string) error {
+	args := []string{
+		"upgrade",
 		helmReleaseName,
 		localChartPath,
 		"--namespace", namespace,
-		"--set", "image.repository="+operatorImageRepo,
-		"--set", "image.tag="+operatorImageTag,
+		"--set", "image.repository=" + operatorImageRepo,
+		"--set", "image.tag=" + operatorImageTag,
 		"--set", "image.pullPolicy=Never",
 		"--wait",
 		"--timeout", "2m",
-	)
+	}
+	args = append(args, extraArgs...)
+	return Run("helm", args...)
 }
 
 // helmCleanup removes all resources that 2.3.x chart may have left behind in
@@ -61,6 +64,8 @@ func helmCleanup(namespace string) {
 	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-manager-rolebinding", "--ignore-not-found")
 	_ = Kubectl("delete", "clusterrole", "emqx-operator-pre-upgrade", "--ignore-not-found")
 	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-pre-upgrade", "--ignore-not-found")
+	_ = Kubectl("delete", "clusterrole", "emqx-operator-pre-upgrade-check", "--ignore-not-found")
+	_ = Kubectl("delete", "clusterrolebinding", "emqx-operator-pre-upgrade-check", "--ignore-not-found")
 	_ = Kubectl("delete", "crd", "emqxes.apps.emqx.io", "--ignore-not-found")
 	_ = Kubectl("delete", "crd", "rebalances.apps.emqx.io", "--ignore-not-found")
 	_ = Kubectl("delete", "ns", namespace, "--ignore-not-found")

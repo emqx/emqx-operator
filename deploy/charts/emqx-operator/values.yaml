@@ -70,33 +70,31 @@ tolerations: []
 affinity: {}
 
 ## Upgrade settings.
-## A pre-install/pre-upgrade Job runs automatically to ensure a smooth
-## upgrade from earlier chart versions:
-##   1. Checks for legacy custom resources (emqxbrokers, emqxenterprises,
-##      emqxplugins) and blocks the upgrade if any exist, because Helm
-##      will delete those CRDs (and their CRs) during the upgrade.
-##   2. Patches CRD conversion webhooks to strategy "None" so the API
-##      server does not fail while the old operator is being replaced.
+## Pre-install/pre-upgrade hooks run automatically to ensure a smooth upgrade
+## from earlier chart versions. A dedicated hook always patches CRD conversion
+## webhooks to strategy "None" so the API server does not fail while the old
+## operator is being replaced. It can also check for legacy custom resources
+## (emqxbrokers, emqxenterprises, emqxplugins) and block the upgrade before Helm
+## deletes those CRDs and their CRs.
 ##
-## The Job is fully idempotent and becomes a no-op on fresh installs.
+## The hooks are fully idempotent and become no-ops on fresh installs.
 upgrade:
-  ## Run the pre-upgrade compatibility check Job.
-  ## Enabled by default so that upgrades from 2.2.x work out of the box.
-  ## Set to false to skip the Job entirely (e.g. in air-gapped
-  ## environments where pulling the kubectl image is not possible).
+  ## Check for legacy custom resources before upgrading and block the upgrade
+  ## if any exist. Disabling this check does not disable the mandatory CRD
+  ## conversion webhook cleanup hook.
   preUpgradeCheck: true
 
-  ## Image used for the pre-upgrade cleanup Job.
+  ## Image used for the pre-upgrade hooks.
   ## Must include kubectl and sh.
   image:
     repository: alpine/k8s
     tag: "1.31.4"
     pullPolicy: IfNotPresent
 
-  ## Optional pod security context overrides for the pre-upgrade Job.
+  ## Optional pod security context overrides for the pre-upgrade Jobs.
   ## Defaults to podSecurityContext, with runAsUser=65534 added when no UID is set.
   podSecurityContext: {}
 
-  ## Optional container security context overrides for the pre-upgrade Job.
+  ## Optional container security context overrides for the pre-upgrade Jobs.
   ## Defaults to containerSecurityContext.
   containerSecurityContext: {}
