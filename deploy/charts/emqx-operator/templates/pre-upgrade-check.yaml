@@ -32,6 +32,12 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 rules:
 - apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+- apiGroups:
   - apps.emqx.io
   resources:
   - emqxbrokers
@@ -100,25 +106,31 @@ spec:
           # destroyed. Abort early and ask the user to migrate first.
           BLOCKED=""
 
-          if kubectl get crd emqxbrokers.apps.emqx.io >/dev/null 2>&1; then
-            N=$(kubectl get emqxbrokers --all-namespaces --no-headers 2>/dev/null | wc -l)
-            if [ "$N" -gt 0 ]; then
+          CRD=$(kubectl get crd emqxbrokers.apps.emqx.io --ignore-not-found -o name)
+          if [ -n "$CRD" ]; then
+            CRS=$(kubectl get emqxbrokers --all-namespaces --no-headers)
+            if [ -n "$CRS" ]; then
+              N=$(printf '%s\n' "$CRS" | wc -l)
               echo "ERROR: Found $N EmqxBroker CR(s)."
               BLOCKED="emqxbrokers $BLOCKED"
             fi
           fi
 
-          if kubectl get crd emqxenterprises.apps.emqx.io >/dev/null 2>&1; then
-            N=$(kubectl get emqxenterprises --all-namespaces --no-headers 2>/dev/null | wc -l)
-            if [ "$N" -gt 0 ]; then
+          CRD=$(kubectl get crd emqxenterprises.apps.emqx.io --ignore-not-found -o name)
+          if [ -n "$CRD" ]; then
+            CRS=$(kubectl get emqxenterprises --all-namespaces --no-headers)
+            if [ -n "$CRS" ]; then
+              N=$(printf '%s\n' "$CRS" | wc -l)
               echo "ERROR: Found $N EmqxEnterprise CR(s)."
               BLOCKED="emqxenterprises $BLOCKED"
             fi
           fi
 
-          if kubectl get crd emqxplugins.apps.emqx.io >/dev/null 2>&1; then
-            N=$(kubectl get emqxplugins --all-namespaces --no-headers 2>/dev/null | wc -l)
-            if [ "$N" -gt 0 ]; then
+          CRD=$(kubectl get crd emqxplugins.apps.emqx.io --ignore-not-found -o name)
+          if [ -n "$CRD" ]; then
+            CRS=$(kubectl get emqxplugins --all-namespaces --no-headers)
+            if [ -n "$CRS" ]; then
+              N=$(printf '%s\n' "$CRS" | wc -l)
               echo "ERROR: Found $N EmqxPlugin CR(s)."
               BLOCKED="emqxplugins $BLOCKED"
             fi
