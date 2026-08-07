@@ -23,10 +23,14 @@ func (s *retireCorePods) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 	}
 
 	for _, pod := range r.state.podsManagedBy(coreSet) {
+		// No finalizer attached, skip:
 		if !controllerutil.ContainsFinalizer(pod, crd.FinalizerScaleDownRetirement) {
 			continue
 		}
+
+		// Has finalizer but no deletion was requested, reconcile:
 		if pod.DeletionTimestamp == nil {
+			// If this replica is in the range of desired number of replicas, drop the finalizer:
 			ordinal := util.PodOrdinal(pod.Name)
 			if ordinal >= 0 && ordinal < int(instance.Spec.NumCoreReplicas()) {
 				err := removeScaleDownRetirementFinalizer(r.ctx, s.Client, pod)
