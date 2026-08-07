@@ -15,6 +15,16 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// Responsibilities:
+// - Reflects aggregate state of the managed EMQX cluster in the `.status` subresource.
+//
+// On each reconciliation status is built from:
+//  1. Conditions and few auxiliary status fields preserved from previous reconciliations.
+//  2. State of managed K8S resources aggregated into basic status fields.
+//  3. Information on cluster nodes, node evacuations and DS replication sourced from EMQX API.
+//     If EMQX API is unavailable these fields will remain empty; unavailability will be reflected
+//     in the respective status condition.
+//  4. Re-evaluated conditions.
 type updateStatus struct {
 	*EMQXReconciler
 }
@@ -59,13 +69,15 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 		status.ReplicantNodesStatus.UpdateReplicas = updateReplicantSet.Status.Replicas
 	}
 
+	var apiError error
 	req := r.preferredCoreRequester()
 
-	// check emqx node status
+	// 1. Reflect EMQX cluster nodes information.
 	if req != nil {
 		nodes, err := api.Nodes(req)
 		if err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to get node status")}
+			apiError = err
+			req = nil
 		}
 		emqxNodes := u.getEMQXNodeList(r, instance, nodes)
 		for _, n := range emqxNodes {
@@ -73,6 +85,68 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 				status.ReplicantNodes = append(status.ReplicantNodes, n)
 			} else {
 				status.CoreNodes = append(status.CoreNodes, n)
+			}
+		}
+	}
+
+	// 2. Report node evacuation status.
+	if req != nil {
+		clusterEvacuationsStatus, err := api.ClusterEvacuationStatus(req)
+		if err != nil {
+			apiError = err
+			req = nil
+		}
+		for _, ns := range clusterEvacuationsStatus {
+			status.NodeEvacuations = append(status.NodeEvacuations, crd.NodeEvacuationStatus{
+				NodeName:               ns.Node,
+				State:                  ns.State,
+				SessionRecipients:      ns.SessionRecipients,
+				SessionEvictionRate:    ns.SessionEvictionRate,
+				ConnectionEvictionRate: ns.ConnectionEvictionRate,
+				// Stats
+				InitialSessions:    ns.Stats.InitialSessions,
+				InitialConnections: ns.Stats.InitialConnected,
+			})
+		}
+	}
+
+	// 3. Reflect the status of the DS replication.
+	if req != nil {
+		dsReplicationStatus, err := api.GetDSReplicationStatus(req)
+		if err != nil {
+			apiError = err
+			req = nil
+		}
+		status.DSReplication.DBs = make([]crd.DSDBReplicationStatus, len(dsReplicationStatus.DBs))
+		for i, db := range dsReplicationStatus.DBs {
+			minReplicas := 0
+			maxReplicas := 0
+			numTransitions := 0
+			numShardReplicas := 0
+			lostShardReplicas := 0
+			if len(db.Shards) > 0 {
+				minReplicas = len(db.Shards[0].Replicas)
+				maxReplicas = len(db.Shards[0].Replicas)
+			}
+			for _, shard := range db.Shards {
+				minReplicas = min(minReplicas, len(shard.Replicas))
+				maxReplicas = max(maxReplicas, len(shard.Replicas))
+				numTransitions += len(shard.Transitions)
+				numShardReplicas += len(shard.Replicas)
+				for _, replica := range shard.Replicas {
+					if replica.Status == "lost" {
+						lostShardReplicas += 1
+					}
+				}
+			}
+			status.DSReplication.DBs[i] = crd.DSDBReplicationStatus{
+				Name:              db.Name,
+				NumShards:         int32(len(db.Shards)),
+				NumShardReplicas:  int32(numShardReplicas),
+				LostShardReplicas: int32(lostShardReplicas),
+				NumTransitions:    int32(numTransitions),
+				MinReplicas:       int32(minReplicas),
+				MaxReplicas:       int32(maxReplicas),
 			}
 		}
 	}
@@ -91,68 +165,28 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 		}
 	}
 
-	if req != nil {
-		clusterEvacuationsStatus, err := api.ClusterEvacuationStatus(req)
-		if err == nil {
-			for _, ns := range clusterEvacuationsStatus {
-				status.NodeEvacuations = append(status.NodeEvacuations, crd.NodeEvacuationStatus{
-					NodeName:               ns.Node,
-					State:                  ns.State,
-					SessionRecipients:      ns.SessionRecipients,
-					SessionEvictionRate:    ns.SessionEvictionRate,
-					ConnectionEvictionRate: ns.ConnectionEvictionRate,
-					// Stats
-					InitialSessions:    ns.Stats.InitialSessions,
-					InitialConnections: ns.Stats.InitialConnected,
-				})
-			}
-		} else {
-			return subResult{err: emperror.Wrap(err, "failed to get node evacuation status")}
-		}
-	}
-
-	// Reflect the status of the DS replication in the resource status.
-	var dsReplicationStatus api.DSReplicationStatus
-	if req != nil {
-		var err error
-		dsReplicationStatus, err = api.GetDSReplicationStatus(req)
-		if err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to get DS replication status")}
-		}
-	}
-	if len(dsReplicationStatus.DBs) > 0 {
-		status.DSReplication.DBs = make([]crd.DSDBReplicationStatus, len(dsReplicationStatus.DBs))
-	}
-	for i, db := range dsReplicationStatus.DBs {
-		minReplicas := 0
-		maxReplicas := 0
-		numTransitions := 0
-		numShardReplicas := 0
-		lostShardReplicas := 0
-		if len(db.Shards) > 0 {
-			minReplicas = len(db.Shards[0].Replicas)
-			maxReplicas = len(db.Shards[0].Replicas)
-		}
-		for _, shard := range db.Shards {
-			minReplicas = min(minReplicas, len(shard.Replicas))
-			maxReplicas = max(maxReplicas, len(shard.Replicas))
-			numTransitions += len(shard.Transitions)
-			numShardReplicas += len(shard.Replicas)
-			for _, replica := range shard.Replicas {
-				if replica.Status == "lost" {
-					lostShardReplicas += 1
-				}
-			}
-		}
-		status.DSReplication.DBs[i] = crd.DSDBReplicationStatus{
-			Name:              db.Name,
-			NumShards:         int32(len(db.Shards)),
-			NumShardReplicas:  int32(numShardReplicas),
-			LostShardReplicas: int32(lostShardReplicas),
-			NumTransitions:    int32(numTransitions),
-			MinReplicas:       int32(minReplicas),
-			MaxReplicas:       int32(maxReplicas),
-		}
+	switch {
+	case apiError != nil:
+		status.SetCondition(
+			crd.EMQXAPIAvailable,
+			metav1.ConditionFalse,
+			"RequestFailed",
+			apiError.Error(),
+		)
+	case req == nil:
+		status.SetCondition(
+			crd.EMQXAPIAvailable,
+			metav1.ConditionFalse,
+			"NoRequester",
+			"No eligible core pod is available to serve EMQX API requests",
+		)
+	default:
+		status.SetCondition(
+			crd.EMQXAPIAvailable,
+			metav1.ConditionTrue,
+			"RequestSucceeded",
+			"EMQX API is available",
+		)
 	}
 
 	// update status condition

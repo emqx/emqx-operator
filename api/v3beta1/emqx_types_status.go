@@ -210,6 +210,7 @@ type DSDBReplicationStatus struct {
 }
 
 const (
+	EMQXAPIAvailable          string = "EMQXAPIAvailable"
 	CoreNodesProgressing      string = "CoreNodesProgressing"
 	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
 	Available                 string = "Available"
