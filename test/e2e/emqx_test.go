@@ -522,6 +522,78 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		})
 	})
 
+	Context("EMQX Core-Replicant Cluster / Botched Rolling Updates", func() {
+		const (
+			coreReplicas      = 2
+			replicantReplicas = 2
+		)
+
+		It("deploy cluster", func() {
+			By("create EMQX cluster")
+			emqxCR := PatchDocument(
+				FromYAMLFile(emqxCRBasic),
+				withImage(emqxImage),
+				withCores(coreReplicas),
+				withReplicants(replicantReplicas),
+				withConfig(),
+			)
+			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+			By("wait for EMQX cluster to be ready")
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
+		})
+
+		It("trigger botched rolling updates", func() {
+			By("create MQTT workload")
+			Expect(Kubectl("apply", "-f", "test/e2e/files/resources/mqttx.yaml")).To(Succeed())
+			defer Kubectl("delete", "-f", "test/e2e/files/resources/mqttx.yaml")
+			Expect(Kubectl("wait", "pod",
+				"--selector=app=mqttx",
+				"--for=condition=Ready",
+				"--timeout=1m",
+			)).To(Succeed(), "Timed out waiting MQTTX to be ready")
+
+			By("lookup initial EMQX status")
+			var statusInitial crd.EMQXStatus
+			Eventually(EMQXReady).Should(Succeed())
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status}")).
+				To(UnmarshalInto(&statusInitial))
+
+			By("specify incorrect EMQX image")
+			changedAt1 := metav1.Now()
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "json",
+				"--patch", `[
+					{"op": "replace", "path": "/spec/image", "value": "emqx/emqx:6.Y.ZZZ"}
+				]`)).
+				To(Succeed())
+			Consistently(EMQXReady, "30s", "3s").WithArguments(changedAt1).Should(Not(Succeed()))
+
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status}")).
+				To(BeUnmarshalledAs(&crd.EMQXStatus{}, And(
+					HaveField("CoreNodesStatus.ReadyReplicas", Equal(statusInitial.CoreNodesStatus.ReadyReplicas-1)),
+					HaveField("ReplicantNodesStatus.ReadyReplicas", Equal(statusInitial.ReplicantNodesStatus.ReadyReplicas-1)),
+				)), "exactly 1 core and replicant replica went unavailable")
+
+			By("restore correct EMQX image")
+			changedAt2 := metav1.Now()
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "json",
+				"--patch", `[
+					{"op": "replace", "path": "/spec/image", "value": "`+emqxImageUpgrade+`"}
+				]`)).
+				To(Succeed())
+			Eventually(EMQXReady).WithArguments(changedAt2).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(replicantReplicas).Should(Succeed())
+		})
+
+		It("delete cluster", func() {
+			Expect(Kubectl("delete", "emqx", "emqx")).To(Succeed())
+		})
+	})
+
 	Context("EMQX Core-Replicant DS-Enabled Cluster", func() {
 		// Initial number of core and replicant replicas:
 		var coreReplicas = 2
