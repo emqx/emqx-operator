@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"time"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
@@ -29,14 +30,41 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 		updateRevision  string = "update"
 	)
 
-	updateLabels := emqx.DefaultLabelsWith(
-		crd.ReplicantLabels(),
-		map[string]string{crd.LabelPodTemplateHash: updateRevision},
-	)
-	currentLabels := emqx.DefaultLabelsWith(
-		crd.ReplicantLabels(),
-		map[string]string{crd.LabelPodTemplateHash: currentRevision},
-	)
+	mkReplicantSet := func(revision, image string, replicas int32) *appsv1.ReplicaSet {
+		labels := emqx.DefaultLabelsWith(
+			crd.ReplicantLabels(),
+			map[string]string{crd.LabelPodTemplateHash: revision},
+		)
+		return &appsv1.ReplicaSet{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: emqx.Name + "-",
+				Namespace:    ns.Name,
+				Labels:       labels,
+			},
+			Spec: appsv1.ReplicaSetSpec{
+				Replicas: ptr.To(replicas),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: labels,
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: labels,
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "emqx", Image: image}},
+					},
+				},
+			},
+		}
+	}
+
+	mkReadyCondition := func(status corev1.ConditionStatus, sinceAgo time.Duration) corev1.PodCondition {
+		return corev1.PodCondition{
+			Type:               corev1.PodReady,
+			Status:             status,
+			LastTransitionTime: metav1.NewTime(time.Now().Add(-sinceAgo)),
+		}
+	}
 
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
@@ -68,44 +96,22 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 					Replicas: ptr.To(int32(3)),
 				},
 			}
+			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
+				MaxUnavailable: ptr.To(intstr.FromInt(1)),
+				MaxSurge:       ptr.To(intstr.FromInt(0)),
+			}
 
 			resources = []client.Object{}
 
-			update = &appsv1.ReplicaSet{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: emqx.Name + "-",
-					Namespace:    ns.Name,
-					Labels:       updateLabels,
-				},
-				Spec: appsv1.ReplicaSetSpec{
-					Replicas: ptr.To(int32(1)),
-					Selector: &metav1.LabelSelector{
-						MatchLabels: updateLabels,
-					},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: updateLabels,
-						},
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{Name: "emqx", Image: "emqx"},
-							},
-						},
-					},
-				},
-			}
-			current = update.DeepCopy()
-			current.Labels = currentLabels
-			current.Spec.Selector.MatchLabels = currentLabels
-			current.Spec.Template.Labels = currentLabels
-			current.Spec.Replicas = ptr.To(int32(3))
+			update = mkReplicantSet(updateRevision, "emqx", 1)
+			current = mkReplicantSet(currentRevision, "emqx:0", 3)
 			Expect(k8sClient.Create(ctx, update)).Should(Succeed())
 			Expect(k8sClient.Create(ctx, current)).Should(Succeed())
 
 			resources = append(resources, current, update)
 
 			currentReplicants = []*corev1.Pod{}
-			for i := 0; i < 3; i++ {
+			for i := range 3 {
 				pod := &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName:    current.Name + "-" + currentRevision + fmt.Sprint(i) + "-",
@@ -116,6 +122,8 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 					Spec: current.Spec.Template.Spec,
 				}
 				Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+				pod.Status.Conditions = []corev1.PodCondition{mkReadyCondition(corev1.ConditionTrue, time.Minute)}
+				Expect(k8sClient.Status().Update(ctx, pod)).Should(Succeed())
 				currentReplicants = append(currentReplicants, pod)
 				resources = append(resources, pod)
 			}
@@ -185,7 +193,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 		})
 
 		It("drains up to maxUnavailable old pods in one reconcile", func() {
-			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(3))}
+			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
+				MaxUnavailable: ptr.To(intstr.FromInt32(*current.Spec.Replicas)),
+			}
 			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
@@ -201,11 +211,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 			)
 		})
 
-		It("drains no pods if maxUnavailable reached", func() {
-			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(3))}
-			Expect(actualObject(current)).To(Not(BeNil()))
-			current.Status.AvailableReplicas = 0
-			Expect(k8sClient.Status().Update(ctx, current)).Should(Succeed())
+		It("drains no healthy pods if maxUnavailable reached", func() {
+			instance.Spec.ReplicantTemplate.Spec.Replicas =
+				ptr.To(1 + *instance.Spec.ReplicantTemplate.Spec.Replicas)
 			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
@@ -274,6 +282,122 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 		})
 	})
 
+	Context("rolling update multi-revision", func() {
+		var update, current, broken *appsv1.ReplicaSet
+		var currentReplicants []*corev1.Pod
+		var brokenReplicant *corev1.Pod
+		var resources []client.Object
+
+		const brokenRevision = "broken"
+
+		BeforeEach(func() {
+			instance = emqx.DeepCopy()
+			instance.Namespace = ns.Name
+			instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+				Spec: crd.EMQXReplicantTemplateSpec{
+					Replicas: ptr.To(int32(3)),
+				},
+			}
+			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
+				MaxUnavailable: ptr.To(intstr.FromInt(1)),
+				MaxSurge:       ptr.To(intstr.FromInt(0)),
+			}
+
+			current = mkReplicantSet(currentRevision, "emqx", 2)
+			broken = mkReplicantSet(brokenRevision, "emqx:broken", 1)
+			update = mkReplicantSet(updateRevision, "emqx:new", 0)
+			Expect(k8sClient.Create(ctx, current)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, update)).Should(Succeed())
+			Expect(k8sClient.Create(ctx, broken)).Should(Succeed())
+
+			resources = append(resources, current, update, broken)
+
+			currentReplicants = []*corev1.Pod{}
+			for i := range 2 {
+				pod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName:    current.Name + "-" + fmt.Sprint(i) + "-",
+						Namespace:       ns.Name,
+						Labels:          current.Spec.Template.Labels,
+						OwnerReferences: ownerReferences(current),
+					},
+					Spec: current.Spec.Template.Spec,
+				}
+				Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+				pod.Status.Conditions = []corev1.PodCondition{mkReadyCondition(corev1.ConditionTrue, time.Minute)}
+				Expect(k8sClient.Status().Update(ctx, pod)).Should(Succeed())
+				currentReplicants = append(currentReplicants, pod)
+				resources = append(resources, pod)
+			}
+
+			brokenReplicant = &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName:    broken.Name + "-",
+					Namespace:       ns.Name,
+					Labels:          broken.Spec.Template.Labels,
+					OwnerReferences: ownerReferences(broken),
+				},
+				Spec: broken.Spec.Template.Spec,
+			}
+			Expect(k8sClient.Create(ctx, brokenReplicant)).Should(Succeed())
+			resources = append(resources, brokenReplicant)
+
+			current.Status.Replicas = 2
+			current.Status.ReadyReplicas = 2
+			current.Status.AvailableReplicas = 2
+			Expect(k8sClient.Status().Update(ctx, current)).Should(Succeed())
+			broken.Status.Replicas = 1
+			Expect(k8sClient.Status().Update(ctx, broken)).Should(Succeed())
+
+			instance.Status = crd.EMQXStatus{
+				CoreNodesStatus: crd.CoreNodesStatus{ReadyReplicas: 1},
+				ReplicantNodesStatus: crd.ReplicantNodesStatus{
+					CurrentRevision: currentRevision,
+					CurrentReplicas: 2,
+					UpdateRevision:  updateRevision,
+					ReadyReplicas:   2,
+				},
+				ReplicantNodes: []crd.EMQXNode{
+					{Name: "emqx@10.0.0.1", PodName: currentReplicants[0].Name, Status: "running"},
+					{Name: "emqx@10.0.0.2", PodName: currentReplicants[1].Name, Status: "running"},
+				},
+			}
+		})
+
+		AfterEach(func() {
+			slices.Reverse(resources)
+			for _, resource := range resources {
+				_ = k8sClient.Delete(ctx, resource)
+			}
+		})
+
+		It("cleans up an unavailable outdated revision when maxUnavailable is reached", func() {
+			s := &syncReplicantSets{emqxReconciler()}
+			round := newReconcileRound()
+			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+			Eventually(s.reconcile).WithArguments(round, instance).
+				Should(BeSuccessfulReconcile())
+
+			Expect(actualObject(brokenReplicant)).To(
+				HaveField("Annotations", HaveKey(corev1.PodDeletionCost)),
+			)
+			Expect(actualObject(broken)).To(
+				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))),
+			)
+			for _, pod := range currentReplicants {
+				Expect(actualObject(pod)).To(Not(
+					HaveField("Annotations", HaveKey(corev1.PodDeletionCost)),
+				))
+			}
+			Expect(actualObject(current)).To(
+				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(2))),
+			)
+			Expect(actualObject(update)).To(
+				HaveField("Spec.Replicas", HaveValue(BeEquivalentTo(0))),
+			)
+		})
+	})
+
 	Context("scale-up / scale-down", func() {
 		var rs *appsv1.ReplicaSet
 		var replicants []*corev1.Pod
@@ -334,6 +458,8 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 					Spec: rs.Spec.Template.Spec,
 				}
 				Expect(k8sClient.Create(ctx, pod)).Should(Succeed())
+				pod.Status.Conditions = []corev1.PodCondition{mkReadyCondition(corev1.ConditionTrue, 0)}
+				Expect(k8sClient.Status().Update(ctx, pod)).Should(Succeed())
 				replicants = append(replicants, pod)
 				resources = append(resources, pod)
 			}
@@ -664,6 +790,20 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		}
 		Expect(k8sClient.Create(ctx, currentPod)).Should(Succeed())
 
+		currentPod.Status.Conditions = []corev1.PodCondition{
+			{
+				Type:               corev1.PodReady,
+				Status:             corev1.ConditionTrue,
+				LastTransitionTime: metav1.NewTime(time.Now().Add(-1 * time.Minute)),
+			},
+		}
+		Expect(k8sClient.Status().Update(ctx, currentPod)).Should(Succeed())
+
+		current.Status.Replicas = 1
+		current.Status.ReadyReplicas = 1
+		current.Status.AvailableReplicas = 1
+		Expect(k8sClient.Status().Update(ctx, current)).Should(Succeed())
+
 		// Create "update" (new) RS with a different hash label.
 		updateLabels := emqx.DefaultLabelsWith(
 			crd.ReplicantLabels(),
@@ -710,7 +850,11 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		}
 		Expect(k8sClient.Create(ctx, updatePod)).Should(Succeed())
 		updatePod.Status.Conditions = []corev1.PodCondition{
-			{Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: metav1.Now()},
+			{
+				Type:               corev1.PodReady,
+				Status:             corev1.ConditionTrue,
+				LastTransitionTime: metav1.Now(),
+			},
 		}
 		Expect(k8sClient.Status().Update(ctx, updatePod)).Should(Succeed())
 
@@ -740,10 +884,19 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		}
 	})
 
-	It("replicants not available", func() {
-		round := newReconcileRound()
+	It("update replicants not yet available", func() {
+		instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
+			MaxUnavailable: ptr.To(intstr.FromInt(0)),
+			MaxSurge:       ptr.To(intstr.FromInt(1)),
+		}
+		updatePod.Status.Conditions = []corev1.PodCondition{
+			{Type: corev1.PodReady, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()},
+		}
+		Expect(k8sClient.Status().Update(ctx, updatePod)).Should(Succeed())
+		update.Status.ReadyReplicas = 0
 		update.Status.AvailableReplicas = 0
 		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
+		round := newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		s := &syncReplicantSets{emqxReconciler()}
 		admissions := s.outdatedReplicantAdmissions(round, instance)
@@ -757,8 +910,18 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		//    the maxUnavailable budget.
 		// The controller must still include the pod in admissions because it has
 		// the annotation.
+		instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
+			MaxUnavailable: ptr.To(intstr.FromInt(0)),
+			MaxSurge:       ptr.To(intstr.FromInt(1)),
+		}
 		_ = util.AttachPodAnnotation(currentPod, crd.AnnotationScalingDown, "true")
 		Expect(k8sClient.Update(ctx, currentPod)).Should(Succeed())
+		updatePod.Status.Conditions = []corev1.PodCondition{
+			{Type: corev1.PodReady, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()},
+		}
+		Expect(k8sClient.Status().Update(ctx, currentPod)).Should(Succeed())
+		current.Status.AvailableReplicas = 0
+		Expect(k8sClient.Status().Update(ctx, current)).Should(Succeed())
 		update.Status.AvailableReplicas = 0
 		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
 		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
@@ -784,6 +947,10 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		//    Budget is 0 but the annotation lets it bypass the budget.
 		// The controller must still include the pod in admissions (because it has
 		// the annotation) and allow it to be scheduled for removal.
+		instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
+			MaxUnavailable: ptr.To(intstr.FromInt(0)),
+			MaxSurge:       ptr.To(intstr.FromInt(1)),
+		}
 		_ = util.AttachPodAnnotation(currentPod, crd.AnnotationScalingDown, "true")
 		Expect(k8sClient.Update(ctx, currentPod)).Should(Succeed())
 		// Make update RS unavailable so budget = 0.

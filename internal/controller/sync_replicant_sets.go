@@ -383,9 +383,10 @@ func (s *syncReplicantSets) outdatedReplicantAdmissions(
 }
 
 // evaluateReplicantAdmissions returns admissions for the given candidate pods.
-// Pods already annotated with scaling-down bypass the budget: they were committed
-// to in a previous reconcile iteration. The budget only limits how many *unannotated*
-// pods can be admitted per iteration.
+// Pods already annotated with scaling-down bypass the new-admission limit but keep
+// their regular budget slot: they were committed to in a previous reconcile
+// iteration. Removing an unavailable pod cannot reduce availability further, so it
+// does not consume budget; other unannotated pods do.
 // Candidates are evaluated in order, the caller controls which pods to consider:
 // * outdated pods for migration,
 // * "update" set's replicant pods for scale-down, etc.
@@ -402,22 +403,34 @@ func (s *syncReplicantSets) evaluateReplicantAdmissions(
 			Pod:       pod,
 			Admission: checkReplicantPodRemoval(instance, pod),
 		}
-		// Consume the budget:
-		budgetUsed += 1
-		if _, ok := pod.Annotations[crd.AnnotationScalingDown]; ok {
+		available := s.isReplicantAvailable(instance, pod)
+		_, annotated := pod.Annotations[crd.AnnotationScalingDown]
+		switch {
+		case annotated:
 			// Pod was already committed to in a previous reconcile.
-			// Including it so the controller can progress it toward removal.
+			// Include it so the controller can progress it toward removal, while
+			// reserving its regular budget slot until it is gone.
+			budgetUsed += 1
 			batch = append(batch, admission)
-			continue
+		case admission.Admission.Action == admissionRemove && !available:
+			// Removing an unavailable pod cannot increase unavailability.
+			batch = append(batch, admission)
+		default:
+			// Healthy, uncommitted pods consume the regular maxUnavailable budget.
+			budgetUsed += 1
+			// Otherwise, see if we have budget left:
+			if budgetUsed > budget {
+				continue
+			}
+			// If we do, include the admission:
+			batch = append(batch, admission)
 		}
-		// Otherwise, see if we have budget left:
-		if budgetUsed > budget {
-			continue
-		}
-		// If we do, include the admission:
-		batch = append(batch, admission)
 	}
 	return batch
+}
+
+func (*syncReplicantSets) isReplicantAvailable(instance *crd.EMQX, pod *corev1.Pod) bool {
+	return util.IsPodAvailable(pod, instance.Spec.ReplicantTemplate.Spec.MinReadySeconds)
 }
 
 // podIsActiveReplicant returns `false` if a pod is in the process of or going to be deleted,
