@@ -141,7 +141,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 			resources = append(resources, updateReplicant)
 
 			update.Status.Replicas = 1
-			update.Status.ReadyReplicas = 1
+			update.Status.ReadyReplicas = 0
 			update.Status.AvailableReplicas = 0
 			current.Status.Replicas = 3
 			current.Status.ReadyReplicas = 3
@@ -159,7 +159,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 					UpdateReplicas:  1,
 					CurrentRevision: currentRevision,
 					CurrentReplicas: 3,
-					ReadyReplicas:   4,
+					ReadyReplicas:   3,
 				},
 				ReplicantNodes: []crd.EMQXNode{
 					{Name: "emqx@10.0.0.1", PodName: currentReplicants[0].Name, Status: "running"},
@@ -536,9 +536,6 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 		It("respects maxUnavailable budget during scale-down", func() {
 			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{MaxUnavailable: ptr.To(intstr.FromInt(1))}
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(0))
-			instance.Status.ReplicantNodesStatus.ReadyReplicas = 0
-			rs.Status.AvailableReplicas = 0
-			Expect(k8sClient.Status().Update(ctx, rs)).Should(Succeed())
 
 			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
@@ -916,14 +913,13 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		}
 		_ = util.AttachPodAnnotation(currentPod, crd.AnnotationScalingDown, "true")
 		Expect(k8sClient.Update(ctx, currentPod)).Should(Succeed())
-		updatePod.Status.Conditions = []corev1.PodCondition{
+		currentPod.Status.Conditions = []corev1.PodCondition{
 			{Type: corev1.PodReady, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()},
 		}
 		Expect(k8sClient.Status().Update(ctx, currentPod)).Should(Succeed())
+		current.Status.ReadyReplicas = 0
 		current.Status.AvailableReplicas = 0
 		Expect(k8sClient.Status().Update(ctx, current)).Should(Succeed())
-		update.Status.AvailableReplicas = 0
-		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
 		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 			{NodeName: "emqx@10.0.0.1", State: "evicting_conns"},
 		}
@@ -953,7 +949,12 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		}
 		_ = util.AttachPodAnnotation(currentPod, crd.AnnotationScalingDown, "true")
 		Expect(k8sClient.Update(ctx, currentPod)).Should(Succeed())
-		// Make update RS unavailable so budget = 0.
+		// Make the update pod unavailable so budget = 0.
+		updatePod.Status.Conditions = []corev1.PodCondition{
+			{Type: corev1.PodReady, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()},
+		}
+		Expect(k8sClient.Status().Update(ctx, updatePod)).Should(Succeed())
+		update.Status.ReadyReplicas = 0
 		update.Status.AvailableReplicas = 0
 		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
 		instance.Status.ReplicantNodes[0].Sessions = 0
