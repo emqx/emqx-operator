@@ -127,7 +127,7 @@ func (*retireCorePods) corePodRetirementReady(r *reconcileRound, instance *crd.E
 		}
 	}
 
-	if instance.Status.CoreNodes == nil {
+	if !instance.Status.HasClusterMembership() {
 		return false, "cluster membership state is unknown"
 	}
 

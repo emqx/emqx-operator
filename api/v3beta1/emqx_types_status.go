@@ -132,6 +132,10 @@ type EMQXNode struct {
 	Connections int64 `json:"connections"`
 }
 
+func (s EMQXStatus) HasClusterMembership() bool {
+	return len(s.CoreNodes) > 0
+}
+
 func (s EMQXStatus) FindNode(node string) *EMQXNode {
 	for _, n := range s.CoreNodes {
 		if n.Name == node {

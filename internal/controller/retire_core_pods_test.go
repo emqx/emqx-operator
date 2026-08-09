@@ -19,6 +19,7 @@ func TestCorePodRetirementReadyOverrides(t *testing.T) {
 		deletedAt     time.Time
 		apiStatus     metav1.ConditionStatus
 		apiTransition time.Time
+		coreNodes     []crd.EMQXNode
 		ready         bool
 		reason        string
 	}{
@@ -62,15 +63,13 @@ func TestCorePodRetirementReadyOverrides(t *testing.T) {
 			deletedAt:     now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
 			apiStatus:     metav1.ConditionTrue,
 			apiTransition: now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
-			reason:        "cluster membership state is unknown",
+			coreNodes:     []crd.EMQXNode{{Name: "emqx@emqx", PodName: "emqx-1", Status: "running"}},
+			reason:        "DS cluster state is not loaded",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
-				Labels:            tc.labels,
-				DeletionTimestamp: &metav1.Time{Time: tc.deletedAt},
-			}}
 			instance := &crd.EMQX{}
+			instance.Status.CoreNodes = tc.coreNodes
 			if tc.apiStatus != "" {
 				instance.Status.Conditions = []metav1.Condition{{
 					Type:               crd.EMQXAPIAvailable,
@@ -78,11 +77,13 @@ func TestCorePodRetirementReadyOverrides(t *testing.T) {
 					LastTransitionTime: metav1.NewTime(tc.apiTransition),
 				}}
 			}
-			ready, reason := (&retireCorePods{}).corePodRetirementReady(
-				&reconcileRound{},
-				instance,
-				pod,
-			)
+			r := &retireCorePods{}
+			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Name:              "emqx-0",
+				Labels:            tc.labels,
+				DeletionTimestamp: &metav1.Time{Time: tc.deletedAt},
+			}}
+			ready, reason := r.corePodRetirementReady(&reconcileRound{}, instance, pod)
 			assert.Equal(t, tc.ready, ready)
 			assert.Contains(t, reason, tc.reason)
 		})
