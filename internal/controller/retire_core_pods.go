@@ -7,13 +7,26 @@ import (
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+type forcedRetirementCondition int
+
+const (
+	condEMQXAPIUnavailable forcedRetirementCondition = iota
+	condFallback
+)
+
 // Kubernetes sets DeletionTimestamp to the scheduled end of graceful termination,
-// so the effective timeout from the deletion request includes the pod's grace period.
-const corePodRetirementTimeout = 10 * time.Minute
+// so retirement timeouts measured from it include the pod's grace period.
+var corePodForcedRetirementTimeout = map[forcedRetirementCondition]time.Duration{
+	// causeEMQXAPIUnavailable applies after both pod deletion and continuous EMQX API unavailability have begun.
+	condEMQXAPIUnavailable: time.Minute,
+	// causeFallback defines the unconditional hard retirement deadline.
+	condFallback: time.Minute * 10,
+}
 
 // retireCorePods releases scale-down pod finalizers after other reconcilers
 // have removed the old node identity from EMQX membership and DS metadata.
@@ -87,13 +100,35 @@ func (s *retireCorePods) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 }
 
 func (*retireCorePods) corePodRetirementReady(r *reconcileRound, instance *crd.EMQX, pod *corev1.Pod) (bool, string) {
+	now := time.Now()
+
 	if pod.Labels[crd.LabelForceRetirement] == "true" {
 		return true, "retirement forced"
 	}
 
-	deadline := pod.DeletionTimestamp.Add(corePodRetirementTimeout)
-	if !time.Now().Before(deadline) {
-		return true, fmt.Sprintf("retirement timeout exceeded at %s", deadline.UTC().Format(time.RFC3339))
+	fallbackTimeout := corePodForcedRetirementTimeout[condFallback]
+	fallbackDeadline := pod.DeletionTimestamp.Add(fallbackTimeout)
+	if now.After(fallbackDeadline) {
+		deadlineString := fallbackDeadline.UTC().Format(time.RFC3339)
+		return true, fmt.Sprintf("fallback timeout exceeded at %s", deadlineString)
+	}
+
+	_, apiCondition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
+	if apiCondition != nil && apiCondition.Status == metav1.ConditionFalse {
+		unavailableSince := apiCondition.LastTransitionTime.Time
+		if pod.DeletionTimestamp.After(unavailableSince) {
+			unavailableSince = pod.DeletionTimestamp.Time
+		}
+		apiTimeout := corePodForcedRetirementTimeout[condEMQXAPIUnavailable]
+		apiDeadline := unavailableSince.Add(apiTimeout)
+		if now.After(apiDeadline) {
+			deadlineString := apiDeadline.UTC().Format(time.RFC3339)
+			return true, fmt.Sprintf("EMQX API unavailability timeout exceeded at %s", deadlineString)
+		}
+	}
+
+	if instance.Status.CoreNodes == nil {
+		return false, "cluster membership state is unknown"
 	}
 
 	node := instance.Status.FindNodeByPodName(pod.Name, crd.RoleCore)

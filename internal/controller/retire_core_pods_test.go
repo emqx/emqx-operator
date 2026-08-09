@@ -14,11 +14,13 @@ func TestCorePodRetirementReadyOverrides(t *testing.T) {
 	now := time.Now()
 
 	for _, tc := range []struct {
-		name      string
-		labels    map[string]string
-		deletedAt time.Time
-		ready     bool
-		reason    string
+		name          string
+		labels        map[string]string
+		deletedAt     time.Time
+		apiStatus     metav1.ConditionStatus
+		apiTransition time.Time
+		ready         bool
+		reason        string
 	}{
 		{
 			name:      "force label",
@@ -28,15 +30,39 @@ func TestCorePodRetirementReadyOverrides(t *testing.T) {
 			reason:    "retirement forced",
 		},
 		{
-			name:      "timeout reached",
-			deletedAt: now.Add(-corePodRetirementTimeout - time.Second),
+			name:      "fallback timeout reached",
+			deletedAt: now.Add(-corePodForcedRetirementTimeout[condFallback] - time.Second),
 			ready:     true,
 			reason:    "timeout exceeded",
 		},
 		{
-			name:      "timeout pending",
-			deletedAt: now,
-			reason:    "DS cluster state is not loaded",
+			name:          "API unavailable timeout reached",
+			deletedAt:     now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
+			apiStatus:     metav1.ConditionFalse,
+			apiTransition: now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
+			ready:         true,
+			reason:        "API unavailability timeout exceeded",
+		},
+		{
+			name:          "API unavailability predates deletion",
+			deletedAt:     now.Add(-corePodForcedRetirementTimeout[condEMQXAPIUnavailable] / 2),
+			apiStatus:     metav1.ConditionFalse,
+			apiTransition: now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
+			reason:        "cluster membership state is unknown",
+		},
+		{
+			name:          "deletion predates API unavailability",
+			deletedAt:     now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
+			apiStatus:     metav1.ConditionFalse,
+			apiTransition: now.Add(-corePodForcedRetirementTimeout[condEMQXAPIUnavailable] / 2),
+			reason:        "cluster membership state is unknown",
+		},
+		{
+			name:          "API available",
+			deletedAt:     now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
+			apiStatus:     metav1.ConditionTrue,
+			apiTransition: now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
+			reason:        "cluster membership state is unknown",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -44,9 +70,17 @@ func TestCorePodRetirementReadyOverrides(t *testing.T) {
 				Labels:            tc.labels,
 				DeletionTimestamp: &metav1.Time{Time: tc.deletedAt},
 			}}
+			instance := &crd.EMQX{}
+			if tc.apiStatus != "" {
+				instance.Status.Conditions = []metav1.Condition{{
+					Type:               crd.EMQXAPIAvailable,
+					Status:             tc.apiStatus,
+					LastTransitionTime: metav1.NewTime(tc.apiTransition),
+				}}
+			}
 			ready, reason := (&retireCorePods{}).corePodRetirementReady(
 				&reconcileRound{},
-				&crd.EMQX{},
+				instance,
 				pod,
 			)
 			assert.Equal(t, tc.ready, ready)
