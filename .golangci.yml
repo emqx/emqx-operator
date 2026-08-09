@@ -28,6 +28,8 @@ linters:
       min-occurrences: 5
       ignore-string-values:
         - "apps/v1"
+        - "StatefulSet"
+        - "ReplicaSet"
     revive:
       rules:
         - name: comment-spacings
