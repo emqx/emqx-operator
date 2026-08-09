@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"time"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
@@ -9,6 +10,10 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+// Kubernetes sets DeletionTimestamp to the scheduled end of graceful termination,
+// so the effective timeout from the deletion request includes the pod's grace period.
+const corePodRetirementTimeout = 10 * time.Minute
 
 // retireCorePods releases scale-down pod finalizers after other reconcilers
 // have removed the old node identity from EMQX membership and DS metadata.
@@ -55,6 +60,22 @@ func (s *retireCorePods) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 			logArgs := []any{"pod", klog.KObj(pod)}
 			if reason != "" {
 				logArgs = append(logArgs, "reason", reason)
+				s.EventRecorder.Eventf(
+					instance,
+					corev1.EventTypeWarning,
+					"CorePodForceRetired",
+					"Core pod %s retirement guardrails bypassed: %s",
+					pod.Name,
+					reason,
+				)
+			} else {
+				s.EventRecorder.Eventf(
+					instance,
+					corev1.EventTypeNormal,
+					"CorePodRetired",
+					"Core pod %s retired",
+					pod.Name,
+				)
 			}
 			r.log.V(1).Info("core pod retired", logArgs...)
 		} else {
@@ -66,8 +87,13 @@ func (s *retireCorePods) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 }
 
 func (*retireCorePods) corePodRetirementReady(r *reconcileRound, instance *crd.EMQX, pod *corev1.Pod) (bool, string) {
-	if label, ok := pod.Labels[crd.LabelForceRetirement]; ok && label == "true" {
+	if pod.Labels[crd.LabelForceRetirement] == "true" {
 		return true, "retirement forced"
+	}
+
+	deadline := pod.DeletionTimestamp.Add(corePodRetirementTimeout)
+	if !time.Now().Before(deadline) {
+		return true, fmt.Sprintf("retirement timeout exceeded at %s", deadline.UTC().Format(time.RFC3339))
 	}
 
 	node := instance.Status.FindNodeByPodName(pod.Name, crd.RoleCore)
