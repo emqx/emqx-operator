@@ -31,10 +31,6 @@ const (
 	LabelManagedBy       string = "apps.emqx.io/managed-by" // emqx-operator
 	LabelMriaRole        string = "apps.emqx.io/db-role"    // core, replicant
 	LabelPodTemplateHash string = "apps.emqx.io/pod-template-hash"
-
-	// LabelForceRetirement is a label intended for users to force Operator to
-	// skip normal scale-down retirement guardrails.
-	LabelForceRetirement string = "apps.emqx.io/force-retirement" // true
 )
 
 const (
@@ -44,11 +40,11 @@ const (
 	// Pods with this annotation bypass the maxUnavailable budget on subsequent reconcile
 	// iterations, preventing deadlocks when evacuation makes the pod unavailable.
 	AnnotationScalingDown string = "apps.emqx.io/scaling-down"
-)
 
-const (
-	// finalizers
-	FinalizerScaleDownRetirement string = "apps.emqx.io/scale-down-retirement"
+	// StatefulSet annotations controlling reuse of scaled-down core pod ordinals.
+	// Lowering the watermark to the current replica count unconditionally authorizes reuse.
+	AnnotationCoreRetirementOrdinalWatermark string = "apps.emqx.io/core-retirement-pod-ordinal-watermark"
+	AnnotationCoreRetirementOrdinalUpdatedAt string = "apps.emqx.io/core-retirement-pod-ordinal-updated-at"
 )
 
 const (

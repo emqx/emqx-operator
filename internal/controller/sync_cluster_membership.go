@@ -22,6 +22,11 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 		return reconcilePostpone()
 	}
 
+	coreSet := r.state.coreSet()
+	if coreSet == nil {
+		return reconcilePostpone()
+	}
+
 	desiredReplicas := int(instance.Spec.NumCoreReplicas())
 	staleNodes := []*crd.EMQXNode{}
 	for _, node := range instance.Status.CoreNodes {
@@ -31,11 +36,11 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 		}
 		pod := r.state.podWithName(node.PodName)
 		nodeName := parseNodeName(node.Name, instance)
-		retiring := pod != nil && isPodScaleDownRetiring(pod)
 		ordinal := util.PodOrdinal(node.PodName)
 		if ordinal < 0 && nodeName != nil {
 			ordinal = util.PodOrdinal(nodeName.podName)
 		}
+		retiring := r.coreRetirement.isRetiringOrdinal(coreSet, ordinal)
 		// Skip: running non-retiring cores should not be force-left.
 		if !retiring && pod != nil {
 			continue

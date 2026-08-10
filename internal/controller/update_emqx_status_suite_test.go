@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Reconciler updateStatus", Ordered, func() {
+var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 	var ns *corev1.Namespace
 	var instance *crd.EMQX
 
@@ -48,10 +48,9 @@ var _ = Describe("Reconciler updateStatus", Ordered, func() {
 	It("marks EMQX API unavailable when no core pod can serve API requests", func() {
 		round := newReconcileRound()
 		round.requester = &apiRequesterUnavailable{}
-		round.state = &reconcileState{}
 		s := &updateStatus{emqxReconciler()}
 
-		Expect(s.reconcile(round, instance)).To(BeSuccessfulReconcile())
+		Expect(runRoundReconcile(round, instance, s)).To(BeSuccessfulReconcile())
 
 		Expect(actualObject(instance)).To(HaveCondition(crd.EMQXAPIAvailable, And(
 			HaveField("Status", Equal(metav1.ConditionFalse)),
@@ -83,9 +82,8 @@ var _ = Describe("Reconciler updateStatus", Ordered, func() {
 		)
 		Expect(k8sClient.Status().Update(ctx, instance)).Should(Succeed())
 
-		actual, err := actualObject(instance)
-		Expect(err).NotTo(HaveOccurred())
-		_, conditionBefore := actual.Status.GetCondition(crd.EMQXAPIAvailable)
+		Expect(actualize(instance)).NotTo(HaveOccurred())
+		_, conditionBefore := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 		Expect(conditionBefore).NotTo(BeNil())
 
 		round := newReconcileRoundWithRequester(req.NewMockRequester(
@@ -96,20 +94,18 @@ var _ = Describe("Reconciler updateStatus", Ordered, func() {
 		))
 
 		s := &updateStatus{emqxReconciler()}
-		result := s.reconcile(round, instance)
-		Expect(result).To(BeSuccessfulReconcile())
+		Expect(runRoundReconcile(round, instance, s)).To(BeSuccessfulReconcile())
 
-		actual, err = actualObject(instance)
-		Expect(err).NotTo(HaveOccurred())
-		_, condition := actual.Status.GetCondition(crd.EMQXAPIAvailable)
+		Expect(actualize(instance)).NotTo(HaveOccurred())
+		_, condition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 		Expect(condition).NotTo(BeNil())
 		Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 		Expect(condition.Reason).To(Equal("RequestFailed"))
 		Expect(condition.Message).To(ContainSubstring("connection refused"))
 		Expect(condition.LastTransitionTime).To(Equal(conditionBefore.LastTransitionTime))
-		Expect(actual.Status.CoreNodes).To(BeEmpty())
-		Expect(actual.Status.ReplicantNodes).To(BeEmpty())
-		Expect(actual.Status.NodeEvacuations).To(BeEmpty())
-		Expect(actual.Status.DSReplication.DBs).To(BeEmpty())
+		Expect(instance.Status.CoreNodes).To(BeEmpty())
+		Expect(instance.Status.ReplicantNodes).To(BeEmpty())
+		Expect(instance.Status.NodeEvacuations).To(BeEmpty())
+		Expect(instance.Status.DSReplication.DBs).To(BeEmpty())
 	})
 })

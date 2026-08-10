@@ -50,9 +50,10 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 		coreLabels := emqx.DefaultLabelsWith(crd.CoreLabels())
 		coreSet = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      emqx.Name + "-core",
-				Namespace: ns.Name,
-				Labels:    coreLabels,
+				Name:        emqx.Name + "-core",
+				Namespace:   ns.Name,
+				Labels:      coreLabels,
+				Annotations: newCoreSetRetirementState(1).annotations(),
 			},
 			Spec: appsv1.StatefulSetSpec{
 				ServiceName: emqx.Name + "-core",
@@ -182,7 +183,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 			{Name: emqxNodeName(coreSet.Name + "-10"), PodName: "", Status: "stopped"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
-		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		Expect(ensureReconcileState(round, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 		Expect(forceLeftNodes).To(ConsistOf(
@@ -197,7 +198,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: coreSet.Name + "-1", Status: "stopped"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
-		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		Expect(ensureReconcileState(round, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 		Expect(forceLeftNodes).To(BeEmpty())
@@ -209,7 +210,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "running"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
-		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		Expect(ensureReconcileState(round, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 		Expect(forceLeftNodes).To(BeEmpty())
@@ -224,7 +225,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 			{Name: "emqx@10.0.0.11", PodName: "", Status: "stopped", Role: "replicant"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
-		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		Expect(ensureReconcileState(round, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 		Expect(forceLeftNodes).To(BeEmpty())
@@ -239,7 +240,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 			{Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped", Role: "replicant"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
-		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		Expect(ensureReconcileState(round, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 		Expect(forceLeftNodes).To(BeEmpty())
@@ -253,7 +254,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 			{Name: "emqx@10.0.0.99", PodName: "", Status: "running", Role: "replicant"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
-		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		Expect(ensureReconcileState(round, instance)).To(Succeed())
 		Eventually(s.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 		Expect(forceLeftNodes).To(BeEmpty())

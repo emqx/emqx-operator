@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"emperror.dev/errors"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -275,6 +276,10 @@ func actualObject[Object client.Object](o Object) (Object, error) {
 	return o, err
 }
 
+func actualize[Object client.Object](o Object) error {
+	return k8sClient.Get(ctx, client.ObjectKeyFromObject(o), o)
+}
+
 func ownerReferences(owner client.Object) []metav1.OwnerReference {
 	var apiVersion, kind string
 	switch owner.(type) {
@@ -308,12 +313,36 @@ func newReconcileRound() *reconcileRound {
 
 func newReconcileRoundWithRequester(requester req.RequesterInterface) *reconcileRound {
 	return &reconcileRound{
-		ctx:       ctx,
-		log:       logger,
-		conf:      emqxConf,
-		requester: &apiRequesterOverride{requester},
-		state:     &reconcileState{},
+		ctx:            ctx,
+		log:            logger,
+		conf:           emqxConf,
+		requester:      &apiRequesterOverride{requester},
+		state:          nil,
+		coreRetirement: nil,
 	}
+}
+
+func ensureReconcileState(round *reconcileRound, instance *crd.EMQX) error {
+	err := reloadReconcileState(round, k8sClient, instance)
+	if err != nil {
+		return err
+	}
+	round.coreRetirement, err = loadCoreSetRetirementState(round)
+	return err
+}
+
+// runRoundReconcile performs reconciler.reconcile under a freshly reloaded (through
+// ensureReconcileState) reconcile round.
+func runRoundReconcile(
+	round *reconcileRound,
+	instance *crd.EMQX,
+	reconciler subReconciler,
+) subResult {
+	err := ensureReconcileState(round, instance)
+	if err != nil {
+		return reconcileError(errors.Wrap(err, "ensureReconcileState"))
+	}
+	return reconciler.reconcile(round, instance)
 }
 
 // apiRequesterOverride always provides the given fixed API requester.
@@ -418,13 +447,41 @@ func DescribeClientFaultMatrix(text string, args ...interface{}) bool {
 	})
 }
 
+func DeferCleanupObject(object client.Object) {
+	DeferCleanup(func() {
+		Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, object))).To(Succeed())
+	})
+}
+
 // Gomega helpers
 
-func BeSuccessfulReconcile() gomegatypes.GomegaMatcher {
+type ReconcileResultMatcher interface {
+	matcher() gomegatypes.GomegaMatcher
+}
+
+type Postponed bool
+
+func (p Postponed) matcher() gomegatypes.GomegaMatcher {
+	subm := BeFalse()
+	if p {
+		subm = BeTrue()
+	}
 	return WithTransform(
-		func(in subResult) error {
-			return in.err
-		},
-		Succeed(),
+		func(in subResult) bool { return in.needRequeue },
+		subm,
 	)
+}
+
+func BeSuccessfulReconcile(extra ...any) gomegatypes.GomegaMatcher {
+	matchers := []gomegatypes.GomegaMatcher{
+		WithTransform(
+			func(in subResult) error { return in.err },
+			Succeed(),
+		),
+	}
+	for _, arg := range extra {
+		argm := arg.(ReconcileResultMatcher)
+		matchers = append(matchers, argm.matcher())
+	}
+	return And(matchers...)
 }

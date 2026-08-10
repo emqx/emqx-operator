@@ -34,6 +34,7 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 			"statefulSet", klog.KObj(coreSet),
 			"reason", "no existing statefulSet",
 		)
+		util.AttachAnnotations(coreSet, initialCoreSetRetirementState(coreSet).annotations())
 		if err := a.Create(r.ctx, coreSet); err != nil {
 			if k8sErrors.IsAlreadyExists(emperror.Cause(err)) {
 				return reconcileRequeue()
@@ -42,6 +43,14 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 		}
 		// Force Requeue to give StatefulSet controller time to reflect status.
 		return reconcileRequeueAfter(time.Second)
+	} else {
+		// StatefulSet already exists.
+		// Preserve retirement annotations.
+		util.UnsetAnnotations(coreSet, coreSetRetirementAnnotations...)
+		util.AttachAnnotations(coreSet, util.PeekAnnotations(existing, coreSetRetirementAnnotations...))
+		// Preserve the live replica count.
+		// This update should not bypass syncCoreSet reusable-ordinal admission check.
+		coreSet.Spec.Replicas = existing.Spec.Replicas
 	}
 
 	// StatefulSet exists.

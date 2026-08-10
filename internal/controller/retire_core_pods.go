@@ -7,9 +7,9 @@ import (
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type forcedRetirementCondition int
@@ -19,17 +19,18 @@ const (
 	condFallback
 )
 
-// Kubernetes sets DeletionTimestamp to the scheduled end of graceful termination,
-// so retirement timeouts measured from it include the pod's grace period.
 var corePodForcedRetirementTimeout = map[forcedRetirementCondition]time.Duration{
-	// causeEMQXAPIUnavailable applies after both pod deletion and continuous EMQX API unavailability have begun.
+	// condEMQXAPIUnavailable applies after both ordinal retirement and continuous EMQX API unavailability have begun.
 	condEMQXAPIUnavailable: time.Minute,
-	// causeFallback defines the unconditional hard retirement deadline.
+	// condFallback defines the unconditional hard retirement deadline.
+	// The hard fallback timeout bypasses membership, DS, and PVC checks,
+	// but still requires the pod to be absent.
 	condFallback: time.Minute * 10,
 }
 
-// retireCorePods releases scale-down pod finalizers after other reconcilers
-// have removed the old node identity from EMQX membership and DS metadata.
+// retireCorePods normally advances the reusable ordinal watermark after the
+// retiring core has left EMQX membership and DS metadata, and its pod and PVCs
+// are gone.
 type retireCorePods struct {
 	*EMQXReconciler
 }
@@ -40,110 +41,142 @@ func (s *retireCorePods) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 		return subResult{}
 	}
 
-	for _, pod := range r.state.podsManagedBy(coreSet) {
-		// No finalizer attached, skip:
-		if !controllerutil.ContainsFinalizer(pod, crd.FinalizerScaleDownRetirement) {
-			continue
-		}
-
-		// Has finalizer but no deletion was requested, reconcile:
-		if pod.DeletionTimestamp == nil {
-			// If this replica is in the range of desired number of replicas, drop the finalizer:
-			ordinal := util.PodOrdinal(pod.Name)
-			if ordinal >= 0 && ordinal < int(instance.Spec.NumCoreReplicas()) {
-				err := removeScaleDownRetirementFinalizer(r.ctx, s.Client, pod)
-				if err != nil {
-					return subResult{err: err}
-				}
-			}
-			continue
-		}
-
-		ready, reason := s.corePodRetirementReady(r, instance, pod)
-		if !ready {
-			r.log.V(1).Info("core pod retirement pending",
-				"reason", reason,
-				"pod", klog.KObj(pod),
-			)
-			continue
-		}
-
-		err := removeScaleDownRetirementFinalizer(r.ctx, s.Client, pod)
-		if err == nil {
-			logArgs := []any{"pod", klog.KObj(pod)}
-			if reason != "" {
-				logArgs = append(logArgs, "reason", reason)
-				s.EventRecorder.Eventf(
-					instance,
-					corev1.EventTypeWarning,
-					"CorePodForceRetired",
-					"Core pod %s retirement guardrails bypassed: %s",
-					pod.Name,
-					reason,
-				)
-			} else {
-				s.EventRecorder.Eventf(
-					instance,
-					corev1.EventTypeNormal,
-					"CorePodRetired",
-					"Core pod %s retired",
-					pod.Name,
-				)
-			}
-			r.log.V(1).Info("core pod retired", logArgs...)
-		} else {
-			return subResult{err: err}
-		}
+	currentReplicas := util.NumReplicas(coreSet)
+	if r.coreRetirement.watermark == currentReplicas {
+		return subResult{}
 	}
 
+	ordinal := int(r.coreRetirement.watermark - 1)
+	podName := fmt.Sprintf("%s-%d", coreSet.Name, ordinal)
+	podObject := client.ObjectKey{Namespace: coreSet.Namespace, Name: podName}
+
+	if pod := r.state.podWithName(podName); pod != nil {
+		return reconcilePostpone()
+	}
+
+	decision := s.corePodRetirementReady(r, instance, podName)
+	if decision.err != nil {
+		return reconcileError(decision.err)
+	}
+	if !decision.ready {
+		r.log.V(1).Info("core pod retirement pending", "reason", decision.reason, "pod", podObject)
+		return reconcilePostpone()
+	}
+
+	r.coreRetirement.watermark -= 1
+	util.AttachAnnotations(coreSet, r.coreRetirement.annotations())
+	if err := s.Client.Update(r.ctx, coreSet); err != nil {
+		return reconcileError(fmt.Errorf("failed to advance reusable core pod ordinal watermark: %w", err))
+	}
+
+	logArgs := []any{"pod", podObject}
+	if decision.reason != "" {
+		logArgs = append(logArgs, "reason", decision.reason)
+		s.EventRecorder.Eventf(
+			instance,
+			corev1.EventTypeWarning,
+			"CorePodForceRetired",
+			"Core pod %s retirement guardrails bypassed: %s",
+			podName,
+			decision.reason,
+		)
+	} else {
+		s.EventRecorder.Eventf(
+			instance,
+			corev1.EventTypeNormal,
+			"CorePodRetired",
+			"Core pod %s retired and its ordinal is reusable",
+			podName,
+		)
+	}
+	r.log.V(1).Info("core pod ordinal made reusable", logArgs...)
 	return subResult{}
 }
 
-func (*retireCorePods) corePodRetirementReady(r *reconcileRound, instance *crd.EMQX, pod *corev1.Pod) (bool, string) {
-	now := time.Now()
+type retirementDecision struct {
+	ready  bool
+	reason string
+	err    error
+}
 
-	if pod.Labels[crd.LabelForceRetirement] == "true" {
-		return true, "retirement forced"
-	}
+func retirementReady(reason string) retirementDecision {
+	return retirementDecision{true, reason, nil}
+}
+
+func retirementPending(reason string) retirementDecision {
+	return retirementDecision{false, reason, nil}
+}
+
+func (s *retireCorePods) corePodRetirementReady(
+	r *reconcileRound,
+	instance *crd.EMQX,
+	podName string,
+) retirementDecision {
+	now := time.Now()
+	updatedAt := r.coreRetirement.updatedAt
 
 	fallbackTimeout := corePodForcedRetirementTimeout[condFallback]
-	fallbackDeadline := pod.DeletionTimestamp.Add(fallbackTimeout)
+	fallbackDeadline := updatedAt.Add(fallbackTimeout)
 	if now.After(fallbackDeadline) {
 		deadlineString := fallbackDeadline.UTC().Format(time.RFC3339)
-		return true, fmt.Sprintf("fallback timeout exceeded at %s", deadlineString)
+		return retirementReady(fmt.Sprintf("fallback timeout exceeded at %s", deadlineString))
+	}
+
+	hasPVCs, err := s.corePodHasPVCs(r, podName)
+	if err != nil {
+		return retirementDecision{false, "", err}
+	}
+	if hasPVCs {
+		return retirementPending("pod still has live PVCs")
 	}
 
 	_, apiCondition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 	if apiCondition != nil && apiCondition.Status == metav1.ConditionFalse {
 		unavailableSince := apiCondition.LastTransitionTime.Time
-		if pod.DeletionTimestamp.After(unavailableSince) {
-			unavailableSince = pod.DeletionTimestamp.Time
+		if updatedAt.After(unavailableSince) {
+			unavailableSince = updatedAt
 		}
 		apiTimeout := corePodForcedRetirementTimeout[condEMQXAPIUnavailable]
 		apiDeadline := unavailableSince.Add(apiTimeout)
 		if now.After(apiDeadline) {
 			deadlineString := apiDeadline.UTC().Format(time.RFC3339)
-			return true, fmt.Sprintf("EMQX API unavailability timeout exceeded at %s", deadlineString)
+			return retirementReady(fmt.Sprintf("EMQX API unavailability timeout exceeded at %s", deadlineString))
 		}
 	}
 
 	if !instance.Status.HasClusterMembership() {
-		return false, "cluster membership state is unknown"
+		return retirementPending("cluster membership state is unknown")
 	}
-
-	node := instance.Status.FindNodeByPodName(pod.Name, crd.RoleCore)
-	if node != nil {
-		return false, fmt.Sprintf("node %s is still present in cluster status", node.Name)
+	if node := instance.Status.FindNodeByPodName(podName, crd.RoleCore); node != nil {
+		return retirementPending(fmt.Sprintf("node %s is still present in cluster status", node.Name))
 	}
-
 	if r.dsCluster == nil {
-		return false, "DS cluster state is not loaded"
+		return retirementPending("DS cluster state is not loaded")
+	}
+	if site := r.dsCluster.FindSite(constructNodeName(podName, instance)); site != nil {
+		return retirementPending(fmt.Sprintf("DS site %s for node %s is still present", site.ID, site.Node))
 	}
 
-	site := r.dsCluster.FindSite(constructNodeName(pod.Name, instance))
-	if site != nil {
-		return false, fmt.Sprintf("DS site %s for node %s is still present", site.ID, site.Node)
-	}
+	return retirementReady("")
+}
 
-	return true, ""
+func (s *retireCorePods) corePodHasPVCs(r *reconcileRound, podName string) (bool, error) {
+	coreSet := r.state.coreSet()
+	for _, claim := range coreSet.Spec.VolumeClaimTemplates {
+		pvc := &corev1.PersistentVolumeClaim{}
+		key := client.ObjectKey{
+			Name:      fmt.Sprintf("%s-%s", claim.Name, podName),
+			Namespace: coreSet.Namespace,
+		}
+		err := s.Client.Get(r.ctx, key, pvc)
+		switch {
+		case err == nil:
+			return true, nil
+		case k8sErrors.IsNotFound(err):
+			continue
+		default:
+			return true, fmt.Errorf("failed to get core pod PVC %s: %w", key.Name, err)
+		}
+	}
+	return false, nil
 }

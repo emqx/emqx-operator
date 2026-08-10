@@ -45,7 +45,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
 		got := newStatefulSet(emqx, conf)
 
-		assert.Equal(t, emqx.Spec.CoreTemplate.Annotations, got.Annotations)
+		assert.Equal(t, "core-annotation-value", got.Annotations["core-annotation-key"])
 		assert.Equal(t, "core-label-value", got.Labels["core-label-key"])
 		assert.Equal(t, "emqx", got.Labels[crd.LabelInstance])
 		assert.Equal(t, "emqx-operator", got.Labels[crd.LabelManagedBy])
