@@ -7,6 +7,7 @@ import (
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -206,6 +207,24 @@ func TestCorePreference(t *testing.T) {
 
 		assert.NotNil(t, requester)
 		assert.Equal(t, coreSetName+"-2", requester.GetDescription())
+	})
+
+	t.Run("returns eligible pods in preference order for non-HTTP callers", func(t *testing.T) {
+		state := &reconcileState{
+			coreSets: []*appsv1.StatefulSet{coreSet},
+			pods: []*corev1.Pod{
+				mkPod(coreSetName+"-0", "rev-new", "", true, true),
+				mkPod(coreSetName+"-1", "rev-new", "", false, false),
+				mkPod(coreSetName+"-2", "rev-old", "", true, false),
+				mkPod(coreSetName+"-3", "rev-new", "", true, false),
+			},
+		}
+
+		pods := preferredCorePods(state, podsManagedBy{coreSet})
+
+		require.Len(t, pods, 2)
+		assert.Equal(t, coreSetName+"-3", pods[0].Name)
+		assert.Equal(t, coreSetName+"-2", pods[1].Name)
 	})
 
 	t.Run("deprioritizes sole outdated pod over larger fresh ordinal", func(t *testing.T) {
