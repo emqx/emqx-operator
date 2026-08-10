@@ -1,7 +1,9 @@
 package controller
 
 import (
+	"cmp"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -9,6 +11,7 @@ import (
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
+	util "github.com/emqx/emqx-operator/internal/controller/util"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -21,37 +24,56 @@ type apiRequesterBuilder struct {
 }
 
 type apiRequester interface {
-	forOldestCore(state *reconcileState, filter ...reconcileStatePodFilter) req.RequesterInterface
+	forCore(state *reconcileState, filter ...reconcileStatePodFilter) req.RequesterInterface
 	forPod(pod *corev1.Pod) req.RequesterInterface
 }
 
-func (b *apiRequesterBuilder) forOldestCore(
+func (b *apiRequesterBuilder) forCore(
 	state *reconcileState,
 	filter ...reconcileStatePodFilter,
 ) req.RequesterInterface {
-	pods := state.listPods(podsWithRole{crd.RoleCore})
-	sortByCreationTimestamp(pods)
-outer:
+	filter = append(
+		filter,
+		podsWithRole{crd.RoleCore},
+		podsWithCondition{corev1.ContainersReady},
+		podsAlive{},
+	)
+	pods := state.listPods(filter...)
+	sortByPreference(state, pods)
 	for _, pod := range pods {
 		req := b.forPod(pod)
 		if req == nil {
 			continue
-		}
-		for _, f := range filter {
-			if !f.passes(pod) {
-				continue outer
-			}
 		}
 		return req
 	}
 	return nil
 }
 
+// Prefer lower ordinals by default. If exactly one outdated core remains,
+// deprioritize it because syncCoreSet will recreate it next.
+func sortByPreference(state *reconcileState, pods []*corev1.Pod) {
+	outdated := state.listOutdatedPods()
+	slices.SortFunc(pods, func(a, b *corev1.Pod) int {
+		ai := util.PodOrdinal(a.Name)
+		bi := util.PodOrdinal(b.Name)
+		if len(outdated) == 1 {
+			if slices.Contains(outdated, a) {
+				ai += 10000
+			}
+			if slices.Contains(outdated, b) {
+				bi += 10000
+			}
+		}
+		return cmp.Compare(ai, bi)
+	})
+}
+
 func (b *apiRequesterBuilder) forPod(pod *corev1.Pod) req.RequesterInterface {
 	if b == nil {
 		return nil
 	}
-	if pod.Status.PodIP == "" || pod.Status.Phase != corev1.PodRunning {
+	if pod.Status.PodIP == "" {
 		return nil
 	}
 	return &req.Requester{

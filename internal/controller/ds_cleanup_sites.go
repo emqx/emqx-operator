@@ -27,7 +27,7 @@ func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 
 	// Instantiate API requester for a node that is part of update StatefulSet.
 	// Required API operation is available only since EMQX 6.0.0.
-	req := r.requester.forOldestCore(r.state, &podsWithEMQXVersion{instance: instance, prefix: "6."})
+	req := r.requester.forCore(r.state, &podsWithEMQXVersion{instance: instance, prefix: "6."})
 
 	lostSites := []*api.DSSite{}
 	for _, site := range r.dsCluster.Sites {

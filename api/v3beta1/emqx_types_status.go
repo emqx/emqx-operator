@@ -132,6 +132,10 @@ type EMQXNode struct {
 	Connections int64 `json:"connections"`
 }
 
+func (s EMQXStatus) HasClusterMembership() bool {
+	return len(s.CoreNodes) > 0
+}
+
 func (s EMQXStatus) FindNode(node string) *EMQXNode {
 	for _, n := range s.CoreNodes {
 		if n.Name == node {
@@ -210,6 +214,7 @@ type DSDBReplicationStatus struct {
 }
 
 const (
+	EMQXAPIAvailable          string = "EMQXAPIAvailable"
 	CoreNodesProgressing      string = "CoreNodesProgressing"
 	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
 	Available                 string = "Available"
@@ -217,14 +222,13 @@ const (
 )
 
 func (s *EMQXStatus) SetCondition(ty string, status metav1.ConditionStatus, reason, message string) {
-	_, existing := s.GetCondition(ty)
+	pos, existing := s.GetCondition(ty)
 	if existing != nil &&
 		existing.Status == status &&
 		existing.Reason == reason &&
 		existing.Message == message {
 		return
 	}
-	s.RemoveCondition(ty)
 	c := metav1.Condition{
 		Type:               ty,
 		Status:             status,
@@ -232,7 +236,14 @@ func (s *EMQXStatus) SetCondition(ty string, status metav1.ConditionStatus, reas
 		Message:            message,
 		LastTransitionTime: metav1.Now(),
 	}
-	s.Conditions = append(s.Conditions, c)
+	if existing != nil && existing.Status == status {
+		c.LastTransitionTime = existing.LastTransitionTime
+	}
+	if existing != nil {
+		s.Conditions[pos] = c
+	} else {
+		s.Conditions = append(s.Conditions, c)
+	}
 }
 
 func (s *EMQXStatus) GetCondition(conditionType string) (int, *metav1.Condition) {

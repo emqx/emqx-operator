@@ -25,6 +25,14 @@ type reconcileStatePodFilter interface {
 	passes(pod *corev1.Pod) bool
 }
 
+type podsNot struct {
+	inner reconcileStatePodFilter
+}
+
+func (filter podsNot) passes(pod *corev1.Pod) bool {
+	return !filter.inner.passes(pod)
+}
+
 type podsManagedBy struct {
 	manager metav1.Object
 }
@@ -48,6 +56,15 @@ type podsAlive struct{}
 
 func (filter podsAlive) passes(pod *corev1.Pod) bool {
 	return pod.DeletionTimestamp == nil
+}
+
+type podsOnRevision struct {
+	revision string
+}
+
+func (filter podsOnRevision) passes(pod *corev1.Pod) bool {
+	podRevision := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
+	return podRevision == filter.revision
 }
 
 type podsWithCondition struct {
@@ -90,10 +107,25 @@ func (r *reconcileState) listPods(filters ...reconcileStatePodFilter) []*corev1.
 		}
 		if passes {
 			list = append(list, pod)
-
 		}
 	}
 	return list
+}
+
+// listOutdatedPods returns core StatefulSet pods whose pod template is not yet the
+// desired one: anything not labeled with Status.UpdateRevision.
+func (r *reconcileState) listOutdatedPods() []*corev1.Pod {
+	var outdated []*corev1.Pod
+	coreSet := r.coreSet()
+	if coreSet == nil ||
+		coreSet.Status.UpdateRevision == "" ||
+		coreSet.Status.UpdateRevision == coreSet.Status.CurrentRevision {
+		return outdated
+	}
+	return r.listPods(
+		podsManagedBy{coreSet},
+		podsNot{podsOnRevision{coreSet.Status.UpdateRevision}},
+	)
 }
 
 // coreSet returns the single core StatefulSet, or nil if none exists.

@@ -17,7 +17,7 @@ type syncClusterMembership struct {
 
 func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Instantiate API requester.
-	req := r.oldestCoreRequester()
+	req := r.preferredCoreRequester()
 	if req == nil {
 		return reconcilePostpone()
 	}
@@ -50,7 +50,7 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 	}
 
 	for _, staleNode := range staleNodes {
-		err := api.ForceLeave(r.oldestCoreRequester(), staleNode.Name)
+		err := api.ForceLeave(req, staleNode.Name)
 		if err == nil {
 			s.EventRecorder.Event(
 				instance,

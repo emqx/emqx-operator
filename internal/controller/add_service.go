@@ -22,7 +22,7 @@ type addService struct {
 func (a *addService) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Postpone if there are no usable cores yet.
 	// Should proceed once one core replica is Ready.
-	req := r.oldestCoreRequester()
+	req := r.preferredCoreRequester()
 	if req == nil {
 		return reconcilePostpone()
 	}

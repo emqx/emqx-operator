@@ -130,7 +130,7 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult
 // starting from the highest ordinal. Each pod is evacuated before deletion.
 func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crd.EMQX) subResult {
 	// Sort outdated pods by ordinal ascending; pick highest ordinal last.
-	outdated := listOutdatedPods(r)
+	outdated := r.state.listOutdatedPods()
 	sortByOrdinal(outdated)
 
 	if len(outdated) == 0 {
@@ -235,27 +235,6 @@ func (s *syncCoreSet) updateEvacuationState(r *reconcileRound, instance *crd.EMQ
 		}
 	}
 	return nil
-}
-
-// listOutdatedPods returns core StatefulSet pods whose pod template is not yet the
-// desired one: anything not labeled with Status.UpdateRevision.
-//
-// We intentionally do not key off CurrentRevision alone. Pods can remain labeled
-// with a revision hash that is neither CurrentRevision nor UpdateRevision (e.g.
-// stuck pod after ControllerRevision history moved on). Those are still outdated.
-func listOutdatedPods(r *reconcileRound) []*corev1.Pod {
-	var outdated []*corev1.Pod
-	coreSet := r.state.coreSet()
-	updateRevision := coreSet.Status.UpdateRevision
-	if updateRevision == "" || updateRevision == coreSet.Status.CurrentRevision {
-		return outdated
-	}
-	for _, pod := range r.state.podsManagedBy(coreSet) {
-		if !r.state.partOfCoreSetRevision(pod, updateRevision) {
-			outdated = append(outdated, pod)
-		}
-	}
-	return outdated
 }
 
 // checkCorePodRemoval is a pure function that decides whether a core pod can

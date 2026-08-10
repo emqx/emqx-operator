@@ -86,7 +86,7 @@ func TestRequesterFilter(t *testing.T) {
 					OwnerReferences:   []metav1.OwnerReference{coreOwnerReference},
 				},
 				Status: corev1.PodStatus{
-					PodIP:      "10.0.0.1",
+					PodIP:      "",
 					Phase:      corev1.PodPending,
 					Conditions: []corev1.PodCondition{},
 				},
@@ -116,7 +116,7 @@ func TestRequesterFilter(t *testing.T) {
 
 	var requester req.RequesterInterface
 
-	requester = builder.forOldestCore(state)
+	requester = builder.forCore(state)
 	assert.NotNil(t, requester)
 	assert.Equal(t, state.pods[1].Name, requester.GetDescription())
 
@@ -127,14 +127,130 @@ func TestRequesterFilter(t *testing.T) {
 	assert.NotNil(t, requester)
 
 	// Filter by the single core StatefulSet:
-	requester = builder.forOldestCore(state, &podsManagedBy{state.coreSet()})
+	requester = builder.forCore(state, &podsManagedBy{state.coreSet()})
 	assert.NotNil(t, requester)
 	assert.Equal(t, state.pods[1].Name, requester.GetDescription())
 
-	requester = builder.forOldestCore(state, &podsWithEMQXVersion{instance, "5.10."})
+	requester = builder.forCore(state, &podsWithEMQXVersion{instance, "5.10."})
 	assert.NotNil(t, requester)
 
-	requester = builder.forOldestCore(state, &podsWithEMQXVersion{instance, "6."})
+	requester = builder.forCore(state, &podsWithEMQXVersion{instance, "6."})
 	assert.Nil(t, requester)
 
+}
+
+func TestCorePreference(t *testing.T) {
+	const coreSetName = "emqx-core"
+
+	coreSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: coreSetName,
+			UID:  "abcdef",
+		},
+		Status: appsv1.StatefulSetStatus{
+			UpdateRevision: "rev-new",
+		},
+	}
+	coreSetReference := metav1.OwnerReference{
+		APIVersion: "apps/v1",
+		Kind:       "StatefulSet",
+		Name:       coreSetName,
+		UID:        "abcdef",
+		Controller: ptr.To(true),
+	}
+
+	mkPod := func(name, revision, ip string, ready bool, deleting bool) *corev1.Pod {
+		labels := crd.CoreLabels()
+		labels[appsv1.ControllerRevisionHashLabelKey] = revision
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              name,
+				Labels:            labels,
+				CreationTimestamp: metav1.NewTime(time.Now()),
+				OwnerReferences:   []metav1.OwnerReference{coreSetReference},
+			},
+			Status: corev1.PodStatus{
+				PodIP: ip,
+				Phase: corev1.PodRunning,
+			},
+		}
+		if ready {
+			pod.Status.Conditions = []corev1.PodCondition{
+				{Type: corev1.ContainersReady, Status: corev1.ConditionTrue},
+			}
+		}
+		if deleting {
+			pod.DeletionTimestamp = ptr.To(metav1.NewTime(time.Now()))
+		}
+		return pod
+	}
+
+	builder := &apiRequesterBuilder{
+		schema:   "http",
+		port:     "18083",
+		username: "emqx",
+		password: "emqx",
+	}
+
+	t.Run("skips deleting and not ready pods", func(t *testing.T) {
+		state := &reconcileState{
+			coreSets: []*appsv1.StatefulSet{coreSet},
+			pods: []*corev1.Pod{
+				mkPod(coreSetName+"-0", "rev-new", "10.0.0.1", true, true),
+				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", false, false),
+				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", true, false),
+			},
+		}
+
+		requester := builder.forCore(state)
+
+		assert.NotNil(t, requester)
+		assert.Equal(t, coreSetName+"-2", requester.GetDescription())
+	})
+
+	t.Run("deprioritizes sole outdated pod over larger fresh ordinal", func(t *testing.T) {
+		state := &reconcileState{
+			coreSets: []*appsv1.StatefulSet{coreSet},
+			pods: []*corev1.Pod{
+				mkPod(coreSetName+"-0", "rev-old", "10.0.0.1", true, false),
+				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", true, false),
+			},
+		}
+
+		requester := builder.forCore(state)
+
+		assert.NotNil(t, requester)
+		assert.Equal(t, coreSetName+"-1", requester.GetDescription())
+	})
+
+	t.Run("prefers smaller ordinal when more than one outdated pod remains", func(t *testing.T) {
+		state := &reconcileState{
+			coreSets: []*appsv1.StatefulSet{coreSet},
+			pods: []*corev1.Pod{
+				mkPod(coreSetName+"-0", "rev-old", "10.0.0.1", true, false),
+				mkPod(coreSetName+"-1", "rev-old", "10.0.0.2", true, false),
+				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", true, false),
+			},
+		}
+
+		requester := builder.forCore(state)
+
+		assert.NotNil(t, requester)
+		assert.Equal(t, coreSetName+"-0", requester.GetDescription())
+	})
+
+	t.Run("prefers smaller ordinal among equally fresh pods", func(t *testing.T) {
+		state := &reconcileState{
+			coreSets: []*appsv1.StatefulSet{coreSet},
+			pods: []*corev1.Pod{
+				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", true, false),
+				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", true, false),
+			},
+		}
+
+		requester := builder.forCore(state)
+
+		assert.NotNil(t, requester)
+		assert.Equal(t, coreSetName+"-1", requester.GetDescription())
+	})
 }
