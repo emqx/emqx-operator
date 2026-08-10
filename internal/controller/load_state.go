@@ -180,6 +180,14 @@ func (r *reconcileState) hasReplicants() bool {
 	return false
 }
 
+func (r *reconcileState) replicantPods() []*corev1.Pod {
+	pods := make([]*corev1.Pod, 0, len(r.pods))
+	for _, rs := range r.replicantSets {
+		pods = append(pods, r.podsManagedBy(rs)...)
+	}
+	return pods
+}
+
 // outdatedReplicantReplicaSets returns all replicant ReplicaSets except the update revision set,
 // sorted by creation timestamp (oldest first).
 func (r *reconcileState) outdatedReplicantSets(instance *crd.EMQX) []*appsv1.ReplicaSet {
