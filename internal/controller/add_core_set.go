@@ -150,6 +150,7 @@ func generateStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
 					TopologySpreadConstraints: template.Spec.TopologySpreadConstraints,
 					NodeName:                  template.Spec.NodeName,
 					NodeSelector:              template.Spec.NodeSelector,
+					DNSConfig:                 template.Spec.DNSConfig,
 					InitContainers:            template.Spec.InitContainers,
 					Containers: append([]corev1.Container{
 						{

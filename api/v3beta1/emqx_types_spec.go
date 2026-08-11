@@ -202,6 +202,11 @@ type EMQXReplicantTemplateSpec struct {
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// Specifies how to spread matching pods among the given topology.
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+	// Specifies the DNS parameters of a pod.
+	// Parameters specified here will be merged to the generated DNS
+	// configuration based on DNSPolicy (always ClusterFirst).
+	// More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
 
 	// Desired number of instances.
 	// In case of core nodes, each instance has a consistent identity.

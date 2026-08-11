@@ -1258,6 +1258,54 @@ spec:
                                 type: string
                             type: object
                         type: object
+                      dnsConfig:
+                        description: |-
+                          Specifies the DNS parameters of a pod.
+                          Parameters specified here will be merged to the generated DNS
+                          configuration based on DNSPolicy (always ClusterFirst).
+                          More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+                        properties:
+                          nameservers:
+                            description: |-
+                              A list of DNS name server IP addresses.
+                              This will be appended to the base nameservers generated from DNSPolicy.
+                              Duplicated nameservers will be removed.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          options:
+                            description: |-
+                              A list of DNS resolver options.
+                              This will be merged with the base options generated from DNSPolicy.
+                              Duplicated entries will be removed. Resolution options given in Options
+                              will override those that appear in the base DNSPolicy.
+                            items:
+                              description: PodDNSConfigOption defines DNS resolver
+                                options of a pod.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name is this DNS resolver option's name.
+                                    Required.
+                                  type: string
+                                value:
+                                  description: Value is this DNS resolver option's
+                                    value.
+                                  type: string
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          searches:
+                            description: |-
+                              A list of DNS search domains for host-name lookup.
+                              This will be appended to the base search paths generated from DNSPolicy.
+                              Duplicated search paths will be removed.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        type: object
                       env:
                         description: List of environment variables to set in the container.
                         items:
@@ -9658,6 +9706,54 @@ spec:
                                   PodSecurityContext, the value specified in SecurityContext takes precedence.
                                 type: string
                             type: object
+                        type: object
+                      dnsConfig:
+                        description: |-
+                          Specifies the DNS parameters of a pod.
+                          Parameters specified here will be merged to the generated DNS
+                          configuration based on DNSPolicy (always ClusterFirst).
+                          More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+                        properties:
+                          nameservers:
+                            description: |-
+                              A list of DNS name server IP addresses.
+                              This will be appended to the base nameservers generated from DNSPolicy.
+                              Duplicated nameservers will be removed.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          options:
+                            description: |-
+                              A list of DNS resolver options.
+                              This will be merged with the base options generated from DNSPolicy.
+                              Duplicated entries will be removed. Resolution options given in Options
+                              will override those that appear in the base DNSPolicy.
+                            items:
+                              description: PodDNSConfigOption defines DNS resolver
+                                options of a pod.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name is this DNS resolver option's name.
+                                    Required.
+                                  type: string
+                                value:
+                                  description: Value is this DNS resolver option's
+                                    value.
+                                  type: string
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          searches:
+                            description: |-
+                              A list of DNS search domains for host-name lookup.
+                              This will be appended to the base search paths generated from DNSPolicy.
+                              Duplicated search paths will be removed.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
                         type: object
                       env:
                         description: List of environment variables to set in the container.
