@@ -92,16 +92,25 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult
 	desiredReplicas := instance.Spec.NumCoreReplicas()
 	currentReplicas := util.NumReplicas(coreSet)
 
-	// Reconcile active and desired scale-downs as one idempotent operation. This
-	// retries pod deletion after a successful StatefulSet update and may extend
-	// the accumulated retirement range by one ordinal.
+	// Handle scale-downs and await retirement convergence.
+	// May extend the retirement range by one ordinal.
+	// Converged retirement enables safe scale-ups / rolling updates. Additionally, retries
+	// removals of any pods that were supposed to be removed by scaleDown.
 	if currentReplicas > desiredReplicas || r.coreRetirement.watermark > currentReplicas {
-		r.log.V(1).Info("scaling down coreSet",
-			"statefulSet", klog.KObj(coreSet),
-			"from", currentReplicas,
-			"to", desiredReplicas,
-			"watermark", r.coreRetirement.watermark,
-		)
+		if currentReplicas > desiredReplicas {
+			r.log.V(1).Info("scaling down coreSet",
+				"statefulSet", klog.KObj(coreSet),
+				"from", currentReplicas,
+				"to", desiredReplicas,
+				"watermark", r.coreRetirement.watermark,
+			)
+		} else {
+			r.log.V(1).Info("awaiting coreSet retirement",
+				"statefulSet", klog.KObj(coreSet),
+				"replicas", currentReplicas,
+				"watermark", r.coreRetirement.watermark,
+			)
+		}
 		return s.scaleDown(r, instance, currentReplicas)
 	}
 

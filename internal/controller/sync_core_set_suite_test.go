@@ -338,7 +338,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 		round := newReconcileRound()
 		reconciler := &syncCoreSet{emqxReconciler()}
 		Eventually(runRoundReconcile).WithArguments(round, instance, reconciler).
-			Should(BeSuccessfulReconcile(Postponed(false)))
+			Should(BeSuccessfulReconcile())
+		Eventually(runRoundReconcile).WithArguments(round, instance, reconciler).
+			Should(BeSuccessfulReconcile())
 
 		// Postconditions:
 		// - coreSet scaling down succeeded, 1 replica left
