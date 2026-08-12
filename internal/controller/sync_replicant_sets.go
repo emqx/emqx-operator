@@ -71,10 +71,7 @@ func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crd.EMQX) sub
 
 	// Steady state: clean up stale artifacts.
 	if currentReplicas == specReplicas {
-		err := s.ensureConsistency(r, instance, updateRs)
-		if err != nil {
-			return reconcileError(emperror.Wrap(err, "failed to restore replicant consistency"))
-		}
+		return s.ensureConsistency(r, instance, updateRs)
 	}
 
 	return subResult{}
@@ -147,28 +144,35 @@ func (s *syncReplicantSets) ensureConsistency(
 	r *reconcileRound,
 	instance *crd.EMQX,
 	updateRs *appsv1.ReplicaSet,
-) error {
+) subResult {
+	postpone := false
 	for _, pod := range r.state.listPods(podsManagedBy{updateRs}, podsAlive{}) {
 		// 1. Check if pod has stale scale-down annotations.
 		dirty := s.removeStaleReplicantAnnotations(pod)
 		if !dirty {
 			continue
 		}
-
 		// 2. Stop any ongoing node evacuation.
 		// This is attempted irrespective of whether Node Evacuation is enabled or not,
 		// to avoid ending up in transient state if it was disabled mid-update.
 		stopped, err := s.stopStaleReplicantEvacuation(r, instance, pod)
-		if err != nil {
-			return err
-		}
-		if stopped {
+		switch {
+		case stopped && err != nil:
+			return reconcileError(emperror.Wrap(err, "failed to restore replicant consistency"))
+		case err != nil:
+			r.log.V(1).Info("stopping stale replicant node evacuation postponed",
+				"replicaSet", klog.KObj(updateRs),
+				"pod", klog.KObj(pod),
+				"reason", err.Error(),
+			)
+			postpone = true
+			continue
+		case stopped:
 			r.log.V(1).Info("stopped stale replicant node evacuation",
 				"replicaSet", klog.KObj(updateRs),
 				"pod", klog.KObj(pod),
 			)
 		}
-
 		// 3. Remove stale annotations.
 		err = s.Client.Update(r.ctx, pod)
 		if err == nil {
@@ -177,10 +181,13 @@ func (s *syncReplicantSets) ensureConsistency(
 				"pod", klog.KObj(pod),
 			)
 		} else {
-			return emperror.Wrap(err, "failed to remove stale replicant pod annotations")
+			return reconcileError(emperror.Wrap(err, "failed to remove stale replicant pod annotations"))
 		}
 	}
-	return nil
+	if postpone {
+		return reconcilePostpone()
+	}
+	return subResult{}
 }
 
 // removeStaleReplicantAnnotations strips AnnotationScalingDown and PodDeletionCost from
