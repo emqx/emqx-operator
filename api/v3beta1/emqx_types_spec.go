@@ -323,7 +323,7 @@ func (spec *EMQXSpec) IsEvacuationEnabled() bool {
 }
 
 func (s *ServiceTemplate) IsEnabled() bool {
-	return s.Enabled != nil && *s.Enabled
+	return s == nil || s.Enabled == nil || *s.Enabled
 }
 
 func (spec *EMQXSpec) NumCoreReplicas() int32 {

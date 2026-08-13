@@ -143,7 +143,7 @@ func newReplicaSet(instance *crd.EMQX, conf *config.EMQX) *appsv1.ReplicaSet {
 	rs.Labels[crd.LabelPodTemplateHash] = podTemplateHash
 	rs.Spec.Template.Labels[crd.LabelPodTemplateHash] = podTemplateHash
 	rs.Spec.Selector = util.CloneSelectorAndAddLabel(rs.Spec.Selector, crd.LabelPodTemplateHash, podTemplateHash)
-	rs.Spec.Template.Spec.Containers[0].Ports = util.MergeContainerPorts(
+	rs.Spec.Template.Spec.Containers[0].Ports = util.AppendMissingContainerPorts(
 		rs.Spec.Template.Spec.Containers[0].Ports,
 		util.MapServicePortsToContainerPorts(conf.GetDashboardServicePorts()),
 	)

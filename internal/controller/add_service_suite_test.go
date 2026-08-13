@@ -3,7 +3,6 @@ package controller
 import (
 	"net/http"
 	"net/url"
-	"strings"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	config "github.com/emqx/emqx-operator/internal/controller/config"
@@ -18,19 +17,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type serviceAPIResponse struct {
+	status int
+	body   string
+}
+
+func mockServiceAPI(responses map[string]serviceAPIResponse) req.RequesterInterface {
+	return req.NewMockRequester(
+		func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
+			response, ok := responses[u.Path]
+			if method != "GET" || !ok {
+				return &http.Response{StatusCode: http.StatusNotImplemented}, nil, nil
+			}
+			return &http.Response{StatusCode: response.status}, []byte(response.body), nil
+		},
+	)
+}
+
 var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 	var instance *crd.EMQX
 	var ns *corev1.Namespace
 
 	validConfig := config.WithDefaults("")
-	validConfigRequester := req.NewMockRequester(
-		func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
-			if method == "GET" && strings.Contains(u.Path, "api/v5/configs") {
-				return &http.Response{StatusCode: http.StatusOK}, []byte(validConfig), nil
-			}
-			return &http.Response{StatusCode: http.StatusNotImplemented}, nil, nil
-		},
-	)
+	validServiceRequester := mockServiceAPI(map[string]serviceAPIResponse{
+		"api/v5/configs": {status: http.StatusOK, body: validConfig},
+		"api/v5/listeners": {status: http.StatusOK, body: `[
+			{"type":"tcp","name":"default","enable":true,"bind":"1883"}
+		]`},
+		"api/v5/gateways": {status: http.StatusOK, body: `[]`},
+	})
 
 	BeforeAll(func() {
 		ns = &corev1.Namespace{
@@ -68,9 +83,9 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 		Expect(a.reconcile(r, instance)).To(Equal(subResult{needRequeue: true}))
 	})
 
-	It("creates Dashboard and Listeners Services from EMQX config", func() {
+	It("creates Dashboard and Listeners Services from their respective APIs", func() {
 		a := &addService{emqxReconciler()}
-		round := newReconcileRoundWithRequester(validConfigRequester)
+		round := newReconcileRoundWithRequester(validServiceRequester)
 		Eventually(a.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 
@@ -90,7 +105,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 			},
 		}
 
-		round := newReconcileRoundWithRequester(validConfigRequester)
+		round := newReconcileRoundWithRequester(validServiceRequester)
 		round.state = &reconcileState{
 			replicantSets: []*appsv1.ReplicaSet{
 				{
@@ -125,7 +140,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 		}
 
 		a := &addService{emqxReconciler()}
-		round := newReconcileRoundWithRequester(validConfigRequester)
+		round := newReconcileRoundWithRequester(validServiceRequester)
 		Eventually(a.reconcile).WithArguments(round, instance).
 			Should(BeSuccessfulReconcile())
 
@@ -134,5 +149,103 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 
 		listeners := &corev1.Service{}
 		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
+	})
+
+	It("does not discover listeners when the Listeners Service template is disabled", func() {
+		instance.Spec.ListenersServiceTemplate = &crd.ServiceTemplate{Enabled: ptr.To(false)}
+		round := newReconcileRoundWithRequester(mockServiceAPI(map[string]serviceAPIResponse{
+			"api/v5/configs": {status: http.StatusOK, body: validConfig},
+		}))
+
+		a := &addService{emqxReconciler()}
+		Eventually(a.reconcile).WithArguments(round, instance).Should(BeSuccessfulReconcile())
+		Expect(k8sClient.Get(ctx, instance.DashboardServiceNamespacedName(), &corev1.Service{})).To(Succeed())
+		err := k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), &corev1.Service{})
+		Expect(k8sErrors.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("does not use the Configs API for listener discovery", func() {
+		instance.Spec.DashboardServiceTemplate = &crd.ServiceTemplate{Enabled: ptr.To(false)}
+		round := newReconcileRoundWithRequester(mockServiceAPI(map[string]serviceAPIResponse{
+			"api/v5/listeners": {status: http.StatusOK, body: `[
+				{"type":"tcp","name":"custom","enable":true,"bind":"1884"}
+			]`},
+			"api/v5/gateways": {status: http.StatusOK, body: `[]`},
+		}))
+
+		a := &addService{emqxReconciler()}
+		Eventually(a.reconcile).WithArguments(round, instance).Should(BeSuccessfulReconcile())
+		listeners := &corev1.Service{}
+		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), listeners)).To(Succeed())
+		Expect(listeners.Spec.Ports).To(HaveLen(1))
+		Expect(listeners.Spec.Ports[0].Name).To(Equal("tcp-custom"))
+		Expect(listeners.Spec.Ports[0].Port).To(Equal(int32(1884)))
+	})
+
+	It("leaves the existing Listeners Service unchanged after partial gateway discovery", func() {
+		a := &addService{emqxReconciler()}
+		validRound := newReconcileRoundWithRequester(validServiceRequester)
+		Eventually(a.reconcile).WithArguments(validRound, instance).Should(BeSuccessfulReconcile())
+		before := &corev1.Service{}
+		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), before)).To(Succeed())
+
+		partialFailure := mockServiceAPI(map[string]serviceAPIResponse{
+			"api/v5/configs": {status: http.StatusOK, body: validConfig},
+			"api/v5/listeners": {status: http.StatusOK, body: `[
+				{"type":"tcp","name":"changed","enable":true,"bind":"1884"}
+			]`},
+			"api/v5/gateways": {status: http.StatusOK, body: `[
+				{"name":"lwm2m","status":"running"}
+			]`},
+			"api/v5/gateways/lwm2m/listeners": {
+				status: http.StatusServiceUnavailable,
+				body:   `{"message":"temporarily unavailable"}`,
+			},
+		})
+		result := a.reconcile(newReconcileRoundWithRequester(partialFailure), instance)
+		Expect(result.err).To(MatchError(ContainSubstring(`failed to get listeners for gateway "lwm2m"`)))
+
+		after := &corev1.Service{}
+		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), after)).To(Succeed())
+		Expect(after.Spec.Ports).To(Equal(before.Spec.Ports))
+	})
+
+	It("preserves Kubernetes validation errors and the existing Listeners Service", func() {
+		a := &addService{emqxReconciler()}
+		validRound := newReconcileRoundWithRequester(validServiceRequester)
+		Eventually(a.reconcile).WithArguments(validRound, instance).Should(BeSuccessfulReconcile())
+		before := &corev1.Service{}
+		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), before)).To(Succeed())
+
+		invalidListenerResponses := []string{
+			`[{"type":"tcp","name":"zero","enable":true,"bind":"0"}]`,
+			`[{"type":"tcp","name":"too-large","enable":true,"bind":"65536"}]`,
+			`[
+				{"type":"tcp","name":"duplicate","enable":true,"bind":"1884"},
+				{"type":"tcp","name":"duplicate","enable":true,"bind":"1885"}
+			]`,
+		}
+		for _, listenersResponse := range invalidListenerResponses {
+			invalid := mockServiceAPI(map[string]serviceAPIResponse{
+				"api/v5/configs":   {status: http.StatusOK, body: validConfig},
+				"api/v5/listeners": {status: http.StatusOK, body: listenersResponse},
+				"api/v5/gateways":  {status: http.StatusOK, body: `[]`},
+			})
+			invalidRound := newReconcileRoundWithRequester(invalid)
+			Eventually(func() string {
+				result := a.reconcile(invalidRound, instance)
+				if result.err == nil {
+					return ""
+				}
+				return result.err.Error()
+			}).Should(And(
+				ContainSubstring("failed to create or update services"),
+				ContainSubstring("spec.ports"),
+			))
+
+			after := &corev1.Service{}
+			Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), after)).To(Succeed())
+			Expect(after.Spec.Ports).To(Equal(before.Spec.Ports))
+		}
 	})
 })

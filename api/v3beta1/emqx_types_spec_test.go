@@ -55,3 +55,22 @@ func TestRolloutMaxSurge(t *testing.T) {
 	}
 	assert.Equal(t, int32(2), emqx.Spec.NumMaxSurgeReplicantReplicas())
 }
+
+func TestServiceTemplateIsEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		template *ServiceTemplate
+		enabled  bool
+	}{
+		{name: "absent template", template: nil, enabled: true},
+		{name: "enabled omitted", template: &ServiceTemplate{}, enabled: true},
+		{name: "explicitly enabled", template: &ServiceTemplate{Enabled: ptr.To(true)}, enabled: true},
+		{name: "explicitly disabled", template: &ServiceTemplate{Enabled: ptr.To(false)}, enabled: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.enabled, tt.template.IsEnabled())
+		})
+	}
+}
