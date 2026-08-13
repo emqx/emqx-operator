@@ -52,6 +52,8 @@ type reconcileRound struct {
 	requester apiRequester
 	// Populated by loadState reconciler:
 	state *reconcileState
+	// Populated by loadCoreSetRetirement reconciler:
+	coreRetirement *coreSetRetirement
 	// Populated by dsLoadClusterState reconciler:
 	dsCluster     *api.DSCluster
 	dsReplication *api.DSReplicationStatus
@@ -157,6 +159,7 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&addCoreSet{r},
 		&addReplicantSet{r},
 		&addService{r},
+		&loadCoreSetRetirement{r},
 		&dsLoadClusterState{r},
 		&dsCleanupSites{r},
 		&dsUpdateReplicaSets{r},

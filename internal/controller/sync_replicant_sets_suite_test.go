@@ -612,8 +612,8 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 			//    cancelled by scaling back up.
 			// 2. No scaling is requested.
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(3))
-			_ = util.AttachPodAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
-			_ = util.AttachPodAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
+			_ = util.AttachAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
+			_ = util.AttachAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
 			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
 
 			s := &syncReplicantSets{emqxReconciler()}
@@ -647,8 +647,8 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 			instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 				{NodeName: "emqx@10.0.0.1", State: "evicting_conns"},
 			}
-			_ = util.AttachPodAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
-			_ = util.AttachPodAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
+			_ = util.AttachAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
+			_ = util.AttachAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
 			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
 
 			// Use a requester that accepts the stop-evacuation POST.
@@ -684,8 +684,8 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 			instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 				{NodeName: "emqx@10.0.0.1", State: "evicting_conns"},
 			}
-			_ = util.AttachPodAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
-			_ = util.AttachPodAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
+			_ = util.AttachAnnotation(replicants[0], crd.AnnotationScalingDown, "true")
+			_ = util.AttachAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
 			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
 
 			// Use a requester that accepts the stop-evacuation POST.
@@ -911,7 +911,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 			MaxUnavailable: ptr.To(intstr.FromInt(0)),
 			MaxSurge:       ptr.To(intstr.FromInt(1)),
 		}
-		_ = util.AttachPodAnnotation(currentPod, crd.AnnotationScalingDown, "true")
+		_ = util.AttachAnnotation(currentPod, crd.AnnotationScalingDown, "true")
 		Expect(k8sClient.Update(ctx, currentPod)).Should(Succeed())
 		currentPod.Status.Conditions = []corev1.PodCondition{
 			{Type: corev1.PodReady, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()},
@@ -947,7 +947,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 			MaxUnavailable: ptr.To(intstr.FromInt(0)),
 			MaxSurge:       ptr.To(intstr.FromInt(1)),
 		}
-		_ = util.AttachPodAnnotation(currentPod, crd.AnnotationScalingDown, "true")
+		_ = util.AttachAnnotation(currentPod, crd.AnnotationScalingDown, "true")
 		Expect(k8sClient.Update(ctx, currentPod)).Should(Succeed())
 		// Make the update pod unavailable so budget = 0.
 		updatePod.Status.Conditions = []corev1.PodCondition{

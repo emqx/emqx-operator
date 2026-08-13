@@ -44,3 +44,52 @@ func CloneAnnotations(annotations map[string]string) map[string]string {
 	}
 	return clone
 }
+
+func AttachAnnotation(object metav1.Object, name, value string) bool {
+	return AttachAnnotations(object, map[string]string{name: value})
+}
+
+func AttachAnnotations(object metav1.Object, annotations map[string]string) bool {
+	dirty := false
+	attached := object.GetAnnotations()
+	if len(annotations) > 0 && attached == nil {
+		attached = make(map[string]string, len(annotations))
+	}
+	for name, value := range annotations {
+		valueWas, present := attached[name]
+		if !present || valueWas != value {
+			attached[name] = value
+			dirty = true
+		}
+	}
+	if dirty {
+		object.SetAnnotations(attached)
+	}
+	return dirty
+}
+
+func PeekAnnotations(object metav1.Object, names ...string) map[string]string {
+	peeked := make(map[string]string, len(names))
+	annotations := object.GetAnnotations()
+	for _, name := range names {
+		if value, present := annotations[name]; present {
+			peeked[name] = value
+		}
+	}
+	return peeked
+}
+
+func UnsetAnnotations(object metav1.Object, names ...string) bool {
+	dirty := false
+	annotations := object.GetAnnotations()
+	for _, name := range names {
+		if _, present := annotations[name]; present {
+			dirty = true
+			delete(annotations, name)
+		}
+	}
+	if dirty {
+		object.SetAnnotations(annotations)
+	}
+	return dirty
+}

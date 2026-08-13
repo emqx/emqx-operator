@@ -52,7 +52,6 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crd.EMQX) s
 
 	// Compute the current sites.
 	currentSites := r.dsReplication.TargetSites()
-
 	// Compute the target sites.
 	targetSites := []string{}
 	for _, site := range r.dsCluster.Sites {
@@ -65,9 +64,8 @@ func (u *dsUpdateReplicaSets) reconcile(r *reconcileRound, instance *crd.EMQX) s
 			continue
 		}
 		// Exclude retiring core nodes:
-		pod := r.state.podWithName(nodeName.podName)
 		ordinal := util.PodOrdinal(nodeName.podName)
-		if pod != nil && isPodScaleDownRetiring(pod) {
+		if r.coreRetirement.isRetiringOrdinal(coreSet, ordinal) {
 			continue
 		}
 		// Exclude unrecognizable core pods:

@@ -91,20 +91,22 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 		}
 
 		round := newReconcileRoundWithRequester(validConfigRequester)
-		round.state.replicantSets = []*appsv1.ReplicaSet{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "emqx-rev-current",
-					Labels: map[string]string{crd.LabelPodTemplateHash: "rev-current"},
+		round.state = &reconcileState{
+			replicantSets: []*appsv1.ReplicaSet{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "emqx-rev-current",
+						Labels: map[string]string{crd.LabelPodTemplateHash: "rev-current"},
+					},
+					Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
 				},
-				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 1},
-			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "emqx-rev-update",
-					Labels: map[string]string{crd.LabelPodTemplateHash: "rev-update"},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "emqx-rev-update",
+						Labels: map[string]string{crd.LabelPodTemplateHash: "rev-update"},
+					},
+					Status: appsv1.ReplicaSetStatus{ReadyReplicas: 0},
 				},
-				Status: appsv1.ReplicaSetStatus{ReadyReplicas: 0},
 			},
 		}
 

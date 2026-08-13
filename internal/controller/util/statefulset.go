@@ -10,3 +10,7 @@ func NumReplicas(sts *appsv1.StatefulSet) int32 {
 	}
 	return 1
 }
+
+func SetReplicas(sts *appsv1.StatefulSet, numReplicas int32) {
+	sts.Spec.Replicas = &numReplicas
+}

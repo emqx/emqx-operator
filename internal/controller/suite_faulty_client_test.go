@@ -64,6 +64,18 @@ func newFaultyClient(
 			}
 			return c.Update(ctx, o, opts...)
 		},
+		Patch: func(
+			ctx context.Context,
+			c client.WithWatch,
+			o client.Object,
+			patch client.Patch,
+			opts ...client.PatchOption,
+		) error {
+			if err := fault.err(); err != nil {
+				return err
+			}
+			return c.Patch(ctx, o, patch, opts...)
+		},
 	})
 }
 

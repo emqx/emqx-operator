@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"context"
 	"fmt"
 	"slices"
 
@@ -10,9 +9,8 @@ import (
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Responsibilities:
@@ -94,24 +92,37 @@ func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult
 	desiredReplicas := instance.Spec.NumCoreReplicas()
 	currentReplicas := util.NumReplicas(coreSet)
 
-	// Handle scale-up: simply update the StatefulSet replica count.
+	// Handle scale-downs and await retirement convergence.
+	// May extend the retirement range by one ordinal.
+	// Converged retirement enables safe scale-ups / rolling updates. Additionally, retries
+	// removals of any pods that were supposed to be removed by scaleDown.
+	if currentReplicas > desiredReplicas || r.coreRetirement.watermark > currentReplicas {
+		if currentReplicas > desiredReplicas {
+			r.log.V(1).Info("scaling down coreSet",
+				"statefulSet", klog.KObj(coreSet),
+				"from", currentReplicas,
+				"to", desiredReplicas,
+				"watermark", r.coreRetirement.watermark,
+			)
+		} else {
+			r.log.V(1).Info("awaiting coreSet retirement",
+				"statefulSet", klog.KObj(coreSet),
+				"replicas", currentReplicas,
+				"watermark", r.coreRetirement.watermark,
+			)
+		}
+		return s.scaleDown(r, instance, currentReplicas)
+	}
+
+	// Handle scale-up after all ordinals being restored have been authorized for reuse.
 	if currentReplicas < desiredReplicas {
 		r.log.V(1).Info("scaling up coreSet",
 			"statefulSet", klog.KObj(coreSet),
 			"from", currentReplicas,
 			"to", desiredReplicas,
+			"watermark", r.coreRetirement.watermark,
 		)
 		return s.scaleUp(r, desiredReplicas)
-	}
-
-	// Handle scale-down: remove highest-ordinal pod with evacuation gating.
-	if currentReplicas > desiredReplicas {
-		r.log.V(1).Info("scaling down coreSet",
-			"statefulSet", klog.KObj(coreSet),
-			"from", currentReplicas,
-			"to", desiredReplicas,
-		)
-		return s.scaleDown(r, instance, currentReplicas)
 	}
 
 	// Stop evacuations of any updated pods.
@@ -163,7 +174,9 @@ func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crd.EMQX) subRe
 
 func (s *syncCoreSet) scaleUp(r *reconcileRound, desiredReplicas int32) subResult {
 	coreSet := r.state.coreSet()
-	coreSet.Spec.Replicas = &desiredReplicas
+	r.coreRetirement = newCoreSetRetirementState(desiredReplicas)
+	util.SetReplicas(coreSet, desiredReplicas)
+	util.AttachAnnotations(coreSet, r.coreRetirement.annotations())
 	err := s.Client.Update(r.ctx, coreSet)
 	if err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to scale up coreSet")}
@@ -171,16 +184,40 @@ func (s *syncCoreSet) scaleUp(r *reconcileRound, desiredReplicas int32) subResul
 	return subResult{}
 }
 
-// scaleDown removes the highest-ordinal pod with evacuation gating, then
-// decrements the StatefulSet replica count.
+// scaleDown reconciles deletion of already-retiring pods, then, if needed,
+// admits one more ordinal and decrements the StatefulSet replica count.
 func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentReplicas int32) subResult {
+	var candidate *corev1.Pod
+	var admission coreAdmission
+
 	coreSet := r.state.coreSet()
+	desiredReplicas := instance.Spec.NumCoreReplicas()
+	watermark := r.coreRetirement.watermark
+
+	// Remove pods that were supposed to be removed in previous reconciliations.
+	if watermark > currentReplicas {
+		for n := watermark; n > currentReplicas; n-- {
+			pod := r.state.podWithName(fmt.Sprintf("%s-%d", coreSet.Name, n-1))
+			if pod != nil && pod.DeletionTimestamp == nil {
+				admission = coreAdmission{
+					Action: admissionRemove,
+					Reason: "removal already admitted",
+					Cause:  coreScaleDown,
+				}
+				result := s.onCoreAdmission(r, instance, pod, admission)
+				result.needRequeue = true
+				return result
+			}
+		}
+	}
 
 	// Candidate is the highest-ordinal pod, where ordinal = currentReplicas-1.
-	candidateName := fmt.Sprintf("%s-%d", coreSet.Name, currentReplicas-1)
-	candidate := r.state.podWithName(candidateName)
+	if currentReplicas > desiredReplicas {
+		candidate = r.state.podWithName(fmt.Sprintf("%s-%d", coreSet.Name, currentReplicas-1))
+	} else {
+		return reconcilePostpone()
+	}
 
-	var admission coreAdmission
 	if candidate != nil {
 		admission = checkCorePodRemoval(r, instance, candidate, coreScaleDown)
 	} else {
@@ -194,8 +231,11 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentRe
 	if admission.Action == admissionRemove {
 		// Decrement StatefulSet replica count first so the StatefulSet controller
 		// won't recreate the pod after we delete it.
-		newReplicas := currentReplicas - 1
-		coreSet.Spec.Replicas = &newReplicas
+		if r.coreRetirement.watermark == currentReplicas {
+			r.coreRetirement = newCoreSetRetirementState(currentReplicas)
+		}
+		util.SetReplicas(coreSet, currentReplicas-1)
+		util.AttachAnnotations(coreSet, r.coreRetirement.annotations())
 		err := s.Client.Update(r.ctx, coreSet)
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to decrement coreSet replicas")}
@@ -316,12 +356,7 @@ func (s *syncCoreSet) onCoreAdmission(
 			"statefulSet", klog.KObj(r.state.coreSet()),
 			"cause", admission.Cause,
 		)
-		if admission.Cause == coreScaleDown {
-			if err := attachScaleDownRetirementFinalizer(r.ctx, s.Client, candidate); err != nil {
-				return reconcileError(err)
-			}
-		}
-		if err := s.Client.Delete(r.ctx, candidate); err != nil {
+		if err := s.deleteCorePod(r, candidate); err != nil {
 			return reconcileError(emperror.Wrap(err, "failed to delete core pod"))
 		}
 	case admissionWait:
@@ -343,6 +378,16 @@ func (s *syncCoreSet) onCoreAdmission(
 		}
 	}
 	return subResult{}
+}
+
+func (s *syncCoreSet) deleteCorePod(r *reconcileRound, pod *corev1.Pod) error {
+	if pod.DeletionTimestamp == nil {
+		err := s.Client.Delete(r.ctx, pod)
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
 }
 
 // actOnCoreAdmission performs the side effects implied by a coreAdmission.
@@ -423,27 +468,4 @@ func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 		}
 	}
 	return targets
-}
-
-func attachScaleDownRetirementFinalizer(ctx context.Context, k8sClient client.Client, pod *corev1.Pod) error {
-	if controllerutil.AddFinalizer(pod, crd.FinalizerScaleDownRetirement) {
-		if err := k8sClient.Update(ctx, pod); err != nil {
-			return emperror.Wrap(err, "failed to attach retirement finalizer")
-		}
-	}
-	return nil
-}
-
-func removeScaleDownRetirementFinalizer(ctx context.Context, k8sClient client.Client, pod *corev1.Pod) error {
-	if controllerutil.RemoveFinalizer(pod, crd.FinalizerScaleDownRetirement) {
-		if err := k8sClient.Update(ctx, pod); err != nil {
-			return emperror.Wrap(err, "failed to remove retirement finalizer")
-		}
-	}
-	return nil
-}
-
-func isPodScaleDownRetiring(pod *corev1.Pod) bool {
-	return pod.DeletionTimestamp != nil &&
-		controllerutil.ContainsFinalizer(pod, crd.FinalizerScaleDownRetirement)
 }

@@ -293,14 +293,14 @@ func (s *syncReplicantSets) onReplicantAdmission(
 	pod *corev1.Pod,
 	admission replicantAdmission,
 ) error {
-	annotationsDirty := util.AttachPodAnnotation(pod, crd.AnnotationScalingDown, "true")
+	annotationsDirty := util.AttachAnnotation(pod, crd.AnnotationScalingDown, "true")
 	switch admission.Action {
 	case admissionRemove:
 		r.log.V(1).Info("scheduling replicant pod removal",
 			"reason", admission.Reason,
 			"pod", klog.KObj(pod),
 		)
-		annotationsDirty = util.AttachPodAnnotation(pod, corev1.PodDeletionCost, "-99999") || annotationsDirty
+		annotationsDirty = util.AttachAnnotation(pod, corev1.PodDeletionCost, "-99999") || annotationsDirty
 	case admissionWait:
 		r.log.V(1).Info("removal of replicant pod postponed",
 			"reason", admission.Reason,
