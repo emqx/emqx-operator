@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
-	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,21 +19,11 @@ func TestGenerateNodeCookieSecret(t *testing.T) {
 	}
 
 	t.Run("generate node cookie secret", func(t *testing.T) {
-		conf, _ := config.EMQXConfig(instance.Spec.Config.Data)
-		got := generateNodeCookieSecret(instance, conf)
+		got := generateNodeCookieSecret(instance)
 		assert.Equal(t, "emqx-node-cookie", got.Name)
 		_, ok := got.StringData["node_cookie"]
 		assert.True(t, ok)
-	})
-
-	t.Run("generate node cookie when already set node cookie", func(t *testing.T) {
-		instance.Spec.Config.Data = "node.cookie = fake"
-		conf, _ := config.EMQXConfig(instance.Spec.Config.Data)
-		got := generateNodeCookieSecret(instance, conf)
-		assert.Equal(t, "emqx-node-cookie", got.Name)
-		_, ok := got.StringData["node_cookie"]
-		assert.True(t, ok)
-		assert.Equal(t, "fake", got.StringData["node_cookie"])
+		assert.NotEmpty(t, got.StringData["node_cookie"])
 	})
 }
 
