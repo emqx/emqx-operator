@@ -1,8 +1,6 @@
 package api
 
 import (
-	"net/http"
-	"net/url"
 	"testing"
 
 	req "github.com/emqx/emqx-operator/internal/requester"
@@ -10,26 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func mockRequesterURLs(responses map[string]string) *req.MockRequester {
-	return req.NewMockRequester(
-		func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
-			responseBody, ok := responses[u.Path]
-			if ok {
-				return &http.Response{StatusCode: 200}, []byte(responseBody), nil
-			}
-			return &http.Response{StatusCode: 501}, []byte{}, nil
-		},
-	)
-}
-
 func TestGetDSReplicationStatusTransitions(t *testing.T) {
 	// DB "messages" has a shard with a transition; DB "sessions" has a shard
 	// without transitions. Before the fix, `dbStatus` was reused across loop
 	// iterations, so "sessions" would inherit "messages"' transitions because
 	// the `omitempty` tag causes the field to be absent from the JSON.
-	r := mockRequesterURLs(map[string]string{
-		"api/v5/ds/storages": `["messages", "sessions"]`,
-		"api/v5/ds/storages/messages": `{
+	r := req.MockRequests(
+		"GET api/v5/ds/storages", `["messages", "sessions"]`,
+		"GET api/v5/ds/storages/messages", `{
 			"name": "messages",
 			"shards": [{
 				"id": "0",
@@ -37,14 +23,14 @@ func TestGetDSReplicationStatusTransitions(t *testing.T) {
 				"transitions": [{"site": "site-b", "transition": "joining"}]
 			}]
 		}`,
-		"api/v5/ds/storages/sessions": `{
+		"GET api/v5/ds/storages/sessions", `{
 			"name": "sessions",
 			"shards": [{
 				"id": "0",
 				"replicas": [{"site": "site-a", "status": "up"}]
 			}]
 		}`,
-	})
+	)
 
 	status, err := GetDSReplicationStatus(r)
 	require.NoError(t, err)
@@ -62,19 +48,19 @@ func TestGetDSReplicationStatusTransitions(t *testing.T) {
 }
 
 func TestGetDSCluster(t *testing.T) {
-	r := mockRequesterURLs(map[string]string{
-		"api/v5/ds/sites": `["site-a", "site-b"]`,
-		"api/v5/ds/sites/site-a": `{
+	r := req.MockRequests(
+		"GET api/v5/ds/sites", `["site-a", "site-b"]`,
+		"GET api/v5/ds/sites/site-a", `{
 			"node": "emqx@node1",
 			"up": true,
 			"shards": [{"storage": "messages", "id": "0", "status": "up"}]
 		}`,
-		"api/v5/ds/sites/site-b": `{
+		"GET api/v5/ds/sites/site-b", `{
 			"node": "emqx@node2",
 			"up": false,
 			"shards": [{"storage": "messages", "id": "0", "status": "joining"}]
 		}`,
-	})
+	)
 
 	cluster, err := GetDSCluster(r)
 	require.NoError(t, err)
@@ -90,7 +76,7 @@ func TestGetDSCluster(t *testing.T) {
 
 func TestGetDSAPIError(t *testing.T) {
 	var err error
-	r := mockRequesterURLs(map[string]string{})
+	r := req.MockRequests()
 	_, err = GetDSReplicationStatus(r)
 	assert.Error(t, err)
 	_, err = GetDSCluster(r)

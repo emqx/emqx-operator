@@ -2,8 +2,6 @@ package controller
 
 import (
 	"errors"
-	"net/http"
-	"net/url"
 	"testing"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
@@ -200,52 +198,35 @@ func TestGenerateListenersService(t *testing.T) {
 	})
 }
 
-func listenerRequester(
-	responses map[string]string,
-	failures map[string]error,
-) *req.MockRequester {
-	return req.NewMockRequester(
-		func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
-			if err := failures[u.Path]; err != nil {
-				return nil, nil, err
-			}
-			if response, ok := responses[u.Path]; ok {
-				return &http.Response{StatusCode: http.StatusOK}, []byte(response), nil
-			}
-			return &http.Response{StatusCode: http.StatusNotImplemented}, nil, nil
-		},
-	)
-}
-
 func TestDiscoverListenerServicePorts(t *testing.T) {
-	r := listenerRequester(map[string]string{
-		"api/v5/listeners": `[
-			{"type":"tcp","name":"default","enable":true,"bind":"1883","status":{"running":false}},
-			{"type":"ssl","name":"external","enable":true,"bind":"mqtt.example:8883"},
-			{"type":"ws","name":"v4","enable":true,"bind":"0.0.0.0:8083"},
-			{"type":"wss","name":"v6","enable":true,"bind":"[::]:8084"},
-			{"type":"quic","name":"default","enable":true,"bind":"14567"},
-			{"type":"tcp","name":"disabled","enable":false,"bind":"1884"}
-		]`,
-		"api/v5/gateways": `[
-			{"name":"stomp","status":"stopped"},
-			{"name":"lwm2m","status":"running"},
-			{"name":"nats","status":"running"}
-		]`,
-		"api/v5/gateways/lwm2m/listeners": `[
-			{"type":"udp","name":"default","enable":true,"bind":"5783"},
-			{"type":"dtls","name":"secure","enable":true,"bind":"[::1]:5784"},
-			{"type":"udp","name":"disabled","enable":false,"bind":"5785"}
-		]`,
-		"api/v5/gateways/nats/listeners": `[
-			{"type":"tcp","name":"default","enable":true,"bind":"4222"},
-			{"type":"ssl","name":"secure","enable":true,"bind":"0.0.0.0:4223"},
-			{"type":"ws","name":"websocket","enable":true,"bind":"4224"},
-			{"type":"wss","name":"secure-websocket","enable":true,"bind":"4225"}
-		]`,
-	}, nil)
-
-	ports, err := discoverListenerServicePorts(r)
+	ports, err := discoverListenerServicePorts(
+		req.MockRequests(
+			"GET api/v5/listeners", `[
+				{"type":"tcp","name":"default","enable":true,"bind":"1883","status":{"running":false}},
+				{"type":"ssl","name":"external","enable":true,"bind":"mqtt.example:8883"},
+				{"type":"ws","name":"v4","enable":true,"bind":"0.0.0.0:8083"},
+				{"type":"wss","name":"v6","enable":true,"bind":"[::]:8084"},
+				{"type":"quic","name":"default","enable":true,"bind":"14567"},
+				{"type":"tcp","name":"disabled","enable":false,"bind":"1884"}
+			]`,
+			"GET api/v5/gateways", `[
+				{"name":"stomp","status":"stopped"},
+				{"name":"lwm2m","status":"running"},
+				{"name":"nats","status":"running"}
+			]`,
+			"GET api/v5/gateways/lwm2m/listeners", `[
+				{"type":"udp","name":"default","enable":true,"bind":"5783"},
+				{"type":"dtls","name":"secure","enable":true,"bind":"[::1]:5784"},
+				{"type":"udp","name":"disabled","enable":false,"bind":"5785"}
+			]`,
+			"GET api/v5/gateways/nats/listeners", `[
+				{"type":"tcp","name":"default","enable":true,"bind":"4222"},
+				{"type":"ssl","name":"secure","enable":true,"bind":"0.0.0.0:4223"},
+				{"type":"ws","name":"websocket","enable":true,"bind":"4224"},
+				{"type":"wss","name":"secure-websocket","enable":true,"bind":"4225"}
+			]`,
+		),
+	)
 	require.NoError(t, err)
 	assert.Equal(t, []corev1.ServicePort{
 		{Name: "lwm2m-dtls-secure",
@@ -300,11 +281,12 @@ func TestDiscoverListenerServicePorts(t *testing.T) {
 }
 
 func TestDiscoverListenerServicePortsEmpty(t *testing.T) {
-	r := listenerRequester(map[string]string{
-		"api/v5/listeners": `[]`,
-		"api/v5/gateways":  `[]`,
-	}, nil)
-	ports, err := discoverListenerServicePorts(r)
+	ports, err := discoverListenerServicePorts(
+		req.MockRequests(
+			"GET api/v5/listeners", `[]`,
+			"GET api/v5/gateways", `[]`,
+		),
+	)
 	require.NoError(t, err)
 	assert.Empty(t, ports)
 }
@@ -312,60 +294,63 @@ func TestDiscoverListenerServicePortsEmpty(t *testing.T) {
 func TestDiscoverListenerServicePortsErrors(t *testing.T) {
 	tests := []struct {
 		name      string
-		responses map[string]string
-		failures  map[string]error
+		requester req.RequesterInterface
 		contains  []string
 	}{
 		{
-			name:     "MQTT request",
-			failures: map[string]error{"api/v5/listeners": errors.New("unavailable")},
+			name: "MQTT request",
+			requester: req.MockRequests(
+				"GET api/v5/listeners", errors.New("unavailable"),
+			),
 			contains: []string{"failed to get MQTT listeners", "unavailable"},
 		},
 		{
-			name:      "gateway overview request",
-			responses: map[string]string{"api/v5/listeners": `[]`},
-			failures:  map[string]error{"api/v5/gateways": errors.New("unavailable")},
-			contains:  []string{"failed to get gateway overview", "unavailable"},
+			name: "gateway overview request",
+			requester: req.MockRequests(
+				"GET api/v5/listeners", `[]`,
+				"GET api/v5/gateways", errors.New("unavailable"),
+			),
+			contains: []string{"failed to get gateway overview", "unavailable"},
 		},
 		{
 			name: "one gateway request",
-			responses: map[string]string{
-				"api/v5/listeners": `[]`,
-				"api/v5/gateways":  `[{"name":"lwm2m","status":"running"}]`,
-			},
-			failures: map[string]error{"api/v5/gateways/lwm2m/listeners": errors.New("unavailable")},
+			requester: req.MockRequests(
+				"GET api/v5/listeners", `[]`,
+				"GET api/v5/gateways", `[{"name":"lwm2m","status":"running"}]`,
+				"GET api/v5/gateways/lwm2m/listeners", errors.New("unavailable"),
+			),
 			contains: []string{"gateway \"lwm2m\"", "unavailable"},
 		},
 		{
 			name: "missing bind port",
-			responses: map[string]string{
-				"api/v5/listeners": `[{"type":"tcp","name":"bad","enable":true,"bind":""}]`,
-				"api/v5/gateways":  `[]`,
-			},
+			requester: req.MockRequests(
+				"GET api/v5/listeners", `[{"type":"tcp","name":"bad","enable":true,"bind":""}]`,
+				"GET api/v5/gateways", `[]`,
+			),
 			contains: []string{"listener tcp:bad", "missing port"},
 		},
 		{
 			name: "non-numeric MQTT bind port",
-			responses: map[string]string{
-				"api/v5/listeners": `[{"type":"tcp","name":"bad","enable":true,"bind":"127.0.0.1"}]`,
-				"api/v5/gateways":  `[]`,
-			},
+			requester: req.MockRequests(
+				"GET api/v5/listeners", `[{"type":"tcp","name":"bad","enable":true,"bind":"127.0.0.1"}]`,
+				"GET api/v5/gateways", `[]`,
+			),
 			contains: []string{"listener tcp:bad", "non-numeric port"},
 		},
 		{
 			name: "non-numeric gateway bind port",
-			responses: map[string]string{
-				"api/v5/listeners":               `[]`,
-				"api/v5/gateways":                `[{"name":"coap","status":"running"}]`,
-				"api/v5/gateways/coap/listeners": `[{"type":"udp","name":"bad","enable":true,"bind":"0.0.0.0:nope"}]`,
-			},
+			requester: req.MockRequests(
+				"GET api/v5/listeners", `[]`,
+				"GET api/v5/gateways", `[{"name":"coap","status":"running"}]`,
+				"GET api/v5/gateways/coap/listeners", `[{"type":"udp","name":"bad","enable":true,"bind":"0.0.0.0:nope"}]`,
+			),
 			contains: []string{"gateway coap listener udp:bad", "non-numeric port"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := discoverListenerServicePorts(listenerRequester(tt.responses, tt.failures))
+			_, err := discoverListenerServicePorts(tt.requester)
 			require.Error(t, err)
 			for _, expected := range tt.contains {
 				assert.ErrorContains(t, err, expected)

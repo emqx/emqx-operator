@@ -2,8 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"net/http"
-	"net/url"
 	"slices"
 	"time"
 
@@ -652,13 +650,8 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
 
 			// Use a requester that accepts the stop-evacuation POST.
-			round := newReconcileRoundWithRequester(req.NewMockRequester(
-				func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
-					if u.Path == "api/v5/load_rebalance/emqx@10.0.0.1/evacuation/stop" {
-						return &http.Response{StatusCode: 200}, []byte("{}"), nil
-					}
-					return &http.Response{StatusCode: 501}, []byte{}, nil
-				},
+			round := newReconcileRoundWithRequester(req.MockRequests(
+				"POST api/v5/load_rebalance/emqx@10.0.0.1/evacuation/stop", "{}",
 			))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 
@@ -688,12 +681,8 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 			_ = util.AttachAnnotation(replicants[0], corev1.PodDeletionCost, "-99999")
 			Expect(k8sClient.Update(ctx, replicants[0])).Should(Succeed())
 
-			// Use a requester that accepts the stop-evacuation POST.
-			round := newReconcileRoundWithRequester(req.NewMockRequester(
-				func(method string, u url.URL, body []byte, header http.Header) (*http.Response, []byte, error) {
-					return &http.Response{StatusCode: 503}, []byte{}, nil
-				},
-			))
+			// Use a requester that responds with "Service Unavailable".
+			round := newReconcileRoundWithRequester(req.MockRequests("*", req.MockUnavail()))
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 
 			s := &syncReplicantSets{emqxReconciler()}

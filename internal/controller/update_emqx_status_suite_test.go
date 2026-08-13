@@ -1,10 +1,7 @@
 package controller
 
 import (
-	"net/http"
-	"net/url"
 	"syscall"
-	"time"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	req "github.com/emqx/emqx-operator/internal/requester"
@@ -86,13 +83,7 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 		_, conditionBefore := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 		Expect(conditionBefore).NotTo(BeNil())
 
-		round := newReconcileRoundWithRequester(req.NewMockRequester(
-			func(string, url.URL, []byte, http.Header) (*http.Response, []byte, error) {
-				time.Sleep(time.Second)
-				return nil, nil, syscall.ECONNREFUSED
-			},
-		))
-
+		round := newReconcileRoundWithRequester(req.MockRequests("*", syscall.ECONNREFUSED))
 		s := &updateStatus{emqxReconciler()}
 		Expect(runRoundReconcile(round, instance, s)).To(BeSuccessfulReconcile())
 

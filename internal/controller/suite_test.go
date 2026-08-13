@@ -20,8 +20,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
-	"net/url"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -303,11 +301,7 @@ func ownerReferences(owner client.Object) []metav1.OwnerReference {
 }
 
 func newReconcileRound() *reconcileRound {
-	req := req.NewMockRequester(
-		func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
-			return &http.Response{StatusCode: 501}, []byte{}, nil
-		},
-	)
+	req := req.MockRequests()
 	return newReconcileRoundWithRequester(req)
 }
 
