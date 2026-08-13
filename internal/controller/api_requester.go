@@ -32,14 +32,7 @@ func (b *apiRequesterBuilder) forCore(
 	state *reconcileState,
 	filter ...reconcileStatePodFilter,
 ) req.RequesterInterface {
-	filter = append(
-		filter,
-		podsWithRole{crd.RoleCore},
-		podsWithCondition{corev1.ContainersReady},
-		podsAlive{},
-	)
-	pods := state.listPods(filter...)
-	sortByPreference(state, pods)
+	pods := preferredCorePods(state, filter...)
 	for _, pod := range pods {
 		req := b.forPod(pod)
 		if req == nil {
@@ -48,6 +41,21 @@ func (b *apiRequesterBuilder) forCore(
 		return req
 	}
 	return nil
+}
+
+func preferredCorePods(
+	state *reconcileState,
+	filter ...reconcileStatePodFilter,
+) []*corev1.Pod {
+	filter = append(
+		filter,
+		podsWithRole{crd.RoleCore},
+		podsWithCondition{corev1.ContainersReady},
+		podsAlive{},
+	)
+	pods := state.listPods(filter...)
+	sortByPreference(state, pods)
+	return pods
 }
 
 // Prefer lower ordinals by default. If exactly one outdated core remains,

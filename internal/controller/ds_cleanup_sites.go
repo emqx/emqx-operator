@@ -5,7 +5,6 @@ import (
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	"github.com/emqx/emqx-operator/internal/emqx/ctl"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // Responsibilities:
@@ -51,8 +50,7 @@ func (c *dsCleanupSites) reconcile(r *reconcileRound, instance *crd.EMQX) subRes
 
 	// If there's no suitable EMQX API to query, switch to `emqx ctl`.
 	if req == nil {
-		pods := r.state.listPods(&podsManagedBy{coreSet}, &podsWithCondition{corev1.ContainersReady})
-		sortByCreationTimestamp(pods)
+		pods := preferredCorePods(r.state, podsManagedBy{coreSet})
 		if len(pods) == 0 {
 			r.log.V(1).Info("skipping DS site cleanup", "reason", "no core pods")
 			return reconcilePostpone()
