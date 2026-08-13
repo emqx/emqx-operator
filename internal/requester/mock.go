@@ -100,12 +100,21 @@ func MockRequests(args ...any) RequesterInterface {
 	return &mockRequester{requests}
 }
 
-func (f *mockRequester) GetURL(path string, query ...string) url.URL { return url.URL{Path: path} }
-func (f *mockRequester) GetSchema() string                           { return "http" }
-func (f *mockRequester) GetHost() string                             { return "" }
-func (f *mockRequester) GetUsername() string                         { return "" }
-func (f *mockRequester) GetPassword() string                         { return "" }
-func (f *mockRequester) GetDescription() string                      { return "MockRequester" }
+func (f *mockRequester) GetURL(path string, query ...string) url.URL {
+	result := url.URL{Path: path}
+	for _, q := range query {
+		if result.RawQuery != "" {
+			result.RawQuery += "&"
+		}
+		result.RawQuery += q
+	}
+	return result
+}
+func (f *mockRequester) GetSchema() string      { return "http" }
+func (f *mockRequester) GetHost() string        { return "" }
+func (f *mockRequester) GetUsername() string    { return "" }
+func (f *mockRequester) GetPassword() string    { return "" }
+func (f *mockRequester) GetDescription() string { return "MockRequester" }
 
 func (f *mockRequester) Request(method string, url url.URL, body []byte, header http.Header) (
 	resp *http.Response, respBody []byte, err error,
