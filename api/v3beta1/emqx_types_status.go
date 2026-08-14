@@ -222,7 +222,12 @@ const (
 	ConfigApplied             string = "ConfigApplied"
 )
 
-func (s *EMQXStatus) SetCondition(ty string, status metav1.ConditionStatus, reason, message string) {
+func (s *EMQXStatus) SetCondition(
+	ty string,
+	status metav1.ConditionStatus,
+	reason, message string,
+	observedIn int64,
+) {
 	pos, existing := s.GetCondition(ty)
 	if existing != nil &&
 		existing.Status == status &&
@@ -236,6 +241,7 @@ func (s *EMQXStatus) SetCondition(ty string, status metav1.ConditionStatus, reas
 		Reason:             reason,
 		Message:            message,
 		LastTransitionTime: metav1.Now(),
+		ObservedGeneration: observedIn,
 	}
 	if existing != nil && existing.Status == status {
 		c.LastTransitionTime = existing.LastTransitionTime
