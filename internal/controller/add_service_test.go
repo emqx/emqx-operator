@@ -5,20 +5,17 @@ import (
 	"testing"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
-	config "github.com/emqx/emqx-operator/internal/controller/config"
 	req "github.com/emqx/emqx-operator/internal/requester"
+	"github.com/emqx/emqx-operator/test/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 )
 
-func loadConf(data string) *config.EMQX {
-	conf, _ := config.EMQXConfigWithDefaults(data)
-	return conf
-}
 func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check metadata", func(t *testing.T) {
@@ -47,7 +44,7 @@ func TestGenerateDashboardService(t *testing.T) {
 				},
 			},
 		}
-		got := generateDashboardService(emqx, loadConf(""))
+		got := generateDashboardService(emqx)
 		assert.Equal(t, metav1.ObjectMeta{
 			Name:      "emqx-dashboard",
 			Namespace: "emqx",
@@ -70,7 +67,7 @@ func TestGenerateDashboardService(t *testing.T) {
 				Name: "emqx",
 			},
 		}
-		got := generateDashboardService(emqx, loadConf(""))
+		got := generateDashboardService(emqx)
 		assert.Equal(t, map[string]string{
 			crd.LabelInstance:  "emqx",
 			crd.LabelManagedBy: "emqx-operator",
@@ -80,9 +77,14 @@ func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check http ports", func(t *testing.T) {
 		emqx := &crd.EMQX{}
-		got := generateDashboardService(emqx, loadConf(`
-		dashboard.listeners.http.bind = 18083
-		`))
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+                listeners:
+                    http:
+                        bind: 18083
+            `)},
+		}
+		got := generateDashboardService(emqx)
 		assert.Equal(t, []corev1.ServicePort{
 			{
 				Name:       "dashboard",
@@ -95,10 +97,16 @@ func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check https ports", func(t *testing.T) {
 		emqx := &crd.EMQX{}
-		got := generateDashboardService(emqx, loadConf(`
-		dashboard.listeners.http.bind = 0
-		dashboard.listeners.https.bind = 18084
-		`))
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+                listeners:
+                    http:
+                        bind: 0
+                    https:
+                        bind: 18084
+            `)},
+		}
+		got := generateDashboardService(emqx)
 		assert.Equal(t, []corev1.ServicePort{
 			{
 				Name:       "dashboard-https",
@@ -111,10 +119,16 @@ func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check http and https ports", func(t *testing.T) {
 		emqx := &crd.EMQX{}
-		got := generateDashboardService(emqx, loadConf(`
-		dashboard.listeners.http.bind = 18083
-		dashboard.listeners.https.bind = 18084
-		`))
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+                listeners:
+                    http:
+                        bind: 18083
+                    https:
+                        bind: 18084
+            `)},
+		}
+		got := generateDashboardService(emqx)
 		assert.ElementsMatch(t, []corev1.ServicePort{
 			{
 				Name:       "dashboard",
@@ -133,10 +147,16 @@ func TestGenerateDashboardService(t *testing.T) {
 
 	t.Run("check empty ports", func(t *testing.T) {
 		emqx := &crd.EMQX{}
-		got := generateDashboardService(emqx, loadConf(`
-		dashboard.listeners.http.bind = 0
-		dashboard.listeners.https.bind = 0
-		`))
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+                listeners:
+                    http:
+                        bind: 0
+                    https:
+                        bind: 0
+            `)},
+		}
+		got := generateDashboardService(emqx)
 		assert.Nil(t, got)
 	})
 }

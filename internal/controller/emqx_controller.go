@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
-	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	"github.com/go-logr/logr"
@@ -46,8 +45,6 @@ import (
 type reconcileRound struct {
 	ctx context.Context
 	log logr.Logger
-	// Populated by `loadConfig` reconciler:
-	conf *config.EMQX
 	// Populated by `setupAPIRequester` reconciler:
 	requester apiRequester
 	// Populated by loadState reconciler:
@@ -144,8 +141,6 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	needRequeue := false
 
 	for _, subReconciler := range []subReconciler{
-		// Load EMQX configuration defined in the spec.config.data:
-		&loadConfig{r},
 		// Load the current state of the resources managed by the controller:
 		&loadState{r},
 		// Setup secrets with bootstrap API keys / node cookie:

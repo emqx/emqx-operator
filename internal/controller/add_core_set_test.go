@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
-	config "github.com/emqx/emqx-operator/internal/controller/config"
+	"github.com/emqx/emqx-operator/test/util"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -42,8 +43,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newStatefulSet(emqx, conf)
+		got := newStatefulSet(emqx)
 
 		assert.Equal(t, "core-annotation-value", got.Annotations["core-annotation-key"])
 		assert.Equal(t, "core-label-value", got.Labels["core-label-key"])
@@ -57,8 +57,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check selector and pod metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newStatefulSet(emqx, conf)
+		got := newStatefulSet(emqx)
 		assert.Equal(t, emqx.Spec.CoreTemplate.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
 			crd.LabelInstance:  "emqx",
@@ -76,16 +75,14 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check update strategy is OnDelete", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newStatefulSet(emqx, conf)
+		got := newStatefulSet(emqx)
 		assert.Equal(t, appsv1.OnDeleteStatefulSetStrategyType, got.Spec.UpdateStrategy.Type)
 		assert.EqualValues(t, int32(0), got.Spec.MinReadySeconds)
 	})
 
 	t.Run("check PVC retention policy deletes on scale-down and sts deletion", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newStatefulSet(emqx, conf)
+		got := newStatefulSet(emqx)
 		assert.NotNil(t, got.Spec.PersistentVolumeClaimRetentionPolicy)
 		assert.Equal(t,
 			appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
@@ -99,8 +96,7 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check bootstrap API keys", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		rs := newStatefulSet(emqx, conf)
+		rs := newStatefulSet(emqx)
 		got := []corev1.EnvVar{}
 		for _, env := range rs.Spec.Template.Spec.Containers[0].Env {
 			if env.Name == "EMQX_API_KEY__BOOTSTRAP_FILE" {
@@ -112,9 +108,14 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check http port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 18083"
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newStatefulSet(emqx, conf)
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+				listeners:
+					http:
+						bind: 18083
+			`)},
+		}
+		got := newStatefulSet(emqx)
 
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
@@ -127,12 +128,16 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = `
-		dashboard.listeners.http.bind = 0
-		dashboard.listeners.https.bind = 18084
-		`
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newStatefulSet(emqx, conf)
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+				listeners:
+					http:
+						bind: 0
+					https:
+						bind: 18084
+			`)},
+		}
+		got := newStatefulSet(emqx)
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
 				Name:          "dashboard-https",
@@ -144,12 +149,16 @@ func TestGetNewStatefulSet(t *testing.T) {
 
 	t.Run("check http and https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = `
-		dashboard.listeners.http.bind = 18083
-		dashboard.listeners.https.bind = 18084
-		`
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newStatefulSet(emqx, conf)
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+				listeners:
+					http:
+						bind: 18083
+					https:
+						bind: 18084
+			`)},
+		}
+		got := newStatefulSet(emqx)
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
 				Name:          "dashboard",

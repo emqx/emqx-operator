@@ -16,3 +16,10 @@ func IsCommonError(err error) bool {
 		k8sErrors.IsNotFound(e) ||
 		k8sErrors.IsConflict(e)
 }
+
+func IsTransientAPIError(err error) bool {
+	e := emperror.Cause(err)
+	return e == io.EOF ||
+		api.IsUnavailable(e) ||
+		api.IsConnectionClosed(e)
+}

@@ -17,420 +17,195 @@ limitations under the License.
 package config
 
 import (
+	"strings"
 	"testing"
 
+	crd "github.com/emqx/emqx-operator/api/v3beta1"
+	"github.com/emqx/emqx-operator/test/util"
+	"github.com/lithammer/dedent"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func TestCopy(t *testing.T) {
-	t.Run("empty config", func(t *testing.T) {
-		config, err := EMQXConfig(`
-		durable_sessions.enable = true
-		listeners.tcp.default.bind = 11883
-		`)
-		assert.Nil(t, err)
-		got := config.Copy()
-		assert.NotSame(t, config.Config, got.Config)
-		got.StripReadOnlyConfig()
-		assert.NotEqual(t, config.Print(), got.Print())
-	})
-}
-
-func TestNodeCookie(t *testing.T) {
-	t.Run("empty config", func(t *testing.T) {
-		config, err := EMQXConfig("")
-		assert.Nil(t, err)
-		got := config.GetNodeCookie()
-		assert.Equal(t, "", got)
-	})
-
-	t.Run("simple cookie", func(t *testing.T) {
-		config, err := EMQXConfig(`node.cookie = COOKIE`)
-		assert.Nil(t, err)
-		got := config.GetNodeCookie()
-		assert.Equal(t, "COOKIE", got)
-	})
-
-	t.Run("cookie with space and special characters", func(t *testing.T) {
-		config, err := EMQXConfig(`node.cookie = "COOKIE #!@#$"`)
-		assert.Nil(t, err)
-		got := config.GetNodeCookie()
-		assert.Equal(t, "COOKIE #!@#$", got)
-	})
-}
-
-func TestStripReadOnlyConfig(t *testing.T) {
-	t.Run("empty config", func(t *testing.T) {
-		config, err := EMQXConfig("")
-		assert.Nil(t, err)
-		got := config.StripReadOnlyConfig()
-		assert.Empty(t, got)
-	})
-
-	t.Run("non-empty config", func(t *testing.T) {
-		config, err := EMQXConfig(`
-		node.cookie = COOKIE
-		cluster.name = emqx
-		listeners {
-			tcp.default.bind = 18083
-			ssl.default.bind = 18084
-		}
-		durable_sessions {
-			enable = true
-		}
-		`)
-		assert.Nil(t, err)
-		got := config.StripReadOnlyConfig()
-		assert.ElementsMatch(t, got, []string{
-			"node",
-			"cluster.name",
-			"durable_sessions",
-		})
-	})
-}
-
-func TestGetDashboardPortMap(t *testing.T) {
-	t.Run("empty config", func(t *testing.T) {
-		config, err := EMQXConfig("")
-		assert.Nil(t, err)
-		got := config.GetDashboardPortMap()
-		assert.Equal(t, map[string]int{
-			"dashboard": 18083,
-		}, got)
-	})
-
-	t.Run("wrong config", func(t *testing.T) {
-		_, err := EMQXConfig("hello world")
-		assert.ErrorContains(t, err, "invalid config object")
-	})
-
-	t.Run("a single http port", func(t *testing.T) {
-		config, err := EMQXConfig(`dashboard.listeners.http.bind = 18083`)
-		assert.Nil(t, err)
-		got := config.GetDashboardPortMap()
-		assert.Equal(t, map[string]int{
-			"dashboard": 18083,
-		}, got)
-	})
-
-	t.Run("a single IPV4 http port", func(t *testing.T) {
-		config, err := EMQXConfig(`dashboard.listeners.http.bind = "0.0.0.0:18083"`)
-		assert.Nil(t, err)
-		got := config.GetDashboardPortMap()
-		assert.Equal(t, map[string]int{
-			"dashboard": 18083,
-		}, got)
-	})
-
-	t.Run("a single IPV6 http port", func(t *testing.T) {
-		config, err := EMQXConfig(`dashboard.listeners.http.bind = "[::]:18083"`)
-		assert.Nil(t, err)
-		got := config.GetDashboardPortMap()
-		assert.Equal(t, map[string]int{
-			"dashboard": 18083,
-		}, got)
-	})
-
-	t.Run("a single https port", func(t *testing.T) {
-		config, err := EMQXConfig(`dashboard.listeners.https.bind = 18084`)
-		assert.Nil(t, err)
-		got := config.GetDashboardPortMap()
-		assert.Equal(t, map[string]int{
-			"dashboard":       18083, // default http port
-			"dashboard-https": 18084,
-		}, got)
-	})
-
-	t.Run("disable http port and a single https port", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			dashboard.listeners.http.bind = 0
-			dashboard.listeners.https.bind = 18084
-		`)
-		assert.Nil(t, err)
-		got := config.GetDashboardPortMap()
-		assert.Equal(t, map[string]int{
-			"dashboard-https": 18084,
-		}, got)
-	})
-
-	t.Run("disable all port", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			dashboard.listeners.http.bind = 0
-			dashboard.listeners.https.bind = 0
-		`)
-		assert.Nil(t, err)
-		got := config.GetDashboardPortMap()
-		assert.Empty(t, got)
-	})
-}
-
-func TestGetDashboardServicePorts(t *testing.T) {
-	expect := []corev1.ServicePort{
-		{
-			Name:       "dashboard",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       int32(18083),
-			TargetPort: intstr.Parse("18083"),
-		},
+func TestRenderRoots(t *testing.T) {
+	first := crd.ConfigRoots{
+		"listeners": apiextv1.JSON{Raw: util.FromYAMLString(`
+			tcp:
+				default:
+					bind: 1883
+					enabled: true
+		`)},
+		"authentication": apiextv1.JSON{Raw: util.FromYAMLString(`
+			- mechanism: password_based
+			  backend:   built_in_database
+		`)},
 	}
-
-	t.Run("empty config with defaults", func(t *testing.T) {
-		config, err := EMQXConfigWithDefaults("")
-		assert.Nil(t, err)
-		got := config.GetDashboardServicePorts()
-		assert.Equal(t, expect, got)
-	})
-
-	t.Run("a single port", func(t *testing.T) {
-		config, err := EMQXConfig(`dashboard.listeners.http.bind = 18083`)
-		assert.Nil(t, err)
-		got := config.GetDashboardServicePorts()
-		assert.Equal(t, expect, got)
-	})
-
-	t.Run("ipv4 address", func(t *testing.T) {
-		config, err := EMQXConfig(`dashboard.listeners.http.bind = "0.0.0.0:18083"`)
-		assert.Nil(t, err)
-		got := config.GetDashboardServicePorts()
-		assert.Equal(t, expect, got)
-	})
-
-	t.Run("ipv6 address", func(t *testing.T) {
-		config, err := EMQXConfig(`dashboard.listeners.http.bind = "[::]:18083"`)
-		assert.Nil(t, err)
-		got := config.GetDashboardServicePorts()
-		assert.Equal(t, expect, got)
-	})
-
-	t.Run("empty config", func(t *testing.T) {
-		config, err := EMQXConfig("")
-		assert.Nil(t, err)
-		got := config.GetDashboardServicePorts()
-		assert.Equal(t, expect, got)
-	})
-
-	t.Run("wrong config", func(t *testing.T) {
-		_, err := EMQXConfig("hello world")
-		assert.ErrorContains(t, err, "invalid config object")
-	})
+	second := crd.ConfigRoots{
+		"authentication": apiextv1.JSON{Raw: util.FromYAMLString(`
+			- backend:   built_in_database
+			  mechanism: password_based
+		`)},
+		"listeners": apiextv1.JSON{Raw: util.FromYAMLString(`
+			tcp:
+				default:
+					enabled: true
+					bind: 1883
+		`)},
+	}
+	want := strings.TrimLeft(dedent.Dedent(`
+		"authentication" = [{"backend":"built_in_database","mechanism":"password_based"}]
+		"listeners" = {"tcp":{"default":{"bind":1883,"enabled":true}}}
+	`), "\n")
+	assert.Equal(t, want, RenderRoots(first))
+	assert.Equal(t, want, RenderRoots(second))
 }
 
-func TestGetListenersServicePorts(t *testing.T) {
-	t.Run("check listeners", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			listeners.tcp.default.bind = "0.0.0.0:1883"
-			listeners.ssl.default.bind = "0.0.0.0:8883"
-			listeners.ws.default.bind = "0.0.0.0:8083"
-			listeners.wss.default.bind = "0.0.0.0:8084"
-			listeners.quic.default.bind = "0.0.0.0:14567"
-		`)
-		assert.Nil(t, err)
-		got := config.GetListenersServicePorts()
-		assert.ElementsMatch(t, []corev1.ServicePort{
-			{
-				Name:       "tcp-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       1883,
-				TargetPort: intstr.Parse("1883"),
-			},
-			{
-				Name:       "ssl-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       8883,
-				TargetPort: intstr.Parse("8883"),
-			},
-			{
-				Name:       "ws-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       8083,
-				TargetPort: intstr.Parse("8083"),
-			},
-			{
-				Name:       "wss-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       8084,
-				TargetPort: intstr.Parse("8084"),
-			},
-			{
-				Name:       "quic-default",
-				Protocol:   corev1.ProtocolUDP,
-				Port:       14567,
-				TargetPort: intstr.Parse("14567"),
-			},
-		}, got)
-	})
-
-	t.Run("check gateway listeners", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			gateway.coap.listeners.udp.default.bind = "5683"
-			gateway.exporto.listeners.tcp.default.bind = "7993"
-			gateway.lwm2w.listeners.udp.default.bind = "5783"
-			gateway.mqttsn.listeners.udp.default.bind = "1884"
-			gateway.stomp.listeners.tcp.default.bind = "61613"
-		`)
-		assert.Nil(t, err)
-		got := config.GetListenersServicePorts()
-		assert.ElementsMatch(t, []corev1.ServicePort{
-			{
-				Name:       "coap-udp-default",
-				Protocol:   corev1.ProtocolUDP,
-				Port:       5683,
-				TargetPort: intstr.Parse("5683"),
-			},
-			{
-				Name:       "exporto-tcp-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       7993,
-				TargetPort: intstr.Parse("7993"),
-			},
-			{
-				Name:       "lwm2w-udp-default",
-				Protocol:   corev1.ProtocolUDP,
-				Port:       5783,
-				TargetPort: intstr.Parse("5783"),
-			},
-			{
-				Name:       "mqttsn-udp-default",
-				Protocol:   corev1.ProtocolUDP,
-				Port:       1884,
-				TargetPort: intstr.Parse("1884"),
-			},
-			{
-				Name:       "stomp-tcp-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       61613,
-				TargetPort: intstr.Parse("61613"),
-			},
-		}, got)
-	})
+func TestRenderBaseConfig(t *testing.T) {
+	roots := crd.ConfigRoots{
+		"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+			listeners:
+				http:
+					bind: 0
+		`)},
+	}
+	got := RenderBaseConfig(roots)
+	assert.Contains(t, got, `http.bind = "0.0.0.0:18083"`)
+	assert.Greater(t, len(got), len(EMQXDefaults))
 }
 
-func TestPrint(t *testing.T) {
-	t.Run("empty config", func(t *testing.T) {
-		config, err := EMQXConfig("")
-		assert.Nil(t, err)
-		got := config.Print()
-		assert.Equal(t, "", got)
-	})
-
-	t.Run("empty object", func(t *testing.T) {
-		config, err := EMQXConfig("cluster {}")
-		assert.Nil(t, err)
-		got := config.Print()
-		assert.Equal(t, "cluster {}", got)
-	})
-
-	t.Run("arrays", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			node.name = "emqx@127.0.0.1"
-			cluster.core_nodes = ["emqx@node1.emqx.io", "emqx@node2.emqx.io"]
-		`)
-		assert.Nil(t, err)
-		got := config.Print()
-		expected := `cluster {core_nodes = ["emqx@node1.emqx.io", "emqx@node2.emqx.io"]}, node {name = "emqx@127.0.0.1"}`
-		assert.Equal(t, expected, got)
-	})
-
-	t.Run("empty arrays", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			cluster.core_nodes = []
-		`)
-		assert.Nil(t, err)
-		got := config.Print()
-		expected := `cluster {core_nodes = []}`
-		assert.Equal(t, expected, got)
-	})
-
-	t.Run("non-empty scalar arrays", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			authentication.mechanisms = ["password_based", "jwt"]
-			authorization.cache_ttl = [1, 5, 10]
-		`)
-		assert.Nil(t, err)
-		got := config.Print()
-		expected := `authentication {mechanisms = ["password_based", jwt]}, authorization {cache_ttl = [1, 5, 10]}`
-		assert.Equal(t, expected, got)
-	})
-
-	t.Run("nested arrays", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			cluster.seed_nodes = [["emqx@node1.emqx.io"], []]
-		`)
-		assert.Nil(t, err)
-		got := config.Print()
-		expected := `cluster {seed_nodes = [["emqx@node1.emqx.io"], []]}`
-		assert.Equal(t, expected, got)
-	})
-
-	t.Run("array objects", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			authentication = [
-				{mechanism = password_based, backend = built_in_database},
-				{mechanism = jwt}
-			]
-		`)
-		assert.Nil(t, err)
-		got := config.Print()
-		expected := `authentication = [{backend = "built_in_database", mechanism = "password_based"}, {mechanism = jwt}]`
-		assert.Equal(t, expected, got)
-	})
-
-	//nolint:lll
-	t.Run("complex nested structure", func(t *testing.T) {
-		config, err := EMQXConfig(`
-			durable_sessions.enable = true
-			gateway.coap.listeners.udp.default.bind = 5683
-			gateway.coap.listeners.dtls.default.bind = 5684
-			listeners.tcp.default.bind = 1883
-			listeners.ssl.default.bind = 8883
-			dashboard.listeners.http.bind = 18083
-			dashboard.listeners.https.bind = 18084
-		`)
-		assert.Nil(t, err)
-		got := config.Print()
-		expected := `dashboard {listeners {http {bind = 18083}, https {bind = 18084}}}, durable_sessions {enable = true}, gateway {coap {listeners {dtls {default {bind = 5684}}, udp {default {bind = 5683}}}}}, listeners {ssl {default {bind = 8883}}, tcp {default {bind = 1883}}}`
-		assert.Equal(t, expected, got)
-	})
+func TestValidateRoots(t *testing.T) {
+	assert.NoError(t, ValidateRoots(crd.ConfigRoots{
+		"node": apiextv1.JSON{Raw: util.FromYAMLString(`name: emqx@host`)},
+	}))
+	assert.EqualError(t,
+		ValidateRoots(crd.ConfigRoots{
+			"node": apiextv1.JSON{Raw: util.FromYAMLString(`cookie: secret`)},
+		}),
+		"spec.config.roots.node.cookie is reserved for the Operator",
+	)
+	assert.EqualError(t,
+		ValidateRoots(crd.ConfigRoots{
+			"node": apiextv1.JSON{Raw: util.FromYAMLString(`cookie: null`)},
+		}),
+		"spec.config.roots.node.cookie is reserved for the Operator",
+	)
 }
 
-func TestStrip(t *testing.T) {
-	t.Run("empty config", func(t *testing.T) {
-		config, err := EMQXConfig("")
-		assert.Nil(t, err)
-		got := config.Strip("dashboard.listeners.http.bind")
-		assert.Equal(t, got, false)
-		assert.Equal(t, config.Print(), "")
-	})
+func TestSplitRuntimeRoots(t *testing.T) {
+	roots := crd.ConfigRoots{
+		"listeners": apiextv1.JSON{Raw: util.FromYAMLString(`
+			tcp:
+				default:
+					bind: 1883
+		`)},
+		"cluster": apiextv1.JSON{Raw: util.FromYAMLString(`
+			name: emqx
+			links:
+				- name: remote
+		`)},
+		"durable_sessions": apiextv1.JSON{Raw: util.FromYAMLString(`
+			enable: true
+		`)},
+		"rpc": apiextv1.JSON{Raw: util.FromYAMLString(`
+			port_discovery: stateless
+		`)},
+	}
+	runtimeRoots, restartRequired := SplitRuntimeRoots(roots)
+	assert.Equal(t, []string{"cluster.name", "durable_sessions", "rpc"}, restartRequired)
+	rendered := RenderRoots(runtimeRoots)
+	assert.Equal(t,
+		strings.TrimLeft(dedent.Dedent(`
+			"cluster" = {"links":[{"name":"remote"}]}
+			"listeners" = {"tcp":{"default":{"bind":1883}}}
+		`), "\n"),
+		rendered,
+	)
+}
 
-	t.Run("delete non-existent key", func(t *testing.T) {
-		config, err := EMQXConfig(`
-		dashboard.listeners.http.bind = 18083
-		`)
-		assert.Nil(t, err)
-		got := config.Strip("dashboard.config.file")
-		assert.Equal(t, got, false)
-		assert.Equal(t, config.Print(), `dashboard {listeners {http {bind = 18083}}}`)
-	})
+func TestDashboardPortMap(t *testing.T) {
+	tests := []struct {
+		name  string
+		roots crd.ConfigRoots
+		want  map[string]int
+	}{
+		{name: "default",
+			roots: crd.ConfigRoots{},
+			want:  map[string]int{"dashboard": 18083}},
+		{name: "integer HTTP bind",
+			roots: crd.ConfigRoots{
+				"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+					listeners:
+						http: { bind: 28083 }
+				`)},
+			},
+			want: map[string]int{"dashboard": 28083}},
+		{name: "IPv4 HTTP bind",
+			roots: crd.ConfigRoots{
+				"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+					listeners:
+						http: { bind: "0.0.0.0:28083" }
+				`)},
+			},
+			want: map[string]int{"dashboard": 28083}},
+		{name: "IPv6 HTTP bind",
+			roots: crd.ConfigRoots{
+				"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+					listeners:
+						http: { bind: "[::]:28083" }
+				`)},
+			},
+			want: map[string]int{"dashboard": 28083}},
+		{name: "HTTPS with default HTTP",
+			roots: crd.ConfigRoots{
+				"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+					listeners:
+						https: { bind: ":18084" }
+				`)},
+			},
+			want: map[string]int{"dashboard": 18083, "dashboard-https": 18084}},
+		{name: "disabled HTTP",
+			roots: crd.ConfigRoots{
+				"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+					listeners:
+						http:  { bind: 0 }
+						https: { bind: 18084 }
+				`)},
+			},
+			want: map[string]int{"dashboard-https": 18084}},
+		{name: "all disabled",
+			roots: crd.ConfigRoots{
+				"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+					listeners:
+						http:  { bind: 0 }
+						https: { bind: 0 }
+				`)},
+			},
+			want: map[string]int{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, DashboardPortMap(tt.roots))
+		})
+	}
+}
 
-	t.Run("delete whole root", func(t *testing.T) {
-		config, err := EMQXConfig(`
-		dashboard.listeners { http.bind = 18083, https.bind = 18084 }
-		`)
-		assert.Nil(t, err)
-		got := config.Strip("dashboard")
-		assert.Equal(t, got, true)
-		assert.Equal(t, config.Print(), "")
-	})
-
-	t.Run("delete empty leftover objects", func(t *testing.T) {
-		config, err := EMQXConfig(`
-		dashboard.listeners { http.bind = 18083, https.bind = 18084 }
-		`)
-		assert.Nil(t, err)
-		got := config.Strip("dashboard.listeners.https.bind")
-		assert.Equal(t, got, true)
-		assert.Equal(t, config.Print(), `dashboard {listeners {http {bind = 18083}}}`)
-	})
+func TestDashboardServicePorts(t *testing.T) {
+	roots := crd.ConfigRoots{
+		"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+			listeners:
+				http:
+					bind: 28083
+				https:
+					bind: 28084
+		`)},
+	}
+	assert.Equal(t,
+		[]corev1.ServicePort{
+			{Name: "dashboard", Protocol: corev1.ProtocolTCP, Port: 28083, TargetPort: intstr.FromInt(28083)},
+			{Name: "dashboard-https", Protocol: corev1.ProtocolTCP, Port: 28084, TargetPort: intstr.FromInt(28084)},
+		},
+		DashboardServicePorts(roots),
+	)
 }

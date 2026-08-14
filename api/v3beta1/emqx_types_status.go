@@ -219,6 +219,7 @@ const (
 	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
 	Available                 string = "Available"
 	Ready                     string = "Ready"
+	ConfigApplied             string = "ConfigApplied"
 )
 
 func (s *EMQXStatus) SetCondition(ty string, status metav1.ConditionStatus, reason, message string) {

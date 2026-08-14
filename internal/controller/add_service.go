@@ -27,31 +27,21 @@ type addService struct {
 }
 
 func (a *addService) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
-	// Postpone if there are no usable cores yet.
-	// Should proceed once one core replica is Ready.
-	req := r.preferredCoreRequester()
-	if req == nil {
-		return reconcilePostpone()
-	}
-
 	resources := []client.Object{}
 
 	if instance.Spec.DashboardServiceTemplate.IsEnabled() {
-		configStr, err := api.Configs(req)
-		if err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to get emqx configs")}
-		}
-		conf, err := config.EMQXConfig(configStr)
-		if err != nil {
-			return subResult{err: emperror.Wrap(err, "failed to load emqx config")}
-		}
-		service := generateDashboardService(instance, conf)
+		service := generateDashboardService(instance)
 		if service != nil {
 			resources = append(resources, service)
 		}
 	}
 
 	if instance.Spec.ListenersServiceTemplate.IsEnabled() {
+		// Listener discovery requires a usable core API endpoint.
+		req := r.preferredCoreRequester()
+		if req == nil {
+			return reconcilePostpone()
+		}
 		ports, err := discoverListenerServicePorts(req)
 		if err != nil {
 			return subResult{err: err}
@@ -66,7 +56,7 @@ func (a *addService) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 	return subResult{}
 }
 
-func generateDashboardService(instance *crd.EMQX, conf *config.EMQX) *corev1.Service {
+func generateDashboardService(instance *crd.EMQX) *corev1.Service {
 	meta := &crd.TemplateObjectMeta{}
 	spec := &corev1.ServiceSpec{}
 	if instance.Spec.DashboardServiceTemplate != nil {
@@ -74,7 +64,7 @@ func generateDashboardService(instance *crd.EMQX, conf *config.EMQX) *corev1.Ser
 		spec = instance.Spec.DashboardServiceTemplate.Spec.DeepCopy()
 	}
 
-	ports := conf.GetDashboardServicePorts()
+	ports := config.DashboardServicePorts(instance.Spec.Config.Roots)
 	if len(ports) == 0 {
 		return nil
 	}

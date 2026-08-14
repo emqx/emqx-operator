@@ -2,7 +2,6 @@ package controller
 
 import (
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
-	config "github.com/emqx/emqx-operator/internal/controller/config"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -18,9 +17,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 	var instance *crd.EMQX
 	var ns *corev1.Namespace
 
-	validConfig := config.WithDefaults("")
 	validServiceRequester := req.MockRequests(
-		"GET api/v5/configs", validConfig,
 		"GET api/v5/listeners", `[ {"type":"tcp","name":"default","enable":true,"bind":"1883"} ]`,
 		"GET api/v5/gateways", `[]`,
 	)
@@ -61,7 +58,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 		Expect(a.reconcile(r, instance)).To(Equal(subResult{needRequeue: true}))
 	})
 
-	It("creates Dashboard and Listeners Services from their respective APIs", func() {
+	It("creates the Dashboard Service from roots and the Listeners Service from APIs", func() {
 		a := &addService{emqxReconciler()}
 		round := newReconcileRoundWithRequester(validServiceRequester)
 		Eventually(a.reconcile).WithArguments(round, instance).
@@ -131,9 +128,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 
 	It("does not discover listeners when the Listeners Service template is disabled", func() {
 		instance.Spec.ListenersServiceTemplate = &crd.ServiceTemplate{Enabled: ptr.To(false)}
-		round := newReconcileRoundWithRequester(req.MockRequests(
-			"GET api/v5/configs", validConfig,
-		))
+		round := newReconcileRoundWithRequester(req.MockRequests())
 		a := &addService{emqxReconciler()}
 		Eventually(a.reconcile).WithArguments(round, instance).Should(BeSuccessfulReconcile())
 		Expect(k8sClient.Get(ctx, instance.DashboardServiceNamespacedName(), &corev1.Service{})).To(Succeed())
@@ -164,7 +159,6 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 		Expect(k8sClient.Get(ctx, instance.ListenersServiceNamespacedName(), before)).To(Succeed())
 
 		round := newReconcileRoundWithRequester(req.MockRequests(
-			"GET api/v5/configs", validConfig,
 			"GET api/v5/listeners", `[ {"type":"tcp","name":"changed","enable":true,"bind":"1884"} ]`,
 			"GET api/v5/gateways", `[ {"name":"lwm2m","status":"running"} ]`,
 			"GET api/v5/gateways/lwm2m/listeners", req.MockUnavail(),
@@ -194,7 +188,6 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 		}
 		for _, listenersResponse := range invalidListenerResponses {
 			invalidRound := newReconcileRoundWithRequester(req.MockRequests(
-				"GET api/v5/configs", validConfig,
 				"GET api/v5/listeners", listenersResponse,
 				"GET api/v5/gateways", `[]`,
 			))

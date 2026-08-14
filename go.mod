@@ -8,15 +8,16 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/go-logr/logr v1.4.3
+	github.com/json-iterator/go v1.1.12
 	github.com/lithammer/dedent v1.1.0
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.36.1
-	github.com/rory-z/go-hocon v1.2.15-1
 	github.com/sethvargo/go-password v0.4.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.19.0
 	go.uber.org/zap v1.27.0
 	k8s.io/api v0.32.13
+	k8s.io/apiextensions-apiserver v0.32.13
 	k8s.io/apimachinery v0.32.13
 	k8s.io/client-go v0.32.13
 	k8s.io/klog/v2 v2.130.1
@@ -62,7 +63,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/moby/spdystream v0.5.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -106,7 +106,6 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.32.13 // indirect
 	k8s.io/apiserver v0.32.13 // indirect
 	k8s.io/component-base v0.32.13 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect

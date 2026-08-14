@@ -42,7 +42,7 @@ func (a *addReplicantSet) reconcile(r *reconcileRound, instance *crd.EMQX) subRe
 		return reconcilePostpone()
 	}
 
-	rs := newReplicaSet(instance, r.conf)
+	rs := newReplicaSet(instance)
 	rsHash := rs.Labels[crd.LabelPodTemplateHash]
 
 	needCreate := false
@@ -136,7 +136,7 @@ func (a *addReplicantSet) updateEMQXStatus(r *reconcileRound, instance *crd.EMQX
 	return a.Client.Status().Update(r.ctx, instance)
 }
 
-func newReplicaSet(instance *crd.EMQX, conf *config.EMQX) *appsv1.ReplicaSet {
+func newReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 	rs := generateReplicaSet(instance)
 	podTemplateHash := computeHash(rs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
 	rs.Name = rs.Name + "-" + podTemplateHash
@@ -145,7 +145,7 @@ func newReplicaSet(instance *crd.EMQX, conf *config.EMQX) *appsv1.ReplicaSet {
 	rs.Spec.Selector = util.CloneSelectorAndAddLabel(rs.Spec.Selector, crd.LabelPodTemplateHash, podTemplateHash)
 	rs.Spec.Template.Spec.Containers[0].Ports = util.AppendMissingContainerPorts(
 		rs.Spec.Template.Spec.Containers[0].Ports,
-		util.MapServicePortsToContainerPorts(conf.GetDashboardServicePorts()),
+		util.MapServicePortsToContainerPorts(config.DashboardServicePorts(instance.Spec.Config.Roots)),
 	)
 	return rs
 }
@@ -176,6 +176,9 @@ func generateReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 	cookie := resources.Cookie(instance)
 	config := resources.EMQXConfig(instance)
 
+	// User-provided env, volumes, and mounts are appended verbatim. Collisions can
+	// override Operator-owned environment variables (including the node cookie),
+	// make the Pod invalid through duplicate names, or shadow bootstrap files.
 	return &appsv1.ReplicaSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ReplicaSet",

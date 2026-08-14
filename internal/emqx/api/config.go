@@ -16,10 +16,10 @@ func Configs(req req.RequesterInterface) (string, error) {
 	return string(body), nil
 }
 
-func UpdateConfigs(req req.RequesterInterface, mode, config string) error {
+func UpdateConfigs(req req.RequesterInterface, config string) error {
 	header := http.Header{}
 	header.Set("Content-Type", "text/plain")
-	_, err := request(req, "PUT", "api/v5/configs", []byte(config), header)
+	_, err := requestWithQuery(req, "PUT", "api/v5/configs", []byte(config), header, "mode=replace")
 	if err != nil {
 		return err
 	}

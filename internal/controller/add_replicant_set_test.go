@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
-	config "github.com/emqx/emqx-operator/internal/controller/config"
+	"github.com/emqx/emqx-operator/test/util"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
@@ -47,8 +48,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newReplicaSet(emqx, conf)
+		got := newReplicaSet(emqx)
 
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Annotations, got.Annotations)
 		assert.Equal(t, "repl-label-value", got.Labels["repl-label-key"])
@@ -62,8 +62,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check selector and pod metadata", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newReplicaSet(emqx, conf)
+		got := newReplicaSet(emqx)
 
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Annotations, got.Spec.Template.Annotations)
 		assert.EqualValues(t, map[string]string{
@@ -91,15 +90,13 @@ func TestGetNewReplicaSet(t *testing.T) {
 				{Name: "ndots", Value: ptr.To("3")},
 			},
 		}
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newReplicaSet(emqx, conf)
+		got := newReplicaSet(emqx)
 		assert.Equal(t, emqx.Spec.ReplicantTemplate.Spec.DNSConfig, got.Spec.Template.Spec.DNSConfig)
 	})
 
 	t.Run("check no bootstrap API keys", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		rs := newReplicaSet(emqx, conf)
+		rs := newReplicaSet(emqx)
 		got := []corev1.EnvVar{}
 		for _, env := range rs.Spec.Template.Spec.Containers[0].Env {
 			if env.Name == "EMQX_API_KEY__BOOTSTRAP_FILE" {
@@ -111,9 +108,14 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check http port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = "dashboard.listeners.http.bind = 18083"
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newReplicaSet(emqx, conf)
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+                listeners:
+                    http:
+                        bind: 18083
+            `)},
+		}
+		got := newReplicaSet(emqx)
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
 				Name:          "dashboard",
@@ -125,12 +127,16 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = `
-		dashboard.listeners.http.bind = 0
-		dashboard.listeners.https.bind = 18084
-		`
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newReplicaSet(emqx, conf)
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+                listeners:
+                    http:
+                        bind: 0
+                    https:
+                        bind: 18084
+            `)},
+		}
+		got := newReplicaSet(emqx)
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
 				Name:          "dashboard-https",
@@ -142,12 +148,16 @@ func TestGetNewReplicaSet(t *testing.T) {
 
 	t.Run("check http and https port", func(t *testing.T) {
 		emqx := instance.DeepCopy()
-		emqx.Spec.Config.Data = `
-		dashboard.listeners.http.bind = 18083
-		dashboard.listeners.https.bind = 18084
-		`
-		conf, _ := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-		got := newReplicaSet(emqx, conf)
+		emqx.Spec.Config.Roots = crd.ConfigRoots{
+			"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+                listeners:
+                    http:
+                        bind: 18083
+                    https:
+                        bind: 18084
+            `)},
+		}
+		got := newReplicaSet(emqx)
 		assert.Contains(t, got.Spec.Template.Spec.Containers[0].Ports,
 			corev1.ContainerPort{
 				Name:          "dashboard",

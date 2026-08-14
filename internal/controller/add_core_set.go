@@ -25,7 +25,7 @@ type addCoreSet struct {
 
 func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	existing := r.state.coreSet()
-	coreSet := newStatefulSet(instance, r.conf)
+	coreSet := newStatefulSet(instance)
 	_ = ctrl.SetControllerReference(instance, coreSet, a.Scheme)
 
 	if existing == nil {
@@ -87,11 +87,11 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 	return subResult{}
 }
 
-func newStatefulSet(instance *crd.EMQX, conf *config.EMQX) *appsv1.StatefulSet {
+func newStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
 	sts := generateStatefulSet(instance)
 	sts.Spec.Template.Spec.Containers[0].Ports = util.AppendMissingContainerPorts(
 		sts.Spec.Template.Spec.Containers[0].Ports,
-		util.MapServicePortsToContainerPorts(conf.GetDashboardServicePorts()),
+		util.MapServicePortsToContainerPorts(config.DashboardServicePorts(instance.Spec.Config.Roots)),
 	)
 	return sts
 }
@@ -124,6 +124,9 @@ func generateStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
 		}
 	}
 
+	// User-provided env, volumes, and mounts are appended verbatim. Collisions can
+	// override Operator-owned environment variables (including the node cookie),
+	// make the Pod invalid through duplicate names, or shadow bootstrap files.
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
