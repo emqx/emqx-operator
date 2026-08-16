@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"sort"
 	"strings"
@@ -75,6 +76,10 @@ func RenderBaseConfig(roots crd.ConfigRoots) string {
 	return WithDefaults(RenderRoots(roots))
 }
 
+func RestartConfigHash(restartRoots crd.ConfigRoots) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(RenderRoots(restartRoots))))
+}
+
 func ValidateRoots(roots crd.ConfigRoots) error {
 	node, ok := roots["node"]
 	if !ok {
@@ -86,37 +91,50 @@ func ValidateRoots(roots crd.ConfigRoots) error {
 	return nil
 }
 
-// SplitRuntimeRoots returns the configuration that can be sent to the EMQX
-// runtime Configs API and the paths that require a Pod restart.
-func SplitRuntimeRoots(roots crd.ConfigRoots) (crd.ConfigRoots, []string) {
+// SplitRoots separates configuration that can be sent to the EMQX runtime
+// Configs API from configuration that requires a Pod restart.
+func SplitRoots(roots crd.ConfigRoots) (crd.ConfigRoots, crd.ConfigRoots) {
 	runtimeRoots := make(crd.ConfigRoots, len(roots))
-	restartRequired := []string{}
+	restartRoots := make(crd.ConfigRoots)
 	for root, value := range roots {
 		switch root {
 		case "node", "rpc", "durable_sessions", "durable_storage":
-			restartRequired = append(restartRequired, root)
+			restartRoots[root] = *value.DeepCopy()
 		case "cluster":
 			rootValue := map[string]any{}
 			err := json.Unmarshal(value.Raw, &rootValue)
 			if err != nil {
-				restartRequired = append(restartRequired, root)
+				restartRoots[root] = *value.DeepCopy()
 				continue
 			}
 			if links, exists := rootValue["links"]; exists {
 				rootJson, _ := json.Marshal(map[string]any{"links": links})
 				runtimeRoots[root] = apiextv1.JSON{Raw: rootJson}
 			}
-			for key := range rootValue {
+			restartValue := map[string]any{}
+			for key, field := range rootValue {
 				if key != "links" {
-					restartRequired = append(restartRequired, root+"."+key)
+					restartValue[key] = field
 				}
+			}
+			if len(restartValue) > 0 {
+				rootJSON, _ := json.Marshal(restartValue)
+				restartRoots[root] = apiextv1.JSON{Raw: rootJSON}
 			}
 		default:
 			runtimeRoots[root] = *value.DeepCopy()
 		}
 	}
+	return runtimeRoots, restartRoots
+}
+
+func RestartRequiredPaths(restartRoots crd.ConfigRoots) []string {
+	restartRequired := make([]string, 0, len(restartRoots))
+	for root := range restartRoots {
+		restartRequired = append(restartRequired, root)
+	}
 	sort.Strings(restartRequired)
-	return runtimeRoots, restartRequired
+	return restartRequired
 }
 
 func DashboardPortMap(roots crd.ConfigRoots) map[string]int {

@@ -93,7 +93,7 @@ func TestValidateRoots(t *testing.T) {
 	)
 }
 
-func TestSplitRuntimeRoots(t *testing.T) {
+func TestSplitRoots(t *testing.T) {
 	roots := crd.ConfigRoots{
 		"listeners": apiextv1.JSON{Raw: util.FromYAMLString(`
 			tcp:
@@ -112,8 +112,9 @@ func TestSplitRuntimeRoots(t *testing.T) {
 			port_discovery: stateless
 		`)},
 	}
-	runtimeRoots, restartRequired := SplitRuntimeRoots(roots)
-	assert.Equal(t, []string{"cluster.name", "durable_sessions", "rpc"}, restartRequired)
+	runtimeRoots, restartRoots := SplitRoots(roots)
+	restartRequired := RestartRequiredPaths(restartRoots)
+	assert.Equal(t, []string{"cluster", "durable_sessions", "rpc"}, restartRequired)
 	rendered := RenderRoots(runtimeRoots)
 	assert.Equal(t,
 		strings.TrimLeft(dedent.Dedent(`

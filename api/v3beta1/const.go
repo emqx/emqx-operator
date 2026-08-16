@@ -36,6 +36,7 @@ const (
 const (
 	// annotations
 	AnnotationLastRuntimeConfigHash string = "apps.emqx.io/last-runtime-config-hash"
+	AnnotationRestartConfigHash     string = "apps.emqx.io/restart-config-hash"
 	// AnnotationScalingDown marks a pod that the operator has committed to removing.
 	// Pods with this annotation bypass the maxUnavailable budget on subsequent reconcile
 	// iterations, preventing deadlocks when evacuation makes the pod unavailable.

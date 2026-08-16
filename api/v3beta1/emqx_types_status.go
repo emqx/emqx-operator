@@ -19,6 +19,7 @@ package v3beta1
 import (
 	"slices"
 
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,7 +58,21 @@ type EMQXStatus struct {
 	NodeEvacuations []NodeEvacuationStatus `json:"nodeEvacuations,omitempty"`
 	// Status of EMQX Durable Storage replication.
 	DSReplication DSReplicationStatus `json:"dsReplication,omitempty"`
+
+	// Declarative EMQX configuration reconciliation status.
+	// Config ConfigStatus `json:"config,omitempty"`
 }
+
+// type ConfigStatus struct {
+// 	// SHA-256 hash of the canonical desired `.spec.config.roots` representation.
+// 	DesiredHash string `json:"desiredHash,omitempty"`
+// 	// DesiredHash most recently established as active in EMQX.
+// 	AppliedHash string `json:"appliedHash,omitempty"`
+// 	// CR generation corresponding to AppliedHash.
+// 	AppliedGeneration int64 `json:"appliedGeneration,omitempty"`
+// 	// Configuration paths that cannot be changed through the EMQX runtime API.
+// 	RestartRequired []string `json:"restartRequired,omitempty"`
+// }
 
 type NodeEvacuationStatus struct {
 	// Evacuated node name
@@ -227,30 +242,18 @@ func (s *EMQXStatus) SetCondition(
 	status metav1.ConditionStatus,
 	reason, message string,
 	observedIn int64,
-) {
-	pos, existing := s.GetCondition(ty)
-	if existing != nil &&
-		existing.Status == status &&
-		existing.Reason == reason &&
-		existing.Message == message {
-		return
-	}
-	c := metav1.Condition{
+) bool {
+	return s.AttachCondition(metav1.Condition{
 		Type:               ty,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,
-		LastTransitionTime: metav1.Now(),
 		ObservedGeneration: observedIn,
-	}
-	if existing != nil && existing.Status == status {
-		c.LastTransitionTime = existing.LastTransitionTime
-	}
-	if existing != nil {
-		s.Conditions[pos] = c
-	} else {
-		s.Conditions = append(s.Conditions, c)
-	}
+	})
+}
+
+func (s *EMQXStatus) AttachCondition(condition metav1.Condition) bool {
+	return apimeta.SetStatusCondition(&s.Conditions, condition)
 }
 
 func (s *EMQXStatus) GetCondition(conditionType string) (int, *metav1.Condition) {
