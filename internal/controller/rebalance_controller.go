@@ -35,7 +35,6 @@ import (
 	crdv2beta1 "github.com/emqx/emqx-operator/api/v2beta1"
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 
-	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	req "github.com/emqx/emqx-operator/internal/requester"
 )
@@ -110,24 +109,19 @@ func (r *RebalanceReconciler) Reconcile(ctx context.Context, request ctrl.Reques
 		return ctrl.Result{}, r.Client.Status().Update(ctx, rebalance)
 	}
 
-	conf, err := config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-	if err != nil {
-		return ctrl.Result{}, emperror.New("failed to parse config")
-	}
-
 	bootstrapAPIKey, err := getBootstrapAPIKey(ctx, r.Client, emqx)
 	if err != nil {
 		return ctrl.Result{}, emperror.Wrap(err, "failed to get bootstrap API key")
 	}
 
-	requester, err := newAPIRequesterBuilder(conf, bootstrapAPIKey)
-	if err != nil {
-		return ctrl.Result{}, emperror.Wrap(err, "failed to create EMQX API requester")
-	}
-
 	state, err := loadReconcileState(ctx, r.Client, emqx)
 	if err != nil {
 		return ctrl.Result{}, emperror.New("failed to load reconcile round state")
+	}
+
+	requester, err := newAPIRequesterBuilder(bootstrapAPIKey)
+	if err != nil {
+		return ctrl.Result{}, emperror.Wrap(err, "failed to create EMQX API requester")
 	}
 
 	req = requester.forCore(state)

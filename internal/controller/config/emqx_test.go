@@ -111,10 +111,16 @@ func TestSplitRoots(t *testing.T) {
 		"rpc": apiextv1.JSON{Raw: util.FromYAMLString(`
 			port_discovery: stateless
 		`)},
+		"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+			listeners:
+				http:
+					bind: 18083
+			password_expire_in: 30d
+		`)},
 	}
 	runtimeRoots, restartRoots := SplitRoots(roots)
 	restartRequired := RestartRequiredPaths(restartRoots)
-	assert.Equal(t, []string{"cluster", "durable_sessions", "rpc"}, restartRequired)
+	assert.Equal(t, []string{"cluster", "dashboard", "durable_sessions", "rpc"}, restartRequired)
 	rendered := RenderRoots(runtimeRoots)
 	assert.Equal(t,
 		strings.TrimLeft(dedent.Dedent(`
@@ -123,6 +129,8 @@ func TestSplitRoots(t *testing.T) {
 		`), "\n"),
 		rendered,
 	)
+	assert.Contains(t, RenderRoots(restartRoots),
+		`"dashboard" = {"listeners":{"http":{"bind":18083}},"password_expire_in":"30d"}`)
 }
 
 func TestDashboardPortMap(t *testing.T) {
@@ -204,8 +212,12 @@ func TestDashboardServicePorts(t *testing.T) {
 	}
 	assert.Equal(t,
 		[]corev1.ServicePort{
-			{Name: "dashboard", Protocol: corev1.ProtocolTCP, Port: 28083, TargetPort: intstr.FromInt(28083)},
-			{Name: "dashboard-https", Protocol: corev1.ProtocolTCP, Port: 28084, TargetPort: intstr.FromInt(28084)},
+			{Name: "dashboard", Protocol: corev1.ProtocolTCP,
+				Port:       28083,
+				TargetPort: intstr.FromString("dashboard")},
+			{Name: "dashboard-https", Protocol: corev1.ProtocolTCP,
+				Port:       28084,
+				TargetPort: intstr.FromString("dashboard-https")},
 		},
 		DashboardServicePorts(roots),
 	)

@@ -90,7 +90,7 @@ func TestGenerateDashboardService(t *testing.T) {
 				Name:       "dashboard",
 				Protocol:   corev1.ProtocolTCP,
 				Port:       18083,
-				TargetPort: intstr.FromInt(18083),
+				TargetPort: intstr.FromString("dashboard"),
 			},
 		}, got.Spec.Ports)
 	})
@@ -112,7 +112,7 @@ func TestGenerateDashboardService(t *testing.T) {
 				Name:       "dashboard-https",
 				Protocol:   corev1.ProtocolTCP,
 				Port:       18084,
-				TargetPort: intstr.FromInt(18084),
+				TargetPort: intstr.FromString("dashboard-https"),
 			},
 		}, got.Spec.Ports)
 	})
@@ -134,13 +134,13 @@ func TestGenerateDashboardService(t *testing.T) {
 				Name:       "dashboard",
 				Protocol:   corev1.ProtocolTCP,
 				Port:       18083,
-				TargetPort: intstr.FromInt(18083),
+				TargetPort: intstr.FromString("dashboard"),
 			},
 			{
 				Name:       "dashboard-https",
 				Protocol:   corev1.ProtocolTCP,
 				Port:       18084,
-				TargetPort: intstr.FromInt(18084),
+				TargetPort: intstr.FromString("dashboard-https"),
 			},
 		}, got.Spec.Ports)
 	})

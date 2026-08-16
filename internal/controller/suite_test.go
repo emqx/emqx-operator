@@ -307,6 +307,69 @@ var _ = Describe("CRD Defaults", Ordered, func() {
 			`[{"mechanism":"password_based"}]`,
 		))
 	})
+
+	It("rejects the dashboard port name in the core template", func() {
+		instance := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": crd.GroupVersion.String(),
+				"kind":       "EMQX",
+				"metadata": map[string]interface{}{
+					"name":      "reserved-dashboard-core",
+					"namespace": ns.Name,
+				},
+				"spec": map[string]interface{}{
+					"image": "emqx",
+					"coreTemplate": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"ports": []interface{}{
+								map[string]interface{}{
+									"name":          "dashboard",
+									"containerPort": int64(18083),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, instance)).To(MatchError(ContainSubstring(
+			"port names dashboard and dashboard-https are reserved by the Operator",
+		)))
+	})
+
+	It("rejects the dashboard-https port name in the replicant template", func() {
+		instance := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": crd.GroupVersion.String(),
+				"kind":       "EMQX",
+				"metadata": map[string]interface{}{
+					"name":      "reserved-dashboard-https-replicant",
+					"namespace": ns.Name,
+				},
+				"spec": map[string]interface{}{
+					"image": "emqx",
+					"coreTemplate": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"replicas": int64(2),
+						},
+					},
+					"replicantTemplate": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"ports": []interface{}{
+								map[string]interface{}{
+									"name":          "dashboard-https",
+									"containerPort": int64(18084),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, instance)).To(MatchError(ContainSubstring(
+			"port names dashboard and dashboard-https are reserved by the Operator",
+		)))
+	})
 })
 
 func actualObject[Object client.Object](o Object) (Object, error) {

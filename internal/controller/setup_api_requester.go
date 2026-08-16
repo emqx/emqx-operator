@@ -18,7 +18,7 @@ func (s *setupAPIRequester) reconcile(r *reconcileRound, instance *crd.EMQX) sub
 	if err != nil {
 		return subResult{err: err}
 	}
-	reqBuilder, err := newAPIRequesterBuilder(r.conf, bootstrapAPIKey)
+	reqBuilder, err := newAPIRequesterBuilder(bootstrapAPIKey)
 	if err != nil {
 		return subResult{err: err}
 	}

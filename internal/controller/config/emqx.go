@@ -121,6 +121,11 @@ func SplitRoots(roots crd.ConfigRoots) (crd.ConfigRoots, crd.ConfigRoots) {
 				rootJSON, _ := json.Marshal(restartValue)
 				restartRoots[root] = apiextv1.JSON{Raw: rootJSON}
 			}
+		case "dashboard":
+			// Configs API replacement is scoped to top-level roots. Sending only
+			// non-listener dashboard fields would still replace the dashboard root
+			// and could change the endpoint serving the request.
+			restartRoots[root] = *value.DeepCopy()
 		default:
 			runtimeRoots[root] = *value.DeepCopy()
 		}
@@ -171,7 +176,7 @@ func DashboardServicePorts(roots crd.ConfigRoots) []corev1.ServicePort {
 			Name:       name,
 			Protocol:   corev1.ProtocolTCP,
 			Port:       int32(port),
-			TargetPort: intstr.FromInt(port),
+			TargetPort: intstr.FromString(name),
 		})
 	}
 	sort.Slice(ports, func(i, j int) bool {

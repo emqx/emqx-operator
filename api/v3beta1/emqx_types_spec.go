@@ -68,6 +68,10 @@ type EMQXSpec struct {
 
 	// Template for Service exposing the EMQX Dashboard.
 	// Dashboard Service always points to the set of EMQX core nodes.
+	// A port named `dashboard` or `dashboard-https` in the template overrides the corresponding
+	// generated Service port. Its `port` may expose the listener on a different Service port, but
+	// its `targetPort` must resolve to the corresponding Dashboard listener. Prefer the reserved
+	// named target port so it follows changes to the listener bind.
 	DashboardServiceTemplate *ServiceTemplate `json:"dashboardServiceTemplate,omitempty"`
 
 	// Template for Service exposing enabled EMQX listeners.
@@ -245,6 +249,11 @@ type EMQXReplicantTemplateSpec struct {
 	// container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that
 	// port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a
 	// container will be accessible from the network.
+	// Port names `dashboard` and `dashboard-https` are reserved by the Operator and cannot be supplied
+	// in the template. The Operator derives these named ports from
+	// `spec.config.roots.dashboard.listeners` for probes, Services, and per-Pod API requests.
+	// Change their container port by changing the corresponding listener bind instead.
+	// +kubebuilder:validation:XValidation:rule="self.all(p, !has(p.name) || (p.name != 'dashboard' && p.name != 'dashboard-https'))",message="port names dashboard and dashboard-https are reserved by the Operator"
 	Ports []corev1.ContainerPort `json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"containerPort" protobuf:"bytes,6,rep,name=ports"`
 	// List of environment variables to set in the container.
 	Env []corev1.EnvVar `json:"env,omitempty"`
