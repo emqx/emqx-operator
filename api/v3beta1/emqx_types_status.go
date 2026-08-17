@@ -256,18 +256,13 @@ func (s *EMQXStatus) AttachCondition(condition metav1.Condition) bool {
 	return apimeta.SetStatusCondition(&s.Conditions, condition)
 }
 
-func (s *EMQXStatus) GetCondition(conditionType string) (int, *metav1.Condition) {
-	for i := range s.Conditions {
-		c := s.Conditions[i]
-		if c.Type == conditionType {
-			return i, c.DeepCopy()
-		}
-	}
-	return -1, nil
+func (s *EMQXStatus) GetCondition(conditionType string) *metav1.Condition {
+	_, cond := s.findCondition(conditionType)
+	return cond
 }
 
 func (s *EMQXStatus) IsConditionTrue(conditionType string) bool {
-	_, condition := s.GetCondition(conditionType)
+	condition := s.GetCondition(conditionType)
 	if condition == nil {
 		return false
 	}
@@ -275,7 +270,7 @@ func (s *EMQXStatus) IsConditionTrue(conditionType string) bool {
 }
 
 func (s *EMQXStatus) RemoveCondition(conditionType string) {
-	pos, _ := s.GetCondition(conditionType)
+	pos, _ := s.findCondition(conditionType)
 	if pos != -1 {
 		s.Conditions = slices.Delete(s.Conditions, pos, pos+1)
 	}
@@ -291,4 +286,14 @@ func (s *DSReplicationStatus) IsStable() bool {
 		}
 	}
 	return true
+}
+
+func (s *EMQXStatus) findCondition(conditionType string) (int, *metav1.Condition) {
+	for i := range s.Conditions {
+		c := s.Conditions[i]
+		if c.Type == conditionType {
+			return i, c.DeepCopy()
+		}
+	}
+	return -1, nil
 }

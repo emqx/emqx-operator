@@ -76,11 +76,12 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 			metav1.ConditionFalse,
 			"RequestFailed",
 			"previous failure",
+			instance.Generation,
 		)
 		Expect(k8sClient.Status().Update(ctx, instance)).Should(Succeed())
 
 		Expect(actualize(instance)).NotTo(HaveOccurred())
-		_, conditionBefore := instance.Status.GetCondition(crd.EMQXAPIAvailable)
+		conditionBefore := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 		Expect(conditionBefore).NotTo(BeNil())
 
 		round := newReconcileRoundWithRequester(req.MockRequests("*", syscall.ECONNREFUSED))
@@ -88,7 +89,7 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 		Expect(runRoundReconcile(round, instance, s)).To(BeSuccessfulReconcile())
 
 		Expect(actualize(instance)).NotTo(HaveOccurred())
-		_, condition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
+		condition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 		Expect(condition).NotTo(BeNil())
 		Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 		Expect(condition.Reason).To(Equal("RequestFailed"))

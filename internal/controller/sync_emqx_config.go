@@ -46,8 +46,11 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 		if err != nil {
 			return reconcileError(err)
 		}
+		// Record the runtime-hash to avoid sending the same configuration through the API after
+		// initial startup.
+		metadataChanged = s.attachRuntimeConfigHash(instance, runtimeHash)
 		if len(restartRoots) > 0 {
-			metadataChanged = s.reflectConfigHash(instance, crd.AnnotationRestartConfigHash, restartHash)
+			metadataChanged = s.attachRestartConfigHash(instance, restartHash) || metadataChanged
 		}
 		instance.Status.SetCondition(
 			crd.ConfigApplied,
@@ -73,7 +76,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 			return reconcileError(err)
 		}
 		if len(restartRoots) > 0 {
-			metadataChanged = s.reflectConfigHash(instance, crd.AnnotationRestartConfigHash, restartHash)
+			metadataChanged = s.attachRestartConfigHash(instance, restartHash)
 		}
 		instance.Status.SetCondition(
 			crd.ConfigApplied,
@@ -91,16 +94,9 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 
 	// Runtime-applicable configuration changed:
 	// Update runtime-applicable configuration through EMQX API if there were any changes.
-	// If there were not (no previous runtime update was performed), just record the hash.
 	if runtimeHashApplied != runtimeHash {
 		var err error
-		// Absence of hash means that:
-		// 1. Initial rollout of the core set completed.
-		// 2. Cores picked up the initially staged ConfigMap.
-		// This avoids a redundant update after initial startup. Note that deleting / renaming
-		// this annotation on an existing cluster suppresses one runtime update and records
-		// the current desired hash as applied.
-		if runtimeHashApplied != "" && len(runtimeRoots) > 0 {
+		if len(runtimeRoots) > 0 {
 			r.log.V(1).Info("updating runtime config", "config", runtimeConfig)
 			err = api.UpdateConfigs(req, runtimeConfig)
 		}
@@ -119,7 +115,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 			_ = s.persistConfigState(r, instance, false)
 			return reconcileError(emperror.Wrap(err, "failed to update EMQX runtime config"))
 		}
-		metadataChanged = s.reflectConfigHash(instance, crd.AnnotationLastRuntimeConfigHash, runtimeHash)
+		metadataChanged = s.attachRuntimeConfigHash(instance, runtimeHash)
 	}
 
 	// Only accepted update is persisted to ConfigMap for future Pod starts.
@@ -129,7 +125,7 @@ func (s *syncConfig) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 	}
 
 	if len(restartRoots) > 0 {
-		metadataChanged = s.reflectConfigHash(instance, crd.AnnotationRestartConfigHash, restartHash) || metadataChanged
+		metadataChanged = s.attachRestartConfigHash(instance, restartHash) || metadataChanged
 	}
 
 	// Configuration is considered to be applied completely, if it was successfully
@@ -226,8 +222,12 @@ func (s *syncConfig) syncConfigMap(r *reconcileRound, instance *crd.EMQX, baseCo
 	return nil
 }
 
-func (s *syncConfig) reflectConfigHash(instance *crd.EMQX, annotation, hash string) bool {
-	return util.AttachAnnotation(instance, annotation, hash)
+func (s *syncConfig) attachRuntimeConfigHash(instance *crd.EMQX, hash string) bool {
+	return util.AttachAnnotation(instance, crd.AnnotationLastRuntimeConfigHash, hash)
+}
+
+func (s *syncConfig) attachRestartConfigHash(instance *crd.EMQX, hash string) bool {
+	return util.AttachAnnotation(instance, crd.AnnotationRestartConfigHash, hash)
 }
 
 func (s *syncConfig) persistConfigState(r *reconcileRound, instance *crd.EMQX, metadataChanged bool) error {

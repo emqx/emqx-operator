@@ -130,7 +130,7 @@ func (s *retireCorePods) corePodRetirementReady(
 		return retirementPending("pod still has live PVCs")
 	}
 
-	_, apiCondition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
+	apiCondition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 	if apiCondition != nil && apiCondition.Status == metav1.ConditionFalse {
 		unavailableSince := apiCondition.LastTransitionTime.Time
 		if updatedAt.After(unavailableSince) {
