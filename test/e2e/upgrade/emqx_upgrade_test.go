@@ -96,7 +96,7 @@ var _ = Describe("EMQX Upgrade", Ordered, func() {
 			WithImage(emqxImageInitial).
 			WithCores(coreReplicas).
 			WithReplicants(replicantReplicas).
-			WithConfig(ConfigDS()).
+			WithDS().
 			ToJSONDocument()
 		Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 		By("wait for EMQX cluster to be ready")

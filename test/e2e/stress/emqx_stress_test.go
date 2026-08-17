@@ -229,7 +229,7 @@ var _ = Describe("EMQX Cluster / Stress Testing", Label("emqx", "stress"), Order
 			WithImage(emqxImage).
 			WithCores(initial.cores).
 			WithReplicants(initial.replicants).
-			WithConfig(ConfigDS()).
+			WithDS().
 			ToJSONDocument()
 		Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 		By("wait for EMQX cluster to be ready")
