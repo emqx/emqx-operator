@@ -55,22 +55,18 @@ spec:
               config:
                 description: EMQX Configuration.
                 properties:
-                  data:
+                  roots:
+                    additionalProperties:
+                      x-kubernetes-preserve-unknown-fields: true
                     description: |-
-                      EMQX configuration, in HOCON format.
-                      This configuration will be supplied as `base.hocon` to the container. See respective
-                      [documentation](https://docs.emqx.com/en/emqx/latest/configuration/configuration.html#base-configuration-file).
-                    type: string
-                  mode:
-                    default: Merge
-                    description: |-
-                      Determines how configuration updates are applied.
-                      * `Merge`: Merge the new configuration into the existing configuration.
-                      * `Replace`: Replace the whole configuration.
-                    enum:
-                    - Merge
-                    - Replace
-                    type: string
+                      Top-level EMQX configuration roots. Values must be JSON-compatible. The Operator
+                      serializes runtime-applicable roots into `base.hocon` and settings that take effect
+                      when EMQX starts into `emqx.conf`.
+                      HOCON-only syntax such as includes, substitutions, and duplicate declarations is not supported.
+                      Removing a root relinquishes Operator ownership; it does not delete values persisted by EMQX.
+                      The `node.cookie` path is reserved for the Operator and must not be specified here.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                 type: object
               coreTemplate:
                 default:
@@ -16225,6 +16221,33 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              config:
+                description: |-
+                  Declarative EMQX configuration reconciliation status.
+                  Fields are informational implementation details. Prefer the ConfigApplied
+                  condition to determine configuration lifecycle state.
+                properties:
+                  activeStartupRevisions:
+                    description: |-
+                      Revisions of startup configuration used by ready Pods.
+                      Multiple revisions indicate that ready Pods started with different versions of those settings.
+                    items:
+                      type: string
+                    type: array
+                  desiredRevision:
+                    description: Revision of the complete desired configuration in
+                      spec.config.roots.
+                    type: string
+                  desiredStartupRevision:
+                    description: Revision of the desired settings that take effect
+                      when EMQX starts.
+                    type: string
+                  runtimeRevision:
+                    description: |-
+                      Revision of runtime configuration most recently accepted by the EMQX API.
+                      Before initial startup, it is the revision staged for cluster bootstrap.
+                    type: string
+                type: object
               coreNodes:
                 description: Status of each core node in the cluster.
                 items:

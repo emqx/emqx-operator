@@ -64,14 +64,14 @@ func TestRenderRoots(t *testing.T) {
 
 func TestRenderBaseConfig(t *testing.T) {
 	roots := crd.ConfigRoots{
-		"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
-			listeners:
-				http:
-					bind: 0
+		"log": apiextv1.JSON{Raw: util.FromYAMLString(`
+			console:
+				level: info
 		`)},
 	}
 	got := RenderBaseConfig(roots)
 	assert.Contains(t, got, `http.bind = "0.0.0.0:18083"`)
+	assert.Contains(t, got, `"log" = {"console":{"level":"info"}}`)
 	assert.Greater(t, len(got), len(EMQXDefaults))
 }
 
@@ -118,9 +118,9 @@ func TestSplitRoots(t *testing.T) {
 			password_expire_in: 30d
 		`)},
 	}
-	runtimeRoots, restartRoots := SplitRoots(roots)
-	restartRequired := RestartRequiredPaths(restartRoots)
-	assert.Equal(t, []string{"cluster", "dashboard", "durable_sessions", "rpc"}, restartRequired)
+	runtimeRoots, startupRoots := SplitRoots(roots)
+	startupPaths := StartupConfigPaths(startupRoots)
+	assert.Equal(t, []string{"cluster", "dashboard", "durable_sessions", "rpc"}, startupPaths)
 	rendered := RenderRoots(runtimeRoots)
 	assert.Equal(t,
 		strings.TrimLeft(dedent.Dedent(`
@@ -129,7 +129,7 @@ func TestSplitRoots(t *testing.T) {
 		`), "\n"),
 		rendered,
 	)
-	assert.Contains(t, RenderRoots(restartRoots),
+	assert.Contains(t, RenderRoots(startupRoots),
 		`"dashboard" = {"listeners":{"http":{"bind":18083}},"password_expire_in":"30d"}`)
 }
 

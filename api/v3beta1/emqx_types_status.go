@@ -60,19 +60,25 @@ type EMQXStatus struct {
 	DSReplication DSReplicationStatus `json:"dsReplication,omitempty"`
 
 	// Declarative EMQX configuration reconciliation status.
-	// Config ConfigStatus `json:"config,omitempty"`
+	// Fields are informational implementation details. Prefer the ConfigApplied
+	// condition to determine configuration lifecycle state.
+	Config ConfigStatus `json:"config,omitempty"`
 }
 
-// type ConfigStatus struct {
-// 	// SHA-256 hash of the canonical desired `.spec.config.roots` representation.
-// 	DesiredHash string `json:"desiredHash,omitempty"`
-// 	// DesiredHash most recently established as active in EMQX.
-// 	AppliedHash string `json:"appliedHash,omitempty"`
-// 	// CR generation corresponding to AppliedHash.
-// 	AppliedGeneration int64 `json:"appliedGeneration,omitempty"`
-// 	// Configuration paths that cannot be changed through the EMQX runtime API.
-// 	RestartRequired []string `json:"restartRequired,omitempty"`
-// }
+// ConfigStatus contains controller-owned reconciliation checkpoints.
+// These fields are informational implementation details and may change.
+type ConfigStatus struct {
+	// Revision of the complete desired configuration in spec.config.roots.
+	DesiredRevision string `json:"desiredRevision,omitempty"`
+	// Revision of runtime configuration most recently accepted by the EMQX API.
+	// Before initial startup, it is the revision staged for cluster bootstrap.
+	RuntimeRevision string `json:"runtimeRevision,omitempty"`
+	// Revision of the desired settings that take effect when EMQX starts.
+	DesiredStartupRevision string `json:"desiredStartupRevision,omitempty"`
+	// Revisions of startup configuration used by ready Pods.
+	// Multiple revisions indicate that ready Pods started with different versions of those settings.
+	ActiveStartupRevisions []string `json:"activeStartupRevisions,omitempty"`
+}
 
 type NodeEvacuationStatus struct {
 	// Evacuated node name

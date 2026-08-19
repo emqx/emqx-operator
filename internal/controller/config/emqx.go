@@ -17,7 +17,6 @@ limitations under the License.
 package config
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"sort"
 	"strings"
@@ -38,14 +37,15 @@ var json = jsoniter.Config{
 
 const EMQXDefaults string = `
 ### Minimal default configuration
-# This is generally provided by 'emqx.conf' but defined here instead, as 'emqx.conf' should now be empty.
+# The Operator keeps this prelude in 'base.hocon' so it remains below both
+# EMQX's persisted 'cluster.hocon' and the startup settings in 'emqx.conf'.
 dashboard {
   listeners {
     http.bind = "0.0.0.0:18083"
   }
 }
 
-### User-supplied configuration
+### Runtime-applicable user configuration
 `
 
 func WithDefaults(config string) string {
@@ -72,12 +72,8 @@ func RenderRoots(roots crd.ConfigRoots) string {
 	return builder.String()
 }
 
-func RenderBaseConfig(roots crd.ConfigRoots) string {
-	return WithDefaults(RenderRoots(roots))
-}
-
-func RestartConfigHash(restartRoots crd.ConfigRoots) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(RenderRoots(restartRoots))))
+func RenderBaseConfig(runtimeRoots crd.ConfigRoots) string {
+	return WithDefaults(RenderRoots(runtimeRoots))
 }
 
 func ValidateRoots(roots crd.ConfigRoots) error {
@@ -92,54 +88,54 @@ func ValidateRoots(roots crd.ConfigRoots) error {
 }
 
 // SplitRoots separates configuration that can be sent to the EMQX runtime
-// Configs API from configuration that requires a Pod restart.
+// Configs API from configuration that takes effect when EMQX starts.
 func SplitRoots(roots crd.ConfigRoots) (crd.ConfigRoots, crd.ConfigRoots) {
 	runtimeRoots := make(crd.ConfigRoots, len(roots))
-	restartRoots := make(crd.ConfigRoots)
+	startupRoots := make(crd.ConfigRoots)
 	for root, value := range roots {
 		switch root {
 		case "node", "rpc", "durable_sessions", "durable_storage":
-			restartRoots[root] = *value.DeepCopy()
+			startupRoots[root] = *value.DeepCopy()
 		case "cluster":
 			rootValue := map[string]any{}
 			err := json.Unmarshal(value.Raw, &rootValue)
 			if err != nil {
-				restartRoots[root] = *value.DeepCopy()
+				startupRoots[root] = *value.DeepCopy()
 				continue
 			}
 			if links, exists := rootValue["links"]; exists {
 				rootJson, _ := json.Marshal(map[string]any{"links": links})
 				runtimeRoots[root] = apiextv1.JSON{Raw: rootJson}
 			}
-			restartValue := map[string]any{}
+			startupValue := map[string]any{}
 			for key, field := range rootValue {
 				if key != "links" {
-					restartValue[key] = field
+					startupValue[key] = field
 				}
 			}
-			if len(restartValue) > 0 {
-				rootJSON, _ := json.Marshal(restartValue)
-				restartRoots[root] = apiextv1.JSON{Raw: rootJSON}
+			if len(startupValue) > 0 {
+				rootJSON, _ := json.Marshal(startupValue)
+				startupRoots[root] = apiextv1.JSON{Raw: rootJSON}
 			}
 		case "dashboard":
 			// Configs API replacement is scoped to top-level roots. Sending only
 			// non-listener dashboard fields would still replace the dashboard root
 			// and could change the endpoint serving the request.
-			restartRoots[root] = *value.DeepCopy()
+			startupRoots[root] = *value.DeepCopy()
 		default:
 			runtimeRoots[root] = *value.DeepCopy()
 		}
 	}
-	return runtimeRoots, restartRoots
+	return runtimeRoots, startupRoots
 }
 
-func RestartRequiredPaths(restartRoots crd.ConfigRoots) []string {
-	restartRequired := make([]string, 0, len(restartRoots))
-	for root := range restartRoots {
-		restartRequired = append(restartRequired, root)
+func StartupConfigPaths(startupRoots crd.ConfigRoots) []string {
+	paths := make([]string, 0, len(startupRoots))
+	for root := range startupRoots {
+		paths = append(paths, root)
 	}
-	sort.Strings(restartRequired)
-	return restartRequired
+	sort.Strings(paths)
+	return paths
 }
 
 func DashboardPortMap(roots crd.ConfigRoots) map[string]int {

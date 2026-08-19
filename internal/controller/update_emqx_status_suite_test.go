@@ -55,6 +55,27 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 		)))
 	})
 
+	It("preserves runtime configuration checkpoint and recomputes derived revisions", func() {
+		instance.Status.Config = crd.ConfigStatus{
+			DesiredRevision:        "stale-desired-revision",
+			DesiredStartupRevision: "stale-startup-revision",
+			RuntimeRevision:        "runtime-revision",
+			ActiveStartupRevisions: []string{"stale-active-revision"},
+		}
+		Expect(k8sClient.Status().Update(ctx, instance)).To(Succeed())
+
+		round := newReconcileRound()
+		round.requester = &apiRequesterUnavailable{}
+		Expect(runRoundReconcile(round, instance, &updateStatus{emqxReconciler()})).To(BeSuccessfulReconcile())
+
+		actual, err := actualObject(instance)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(actual.Status.Config.RuntimeRevision).To(Equal("runtime-revision"))
+		Expect(actual.Status.Config.ActiveStartupRevisions).To(BeEmpty())
+		Expect(actual.Status.Config.DesiredRevision).To(Equal(configRevision(instance.Spec.Config.Roots)))
+		Expect(actual.Status.Config.DesiredStartupRevision).To(Equal(startupConfigRevision(nil)))
+	})
+
 	It("preserves unavailable transition time while API remains unavailable", func() {
 		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: "emqx@emqx-core-0", PodName: "emqx-core-0", Status: "running"},

@@ -84,10 +84,10 @@ type ConfigRoots map[string]apiextv1.JSON
 
 type Config struct {
 	// Top-level EMQX configuration roots. Values must be JSON-compatible. The Operator
-	// serializes the roots deterministically and supplies them to EMQX as `base.hocon`.
+	// serializes runtime-applicable roots into `base.hocon` and settings that take effect
+	// when EMQX starts into `emqx.conf`.
 	// HOCON-only syntax such as includes, substitutions, and duplicate declarations is not supported.
-	// Kubernetes prunes entries whose value is `null`; null roots are unsupported and
-	// must not be used as deletion markers.
+	// Removing a root relinquishes Operator ownership; it does not delete values persisted by EMQX.
 	// The `node.cookie` path is reserved for the Operator and must not be specified here.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Roots ConfigRoots `json:"roots,omitempty"`

@@ -34,9 +34,10 @@ const (
 )
 
 const (
-	// annotations
-	AnnotationLastRuntimeConfigHash string = "apps.emqx.io/last-runtime-config-hash"
-	AnnotationRestartConfigHash     string = "apps.emqx.io/restart-config-hash"
+	// AnnotationStartupConfigRevision marks Pod templates and Pods with the
+	// revision of configuration that takes effect when EMQX starts. Changing or
+	// removing this annotation from a Pod template drives a rollout.
+	AnnotationStartupConfigRevision string = "apps.emqx.io/startup-config-revision"
 	// AnnotationScalingDown marks a pod that the operator has committed to removing.
 	// Pods with this annotation bypass the maxUnavailable budget on subsequent reconcile
 	// iterations, preventing deadlocks when evacuation makes the pod unavailable.

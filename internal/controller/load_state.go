@@ -21,6 +21,11 @@ type reconcileState struct {
 	pods          []*corev1.Pod
 }
 
+type roleCounts struct {
+	cores      int32
+	replicants int32
+}
+
 type reconcileStatePodFilter interface {
 	passes(pod *corev1.Pod) bool
 }
@@ -110,6 +115,30 @@ func (r *reconcileState) listPods(filters ...reconcileStatePodFilter) []*corev1.
 		}
 	}
 	return list
+}
+
+// activeStartupConfigRevisions counts ready Pods by the startup configuration
+// revision they carry. Pods without the annotation carry the canonical
+// revision of empty startup configuration.
+func (r *reconcileState) activeStartupConfigRevisions() map[string]roleCounts {
+	revisions := map[string]roleCounts{}
+	for _, pod := range r.listPods(podsAlive{}, podsWithCondition{corev1.ContainersReady}) {
+		revision, annotated := pod.Annotations[crd.AnnotationStartupConfigRevision]
+		if !annotated {
+			revision = startupConfigRevision(nil)
+		}
+		counts := revisions[revision]
+		switch pod.Labels[crd.LabelMriaRole] {
+		case crd.RoleCore:
+			counts.cores++
+		case crd.RoleReplicant:
+			counts.replicants++
+		default:
+			continue
+		}
+		revisions[revision] = counts
+	}
+	return revisions
 }
 
 // listOutdatedPods returns core StatefulSet pods whose pod template is not yet the

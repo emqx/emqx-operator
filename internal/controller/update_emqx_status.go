@@ -8,6 +8,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +26,7 @@ import (
 //     If EMQX API is unavailable these fields will remain empty; unavailability will be reflected
 //     in the respective status condition.
 //  4. Re-evaluated conditions.
+//  5. Target and applied onfiguration revisions.
 type updateStatus struct {
 	*EMQXReconciler
 }
@@ -32,6 +34,15 @@ type updateStatus struct {
 func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	status := u.inheritStatus(instance)
 	hasReplicants := instance.Spec.HasReplicants() || r.state.hasReplicants()
+
+	configRoots := instance.Spec.Config.Roots
+	_, startupRoots := config.SplitRoots(configRoots)
+	status.Config.DesiredRevision = configRevision(configRoots)
+	status.Config.DesiredStartupRevision = startupConfigRevision(startupRoots)
+	for revision := range r.state.activeStartupConfigRevisions() {
+		status.Config.ActiveStartupRevisions = append(status.Config.ActiveStartupRevisions, revision)
+	}
+	slices.Sort(status.Config.ActiveStartupRevisions)
 
 	// Core: count pods on each revision for rolling update progress.
 	coreSet := r.state.coreSet()
@@ -209,6 +220,9 @@ func (u *updateStatus) inheritStatus(instance *crd.EMQX) crd.EMQXStatus {
 		Conditions:     u.inheritConditions(instance),
 		CoreNodes:      []crd.EMQXNode{},
 		ReplicantNodes: []crd.EMQXNode{},
+		Config: crd.ConfigStatus{
+			RuntimeRevision: instance.Status.Config.RuntimeRevision,
+		},
 	}
 	if instance.Spec.HasReplicants() {
 		status.ReplicantNodesStatus = crd.ReplicantNodesStatus{

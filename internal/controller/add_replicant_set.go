@@ -138,7 +138,6 @@ func (a *addReplicantSet) updateEMQXStatus(r *reconcileRound, instance *crd.EMQX
 
 func newReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 	rs := generateReplicaSet(instance)
-	attachRestartConfigHash(instance, &rs.Spec.Template)
 	podTemplateHash := computeHash(rs.Spec.Template.DeepCopy(), instance.Status.ReplicantNodesStatus.CollisionCount)
 	rs.Name = rs.Name + "-" + podTemplateHash
 	rs.Labels[crd.LabelPodTemplateHash] = podTemplateHash
@@ -148,6 +147,7 @@ func newReplicaSet(instance *crd.EMQX) *appsv1.ReplicaSet {
 		rs.Spec.Template.Spec.Containers[0].Ports,
 		util.MapServicePortsToContainerPorts(config.DashboardServicePorts(instance.Spec.Config.Roots)),
 	)
+	attachTemplateStartupConfigRevision(instance, &rs.Spec.Template)
 	return rs
 }
 

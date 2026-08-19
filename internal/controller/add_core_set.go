@@ -89,11 +89,11 @@ func (a *addCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult 
 
 func newStatefulSet(instance *crd.EMQX) *appsv1.StatefulSet {
 	sts := generateStatefulSet(instance)
-	attachRestartConfigHash(instance, &sts.Spec.Template)
 	sts.Spec.Template.Spec.Containers[0].Ports = util.AppendMissingContainerPorts(
 		sts.Spec.Template.Spec.Containers[0].Ports,
 		util.MapServicePortsToContainerPorts(config.DashboardServicePorts(instance.Spec.Config.Roots)),
 	)
+	attachTemplateStartupConfigRevision(instance, &sts.Spec.Template)
 	return sts
 }
 
