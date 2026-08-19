@@ -25,14 +25,15 @@ const (
 	RoleReplicant string = "replicant"
 )
 
+// labels
 const (
-	// labels
 	LabelInstance        string = "apps.emqx.io/instance"   // my-emqx
 	LabelManagedBy       string = "apps.emqx.io/managed-by" // emqx-operator
 	LabelMriaRole        string = "apps.emqx.io/db-role"    // core, replicant
 	LabelPodTemplateHash string = "apps.emqx.io/pod-template-hash"
 )
 
+// annotations
 const (
 	// AnnotationStartupConfigRevision marks Pod templates and Pods with the
 	// revision of configuration that takes effect when EMQX starts. Changing or

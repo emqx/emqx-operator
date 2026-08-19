@@ -26,10 +26,7 @@ linters:
     goconst:
       min-len: 5
       min-occurrences: 5
-      ignore-string-values:
-        - "apps/v1"
-        - "StatefulSet"
-        - "ReplicaSet"
+      ignore-tests: true
     revive:
       rules:
         - name: comment-spacings
