@@ -26,8 +26,40 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `mode` _string_ | Determines how configuration updates are applied.<br />* `Merge`: Merge the new configuration into the existing configuration.<br />* `Replace`: Replace the whole configuration. | Merge | Enum: [Merge Replace] <br /> |
-| `data` _string_ | EMQX configuration, in HOCON format.<br />This configuration will be supplied as `base.hocon` to the container. See respective<br />[documentation](https://docs.emqx.com/en/emqx/latest/configuration/configuration.html#base-configuration-file). |  |  |
+| `roots` _[ConfigRoots](#configroots)_ | Top-level EMQX configuration roots. Values must be JSON-compatible. The Operator<br />serializes runtime-applicable roots into `base.hocon` and settings that take effect<br />when EMQX starts into `emqx.conf`.<br />HOCON-only syntax such as includes, substitutions, and duplicate declarations is not supported.<br />Kubernetes prunes entries whose value is `null`; null roots are unsupported and<br />must not be used as deletion markers.<br />Removing a root relinquishes Operator ownership; it does not delete values persisted by EMQX.<br />The `node.cookie` path is reserved for the Operator and must not be specified here. |  |  |
+
+
+#### ConfigRoots
+
+_Underlying type:_ _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_
+
+
+
+
+
+_Appears in:_
+- [Config](#config)
+
+
+
+#### ConfigStatus
+
+
+
+ConfigStatus contains controller-owned reconciliation checkpoints.
+These fields are informational implementation details and may change.
+
+
+
+_Appears in:_
+- [EMQXStatus](#emqxstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `desiredRevision` _string_ | Revision of the complete desired configuration in spec.config.roots. |  |  |
+| `runtimeRevision` _string_ | Revision of runtime configuration most recently accepted by the EMQX API.<br />Before initial startup, it is the revision staged for cluster bootstrap. |  |  |
+| `desiredStartupRevision` _string_ | Revision of the desired settings that take effect when EMQX starts. |  |  |
+| `activeStartupRevisions` _string array_ | Revisions of startup configuration used by ready Pods.<br />Multiple revisions indicate that ready Pods started with different versions of those settings. |  |  |
 
 
 #### CoreNodesStatus
@@ -145,7 +177,7 @@ _Appears in:_
 | `minReadySeconds` _integer_ | MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.<br />For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);<br />for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).<br />Omitted or zero matches the apps/v1 default (0). |  | Minimum: 0 <br /> |
 | `command` _string array_ | Entrypoint array. Not executed within a shell.<br />The container image's ENTRYPOINT is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not. Cannot be updated.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  | Optional: \{\} <br /> |
 | `args` _string array_ | Arguments to the entrypoint.<br />The container image's CMD is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  |  |
-| `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#containerport-v1-core) array_ | List of ports to expose from the container.<br />Exposing a port here gives the system additional information about the network connections a<br />container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that<br />port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a<br />container will be accessible from the network. |  |  |
+| `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#containerport-v1-core) array_ | List of ports to expose from the container.<br />Exposing a port here gives the system additional information about the network connections a<br />container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that<br />port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a<br />container will be accessible from the network.<br />Port names `dashboard` and `dashboard-https` are reserved by the Operator and cannot be supplied<br />in the template. The Operator derives these named ports from<br />`spec.config.roots.dashboard.listeners` for probes, Services, and per-Pod API requests.<br />Change their container port by changing the corresponding listener bind instead. |  |  |
 | `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core) array_ | List of environment variables to set in the container. |  |  |
 | `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envfromsource-v1-core) array_ | List of sources to populate environment variables from in the container.<br />The keys defined within a source must be a C_IDENTIFIER. All invalid keys<br />will be reported as an event when the container is starting. When a key exists in multiple<br />sources, the value associated with the last source will take precedence.<br />Values defined by an Env with a duplicate key will take precedence. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcerequirements-v1-core)_ | Compute Resources required by this container.<br />More info: https://kubernetes.io/docs/concepts/config/manage-resources-containers/ |  |  |
@@ -226,7 +258,7 @@ _Appears in:_
 | `minReadySeconds` _integer_ | MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.<br />For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);<br />for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).<br />Omitted or zero matches the apps/v1 default (0). |  | Minimum: 0 <br /> |
 | `command` _string array_ | Entrypoint array. Not executed within a shell.<br />The container image's ENTRYPOINT is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not. Cannot be updated.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  | Optional: \{\} <br /> |
 | `args` _string array_ | Arguments to the entrypoint.<br />The container image's CMD is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  |  |
-| `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#containerport-v1-core) array_ | List of ports to expose from the container.<br />Exposing a port here gives the system additional information about the network connections a<br />container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that<br />port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a<br />container will be accessible from the network. |  |  |
+| `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#containerport-v1-core) array_ | List of ports to expose from the container.<br />Exposing a port here gives the system additional information about the network connections a<br />container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that<br />port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a<br />container will be accessible from the network.<br />Port names `dashboard` and `dashboard-https` are reserved by the Operator and cannot be supplied<br />in the template. The Operator derives these named ports from<br />`spec.config.roots.dashboard.listeners` for probes, Services, and per-Pod API requests.<br />Change their container port by changing the corresponding listener bind instead. |  |  |
 | `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core) array_ | List of environment variables to set in the container. |  |  |
 | `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envfromsource-v1-core) array_ | List of sources to populate environment variables from in the container.<br />The keys defined within a source must be a C_IDENTIFIER. All invalid keys<br />will be reported as an event when the container is starting. When a key exists in multiple<br />sources, the value associated with the last source will take precedence.<br />Values defined by an Env with a duplicate key will take precedence. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcerequirements-v1-core)_ | Compute Resources required by this container.<br />More info: https://kubernetes.io/docs/concepts/config/manage-resources-containers/ |  |  |
@@ -265,7 +297,7 @@ _Appears in:_
 | `updateStrategy` _[UpdateStrategy](#updatestrategy)_ | Cluster upgrade strategy settings. | \{ type:RollingUpdate \} |  |
 | `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | Template for Pods running EMQX core nodes. | \{ spec:map[persistentVolumeClaimSpec:map[accessModes:[ReadWriteOnce] resources:map[requests:map[storage:500Mi]]] replicas:1] \} |  |
 | `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | Template for Pods running EMQX replicant nodes. |  |  |
-| `dashboardServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | Template for Service exposing the EMQX Dashboard.<br />Dashboard Service always points to the set of EMQX core nodes. |  |  |
+| `dashboardServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | Template for Service exposing the EMQX Dashboard.<br />Dashboard Service always points to the set of EMQX core nodes.<br />A port named `dashboard` or `dashboard-https` in the template overrides the corresponding<br />generated Service port. Its `port` may expose the listener on a different Service port, but<br />its `targetPort` must resolve to the corresponding Dashboard listener. Prefer the reserved<br />named target port so it follows changes to the listener bind. |  |  |
 | `listenersServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | Template for Service exposing enabled EMQX listeners.<br />Listeners Service points to the set of EMQX replicant nodes if they are enabled and exist.<br />Otherwise, it points to the set of EMQX core nodes. |  |  |
 
 
@@ -293,6 +325,7 @@ _Appears in:_
 | `replicantNodesStatus` _[ReplicantNodesStatus](#replicantnodesstatus)_ | Summary status of the set of replicant nodes. |  |  |
 | `nodeEvacuations` _[NodeEvacuationStatus](#nodeevacuationstatus) array_ | Status of active node evacuations in the cluster. |  |  |
 | `dsReplication` _[DSReplicationStatus](#dsreplicationstatus)_ | Status of EMQX Durable Storage replication. |  |  |
+| `config` _[ConfigStatus](#configstatus)_ | Declarative EMQX configuration reconciliation status.<br />Fields are informational implementation details. Prefer the ConfigApplied<br />condition to determine configuration lifecycle state. |  |  |
 
 
 #### EvacuationStrategy
@@ -447,4 +480,3 @@ _Appears in:_
 | `type` _string_ | Determines how cluster upgrade is performed.<br />* `RollingUpdate`: Perform a rolling upgrade, updating pods gradually; core pods are<br />   always updated one at a time, updating of replicants is controlled by `replicants`<br />   strategy. | RollingUpdate | Enum: [RollingUpdate] <br /> |
 | `evacuationStrategy` _[EvacuationStrategy](#evacuationstrategy)_ | Evacuation strategy settings. | \{ type:NodeEvacuation \} |  |
 | `replicants` _[ReplicantsUpdateStrategy](#replicantsupdatestrategy)_ | Parameters of the rolling update for replicant ReplicaSet rollouts. |  |  |
-
