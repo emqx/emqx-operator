@@ -39,14 +39,20 @@ var (
 )
 
 func EMQXReady(g Gomega, afterTime ...metav1.Time) {
-	var cond metav1.Condition
-	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.conditions[?(@.type==\"Ready\")]}")).
-		To(UnmarshalInto(&cond), "Failed to get emqx status")
-	g.Expect(cond.Status).To(
-		Equal(metav1.ConditionTrue),
-		"EMQX cluster has not become ready",
-	)
+	var status crd.EMQXStatus
+	g.Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status}")).
+		To(UnmarshalInto(&status), "Failed to get emqx status")
+	for _, conditionType := range []string{crd.Ready, crd.ConfigApplied} {
+		cond := status.GetCondition(conditionType)
+		g.Expect(cond).NotTo(BeNil(), "EMQX condition %s is missing", conditionType)
+		g.Expect(cond.Status).To(
+			Equal(metav1.ConditionTrue),
+			"EMQX condition %s is not true",
+			conditionType,
+		)
+	}
 	if len(afterTime) > 0 {
+		cond := status.GetCondition(crd.Ready)
 		g.Expect(cond.LastTransitionTime.After(afterTime[0].Time)).To(
 			BeTrue(),
 			"EMQX cluster has not become ready after specified time",
