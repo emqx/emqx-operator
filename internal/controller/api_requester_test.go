@@ -64,6 +64,15 @@ func TestRequesterFilter(t *testing.T) {
 		Controller: ptr.To(true),
 	}
 
+	podSpec := corev1.PodSpec{
+		Containers: []corev1.Container{{
+			Name: crd.DefaultContainerName,
+			Ports: []corev1.ContainerPort{{
+				Name:          "dashboard",
+				ContainerPort: 18083,
+			}},
+		}}}
+
 	state := &reconcileState{
 		coreSets: []*appsv1.StatefulSet{
 			{
@@ -86,6 +95,7 @@ func TestRequesterFilter(t *testing.T) {
 					CreationTimestamp: metav1.NewTime(time.Now().Add(-1 * time.Minute)),
 					OwnerReferences:   []metav1.OwnerReference{coreOwnerReference},
 				},
+				Spec: podSpec,
 				Status: corev1.PodStatus{
 					PodIP:      "",
 					Phase:      corev1.PodPending,
@@ -99,6 +109,7 @@ func TestRequesterFilter(t *testing.T) {
 					CreationTimestamp: metav1.NewTime(time.Now().Add(-1 * time.Second)),
 					OwnerReferences:   []metav1.OwnerReference{coreOwnerReference},
 				},
+				Spec: podSpec,
 				Status: corev1.PodStatus{
 					PodIP:      "10.0.0.2",
 					Phase:      corev1.PodRunning,
@@ -109,8 +120,6 @@ func TestRequesterFilter(t *testing.T) {
 	}
 
 	builder := &apiRequesterBuilder{
-		schema:   "http",
-		port:     "1883",
 		username: "emqx",
 		password: "emqx",
 	}
@@ -160,7 +169,7 @@ func TestCorePreference(t *testing.T) {
 		Controller: ptr.To(true),
 	}
 
-	mkPod := func(name, revision, ip string, ready bool, deleting bool) *corev1.Pod {
+	mkPod := func(name, revision, ip string, port int32, ready bool, deleting bool) *corev1.Pod {
 		labels := crd.CoreLabels()
 		labels[appsv1.ControllerRevisionHashLabelKey] = revision
 		pod := &corev1.Pod{
@@ -170,6 +179,14 @@ func TestCorePreference(t *testing.T) {
 				CreationTimestamp: metav1.NewTime(time.Now()),
 				OwnerReferences:   []metav1.OwnerReference{coreSetReference},
 			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{
+					Name: crd.DefaultContainerName,
+					Ports: []corev1.ContainerPort{{
+						Name:          "dashboard",
+						ContainerPort: port,
+					}},
+				}}},
 			Status: corev1.PodStatus{
 				PodIP: ip,
 				Phase: corev1.PodRunning,
@@ -187,8 +204,6 @@ func TestCorePreference(t *testing.T) {
 	}
 
 	builder := &apiRequesterBuilder{
-		schema:   "http",
-		port:     "18083",
 		username: "emqx",
 		password: "emqx",
 	}
@@ -197,9 +212,9 @@ func TestCorePreference(t *testing.T) {
 		state := &reconcileState{
 			coreSets: []*appsv1.StatefulSet{coreSet},
 			pods: []*corev1.Pod{
-				mkPod(coreSetName+"-0", "rev-new", "10.0.0.1", true, true),
-				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", false, false),
-				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", true, false),
+				mkPod(coreSetName+"-0", "rev-new", "10.0.0.1", 18083, true, true),
+				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", 18083, false, false),
+				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", 18083, true, false),
 			},
 		}
 
@@ -213,10 +228,10 @@ func TestCorePreference(t *testing.T) {
 		state := &reconcileState{
 			coreSets: []*appsv1.StatefulSet{coreSet},
 			pods: []*corev1.Pod{
-				mkPod(coreSetName+"-0", "rev-new", "", true, true),
-				mkPod(coreSetName+"-1", "rev-new", "", false, false),
-				mkPod(coreSetName+"-2", "rev-old", "", true, false),
-				mkPod(coreSetName+"-3", "rev-new", "", true, false),
+				mkPod(coreSetName+"-0", "rev-new", "", 18083, true, true),
+				mkPod(coreSetName+"-1", "rev-new", "", 18083, false, false),
+				mkPod(coreSetName+"-2", "rev-old", "", 18083, true, false),
+				mkPod(coreSetName+"-3", "rev-new", "", 18083, true, false),
 			},
 		}
 
@@ -231,8 +246,8 @@ func TestCorePreference(t *testing.T) {
 		state := &reconcileState{
 			coreSets: []*appsv1.StatefulSet{coreSet},
 			pods: []*corev1.Pod{
-				mkPod(coreSetName+"-0", "rev-old", "10.0.0.1", true, false),
-				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", true, false),
+				mkPod(coreSetName+"-0", "rev-old", "10.0.0.1", 18083, true, false),
+				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", 18083, true, false),
 			},
 		}
 
@@ -246,9 +261,9 @@ func TestCorePreference(t *testing.T) {
 		state := &reconcileState{
 			coreSets: []*appsv1.StatefulSet{coreSet},
 			pods: []*corev1.Pod{
-				mkPod(coreSetName+"-0", "rev-old", "10.0.0.1", true, false),
-				mkPod(coreSetName+"-1", "rev-old", "10.0.0.2", true, false),
-				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", true, false),
+				mkPod(coreSetName+"-0", "rev-old", "10.0.0.1", 18083, true, false),
+				mkPod(coreSetName+"-1", "rev-old", "10.0.0.2", 18083, true, false),
+				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", 18083, true, false),
 			},
 		}
 
@@ -262,8 +277,8 @@ func TestCorePreference(t *testing.T) {
 		state := &reconcileState{
 			coreSets: []*appsv1.StatefulSet{coreSet},
 			pods: []*corev1.Pod{
-				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", true, false),
-				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", true, false),
+				mkPod(coreSetName+"-2", "rev-new", "10.0.0.3", 18083, true, false),
+				mkPod(coreSetName+"-1", "rev-new", "10.0.0.2", 18083, true, false),
 			},
 		}
 
@@ -272,4 +287,44 @@ func TestCorePreference(t *testing.T) {
 		assert.NotNil(t, requester)
 		assert.Equal(t, coreSetName+"-1", requester.GetDescription())
 	})
+}
+
+func TestRequesterUsesPodDashboardPort(t *testing.T) {
+	builder := &apiRequesterBuilder{username: "emqx", password: "secret"}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "emqx-core-0"},
+		Spec: corev1.PodSpec{Containers: []corev1.Container{{
+			Name: crd.DefaultContainerName,
+			Ports: []corev1.ContainerPort{{
+				Name:          "dashboard",
+				ContainerPort: 28083,
+			}},
+		}}},
+		Status: corev1.PodStatus{PodIP: "10.0.0.1"},
+	}
+
+	requester := builder.forPod(pod)
+	require.NotNil(t, requester)
+	assert.Equal(t, "10.0.0.1:28083", requester.GetHost())
+	assert.Equal(t, "http", requester.GetURL("status").Scheme)
+
+	pod.Spec.Containers[0].Ports = []corev1.ContainerPort{
+		{Name: "dashboard-https", ContainerPort: 28084},
+	}
+	requester = builder.forPod(pod)
+	require.NotNil(t, requester)
+	assert.Equal(t, "10.0.0.1:28084", requester.GetHost())
+	assert.Equal(t, "https", requester.GetURL("status").Scheme)
+
+	pod.Spec.Containers[0].Ports = []corev1.ContainerPort{
+		{Name: "dashboard-https", ContainerPort: 28084},
+		{Name: "dashboard", ContainerPort: 28083},
+	}
+	requester = builder.forPod(pod)
+	require.NotNil(t, requester)
+	assert.Equal(t, "10.0.0.1:28083", requester.GetHost())
+	assert.Equal(t, "http", requester.GetURL("status").Scheme)
+
+	pod.Spec.Containers[0].Ports = nil
+	assert.Nil(t, builder.forPod(pod))
 }

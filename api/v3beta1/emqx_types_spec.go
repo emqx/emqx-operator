@@ -18,6 +18,7 @@ package v3beta1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 )
@@ -67,6 +68,10 @@ type EMQXSpec struct {
 
 	// Template for Service exposing the EMQX Dashboard.
 	// Dashboard Service always points to the set of EMQX core nodes.
+	// A port named `dashboard` or `dashboard-https` in the template overrides the corresponding
+	// generated Service port. Its `port` may expose the listener on a different Service port, but
+	// its `targetPort` must resolve to the corresponding Dashboard listener. Prefer the reserved
+	// named target port so it follows changes to the listener bind.
 	DashboardServiceTemplate *ServiceTemplate `json:"dashboardServiceTemplate,omitempty"`
 
 	// Template for Service exposing enabled EMQX listeners.
@@ -75,17 +80,17 @@ type EMQXSpec struct {
 	ListenersServiceTemplate *ServiceTemplate `json:"listenersServiceTemplate,omitempty"`
 }
 
+type ConfigRoots map[string]apiextv1.JSON
+
 type Config struct {
-	// Determines how configuration updates are applied.
-	// * `Merge`: Merge the new configuration into the existing configuration.
-	// * `Replace`: Replace the whole configuration.
-	// +kubebuilder:validation:Enum=Merge;Replace
-	// +kubebuilder:default=Merge
-	Mode string `json:"mode,omitempty"`
-	// EMQX configuration, in HOCON format.
-	// This configuration will be supplied as `base.hocon` to the container. See respective
-	// [documentation](https://docs.emqx.com/en/emqx/latest/configuration/configuration.html#base-configuration-file).
-	Data string `json:"data,omitempty"`
+	// Top-level EMQX configuration roots. Values must be JSON-compatible. The Operator
+	// serializes runtime-applicable roots into `base.hocon` and settings that take effect
+	// when EMQX starts into `emqx.conf`.
+	// HOCON-only syntax such as includes, substitutions, and duplicate declarations is not supported.
+	// Removing a root relinquishes Operator ownership; it does not delete values persisted by EMQX.
+	// The `node.cookie` path is reserved for the Operator and must not be specified here.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Roots ConfigRoots `json:"roots,omitempty"`
 }
 
 type UpdateStrategy struct {
@@ -244,6 +249,11 @@ type EMQXReplicantTemplateSpec struct {
 	// container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that
 	// port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a
 	// container will be accessible from the network.
+	// Port names `dashboard` and `dashboard-https` are reserved by the Operator and cannot be supplied
+	// in the template. The Operator derives these named ports from
+	// `spec.config.roots.dashboard.listeners` for probes, Services, and per-Pod API requests.
+	// Change their container port by changing the corresponding listener bind instead.
+	// +kubebuilder:validation:XValidation:rule="self.all(p, !has(p.name) || (p.name != 'dashboard' && p.name != 'dashboard-https'))",message="port names dashboard and dashboard-https are reserved by the Operator"
 	Ports []corev1.ContainerPort `json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"containerPort" protobuf:"bytes,6,rep,name=ports"`
 	// List of environment variables to set in the container.
 	Env []corev1.EnvVar `json:"env,omitempty"`
@@ -323,7 +333,7 @@ func (spec *EMQXSpec) IsEvacuationEnabled() bool {
 }
 
 func (s *ServiceTemplate) IsEnabled() bool {
-	return s.Enabled != nil && *s.Enabled
+	return s == nil || s.Enabled == nil || *s.Enabled
 }
 
 func (spec *EMQXSpec) NumCoreReplicas() int32 {

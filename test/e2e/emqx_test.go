@@ -40,16 +40,6 @@ func withReplicantResources(cpuRequest, memRequest, cpuLimit, memLimit string) [
 	)
 }
 
-//nolint:unparam
-func configListener(ty string, name string, enabled bool, bind string) string {
-	return fmt.Sprintf(`
-		listeners.%s.%s {
-			enabled = %t
-			bind = "%s"
-		}
-	`, ty, name, enabled, bind)
-}
-
 //nolint:errcheck
 var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
@@ -216,21 +206,37 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 		It("change config", func() {
 			By("change EMQX config")
-			configChange := string(intoJsonString(
-				// Change listener ports:
-				configListener("tcp", "default", true, "11883"),
-				configListener("quic", "default", true, "14567"),
-				configListener("ws", "default", false, "0"),
-				configListener("wss", "default", false, "0"),
-				// And also change dashboard config, should be skipped:
-				"dashboard.listeners.http { bind = 28083, num_acceptors = 1 }",
-			))
+			changedAt := metav1.Now()
+			configChange := string(buildConfigRoots(`
+				listeners:
+				  tcp:
+				    default:
+				      enabled: true
+				      bind: "11883"
+				  quic:
+				    default:
+				      enabled: true
+				      bind: "14567"
+				  ws:
+				    default:
+				      enabled: false
+				      bind: "0"
+				  wss:
+				    default:
+				      enabled: false
+				      bind: "0"
+				dashboard:
+				  listeners:
+				    http:
+				      bind: 28083
+				      num_acceptors: 1
+			`))
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
-				"--patch", `[{"op": "replace", "path": "/spec/config/data", "value": `+configChange+`}]`)).
+				"--patch", `[{"op": "replace", "path": "/spec/config/roots", "value": `+configChange+`}]`)).
 				To(Succeed())
 			By("wait for EMQX cluster to be ready")
-			Eventually(EMQXReady).Should(Succeed())
+			Eventually(EMQXReady).WithArguments(changedAt).Should(Succeed())
 			By("wait for services to be updated")
 			var servicePorts []corev1.ServicePort
 			Eventually(KubectlOut).WithArguments("get", "service", "emqx-listeners", "-o", "jsonpath={.spec.ports}").
@@ -305,11 +311,14 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 			By("specify broken EMQX config")
 			changedAt2 := metav1.Now()
-			configBroken := string(intoJsonString("broker { no.such.config { k = v } }"))
+			configBroken := string(buildConfigRoots(`
+				broker:
+				  no: { such: [ config ] }
+			`))
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
 				"--patch", `[
-					{"op": "replace", "path": "/spec/config/data", "value": `+configBroken+`},
+					{"op": "replace", "path": "/spec/config/roots", "value": `+configBroken+`},
 					{"op": "replace", "path": "/spec/image", "value": "`+emqxImageUpgrade+`"},
 				]`)).
 				To(Succeed())
@@ -330,7 +339,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
 				"--patch", `[
-					{"op": "replace", "path": "/spec/config/data", "value": ""},
+					{"op": "replace", "path": "/spec/config/roots", "value": {}},
 					{"op": "replace", "path": "/spec/image", "value": "`+imageForceChange+`"},
 				]`)).
 				To(Succeed())
@@ -606,7 +615,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				withImage(emqxImage),
 				withCores(coreReplicas),
 				withReplicants(replicantReplicas),
-				withConfig(ConfigDS()),
+				withDS(),
 			)
 			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
 
@@ -752,15 +761,12 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		})
 
 		It("enable DS replication", func() {
-			By("change config + add label to trigger rolling update")
-			configDs := string(intoJsonString(ConfigDS()))
+			By("change DS config to trigger rolling update")
+			configDs := string(buildConfigRoots(configDS))
 			changedAt := metav1.Now()
 			Expect(Kubectl("patch", "emqx", "emqx",
 				"--type", "json",
-				"--patch", `[
-					{"op": "replace", "path": "/spec/config/data", "value": `+configDs+`},
-					{"op": "add", "path": "/spec/coreTemplate/metadata/labels", "value": {"e2e/ds-replication": "true"}}
-				]`,
+				"--patch", `[{"op": "replace", "path": "/spec/config/roots", "value": `+configDs+`}]`,
 			)).To(Succeed())
 
 			By("wait for EMQX cluster to become ready again")

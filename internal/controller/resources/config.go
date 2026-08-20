@@ -7,7 +7,7 @@ import (
 )
 
 const BaseConfigFile string = "base.hocon"
-const OverridesConfigFile string = "emqx.conf"
+const StartupConfigFile string = "emqx.conf"
 
 const configVolumeName = "bootstrap-config"
 
@@ -19,10 +19,7 @@ func EMQXConfig(instance *crd.EMQX) emqxConfigResource {
 	return emqxConfigResource{instance}
 }
 
-func (from emqxConfigResource) ConfigMap(baseConfig string) *corev1.ConfigMap {
-	// NOTE
-	// Providing empty 'emqx.conf' to make sure no user-defined configuration is ignored or
-	// overridden during restarts.
+func (from emqxConfigResource) ConfigMap(baseConfig, startupConfig string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -34,8 +31,8 @@ func (from emqxConfigResource) ConfigMap(baseConfig string) *corev1.ConfigMap {
 			Labels:    from.DefaultLabelsWith(from.Labels),
 		},
 		Data: map[string]string{
-			BaseConfigFile:      baseConfig,
-			OverridesConfigFile: "",
+			BaseConfigFile:    baseConfig,
+			StartupConfigFile: startupConfig,
 		},
 	}
 }
@@ -50,8 +47,8 @@ func (emqxConfigResource) VolumeMounts() []corev1.VolumeMount {
 		},
 		{
 			Name:      configVolumeName,
-			MountPath: "/opt/emqx/etc/" + OverridesConfigFile,
-			SubPath:   OverridesConfigFile,
+			MountPath: "/opt/emqx/etc/" + StartupConfigFile,
+			SubPath:   StartupConfigFile,
 			ReadOnly:  true,
 		},
 	}

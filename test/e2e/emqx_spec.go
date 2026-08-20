@@ -17,14 +17,27 @@ limitations under the License.
 package e2e
 
 import (
-	"encoding/json"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/emqx/emqx-operator/test/util"
-	"github.com/lithammer/dedent"
 )
+
+const defaultConfigYAML = `
+license:
+  key: evaluation
+log:
+  console:
+    level: info
+`
+
+const configDS = `
+durable_sessions:
+  enable: true
+durable_storage:
+  messages:
+    backend: builtin_raft
+    n_shards: 8
+`
 
 type specBuilder struct {
 	base     []byte
@@ -55,6 +68,11 @@ func (sb *specBuilder) WithConfig(snippets ...string) *specBuilder {
 	return sb
 }
 
+func (sb *specBuilder) WithDS() *specBuilder {
+	sb.overlays = append(sb.overlays, withDS())
+	return sb
+}
+
 func (sb *specBuilder) ToJSONDocument() []byte {
 	return util.PatchDocument(sb.base, sb.overlays...)
 }
@@ -78,37 +96,18 @@ func withImage(image string) []byte {
 }
 
 func withConfig(snippets ...string) []byte {
-	defaults := []string{ConfigLicense(), ConfigConsoleLog("info")}
-	config := slices.Concat(defaults, snippets)
-	return fmt.Appendf(nil, `{"spec": {"config": {"data": %s}}}`, intoJsonString(config...))
+	snippets = append([]string{defaultConfigYAML}, snippets...)
+	return fmt.Appendf(nil, `{"spec": {"config": {"roots": %s}}}`, buildConfigRoots(snippets...))
 }
 
-func intoJsonString(snippets ...string) []byte {
-	configStr := dedent.Dedent(strings.Join(snippets, ""))
-	jsonStr, _ := json.Marshal(configStr)
-	return jsonStr
+func withDS() []byte {
+	return withConfig(configDS)
 }
 
-func ConfigLicense() string {
-	return `
-		license { key = "evaluation" }
-	`
-}
-
-func ConfigConsoleLog(level string) string {
-	return `
-		log.console { level = "` + level + `" }
-	`
-}
-
-func ConfigDS() string {
-	return `
-		durable_sessions { enable = true }
-		durable_storage { 
-			messages {
-				backend = builtin_raft
-				n_shards = 8
-			}
-		}
-	`
+func buildConfigRoots(snippets ...string) []byte {
+	roots := []byte(`{}`)
+	for _, snippet := range snippets {
+		roots = util.PatchDocument(roots, util.FromYAMLString(snippet))
+	}
+	return roots
 }

@@ -9,7 +9,6 @@ import (
 
 	emperror "emperror.dev/errors"
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
-	config "github.com/emqx/emqx-operator/internal/controller/config"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
 	util "github.com/emqx/emqx-operator/internal/controller/util"
 	req "github.com/emqx/emqx-operator/internal/requester"
@@ -17,8 +16,6 @@ import (
 )
 
 type apiRequesterBuilder struct {
-	schema   string
-	port     string
 	username string
 	password string
 }
@@ -84,36 +81,53 @@ func (b *apiRequesterBuilder) forPod(pod *corev1.Pod) req.RequesterInterface {
 	if pod.Status.PodIP == "" {
 		return nil
 	}
+	schema, port, ok := dashboardEndpoint(pod)
+	if !ok {
+		return nil
+	}
 	return &req.Requester{
-		Schema:      b.schema,
-		Host:        net.JoinHostPort(pod.Status.PodIP, b.port),
+		Schema:      schema,
+		Host:        net.JoinHostPort(pod.Status.PodIP, port),
 		Username:    b.username,
 		Password:    b.password,
 		Description: pod.Name,
 	}
 }
 
-func newAPIRequesterBuilder(
-	conf *config.EMQX,
-	bootstrapAPIKey *corev1.Secret,
-) (*apiRequesterBuilder, error) {
+// dashboardEndpoint uses the Operator-generated named container port as the
+// dashboard endpoint loaded by this Pod revision. Overriding the reserved
+// dashboard port names with values that disagree with dashboard.listeners is
+// unsupported.
+func dashboardEndpoint(pod *corev1.Pod) (string, string, bool) {
+	for _, container := range pod.Spec.Containers {
+		if container.Name != crd.DefaultContainerName {
+			continue
+		}
+		var httpsPort int32
+		for _, port := range container.Ports {
+			switch port.Name {
+			case "dashboard":
+				if port.ContainerPort > 0 {
+					return "http", strconv.Itoa(int(port.ContainerPort)), true
+				}
+			case "dashboard-https":
+				httpsPort = port.ContainerPort
+			}
+		}
+		if httpsPort > 0 {
+			return "https", strconv.Itoa(int(httpsPort)), true
+		}
+		return "", "", false
+	}
+	return "", "", false
+}
+
+func newAPIRequesterBuilder(bootstrapAPIKey *corev1.Secret) (*apiRequesterBuilder, error) {
 	username, password, err := getAPICredentials(bootstrapAPIKey)
 	if err != nil {
 		return nil, err
 	}
-	var schema, port string
-	portMap := conf.GetDashboardPortMap()
-	if dashboardHttps, ok := portMap["dashboard-https"]; ok {
-		schema = "https"
-		port = strconv.Itoa(dashboardHttps)
-	}
-	if dashboard, ok := portMap["dashboard"]; ok {
-		schema = "http"
-		port = strconv.Itoa(dashboard)
-	}
 	return &apiRequesterBuilder{
-		schema:   schema,
-		port:     port,
 		username: username,
 		password: password,
 	}, nil

@@ -22,15 +22,15 @@ func TestSetConditionTransitionTime(t *testing.T) {
 		},
 	}
 
-	status.SetCondition(Ready, metav1.ConditionFalse, "Progressing", "second attempt")
-	_, condition := status.GetCondition(Ready)
+	status.SetCondition(Ready, metav1.ConditionFalse, "Progressing", "second attempt", 1)
+	condition := status.GetCondition(Ready)
 	if assert.NotNil(t, condition) {
 		assert.Equal(t, oldTransition, condition.LastTransitionTime)
 		assert.Equal(t, "second attempt", condition.Message)
 	}
 
-	status.SetCondition(Ready, metav1.ConditionTrue, "UpToDate", "third attempt")
-	_, condition = status.GetCondition(Ready)
+	status.SetCondition(Ready, metav1.ConditionTrue, "UpToDate", "third attempt", 1)
+	condition = status.GetCondition(Ready)
 	if assert.NotNil(t, condition) {
 		assert.NotEqual(t, oldTransition, condition.LastTransitionTime)
 		assert.Equal(t, metav1.ConditionTrue, condition.Status)

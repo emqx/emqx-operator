@@ -12,8 +12,7 @@ import (
 func HaveCondition(conditionType string, matcher types.GomegaMatcher) types.GomegaMatcher {
 	return gomega.WithTransform(
 		func(instance *crd.EMQX) *metav1.Condition {
-			_, condition := instance.Status.GetCondition(conditionType)
-			return condition
+			return instance.Status.GetCondition(conditionType)
 		},
 		matcher,
 	)

@@ -1,10 +1,7 @@
 package controller
 
 import (
-	"net/http"
-	"net/url"
 	"syscall"
-	"time"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	req "github.com/emqx/emqx-operator/internal/requester"
@@ -58,6 +55,27 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 		)))
 	})
 
+	It("preserves runtime configuration checkpoint and recomputes derived revisions", func() {
+		instance.Status.Config = crd.ConfigStatus{
+			DesiredRevision:        "stale-desired-revision",
+			DesiredStartupRevision: "stale-startup-revision",
+			RuntimeRevision:        "runtime-revision",
+			ActiveStartupRevisions: []string{"stale-active-revision"},
+		}
+		Expect(k8sClient.Status().Update(ctx, instance)).To(Succeed())
+
+		round := newReconcileRound()
+		round.requester = &apiRequesterUnavailable{}
+		Expect(runRoundReconcile(round, instance, &updateStatus{emqxReconciler()})).To(BeSuccessfulReconcile())
+
+		actual, err := actualObject(instance)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(actual.Status.Config.RuntimeRevision).To(Equal("runtime-revision"))
+		Expect(actual.Status.Config.ActiveStartupRevisions).To(BeEmpty())
+		Expect(actual.Status.Config.DesiredRevision).To(Equal(configRevision(instance.Spec.Config.Roots)))
+		Expect(actual.Status.Config.DesiredStartupRevision).To(Equal(startupConfigRevision(nil)))
+	})
+
 	It("preserves unavailable transition time while API remains unavailable", func() {
 		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: "emqx@emqx-core-0", PodName: "emqx-core-0", Status: "running"},
@@ -79,25 +97,20 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 			metav1.ConditionFalse,
 			"RequestFailed",
 			"previous failure",
+			instance.Generation,
 		)
 		Expect(k8sClient.Status().Update(ctx, instance)).Should(Succeed())
 
 		Expect(actualize(instance)).NotTo(HaveOccurred())
-		_, conditionBefore := instance.Status.GetCondition(crd.EMQXAPIAvailable)
+		conditionBefore := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 		Expect(conditionBefore).NotTo(BeNil())
 
-		round := newReconcileRoundWithRequester(req.NewMockRequester(
-			func(string, url.URL, []byte, http.Header) (*http.Response, []byte, error) {
-				time.Sleep(time.Second)
-				return nil, nil, syscall.ECONNREFUSED
-			},
-		))
-
+		round := newReconcileRoundWithRequester(req.MockRequests("*", syscall.ECONNREFUSED))
 		s := &updateStatus{emqxReconciler()}
 		Expect(runRoundReconcile(round, instance, s)).To(BeSuccessfulReconcile())
 
 		Expect(actualize(instance)).NotTo(HaveOccurred())
-		_, condition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
+		condition := instance.Status.GetCondition(crd.EMQXAPIAvailable)
 		Expect(condition).NotTo(BeNil())
 		Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 		Expect(condition.Reason).To(Equal("RequestFailed"))

@@ -20,8 +20,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
-	"net/url"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -49,7 +47,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
-	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/emqx/emqx-operator/internal/handler"
 	req "github.com/emqx/emqx-operator/internal/requester"
 	// +kubebuilder:scaffold:imports
@@ -64,7 +61,6 @@ var ctx context.Context
 var cancel context.CancelFunc
 var logger logr.Logger
 
-var emqxConf *config.EMQX
 var emqx *crd.EMQX = &crd.EMQX{
 	ObjectMeta: metav1.ObjectMeta{
 		UID:  "fake-1234567890",
@@ -171,10 +167,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	emqxConf, err = config.EMQXConfigWithDefaults(emqx.Spec.Config.Data)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(emqxConf).ToNot(BeNil())
-
 	baseReconciler = &EMQXReconciler{
 		Handler:       handler.NewHandler(k8sClient),
 		RESTConfig:    restConfig,
@@ -269,6 +261,115 @@ var _ = Describe("CRD Defaults", Ordered, func() {
 		actual.Annotations = map[string]string{"apps.emqx.io/test": "updated"}
 		Expect(k8sClient.Update(ctx, actual)).To(Succeed())
 	})
+
+	It("preserves arbitrary JSON values under config roots", func() {
+		instance := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": crd.GroupVersion.String(),
+				"kind":       "EMQX",
+				"metadata": map[string]interface{}{
+					"name":      "emqx-config-roots",
+					"namespace": ns.Name,
+				},
+				"spec": map[string]interface{}{
+					"image": "emqx",
+					"config": map[string]interface{}{
+						"roots": map[string]interface{}{
+							"listeners": map[string]interface{}{
+								"tcp": map[string]interface{}{
+									"default": map[string]interface{}{
+										"bind":    int64(1883),
+										"enabled": true,
+									},
+								},
+							},
+							"authentication": []interface{}{
+								map[string]interface{}{"mechanism": "password_based"},
+							},
+						},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, instance)).To(Succeed())
+
+		actual := &crd.EMQX{}
+		key := client.ObjectKey{Namespace: ns.Name, Name: "emqx-config-roots"}
+		Expect(k8sClient.Get(ctx, key, actual)).To(Succeed())
+
+		Expect(actual.Spec.Config.Roots).To(HaveLen(2))
+		Expect(actual.Spec.Config.Roots).To(HaveKey("listeners"))
+		Expect(actual.Spec.Config.Roots["listeners"].Raw).To(MatchJSON(
+			`{"tcp":{"default":{"bind":1883,"enabled":true}}}`,
+		))
+		Expect(actual.Spec.Config.Roots).To(HaveKey("authentication"))
+		Expect(actual.Spec.Config.Roots["authentication"].Raw).To(MatchJSON(
+			`[{"mechanism":"password_based"}]`,
+		))
+	})
+
+	It("rejects the dashboard port name in the core template", func() {
+		instance := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": crd.GroupVersion.String(),
+				"kind":       "EMQX",
+				"metadata": map[string]interface{}{
+					"name":      "reserved-dashboard-core",
+					"namespace": ns.Name,
+				},
+				"spec": map[string]interface{}{
+					"image": "emqx",
+					"coreTemplate": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"ports": []interface{}{
+								map[string]interface{}{
+									"name":          "dashboard",
+									"containerPort": int64(18083),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, instance)).To(MatchError(ContainSubstring(
+			"port names dashboard and dashboard-https are reserved by the Operator",
+		)))
+	})
+
+	It("rejects the dashboard-https port name in the replicant template", func() {
+		instance := &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": crd.GroupVersion.String(),
+				"kind":       "EMQX",
+				"metadata": map[string]interface{}{
+					"name":      "reserved-dashboard-https-replicant",
+					"namespace": ns.Name,
+				},
+				"spec": map[string]interface{}{
+					"image": "emqx",
+					"coreTemplate": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"replicas": int64(2),
+						},
+					},
+					"replicantTemplate": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"ports": []interface{}{
+								map[string]interface{}{
+									"name":          "dashboard-https",
+									"containerPort": int64(18084),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, instance)).To(MatchError(ContainSubstring(
+			"port names dashboard and dashboard-https are reserved by the Operator",
+		)))
+	})
 })
 
 func actualObject[Object client.Object](o Object) (Object, error) {
@@ -303,11 +404,7 @@ func ownerReferences(owner client.Object) []metav1.OwnerReference {
 }
 
 func newReconcileRound() *reconcileRound {
-	req := req.NewMockRequester(
-		func(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error) {
-			return &http.Response{StatusCode: 501}, []byte{}, nil
-		},
-	)
+	req := req.MockRequests()
 	return newReconcileRoundWithRequester(req)
 }
 
@@ -315,7 +412,6 @@ func newReconcileRoundWithRequester(requester req.RequesterInterface) *reconcile
 	return &reconcileRound{
 		ctx:            ctx,
 		log:            logger,
-		conf:           emqxConf,
 		requester:      &apiRequesterOverride{requester},
 		state:          nil,
 		coreRetirement: nil,

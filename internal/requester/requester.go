@@ -126,35 +126,3 @@ func (requester *Requester) Request(
 	}
 	return resp, body, nil
 }
-
-// Mock
-type MockRequesterFunc func(
-	method string,
-	url url.URL,
-	body []byte,
-	header http.Header,
-) (resp *http.Response, respBody []byte, err error)
-
-type MockRequester struct {
-	mockFunc MockRequesterFunc
-}
-
-func NewMockRequester(mockFunc MockRequesterFunc) *MockRequester {
-	return &MockRequester{mockFunc: mockFunc}
-}
-
-func (f *MockRequester) GetURL(path string, query ...string) url.URL { return url.URL{Path: path} }
-func (f *MockRequester) GetSchema() string                           { return "http" }
-func (f *MockRequester) GetHost() string                             { return "" }
-func (f *MockRequester) GetUsername() string                         { return "" }
-func (f *MockRequester) GetPassword() string                         { return "" }
-func (f *MockRequester) GetDescription() string                      { return "MockRequester" }
-
-func (f *MockRequester) Request(
-	method string,
-	url url.URL,
-	body []byte,
-	header http.Header,
-) (resp *http.Response, respBody []byte, err error) {
-	return f.mockFunc(method, url, body, header)
-}

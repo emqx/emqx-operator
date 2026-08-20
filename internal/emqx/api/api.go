@@ -57,10 +57,14 @@ func delete(req req.RequesterInterface, path string) ([]byte, error) {
 }
 
 func request(req req.RequesterInterface, method string, path string, body []byte, header http.Header) ([]byte, error) {
+	return requestWithQuery(req, method, path, body, header)
+}
+
+func requestWithQuery(req req.RequesterInterface, method string, path string, body []byte, header http.Header, query ...string) ([]byte, error) {
 	if req == nil {
 		return nil, emperror.New("no requester")
 	}
-	url := req.GetURL(path)
+	url := req.GetURL(path, query...)
 	resp, body, err := req.Request(method, url, body, header)
 	if err != nil {
 		return nil, emperror.Wrapf(err, "error accessing %s API %s", req.GetDescription(), url.String())

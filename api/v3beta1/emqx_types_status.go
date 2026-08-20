@@ -19,6 +19,7 @@ package v3beta1
 import (
 	"slices"
 
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,6 +58,26 @@ type EMQXStatus struct {
 	NodeEvacuations []NodeEvacuationStatus `json:"nodeEvacuations,omitempty"`
 	// Status of EMQX Durable Storage replication.
 	DSReplication DSReplicationStatus `json:"dsReplication,omitempty"`
+
+	// Declarative EMQX configuration reconciliation status.
+	// Fields are informational implementation details. Prefer the ConfigApplied
+	// condition to determine configuration lifecycle state.
+	Config ConfigStatus `json:"config,omitempty"`
+}
+
+// ConfigStatus contains controller-owned reconciliation checkpoints.
+// These fields are informational implementation details and may change.
+type ConfigStatus struct {
+	// Revision of the complete desired configuration in spec.config.roots.
+	DesiredRevision string `json:"desiredRevision,omitempty"`
+	// Revision of runtime configuration most recently accepted by the EMQX API.
+	// Before initial startup, it is the revision staged for cluster bootstrap.
+	RuntimeRevision string `json:"runtimeRevision,omitempty"`
+	// Revision of the desired settings that take effect when EMQX starts.
+	DesiredStartupRevision string `json:"desiredStartupRevision,omitempty"`
+	// Revisions of startup configuration used by ready Pods.
+	// Multiple revisions indicate that ready Pods started with different versions of those settings.
+	ActiveStartupRevisions []string `json:"activeStartupRevisions,omitempty"`
 }
 
 type NodeEvacuationStatus struct {
@@ -219,45 +240,35 @@ const (
 	ReplicantNodesProgressing string = "ReplicantNodesProgressing"
 	Available                 string = "Available"
 	Ready                     string = "Ready"
+	ConfigApplied             string = "ConfigApplied"
 )
 
-func (s *EMQXStatus) SetCondition(ty string, status metav1.ConditionStatus, reason, message string) {
-	pos, existing := s.GetCondition(ty)
-	if existing != nil &&
-		existing.Status == status &&
-		existing.Reason == reason &&
-		existing.Message == message {
-		return
-	}
-	c := metav1.Condition{
+func (s *EMQXStatus) SetCondition(
+	ty string,
+	status metav1.ConditionStatus,
+	reason, message string,
+	observedIn int64,
+) bool {
+	return s.AttachCondition(metav1.Condition{
 		Type:               ty,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,
-		LastTransitionTime: metav1.Now(),
-	}
-	if existing != nil && existing.Status == status {
-		c.LastTransitionTime = existing.LastTransitionTime
-	}
-	if existing != nil {
-		s.Conditions[pos] = c
-	} else {
-		s.Conditions = append(s.Conditions, c)
-	}
+		ObservedGeneration: observedIn,
+	})
 }
 
-func (s *EMQXStatus) GetCondition(conditionType string) (int, *metav1.Condition) {
-	for i := range s.Conditions {
-		c := s.Conditions[i]
-		if c.Type == conditionType {
-			return i, c.DeepCopy()
-		}
-	}
-	return -1, nil
+func (s *EMQXStatus) AttachCondition(condition metav1.Condition) bool {
+	return apimeta.SetStatusCondition(&s.Conditions, condition)
+}
+
+func (s *EMQXStatus) GetCondition(conditionType string) *metav1.Condition {
+	_, cond := s.findCondition(conditionType)
+	return cond
 }
 
 func (s *EMQXStatus) IsConditionTrue(conditionType string) bool {
-	_, condition := s.GetCondition(conditionType)
+	condition := s.GetCondition(conditionType)
 	if condition == nil {
 		return false
 	}
@@ -265,7 +276,7 @@ func (s *EMQXStatus) IsConditionTrue(conditionType string) bool {
 }
 
 func (s *EMQXStatus) RemoveCondition(conditionType string) {
-	pos, _ := s.GetCondition(conditionType)
+	pos, _ := s.findCondition(conditionType)
 	if pos != -1 {
 		s.Conditions = slices.Delete(s.Conditions, pos, pos+1)
 	}
@@ -281,4 +292,14 @@ func (s *DSReplicationStatus) IsStable() bool {
 		}
 	}
 	return true
+}
+
+func (s *EMQXStatus) findCondition(conditionType string) (int, *metav1.Condition) {
+	for i := range s.Conditions {
+		c := s.Conditions[i]
+		if c.Type == conditionType {
+			return i, c.DeepCopy()
+		}
+	}
+	return -1, nil
 }

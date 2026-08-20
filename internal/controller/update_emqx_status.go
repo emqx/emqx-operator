@@ -8,6 +8,7 @@ import (
 
 	emperror "emperror.dev/errors"
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
+	config "github.com/emqx/emqx-operator/internal/controller/config"
 	"github.com/emqx/emqx-operator/internal/emqx/api"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +26,7 @@ import (
 //     If EMQX API is unavailable these fields will remain empty; unavailability will be reflected
 //     in the respective status condition.
 //  4. Re-evaluated conditions.
+//  5. Target and applied onfiguration revisions.
 type updateStatus struct {
 	*EMQXReconciler
 }
@@ -32,6 +34,15 @@ type updateStatus struct {
 func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	status := u.inheritStatus(instance)
 	hasReplicants := instance.Spec.HasReplicants() || r.state.hasReplicants()
+
+	configRoots := instance.Spec.Config.Roots
+	_, startupRoots := config.SplitRoots(configRoots)
+	status.Config.DesiredRevision = configRevision(configRoots)
+	status.Config.DesiredStartupRevision = startupConfigRevision(startupRoots)
+	for revision := range r.state.activeStartupConfigRevisions() {
+		status.Config.ActiveStartupRevisions = append(status.Config.ActiveStartupRevisions, revision)
+	}
+	slices.Sort(status.Config.ActiveStartupRevisions)
 
 	// Core: count pods on each revision for rolling update progress.
 	coreSet := r.state.coreSet()
@@ -172,6 +183,7 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 			metav1.ConditionFalse,
 			"RequestFailed",
 			apiError.Error(),
+			instance.Generation,
 		)
 	case req == nil:
 		status.SetCondition(
@@ -179,6 +191,7 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 			metav1.ConditionFalse,
 			"NoRequester",
 			"No eligible core pod is available to serve EMQX API requests",
+			instance.Generation,
 		)
 	default:
 		status.SetCondition(
@@ -186,6 +199,7 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 			metav1.ConditionTrue,
 			"RequestSucceeded",
 			"EMQX API is available",
+			instance.Generation,
 		)
 	}
 
@@ -206,6 +220,9 @@ func (u *updateStatus) inheritStatus(instance *crd.EMQX) crd.EMQXStatus {
 		Conditions:     u.inheritConditions(instance),
 		CoreNodes:      []crd.EMQXNode{},
 		ReplicantNodes: []crd.EMQXNode{},
+		Config: crd.ConfigStatus{
+			RuntimeRevision: instance.Status.Config.RuntimeRevision,
+		},
 	}
 	if instance.Spec.HasReplicants() {
 		status.ReplicantNodesStatus = crd.ReplicantNodesStatus{
@@ -243,7 +260,11 @@ func evaluateCoreNodesProgressing(s *reconcileState, instance *crd.EMQX) {
 
 	coreSet := s.coreSet()
 	if coreSet == nil {
-		status.SetCondition(cond, metav1.ConditionTrue, "Create", "spinning up core set")
+		status.SetCondition(cond, metav1.ConditionTrue,
+			"Create",
+			"spinning up core set",
+			instance.Generation,
+		)
 		return
 	}
 
@@ -253,25 +274,43 @@ func evaluateCoreNodesProgressing(s *reconcileState, instance *crd.EMQX) {
 
 	switch {
 	case total < desired:
-		status.SetCondition(cond, metav1.ConditionTrue, "ScalingUp",
-			fmt.Sprintf("%d/%d core pods", total, desired))
+		status.SetCondition(cond, metav1.ConditionTrue,
+			"ScalingUp",
+			fmt.Sprintf("%d/%d core pods", total, desired),
+			instance.Generation,
+		)
 	case total > desired:
-		status.SetCondition(cond, metav1.ConditionTrue, "ScalingDown",
-			fmt.Sprintf("%d/%d core pods", total, desired))
+		status.SetCondition(cond, metav1.ConditionTrue,
+			"ScalingDown",
+			fmt.Sprintf("%d/%d core pods", total, desired),
+			instance.Generation,
+		)
 	case updated < desired:
-		status.SetCondition(cond, metav1.ConditionTrue, "RollingUpdate",
-			fmt.Sprintf("%d/%d core pods updated", updated, desired))
+		status.SetCondition(cond, metav1.ConditionTrue,
+			"RollingUpdate",
+			fmt.Sprintf("%d/%d core pods updated", updated, desired),
+			instance.Generation,
+		)
 	default:
-		status.SetCondition(cond, metav1.ConditionFalse, "Converged",
-			fmt.Sprintf("%d core pods up to date", desired))
+		status.SetCondition(cond, metav1.ConditionFalse,
+			"Converged",
+			fmt.Sprintf("%d core pods up to date", desired),
+			instance.Generation,
+		)
 	}
 }
 
 func forceCoreNodesProgressing(instance *crd.EMQX) {
-	instance.Status.SetCondition(crd.CoreNodesProgressing, metav1.ConditionTrue, "RollingUpdate",
-		"0 core pods updated")
-	instance.Status.SetCondition(crd.Ready, metav1.ConditionFalse, "CoreNodesProgressing",
-		"Core nodes are progressing")
+	instance.Status.SetCondition(crd.CoreNodesProgressing, metav1.ConditionTrue,
+		"RollingUpdate",
+		"0 core pods updated",
+		instance.Generation,
+	)
+	instance.Status.SetCondition(crd.Ready, metav1.ConditionFalse,
+		"CoreNodesProgressing",
+		"Core nodes are progressing",
+		instance.Generation,
+	)
 }
 
 func evaluateReplicantNodesProgressing(s *reconcileState, instance *crd.EMQX) {
@@ -284,7 +323,11 @@ func evaluateReplicantNodesProgressing(s *reconcileState, instance *crd.EMQX) {
 
 	updateSet := s.updateReplicantSet(instance)
 	if updateSet == nil {
-		status.SetCondition(cond, metav1.ConditionTrue, "Create", "spinning up replicant set")
+		status.SetCondition(cond, metav1.ConditionTrue,
+			"Create",
+			"spinning up replicant set",
+			instance.Generation,
+		)
 		return
 	}
 
@@ -300,25 +343,43 @@ func evaluateReplicantNodesProgressing(s *reconcileState, instance *crd.EMQX) {
 		if currentSet != nil && currentSet.Spec.Replicas != nil {
 			currentReplicas = *currentSet.Spec.Replicas
 		}
-		status.SetCondition(cond, metav1.ConditionTrue, "RollingUpdate",
-			fmt.Sprintf("%d/%d replicant pods updated", total-currentReplicas, total))
+		status.SetCondition(cond, metav1.ConditionTrue,
+			"RollingUpdate",
+			fmt.Sprintf("%d/%d replicant pods updated", total-currentReplicas, total),
+			instance.Generation,
+		)
 	case total > desired:
-		status.SetCondition(cond, metav1.ConditionTrue, "ScalingDown",
-			fmt.Sprintf("%d/%d replicant pods", total, desired))
+		status.SetCondition(cond, metav1.ConditionTrue,
+			"ScalingDown",
+			fmt.Sprintf("%d/%d replicant pods", total, desired),
+			instance.Generation,
+		)
 	case total < desired:
-		status.SetCondition(cond, metav1.ConditionTrue, "ScalingUp",
-			fmt.Sprintf("%d/%d replicant pods", total, desired))
+		status.SetCondition(cond, metav1.ConditionTrue,
+			"ScalingUp",
+			fmt.Sprintf("%d/%d replicant pods", total, desired),
+			instance.Generation,
+		)
 	default:
-		status.SetCondition(cond, metav1.ConditionFalse, "Converged",
-			fmt.Sprintf("%d replicant pods up to date", desired))
+		status.SetCondition(cond, metav1.ConditionFalse,
+			"Converged",
+			fmt.Sprintf("%d replicant pods up to date", desired),
+			instance.Generation,
+		)
 	}
 }
 
 func forceReplicantNodesProgressing(instance *crd.EMQX) {
-	instance.Status.SetCondition(crd.ReplicantNodesProgressing, metav1.ConditionTrue, "RollingUpdate",
-		"0 replicant pods updated")
-	instance.Status.SetCondition(crd.Ready, metav1.ConditionFalse, "ReplicantNodesProgressing",
-		"Replicant nodes are progressing")
+	instance.Status.SetCondition(crd.ReplicantNodesProgressing, metav1.ConditionTrue,
+		"RollingUpdate",
+		"0 replicant pods updated",
+		instance.Generation,
+	)
+	instance.Status.SetCondition(crd.Ready, metav1.ConditionFalse,
+		"ReplicantNodesProgressing",
+		"Replicant nodes are progressing",
+		instance.Generation,
+	)
 }
 
 func evaluateAvailable(s *reconcileState, instance *crd.EMQX) {
@@ -328,11 +389,17 @@ func evaluateAvailable(s *reconcileState, instance *crd.EMQX) {
 		desired := instance.Spec.NumReplicantReplicas()
 		available := s.numAvailableReplicants()
 		if available >= desired {
-			status.SetCondition(cond, metav1.ConditionTrue, "ReplicantPodsAvailable",
-				fmt.Sprintf("%d/%d replicant pods available", available, desired))
+			status.SetCondition(cond, metav1.ConditionTrue,
+				"ReplicantPodsAvailable",
+				fmt.Sprintf("%d/%d replicant pods available", available, desired),
+				instance.Generation,
+			)
 		} else {
-			status.SetCondition(cond, metav1.ConditionFalse, "ReplicantPodsUnavailable",
-				fmt.Sprintf("%d/%d replicant pods available", available, desired))
+			status.SetCondition(cond, metav1.ConditionFalse,
+				"ReplicantPodsUnavailable",
+				fmt.Sprintf("%d/%d replicant pods available", available, desired),
+				instance.Generation,
+			)
 		}
 	} else {
 		coreSet := s.coreSet()
@@ -342,45 +409,54 @@ func evaluateAvailable(s *reconcileState, instance *crd.EMQX) {
 			available = coreSet.Status.AvailableReplicas
 		}
 		if available >= desired {
-			status.SetCondition(cond, metav1.ConditionTrue, "CorePodsAvailable",
-				fmt.Sprintf("%d/%d core pods available", available, desired))
+			status.SetCondition(cond, metav1.ConditionTrue,
+				"CorePodsAvailable",
+				fmt.Sprintf("%d/%d core pods available", available, desired),
+				instance.Generation,
+			)
 		} else {
-			status.SetCondition(cond, metav1.ConditionFalse, "CorePodsUnavailable",
-				fmt.Sprintf("%d/%d core pods available", available, desired))
+			status.SetCondition(cond, metav1.ConditionFalse,
+				"CorePodsUnavailable",
+				fmt.Sprintf("%d/%d core pods available", available, desired),
+				instance.Generation,
+			)
 		}
 	}
 }
 
 func evaluateReady(s *reconcileState, instance *crd.EMQX) {
 	status := &instance.Status
-
 	if !evaluateCoresReady(s, instance) {
 		status.SetCondition(crd.Ready, metav1.ConditionFalse,
 			"CoreNodesProgressing",
 			"Core nodes are progressing",
+			instance.Generation,
 		)
 		return
 	}
-
 	if instance.Spec.HasReplicants() || s.hasReplicants() {
 		if !evaluateReplicantsReady(s, instance) {
 			status.SetCondition(crd.Ready, metav1.ConditionFalse,
 				"ReplicantNodesProgressing",
 				"Replicant nodes are progressing",
+				instance.Generation,
 			)
 			return
 		}
 	}
-
 	if !instance.Status.DSReplication.IsStable() {
 		status.SetCondition(crd.Ready, metav1.ConditionFalse,
 			"DSReplicationProgressing",
 			"Durable storage membership transitions are in progress",
+			instance.Generation,
 		)
 		return
 	}
-
-	status.SetCondition(crd.Ready, metav1.ConditionTrue, "Ready", "Cluster is ready")
+	status.SetCondition(crd.Ready, metav1.ConditionTrue,
+		"Ready",
+		"Cluster is ready",
+		instance.Generation,
+	)
 }
 
 func evaluateCoresReady(r *reconcileState, instance *crd.EMQX) bool {

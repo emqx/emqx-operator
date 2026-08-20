@@ -6,8 +6,9 @@ spec:
   image: emqx/emqx:6.2.1
   imagePullPolicy: IfNotPresent
   config:
-    data: |
-      license { key = "evaluation" }
+    roots:
+      license:
+        key: evaluation
   coreTemplate:
     spec:
       minReadySeconds: 3

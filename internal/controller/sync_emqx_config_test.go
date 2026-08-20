@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,58 +19,66 @@ package controller
 import (
 	"testing"
 
+	crd "github.com/emqx/emqx-operator/api/v3beta1"
+	"github.com/emqx/emqx-operator/internal/controller/config"
+	"github.com/emqx/emqx-operator/test/util"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestStripNonChangeableConfig(t *testing.T) {
-	t.Run("empty configs", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig("", "")
-		assert.Equal(t, "", config)
-		assert.Equal(t, []string{}, stripped)
+func TestAttachStartupConfigRevision(t *testing.T) {
+	t.Run("attaches revision for startup roots", func(t *testing.T) {
+		instance := &crd.EMQX{
+			Spec: crd.EMQXSpec{Config: crd.Config{Roots: crd.ConfigRoots{
+				"dashboard": apiextv1.JSON{Raw: util.FromYAMLString(`
+					listeners:
+					  http:
+					    bind: 28083
+				`)},
+			}}},
+		}
+		template := &corev1.PodTemplateSpec{}
+
+		attachTemplateStartupConfigRevision(instance, template)
+
+		_, startupRoots := config.SplitRoots(instance.Spec.Config.Roots)
+		assert.Equal(t, configRevision(startupRoots),
+			template.Annotations[crd.AnnotationStartupConfigRevision])
 	})
 
-	t.Run("http port changed", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
-			"dashboard.listeners.http.bind = 18083",
-			"dashboard.listeners.http.bind = 18084",
-		)
-		assert.Equal(t, "", config)
-		assert.Equal(t, []string{"dashboard.listeners.http.bind"}, stripped)
-	})
+	t.Run("omits revision without startup roots", func(t *testing.T) {
+		template := &corev1.PodTemplateSpec{}
 
-	t.Run("http port unchanged", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
-			"dashboard.listeners.http.bind = 18083",
-			"dashboard.listeners.http.bind = 18083",
-		)
-		assert.Equal(t, "dashboard.listeners.http.bind = 18083", config)
-		assert.Equal(t, []string{}, stripped)
-	})
+		attachTemplateStartupConfigRevision(&crd.EMQX{}, template)
 
-	t.Run("https port changed", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
-			"dashboard.listeners.https.bind = 18083",
-			"dashboard.listeners.https.bind = 18084",
-		)
-		assert.Equal(t, "", config)
-		assert.Equal(t, []string{"dashboard.listeners.https.bind"}, stripped)
+		assert.NotContains(t, template.Annotations, crd.AnnotationStartupConfigRevision)
 	})
+}
 
-	t.Run("https port enabled", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
-			"dashboard.listeners.https.bind = 18883",
-			"dashboard.listeners.https.bind = 0",
-		)
-		assert.Equal(t, "dashboard.listeners.https.bind = 18883", config)
-		assert.Equal(t, []string{}, stripped)
-	})
+func TestActiveStartupConfigRevisions(t *testing.T) {
+	readyCore := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
+			crd.LabelMriaRole: crd.RoleCore,
+		}},
+		Status: corev1.PodStatus{Conditions: []corev1.PodCondition{{
+			Type:   corev1.ContainersReady,
+			Status: corev1.ConditionTrue,
+		}}},
+	}
+	state := &reconcileState{pods: []*corev1.Pod{readyCore}}
 
-	t.Run("both ports changed", func(t *testing.T) {
-		config, stripped := stripNonChangeableConfig(
-			"dashboard.listeners { http.bind = 18883, https.bind = 18884 }",
-			"dashboard.listeners { http.bind = 18083, https.bind = 18084 }",
-		)
-		assert.Equal(t, "dashboard {listeners {https {bind = 18884}}}", config)
-		assert.Equal(t, []string{"dashboard.listeners.http.bind"}, stripped)
-	})
+	assert.Equal(t,
+		map[string]roleCounts{startupConfigRevision(nil): {cores: 1}},
+		state.activeStartupConfigRevisions(),
+	)
+
+	readyCore.Annotations = map[string]string{
+		crd.AnnotationStartupConfigRevision: "previously-applied",
+	}
+	assert.Equal(t,
+		map[string]roleCounts{"previously-applied": {cores: 1}},
+		state.activeStartupConfigRevisions(),
+	)
 }
