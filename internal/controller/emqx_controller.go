@@ -63,6 +63,8 @@ func (r *reconcileRound) preferredCoreRequester() req.RequesterInterface {
 	return r.requester.forCore(r.state)
 }
 
+const observationInterval = 30 * time.Second
+
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
 	err error
@@ -145,10 +147,11 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&loadState{r},
 		// Setup secrets with bootstrap API keys / node cookie:
 		&addBootstrap{r},
-		// Set up API requester builder for the current round:
+		// Observe status before deciding whether to pause later mutations:
 		&setupAPIRequester{r},
-		// Perform reconciliation steps:
 		&updateStatus{r},
+		&pauseReconciliation{r},
+		// Perform mutating reconciliation steps:
 		&syncConfig{r},
 		&addHeadlessService{r},
 		&addCoreSet{r},
@@ -188,14 +191,18 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
-	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
+	return ctrl.Result{RequeueAfter: observationInterval}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.EMQX{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		WithEventFilter(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			// Reconcile metadata-only pause and resume annotation changes.
+			predicate.AnnotationChangedPredicate{},
+		)).
 		Named("emqx").
 		Complete(r)
 }
