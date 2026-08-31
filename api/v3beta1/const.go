@@ -35,6 +35,9 @@ const (
 
 // annotations
 const (
+	// AnnotationPaused prevents the controller from mutating the managed cluster
+	// resources while it continues to observe and report cluster status.
+	AnnotationPaused string = "apps.emqx.io/paused"
 	// AnnotationStartupConfigRevision marks Pod templates and Pods with the
 	// revision of configuration that takes effect when EMQX starts. Changing or
 	// removing this annotation from a Pod template drives a rollout.
