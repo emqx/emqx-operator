@@ -43,8 +43,9 @@ import (
 
 // Currently executing round of reconciliation
 type reconcileRound struct {
-	ctx context.Context
-	log logr.Logger
+	ctx  context.Context
+	log  logr.Logger
+	step string
 	// Populated by `setupAPIRequester` reconciler:
 	requester apiRequester
 	// Populated by loadState reconciler:
@@ -62,6 +63,8 @@ type reconcileRound struct {
 func (r *reconcileRound) preferredCoreRequester() req.RequesterInterface {
 	return r.requester.forCore(r.state)
 }
+
+const observationInterval = 30 * time.Second
 
 // subResult provides a wrapper around different results from a subreconciler.
 type subResult struct {
@@ -138,17 +141,45 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	logger := log.FromContext(ctx)
 	round := reconcileRound{ctx: ctx, log: logger}
-	needRequeue := false
+	result := r.runReconcilers(&round, instance)
+	if result.err != nil && errors.IsCommonError(result.err) {
+		round.log.Info("reconciler requeue", "reason", result.err)
+		return ctrl.Result{RequeueAfter: time.Second}, nil
+	}
+	if result.err != nil {
+		r.EventRecorder.Eventf(instance, corev1.EventTypeWarning,
+			"ReconcilerFailed",
+			"reconcile failed at step %s, reason: %s", round.step, result.err.Error(),
+		)
+		return ctrl.Result{}, result.err
+	}
+	if result.immediateResult != nil {
+		return *result.immediateResult, nil
+	}
 
+	if !instance.Status.IsConditionTrue(crd.Ready) || result.needRequeue {
+		return ctrl.Result{RequeueAfter: time.Second}, nil
+	}
+
+	return ctrl.Result{RequeueAfter: observationInterval}, nil
+}
+
+func (r *EMQXReconciler) runReconcilers(
+	round *reconcileRound,
+	instance *crd.EMQX,
+) subResult {
+	logger := round.log
+	needRequeue := false
 	for _, subReconciler := range []subReconciler{
 		// Load the current state of the resources managed by the controller:
 		&loadState{r},
 		// Setup secrets with bootstrap API keys / node cookie:
 		&addBootstrap{r},
-		// Set up API requester builder for the current round:
+		// Observe status before deciding whether to pause later mutations:
 		&setupAPIRequester{r},
-		// Perform reconciliation steps:
 		&updateStatus{r},
+		&pauseReconciliation{r},
+		// Perform mutating reconciliation steps:
 		&syncConfig{r},
 		&addHeadlessService{r},
 		&addCoreSet{r},
@@ -165,37 +196,26 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		&retireCorePods{r},
 		&cleanupOutdatedSets{r},
 	} {
-		round.log = logger.WithValues("reconciler", subReconcilerName(subReconciler))
-		subResult := subReconciler.reconcile(&round, instance)
+		round.step = subReconcilerName(subReconciler)
+		round.log = logger.WithValues("reconciler", round.step)
+		subResult := subReconciler.reconcile(round, instance)
 		needRequeue = needRequeue || subResult.needRequeue
-		if subResult.err != nil {
-			if errors.IsCommonError(subResult.err) {
-				round.log.Info("reconciler requeue", "reason", subResult.err)
-				return ctrl.Result{RequeueAfter: time.Second}, nil
-			}
-			r.EventRecorder.Eventf(instance, corev1.EventTypeWarning,
-				"ReconcilerFailed",
-				"reconcile failed at step %s, reason: %s", subReconcilerName(subReconciler), subResult.err.Error(),
-			)
-			return ctrl.Result{}, subResult.err
-		}
-		if subResult.immediateResult != nil {
-			return *subResult.immediateResult, nil
+		if subResult.err != nil || subResult.immediateResult != nil {
+			return subResult
 		}
 	}
-
-	if !instance.Status.IsConditionTrue(crd.Ready) || needRequeue {
-		return ctrl.Result{RequeueAfter: time.Second}, nil
-	}
-
-	return ctrl.Result{RequeueAfter: time.Duration(30) * time.Second}, nil
+	return subResult{needRequeue: needRequeue}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *EMQXReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.EMQX{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		WithEventFilter(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			// Reconcile metadata-only pause and resume annotation changes.
+			predicate.AnnotationChangedPredicate{},
+		)).
 		Named("emqx").
 		Complete(r)
 }

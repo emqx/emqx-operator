@@ -241,6 +241,7 @@ const (
 	Available                 string = "Available"
 	Ready                     string = "Ready"
 	ConfigApplied             string = "ConfigApplied"
+	Paused                    string = "Paused"
 )
 
 func (s *EMQXStatus) SetCondition(

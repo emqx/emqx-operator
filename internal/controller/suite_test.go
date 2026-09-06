@@ -40,6 +40,7 @@ import (
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -565,6 +566,15 @@ func (p Postponed) matcher() gomegatypes.GomegaMatcher {
 	return WithTransform(
 		func(in subResult) bool { return in.needRequeue },
 		subm,
+	)
+}
+
+type WithImmediateResult ctrl.Result
+
+func (imm WithImmediateResult) matcher() gomegatypes.GomegaMatcher {
+	return WithTransform(
+		func(in subResult) *ctrl.Result { return in.immediateResult },
+		And(Not(BeNil()), HaveValue(Equal(ctrl.Result(imm)))),
 	)
 }
 
