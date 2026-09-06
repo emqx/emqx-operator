@@ -64,13 +64,6 @@ func IsPodAvailable(pod *corev1.Pod, minReadySeconds int32) bool {
 	return PodReadyDuration(pod) > time.Duration(minReadySeconds)*time.Second
 }
 
-func IsPodManagedBy(pod *corev1.Pod, object metav1.Object) bool {
-	if metav1.GetControllerOf(pod) != nil && metav1.GetControllerOf(pod).UID == object.GetUID() {
-		return true
-	}
-	return false
-}
-
 func PodOrdinal(podName string) int {
 	parts := strings.Split(podName, "-")
 	if len(parts) < 2 {
