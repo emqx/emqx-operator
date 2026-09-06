@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
+	util "github.com/emqx/emqx-operator/internal/controller/util"
 	. "github.com/emqx/emqx-operator/test/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,6 +29,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func withReplicantResources(cpuRequest, memRequest, cpuLimit, memLimit string) []byte {
@@ -101,6 +103,113 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 		It("delete cluster", func() {
 			Expect(Kubectl("delete", "emqx", "emqx")).To(Succeed())
+		})
+	})
+
+	Context("Adoption", func() {
+
+		type objectIdent struct {
+			metav1.TypeMeta
+			Name string
+			UID  types.UID
+		}
+
+		objectIdentity := func(o metav1.PartialObjectMetadata) objectIdent {
+			return objectIdent{o.TypeMeta, o.Name, o.UID}
+		}
+
+		objectIdentities := func(list metav1.PartialObjectMetadataList) []objectIdent {
+			ret := []objectIdent{}
+			for _, o := range list.Items {
+				ret = append(ret, objectIdentity(o))
+			}
+			return ret
+		}
+
+		It("re-adopts resources orphaned by deleting and recreating the EMQX CR", func() {
+			const managedResourceTypes = "configmaps,secrets,services,statefulsets,replicasets"
+
+			emqxCR := PatchDocument(
+				FromYAMLFile(emqxCRBasic),
+				withImage(emqxImage),
+				withCores(2),
+				withReplicants(1),
+				withConfig(),
+			)
+			defer func() {
+				_ = Kubectl("delete", "emqx", "emqx", "--ignore-not-found")
+				_ = Kubectl("delete", managedResourceTypes+",persistentvolumeclaims,pods",
+					"--selector", emqxLabels.String(), "--ignore-not-found")
+			}()
+
+			By("create an EMQX cluster with all managed resource kinds")
+			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(2).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(1).Should(Succeed())
+
+			var instance crd.EMQX
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "json")).
+				To(UnmarshalInto(&instance))
+
+			var originalList metav1.PartialObjectMetadataList
+			Expect(KubectlOut("get", managedResourceTypes,
+				"--selector", emqxLabels.String(), "-o", "json",
+			)).To(
+				BeUnmarshalledAs(&originalList,
+					HaveField("Items", HaveEach(BeControlledBy(&instance))),
+				),
+			)
+
+			kindCounts := make(map[string]int)
+			for _, resource := range originalList.Items {
+				if util.IsManagedBy(&resource.ObjectMeta, &instance) {
+					kindCounts[resource.Kind]++
+				}
+			}
+			Expect(kindCounts).To(Equal(map[string]int{
+				"ConfigMap":   1,
+				"ReplicaSet":  1,
+				"Secret":      2,
+				"Service":     3,
+				"StatefulSet": 1,
+			}), "Unexpected set of resources controlled by the EMQX CR")
+
+			By("delete the EMQX CR and orphan its managed resources")
+			Expect(Kubectl("delete", "emqx", "emqx", "--cascade=orphan")).To(Succeed())
+			Expect(Kubectl("get", "emqx", "emqx")).To(HaveOccurred())
+
+			Expect(KubectlOut("get", managedResourceTypes,
+				"--selector", emqxLabels.String(), "-o", "json",
+			)).To(
+				BeUnmarshalledAs(&metav1.PartialObjectMetadataList{}, And(
+					WithTransform(objectIdentities, ConsistOf(objectIdentities(originalList))),
+					HaveField("Items", HaveEach(BeNotControlled())),
+				)),
+				"Orphaning the EMQX CR should preserve every directly managed resource",
+			)
+
+			By("recreate the EMQX CR")
+			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+
+			var instanceRecreated crd.EMQX
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "json")).
+				To(UnmarshalInto(&instanceRecreated))
+			Expect(instanceRecreated.UID).NotTo(Equal(instance.UID))
+
+			By("verify the existing resources are re-adopted by the recreated EMQX CR")
+			Eventually(KubectlOut).WithArguments("get", managedResourceTypes,
+				"--selector", emqxLabels.String(), "-o", "json",
+			).Should(
+				BeUnmarshalledAs(&metav1.PartialObjectMetadataList{}, And(
+					WithTransform(objectIdentities, ConsistOf(objectIdentities(originalList))),
+					HaveField("Items", HaveEach(BeControlledBy(&instanceRecreated))),
+				)),
+			)
+
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(2).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(1).Should(Succeed())
 		})
 	})
 
