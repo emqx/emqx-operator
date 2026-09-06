@@ -46,7 +46,7 @@ func (filter podsManagedBy) passes(pod *corev1.Pod) bool {
 	if filter.manager == nil && reflect.ValueOf(filter.manager).IsNil() {
 		return false
 	}
-	return util.IsPodManagedBy(pod, filter.manager)
+	return util.IsManagedBy(pod, filter.manager)
 }
 
 type podsWithRole struct {
@@ -171,20 +171,16 @@ func (r *reconcileState) partOfCoreSet(pod *corev1.Pod) bool {
 	if coreSet == nil {
 		return false
 	}
-	return util.IsPodManagedBy(pod, coreSet)
+	return util.IsManagedBy(pod, coreSet)
 }
 
 // partOfCoreSetRevision checks if a core pod's StatefulSet-assigned revision matches the specified revision.
 func (r *reconcileState) partOfCoreSetRevision(pod *corev1.Pod, revision string) bool {
-	coreSet := r.coreSet()
-	if coreSet == nil {
-		return false
+	if r.partOfCoreSet(pod) {
+		podRevision := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
+		return podRevision == revision
 	}
-	if !util.IsPodManagedBy(pod, coreSet) {
-		return false
-	}
-	podRevision := pod.Labels[appsv1.ControllerRevisionHashLabelKey]
-	return podRevision == revision
+	return false
 }
 
 // numCoresRevision counts number of core pods running specified StatefulSet revision.

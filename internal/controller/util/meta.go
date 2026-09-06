@@ -93,3 +93,11 @@ func UnsetAnnotations(object metav1.Object, names ...string) bool {
 	}
 	return dirty
 }
+
+func IsManagedBy(object metav1.Object, manager metav1.Object) bool {
+	controller := metav1.GetControllerOf(object)
+	if controller != nil && controller.UID == manager.GetUID() {
+		return true
+	}
+	return false
+}

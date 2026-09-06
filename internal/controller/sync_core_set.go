@@ -448,7 +448,7 @@ func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 			if pod == nil {
 				continue
 			}
-			if util.IsPodManagedBy(pod, updateReplicantSet) {
+			if util.IsManagedBy(pod, updateReplicantSet) {
 				targets = append(targets, node.Name)
 			}
 			fallback = append(fallback, node.Name)
