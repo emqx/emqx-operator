@@ -27,7 +27,7 @@ import (
 func TestRolloutMaxUnavailable(t *testing.T) {
 	emqx := &EMQX{
 		Spec: EMQXSpec{
-			ReplicantTemplate: &EMQXReplicantTemplate{
+			ReplicantTemplate: EMQXReplicantTemplate{
 				Spec: EMQXReplicantTemplateSpec{Replicas: ptr.To(int32(10))},
 			},
 		},
@@ -43,7 +43,7 @@ func TestRolloutMaxUnavailable(t *testing.T) {
 func TestRolloutMaxSurge(t *testing.T) {
 	emqx := &EMQX{
 		Spec: EMQXSpec{
-			ReplicantTemplate: &EMQXReplicantTemplate{
+			ReplicantTemplate: EMQXReplicantTemplate{
 				Spec: EMQXReplicantTemplateSpec{Replicas: ptr.To(int32(3))},
 			},
 		},

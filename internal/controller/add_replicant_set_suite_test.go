@@ -42,7 +42,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addReplicantSet", Ordered, func() 
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(2))
-		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+		instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{
 			Spec: crd.EMQXReplicantTemplateSpec{
 				Replicas: ptr.To(int32(3)),
 			},
@@ -126,10 +126,10 @@ var _ = DescribeClientFaultMatrix("Reconciler addReplicantSet", Ordered, func() 
 		Expect(k8sClient.Delete(ctx, instance)).To(Succeed())
 	})
 
-	When("replicant template is nil", func() {
+	When("default replicant template", func() {
 		It("should do nothing", func() {
 			// Clear replicant template:
-			instance.Spec.ReplicantTemplate = nil
+			instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{}
 			// Reconciliation step should do nothing and succeed:
 			Eventually(a.reconcile).WithArguments(round, instance).
 				Should(BeSuccessfulReconcile())

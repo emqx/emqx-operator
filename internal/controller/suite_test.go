@@ -34,6 +34,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -228,6 +229,36 @@ var _ = Describe("CRD Defaults", Ordered, func() {
 			Not(BeNil()),
 			HaveValue(HaveField("RunAsUser", HaveValue(BeEquivalentTo(1000)))),
 		)))
+	})
+
+	It("defaults the replicant scale path for core-only instances", func() {
+		name := "emqx-core-only-scale"
+		Expect(k8sClient.Create(ctx, &unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": crd.GroupVersion.String(),
+				"kind":       "EMQX",
+				"metadata": map[string]interface{}{
+					"name":      name,
+					"namespace": ns.Name,
+				},
+				"spec": map[string]interface{}{
+					"image": "emqx",
+				},
+			},
+		})).To(Succeed())
+
+		instance := &crd.EMQX{}
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: name}, instance)).
+			To(Succeed())
+
+		// Materialize status.replicantReplicas, which the scale subresource also requires.
+		instance.Status.ReplicantReplicas = 0
+		Expect(k8sClient.Status().Update(ctx, instance)).To(Succeed())
+
+		scale := &autoscalingv1.Scale{}
+		Expect(k8sClient.SubResource("scale").Get(ctx, instance, scale)).To(Succeed())
+		Expect(scale.Spec.Replicas).To(BeEquivalentTo(0))
+		Expect(scale.Status.Replicas).To(BeEquivalentTo(0))
 	})
 
 	It("defaults updateStrategy.evacuationStrategy for minimal instances", func() {
