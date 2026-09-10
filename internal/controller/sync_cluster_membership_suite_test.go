@@ -163,7 +163,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 		instance.Namespace = ns.Name
 		instance.Spec.ClusterDomain = "local"
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{}
+		instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{}
 		instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(1))
 		round = newReconcileRoundWithRequester(mockRequester)
 	})

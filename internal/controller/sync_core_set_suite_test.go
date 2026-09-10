@@ -200,7 +200,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 
 	When("replicant replicaSet updating", func() {
 		BeforeEach(func() {
-			instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+			instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{
 				Spec: crd.EMQXReplicantTemplateSpec{
 					Replicas: ptr.To(int32(3)),
 				},

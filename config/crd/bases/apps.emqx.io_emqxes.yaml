@@ -7318,9 +7318,8 @@ spec:
                         type: object
                       replicas:
                         default: 1
-                        description: |-
-                          Desired number of instances.
-                          In case of core nodes, each instance has a consistent identity.
+                        description: Desired number of Core nodes. Each instance has
+                          a consistent identity.
                         format: int32
                         minimum: 0
                         type: integer
@@ -8541,6 +8540,9 @@ spec:
                     type: object
                 type: object
               replicantTemplate:
+                default:
+                  spec:
+                    replicas: 0
                 description: Template for Pods running EMQX replicant nodes.
                 properties:
                   metadata:
@@ -8557,6 +8559,8 @@ spec:
                         type: object
                     type: object
                   spec:
+                    default:
+                      replicas: 0
                     description: |-
                       Specification of the desired state of a replicant node.
                       More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
@@ -15582,10 +15586,8 @@ spec:
                             type: integer
                         type: object
                       replicas:
-                        default: 1
-                        description: |-
-                          Desired number of instances.
-                          In case of core nodes, each instance has a consistent identity.
+                        default: 0
+                        description: Desired number of Replicant nodes.
                         format: int32
                         minimum: 0
                         type: integer
@@ -16154,9 +16156,8 @@ spec:
             x-kubernetes-validations:
             - message: Core-replicant clusters require at least 2 core replicas for
                 rolling updates.
-              rule: '!has(self.replicantTemplate) || !has(self.replicantTemplate.spec.replicas)
-                || self.replicantTemplate.spec.replicas == 0 || self.coreTemplate.spec.replicas
-                >= 2'
+              rule: self.replicantTemplate.spec.replicas == 0 || self.coreTemplate.spec.replicas
+                >= 2
           status:
             description: Current status of the EMQX cluster.
             properties:

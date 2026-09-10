@@ -89,7 +89,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 		BeforeEach(func() {
 			instance = emqx.DeepCopy()
 			instance.Namespace = ns.Name
-			instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+			instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{
 				Spec: crd.EMQXReplicantTemplateSpec{
 					Replicas: ptr.To(int32(3)),
 				},
@@ -291,7 +291,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 		BeforeEach(func() {
 			instance = emqx.DeepCopy()
 			instance.Namespace = ns.Name
-			instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+			instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{
 				Spec: crd.EMQXReplicantTemplateSpec{
 					Replicas: ptr.To(int32(3)),
 				},
@@ -406,7 +406,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 		BeforeEach(func() {
 			instance = emqx.DeepCopy()
 			instance.Namespace = ns.Name
-			instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+			instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{
 				Spec: crd.EMQXReplicantTemplateSpec{
 					Replicas: ptr.To(int32(3)),
 				},
@@ -852,7 +852,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		// Create EMQX instance:
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+		instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{
 			Spec: crd.EMQXReplicantTemplateSpec{
 				Replicas: ptr.To(int32(1)),
 			},

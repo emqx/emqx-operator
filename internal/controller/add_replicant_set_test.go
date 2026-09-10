@@ -29,7 +29,7 @@ func TestGetNewReplicaSet(t *testing.T) {
 			ClusterDomain: "cluster.local",
 		},
 	}
-	instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+	instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{
 		TemplateObjectMeta: crd.TemplateObjectMeta{
 			Labels: map[string]string{
 				"repl-label-key": "repl-label-value",

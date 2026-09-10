@@ -24,7 +24,7 @@ import (
 )
 
 // EMQXSpec defines the desired state of EMQX.
-// +kubebuilder:validation:XValidation:rule="!has(self.replicantTemplate) || !has(self.replicantTemplate.spec.replicas) || self.replicantTemplate.spec.replicas == 0 || self.coreTemplate.spec.replicas >= 2",message="Core-replicant clusters require at least 2 core replicas for rolling updates."
+// +kubebuilder:validation:XValidation:rule="self.replicantTemplate.spec.replicas == 0 || self.coreTemplate.spec.replicas >= 2",message="Core-replicant clusters require at least 2 core replicas for rolling updates."
 type EMQXSpec struct {
 	// EMQX container image.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
@@ -64,7 +64,8 @@ type EMQXSpec struct {
 	CoreTemplate EMQXCoreTemplate `json:"coreTemplate,omitempty"`
 
 	// Template for Pods running EMQX replicant nodes.
-	ReplicantTemplate *EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
+	// +kubebuilder:default={spec:{replicas:0}}
+	ReplicantTemplate EMQXReplicantTemplate `json:"replicantTemplate,omitempty"`
 
 	// Template for Service exposing the EMQX Dashboard.
 	// Dashboard Service always points to the set of EMQX core nodes.
@@ -181,17 +182,33 @@ type EMQXReplicantTemplate struct {
 	TemplateObjectMeta `json:"metadata,omitempty"`
 	// Specification of the desired state of a replicant node.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	// +kubebuilder:default={replicas:0}
 	Spec EMQXReplicantTemplateSpec `json:"spec,omitempty"`
 }
 
 type EMQXCoreTemplateSpec struct {
-	EMQXReplicantTemplateSpec `json:",inline"`
+	EMQXPodTemplateSpec `json:",inline"`
+
+	// Desired number of Core nodes. Each instance has a consistent identity.
+	// +kubebuilder:default:=1
+	// +kubebuilder:validation:Minimum=0
+	Replicas *int32 `json:"replicas,omitempty"`
 
 	// PVC specification for a core node data storage.
 	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
 }
 
 type EMQXReplicantTemplateSpec struct {
+	EMQXPodTemplateSpec `json:",inline"`
+
+	// Desired number of Replicant nodes.
+	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Minimum=0
+	Replicas *int32 `json:"replicas,omitempty"`
+}
+
+// EMQXPodTemplateSpec defines the Pod settings shared by Core and Replicant nodes.
+type EMQXPodTemplateSpec struct {
 	// Selector which must be true for the pod to fit on a node.
 	// Must match a node's labels for the pod to be scheduled on that node.
 	// More info: https://kubernetes.io/docs/concepts/config/assign-pod-node/
@@ -213,11 +230,6 @@ type EMQXReplicantTemplateSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
 	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
 
-	// Desired number of instances.
-	// In case of core nodes, each instance has a consistent identity.
-	// +kubebuilder:default:=1
-	// +kubebuilder:validation:Minimum=0
-	Replicas *int32 `json:"replicas,omitempty"`
 	// MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.
 	// For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);
 	// for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).
@@ -325,7 +337,7 @@ type ServiceTemplate struct {
 }
 
 func (spec *EMQXSpec) HasReplicants() bool {
-	return spec.ReplicantTemplate != nil && ptr.Deref(spec.ReplicantTemplate.Spec.Replicas, 1) > 0
+	return ptr.Deref(spec.ReplicantTemplate.Spec.Replicas, 0) > 0
 }
 
 func (spec *EMQXSpec) IsEvacuationEnabled() bool {
@@ -344,7 +356,7 @@ func (spec *EMQXSpec) NumCoreReplicas() int32 {
 }
 
 func (spec *EMQXSpec) NumReplicantReplicas() int32 {
-	if spec.ReplicantTemplate != nil && spec.ReplicantTemplate.Spec.Replicas != nil {
+	if spec.ReplicantTemplate.Spec.Replicas != nil {
 		return *spec.ReplicantTemplate.Spec.Replicas
 	}
 	return 0

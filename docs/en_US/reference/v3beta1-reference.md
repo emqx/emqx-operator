@@ -173,7 +173,6 @@ _Appears in:_
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#toleration-v1-core) array_ | Pod tolerations.<br />If specified, Pod tolerates any taint that matches the triple <key,value,effect> using the matching operator. |  |  |
 | `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#topologyspreadconstraint-v1-core) array_ | Specifies how to spread matching pods among the given topology. |  |  |
 | `dnsConfig` _[PodDNSConfig](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#poddnsconfig-v1-core)_ | Specifies the DNS parameters of a pod.<br />Parameters specified here will be merged to the generated DNS<br />configuration based on DNSPolicy (always ClusterFirst).<br />More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config |  |  |
-| `replicas` _integer_ | Desired number of instances.<br />In case of core nodes, each instance has a consistent identity. | 1 | Minimum: 0 <br /> |
 | `minReadySeconds` _integer_ | MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.<br />For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);<br />for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).<br />Omitted or zero matches the apps/v1 default (0). |  | Minimum: 0 <br /> |
 | `command` _string array_ | Entrypoint array. Not executed within a shell.<br />The container image's ENTRYPOINT is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not. Cannot be updated.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  | Optional: \{\} <br /> |
 | `args` _string array_ | Arguments to the entrypoint.<br />The container image's CMD is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  |  |
@@ -191,6 +190,7 @@ _Appears in:_
 | `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#probe-v1-core)_ | Periodic probe of container service readiness.<br />Container will be removed from service endpoints if the probe fails.<br />Strongly advised to keep the current default: it takes into account ongoing node evacuations managed<br />by the Operator as part of scaling operations and rolling updates.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes | \{ failureThreshold:1 httpGet:map[path:/api/v5/load_rebalance/availability_check port:dashboard] initialDelaySeconds:10 periodSeconds:5 timeoutSeconds:3 \} |  |
 | `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#probe-v1-core)_ | StartupProbe indicates that the Pod has successfully initialized.<br />If specified, no other probes are executed until this completes successfully.<br />If this probe fails, the Pod will be restarted, just as if the `livenessProbe` failed.<br />This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,<br />when it might take a long time to load data or warm a cache, than during steady-state operation.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |  |  |
 | `lifecycle` _[Lifecycle](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#lifecycle-v1-core)_ | Actions that the management system should take in response to container lifecycle events. |  |  |
+| `replicas` _integer_ | Desired number of Core nodes. Each instance has a consistent identity. | 1 | Minimum: 0 <br /> |
 | `persistentVolumeClaimSpec` _[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#persistentvolumeclaimspec-v1-core)_ | PVC specification for a core node data storage. |  |  |
 
 
@@ -217,34 +217,17 @@ _Appears in:_
 | `connections` _integer_ | Number of connected MQTT clients |  |  |
 
 
-#### EMQXReplicantTemplate
+#### EMQXPodTemplateSpec
 
 
 
-
-
-
-
-_Appears in:_
-- [EMQXSpec](#emqxspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `metadata` _[TemplateObjectMeta](#templateobjectmeta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[EMQXReplicantTemplateSpec](#emqxreplicanttemplatespec)_ | Specification of the desired state of a replicant node.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status |  |  |
-
-
-#### EMQXReplicantTemplateSpec
-
-
-
-
+EMQXPodTemplateSpec defines the Pod settings shared by Core and Replicant nodes.
 
 
 
 _Appears in:_
 - [EMQXCoreTemplateSpec](#emqxcoretemplatespec)
-- [EMQXReplicantTemplate](#emqxreplicanttemplate)
+- [EMQXReplicantTemplateSpec](#emqxreplicanttemplatespec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -254,7 +237,6 @@ _Appears in:_
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#toleration-v1-core) array_ | Pod tolerations.<br />If specified, Pod tolerates any taint that matches the triple <key,value,effect> using the matching operator. |  |  |
 | `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#topologyspreadconstraint-v1-core) array_ | Specifies how to spread matching pods among the given topology. |  |  |
 | `dnsConfig` _[PodDNSConfig](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#poddnsconfig-v1-core)_ | Specifies the DNS parameters of a pod.<br />Parameters specified here will be merged to the generated DNS<br />configuration based on DNSPolicy (always ClusterFirst).<br />More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config |  |  |
-| `replicas` _integer_ | Desired number of instances.<br />In case of core nodes, each instance has a consistent identity. | 1 | Minimum: 0 <br /> |
 | `minReadySeconds` _integer_ | MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.<br />For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);<br />for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).<br />Omitted or zero matches the apps/v1 default (0). |  | Minimum: 0 <br /> |
 | `command` _string array_ | Entrypoint array. Not executed within a shell.<br />The container image's ENTRYPOINT is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not. Cannot be updated.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  | Optional: \{\} <br /> |
 | `args` _string array_ | Arguments to the entrypoint.<br />The container image's CMD is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  |  |
@@ -272,6 +254,62 @@ _Appears in:_
 | `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#probe-v1-core)_ | Periodic probe of container service readiness.<br />Container will be removed from service endpoints if the probe fails.<br />Strongly advised to keep the current default: it takes into account ongoing node evacuations managed<br />by the Operator as part of scaling operations and rolling updates.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes | \{ failureThreshold:1 httpGet:map[path:/api/v5/load_rebalance/availability_check port:dashboard] initialDelaySeconds:10 periodSeconds:5 timeoutSeconds:3 \} |  |
 | `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#probe-v1-core)_ | StartupProbe indicates that the Pod has successfully initialized.<br />If specified, no other probes are executed until this completes successfully.<br />If this probe fails, the Pod will be restarted, just as if the `livenessProbe` failed.<br />This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,<br />when it might take a long time to load data or warm a cache, than during steady-state operation.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |  |  |
 | `lifecycle` _[Lifecycle](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#lifecycle-v1-core)_ | Actions that the management system should take in response to container lifecycle events. |  |  |
+
+
+#### EMQXReplicantTemplate
+
+
+
+
+
+
+
+_Appears in:_
+- [EMQXSpec](#emqxspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `metadata` _[TemplateObjectMeta](#templateobjectmeta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[EMQXReplicantTemplateSpec](#emqxreplicanttemplatespec)_ | Specification of the desired state of a replicant node.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status | \{ replicas:0 \} |  |
+
+
+#### EMQXReplicantTemplateSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [EMQXReplicantTemplate](#emqxreplicanttemplate)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `nodeSelector` _object (keys:string, values:string)_ | Selector which must be true for the pod to fit on a node.<br />Must match a node's labels for the pod to be scheduled on that node.<br />More info: https://kubernetes.io/docs/concepts/config/assign-pod-node/ |  |  |
+| `nodeName` _string_ | Request to schedule this pod onto a specific node.<br />If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements. |  |  |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#affinity-v1-core)_ | Affinity for pod assignment<br />ref: https://kubernetes.io/docs/concepts/config/assign-pod-node/#affinity-and-anti-affinity |  |  |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#toleration-v1-core) array_ | Pod tolerations.<br />If specified, Pod tolerates any taint that matches the triple <key,value,effect> using the matching operator. |  |  |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#topologyspreadconstraint-v1-core) array_ | Specifies how to spread matching pods among the given topology. |  |  |
+| `dnsConfig` _[PodDNSConfig](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#poddnsconfig-v1-core)_ | Specifies the DNS parameters of a pod.<br />Parameters specified here will be merged to the generated DNS<br />configuration based on DNSPolicy (always ClusterFirst).<br />More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config |  |  |
+| `minReadySeconds` _integer_ | MinReadySeconds is the minimum time (seconds) a pod must be Ready before it counts as available.<br />For core nodes this is applied to the StatefulSet (mirrors apps/v1 StatefulSetSpec.minReadySeconds);<br />for replicants, to the ReplicaSet (mirrors apps/v1 ReplicaSetSpec.minReadySeconds).<br />Omitted or zero matches the apps/v1 default (0). |  | Minimum: 0 <br /> |
+| `command` _string array_ | Entrypoint array. Not executed within a shell.<br />The container image's ENTRYPOINT is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not. Cannot be updated.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  | Optional: \{\} <br /> |
+| `args` _string array_ | Arguments to the entrypoint.<br />The container image's CMD is used if this is not provided.<br />Variable references `$(VAR_NAME)` are expanded using the container's environment. If a variable<br />cannot be resolved, the reference in the input string will be unchanged. Double `$$` are reduced<br />to a single `$`, which allows for escaping the `$(VAR_NAME)` syntax: i.e. `$$(VAR_NAME)` will<br />produce the string literal `$(VAR_NAME)`. Escaped references will never be expanded, regardless<br />of whether the variable exists or not.<br />More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell |  |  |
+| `ports` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#containerport-v1-core) array_ | List of ports to expose from the container.<br />Exposing a port here gives the system additional information about the network connections a<br />container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that<br />port from being exposed. Any port which is listening on the default `0.0.0.0` address inside a<br />container will be accessible from the network.<br />Port names `dashboard` and `dashboard-https` are reserved by the Operator and cannot be supplied<br />in the template. The Operator derives these named ports from<br />`spec.config.roots.dashboard.listeners` for probes, Services, and per-Pod API requests.<br />Change their container port by changing the corresponding listener bind instead. |  |  |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core) array_ | List of environment variables to set in the container. |  |  |
+| `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envfromsource-v1-core) array_ | List of sources to populate environment variables from in the container.<br />The keys defined within a source must be a C_IDENTIFIER. All invalid keys<br />will be reported as an event when the container is starting. When a key exists in multiple<br />sources, the value associated with the last source will take precedence.<br />Values defined by an Env with a duplicate key will take precedence. |  |  |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcerequirements-v1-core)_ | Compute Resources required by this container.<br />More info: https://kubernetes.io/docs/concepts/config/manage-resources-containers/ |  |  |
+| `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#podsecuritycontext-v1-core)_ | Pod-level security attributes and common container settings. | \{ fsGroup:1000 fsGroupChangePolicy:Always runAsGroup:1000 runAsNonRoot:true runAsUser:1000 \} |  |
+| `containerSecurityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#securitycontext-v1-core)_ | Security options the container should be run with.<br />If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |  |  |
+| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#container-v1-core) array_ | List of initialization containers belonging to the pod.<br />Init containers are executed in order prior to containers being started. If any<br />init container fails, the pod is considered to have failed and is handled according<br />to its restartPolicy. The name for an init container or normal container must be<br />unique among all containers.<br />Init containers may not have Lifecycle actions, Readiness probes, Liveness probes, or Startup probes.<br />The resourceRequirements of an init container are taken into account during scheduling<br />by finding the highest request/limit for each resource type, and then using the max of<br />of that value or the sum of the normal containers. Limits are applied to init containers<br />in a similar fashion.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |  |  |
+| `extraContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#container-v1-core) array_ | Additional containers to run alongside the main container. |  |  |
+| `extraVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volume-v1-core) array_ | Additional volumes to provide to a Pod. |  |  |
+| `extraVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core) array_ | Specifies how additional volumes are mounted into the main container. |  |  |
+| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#probe-v1-core)_ | Periodic probe of container liveness.<br />Container will be restarted if the probe fails.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes | \{ failureThreshold:3 httpGet:map[path:/status port:dashboard] initialDelaySeconds:60 periodSeconds:30 \} |  |
+| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#probe-v1-core)_ | Periodic probe of container service readiness.<br />Container will be removed from service endpoints if the probe fails.<br />Strongly advised to keep the current default: it takes into account ongoing node evacuations managed<br />by the Operator as part of scaling operations and rolling updates.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes | \{ failureThreshold:1 httpGet:map[path:/api/v5/load_rebalance/availability_check port:dashboard] initialDelaySeconds:10 periodSeconds:5 timeoutSeconds:3 \} |  |
+| `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#probe-v1-core)_ | StartupProbe indicates that the Pod has successfully initialized.<br />If specified, no other probes are executed until this completes successfully.<br />If this probe fails, the Pod will be restarted, just as if the `livenessProbe` failed.<br />This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,<br />when it might take a long time to load data or warm a cache, than during steady-state operation.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes |  |  |
+| `lifecycle` _[Lifecycle](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#lifecycle-v1-core)_ | Actions that the management system should take in response to container lifecycle events. |  |  |
+| `replicas` _integer_ | Desired number of Replicant nodes. | 0 | Minimum: 0 <br /> |
 
 
 #### EMQXSpec
@@ -296,7 +334,7 @@ _Appears in:_
 | `revisionHistoryLimit` _integer_ | Number of old ReplicaSets to retain to allow rollback. | 3 |  |
 | `updateStrategy` _[UpdateStrategy](#updatestrategy)_ | Cluster upgrade strategy settings. | \{ type:RollingUpdate \} |  |
 | `coreTemplate` _[EMQXCoreTemplate](#emqxcoretemplate)_ | Template for Pods running EMQX core nodes. | \{ spec:map[persistentVolumeClaimSpec:map[accessModes:[ReadWriteOnce] resources:map[requests:map[storage:500Mi]]] replicas:1] \} |  |
-| `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | Template for Pods running EMQX replicant nodes. |  |  |
+| `replicantTemplate` _[EMQXReplicantTemplate](#emqxreplicanttemplate)_ | Template for Pods running EMQX replicant nodes. | \{ spec:map[replicas:0] \} |  |
 | `dashboardServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | Template for Service exposing the EMQX Dashboard.<br />Dashboard Service always points to the set of EMQX core nodes.<br />A port named `dashboard` or `dashboard-https` in the template overrides the corresponding<br />generated Service port. Its `port` may expose the listener on a different Service port, but<br />its `targetPort` must resolve to the corresponding Dashboard listener. Prefer the reserved<br />named target port so it follows changes to the listener bind. |  |  |
 | `listenersServiceTemplate` _[ServiceTemplate](#servicetemplate)_ | Template for Service exposing enabled EMQX listeners.<br />Listeners Service points to the set of EMQX replicant nodes if they are enabled and exist.<br />Otherwise, it points to the set of EMQX core nodes. |  |  |
 

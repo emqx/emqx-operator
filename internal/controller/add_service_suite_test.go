@@ -74,7 +74,7 @@ var _ = DescribeClientFaultMatrix("Reconciler addService", Ordered, func() {
 	})
 
 	It("points the Listeners Service at replicants when any are available", func() {
-		instance.Spec.ReplicantTemplate = &crd.EMQXReplicantTemplate{
+		instance.Spec.ReplicantTemplate = crd.EMQXReplicantTemplate{
 			Spec: crd.EMQXReplicantTemplateSpec{
 				Replicas: ptr.To(int32(2)),
 			},
