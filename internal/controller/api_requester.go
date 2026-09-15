@@ -2,7 +2,11 @@ package controller
 
 import (
 	"cmp"
+	"errors"
+	"io"
 	"net"
+	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -30,14 +34,58 @@ func (b *apiRequesterBuilder) forCore(
 	filter ...reconcileStatePodFilter,
 ) req.RequesterInterface {
 	pods := preferredCorePods(state, filter...)
+	var endpoints []req.RequesterInterface
 	for _, pod := range pods {
 		req := b.forPod(pod)
 		if req == nil {
 			continue
 		}
-		return req
+		endpoints = append(endpoints, req)
 	}
-	return nil
+	if len(endpoints) == 0 {
+		return nil
+	}
+	return &coreClusterRequester{endpoints: endpoints}
+}
+
+// coreClusterRequester tries each eligible core once, in preference order, for
+// read requests only. Every request starts at the preferred endpoint.
+type coreClusterRequester struct {
+	endpoints []req.RequesterInterface
+}
+
+// preferredEndpoint returns the first endpoint selected by the builder.
+func (r *coreClusterRequester) preferredEndpoint() *req.Requester {
+	return r.endpoints[0].(*req.Requester)
+}
+
+func (r *coreClusterRequester) Request(method string, u url.URL, body []byte, header http.Header) (
+	resp *http.Response, respBody []byte, err error,
+) {
+	for _, endpoint := range r.endpoints {
+		resp, respBody, err = endpoint.Request(method, u, body, header)
+		if !canRetry(method, resp, err) {
+			break
+		}
+	}
+	return
+}
+
+func canRetry(method string, resp *http.Response, err error) bool {
+	if method != http.MethodGet {
+		return false
+	}
+	if err != nil {
+		var networkError net.Error
+		return errors.As(err, &networkError) ||
+			errors.Is(err, io.EOF) ||
+			errors.Is(err, io.ErrUnexpectedEOF) ||
+			errors.Is(err, net.ErrClosed)
+	}
+	if resp != nil && resp.StatusCode >= 500 && resp.StatusCode < 600 {
+		return true
+	}
+	return false
 }
 
 func preferredCorePods(
