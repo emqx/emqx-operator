@@ -16,11 +16,8 @@ type HeaderOpt struct {
 }
 
 type RequesterInterface interface {
-	GetURL(path string, query ...string) url.URL
-	GetHost() string
-	GetUsername() string
-	GetPassword() string
-	GetDescription() string
+	// Request resolves the endpoint and returns contextual errors for transport and body-read failures.
+	// Preserves the response when available, including Request.URL identifying the responding endpoint.
 	Request(method string, url url.URL, body []byte, header http.Header) (resp *http.Response, respBody []byte, err error)
 }
 
@@ -85,17 +82,20 @@ func (requester *Requester) Request(
 	url url.URL,
 	body []byte,
 	header http.Header,
-) (resp *http.Response, respBody []byte, err error) {
+) (*http.Response, []byte, error) {
 	if url.Scheme == "" {
 		url.Scheme = requester.GetSchema()
 	}
 	if url.Host == "" {
 		url.Host = requester.GetHost()
 	}
+	withContext := func(err error) error {
+		return emperror.Wrapf(err, "error accessing %s API %s", requester.Description, url.String())
+	}
 
 	req, err := http.NewRequest(method, url.String(), bytes.NewReader(body))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, withContext(err)
 	}
 
 	for k, v := range header {
@@ -111,9 +111,9 @@ func (requester *Requester) Request(
 		req.Header.Set("Accept", "application/json")
 	}
 
-	resp, err = httpClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, nil, emperror.Wrap(err, "request failed")
+		return nil, nil, withContext(emperror.Wrap(err, "request failed"))
 	}
 
 	defer func() {
@@ -122,7 +122,7 @@ func (requester *Requester) Request(
 
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return resp, nil, emperror.Wrap(err, "response body unreadable")
+		return resp, nil, withContext(emperror.Wrap(err, "response body unreadable"))
 	}
 	return resp, body, nil
 }
