@@ -44,6 +44,10 @@ type specBuilder struct {
 	overlays [][]byte
 }
 
+func SpecFromYAML(document string) *specBuilder {
+	return &specBuilder{base: util.FromYAMLString(document)}
+}
+
 func SpecFromYAMLFile(filename string) *specBuilder {
 	return &specBuilder{base: util.FromYAMLFile(filename)}
 }
