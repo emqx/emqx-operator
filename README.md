@@ -38,6 +38,14 @@ This will install both the CRDs, the controller manager and relevant resources i
 
 ## Operation
 
+### Pause reconciliation
+
+Use the `apps.emqx.io/paused` annotation to temporarily prevent the Operator from changing one EMQX cluster while it continues to report status.
+
+Operator reports corresponding `Paused` status condition. While `Paused=True`, the Operator continues to observe Kubernetes and EMQX state and update the EMQX resource status. It creates the bootstrap API-key and node-cookie Secrets when they are missing, but does not create, update, or delete managed resources, or manage EMQX cluster in any way.
+
+Remove the annotation or set to `"false"` to resume reconciliation. Specification changes made while paused are then applied.
+
 ### PVC Lifecycle
 
 Core nodes are managed by a single StatefulSet with deterministic names (`{name}-core-0`, `{name}-core-1`, ...). Each core pod has a PersistentVolumeClaim named `{name}-core-data-{name}-core-{ordinal}`. PVC names are stable across image updates and rolling upgrades because the StatefulSet name never changes.
