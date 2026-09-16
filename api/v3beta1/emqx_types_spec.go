@@ -111,21 +111,21 @@ type UpdateStrategy struct {
 
 // ReplicantsUpdateStrategy controls the pace of replicant ReplicaSet rollouts.
 // Semantics mirror `apps/v1 Deployment.spec.strategy.rollingUpdate`.
-// +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && has(self.maxSurge) && (type(self.maxUnavailable) == int ? self.maxUnavailable == 0 : self.maxUnavailable == '0%') && (type(self.maxSurge) == int ? self.maxSurge == 0 : self.maxSurge == '0%'))",message="maxUnavailable and maxSurge cannot both be zero"
-// +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && (type(self.maxUnavailable) == string && self.maxUnavailable == '100%') && (!has(self.maxSurge) || (type(self.maxSurge) == int ? self.maxSurge == 0 : self.maxSurge == '0%')))",message="maxSurge must be greater than zero when maxUnavailable is 100%"
+// +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && (type(self.maxUnavailable) == int ? self.maxUnavailable == 0 : self.maxUnavailable.matches(r'^0+%$')) && (!has(self.maxSurge) || (type(self.maxSurge) == int ? self.maxSurge == 0 : self.maxSurge.matches(r'^0+%$'))))",message="maxUnavailable may not be 0 when maxSurge is 0",fieldPath=".maxUnavailable"
+// +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && (type(self.maxUnavailable) == string && self.maxUnavailable.matches(r'^0*100%$')) && (!has(self.maxSurge) || (type(self.maxSurge) == int ? self.maxSurge == 0 : self.maxSurge.matches(r'^0+%$'))))",message="maxSurge must be greater than zero when maxUnavailable is 100%",fieldPath=".maxSurge"
 type ReplicantsUpdateStrategy struct {
 	// MaxUnavailable is the maximum number of old replicant pods that may be drained (evacuating,
 	// terminating, or marked for deletion) at once during a replicant ReplicaSet rollout.
 	// Integers are absolute counts; strings are percentages of desired replicant replicas (e.g. "25%").
 	// Defaults to 1 (serial drain).
 	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:validation:XValidation:rule="type(self) == int ? self >= 0 : true",message="maxUnavailable must be non-negative when specified as an integer"
+	// +kubebuilder:validation:XValidation:rule="type(self) == int ? self >= 0 : self.matches(r'^0*(?:[0-9]{1,2}|100)%$')",message="must be a non-negative integer or a percentage between 0% and 100%"
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 	// MaxSurge is the number of extra replicant pods allowed above the desired replica count on the
 	// new ReplicaSet during a template rollout. Integers are absolute; strings are percentages of desired replicas.
 	// Defaults to 0.
 	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:validation:XValidation:rule="type(self) == int ? self >= 0 : true",message="maxSurge must be non-negative when specified as an integer"
+	// +kubebuilder:validation:XValidation:rule="type(self) == int ? self >= 0 : self.matches(r'^[0-9]+%$')",message="must be a non-negative integer or percentage"
 	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty"`
 }
 
