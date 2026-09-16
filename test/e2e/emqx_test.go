@@ -265,7 +265,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		})
 	})
 
-	Context("EMQX Cluster / Botched Rolling Updates", func() {
+	Context("EMQX Cluster / Botched Rolling Updates", Label("ci-cluster"), func() {
 		// Initial number of core replicas:
 		var coreReplicas = 2
 
@@ -352,7 +352,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		})
 	})
 
-	Context("EMQX Core-Replicant Cluster", func() {
+	Context("EMQX Core-Replicant Cluster", Label("ci-core-replicant"), func() {
 		// Initial number of core and replicant replicas:
 		var coreReplicas = 2
 		var replicantReplicas = 2
@@ -531,7 +531,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		})
 	})
 
-	Context("EMQX Core-Replicant Cluster / Botched Rolling Updates", func() {
+	Context("EMQX Core-Replicant Cluster / Botched Rolling Updates", Label("ci-core-replicant"), func() {
 		const (
 			coreReplicas      = 2
 			replicantReplicas = 2
@@ -603,7 +603,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		})
 	})
 
-	Context("EMQX Core-Replicant DS-Enabled Cluster", func() {
+	Context("EMQX Core-Replicant DS-Enabled Cluster", Label("ci-ds"), func() {
 		// Initial number of core and replicant replicas:
 		var coreReplicas = 2
 		var replicantReplicas = 2
@@ -736,7 +736,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	})
 
-	Context("EMQX Core-Replicant Cluster / Runtime-enabled DS Replication", func() {
+	Context("EMQX Core-Replicant Cluster / Runtime-enabled DS Replication", Label("ci-ds"), func() {
 		// Initial number of core and replicant replicas:
 		var coreReplicas = 2
 		var replicantReplicas = 2
@@ -807,7 +807,7 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 	})
 
-	Context("EMQX Cluster Scaling / HPA", Label("scale", "hpa"), func() {
+	Context("EMQX Cluster Scaling / HPA", Label("scale", "ci-hpa"), func() {
 		// Initial number of core and replicant replicas:
 		var coreReplicas = 2
 		var replicantReplicas = 2
