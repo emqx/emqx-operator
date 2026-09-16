@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	emperror "emperror.dev/errors"
 )
 
 type MockRequester interface {
@@ -100,24 +102,19 @@ func MockRequests(args ...any) RequesterInterface {
 	return &mockRequester{requests}
 }
 
-func (f *mockRequester) GetURL(path string, query ...string) url.URL {
-	result := url.URL{Path: path}
-	for _, q := range query {
-		if result.RawQuery != "" {
-			result.RawQuery += "&"
-		}
-		result.RawQuery += q
-	}
-	return result
-}
-func (f *mockRequester) GetSchema() string      { return "http" }
-func (f *mockRequester) GetHost() string        { return "" }
-func (f *mockRequester) GetUsername() string    { return "" }
-func (f *mockRequester) GetPassword() string    { return "" }
-func (f *mockRequester) GetDescription() string { return "MockRequester" }
-
 func (f *mockRequester) Request(method string, url url.URL, body []byte, header http.Header) (
-	resp *http.Response, respBody []byte, err error,
+	*http.Response, []byte, error,
 ) {
-	return f.m.Mock(method, url, body, header)
+	var resp *http.Response
+	respMock, respBody, err := f.m.Mock(method, url, body, header)
+	if respMock != nil {
+		// Match http.Client responses so API errors can use Request.URL.
+		// Copy to avoid mutating a reused mock response; preserve any explicit request.
+		respCopy := *respMock
+		resp = &respCopy
+		if respMock.Request == nil {
+			resp.Request = &http.Request{Method: method, URL: &url}
+		}
+	}
+	return resp, respBody, emperror.Wrapf(err, "error accessing MockRequester API %s", url.String())
 }

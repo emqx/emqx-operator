@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"syscall"
 
 	emperror "emperror.dev/errors"
@@ -14,6 +16,15 @@ import (
 type apiError struct {
 	StatusCode int
 	Message    string
+}
+
+func (e apiError) Error() string {
+	return fmt.Sprintf("HTTP %d, response: %s", e.StatusCode, e.Message)
+}
+
+func (e apiError) Is(target error) bool {
+	other, ok := target.(apiError)
+	return ok && e.StatusCode == other.StatusCode
 }
 
 var (
@@ -31,17 +42,6 @@ func IsUnavailable(err error) bool {
 
 func IsConnectionClosed(err error) bool {
 	return errors.Is(err, net.ErrClosed)
-}
-
-func (e apiError) Error() string {
-	return fmt.Sprintf("HTTP %d, response: %s", e.StatusCode, e.Message)
-}
-
-func (e apiError) Is(target error) bool {
-	if target, ok := target.(apiError); ok {
-		return e.StatusCode == target.StatusCode
-	}
-	return false
 }
 
 func get(req req.RequesterInterface, path string) ([]byte, error) {
@@ -64,14 +64,14 @@ func requestWithQuery(req req.RequesterInterface, method string, path string, bo
 	if req == nil {
 		return nil, emperror.New("no requester")
 	}
-	url := req.GetURL(path, query...)
-	resp, body, err := req.Request(method, url, body, header)
+	u := url.URL{Path: path, RawQuery: strings.Join(query, "&")}
+	resp, body, err := req.Request(method, u, body, header)
 	if err != nil {
-		return nil, emperror.Wrapf(err, "error accessing %s API %s", req.GetDescription(), url.String())
+		return nil, err
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err := apiError{StatusCode: resp.StatusCode, Message: string(body)}
-		return nil, emperror.Wrapf(err, "error accessing %s API %s", req.GetDescription(), url.String())
+		return nil, emperror.Wrapf(err, "error accessing API %s", resp.Request.URL.String())
 	}
 	return body, nil
 }
