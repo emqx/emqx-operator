@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -59,6 +60,12 @@ func init() {
 // projectImage is the name of the image which will be build and loaded
 // with the code source changes to be tested.
 const projectImage = "emqx/emqx-operator:0.0.1"
+
+var (
+	// If `TEST_E2E_SKIP_IMAGE_BUILD=true`, coverage-capable image build is skipped.
+	// Supply the corresponding image in local Docker before running the suite.
+	skipImageBuild = os.Getenv("TEST_E2E_SKIP_IMAGE_BUILD") == "true"
+)
 
 type mutationKind int
 
@@ -167,10 +174,11 @@ var _ = BeforeSuite(func() {
 	By("generate manifests")
 	Expect(Run("make", "manifests")).To(Succeed())
 
-	By("build emqx-operator docker image")
-	Expect(Run("make", "docker-build-coverage",
-		fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage),
-	)).To(Succeed())
+	if !skipImageBuild {
+		By("build emqx-operator docker image")
+		Expect(Run("make", "docker-build-coverage", fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage))).
+			To(Succeed())
+	}
 
 	By("load emqx-operator docker image into kind cluster")
 	Expect(LoadImageToKindClusterWithName(projectImage)).To(Succeed())

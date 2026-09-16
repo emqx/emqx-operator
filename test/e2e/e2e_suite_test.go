@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -36,6 +37,12 @@ const (
 	namespace = Namespace
 )
 
+var (
+	// If `TEST_E2E_SKIP_IMAGE_BUILD=true`, coverage-capable image build is skipped.
+	// Supply the corresponding image in local Docker before running the suite.
+	skipImageBuild = os.Getenv("TEST_E2E_SKIP_IMAGE_BUILD") == "true"
+)
+
 // TestE2E runs the end-to-end (e2e) test suite for the project. These tests execute in an isolated,
 // temporary environment to validate project changes with the the purposed to be used in CI jobs.
 // The default setup requires Kind, builds/loads the Manager Docker image locally.
@@ -52,10 +59,11 @@ var _ = BeforeSuite(func() {
 	By("generate manifests")
 	Expect(util.Run("make", "manifests")).To(Succeed())
 
-	By("build emqx-operator docker image")
-	Expect(util.Run("make", "docker-build-coverage",
-		fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage),
-	)).To(Succeed())
+	if !skipImageBuild {
+		By("build emqx-operator docker image")
+		Expect(util.Run("make", "docker-build-coverage", fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage))).
+			To(Succeed())
+	}
 
 	By("load emqx-operator docker image into kind cluster")
 	Expect(util.LoadImageToKindClusterWithName(projectImage)).To(Succeed())
