@@ -122,6 +122,9 @@ jobs:
           - initial: "emqx/emqx:6.0.2"
             upgrade: "emqx/emqx:6.1.0"
             profile: "6.0.2-6.1.0"
+          - initial: "emqx/emqx:6.2.2"
+            upgrade: "emqx/emqx:6.3.0"
+            profile: "6.2.2-6.3.0"
 
     runs-on: ubuntu-latest
     env:
