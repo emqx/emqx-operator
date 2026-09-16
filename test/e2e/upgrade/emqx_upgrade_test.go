@@ -31,13 +31,17 @@ const (
 
 	// namespace where the project is deployed in
 	namespace = Namespace
+
+	defaultEventualTimeout = time.Minute * 5
+	defaultPollingInterval = time.Second * 3
+	workaroundTimeout      = defaultEventualTimeout / 4
 )
 
 func TestUpgrade(t *testing.T) {
 	RegisterFailHandler(Fail)
 	// Set the default timeout and interval for async assertions
-	SetDefaultEventuallyTimeout(time.Minute * 5)
-	SetDefaultEventuallyPollingInterval(time.Second * 3)
+	SetDefaultEventuallyTimeout(defaultEventualTimeout)
+	SetDefaultEventuallyPollingInterval(defaultPollingInterval)
 	// Run tests
 	RunSpecs(t, "Upgrade")
 }
@@ -60,11 +64,19 @@ var _ = Describe("EMQX Upgrade", Ordered, func() {
 	var coreReplicas = 2
 	var replicantReplicas = 2
 
-	const emqxCRBasic = "test/e2e/files/resources/emqx.yaml"
+	var emqxSpec *SpecBuilder
+
+	var workaround upgradeWorkaround
+	var hasWorkaround bool
 
 	BeforeAll(func() {
 		if emqxImageInitial == "" || emqxImageUpgrade == "" {
 			Fail("Both `-emqx-image-initial` and `-emqx-image-upgrade` should be set")
+		}
+
+		workaround, hasWorkaround = UpgradePlaybook.resolve(emqxImageInitial, emqxImageUpgrade)
+		if hasWorkaround {
+			GinkgoWriter.Printf("Upgrade workaround: %s\n", workaround.Description)
 		}
 
 		By("deploy emqx-operator")
@@ -92,13 +104,12 @@ var _ = Describe("EMQX Upgrade", Ordered, func() {
 
 	It("deploy cluster", func() {
 		By("create EMQX cluster")
-		emqxCR := SpecFromYAMLFile(emqxCRBasic).
+		emqxSpec = SpecFromYAMLFile("test/e2e/files/resources/emqx.yaml").
 			WithImage(emqxImageInitial).
 			WithCores(coreReplicas).
 			WithReplicants(replicantReplicas).
-			WithDS().
-			ToJSONDocument()
-		Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+			WithDS()
+		Expect(KubectlStdin(emqxSpec.ToJSONDocument(), "apply", "-f", "-")).To(Succeed())
 		By("wait for EMQX cluster to be ready")
 		Eventually(EMQXReady).Should(Succeed())
 		Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
@@ -117,12 +128,28 @@ var _ = Describe("EMQX Upgrade", Ordered, func() {
 			"--timeout=1m",
 		)).To(Succeed(), "Timed out waiting for MQTTX to be ready")
 
+		emqxCR := emqxSpec.WithImage(emqxImageUpgrade).ToJSONDocument()
+		if hasWorkaround && workaround.Prepare != nil {
+			By("prepare upgrade workaround")
+			Expect(workaround.Prepare(&emqxCR)).To(Succeed())
+		}
+
 		By("change EMQX image")
 		changingTime := metav1.Now()
-		Expect(Kubectl("patch", "emqx", "emqx",
-			"--type", "json",
-			"--patch", `[{"op": "replace", "path": "/spec/image", "value": "`+emqxImageUpgrade+`"}]`)).
-			To(Succeed())
+		Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+
+		if hasWorkaround {
+			By("wait for upgrade to complete before trying a workaround")
+			failure := InterceptGomegaFailure(func() {
+				Eventually(EMQXReady).WithArguments(changingTime).
+					WithTimeout(defaultEventualTimeout / 2).Should(Succeed())
+			})
+			if failure != nil {
+				By(fmt.Sprintf("apply upgrade workaround: %s", workaround.Description))
+				Eventually(workaround.apply).WithArguments("emqx").
+					WithTimeout(workaroundTimeout).Should(Succeed())
+			}
+		}
 
 		By("wait for EMQX cluster to be ready again")
 		Eventually(EMQXReady).WithArguments(changingTime).Should(Succeed())

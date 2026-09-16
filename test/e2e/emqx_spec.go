@@ -39,41 +39,42 @@ durable_storage:
     n_shards: 8
 `
 
-type specBuilder struct {
+// SpecBuilder builds an EMQX resource by applying overlays to a base document.
+type SpecBuilder struct {
 	base     []byte
 	overlays [][]byte
 }
 
-func SpecFromYAMLFile(filename string) *specBuilder {
-	return &specBuilder{base: util.FromYAMLFile(filename)}
+func SpecFromYAMLFile(filename string) *SpecBuilder {
+	return &SpecBuilder{base: util.FromYAMLFile(filename)}
 }
 
-func (sb *specBuilder) WithCores(numReplicas int) *specBuilder {
+func (sb *SpecBuilder) WithCores(numReplicas int) *SpecBuilder {
 	sb.overlays = append(sb.overlays, withCores(numReplicas))
 	return sb
 }
 
-func (sb *specBuilder) WithReplicants(numReplicas int) *specBuilder {
+func (sb *SpecBuilder) WithReplicants(numReplicas int) *SpecBuilder {
 	sb.overlays = append(sb.overlays, withReplicants(numReplicas))
 	return sb
 }
 
-func (sb *specBuilder) WithImage(image string) *specBuilder {
+func (sb *SpecBuilder) WithImage(image string) *SpecBuilder {
 	sb.overlays = append(sb.overlays, withImage(image))
 	return sb
 }
 
-func (sb *specBuilder) WithConfig(snippets ...string) *specBuilder {
+func (sb *SpecBuilder) WithConfig(snippets ...string) *SpecBuilder {
 	sb.overlays = append(sb.overlays, withConfig(snippets...))
 	return sb
 }
 
-func (sb *specBuilder) WithDS() *specBuilder {
+func (sb *SpecBuilder) WithDS() *SpecBuilder {
 	sb.overlays = append(sb.overlays, withDS())
 	return sb
 }
 
-func (sb *specBuilder) ToJSONDocument() []byte {
+func (sb *SpecBuilder) ToJSONDocument() []byte {
 	return util.PatchDocument(sb.base, sb.overlays...)
 }
 
