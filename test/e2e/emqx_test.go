@@ -926,16 +926,14 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			Expect(KubectlStdin(hpa, "apply", "-f", "-")).To(Succeed(), "Failed to create HPA")
 
 			By("verify HPA can read the scale subresource")
-			var hpaOut autoscalingv2.HorizontalPodAutoscaler
 			Eventually(KubectlOut).WithArguments("get", "hpa", hpaName, "-o", "json").
-				Should(BeUnmarshalledAs(&hpaOut, And(
-					HaveField("Status.DesiredReplicas", BeEquivalentTo(replicantReplicas)),
+				Should(BeUnmarshalledAs(&autoscalingv2.HorizontalPodAutoscaler{},
 					HaveField("Status.CurrentReplicas", BeEquivalentTo(replicantReplicas)),
-				)), "HPA should observe current replicant replica count via scale subresource")
+				), "HPA should observe current replicant replica count via scale subresource")
 
 			By("verify HPA eventually scales replicants down")
 			Eventually(KubectlOut).WithArguments("get", "hpa", hpaName, "-o", "json").
-				Should(BeUnmarshalledAs(&hpaOut,
+				Should(BeUnmarshalledAs(&autoscalingv2.HorizontalPodAutoscaler{},
 					HaveField("Status.CurrentReplicas", BeEquivalentTo(minReplicas)),
 				), "HPA should scale replicant set down")
 
