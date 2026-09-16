@@ -169,6 +169,9 @@ func (r *EMQXReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		subResult := subReconciler.reconcile(&round, instance)
 		needRequeue = needRequeue || subResult.needRequeue
 		if subResult.err != nil {
+			if k8sErrors.HasStatusCause(subResult.err, corev1.NamespaceTerminatingCause) {
+				return ctrl.Result{}, nil
+			}
 			if errors.IsCommonError(subResult.err) {
 				round.log.Info("reconciler requeue", "reason", subResult.err)
 				return ctrl.Result{RequeueAfter: time.Second}, nil

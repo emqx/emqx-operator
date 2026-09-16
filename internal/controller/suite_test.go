@@ -36,11 +36,15 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -104,23 +108,26 @@ var (
 
 var baseReconciler *EMQXReconciler
 
+func emqxReconcilerDefault() *EMQXReconciler {
+	r := *baseReconciler
+	return &r
+}
+
 func emqxReconciler() *EMQXReconciler {
 	switch clientFaultMode {
 	case clientFaultModeFixed:
 		r := *baseReconciler
-		r.Handler = handler.NewHandler(newFaultyClient(k8sClient, 1, 1))
+		r.Handler = handler.NewHandler(newFaultyClient(k8sClient, newFaultEmitter(1, 1)))
 		return &r
 	case clientFaultModeRandom:
 		r := *baseReconciler
 		r.Handler = handler.NewHandler(newFaultyClient(
 			k8sClient,
-			*clientFaultRandomEvents,
-			*clientFaultRandomProbability,
+			newFaultEmitter(*clientFaultRandomEvents, *clientFaultRandomProbability),
 		))
 		return &r
 	default:
-		r := *baseReconciler
-		return &r
+		return emqxReconcilerDefault()
 	}
 }
 
@@ -400,6 +407,61 @@ var _ = Describe("CRD Defaults", Ordered, func() {
 		Expect(k8sClient.Create(ctx, instance)).To(MatchError(ContainSubstring(
 			"port names dashboard and dashboard-https are reserved by the Operator",
 		)))
+	})
+})
+
+var _ = Describe("EMQX Reconciler / namespace termination", func() {
+	var ns *corev1.Namespace
+	var instance *crd.EMQX
+	var reconciler *EMQXReconciler
+	var recorder *record.FakeRecorder
+
+	reconcileRequest := func() ctrl.Request {
+		return ctrl.Request{NamespacedName: client.ObjectKeyFromObject(instance)}
+	}
+
+	BeforeEach(func() {
+		ns = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "reconcile-termination-"}}
+		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, ns))).To(Succeed())
+		})
+		instance = emqx.DeepCopy()
+		instance.Namespace = ns.Name
+		Expect(k8sClient.Create(ctx, instance)).To(Succeed())
+		recorder = record.NewFakeRecorder(10)
+		reconciler = emqxReconcilerDefault()
+		reconciler.EventRecorder = recorder
+	})
+
+	It("stops without requeue or warning when the namespace is terminating", func() {
+		Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
+		// Envtest has no namespace controller, so the EMQX remains undeleted.
+		Expect(actualize(instance)).To(Succeed())
+		Expect(instance.DeletionTimestamp).To(BeNil())
+		Eventually(k8sClient.Create).WithArguments(ctx, generateNodeCookieSecret(instance)).
+			Should(Satisfy(func(err error) bool {
+				return k8sErrors.HasStatusCause(err, corev1.NamespaceTerminatingCause)
+			}))
+		result, err := reconciler.Reconcile(ctx, reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(ctrl.Result{}))
+		Expect(recorder.Events).To(BeEmpty())
+		Expect(k8sClient.Get(ctx, instance.NodeCookieNamespacedName(), &corev1.Secret{})).
+			To(Satisfy(k8sErrors.IsNotFound))
+	})
+
+	It("still reports ordinary forbidden errors", func() {
+		forbidden := k8sErrors.NewForbidden(
+			schema.GroupResource{Resource: "secrets"},
+			instance.NodeCookieNamespacedName().Name,
+			fmt.Errorf("creation forbidden"),
+		)
+		// Allow the initial EMQX Get, then reject bootstrap Secret creation.
+		reconciler.Handler = handler.NewHandler(newFaultyClient(k8sClient, &faultSequence{nil, forbidden}))
+		_, err := reconciler.Reconcile(ctx, reconcileRequest())
+		Expect(err).To(MatchError(forbidden))
+		Expect(recorder.Events).To(Receive(ContainSubstring("Warning ReconcilerFailed")))
 	})
 })
 
