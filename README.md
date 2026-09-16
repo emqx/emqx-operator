@@ -68,6 +68,12 @@ In short, Operator proceeds with scaling down once pod no longer contributes to 
 
 If a PVC is manually deleted or becomes orphaned, the StatefulSet controller will create a fresh PVC when the pod is recreated. The new PVC starts empty; the EMQX node will rejoin the cluster and participate in EMQX Durable Storage replication to recover data from peers.
 
+### EMQX Upgrades
+
+To upgrade EMQX version, set the EMQX resource's `spec.image` to the target version. The operator rolls core pods one at a time, evacuating connections and sessions before replacement and checking availability before proceeding. Once a core is running the new version, the operator starts migrating replicants to a new ReplicaSet. It keeps at least one old-version core until the replicant migration completes, then finishes the core rollout.
+
+If an upgrade stalls, check the operator logs and EMQX resource's events. See [EMQX Upgrade Workarounds](docs/en_US/upgrade-workarounds.md) for known upgrade-path issues, symptoms, and manual recovery steps.
+
 ## Upgrading
 
 ### From 2.2.x

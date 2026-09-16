@@ -7,20 +7,32 @@ import (
 	"k8s.io/apimachinery/pkg/util/version"
 )
 
+// UpgradePlaybook contains manual workarounds exercised by the upgrade E2E suite.
+//
+// To add one, register its initial and target image tags here and document its
+// symptoms, manual commands, and verification in docs/en_US/upgrade-workarounds.md.
+// * Exact pairs take precedence over initial minor-series keys such as "6.2.x".
+// * Target tag is always exact.
+//
+// Validate the affected pair on the isolated Kind cluster:
+//
+//	make test-e2e-upgrade \
+//	  TEST_E2E_UPGRADE_IMAGE_INITIAL=emqx/emqx:6.2.2 \
+//	  TEST_E2E_UPGRADE_IMAGE_UPGRADE=emqx/emqx:6.3.0 \
+//	  TEST_E2E_DIAGNOSTIC_REPORT_PATH=test/_reports
 var UpgradePlaybook = playbook{
 	// Trouble:
 	// During a mixed-version upgrade, a 6.3.0 node overwrites the shared
 	// bootstrap API key records with records that 6.2 cores cannot use.
 	// The older cores return BAD_API_KEY_OR_SECRET, stalling reconciliation.
 	// Workaround:
-	// Run `emqx_mgmt_auth:try_init_bootstrap_file()` on ona remaining 6.2 core
+	// Run `emqx_mgmt_auth:try_init_bootstrap_file()` on a remaining 6.2 core
 	// to reload its bootstrap file and replace the shared records, restoring
 	// API access so the operator can continue the upgrade.
 	{Initial: "6.2.x", Upgrade: "6.3.0"}: bootstrapAuthWorkaround,
 }
 
 // upgradeWorkaround codifies manual intervention for one known upgrade path.
-// See docs/en_US/upgrade-workarounds.md for how to add and validate a recipe.
 type upgradeWorkaround struct {
 	Description string
 	// Prepare optionally modifies the desired CR before the image update is
