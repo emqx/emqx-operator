@@ -12,11 +12,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
+type faultInjector interface {
+	err() error
+}
+
 type faultEmitter struct {
 	mu              sync.Mutex
 	remainingEvents int
 	probability     float64
 }
+
+type faultSequence []error
 
 var (
 	faultRandomMu sync.Mutex
@@ -25,10 +31,8 @@ var (
 
 func newFaultyClient(
 	base client.WithWatch,
-	numEvents int,
-	faultProbability float64,
+	fault faultInjector,
 ) client.Client {
-	fault := newFaultEmitter(numEvents, faultProbability)
 	if fault == nil {
 		return base
 	}
@@ -79,7 +83,7 @@ func newFaultyClient(
 	})
 }
 
-func newFaultEmitter(numEvents int, faultProbability float64) *faultEmitter {
+func newFaultEmitter(numEvents int, faultProbability float64) faultInjector {
 	if numEvents <= 0 {
 		return nil
 	}
@@ -114,6 +118,15 @@ func faultRandomFloat64() float64 {
 		faultRandom = rand.New(rand.NewSource(ginkgo.GinkgoRandomSeed()))
 	}
 	return faultRandom.Float64()
+}
+
+func (f *faultSequence) err() error {
+	if len(*f) == 0 {
+		return nil
+	}
+	err := (*f)[0]
+	*f = (*f)[1:]
+	return err
 }
 
 func restoreObject(ctx context.Context, c client.Client, obj client.Object) {

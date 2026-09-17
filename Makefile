@@ -100,7 +100,14 @@ smoke-test-controller: manifests generate fmt vet envtest ## Run smoke tests.
 # - TEST_E2E_SKIP_PROMETHEUS_INSTALL=true
 .PHONY: test-e2e
 test-e2e: manifests generate e2e-test-cluster ## Run general E2E tests. Expected an isolated environment using Kind.
-	go test ./test/e2e/ -v -ginkgo.v -timeout 60m
+	go test ./test/e2e/ -v -ginkgo.v -timeout 60m -ginkgo.fail-on-empty
+
+test-e2e-%: manifests generate e2e-test-cluster ## Run a labeled context, e.g. make test-e2e-ci-hpa.
+	go test ./test/e2e/ -v -ginkgo.v -timeout 60m -ginkgo.label-filter "$*" -ginkgo.fail-on-empty
+
+.PHONY: test-e2e-unlabeled
+test-e2e-unlabeled: manifests generate e2e-test-cluster ## Run E2E tests outside smoke and ci-* labels; allow no matching tests.
+	go test ./test/e2e/ -v -ginkgo.v -timeout 60m -ginkgo.label-filter '!(smoke || /^ci-/)'
 
 test-e2e-upgrade: manifests generate e2e-test-cluster ## Run E2E upgrade tests. Expected an isolated environment using Kind.
 	go test ./test/e2e/upgrade -v -ginkgo.v -timeout 20m \

@@ -3,6 +3,7 @@ package upgrade
 import (
 	"flag"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -37,6 +38,12 @@ const (
 	workaroundTimeout      = defaultEventualTimeout / 4
 )
 
+var (
+	// If `TEST_E2E_SKIP_IMAGE_BUILD=true`, coverage-capable image build is skipped.
+	// Supply the corresponding image in local Docker before running the suite.
+	skipImageBuild = os.Getenv("TEST_E2E_SKIP_IMAGE_BUILD") == "true"
+)
+
 func TestUpgrade(t *testing.T) {
 	RegisterFailHandler(Fail)
 	// Set the default timeout and interval for async assertions
@@ -50,10 +57,11 @@ var _ = BeforeSuite(func() {
 	By("generate manifests")
 	Expect(Run("make", "manifests")).To(Succeed())
 
-	By("build emqx-operator docker image")
-	Expect(Run("make", "docker-build-coverage",
-		fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage),
-	)).To(Succeed())
+	if !skipImageBuild {
+		By("build emqx-operator docker image")
+		Expect(Run("make", "docker-build-coverage", fmt.Sprintf("OPERATOR_IMAGE=%s", projectImage))).
+			To(Succeed())
+	}
 
 	By("load emqx-operator docker image into kind cluster")
 	Expect(LoadImageToKindClusterWithName(projectImage)).To(Succeed())

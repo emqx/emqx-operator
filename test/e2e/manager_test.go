@@ -38,7 +38,7 @@ var (
 	isPrometheusInstalled = false
 )
 
-var _ = Describe("Manager", Ordered, func() {
+var _ = Describe("Manager", Label("ci-manager"), Ordered, func() {
 	const (
 		// Kustomize manifest defining Service Monitor
 		serviceMonitorManifest = "test/e2e/files/prometheus"

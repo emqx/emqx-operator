@@ -10,6 +10,9 @@ concurrency:
 on:
   pull_request:
 
+env:
+  TEST_E2E_COVERAGE_PATH: /tmp/kind/data/emqx-operator-system/test-e2e-coverage
+
 jobs:
   test:
     name: Unit Tests
@@ -32,10 +35,59 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
 
+  test-e2e-labels:
+    name: Discover E2E Labels
+    runs-on: ubuntu-latest
+    outputs:
+      labels: ${{ steps.labels.outputs.labels }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      - id: labels
+        shell: bash
+        run: |
+          labels=$(go run github.com/onsi/ginkgo/v2/ginkgo labels ./test/e2e |
+            jq -Rce 'ltrimstr("e2e: ") | fromjson | map(select(startswith("ci-"))) | unique')
+          echo "labels=$labels" >> "$GITHUB_OUTPUT"
+
+  test-e2e-image:
+    name: Build Operator Image + Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      - run: make docker-build-coverage OPERATOR_IMAGE=emqx/emqx-operator:0.0.1
+
+      - run: docker save emqx/emqx-operator:0.0.1 -o "${{ runner.temp }}/emqx-operator-coverage.tar"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: emqx-operator-coverage-image
+          path: ${{ runner.temp }}/emqx-operator-coverage.tar
+          if-no-files-found: error
+          retention-days: 1
+
   test-e2e:
-    name: E2E Tests
+    name: E2E Tests - ${{ matrix.label }}
+    needs: [test-e2e-labels, test-e2e-image]
+    strategy:
+      fail-fast: false
+      matrix:
+        label: ${{ fromJSON(needs.test-e2e-labels.outputs.labels) }}
+        include:
+          - label: smoke
+          - label: unlabeled
     runs-on: ubuntu-latest
     env:
+      TEST_E2E_SKIP_IMAGE_BUILD: "true"
       TEST_E2E_DIAGNOSTIC_REPORT_PATH: ${{ github.workspace }}/test-report
     steps:
       - uses: actions/checkout@v6
@@ -46,26 +98,38 @@ jobs:
 
       - run: go mod tidy
 
-      - run: make test-e2e
+      - uses: actions/download-artifact@v4
+        with:
+          name: emqx-operator-coverage-image
+          path: ${{ runner.temp }}/e2e-image
+
+      - run: docker load -i "${{ runner.temp }}/e2e-image/emqx-operator-coverage.tar"
+
+      - run: make "test-e2e-${{ matrix.label }}"
 
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: test-report-e2e
+          name: test-report-e2e-${{ matrix.label }}
           path: ${{ env.TEST_E2E_DIAGNOSTIC_REPORT_PATH }}
           if-no-files-found: ignore
 
-      - run: go tool covdata textfmt -i /tmp/kind/data/emqx-operator-system/test-e2e-coverage -o ${{ github.workspace }}/cover.e2e.out
+      - name: Collect test coverage
+        run: |
+          if [ -d "$TEST_E2E_COVERAGE_PATH" ]; then
+            go tool covdata textfmt -i "$TEST_E2E_COVERAGE_PATH" -o "${{ github.workspace }}/cover.e2e.out"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: coverprofile-e2e
+          name: coverprofile-e2e-${{ matrix.label }}
           path: ${{ github.workspace }}/cover.e2e.out
           if-no-files-found: ignore
           retention-days: 1
 
   test-stress:
     name: E2E Stress Tests
+    needs: test-e2e-image
     strategy:
       fail-fast: true
       matrix:
@@ -79,6 +143,7 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
+      TEST_E2E_SKIP_IMAGE_BUILD: "true"
       TEST_E2E_DIAGNOSTIC_REPORT_PATH: ${{ github.workspace }}/test-report
     steps:
       - uses: actions/checkout@v6
@@ -88,6 +153,13 @@ jobs:
           go-version-file: 'go.mod'
 
       - run: go mod tidy
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: emqx-operator-coverage-image
+          path: ${{ runner.temp }}/e2e-image
+
+      - run: docker load -i "${{ runner.temp }}/e2e-image/emqx-operator-coverage.tar"
 
       - run: make test-e2e-stress
         env:
@@ -101,7 +173,7 @@ jobs:
           path: ${{ env.TEST_E2E_DIAGNOSTIC_REPORT_PATH }}
           if-no-files-found: ignore
 
-      - run: go tool covdata textfmt -i /tmp/kind/data/emqx-operator-system/test-e2e-coverage -o ${{ github.workspace }}/cover.stress.out
+      - run: go tool covdata textfmt -i "$TEST_E2E_COVERAGE_PATH" -o ${{ github.workspace }}/cover.stress.out
 
       - uses: actions/upload-artifact@v4
         with:
@@ -112,6 +184,7 @@ jobs:
 
   test-upgrade:
     name: E2E Upgrade Tests - ${{ matrix.profile }}
+    needs: test-e2e-image
     strategy:
       fail-fast: false
       matrix:
@@ -128,6 +201,7 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
+      TEST_E2E_SKIP_IMAGE_BUILD: "true"
       TEST_E2E_DIAGNOSTIC_REPORT_PATH: ${{ github.workspace }}/test-report
     steps:
       - uses: jlumbroso/free-disk-space@v1.3.1
@@ -142,6 +216,13 @@ jobs:
 
       - run: go mod tidy
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: emqx-operator-coverage-image
+          path: ${{ runner.temp }}/e2e-image
+
+      - run: docker load -i "${{ runner.temp }}/e2e-image/emqx-operator-coverage.tar"
+
       - run: make test-e2e-upgrade
         env:
           TEST_E2E_UPGRADE_IMAGE_INITIAL: ${{ matrix.initial }}
@@ -154,7 +235,7 @@ jobs:
           path: ${{ env.TEST_E2E_DIAGNOSTIC_REPORT_PATH }}
           if-no-files-found: ignore
 
-      - run: go tool covdata textfmt -i /tmp/kind/data/emqx-operator-system/test-e2e-coverage -o ${{ github.workspace }}/cover.upgrade.out
+      - run: go tool covdata textfmt -i "$TEST_E2E_COVERAGE_PATH" -o ${{ github.workspace }}/cover.upgrade.out
 
       - uses: actions/upload-artifact@v4
         with:
@@ -199,4 +280,3 @@ jobs:
       - uses: geekyeggo/delete-artifact@v5
         with:
           name: coverprofile-*
-
