@@ -26,7 +26,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `roots` _[ConfigRoots](#configroots)_ | Top-level EMQX configuration roots. Values must be JSON-compatible. The Operator<br />serializes runtime-applicable roots into `base.hocon` and settings that take effect<br />when EMQX starts into `emqx.conf`.<br />HOCON-only syntax such as includes, substitutions, and duplicate declarations is not supported.<br />Kubernetes prunes entries whose value is `null`; null roots are unsupported and<br />must not be used as deletion markers.<br />Removing a root relinquishes Operator ownership; it does not delete values persisted by EMQX.<br />The `node.cookie` path is reserved for the Operator and must not be specified here. |  |  |
+| `roots` _[ConfigRoots](#configroots)_ | Top-level EMQX configuration roots. Values must be JSON-compatible. The Operator<br />serializes runtime-applicable roots into `base.hocon` and settings that take effect<br />when EMQX starts into `emqx.conf`.<br />HOCON-only syntax such as includes, substitutions, and duplicate declarations is not supported.<br />Removing a root relinquishes Operator ownership; it does not delete values persisted by EMQX.<br />The `node.cookie` path is reserved for the Operator and must not be specified here. |  |  |
 
 
 #### ConfigRoots
