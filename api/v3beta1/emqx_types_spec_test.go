@@ -56,6 +56,50 @@ func TestRolloutMaxSurge(t *testing.T) {
 	assert.Equal(t, int32(2), emqx.Spec.NumMaxSurgeReplicantReplicas())
 }
 
+func TestRolloutPercentageRounding(t *testing.T) {
+	spec := EMQXSpec{
+		ReplicantTemplate: EMQXReplicantTemplate{
+			Spec: EMQXReplicantTemplateSpec{Replicas: ptr.To(int32(10))},
+		},
+		UpdateStrategy: UpdateStrategy{Replicants: &ReplicantsUpdateStrategy{
+			MaxUnavailable: ptr.To(intstr.FromString("39%")),
+			MaxSurge:       ptr.To(intstr.FromString("39%")),
+		}},
+	}
+	assert.Equal(t, int32(3), spec.NumMaxUnavailableReplicantReplicas())
+	assert.Equal(t, int32(4), spec.NumMaxSurgeReplicantReplicas())
+
+	spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(1))
+	assert.Equal(t, int32(0), spec.NumMaxUnavailableReplicantReplicas())
+	assert.Equal(t, int32(1), spec.NumMaxSurgeReplicantReplicas())
+}
+
+func TestRolloutZeroBudgetFallback(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		replicas int32
+		surge    *intstr.IntOrString
+	}{
+		{"rounded unavailable with zero surge", 10, ptr.To(intstr.FromInt(0))},
+		{"rounded unavailable with omitted surge", 10, nil},
+		{"zero replicas with percentage surge", 0, ptr.To(intstr.FromString("1%"))},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := EMQXSpec{
+				ReplicantTemplate: EMQXReplicantTemplate{
+					Spec: EMQXReplicantTemplateSpec{Replicas: ptr.To(tt.replicas)},
+				},
+				UpdateStrategy: UpdateStrategy{Replicants: &ReplicantsUpdateStrategy{
+					MaxUnavailable: ptr.To(intstr.FromString("1%")),
+					MaxSurge:       tt.surge,
+				}},
+			}
+			assert.Equal(t, int32(1), spec.NumMaxUnavailableReplicantReplicas())
+			assert.Equal(t, int32(0), spec.NumMaxSurgeReplicantReplicas())
+		})
+	}
+}
+
 func TestServiceTemplateIsEnabled(t *testing.T) {
 	tests := []struct {
 		name     string

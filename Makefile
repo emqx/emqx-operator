@@ -105,9 +105,17 @@ test-e2e: manifests generate e2e-test-cluster ## Run general E2E tests. Expected
 test-e2e-%: manifests generate e2e-test-cluster ## Run a labeled context, e.g. make test-e2e-ci-hpa.
 	go test ./test/e2e/ -v -ginkgo.v -timeout 60m -ginkgo.label-filter "$*" -ginkgo.fail-on-empty
 
-.PHONY: test-e2e-unlabeled
-test-e2e-unlabeled: manifests generate e2e-test-cluster ## Run E2E tests outside smoke and ci-* labels; allow no matching tests.
-	go test ./test/e2e/ -v -ginkgo.v -timeout 60m -ginkgo.label-filter '!(smoke || /^ci-/)'
+.PHONY: test-e2e-list-unlabeled
+test-e2e-list-unlabeled: ## List contexts with runnable E2E specs outside smoke and ci-* labels; fail if any exist.
+	@go test ./test/e2e/ -ginkgo.dry-run \
+		-ginkgo.label-filter='!(smoke || /^ci-/)' \
+		-ginkgo.json-report="$(PWD)/ginkgo.report.json"
+	@jq "[.[] | .SpecReports[] \
+			| select(.LeafNodeType == \"It\" and .State == \"passed\") \
+			| .ContainerHierarchyTexts] \
+		| unique \
+		| if length > 0 then {Unlabeled: .}, (null | halt_error(1)) end" \
+		"$(PWD)/ginkgo.report.json"
 
 test-e2e-upgrade: manifests generate e2e-test-cluster ## Run E2E upgrade tests. Expected an isolated environment using Kind.
 	go test ./test/e2e/upgrade -v -ginkgo.v -timeout 20m \

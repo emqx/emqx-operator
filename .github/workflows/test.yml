@@ -47,6 +47,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Check E2E label coverage
+        run: make test-e2e-list-unlabeled
+
       - id: labels
         shell: bash
         run: |
@@ -84,7 +87,6 @@ jobs:
         label: ${{ fromJSON(needs.test-e2e-labels.outputs.labels) }}
         include:
           - label: smoke
-          - label: unlabeled
     runs-on: ubuntu-latest
     env:
       TEST_E2E_SKIP_IMAGE_BUILD: "true"
