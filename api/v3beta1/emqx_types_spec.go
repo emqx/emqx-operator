@@ -355,10 +355,7 @@ func (spec *EMQXSpec) NumCoreReplicas() int32 {
 }
 
 func (spec *EMQXSpec) NumReplicantReplicas() int32 {
-	if spec.ReplicantTemplate.Spec.Replicas != nil {
-		return *spec.ReplicantTemplate.Spec.Replicas
-	}
-	return 0
+	return ptr.Deref(spec.ReplicantTemplate.Spec.Replicas, 0)
 }
 
 func (spec *EMQXSpec) NumMaxUnavailableReplicantReplicas() int32 {
