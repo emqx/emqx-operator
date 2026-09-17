@@ -375,6 +375,10 @@ func (spec *EMQXSpec) NumMaxUnavailableReplicantReplicas() int32 {
 	if v < 0 {
 		v = 0
 	}
+	// Allow progress when rounding leaves neither surge nor unavailability budget.
+	if v == 0 && spec.NumMaxSurgeReplicantReplicas() == 0 {
+		return 1
+	}
 	return int32(v)
 }
 
