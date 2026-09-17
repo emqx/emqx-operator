@@ -368,7 +368,7 @@ func (spec *EMQXSpec) NumMaxUnavailableReplicantReplicas() int32 {
 	if r == nil || r.MaxUnavailable == nil {
 		return 1
 	}
-	v, err := intstr.GetScaledValueFromIntOrPercent(r.MaxUnavailable, numReplicas, true)
+	v, err := intstr.GetScaledValueFromIntOrPercent(r.MaxUnavailable, numReplicas, false)
 	if err != nil {
 		return 1
 	}
