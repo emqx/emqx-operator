@@ -448,6 +448,9 @@ func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 			if pod == nil {
 				continue
 			}
+			if _, ok := pod.Annotations[crd.AnnotationScalingDown]; ok {
+				continue
+			}
 			if util.IsPodManagedBy(pod, updateReplicantSet) {
 				targets = append(targets, node.Name)
 			}
