@@ -528,6 +528,83 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		})
 	})
 
+	Context("EMQX Core-Replicant Cluster / Full MaxUnavailable + Surge Disallowed", Label("ci-core-replicant"), func() {
+		AfterAll(func() {
+			Expect(Kubectl("delete", "pod", "mqttx-rollout", "--ignore-not-found")).To(Succeed())
+			Expect(Kubectl("delete", "emqx", "emqx", "--ignore-not-found")).To(Succeed())
+		})
+
+		It("replaces replicants holding sessions without stalling", func() {
+			By("deploy a cluster allowing all replicants to be unavailable without surge")
+			emqxCR := PatchDocument(
+				FromYAMLFile(emqxCRBasic),
+				withImage(emqxImage),
+				withCores(2),
+				withReplicants(2),
+				withConfig("durable_sessions:\n  enable: false\n"),
+				[]byte(`{"spec":{"updateStrategy":{
+					"replicants":{"maxUnavailable":"100%","maxSurge":0},
+					"evacuationStrategy":{"type":"NodeEvacuation"}
+				}}}`),
+			)
+			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(2).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(2).Should(Succeed())
+
+			var initial crd.EMQXStatus
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status}")).
+				To(UnmarshalInto(&initial))
+			Expect(initial.ReplicantNodes).To(HaveLen(2))
+
+			By("leave an offline persistent session on each old replicant")
+			Expect(Kubectl("run", "mqttx-rollout", "--image=emqx/mqttx-cli:v1.13.0",
+				"--restart=Never", "--command", "--", "sleep", "3600")).To(Succeed())
+			Expect(Kubectl("wait", "pod/mqttx-rollout", "--for=condition=Ready", "--timeout=1m")).To(Succeed())
+			for _, node := range initial.ReplicantNodes {
+				// Target each pod directly; a one-shot publish leaves an offline session
+				// without reconnecting during the rollout.
+				podIP, err := KubectlOut("get", "pod", node.PodName, "-o", "jsonpath={.status.podIP}")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(podIP).NotTo(BeEmpty())
+				Expect(Kubectl("exec", "mqttx-rollout", "--", "mqttx", "pub",
+					"--hostname", podIP, "--client-id", node.PodName,
+					"--mqtt-version", "5.0", "--no-clean", "--session-expiry-interval", "3600",
+					"--reconnect-period", "0", "--topic", "rollout/session", "--qos", "1", "--message", "setup",
+				)).To(Succeed())
+			}
+			Eventually(KubectlOut).
+				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status}").
+				Should(BeUnmarshalledAs(&crd.EMQXStatus{}, HaveField("ReplicantNodes", And(
+					HaveLen(2),
+					HaveEach(And(
+						HaveField("Sessions", BeNumerically(">", 0)),
+						HaveField("Connections", BeZero()),
+					)),
+				))))
+
+			By("trigger a replicant-only rollout")
+			changedAt := metav1.Now()
+			Expect(Kubectl("patch", "emqx", "emqx", "--type", "merge", "--patch",
+				`{"spec":{"replicantTemplate":{"metadata":{"annotations":{"test.emqx.io/rollout":"full-unavailability"}}}}}`,
+			)).To(Succeed())
+
+			By("wait for replacement despite sessions on every old replicant; session loss is allowed")
+			Eventually(EMQXReady).WithArguments(changedAt).Should(Succeed())
+			Eventually(ReplicantsStable).WithArguments(2).Should(Succeed())
+			var updated crd.EMQXStatus
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status}")).
+				To(BeUnmarshalledAs(&updated,
+					HaveField("ReplicantNodesStatus.CurrentRevision",
+						Not(Equal(initial.ReplicantNodesStatus.CurrentRevision)),
+					)))
+			for _, node := range initial.ReplicantNodes {
+				Expect(updated.ReplicantNodes).
+					NotTo(ContainElement(HaveField("PodName", Equal(node.PodName))))
+			}
+		})
+	})
+
 	Context("EMQX Core-Replicant Cluster / Botched Rolling Updates", Label("ci-core-replicant"), func() {
 		const (
 			coreReplicas      = 2
