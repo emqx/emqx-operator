@@ -18,18 +18,6 @@ type syncReplicantSets struct {
 	*EMQXReconciler
 }
 
-// replicantAdmission mirrors coreAdmission: a pure decision plus the candidate pod when relevant.
-type replicantAdmission struct {
-	Action admissionAction
-	Reason string
-}
-
-// replicantPodAdmission pairs a pod with its admission decision, preserving iteration order.
-type replicantPodAdmission struct {
-	Admission replicantAdmission
-	Pod       *corev1.Pod
-}
-
 type replicantAvailability map[*corev1.Pod]bool
 
 func (s *syncReplicantSets) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
@@ -112,7 +100,7 @@ func (s *syncReplicantSets) scaleDown(
 	availability, numAvailable := s.snapshotAvailability(instance, pods)
 	excessUnavailable := max(0, desiredReplicas-numAvailable)
 	budget := max(0, min(maxUnavailable-excessUnavailable, excessReplicas))
-	admissions := s.evaluateReplicantAdmissions(instance, pods, budget, availability)
+	admissions := s.evaluateReplicantAdmissions(r, instance, pods, budget, availability, scaleDown)
 
 	// Record all admissions first, then attempt to act on them: node evacuation relies on
 	// presence of annotations to pick migration targets.
@@ -316,10 +304,10 @@ func (s *syncReplicantSets) surgeScaleSet(
 func (s *syncReplicantSets) recordAdmission(
 	r *reconcileRound,
 	pod *corev1.Pod,
-	admission replicantAdmission,
+	replicantAdmission admission,
 ) error {
 	annotationsDirty := util.AttachAnnotation(pod, crd.AnnotationScalingDown, "true")
-	if admission.Action == admissionRemove {
+	if replicantAdmission.Action == admissionRemove {
 		annotationsDirty = util.AttachAnnotation(pod, corev1.PodDeletionCost, "-99999") || annotationsDirty
 	}
 	if annotationsDirty {
@@ -336,22 +324,22 @@ func (s *syncReplicantSets) onAdmission(
 	r *reconcileRound,
 	instance *crd.EMQX,
 	pod *corev1.Pod,
-	admission replicantAdmission,
+	replicantAdmission admission,
 ) error {
-	switch admission.Action {
+	switch replicantAdmission.Action {
 	case admissionRemove:
 		r.log.V(1).Info("scheduling replicant pod removal",
-			"reason", admission.Reason,
+			"reason", replicantAdmission.Reason,
 			"pod", klog.KObj(pod),
 		)
 	case admissionWait:
 		r.log.V(1).Info("removal of replicant pod postponed",
-			"reason", admission.Reason,
+			"reason", replicantAdmission.Reason,
 			"pod", klog.KObj(pod),
 		)
 	case admissionEvacuate:
 		r.log.V(1).Info("starting replicant pod evacuation",
-			"reason", admission.Reason,
+			"reason", replicantAdmission.Reason,
 			"pod", klog.KObj(pod),
 		)
 		err := s.startEvacuation(r, instance, pod)
@@ -399,14 +387,14 @@ func (s *syncReplicantSets) scaleDownOutdatedReplicantSets(r *reconcileRound, in
 func (s *syncReplicantSets) outdatedReplicantAdmissions(
 	r *reconcileRound,
 	instance *crd.EMQX,
-) []replicantPodAdmission {
+) []podAdmission {
 	specReplicas := instance.Spec.NumReplicantReplicas()
 	maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
 	availability, numAvailable := s.snapshotAvailability(instance, r.state.replicantPods())
 	extraAvailable := numAvailable - specReplicas
 	budget := max(0, maxUnavailable+extraAvailable)
 	outdatedPods := r.state.outdatedReplicantPods(instance)
-	return s.evaluateReplicantAdmissions(instance, outdatedPods, budget, availability)
+	return s.evaluateReplicantAdmissions(r, instance, outdatedPods, budget, availability, rollingUpdate)
 }
 
 // evaluateReplicantAdmissions returns admissions for the given candidate pods.
@@ -418,18 +406,20 @@ func (s *syncReplicantSets) outdatedReplicantAdmissions(
 // * outdated pods for migration,
 // * "update" set's replicant pods for scale-down, etc.
 func (s *syncReplicantSets) evaluateReplicantAdmissions(
+	r *reconcileRound,
 	instance *crd.EMQX,
 	candidates []*corev1.Pod,
 	budget int32,
 	availability replicantAvailability,
-) []replicantPodAdmission {
-	batch := []replicantPodAdmission{}
+	cause admissionCause,
+) []podAdmission {
+	batch := []podAdmission{}
 	budgetUsed := int32(0)
 	for _, pod := range candidates {
 		// Evaluate admission:
-		admission := replicantPodAdmission{
+		admission := podAdmission{
 			Pod:       pod,
-			Admission: checkReplicantPodRemoval(instance, pod),
+			Admission: checkReplicantPodRemoval(r, instance, pod, cause),
 		}
 		available := availability[pod]
 		_, annotated := pod.Annotations[crd.AnnotationScalingDown]
@@ -490,66 +480,71 @@ func (*syncReplicantSets) podIsActiveReplicant(pod *corev1.Pod) bool {
 }
 
 // checkReplicantPodRemoval decides whether an outdated replicant pod may be removed or needs evacuation.
-func checkReplicantPodRemoval(instance *crd.EMQX, pod *corev1.Pod) replicantAdmission {
+func checkReplicantPodRemoval(
+	r *reconcileRound,
+	instance *crd.EMQX,
+	pod *corev1.Pod,
+	cause admissionCause,
+) admission {
 	status := &instance.Status
+	replicantAdmission := admission{Cause: cause}
 
 	if pod.DeletionTimestamp != nil {
-		return replicantAdmission{
-			Action: admissionWait,
-			Reason: fmt.Sprintf("pod %s deletion in progress", pod.Name),
-		}
+		return replicantAdmission.wait("pod %s deletion in progress", pod.Name)
 	}
 
 	if _, ok := pod.Annotations[corev1.PodDeletionCost]; ok {
-		return replicantAdmission{
-			Action: admissionRemove,
-			Reason: "pod already marked for deletion",
-		}
+		return replicantAdmission.remove("pod already marked for deletion")
 	}
 
 	// Disallow permanently removing the pod that is still a DS replication site.
 	dsCondition := util.FindPodCondition(pod, crd.DSReplicationSite)
 	if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
-		return replicantAdmission{
-			Action: admissionWait,
-			Reason: fmt.Sprintf("pod %s is still a DS replication site", pod.Name),
-		}
+		return replicantAdmission.wait("pod %s is still a DS replication site", pod.Name)
 	}
 
 	nodeInfo := status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
 	if nodeInfo == nil {
-		return replicantAdmission{Action: admissionRemove, Reason: "node is out of cluster"}
+		return replicantAdmission.remove("node is out of cluster")
 	}
 
 	if nodeInfo.Status == api.NodeStatusStopped {
-		return replicantAdmission{Action: admissionRemove, Reason: "node is already stopped"}
+		return replicantAdmission.remove("node is already stopped")
 	}
 
 	evacuation := status.FindNodeEvacuation(nodeInfo.Name)
 	if evacuation != nil && evacuation.State != api.EvacuationStateProhibiting {
-		return replicantAdmission{
-			Action: admissionWait,
-			Reason: fmt.Sprintf("node %s evacuation in progress", nodeInfo.Name),
-		}
+		return replicantAdmission.wait("node %s evacuation in progress", nodeInfo.Name)
 	}
 
 	if nodeInfo.Sessions > 0 && instance.Spec.IsEvacuationEnabled() {
-		surgeDisallowed := instance.Spec.NumMaxSurgeReplicantReplicas() == 0
-		desiredReplicas := instance.Spec.NumReplicantReplicas()
-		maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
-		if surgeDisallowed && (desiredReplicas == 1 || maxUnavailable >= desiredReplicas) {
-			return replicantAdmission{
-				Action: admissionRemove,
-				Reason: fmt.Sprintf("node %s has active sessions nowhere to evacuate", nodeInfo.Name),
-			}
+		if replicantSkipEvacuation(r, instance, cause) {
+			return replicantAdmission.remove("node %s has active sessions nowhere to evacuate", nodeInfo.Name)
 		}
-		return replicantAdmission{
-			Action: admissionEvacuate,
-			Reason: fmt.Sprintf("node %s has active sessions", nodeInfo.Name),
-		}
+		return replicantAdmission.evacuate("node %s has active sessions", nodeInfo.Name)
 	}
 
-	return replicantAdmission{Action: admissionRemove, Reason: "node is safe to stop"}
+	return replicantAdmission.remove("node is safe to stop")
+}
+
+func replicantSkipEvacuation(r *reconcileRound, instance *crd.EMQX, cause admissionCause) bool {
+	desiredReplicas := instance.Spec.NumReplicantReplicas()
+	// Retiring replicants, allow evacuation to the core set:
+	if desiredReplicas == 0 {
+		return false
+	}
+	// For rolling update, no evacuation only if:
+	// - `maxSurge` is 0
+	// - `maxUnavailable` allows removal of all replicants
+	// - no recent-revision replicants yet
+	if cause == rollingUpdate {
+		updateRs := r.state.updateReplicantSet(instance)
+		updateReplicas := ptr.Deref(updateRs.Spec.Replicas, 0)
+		surgeDisallowed := instance.Spec.NumMaxSurgeReplicantReplicas() == 0
+		maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
+		return surgeDisallowed && updateReplicas == 0 && maxUnavailable >= desiredReplicas
+	}
+	return false
 }
 
 // startEvacuation calls the EMQX evacuation API for a replicant pod (side effect only).

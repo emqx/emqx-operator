@@ -965,7 +965,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 			{NodeName: "emqx@10.0.0.1", State: "fake"},
 		}
-		admission := checkReplicantPodRemoval(instance, currentPod)
+		round := newReconcileRound()
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("evacuation")),
@@ -989,39 +991,59 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		Expect(migrationTargetNodes(round, instance)).To(BeEmpty())
 	})
 
-	DescribeTable("node session > 0 with multiple replicants",
-		func(maxUnavailable intstr.IntOrString, maxSurge int, action admissionAction) {
-			instance.Status.ReplicantNodes[0].Sessions = 99999
-			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(2))
-			instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
-				MaxUnavailable: &maxUnavailable,
-				MaxSurge:       ptr.To(intstr.FromInt(maxSurge)),
-			}
-			admission := checkReplicantPodRemoval(instance, currentPod)
-			Expect(admission).Should(And(
-				HaveField("Action", Equal(action)),
-				HaveField("Reason", ContainSubstring("active sessions")),
-			))
-		},
-		Entry("evacuates / fewer than all replicas may be unavailable", intstr.FromInt(1), 0, admissionEvacuate),
-		Entry("removes / all replicas may be unavailable and surge is zero", intstr.FromString("100%"), 0, admissionRemove),
-		Entry("removes / maxUnavailable exceeds replicas and surge is zero", intstr.FromInt(3), 0, admissionRemove),
-		Entry("evacuates / all replicas may be unavailable but surge is allowed", intstr.FromString("100%"), 1, admissionEvacuate),
-	)
+	Context("before replacement replicas are created", func() {
+		BeforeEach(func() {
+			update.Spec.Replicas = ptr.To(int32(0))
+			Expect(k8sClient.Update(ctx, update)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, updatePod)).Should(Succeed())
+			update.Status = appsv1.ReplicaSetStatus{}
+			Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
+		})
 
-	It("node session > 0 & single-node replicant cluster", func() {
-		instance.Status.ReplicantNodes[0].Sessions = 99999
-		admission := checkReplicantPodRemoval(instance, currentPod)
-		Expect(admission).Should(And(
-			HaveField("Action", Equal(admissionRemove)),
-			HaveField("Reason", ContainSubstring("nowhere to evacuate")),
-		))
+		DescribeTable("node session > 0 with multiple replicants",
+			func(maxUnavailable intstr.IntOrString, maxSurge int, action admissionAction) {
+				instance.Status.ReplicantNodes[0].Sessions = 99999
+				instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(2))
+				instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
+					MaxUnavailable: &maxUnavailable,
+					MaxSurge:       ptr.To(intstr.FromInt(maxSurge)),
+				}
+				round := newReconcileRound()
+				Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+				admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)
+				Expect(admission).Should(And(
+					HaveField("Action", Equal(action)),
+					HaveField("Reason", ContainSubstring("active sessions")),
+				))
+			},
+			Entry("evacuates / fewer than all replicas may be unavailable",
+				intstr.FromInt(1), 0, admissionEvacuate),
+			Entry("removes / all replicas may be unavailable and surge is zero",
+				intstr.FromString("100%"), 0, admissionRemove),
+			Entry("removes / maxUnavailable exceeds replicas and surge is zero",
+				intstr.FromInt(3), 0, admissionRemove),
+			Entry("evacuates / all replicas may be unavailable but surge is allowed",
+				intstr.FromString("100%"), 1, admissionEvacuate),
+		)
+
+		It("node session > 0 & single-node replicant cluster", func() {
+			instance.Status.ReplicantNodes[0].Sessions = 99999
+			round := newReconcileRound()
+			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+			admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)
+			Expect(admission).Should(And(
+				HaveField("Action", Equal(admissionRemove)),
+				HaveField("Reason", ContainSubstring("nowhere to evacuate")),
+			))
+		})
 	})
 
 	It("node session > 0 & evacuation is disabled", func() {
 		instance.Spec.UpdateStrategy.EvacuationStrategy.Type = crd.DisabledEvacuationStrategy
 		instance.Status.ReplicantNodes[0].Sessions = 99999
-		admission := checkReplicantPodRemoval(instance, currentPod)
+		round := newReconcileRound()
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionRemove)),
 			HaveField("Reason", ContainSubstring("safe to stop")),
@@ -1030,7 +1052,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 
 	It("node session is 0", func() {
 		instance.Status.ReplicantNodes[0].Sessions = 0
-		admission := checkReplicantPodRemoval(instance, currentPod)
+		round := newReconcileRound()
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionRemove)),
 			HaveField("Reason", ContainSubstring("safe to stop")),
