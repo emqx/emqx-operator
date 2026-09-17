@@ -100,6 +100,8 @@ func (s *syncReplicantSets) scaleDown(
 	currentReplicas int32,
 	desiredReplicas int32,
 ) subResult {
+	var err error
+
 	pods := r.state.podsManagedBy(updateRs)
 	sortByName(pods)
 
@@ -111,11 +113,20 @@ func (s *syncReplicantSets) scaleDown(
 	excessUnavailable := max(0, desiredReplicas-numAvailable)
 	budget := max(0, min(maxUnavailable-excessUnavailable, excessReplicas))
 	admissions := s.evaluateReplicantAdmissions(instance, pods, budget, availability)
+
+	// Record all admissions first, then attempt to act on them: node evacuation relies on
+	// presence of annotations to pick migration targets.
 	for _, pa := range admissions {
-		err := s.onReplicantAdmission(r, instance, pa.Pod, pa.Admission)
-		if err != nil {
-			return reconcileError(err)
-		}
+		err = emperror.Append(s.recordAdmission(r, pa.Pod, pa.Admission), err)
+	}
+	if err != nil {
+		return reconcileError(err)
+	}
+	for _, pa := range admissions {
+		err = emperror.Append(s.onAdmission(r, instance, pa.Pod, pa.Admission), err)
+	}
+	if err != nil {
+		return reconcileError(err)
 	}
 
 	// Phase 2: set replicas to the count of non-removed pods, but no less than desired number.
@@ -249,12 +260,20 @@ func (s *syncReplicantSets) migrateSet(
 
 	// Phase 2:
 	// Start migrating outdated replicants up to maxUnavailable allowance.
+	// Record all admissions first, then attempt to act on them: node evacuation relies on
+	// presence of annotations to pick migration targets.
 	admissions := s.outdatedReplicantAdmissions(r, instance)
 	for _, pa := range admissions {
-		err = s.onReplicantAdmission(r, instance, pa.Pod, pa.Admission)
-		if err != nil {
-			return reconcileError(err)
-		}
+		err = emperror.Append(s.recordAdmission(r, pa.Pod, pa.Admission), err)
+	}
+	if err != nil {
+		return reconcileError(err)
+	}
+	for _, pa := range admissions {
+		err = emperror.Append(s.onAdmission(r, instance, pa.Pod, pa.Admission), err)
+	}
+	if err != nil {
+		return reconcileError(err)
 	}
 
 	// Phase 3:
@@ -291,23 +310,40 @@ func (s *syncReplicantSets) surgeScaleSet(
 	return nil
 }
 
-// onReplicantAdmission performs the side effects implied by a replicantAdmission.
+// recordAdmission is responsible for persisting admission annotations.
 // Every admitted pod is marked with AnnotationScalingDown so that on subsequent
 // reconcile iterations it bypasses the maxUnavailable budget.
-func (s *syncReplicantSets) onReplicantAdmission(
+func (s *syncReplicantSets) recordAdmission(
+	r *reconcileRound,
+	pod *corev1.Pod,
+	admission replicantAdmission,
+) error {
+	annotationsDirty := util.AttachAnnotation(pod, crd.AnnotationScalingDown, "true")
+	if admission.Action == admissionRemove {
+		annotationsDirty = util.AttachAnnotation(pod, corev1.PodDeletionCost, "-99999") || annotationsDirty
+	}
+	if annotationsDirty {
+		err := s.Client.Update(r.ctx, pod)
+		if err != nil {
+			return emperror.Wrap(err, "failed to annotate replicant pod")
+		}
+	}
+	return nil
+}
+
+// onAdmission performs the side effects implied by a replicantAdmission.
+func (s *syncReplicantSets) onAdmission(
 	r *reconcileRound,
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 	admission replicantAdmission,
 ) error {
-	annotationsDirty := util.AttachAnnotation(pod, crd.AnnotationScalingDown, "true")
 	switch admission.Action {
 	case admissionRemove:
 		r.log.V(1).Info("scheduling replicant pod removal",
 			"reason", admission.Reason,
 			"pod", klog.KObj(pod),
 		)
-		annotationsDirty = util.AttachAnnotation(pod, corev1.PodDeletionCost, "-99999") || annotationsDirty
 	case admissionWait:
 		r.log.V(1).Info("removal of replicant pod postponed",
 			"reason", admission.Reason,
@@ -318,32 +354,12 @@ func (s *syncReplicantSets) onReplicantAdmission(
 			"reason", admission.Reason,
 			"pod", klog.KObj(pod),
 		)
-	}
-	// 1. Commit the pod annotations.
-	err := s.updatePodAnnotations(r, pod, annotationsDirty)
-	if err != nil {
-		return err
-	}
-	// 2. Run any side effects.
-	switch admission.Action {
-	case admissionEvacuate:
 		err := s.startEvacuation(r, instance, pod)
 		if err != nil {
 			return emperror.WrapWithDetails(err,
 				"failed to start node evacuation",
 				"pod", klog.KObj(pod),
 			)
-		}
-	default:
-	}
-	return nil
-}
-
-func (s *syncReplicantSets) updatePodAnnotations(r *reconcileRound, pod *corev1.Pod, dirty bool) error {
-	if dirty {
-		err := s.Client.Update(r.ctx, pod)
-		if err != nil {
-			return emperror.Wrap(err, "failed to annotate replicant pod")
 		}
 	}
 	return nil
@@ -518,7 +534,10 @@ func checkReplicantPodRemoval(instance *crd.EMQX, pod *corev1.Pod) replicantAdmi
 	}
 
 	if nodeInfo.Sessions > 0 && instance.Spec.IsEvacuationEnabled() {
-		if instance.Spec.NumReplicantReplicas() == 1 && instance.Spec.NumMaxSurgeReplicantReplicas() == 0 {
+		surgeDisallowed := instance.Spec.NumMaxSurgeReplicantReplicas() == 0
+		desiredReplicas := instance.Spec.NumReplicantReplicas()
+		maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
+		if surgeDisallowed && (desiredReplicas == 1 || maxUnavailable >= desiredReplicas) {
 			return replicantAdmission{
 				Action: admissionRemove,
 				Reason: fmt.Sprintf("node %s has active sessions nowhere to evacuate", nodeInfo.Name),
@@ -533,7 +552,7 @@ func checkReplicantPodRemoval(instance *crd.EMQX, pod *corev1.Pod) replicantAdmi
 	return replicantAdmission{Action: admissionRemove, Reason: "node is safe to stop"}
 }
 
-// startReplicantEvacuation calls the EMQX evacuation API for a replicant pod (side effect only).
+// startEvacuation calls the EMQX evacuation API for a replicant pod (side effect only).
 func (s *syncReplicantSets) startEvacuation(r *reconcileRound, instance *crd.EMQX, pod *corev1.Pod) error {
 	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
 	if nodeInfo == nil {
