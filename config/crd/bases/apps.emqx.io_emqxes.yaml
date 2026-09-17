@@ -16133,13 +16133,6 @@ spec:
                         == int ? self.maxUnavailable == 0 : self.maxUnavailable.matches(r''^0+%$''))
                         && (!has(self.maxSurge) || (type(self.maxSurge) == int ? self.maxSurge
                         == 0 : self.maxSurge.matches(r''^0+%$''))))'
-                    - fieldPath: .maxSurge
-                      message: maxSurge must be greater than zero when maxUnavailable
-                        is 100%
-                      rule: '!(has(self.maxUnavailable) && (type(self.maxUnavailable)
-                        == string && self.maxUnavailable.matches(r''^0*100%$'')) &&
-                        (!has(self.maxSurge) || (type(self.maxSurge) == int ? self.maxSurge
-                        == 0 : self.maxSurge.matches(r''^0+%$''))))'
                   type:
                     default: RollingUpdate
                     description: |-

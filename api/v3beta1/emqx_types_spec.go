@@ -112,7 +112,6 @@ type UpdateStrategy struct {
 // ReplicantsUpdateStrategy controls the pace of replicant ReplicaSet rollouts.
 // Semantics mirror `apps/v1 Deployment.spec.strategy.rollingUpdate`.
 // +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && (type(self.maxUnavailable) == int ? self.maxUnavailable == 0 : self.maxUnavailable.matches(r'^0+%$')) && (!has(self.maxSurge) || (type(self.maxSurge) == int ? self.maxSurge == 0 : self.maxSurge.matches(r'^0+%$'))))",message="maxUnavailable may not be 0 when maxSurge is 0",fieldPath=".maxUnavailable"
-// +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && (type(self.maxUnavailable) == string && self.maxUnavailable.matches(r'^0*100%$')) && (!has(self.maxSurge) || (type(self.maxSurge) == int ? self.maxSurge == 0 : self.maxSurge.matches(r'^0+%$'))))",message="maxSurge must be greater than zero when maxUnavailable is 100%",fieldPath=".maxSurge"
 type ReplicantsUpdateStrategy struct {
 	// MaxUnavailable is the maximum number of old replicant pods that may be drained (evacuating,
 	// terminating, or marked for deletion) at once during a replicant ReplicaSet rollout.
