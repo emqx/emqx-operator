@@ -142,7 +142,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 		coreSet.Status.AvailableReplicas = 2
 		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
 		Expect(ensureReconcileState(round, instance)).To(Succeed())
-		admission := checkCorePodRemoval(round, instance, pods[2], coreRollingUpdate)
+		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", Equal("cores are not available yet")),
@@ -153,7 +153,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 			{NodeName: "emqx@" + pods[2].Name, State: "evicting_sessions"},
 		}
-		admission := checkCorePodRemoval(round, instance, pods[2], coreRollingUpdate)
+		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", Equal("node evacuation in progress")),
@@ -162,7 +162,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 
 	It("node session > 0", func() {
 		instance.Status.CoreNodes[2].Sessions = 99999
-		admission := checkCorePodRemoval(round, instance, pods[2], coreRollingUpdate)
+		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionEvacuate)),
 			HaveField("Reason", ContainSubstring("active sessions")),
@@ -174,7 +174,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 		instance.Status.CoreNodes = []crd.EMQXNode{
 			{Name: "emqx@" + pods[0].Name, PodName: pods[0].Name, Status: "running", Sessions: 99999},
 		}
-		admission := checkCorePodRemoval(round, instance, pods[0], coreRollingUpdate)
+		admission := checkCorePodRemoval(round, instance, pods[0], rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionRemove)),
 			HaveField("Reason", ContainSubstring("nowhere")),
@@ -184,7 +184,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 	It("node session > 0 & node evacuation is disabled", func() {
 		instance.Spec.UpdateStrategy.EvacuationStrategy.Type = crd.DisabledEvacuationStrategy
 		instance.Status.CoreNodes[2].Sessions = 99999
-		admission := checkCorePodRemoval(round, instance, pods[2], coreRollingUpdate)
+		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionRemove)),
 		))
@@ -192,7 +192,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 
 	It("node session is 0", func() {
 		instance.Status.CoreNodes[2].Sessions = 0
-		admission := checkCorePodRemoval(round, instance, pods[2], coreRollingUpdate)
+		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).To(
 			HaveField("Action", Equal(admissionRemove)),
 		)
@@ -241,7 +241,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 		pods[2].Status.Conditions = []corev1.PodCondition{
 			{Type: crd.DSReplicationSite, Status: corev1.ConditionTrue},
 		}
-		admission := checkCorePodRemoval(round, instance, pods[2], coreScaleDown)
+		admission := checkCorePodRemoval(round, instance, pods[2], scaleDown)
 		Expect(admission).To(And(
 			HaveField("Action", Equal(admissionWait)),
 			HaveField("Reason", ContainSubstring("DS replication site")),
@@ -252,7 +252,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 		pods[2].Status.Conditions = []corev1.PodCondition{
 			{Type: crd.DSReplicationSite, Status: corev1.ConditionTrue},
 		}
-		admission := checkCorePodRemoval(round, instance, pods[2], coreRollingUpdate)
+		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).To(
 			HaveField("Action", Equal(admissionRemove)),
 		)

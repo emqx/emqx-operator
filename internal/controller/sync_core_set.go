@@ -37,52 +37,6 @@ type syncCoreSet struct {
 	*EMQXReconciler
 }
 
-type admissionAction int
-
-const (
-	// Pod removal blocked; reason explains why.
-	admissionWait admissionAction = iota
-	// Pod may be removed right now.
-	admissionRemove
-	// Pod needs evacuation before it can be removed.
-	admissionEvacuate
-)
-
-type admissionCause string
-
-const (
-	coreScaleDown     admissionCause = "scale down"
-	coreRollingUpdate admissionCause = "rolling update"
-)
-
-type coreAdmission struct {
-	Action admissionAction
-	Reason string
-	Cause  admissionCause
-}
-
-func (a coreAdmission) wait(reason string, args ...any) coreAdmission {
-	return a.withActionReason(admissionWait, reason, args...)
-}
-
-func (a coreAdmission) remove(reason string, args ...any) coreAdmission {
-	return a.withActionReason(admissionRemove, reason, args...)
-}
-
-func (a coreAdmission) evacuate(reason string, args ...any) coreAdmission {
-	return a.withActionReason(admissionEvacuate, reason, args...)
-}
-
-func (a coreAdmission) withActionReason(action admissionAction, reason string, args ...any) coreAdmission {
-	a.Action = action
-	if len(args) > 0 {
-		a.Reason = fmt.Sprintf(reason, args...)
-	} else {
-		a.Reason = reason
-	}
-	return a
-}
-
 func (s *syncCoreSet) reconcile(r *reconcileRound, instance *crd.EMQX) subResult {
 	coreSet := r.state.coreSet()
 	if coreSet == nil {
@@ -160,16 +114,16 @@ func (s *syncCoreSet) rollingUpdate(r *reconcileRound, instance *crd.EMQX) subRe
 		// ReplicantSet is in the process of update.
 		// Keep at least one old-version core alive so current-revision replicants can rejoin.
 		if len(outdated) == 1 {
-			return s.onCoreAdmission(r, instance, candidate, coreAdmission{
+			return s.onAdmission(r, instance, candidate, admission{
 				Action: admissionWait,
 				Reason: "current replicantSet still migrating",
-				Cause:  coreRollingUpdate,
+				Cause:  rollingUpdate,
 			})
 		}
 	}
 
-	admission := checkCorePodRemoval(r, instance, candidate, coreRollingUpdate)
-	return s.onCoreAdmission(r, instance, candidate, admission)
+	admission := checkCorePodRemoval(r, instance, candidate, rollingUpdate)
+	return s.onAdmission(r, instance, candidate, admission)
 }
 
 func (s *syncCoreSet) scaleUp(r *reconcileRound, desiredReplicas int32) subResult {
@@ -188,7 +142,7 @@ func (s *syncCoreSet) scaleUp(r *reconcileRound, desiredReplicas int32) subResul
 // admits one more ordinal and decrements the StatefulSet replica count.
 func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentReplicas int32) subResult {
 	var candidate *corev1.Pod
-	var admission coreAdmission
+	var coreAdmission admission
 
 	coreSet := r.state.coreSet()
 	desiredReplicas := instance.Spec.NumCoreReplicas()
@@ -199,12 +153,12 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentRe
 		for n := watermark; n > currentReplicas; n-- {
 			pod := r.state.podWithName(fmt.Sprintf("%s-%d", coreSet.Name, n-1))
 			if pod != nil && pod.DeletionTimestamp == nil {
-				admission = coreAdmission{
+				coreAdmission = admission{
 					Action: admissionRemove,
 					Reason: "removal already admitted",
-					Cause:  coreScaleDown,
+					Cause:  scaleDown,
 				}
-				result := s.onCoreAdmission(r, instance, pod, admission)
+				result := s.onAdmission(r, instance, pod, coreAdmission)
 				result.needRequeue = true
 				return result
 			}
@@ -219,16 +173,16 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentRe
 	}
 
 	if candidate != nil {
-		admission = checkCorePodRemoval(r, instance, candidate, coreScaleDown)
+		coreAdmission = checkCorePodRemoval(r, instance, candidate, scaleDown)
 	} else {
-		admission = coreAdmission{
+		coreAdmission = admission{
 			Action: admissionRemove,
 			Reason: "already terminated",
-			Cause:  coreScaleDown,
+			Cause:  scaleDown,
 		}
 	}
 
-	if admission.Action == admissionRemove {
+	if coreAdmission.Action == admissionRemove {
 		// Decrement StatefulSet replica count first so the StatefulSet controller
 		// won't recreate the pod after we delete it.
 		if r.coreRetirement.watermark == currentReplicas {
@@ -242,7 +196,7 @@ func (s *syncCoreSet) scaleDown(r *reconcileRound, instance *crd.EMQX, currentRe
 		}
 	}
 	if candidate != nil {
-		return s.onCoreAdmission(r, instance, candidate, admission)
+		return s.onAdmission(r, instance, candidate, coreAdmission)
 	}
 	return subResult{}
 }
@@ -288,9 +242,9 @@ func checkCorePodRemoval(
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 	cause admissionCause,
-) coreAdmission {
+) admission {
 	status := &instance.Status
-	admission := coreAdmission{Cause: cause}
+	admission := admission{Cause: cause}
 
 	// Disallow removing pod if other cores just recently became ready.
 	numAvailableCores := int32(0)
@@ -309,7 +263,7 @@ func checkCorePodRemoval(
 	}
 
 	// Disallow permanently removing the pod that is still a DS replication site.
-	if cause == coreScaleDown {
+	if cause == scaleDown {
 		dsCondition := util.FindPodCondition(pod, crd.DSReplicationSite)
 		if dsCondition != nil && dsCondition.Status != corev1.ConditionFalse {
 			return admission.wait("pod %s is still a DS replication site", pod.Name)
@@ -341,30 +295,30 @@ func checkCorePodRemoval(
 	return admission.remove("node is safe to stop")
 }
 
-// onCoreAdmission performs the side effects implied by a coreAdmission.
-func (s *syncCoreSet) onCoreAdmission(
+// onAdmission performs the side effects implied by an admission.
+func (s *syncCoreSet) onAdmission(
 	r *reconcileRound,
 	instance *crd.EMQX,
 	candidate *corev1.Pod,
-	admission coreAdmission,
+	coreAdmission admission,
 ) subResult {
-	switch admission.Action {
+	switch coreAdmission.Action {
 	case admissionRemove:
 		r.log.V(1).Info("removing core pod",
-			"reason", admission.Reason,
+			"reason", coreAdmission.Reason,
 			"pod", klog.KObj(candidate),
 			"statefulSet", klog.KObj(r.state.coreSet()),
-			"cause", admission.Cause,
+			"cause", coreAdmission.Cause,
 		)
 		if err := s.deleteCorePod(r, candidate); err != nil {
 			return reconcileError(emperror.Wrap(err, "failed to delete core pod"))
 		}
 	case admissionWait:
 		r.log.V(1).Info("removal of core pod postponed",
-			"reason", admission.Reason,
+			"reason", coreAdmission.Reason,
 			"pod", klog.KObj(candidate),
 			"statefulSet", klog.KObj(r.state.coreSet()),
-			"cause", admission.Cause,
+			"cause", coreAdmission.Cause,
 		)
 	case admissionEvacuate:
 		err := s.startEvacuation(r, instance, candidate)
@@ -373,7 +327,7 @@ func (s *syncCoreSet) onCoreAdmission(
 				"failed to start node evacuation",
 				"pod", klog.KObj(candidate),
 				"statefulSet", klog.KObj(r.state.coreSet()),
-				"cause", admission.Cause,
+				"cause", coreAdmission.Cause,
 			)}
 		}
 	}
@@ -438,7 +392,7 @@ func (s *syncCoreSet) startEvacuation(
 func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 	targets := []string{}
 	fallback := []string{}
-	if instance.Spec.HasReplicants() {
+	if instance.Spec.NumReplicantReplicas() > 0 {
 		updateReplicantSet := r.state.updateReplicantSet(instance)
 		if updateReplicantSet == nil {
 			return targets
@@ -446,6 +400,9 @@ func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 		for _, node := range instance.Status.ReplicantNodes {
 			pod := r.state.podWithName(node.PodName)
 			if pod == nil {
+				continue
+			}
+			if _, ok := pod.Annotations[crd.AnnotationScalingDown]; ok {
 				continue
 			}
 			if util.IsPodManagedBy(pod, updateReplicantSet) {
