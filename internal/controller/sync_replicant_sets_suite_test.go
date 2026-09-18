@@ -961,6 +961,19 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		))
 	})
 
+	It("waits when the node is unreachable and its role is unknown", func() {
+		instance.Status.ClusterNodes[0] = crd.EMQXNode{
+			Name: "emqx@10.0.0.1", PodName: currentPod.Name, Status: "unreachable",
+		}
+		round := newReconcileRound()
+		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
+		admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)
+		Expect(admission).Should(And(
+			HaveField("Action", Equal(admissionWait)),
+			HaveField("Reason", Equal("node is unreachable")),
+		))
+	})
+
 	It("node evacuation in progress", func() {
 		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 			{NodeName: "emqx@10.0.0.1", State: "fake"},

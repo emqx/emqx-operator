@@ -149,6 +149,17 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 		))
 	})
 
+	It("waits when the node is unreachable and its role is unknown", func() {
+		instance.Status.ClusterNodes[2] = crd.EMQXNode{
+			Name: "emqx@" + pods[2].Name, PodName: pods[2].Name, Status: "unreachable",
+		}
+		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
+		Expect(admission).Should(And(
+			HaveField("Action", Equal(admissionWait)),
+			HaveField("Reason", Equal("node is unreachable")),
+		))
+	})
+
 	It("waits while a node evacuation is in progress", func() {
 		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 			{NodeName: "emqx@" + pods[2].Name, State: "evicting_sessions"},

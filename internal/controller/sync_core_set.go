@@ -272,12 +272,13 @@ func checkCorePodRemoval(
 
 	nodeInfo := status.FindNodeByPodName(pod.Name, crd.RoleCore)
 
-	if nodeInfo == nil {
+	switch {
+	case nodeInfo == nil:
 		return admission.remove("node is out of cluster")
-	}
-
-	if nodeInfo.Status == api.NodeStatusStopped {
+	case nodeInfo.Status == api.NodeStatusStopped:
 		return admission.remove("node is already stopped")
+	case nodeInfo.Status == api.NodeStatusUnreachable:
+		return admission.wait("node is unreachable")
 	}
 
 	evacuation := status.FindNodeEvacuation(nodeInfo.Name)

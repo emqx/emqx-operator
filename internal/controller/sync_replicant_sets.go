@@ -504,12 +504,13 @@ func checkReplicantPodRemoval(
 	}
 
 	nodeInfo := status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
-	if nodeInfo == nil {
+	switch {
+	case nodeInfo == nil:
 		return replicantAdmission.remove("node is out of cluster")
-	}
-
-	if nodeInfo.Status == api.NodeStatusStopped {
+	case nodeInfo.Status == api.NodeStatusStopped:
 		return replicantAdmission.remove("node is already stopped")
+	case nodeInfo.Status == api.NodeStatusUnreachable:
+		return replicantAdmission.wait("node is unreachable")
 	}
 
 	evacuation := status.FindNodeEvacuation(nodeInfo.Name)
