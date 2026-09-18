@@ -72,6 +72,8 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 			crd.EMQXNode{Role: "replicant", Name: "emqx@replicant", Status: "running"},
 			crd.EMQXNode{Role: "", Name: "emqx@foreign", Status: "unreachable"},
 		))
+		Expect(instance.Status.CoreNodesStatus.ReadyReplicas).To(BeZero())
+		Expect(instance.Status.ReplicantNodesStatus.ReadyReplicas).To(BeZero())
 	})
 
 	It("preserves runtime configuration checkpoint and recomputes derived revisions", func() {

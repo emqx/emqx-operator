@@ -154,18 +154,13 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 		}
 	}
 
-	status.CoreNodesStatus.ReadyReplicas = 0
-	for _, node := range status.CoreNodes {
-		if node.Status == api.NodeStatusRunning {
-			status.CoreNodesStatus.ReadyReplicas++
-		}
+	if coreSet != nil {
+		_, running := tallyClusterNodes(r.state, &status, podsOfCoreSet(r.state))
+		status.CoreNodesStatus.ReadyReplicas = running
 	}
 	if hasReplicants {
-		for _, node := range status.ReplicantNodes {
-			if node.Status == api.NodeStatusRunning {
-				status.ReplicantNodesStatus.ReadyReplicas++
-			}
-		}
+		_, running := tallyClusterNodes(r.state, &status, podsOfReplicantSets(r.state))
+		status.ReplicantNodesStatus.ReadyReplicas = running
 	}
 
 	switch {
@@ -197,7 +192,7 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 
 	// update status condition
 	instance.Status = status
-	evaluateStatusConditions(r.state, instance)
+	u.evaluateStatusConditions(r.state, instance)
 
 	if err := u.Client.Status().Update(r.ctx, instance); err != nil {
 		return subResult{err: emperror.Wrap(err, "failed to update status")}
@@ -238,7 +233,7 @@ func (*updateStatus) inheritConditions(instance *crd.EMQX) []metav1.Condition {
 }
 
 // evaluateStatusConditions evaluates all conditions independently from current state.
-func evaluateStatusConditions(s *reconcileState, instance *crd.EMQX) {
+func (*updateStatus) evaluateStatusConditions(s *reconcileState, instance *crd.EMQX) {
 	evaluateCoreNodesProgressing(s, instance)
 	evaluateReplicantNodesProgressing(s, instance)
 	evaluateAvailable(s, instance)
@@ -450,36 +445,38 @@ func evaluateReady(s *reconcileState, instance *crd.EMQX) {
 	)
 }
 
-func evaluateCoresReady(r *reconcileState, instance *crd.EMQX) bool {
+func evaluateCoresReady(s *reconcileState, instance *crd.EMQX) bool {
 	desired := instance.Spec.NumCoreReplicas()
-	coreSet := r.coreSet()
-	coresReady := int32(0)
-	coresUpdated := int32(0)
-	coresTotal := int32(0)
-	nodesTotal := int32(len(instance.Status.CoreNodes))
-	nodesReady := instance.Status.CoreNodesStatus.ReadyReplicas
-	if coreSet != nil {
-		coresTotal = coreSet.Status.Replicas
-		coresReady = coreSet.Status.ReadyReplicas
-		coresUpdated = coreSet.Status.UpdatedReplicas
+	coreSet := s.coreSet()
+	if coreSet == nil {
+		return false
 	}
-	return coresTotal == desired && coresReady == desired && coresUpdated == desired &&
-		nodesTotal == desired && nodesReady == desired
+	numPods, numRunningNodes := tallyClusterNodes(s, &instance.Status, podsOfCoreSet(s))
+	return coreSet.Status.Replicas == desired &&
+		coreSet.Status.ReadyReplicas == desired &&
+		coreSet.Status.UpdatedReplicas == desired &&
+		numPods == desired &&
+		numRunningNodes == desired
 }
 
 func evaluateReplicantsReady(s *reconcileState, instance *crd.EMQX) bool {
 	desired := instance.Spec.NumReplicantReplicas()
 	replicantSet := s.updateReplicantSet(instance)
-	replicantsTotal := int32(0)
-	replicantsReady := int32(0)
-	nodesTotal := int32(len(instance.Status.ReplicantNodes))
-	nodesReady := instance.Status.ReplicantNodesStatus.ReadyReplicas
-	if replicantSet != nil {
-		replicantsTotal = replicantSet.Status.Replicas
-		replicantsReady = replicantSet.Status.ReadyReplicas
+	if replicantSet == nil && desired > 0 {
+		return false
 	}
-	return replicantsTotal == desired && replicantsReady == desired &&
-		nodesTotal == desired && nodesReady == desired
+	numUpdatedReplicas := int32(0)
+	numReadyReplicas := int32(0)
+	if replicantSet != nil {
+		numUpdatedReplicas = replicantSet.Status.Replicas
+		numReadyReplicas = replicantSet.Status.ReadyReplicas
+	}
+	numPods, numRunningNodes := tallyClusterNodes(s, &instance.Status, podsOfReplicantSets(s))
+	return s.numReplicants() == desired &&
+		numUpdatedReplicas == desired &&
+		numReadyReplicas == desired &&
+		numPods == desired &&
+		numRunningNodes == desired
 }
 
 func switchReplicantSet(
@@ -543,15 +540,28 @@ func (u *updateStatus) getEMQXNodeList(r *reconcileRound, instance *crd.EMQX, no
 	return list
 }
 
-// determineNodeRole tells the node role, making an informed guess when `node.Role` is empty.
-// Returns empty string if impossible to determine.
-func determineNodeRole(s *reconcileState, node crd.EMQXNode) string {
-	if node.Role != "" {
-		return node.Role
+// tallyClusterNodes counts managed Pods with a corresponding running EMQX nodes,
+// according to the set of cluster nodes obtained through EMQX Nodes API.
+// Foreign and duplicate entries are ignored.
+func tallyClusterNodes(
+	s *reconcileState,
+	status *crd.EMQXStatus,
+	filters ...reconcileStatePodFilter,
+) (int32, int32) {
+	total := int32(0)
+	running := int32(0)
+	filterAlive := podsAlive{}
+	for _, pod := range s.listPods(filters...) {
+		total++
+		if !filterAlive.passes(pod) {
+			continue
+		}
+		for _, node := range status.ClusterNodes {
+			if node.PodName == pod.Name && node.Status == api.NodeStatusRunning {
+				running++
+				break
+			}
+		}
 	}
-	pod := s.podWithName(node.PodName)
-	if pod != nil {
-		return podRole(pod)
-	}
-	return ""
+	return total, running
 }
