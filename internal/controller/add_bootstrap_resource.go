@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"crypto/rand"
+
 	emperror "emperror.dev/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -9,7 +11,6 @@ import (
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	resources "github.com/emqx/emqx-operator/internal/controller/resources"
-	"github.com/sethvargo/go-password/password"
 )
 
 type addBootstrap struct {
@@ -35,12 +36,10 @@ func (a *addBootstrap) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 }
 
 func generateBootstrapAPIKeySecret(instance *crd.EMQX) *corev1.Secret {
-	password, _ := password.Generate(64, 10, 0, true, true)
-	content := resources.DefaultBootstrapAPIKey + ":" + password
+	content := resources.DefaultBootstrapAPIKey + ":" + rand.Text()
 	return resources.BootstrapAPIKey(instance).Secret(content)
 }
 
 func generateNodeCookieSecret(instance *crd.EMQX) *corev1.Secret {
-	cookie, _ := password.Generate(64, 10, 0, true, true)
-	return resources.Cookie(instance).Secret(cookie)
+	return resources.Cookie(instance).Secret(rand.Text())
 }

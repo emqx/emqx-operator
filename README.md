@@ -30,7 +30,7 @@ Requires Kubernetes >= 1.27, with following features:
 
 Here's the simplest way to install the operator.
 ```sh
-kubectl apply --server-side=true -f https://github.com/emqx/emqx-operator/releases/download/v2.3.0/install.yaml
+kubectl apply --server-side=true -f https://github.com/emqx/emqx-operator/releases/download/v3.0.0/install.yaml
 kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" --namespace emqx-operator-system
 ```
 
@@ -115,12 +115,16 @@ kubectl logs -l "control-plane=controller-manager" --tail=-1 --namespace emqx-op
 ## Development
 
 ### Prerequisites
-- go version v1.22.0+
+- go version v1.26.0+
 - docker version 17.03+.
 - kubectl version v1.27+.
 - Access to a Kubernetes v1.27+ cluster.
+- Docker Hub account.
 
 ### To Deploy on the cluster
+
+Run `docker login dhi.io` to pull the Docker Hardened Images used by the build.
+
 **Build and push your image to the location specified by `OPERATOR_IMAGE`:**
 
 ```sh

@@ -5,7 +5,6 @@
 *.so
 *.dylib
 bin/*
-Dockerfile.cross
 Dockerfile.coverage
 
 # Test binary, built with `go test -c`

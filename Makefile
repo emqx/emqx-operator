@@ -190,10 +190,10 @@ docker-push: ## Push docker image with the manager.
 #   OPERATOR_IMAGE=<myregistry/image:<tag>> then the export will fail)
 PLATFORMS ?= linux/arm64,linux/amd64
 .PHONY: docker-buildx
-docker-buildx: Dockerfile.cross generate ## Build and push docker image for the manager for cross-platform support
+docker-buildx: Dockerfile generate ## Build and push docker image for the manager for cross-platform support
 	- $(CONTAINER_TOOL) buildx create --name emqx-operator-builder
 	$(CONTAINER_TOOL) buildx use emqx-operator-builder
-	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${OPERATOR_IMAGE} -f Dockerfile.cross .
+	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${OPERATOR_IMAGE} -f Dockerfile .
 	- $(CONTAINER_TOOL) buildx rm emqx-operator-builder
 
 .PHONY: build-installer
@@ -204,10 +204,6 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 
 Dockerfile.coverage: Dockerfile # prepare coverage Dockerfile
 	awk '{ if ($$0 ~ /RUN/) { sub(/go build -a -o manager/, "& -cover -covermode atomic") } print }' $< > $@
-	if diff -q $@ $<; then exit 1; fi
-
-Dockerfile.cross: Dockerfile # prepare cross-platform Dockerfile
-	awk '{ if (NR==2) { sub(/^FROM/, "FROM --platform=$${BUILDPLATFORM}") } print }' $< > $@
 	if diff -q $@ $<; then exit 1; fi
 
 ##@ Deployment
