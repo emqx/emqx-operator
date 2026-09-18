@@ -184,15 +184,23 @@ func parseNodeName(s string, instance *crd.EMQX) *nodeName {
 	// Example: emqx@10.244.0.23
 	var parsed nodeName
 	nameParts := strings.Split(s, "@")
-	if len(nameParts) != 2 {
+	if len(nameParts) != 2 || nameParts[0] == "" || nameParts[1] == "" {
 		return nil
 	}
 	parsed.name = nameParts[0]
 	parsed.hostName = nameParts[1]
-	hostParts := strings.Split(nameParts[1], instance.HeadlessServiceNamespacedName().Name)
-	if len(hostParts) > 1 {
-		parsed.podName = strings.TrimRight(hostParts[0], ".")
+	podName, ok := strings.CutSuffix(parsed.hostName, "."+clusterDNSName(instance))
+	// hostName ends with headless DNS name:
+	if ok {
+		parsed.podName = podName
+		return &parsed
 	}
+	// hostName does not contain `.` or `::`, likely a short hostname:
+	if !strings.ContainsAny(parsed.hostName, ".:") {
+		parsed.podName = parsed.hostName
+		return &parsed
+	}
+	// hostName contains IP address, podName is unknown:
 	return &parsed
 }
 

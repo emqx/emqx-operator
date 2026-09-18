@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
+	"github.com/emqx/emqx-operator/internal/emqx/api"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -144,4 +145,44 @@ func TestManagedWorkloadReadiness(t *testing.T) {
 		instance.Status.ClusterNodes = instance.Status.ClusterNodes[:2]
 		require.True(t, evaluateReplicantsReady(state, instance))
 	})
+}
+
+func TestNodePodAssociation(t *testing.T) {
+	instance := &crd.EMQX{ObjectMeta: metav1.ObjectMeta{Name: "emqx", Namespace: "default"}}
+	instance.Spec.ClusterDomain = "cluster.local"
+	round := &reconcileRound{state: &reconcileState{
+		pods: []*corev1.Pod{
+			{ObjectMeta: metav1.ObjectMeta{Name: "emqx-core-1", Labels: crd.CoreLabels()}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "emqx-core-10", Labels: crd.CoreLabels()}},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "emqx-replicant-abc", Labels: crd.ReplicantLabels()},
+				Status:     corev1.PodStatus{PodIP: "10.244.0.23"},
+			},
+		}},
+	}
+	for _, tc := range []struct {
+		name string
+		role string
+		pod  string
+	}{
+		{"emqx@emqx-core-10.emqx-headless.default.svc.cluster.local", "", "emqx-core-10"},
+		{"emqx@10.244.0.23", "", "emqx-replicant-abc"},
+		{"emqx@emqx-core-1", "", "emqx-core-1"},
+		{"emqx@emqx-core-10.emqx-headless.default.svc.cluster.local", "replicant", "emqx-core-10"},
+		{"emqx@10.244.0.23", "core", "emqx-replicant-abc"},
+		{"emqx@emqx-core-100.emqx-headless.default.svc.cluster.local", "", ""},
+		{"emqx@emqx-core-1.foreign.example", "", ""},
+		{"malformed", "", ""},
+		{"emqx@", "", ""},
+	} {
+		r := &updateStatus{}
+		t.Run(tc.name+"/"+tc.role, func(t *testing.T) {
+			nodes := r.getEMQXNodeList(round, instance, []api.EMQXNode{
+				{Node: tc.name, Role: tc.role, NodeStatus: api.NodeStatusUnreachable},
+			})
+			require.Len(t, nodes, 1)
+			require.Equal(t, tc.pod, nodes[0].PodName)
+			require.Equal(t, tc.role, nodes[0].Role)
+		})
+	}
 }

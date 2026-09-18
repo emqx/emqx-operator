@@ -524,15 +524,18 @@ func (u *updateStatus) getEMQXNodeList(r *reconcileRound, instance *crd.EMQX, no
 			Sessions:    n.Connections,
 			Connections: n.LiveConnections,
 		}
-		host := parseNodeName(n.Node, instance).hostName
-		for _, pod := range r.state.pods {
-			if node.Role == crd.RoleCore && strings.HasPrefix(host, pod.Name) {
-				node.PodName = pod.Name
-				break
-			}
-			if node.Role == crd.RoleReplicant && host == pod.Status.PodIP {
-				node.PodName = pod.Name
-				break
+		if parsed := parseNodeName(n.Node, instance); parsed != nil {
+			for _, pod := range r.state.pods {
+				// A core pod:
+				if parsed.podName == pod.Name {
+					node.PodName = pod.Name
+					break
+				}
+				// Likely a replicant pod:
+				if parsed.hostName == pod.Status.PodIP && pod.Status.PodIP != "" {
+					node.PodName = pod.Name
+					break
+				}
 			}
 		}
 		list = append(list, node)
