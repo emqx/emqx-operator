@@ -1,7 +1,7 @@
 # Build the manager binary
 # Use dhi.io/golang:1.26.8-alpine3.24
 # Refer to https://hub.docker.com/hardened-images/catalog/dhi/golang/images/ for more details
-FROM dhi.io/golang@sha256:9aaf4c5713faa338e6adaef0e67c23d4b2f033270f44b76aa2616625304d90c5 AS builder
+FROM --platform=$BUILDPLATFORM dhi.io/golang@sha256:9aaf4c5713faa338e6adaef0e67c23d4b2f033270f44b76aa2616625304d90c5 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
