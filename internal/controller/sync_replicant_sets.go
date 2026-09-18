@@ -390,7 +390,7 @@ func (s *syncReplicantSets) outdatedReplicantAdmissions(
 ) []podAdmission {
 	specReplicas := instance.Spec.NumReplicantReplicas()
 	maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
-	availability, numAvailable := s.snapshotAvailability(instance, r.state.replicantPods())
+	availability, numAvailable := s.snapshotAvailability(instance, r.state.listPods(podsOfReplicantSets(r.state)))
 	extraAvailable := numAvailable - specReplicas
 	budget := max(0, maxUnavailable+extraAvailable)
 	outdatedPods := r.state.outdatedReplicantPods(instance)
