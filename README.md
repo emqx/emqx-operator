@@ -115,7 +115,7 @@ kubectl logs -l "control-plane=controller-manager" --tail=-1 --namespace emqx-op
 ## Development
 
 ### Prerequisites
-- go version v1.22.0+
+- go version v1.26.0+
 - docker version 17.03+.
 - kubectl version v1.27+.
 - Access to a Kubernetes v1.27+ cluster.
