@@ -90,6 +90,10 @@ func (filter podsWithEMQXVersion) passes(pod *corev1.Pod) bool {
 	return node != nil && strings.HasPrefix(node.Version, filter.prefix)
 }
 
+func podRole(pod *corev1.Pod) string {
+	return pod.Labels[crd.LabelMriaRole]
+}
+
 func (r *reconcileState) podWithName(name string) *corev1.Pod {
 	for _, pod := range r.pods {
 		if pod.Name == name {

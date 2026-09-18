@@ -177,10 +177,11 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 	})
 
 	It("force-leaves scaled-down node whose pod is gone", func() {
-		instance.Status.CoreNodes = []crd.EMQXNode{
-			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
-			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "stopped"},
-			{Name: emqxNodeName(coreSet.Name + "-10"), PodName: "", Status: "stopped"},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "core", Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
+			{Role: "core", Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "stopped"},
+			{Role: "core", Name: emqxNodeName(coreSet.Name + "-10"), PodName: "", Status: "stopped"},
+			{Role: "", Name: emqxNodeName(coreSet.Name + "-11"), Status: "stopped"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
 		Expect(ensureReconcileState(round, instance)).To(Succeed())
@@ -193,9 +194,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 	})
 
 	It("does NOT force-leave stopped node whose pod still exists", func() {
-		instance.Status.CoreNodes = []crd.EMQXNode{
-			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "stopped"},
-			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: coreSet.Name + "-1", Status: "stopped"},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "core", Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "stopped"},
+			{Role: "core", Name: emqxNodeName(coreSet.Name + "-1"), PodName: coreSet.Name + "-1", Status: "stopped"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
 		Expect(ensureReconcileState(round, instance)).To(Succeed())
@@ -205,9 +206,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 	})
 
 	It("does NOT force-leave running nodes without pods", func() {
-		instance.Status.CoreNodes = []crd.EMQXNode{
-			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
-			{Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "running"},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "core", Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
+			{Role: "core", Name: emqxNodeName(coreSet.Name + "-1"), PodName: "", Status: "running"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
 		Expect(ensureReconcileState(round, instance)).To(Succeed())
@@ -217,12 +218,10 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 	})
 
 	It("does NOT force-leave stopped replicant nodes whose pods are gone", func() {
-		instance.Status.CoreNodes = []crd.EMQXNode{
-			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
-		}
-		instance.Status.ReplicantNodes = []crd.EMQXNode{
-			{Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped", Role: "replicant"},
-			{Name: "emqx@10.0.0.11", PodName: "", Status: "stopped", Role: "replicant"},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "core", Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
+			{Role: "replicant", Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped"},
+			{Role: "replicant", Name: "emqx@10.0.0.11", PodName: "", Status: "stopped"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
 		Expect(ensureReconcileState(round, instance)).To(Succeed())
@@ -233,11 +232,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 
 	It("does NOT force-leave stopped replicant whose pod still exists", func() {
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Status.CoreNodes = []crd.EMQXNode{
-			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
-		}
-		instance.Status.ReplicantNodes = []crd.EMQXNode{
-			{Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped", Role: "replicant"},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "core", Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
+			{Role: "replicant", Name: "emqx@10.0.0.1", PodName: replicantPod.Name, Status: "stopped"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
 		Expect(ensureReconcileState(round, instance)).To(Succeed())
@@ -247,11 +244,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 	})
 
 	It("does NOT force-leave running replicant nodes without pods", func() {
-		instance.Status.CoreNodes = []crd.EMQXNode{
-			{Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
-		}
-		instance.Status.ReplicantNodes = []crd.EMQXNode{
-			{Name: "emqx@10.0.0.99", PodName: "", Status: "running", Role: "replicant"},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "core", Name: emqxNodeName(corePod0.Name), PodName: corePod0.Name, Status: "running"},
+			{Role: "replicant", Name: "emqx@10.0.0.99", PodName: "", Status: "running"},
 		}
 		s := &syncClusterMembership{emqxReconciler()}
 		Expect(ensureReconcileState(round, instance)).To(Succeed())

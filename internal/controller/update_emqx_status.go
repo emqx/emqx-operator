@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
-	"strings"
 
 	emperror "emperror.dev/errors"
 	crd "github.com/emqx/emqx-operator/api/v3beta1"
@@ -90,14 +89,7 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 			apiError = err
 			req = nil
 		}
-		emqxNodes := u.getEMQXNodeList(r, instance, nodes)
-		for _, n := range emqxNodes {
-			if n.Role == crd.RoleReplicant {
-				status.ReplicantNodes = append(status.ReplicantNodes, n)
-			} else {
-				status.CoreNodes = append(status.CoreNodes, n)
-			}
-		}
+		status.ClusterNodes = u.getEMQXNodeList(r, instance, nodes)
 	}
 
 	// 2. Report node evacuation status.
@@ -217,9 +209,8 @@ func (u *updateStatus) reconcile(r *reconcileRound, instance *crd.EMQX) subResul
 // preserved across reconcile rounds.
 func (u *updateStatus) inheritStatus(instance *crd.EMQX) crd.EMQXStatus {
 	status := crd.EMQXStatus{
-		Conditions:     u.inheritConditions(instance),
-		CoreNodes:      []crd.EMQXNode{},
-		ReplicantNodes: []crd.EMQXNode{},
+		Conditions:   u.inheritConditions(instance),
+		ClusterNodes: []crd.EMQXNode{},
 		Config: crd.ConfigStatus{
 			RuntimeRevision: instance.Status.Config.RuntimeRevision,
 		},
@@ -550,4 +541,17 @@ func (u *updateStatus) getEMQXNodeList(r *reconcileRound, instance *crd.EMQX, no
 		list = append(list, node)
 	}
 	return list
+}
+
+// determineNodeRole tells the node role, making an informed guess when `node.Role` is empty.
+// Returns empty string if impossible to determine.
+func determineNodeRole(s *reconcileState, node crd.EMQXNode) string {
+	if node.Role != "" {
+		return node.Role
+	}
+	pod := s.podWithName(node.PodName)
+	if pod != nil {
+		return podRole(pod)
+	}
+	return ""
 }

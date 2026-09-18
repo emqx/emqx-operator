@@ -116,13 +116,16 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 			}
 			Expect(k8sClient.Status().Update(ctx, pod)).Should(Succeed())
 			pods = append(pods, pod)
-			nodes = append(nodes, crd.EMQXNode{Name: "emqx@" + pod.Name, PodName: pod.Name, Status: "running"})
+			nodes = append(
+				nodes,
+				crd.EMQXNode{Role: "core", Name: "emqx@" + pod.Name, PodName: pod.Name, Status: "running"},
+			)
 		}
 
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(3))
-		instance.Status.CoreNodes = nodes
+		instance.Status.ClusterNodes = nodes
 
 		round = newReconcileRound()
 		Expect(ensureReconcileState(round, instance)).To(Succeed())
@@ -172,7 +175,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 	})
 
 	It("node session > 0", func() {
-		instance.Status.CoreNodes[2].Sessions = 99999
+		instance.Status.ClusterNodes[2].Sessions = 99999
 		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionEvacuate)),
@@ -182,8 +185,8 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 
 	It("single node session > 0", func() {
 		instance.Spec.CoreTemplate.Spec.Replicas = ptr.To(int32(1))
-		instance.Status.CoreNodes = []crd.EMQXNode{
-			{Name: "emqx@" + pods[0].Name, PodName: pods[0].Name, Status: "running", Sessions: 99999},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "core", Name: "emqx@" + pods[0].Name, PodName: pods[0].Name, Status: "running", Sessions: 99999},
 		}
 		admission := checkCorePodRemoval(round, instance, pods[0], rollingUpdate)
 		Expect(admission).Should(And(
@@ -194,7 +197,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 
 	It("node session > 0 & node evacuation is disabled", func() {
 		instance.Spec.UpdateStrategy.EvacuationStrategy.Type = crd.DisabledEvacuationStrategy
-		instance.Status.CoreNodes[2].Sessions = 99999
+		instance.Status.ClusterNodes[2].Sessions = 99999
 		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).Should(And(
 			HaveField("Action", Equal(admissionRemove)),
@@ -202,7 +205,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncCoreSet", Ordered, func() {
 	})
 
 	It("node session is 0", func() {
-		instance.Status.CoreNodes[2].Sessions = 0
+		instance.Status.ClusterNodes[2].Sessions = 0
 		admission := checkCorePodRemoval(round, instance, pods[2], rollingUpdate)
 		Expect(admission).To(
 			HaveField("Action", Equal(admissionRemove)),

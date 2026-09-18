@@ -53,8 +53,8 @@ func lookupBootstrapAuthTarget(instance string) (*crd.EMQXNode, precondition) {
 		return nil, preconditionUnknown(err.Error())
 	}
 	ready := emqx.Status.GetCondition(crd.Ready)
-	versions := coreNodeVersions(emqx.Status.CoreNodes)
-	node := preferredBootstrapAuthNode(emqx.Status.CoreNodes)
+	versions := coreNodeVersions(emqx.Status.NodesWithRole(crd.RoleCore))
+	node := preferredBootstrapAuthNode(emqx.Status.NodesWithRole(crd.RoleCore))
 	if ready != nil && ready.Status == metav1.ConditionTrue {
 		return nil, precondition{Status: condFalse}
 	}

@@ -55,6 +55,25 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 		)))
 	})
 
+	It("persists all node reports including foreign nodes with unknown roles", func() {
+		round := newReconcileRoundWithRequester(req.MockRequests(
+			"GET api/v5/nodes", `[
+				{"node":"emqx@core","node_status":"running","role":"core"},
+				{"node":"emqx@replicant","node_status":"running","role":"replicant"},
+				{"node":"emqx@foreign","node_status":"unreachable"}
+			]`,
+			"GET api/v5/load_rebalance/global_status", `{"evacuations":[]}`,
+			"GET api/v5/ds/storages", `[]`,
+		))
+		Expect(runRoundReconcile(round, instance, &updateStatus{emqxReconciler()})).To(BeSuccessfulReconcile())
+		Expect(actualize(instance)).To(Succeed())
+		Expect(instance.Status.ClusterNodes).To(ConsistOf(
+			crd.EMQXNode{Role: "core", Name: "emqx@core", Status: "running"},
+			crd.EMQXNode{Role: "replicant", Name: "emqx@replicant", Status: "running"},
+			crd.EMQXNode{Role: "", Name: "emqx@foreign", Status: "unreachable"},
+		))
+	})
+
 	It("preserves runtime configuration checkpoint and recomputes derived revisions", func() {
 		instance.Status.Config = crd.ConfigStatus{
 			DesiredRevision:        "stale-desired-revision",
@@ -77,12 +96,10 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 	})
 
 	It("preserves unavailable transition time while API remains unavailable", func() {
-		instance.Status.CoreNodes = []crd.EMQXNode{
-			{Name: "emqx@emqx-core-0", PodName: "emqx-core-0", Status: "running"},
-			{Name: "emqx@emqx-core-1", PodName: "emqx-core-1", Status: "running"},
-		}
-		instance.Status.ReplicantNodes = []crd.EMQXNode{
-			{Name: "emqx@emqx-replicant-0", PodName: "emqx-replicant-0", Status: "running"},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "core", Name: "emqx@emqx-core-0", PodName: "emqx-core-0", Status: "running"},
+			{Role: "core", Name: "emqx@emqx-core-1", PodName: "emqx-core-1", Status: "running"},
+			{Role: "replicant", Name: "emqx@emqx-replicant-0", PodName: "emqx-replicant-0", Status: "running"},
 		}
 		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 			{NodeName: "emqx@emqx-core-1", State: "evicting_sessions"},
@@ -116,8 +133,7 @@ var _ = DescribeClientFaultMatrix("Reconciler updateStatus", Ordered, func() {
 		Expect(condition.Reason).To(Equal("RequestFailed"))
 		Expect(condition.Message).To(ContainSubstring("connection refused"))
 		Expect(condition.LastTransitionTime).To(Equal(conditionBefore.LastTransitionTime))
-		Expect(instance.Status.CoreNodes).To(BeEmpty())
-		Expect(instance.Status.ReplicantNodes).To(BeEmpty())
+		Expect(instance.Status.ClusterNodes).To(BeEmpty())
 		Expect(instance.Status.NodeEvacuations).To(BeEmpty())
 		Expect(instance.Status.DSReplication.DBs).To(BeEmpty())
 	})

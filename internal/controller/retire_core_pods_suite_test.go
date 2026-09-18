@@ -58,7 +58,7 @@ var _ = DescribeClientFaultMatrix("Reconciler retireCorePods", Ordered, func() {
 		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 		instance = emqx.DeepCopy()
 		instance.Namespace = ns.Name
-		instance.Status.CoreNodes = []crd.EMQXNode{{
+		instance.Status.ClusterNodes = []crd.EMQXNode{{
 			Name: "emqx@surviving-core", PodName: "surviving-core", Role: crd.RoleCore,
 		}}
 	})

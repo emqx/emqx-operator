@@ -151,7 +151,6 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 				CoreNodesStatus: crd.CoreNodesStatus{
 					ReadyReplicas: 1,
 				},
-				CoreNodes: []crd.EMQXNode{},
 				ReplicantNodesStatus: crd.ReplicantNodesStatus{
 					UpdateRevision:  updateRevision,
 					UpdateReplicas:  1,
@@ -159,10 +158,11 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 					CurrentReplicas: 3,
 					ReadyReplicas:   3,
 				},
-				ReplicantNodes: []crd.EMQXNode{
-					{Name: "emqx@10.0.0.1", PodName: currentReplicants[0].Name, Status: "running"},
-					{Name: "emqx@10.0.0.2", PodName: currentReplicants[1].Name, Status: "running"},
-					{Name: "emqx@10.0.0.3", PodName: currentReplicants[2].Name, Status: "running"},
+				ClusterNodes: []crd.EMQXNode{
+					{Role: "replicant", Name: "emqx@10.0.0.1", PodName: currentReplicants[0].Name, Status: "running"},
+					{Role: "replicant", Name: "emqx@10.0.0.2", PodName: currentReplicants[1].Name, Status: "running"},
+					{Role: "replicant", Name: "emqx@10.0.0.3", PodName: currentReplicants[2].Name, Status: "running"},
+					{Role: "core", Name: "emqx@emqx-core-0", PodName: "emqx-core-0", Status: "running"},
 				},
 			}
 		})
@@ -355,9 +355,10 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 					UpdateRevision:  updateRevision,
 					ReadyReplicas:   2,
 				},
-				ReplicantNodes: []crd.EMQXNode{
-					{Name: "emqx@10.0.0.1", PodName: currentReplicants[0].Name, Status: "running"},
-					{Name: "emqx@10.0.0.2", PodName: currentReplicants[1].Name, Status: "running"},
+				ClusterNodes: []crd.EMQXNode{
+					{Role: "replicant", Name: "emqx@10.0.0.1", PodName: currentReplicants[0].Name, Status: "running"},
+					{Role: "replicant", Name: "emqx@10.0.0.2", PodName: currentReplicants[1].Name, Status: "running"},
+					{Role: "core", Name: "emqx@emqx-core-0", PodName: "emqx-core-0", Status: "running"},
 				},
 			}
 		})
@@ -479,10 +480,11 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 					UpdateReplicas:  3,
 					ReadyReplicas:   3,
 				},
-				ReplicantNodes: []crd.EMQXNode{
-					{Name: "emqx@10.0.0.1", PodName: replicants[0].Name, Status: "running"},
-					{Name: "emqx@10.0.0.2", PodName: replicants[1].Name, Status: "running"},
-					{Name: "emqx@10.0.0.3", PodName: replicants[2].Name, Status: "running"},
+				ClusterNodes: []crd.EMQXNode{
+					{Role: "replicant", Name: "emqx@10.0.0.1", PodName: replicants[0].Name, Status: "running"},
+					{Role: "replicant", Name: "emqx@10.0.0.2", PodName: replicants[1].Name, Status: "running"},
+					{Role: "replicant", Name: "emqx@10.0.0.3", PodName: replicants[2].Name, Status: "running"},
+					{Role: "core", Name: "emqx@emqx-core-0", PodName: "emqx-core-0", Status: "running"},
 				},
 			}
 		})
@@ -579,9 +581,11 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets", Ordered, func(
 
 		It("waits for evacuation during scale-down when node has sessions", func() {
 			instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(2))
-			// Give all nodes active sessions.
-			for i := range instance.Status.ReplicantNodes {
-				instance.Status.ReplicantNodes[i].Sessions = 100
+			// Give all replicants active sessions.
+			for i := range instance.Status.ClusterNodes {
+				if instance.Status.ClusterNodes[i].Role == "replicant" {
+					instance.Status.ClusterNodes[i].Sessions = 100
+				}
 			}
 			s := &syncReplicantSets{emqxReconciler()}
 			round := newReconcileRound()
@@ -857,10 +861,11 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 				Replicas: ptr.To(int32(1)),
 			},
 		}
+		instance.Status.CoreNodesStatus.ReadyReplicas = 1
 		instance.Status.ReplicantNodesStatus.CurrentRevision = currentRevision
 		instance.Status.ReplicantNodesStatus.UpdateRevision = updateRevision
-		instance.Status.ReplicantNodes = []crd.EMQXNode{
-			{Name: "emqx@10.0.0.1", PodName: currentPod.Name, Status: "running"},
+		instance.Status.ClusterNodes = []crd.EMQXNode{
+			{Role: "replicant", Name: "emqx@10.0.0.1", PodName: currentPod.Name, Status: "running"},
 		}
 	})
 
@@ -946,7 +951,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		update.Status.ReadyReplicas = 0
 		update.Status.AvailableReplicas = 0
 		Expect(k8sClient.Status().Update(ctx, update)).Should(Succeed())
-		instance.Status.ReplicantNodes[0].Sessions = 0
+		instance.Status.ClusterNodes[0].Sessions = 0
 		instance.Status.NodeEvacuations = []crd.NodeEvacuationStatus{
 			{NodeName: "emqx@10.0.0.1", State: "prohibiting"},
 		}
@@ -988,8 +993,9 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 	})
 
 	It("excludes draining replicants from preferred and fallback migration targets", func() {
-		instance.Status.ReplicantNodes = append(instance.Status.ReplicantNodes,
-			crd.EMQXNode{Name: "emqx@10.0.0.2", PodName: updatePod.Name, Status: "running"},
+		instance.Status.ClusterNodes = append(
+			instance.Status.ClusterNodes,
+			crd.EMQXNode{Role: "replicant", Name: "emqx@10.0.0.2", PodName: updatePod.Name, Status: "running"},
 		)
 		round := newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
@@ -1015,7 +1021,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 
 		DescribeTable("node session > 0 with multiple replicants",
 			func(maxUnavailable intstr.IntOrString, maxSurge int, action admissionAction) {
-				instance.Status.ReplicantNodes[0].Sessions = 99999
+				instance.Status.ClusterNodes[0].Sessions = 99999
 				instance.Spec.ReplicantTemplate.Spec.Replicas = ptr.To(int32(2))
 				instance.Spec.UpdateStrategy.Replicants = &crd.ReplicantsUpdateStrategy{
 					MaxUnavailable: &maxUnavailable,
@@ -1040,7 +1046,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 		)
 
 		It("node session > 0 & single-node replicant cluster", func() {
-			instance.Status.ReplicantNodes[0].Sessions = 99999
+			instance.Status.ClusterNodes[0].Sessions = 99999
 			round := newReconcileRound()
 			Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 			admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)
@@ -1053,7 +1059,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 
 	It("node session > 0 & evacuation is disabled", func() {
 		instance.Spec.UpdateStrategy.EvacuationStrategy.Type = crd.DisabledEvacuationStrategy
-		instance.Status.ReplicantNodes[0].Sessions = 99999
+		instance.Status.ClusterNodes[0].Sessions = 99999
 		round := newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)
@@ -1064,7 +1070,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncReplicantSets admission", func
 	})
 
 	It("node session is 0", func() {
-		instance.Status.ReplicantNodes[0].Sessions = 0
+		instance.Status.ClusterNodes[0].Sessions = 0
 		round := newReconcileRound()
 		Expect(reloadReconcileState(round, k8sClient, instance)).To(Succeed())
 		admission := checkReplicantPodRemoval(round, instance, currentPod, rollingUpdate)

@@ -211,7 +211,7 @@ func (s *syncReplicantSets) stopStaleReplicantEvacuation(
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 ) (bool, error) {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name)
 	if nodeInfo == nil {
 		return false, emperror.Errorf("missing replicant %s node information", pod.Name)
 	}
@@ -503,7 +503,7 @@ func checkReplicantPodRemoval(
 		return replicantAdmission.wait("pod %s is still a DS replication site", pod.Name)
 	}
 
-	nodeInfo := status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
+	nodeInfo := status.FindNodeByPodName(pod.Name)
 	switch {
 	case nodeInfo == nil:
 		return replicantAdmission.remove("node is out of cluster")
@@ -550,7 +550,7 @@ func replicantSkipEvacuation(r *reconcileRound, instance *crd.EMQX, cause admiss
 
 // startEvacuation calls the EMQX evacuation API for a replicant pod (side effect only).
 func (s *syncReplicantSets) startEvacuation(r *reconcileRound, instance *crd.EMQX, pod *corev1.Pod) error {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name)
 	if nodeInfo == nil {
 		return emperror.New("no corresponding replicant node in cluster status")
 	}

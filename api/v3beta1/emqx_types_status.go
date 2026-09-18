@@ -44,16 +44,13 @@ type EMQXStatus struct {
 	// Used by the scale subresource for HPA pod discovery.
 	ReplicantSelector string `json:"replicantSelector,omitempty"`
 
-	// Status of each core node in the cluster.
-	CoreNodes []EMQXNode `json:"coreNodes,omitempty"`
 	// Summary status of the set of core nodes.
 	CoreNodesStatus CoreNodesStatus `json:"coreNodesStatus,omitempty"`
-
-	// Status of each replicant node in the cluster.
-	ReplicantNodes []EMQXNode `json:"replicantNodes,omitempty"`
 	// Summary status of the set of replicant nodes.
 	ReplicantNodesStatus ReplicantNodesStatus `json:"replicantNodesStatus,omitempty"`
 
+	// Observed cluster nodes, including nodes whose role is unknown.
+	ClusterNodes []EMQXNode `json:"clusterNodes,omitempty"`
 	// Status of active node evacuations in the cluster.
 	NodeEvacuations []NodeEvacuationStatus `json:"nodeEvacuations,omitempty"`
 	// Status of EMQX Durable Storage replication.
@@ -144,7 +141,7 @@ type EMQXNode struct {
 	// EMQX version
 	// +kubebuilder:example="5.10.1"
 	Version string `json:"version,omitempty"`
-	// Node role, either "core" or "replicant"
+	// Node role, either "core" or "replicant", omitted when unknown
 	// +kubebuilder:example=core
 	Role string `json:"role,omitempty"`
 	// Number of MQTT sessions
@@ -153,17 +150,13 @@ type EMQXNode struct {
 	Connections int64 `json:"connections"`
 }
 
-func (s EMQXStatus) HasClusterMembership() bool {
-	return len(s.CoreNodes) > 0
+// HasClusterObservation reports whether the API returned any node reports.
+func (s EMQXStatus) HasClusterObservation() bool {
+	return len(s.ClusterNodes) > 0
 }
 
 func (s EMQXStatus) FindNode(node string) *EMQXNode {
-	for _, n := range s.CoreNodes {
-		if n.Name == node {
-			return &n
-		}
-	}
-	for _, n := range s.ReplicantNodes {
+	for _, n := range s.ClusterNodes {
 		if n.Name == node {
 			return &n
 		}
@@ -171,33 +164,27 @@ func (s EMQXStatus) FindNode(node string) *EMQXNode {
 	return nil
 }
 
-func (s EMQXStatus) FindNodeByPodName(pod string, roles ...string) *EMQXNode {
-	scanCores := false
-	scanReplicants := false
-	if len(roles) == 0 {
-		scanCores = true
-		scanReplicants = true
-	} else {
-		for _, r := range roles {
-			scanCores = scanCores || r == RoleCore
-			scanReplicants = scanReplicants || r == RoleReplicant
-		}
+func (s EMQXStatus) FindNodeByPodName(pod string) *EMQXNode {
+	if pod == "" {
+		return nil
 	}
-	if scanCores {
-		for _, n := range s.CoreNodes {
-			if n.PodName == pod {
-				return &n
-			}
-		}
-	}
-	if scanReplicants {
-		for _, n := range s.ReplicantNodes {
-			if n.PodName == pod {
-				return &n
-			}
+	for _, n := range s.ClusterNodes {
+		if n.PodName == pod {
+			return &n
 		}
 	}
 	return nil
+}
+
+// NodesWithRole selects nodes whose API reports explicitly identify their role.
+func (s EMQXStatus) NodesWithRole(role string) []EMQXNode {
+	var nodes []EMQXNode
+	for _, n := range s.ClusterNodes {
+		if n.Role == role {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
 }
 
 func (s EMQXStatus) FindNodeEvacuation(node string) *NodeEvacuationStatus {
