@@ -16155,6 +16155,49 @@ spec:
           status:
             description: Current status of the EMQX cluster.
             properties:
+              clusterNodes:
+                description: Observed cluster nodes, including nodes whose role is
+                  unknown.
+                items:
+                  properties:
+                    connections:
+                      description: Number of connected MQTT clients
+                      format: int64
+                      type: integer
+                    name:
+                      description: Node name
+                      example: emqx@emqx-core-0.emqx-headless.default.svc.cluster.local
+                      type: string
+                    otpRelease:
+                      description: Erlang/OTP version node is running on
+                      example: 27.3.4.2-2/15.2.7.1
+                      type: string
+                    podName:
+                      description: Corresponding pod name
+                      example: emqx-core-0
+                      type: string
+                    role:
+                      description: Node role, either "core" or "replicant", omitted
+                        when unknown
+                      example: core
+                      type: string
+                    sessions:
+                      description: Number of MQTT sessions
+                      format: int64
+                      type: integer
+                    status:
+                      description: Node status
+                      example: running
+                      type: string
+                    version:
+                      description: EMQX version
+                      example: 5.10.1
+                      type: string
+                  required:
+                  - connections
+                  - sessions
+                  type: object
+                type: array
               conditions:
                 description: Conditions representing the current status of the EMQX
                   Custom Resource.
@@ -16243,47 +16286,6 @@ spec:
                       Before initial startup, it is the revision staged for cluster bootstrap.
                     type: string
                 type: object
-              coreNodes:
-                description: Status of each core node in the cluster.
-                items:
-                  properties:
-                    connections:
-                      description: Number of connected MQTT clients
-                      format: int64
-                      type: integer
-                    name:
-                      description: Node name
-                      example: emqx@emqx-core-0.emqx-headless.default.svc.cluster.local
-                      type: string
-                    otpRelease:
-                      description: Erlang/OTP version node is running on
-                      example: 27.3.4.2-2/15.2.7.1
-                      type: string
-                    podName:
-                      description: Corresponding pod name
-                      example: emqx-core-0
-                      type: string
-                    role:
-                      description: Node role, either "core" or "replicant"
-                      example: core
-                      type: string
-                    sessions:
-                      description: Number of MQTT sessions
-                      format: int64
-                      type: integer
-                    status:
-                      description: Node status
-                      example: running
-                      type: string
-                    version:
-                      description: EMQX version
-                      example: 5.10.1
-                      type: string
-                  required:
-                  - connections
-                  - sessions
-                  type: object
-                type: array
               coreNodesStatus:
                 description: Summary status of the set of core nodes.
                 properties:
@@ -16397,47 +16399,6 @@ spec:
                       description: Evacuation state
                       example: evicting_sessions
                       type: string
-                  type: object
-                type: array
-              replicantNodes:
-                description: Status of each replicant node in the cluster.
-                items:
-                  properties:
-                    connections:
-                      description: Number of connected MQTT clients
-                      format: int64
-                      type: integer
-                    name:
-                      description: Node name
-                      example: emqx@emqx-core-0.emqx-headless.default.svc.cluster.local
-                      type: string
-                    otpRelease:
-                      description: Erlang/OTP version node is running on
-                      example: 27.3.4.2-2/15.2.7.1
-                      type: string
-                    podName:
-                      description: Corresponding pod name
-                      example: emqx-core-0
-                      type: string
-                    role:
-                      description: Node role, either "core" or "replicant"
-                      example: core
-                      type: string
-                    sessions:
-                      description: Number of MQTT sessions
-                      format: int64
-                      type: integer
-                    status:
-                      description: Node status
-                      example: running
-                      type: string
-                    version:
-                      description: EMQX version
-                      example: 5.10.1
-                      type: string
-                  required:
-                  - connections
-                  - sessions
                   type: object
                 type: array
               replicantNodesStatus:

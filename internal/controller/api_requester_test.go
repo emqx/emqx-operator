@@ -39,7 +39,7 @@ func TestRequesterFilter(t *testing.T) {
 				CurrentRevision: "cur",
 				UpdateRevision:  "upd",
 			},
-			CoreNodes: []crd.EMQXNode{
+			ClusterNodes: []crd.EMQXNode{
 				{
 					PodName:     coreSetName + "-0",
 					Name:        "emqx@core-0",
@@ -61,7 +61,6 @@ func TestRequesterFilter(t *testing.T) {
 					Connections: 0,
 				},
 			},
-			ReplicantNodes: []crd.EMQXNode{},
 		},
 	}
 

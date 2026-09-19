@@ -144,10 +144,10 @@ func (s *retireCorePods) corePodRetirementReady(
 		}
 	}
 
-	if !instance.Status.HasClusterMembership() {
+	if !instance.Status.HasClusterObservation() {
 		return retirementPending("cluster membership state is unknown")
 	}
-	if node := instance.Status.FindNodeByPodName(podName, crd.RoleCore); node != nil {
+	if node := instance.Status.FindNodeByPodName(podName); node != nil {
 		return retirementPending(fmt.Sprintf("node %s is still present in cluster status", node.Name))
 	}
 	if r.dsCluster == nil {

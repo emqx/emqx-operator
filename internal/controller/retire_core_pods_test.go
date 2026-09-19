@@ -18,7 +18,7 @@ func TestCoreOrdinalRetirementReadyTimeouts(t *testing.T) {
 		startedAt     time.Time
 		apiStatus     metav1.ConditionStatus
 		apiTransition time.Time
-		coreNodes     []crd.EMQXNode
+		clusterNodes  []crd.EMQXNode
 		ready         bool
 		reason        string
 	}{
@@ -55,13 +55,13 @@ func TestCoreOrdinalRetirementReadyTimeouts(t *testing.T) {
 			startedAt:     now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
 			apiStatus:     metav1.ConditionTrue,
 			apiTransition: now.Add(-2 * corePodForcedRetirementTimeout[condEMQXAPIUnavailable]),
-			coreNodes:     []crd.EMQXNode{{Name: "emqx@emqx", PodName: "emqx-core-1", Status: "running"}},
+			clusterNodes:  []crd.EMQXNode{{Name: "emqx@emqx", PodName: "emqx-core-1", Status: "running"}},
 			reason:        "DS cluster state is not loaded",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			instance := &crd.EMQX{}
-			instance.Status.CoreNodes = tc.coreNodes
+			instance.Status.ClusterNodes = tc.clusterNodes
 			if tc.apiStatus != "" {
 				instance.Status.Conditions = []metav1.Condition{{
 					Type:               crd.EMQXAPIAvailable,

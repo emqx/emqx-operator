@@ -212,7 +212,7 @@ _Appears in:_
 | `status` _string_ | Node status |  |  |
 | `otpRelease` _string_ | Erlang/OTP version node is running on |  |  |
 | `version` _string_ | EMQX version |  |  |
-| `role` _string_ | Node role, either "core" or "replicant" |  |  |
+| `role` _string_ | Node role, either "core" or "replicant", omitted when unknown |  |  |
 | `sessions` _integer_ | Number of MQTT sessions |  |  |
 | `connections` _integer_ | Number of connected MQTT clients |  |  |
 
@@ -357,10 +357,9 @@ _Appears in:_
 | `coreSelector` _string_ | Serialized label selector matching core pods. |  |  |
 | `replicantReplicas` _integer_ | Observed replica count for the replicant set pods.<br />Used by the scale subresource. |  |  |
 | `replicantSelector` _string_ | Serialized label selector matching replicant pods.<br />Used by the scale subresource for HPA pod discovery. |  |  |
-| `coreNodes` _[EMQXNode](#emqxnode) array_ | Status of each core node in the cluster. |  |  |
 | `coreNodesStatus` _[CoreNodesStatus](#corenodesstatus)_ | Summary status of the set of core nodes. |  |  |
-| `replicantNodes` _[EMQXNode](#emqxnode) array_ | Status of each replicant node in the cluster. |  |  |
 | `replicantNodesStatus` _[ReplicantNodesStatus](#replicantnodesstatus)_ | Summary status of the set of replicant nodes. |  |  |
+| `clusterNodes` _[EMQXNode](#emqxnode) array_ | Observed cluster nodes, including nodes whose role is unknown. |  |  |
 | `nodeEvacuations` _[NodeEvacuationStatus](#nodeevacuationstatus) array_ | Status of active node evacuations in the cluster. |  |  |
 | `dsReplication` _[DSReplicationStatus](#dsreplicationstatus)_ | Status of EMQX Durable Storage replication. |  |  |
 | `config` _[ConfigStatus](#configstatus)_ | Declarative EMQX configuration reconciliation status.<br />Fields are informational implementation details. Prefer the ConfigApplied<br />condition to determine configuration lifecycle state. |  |  |

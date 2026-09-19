@@ -211,7 +211,7 @@ func (s *syncReplicantSets) stopStaleReplicantEvacuation(
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 ) (bool, error) {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name)
 	if nodeInfo == nil {
 		return false, emperror.Errorf("missing replicant %s node information", pod.Name)
 	}
@@ -390,7 +390,7 @@ func (s *syncReplicantSets) outdatedReplicantAdmissions(
 ) []podAdmission {
 	specReplicas := instance.Spec.NumReplicantReplicas()
 	maxUnavailable := instance.Spec.NumMaxUnavailableReplicantReplicas()
-	availability, numAvailable := s.snapshotAvailability(instance, r.state.replicantPods())
+	availability, numAvailable := s.snapshotAvailability(instance, r.state.listPods(podsOfReplicantSets(r.state)))
 	extraAvailable := numAvailable - specReplicas
 	budget := max(0, maxUnavailable+extraAvailable)
 	outdatedPods := r.state.outdatedReplicantPods(instance)
@@ -503,13 +503,14 @@ func checkReplicantPodRemoval(
 		return replicantAdmission.wait("pod %s is still a DS replication site", pod.Name)
 	}
 
-	nodeInfo := status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
-	if nodeInfo == nil {
+	nodeInfo := status.FindNodeByPodName(pod.Name)
+	switch {
+	case nodeInfo == nil:
 		return replicantAdmission.remove("node is out of cluster")
-	}
-
-	if nodeInfo.Status == api.NodeStatusStopped {
+	case nodeInfo.Status == api.NodeStatusStopped:
 		return replicantAdmission.remove("node is already stopped")
+	case nodeInfo.Status == api.NodeStatusUnreachable:
+		return replicantAdmission.wait("node is unreachable")
 	}
 
 	evacuation := status.FindNodeEvacuation(nodeInfo.Name)
@@ -549,7 +550,7 @@ func replicantSkipEvacuation(r *reconcileRound, instance *crd.EMQX, cause admiss
 
 // startEvacuation calls the EMQX evacuation API for a replicant pod (side effect only).
 func (s *syncReplicantSets) startEvacuation(r *reconcileRound, instance *crd.EMQX, pod *corev1.Pod) error {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleReplicant)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name)
 	if nodeInfo == nil {
 		return emperror.New("no corresponding replicant node in cluster status")
 	}

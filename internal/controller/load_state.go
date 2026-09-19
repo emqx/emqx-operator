@@ -30,12 +30,25 @@ type reconcileStatePodFilter interface {
 	passes(pod *corev1.Pod) bool
 }
 
-type podsNot struct {
+type excludePods struct {
 	inner reconcileStatePodFilter
 }
 
-func (filter podsNot) passes(pod *corev1.Pod) bool {
+type includePods struct {
+	alt []reconcileStatePodFilter
+}
+
+func (filter excludePods) passes(pod *corev1.Pod) bool {
 	return !filter.inner.passes(pod)
+}
+
+func (filter includePods) passes(pod *corev1.Pod) bool {
+	for _, f := range filter.alt {
+		if f.passes(pod) {
+			return true
+		}
+	}
+	return false
 }
 
 type podsManagedBy struct {
@@ -88,6 +101,22 @@ type podsWithEMQXVersion struct {
 func (filter podsWithEMQXVersion) passes(pod *corev1.Pod) bool {
 	node := filter.instance.Status.FindNodeByPodName(pod.Name)
 	return node != nil && strings.HasPrefix(node.Version, filter.prefix)
+}
+
+func podsOfCoreSet(r *reconcileState) reconcileStatePodFilter {
+	return podsManagedBy{r.coreSet()}
+}
+
+func podsOfReplicantSets(r *reconcileState) reconcileStatePodFilter {
+	filter := includePods{}
+	for _, rs := range r.replicantSets {
+		filter.alt = append(filter.alt, podsManagedBy{rs})
+	}
+	return filter
+}
+
+func podRole(pod *corev1.Pod) string {
+	return pod.Labels[crd.LabelMriaRole]
 }
 
 func (r *reconcileState) podWithName(name string) *corev1.Pod {
@@ -153,7 +182,7 @@ func (r *reconcileState) listOutdatedPods() []*corev1.Pod {
 	}
 	return r.listPods(
 		podsManagedBy{coreSet},
-		podsNot{podsOnRevision{coreSet.Status.UpdateRevision}},
+		excludePods{podsOnRevision{coreSet.Status.UpdateRevision}},
 	)
 }
 
@@ -239,14 +268,6 @@ func (r *reconcileState) hasReplicants() bool {
 		}
 	}
 	return false
-}
-
-func (r *reconcileState) replicantPods() []*corev1.Pod {
-	pods := make([]*corev1.Pod, 0, len(r.pods))
-	for _, rs := range r.replicantSets {
-		pods = append(pods, r.podsManagedBy(rs)...)
-	}
-	return pods
 }
 
 // outdatedReplicantReplicaSets returns all replicant ReplicaSets except the update revision set,

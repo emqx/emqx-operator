@@ -3,9 +3,47 @@ package controller
 import (
 	"testing"
 
+	crd "github.com/emqx/emqx-operator/api/v3beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestParseNodeName(t *testing.T) {
+	instance := &crd.EMQX{ObjectMeta: metav1.ObjectMeta{Name: "emqx", Namespace: "default"}}
+	instance.Spec.ClusterDomain = "cluster.local"
+	for _, tc := range []struct {
+		host string
+		pod  string
+	}{
+		{"emqx-core-10.emqx-headless.default.svc.cluster.local", "emqx-core-10"},
+		{"emqx-core-10", "emqx-core-10"},
+		{"10.244.0.23", ""},
+		{"fd00::23", ""},
+		{"emqx-core-10.emqx-headless.other.svc.cluster.local", ""},
+		{"emqx-core-10.emqx-headless.default.svc.other.local", ""},
+		{"emqx-core-10.emqx-headless.default.svc.cluster.local.foreign", ""},
+		{"emqx-headless.default.svc.cluster.local", ""},
+	} {
+		t.Run(tc.host, func(t *testing.T) {
+			parsed := parseNodeName("emqx@"+tc.host, instance)
+			require.NotNil(t, parsed)
+			require.Equal(t, "emqx", parsed.name)
+			require.Equal(t, tc.host, parsed.hostName)
+			require.Equal(t, tc.pod, parsed.podName)
+		})
+	}
+	for _, name := range []string{
+		"emqx",
+		"emqx@",
+		"@host",
+		"emqx@host@other",
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.Nil(t, parseNodeName(name, instance))
+		})
+	}
+}
 
 // JSON checks use assert.JSONEq: both sides are parsed as JSON and compared
 // semantically, so key order and whitespace in the expected literal do not matter.

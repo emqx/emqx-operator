@@ -222,14 +222,15 @@ func rebalanceStatusHandler(emqx *crd.EMQX, rebalance *crdv2beta1.Rebalance, req
 
 func startRebalance(emqx *crd.EMQX, rebalance *crdv2beta1.Rebalance, req req.RequesterInterface) error {
 	nodes := []string{}
-	if len(emqx.Status.ReplicantNodes) == 0 {
-		for _, node := range emqx.Status.CoreNodes {
-			nodes = append(nodes, node.Name)
-		}
-	} else {
-		for _, node := range emqx.Status.ReplicantNodes {
-			nodes = append(nodes, node.Name)
-		}
+	targets := emqx.Status.NodesWithRole(crd.RoleReplicant)
+	if len(targets) == 0 {
+		targets = emqx.Status.NodesWithRole(crd.RoleCore)
+	}
+	if len(targets) == 0 {
+		return emperror.New("no nodes with known roles available for rebalance")
+	}
+	for _, node := range targets {
+		nodes = append(nodes, node.Name)
 	}
 	return api.StartRebalance(req, rebalance.Spec.RebalanceStrategy, nodes)
 }

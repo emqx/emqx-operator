@@ -29,9 +29,9 @@ func (s *syncClusterMembership) reconcile(r *reconcileRound, instance *crd.EMQX)
 
 	desiredReplicas := int(instance.Spec.NumCoreReplicas())
 	staleNodes := []*crd.EMQXNode{}
-	for _, node := range instance.Status.CoreNodes {
-		// Skip: node is running.
-		if node.Status != api.NodeStatusStopped {
+	for _, node := range instance.Status.ClusterNodes {
+		// Only stopped nodes explicitly reported as cores can be force-left.
+		if node.Role != crd.RoleCore || node.Status != api.NodeStatusStopped {
 			continue
 		}
 		pod := r.state.podWithName(node.PodName)

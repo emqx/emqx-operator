@@ -72,11 +72,11 @@ func CoresStable(g Gomega, coreReplicas int) {
 		),
 		"EMQX status does not have expected number of core nodes",
 	)
-	g.Expect(status.CoreNodes).To(
+	g.Expect(status.NodesWithRole(crd.RoleCore)).To(
 		HaveEach(HaveField("Status", Equal("running"))),
 		"EMQX cluster contains stopped nodes",
 	)
-	g.Expect(status.CoreNodes).To(
+	g.Expect(status.NodesWithRole(crd.RoleCore)).To(
 		HaveEach(HaveField("PodName", Not(BeEmpty()))),
 		"EMQX cluster contains nodes without pods",
 	)
@@ -113,7 +113,7 @@ func NoReplicants(g Gomega) {
 		"-o", "jsonpath={.status.replicantNodesStatus.currentReplicas}",
 	)).To(Equal("0"), "EMQX cluster status has replicant replicas")
 	g.Expect(KubectlOut("get", "emqx", "emqx",
-		"-o", "jsonpath={.status.replicantNodes}",
+		"-o", `jsonpath={.status.clusterNodes[?(@.role=="replicant")]}`,
 	)).To(BeEmpty(), "EMQX cluster status lists replicant nodes")
 	g.Expect(KubectlOut("get", "pods",
 		"--selector", emqxReplicantLabels.String(),

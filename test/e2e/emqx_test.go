@@ -479,10 +479,11 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 
 		It("scale replicants down to zero", func() {
 			By("fetch current replicant nodes")
-			var replicantNodes []crd.EMQXNode
-			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status.replicantNodes}")).
-				To(UnmarshalInto(&replicantNodes), "Failed to get EMQX replicant nodes")
-			Expect(replicantNodes).NotTo(BeEmpty(), "No replicant nodes were present before scaling down")
+			var status crd.EMQXStatus
+			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status}")).
+				To(UnmarshalInto(&status), "Failed to get EMQX status")
+			Expect(status.NodesWithRole(crd.RoleReplicant)).
+				NotTo(BeEmpty(), "No replicant nodes were present before scaling down")
 
 			By("fetch existing replicant ReplicaSets")
 			var rsBefore appsv1.ReplicaSetList
@@ -555,13 +556,13 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 			var initial crd.EMQXStatus
 			Expect(KubectlOut("get", "emqx", "emqx", "-o", "jsonpath={.status}")).
 				To(UnmarshalInto(&initial))
-			Expect(initial.ReplicantNodes).To(HaveLen(2))
+			Expect(initial.NodesWithRole(crd.RoleReplicant)).To(HaveLen(2))
 
 			By("leave an offline persistent session on each old replicant")
 			Expect(Kubectl("run", "mqttx-rollout", "--image=emqx/mqttx-cli:v1.13.0",
 				"--restart=Never", "--command", "--", "sleep", "3600")).To(Succeed())
 			Expect(Kubectl("wait", "pod/mqttx-rollout", "--for=condition=Ready", "--timeout=1m")).To(Succeed())
-			for _, node := range initial.ReplicantNodes {
+			for _, node := range initial.NodesWithRole(crd.RoleReplicant) {
 				// Target each pod directly; a one-shot publish leaves an offline session
 				// without reconnecting during the rollout.
 				podIP, err := KubectlOut("get", "pod", node.PodName, "-o", "jsonpath={.status.podIP}")
@@ -574,14 +575,15 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 				)).To(Succeed())
 			}
 			Eventually(KubectlOut).
-				WithArguments("get", "emqx", "emqx", "-o", "jsonpath={.status}").
-				Should(BeUnmarshalledAs(&crd.EMQXStatus{}, HaveField("ReplicantNodes", And(
+				WithArguments("get", "emqx", "emqx",
+					"-o", `jsonpath-as-json={.status.clusterNodes[?(@.role=="replicant")]}`).
+				Should(BeUnmarshalledAs(&[]crd.EMQXNode{}, And(
 					HaveLen(2),
 					HaveEach(And(
 						HaveField("Sessions", BeNumerically(">", 0)),
 						HaveField("Connections", BeZero()),
 					)),
-				))))
+				)))
 
 			By("trigger a replicant-only rollout")
 			changedAt := metav1.Now()
@@ -598,8 +600,8 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 					HaveField("ReplicantNodesStatus.CurrentRevision",
 						Not(Equal(initial.ReplicantNodesStatus.CurrentRevision)),
 					)))
-			for _, node := range initial.ReplicantNodes {
-				Expect(updated.ReplicantNodes).
+			for _, node := range initial.NodesWithRole(crd.RoleReplicant) {
+				Expect(updated.NodesWithRole(crd.RoleReplicant)).
 					NotTo(ContainElement(HaveField("PodName", Equal(node.PodName))))
 			}
 		})

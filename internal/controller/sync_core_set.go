@@ -270,14 +270,15 @@ func checkCorePodRemoval(
 		}
 	}
 
-	nodeInfo := status.FindNodeByPodName(pod.Name, crd.RoleCore)
+	nodeInfo := status.FindNodeByPodName(pod.Name)
 
-	if nodeInfo == nil {
+	switch {
+	case nodeInfo == nil:
 		return admission.remove("node is out of cluster")
-	}
-
-	if nodeInfo.Status == api.NodeStatusStopped {
+	case nodeInfo.Status == api.NodeStatusStopped:
 		return admission.remove("node is already stopped")
+	case nodeInfo.Status == api.NodeStatusUnreachable:
+		return admission.wait("node is unreachable")
 	}
 
 	evacuation := status.FindNodeEvacuation(nodeInfo.Name)
@@ -351,7 +352,7 @@ func (s *syncCoreSet) startEvacuation(
 	instance *crd.EMQX,
 	pod *corev1.Pod,
 ) error {
-	nodeInfo := instance.Status.FindNodeByPodName(pod.Name, crd.RoleCore)
+	nodeInfo := instance.Status.FindNodeByPodName(pod.Name)
 	if nodeInfo == nil {
 		return emperror.New("no corresponding node in cluster status")
 	}
@@ -397,9 +398,9 @@ func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 		if updateReplicantSet == nil {
 			return targets
 		}
-		for _, node := range instance.Status.ReplicantNodes {
+		for _, node := range instance.Status.ClusterNodes {
 			pod := r.state.podWithName(node.PodName)
-			if pod == nil {
+			if pod == nil || podRole(pod) != crd.RoleReplicant {
 				continue
 			}
 			if _, ok := pod.Annotations[crd.AnnotationScalingDown]; ok {
@@ -414,7 +415,7 @@ func migrationTargetNodes(r *reconcileRound, instance *crd.EMQX) []string {
 			return fallback
 		}
 	} else {
-		for _, node := range instance.Status.CoreNodes {
+		for _, node := range instance.Status.ClusterNodes {
 			pod := r.state.podWithName(node.PodName)
 			if pod == nil {
 				continue

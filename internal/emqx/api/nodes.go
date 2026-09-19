@@ -11,17 +11,18 @@ import (
 // EMQX node status values reported by the API.
 const NodeStatusStopped = "stopped"
 const NodeStatusRunning = "running"
+const NodeStatusUnreachable = "unreachable"
 
 type EMQXNode struct {
 	// EMQX node name, example: emqx@127.0.0.1
 	Node string `json:"node,omitempty"`
-	// EMQX node status, example: Running
+	// EMQX node status: running, stopped, or unreachable
 	NodeStatus string `json:"node_status,omitempty"`
 	// Erlang/OTP version used by EMQX, example: 24.2/12.2
 	OTPRelease string `json:"otp_release,omitempty"`
 	// EMQX version
 	Version string `json:"version,omitempty"`
-	// EMQX cluster node role, enum: "core" "replicant"
+	// EMQX cluster node role, enum: "core" "replicant", absent when unreachable
 	Role string `json:"role,omitempty"`
 	// Number of MQTT sessions
 	Connections int64 `json:"connections,omitempty"`
@@ -36,7 +37,7 @@ func NodeInfo(req req.RequesterInterface, nodeName string) (*EMQXNode, error) {
 	if emperror.Is(err, ErrorNotFound) {
 		return &EMQXNode{
 			Node:       nodeName,
-			NodeStatus: "stopped",
+			NodeStatus: NodeStatusStopped,
 		}, nil
 	}
 	if err != nil {
