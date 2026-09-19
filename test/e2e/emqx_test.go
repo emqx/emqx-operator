@@ -264,6 +264,101 @@ var _ = Describe("EMQX Cluster", Label("emqx"), Ordered, func() {
 		})
 	})
 
+	Context("EMQX Cluster / Spec Revert", Label("ci-cluster"), func() {
+		var coreReplicas = 2
+
+		It("deploy cluster", func() {
+			By("create EMQX cluster")
+			emqxCR := PatchDocument(
+				FromYAMLFile(emqxCRMinimal),
+				withImage(emqxImage),
+				withCores(coreReplicas),
+				withConfig(),
+			)
+			Expect(KubectlStdin(emqxCR, "apply", "-f", "-")).To(Succeed())
+			By("wait for EMQX cluster to be ready")
+			Eventually(EMQXReady).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+		})
+
+		It("reverts to the original StatefulSet revision", func() {
+			var coreSets appsv1.StatefulSetList
+			var corePodList0, corePodList1 corev1.PodList
+
+			By("record the original StatefulSet revision and core Pod")
+			Expect(KubectlOut("get", "statefulset",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
+				"-o", "json",
+			)).To(UnmarshalInto(&coreSets))
+			Expect(coreSets.Items).To(HaveLen(1))
+			coreSetRevision0 := coreSets.Items[0].Status.UpdateRevision
+			Expect(coreSetRevision0).NotTo(BeEmpty())
+			Expect(coreSets.Items[0].Status.CurrentRevision).To(Equal(coreSetRevision0))
+
+			Expect(KubectlOut("get", "pod",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
+				"-o", "json",
+			)).To(BeUnmarshalledAs(&corePodList0,
+				HaveField("Items", HaveLen(coreReplicas))))
+
+			By("change the DNS configuration")
+			changedAt := metav1.Now()
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "merge",
+				"--patch", `{"spec":{"coreTemplate":{"spec":{
+					"dnsConfig":{"options":[{"name":"ndots","value":"3"}]}
+				}}}}`,
+			)).To(Succeed())
+			Eventually(EMQXReady).WithArguments(changedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+
+			Expect(KubectlOut("get", "statefulset",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
+				"-o", "json",
+			)).To(BeUnmarshalledAs(&appsv1.StatefulSetList{},
+				HaveField("Items", ConsistOf(
+					HaveField("Status.UpdateRevision", Not(Equal(coreSetRevision0)))))))
+
+			Expect(KubectlOut("get", "pod",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
+				"-o", "json",
+			)).To(BeUnmarshalledAs(&corePodList1,
+				HaveField("Items", ConsistOf(
+					HaveField("ObjectMeta.UID", Not(Equal(corePodList0.Items[0].UID))),
+					HaveField("ObjectMeta.UID", Not(Equal(corePodList0.Items[1].UID))),
+				))))
+
+			By("revert the DNS configuration")
+			revertedAt := metav1.Now()
+			Expect(Kubectl("patch", "emqx", "emqx",
+				"--type", "merge",
+				"--patch", `{"spec":{"coreTemplate":{"spec":{"dnsConfig":null}}}}`,
+			)).To(Succeed())
+			Eventually(EMQXReady).WithArguments(revertedAt).Should(Succeed())
+			Eventually(CoresStable).WithArguments(coreReplicas).Should(Succeed())
+
+			Expect(KubectlOut("get", "statefulset",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
+				"-o", "json",
+			)).To(BeUnmarshalledAs(&appsv1.StatefulSetList{},
+				HaveField("Items", ConsistOf(
+					HaveField("Status.UpdateRevision", Equal(coreSetRevision0))))))
+
+			Expect(KubectlOut("get", "pod",
+				"--selector", crd.LabelMriaRole+"="+crd.RoleCore,
+				"-o", "json",
+			)).To(BeUnmarshalledAs(&corev1.PodList{},
+				HaveField("Items", ConsistOf(
+					HaveField("ObjectMeta.UID", Not(Equal(corePodList1.Items[0].UID))),
+					HaveField("ObjectMeta.UID", Not(Equal(corePodList1.Items[1].UID))),
+				))))
+		})
+
+		It("delete cluster", func() {
+			Expect(Kubectl("delete", "emqx", "emqx")).To(Succeed())
+		})
+	})
+
 	Context("EMQX Cluster / Botched Rolling Updates", Label("ci-cluster"), func() {
 		// Initial number of core replicas:
 		var coreReplicas = 2
