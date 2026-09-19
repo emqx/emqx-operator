@@ -141,6 +141,19 @@ func TestListOutdatedPods(t *testing.T) {
 		assert.Empty(t, state.listOutdatedPods())
 	})
 
+	t.Run("revert currentRevision detects pods on an intermediate revision", func(t *testing.T) {
+		sts := mkCoreSet("rev-original", "rev-original")
+		state := &reconcileState{
+			coreSets: []*appsv1.StatefulSet{sts},
+			pods: []*corev1.Pod{
+				mkCoreSetPod(coreSetName+"-0", "rev-intermediate"),
+			},
+		}
+		got := state.listOutdatedPods()
+		require.Len(t, got, 1)
+		assert.Equal(t, coreSetName+"-0", got[0].Name)
+	})
+
 	t.Run("pods not managed by core StatefulSet are ignored", func(t *testing.T) {
 		sts := mkCoreSet("rev-old", "rev-new")
 		state := &reconcileState{
