@@ -14,7 +14,7 @@ The 6.3.0 node has overwritten shared bootstrap API key records with records tha
 
 Find a remaining running 6.2.x core pod:
 ```sh
-kubectl get emqx <emqx-cr-name> -o jsonpath='{range .status.coreNodes[*]}{.podName}{"\t"}{.version}{"\t"}{.status}{"\n"}{end}'
+kubectl get emqx <emqx-cr-name> -o jsonpath='{range .status.clusterNodes[?(@.role=="core")]}{.podName}{"\t"}{.version}{"\t"}{.status}{"\n"}{end}'
 ```
 
 Run this command in **one remaining 6.2.x core pod**:
