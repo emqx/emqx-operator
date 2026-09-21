@@ -26,6 +26,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 
 	var forceLeftNodes []string
 
+	const currentRevision = "current"
 	const updateRevision = "update"
 
 	emqxNodeName := func(podName string) string {
@@ -139,7 +140,7 @@ var _ = DescribeClientFaultMatrix("Reconciler syncClusterMembership", Ordered, f
 
 		coreSet.Status.Replicas = 1
 		coreSet.Status.ReadyReplicas = 1
-		coreSet.Status.CurrentRevision = updateRevision
+		coreSet.Status.CurrentRevision = currentRevision
 		coreSet.Status.UpdateRevision = updateRevision
 		Expect(k8sClient.Status().Update(ctx, coreSet)).Should(Succeed())
 

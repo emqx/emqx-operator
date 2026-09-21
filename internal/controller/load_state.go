@@ -172,12 +172,13 @@ func (r *reconcileState) activeStartupConfigRevisions() map[string]roleCounts {
 
 // listOutdatedPods returns core StatefulSet pods whose pod template is not yet the
 // desired one: anything not labeled with Status.UpdateRevision.
+// As StatefulSets running under `OnDelete` strategy **do not promote** update revision
+// to current in the status, do not rely on matching revisions to shortcut returning
+// empty list.
 func (r *reconcileState) listOutdatedPods() []*corev1.Pod {
 	var outdated []*corev1.Pod
 	coreSet := r.coreSet()
-	if coreSet == nil ||
-		coreSet.Status.UpdateRevision == "" ||
-		coreSet.Status.UpdateRevision == coreSet.Status.CurrentRevision {
+	if coreSet == nil || coreSet.Status.UpdateRevision == "" {
 		return outdated
 	}
 	return r.listPods(
