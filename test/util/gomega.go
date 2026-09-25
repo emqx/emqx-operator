@@ -9,6 +9,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func xformExtractController(o any) *metav1.OwnerReference {
+	switch o := o.(type) {
+	case metav1.Object:
+		return metav1.GetControllerOf(o)
+	case metav1.PartialObjectMetadata:
+		return metav1.GetControllerOf(&o.ObjectMeta)
+	}
+	return nil
+}
+
 func HaveCondition(conditionType string, matcher types.GomegaMatcher) types.GomegaMatcher {
 	return gomega.WithTransform(
 		func(instance *crd.EMQX) *metav1.Condition {
@@ -20,6 +30,23 @@ func HaveCondition(conditionType string, matcher types.GomegaMatcher) types.Gome
 
 func HaveLabel(label string, matcher types.GomegaMatcher) types.GomegaMatcher {
 	return gomega.HaveField("Labels", gomega.HaveKeyWithValue(label, matcher))
+}
+
+func BeControlledBy(controller metav1.Object) types.GomegaMatcher {
+	return gomega.WithTransform(
+		xformExtractController,
+		gomega.And(
+			gomega.Not(gomega.BeNil()),
+			gomega.HaveValue(gomega.HaveField("UID", gomega.Equal(controller.GetUID()))),
+		),
+	)
+}
+
+func BeNotControlled() types.GomegaMatcher {
+	return gomega.WithTransform(
+		xformExtractController,
+		gomega.BeNil(),
+	)
 }
 
 func UnmarshalInto(v any) types.GomegaMatcher {
