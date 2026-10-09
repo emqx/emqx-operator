@@ -6,10 +6,10 @@ type: application
 
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
-version: 3.0.0-rc.1
+version: 3.0.0-rc.5
 
 # This is the version number of the application being deployed.
-appVersion: 3.0.0
+appVersion: 3.0.0-rc.5
 
 sources:
   - https://github.com/emqx/emqx-operator/tree/main-3.x/deploy/charts/emqx-operator
