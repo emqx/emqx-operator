@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to build from (e.g., main-2.3)'
+        description: 'Branch to build from (e.g., main-3.x)'
         required: true
-        default: main-2.3
+        default: main-3.x
       tag:
-        description: 'Operator tag (e.g. 2.3.0). Empty = dry run.'
+        description: 'Operator tag (e.g. 3.0.0). Empty = dry run.'
         required: false
 
 permissions:

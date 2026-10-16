@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to build from (e.g., main-2.3)'
+        description: 'Branch to build from (e.g., main-3.x)'
         required: true
-        default: main-2.3
+        default: main-3.x
       tag:
-        description: 'Helm tag (e.g. helm-2.3.0-rc.1). Empty = dry run.'
+        description: 'Helm tag (e.g. helm-3.0.0). Empty = dry run.'
         required: false
 
 permissions:
