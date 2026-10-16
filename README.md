@@ -34,6 +34,8 @@ kubectl wait --for=condition=Ready pods -l "control-plane=controller-manager" --
 
 This will install both the CRDs, the controller manager and relevant resources into the cluster. The controller manager will be deployed in the `emqx-operator-system` namespace.
 
+For other installation methods, see the [Getting Started](https://docs.emqx.com/en/emqx/latest/get-started/deploy/kubernetes/operator/getting-started.html) chapter.
+
 ## Operation
 
 ### PVC Lifecycle
@@ -74,29 +76,13 @@ If an upgrade stalls, check the operator logs and EMQX resource's events. See [E
 
 ## Upgrading
 
+### From 2.3.x
+
+Automatic upgrades from Operator 2.3.x to 3.0 are not supported. A manual migration is possible by deploying a new EMQX cluster and switching client traffic to it, without session continuity. See [Migrate from EMQX Operator 2.3 to 3.0](https://docs.emqx.com/en/emqx/latest/get-started/deploy/kubernetes/operator/migration/migrate-from-2.3-to-3.0.html) for the procedure, migration guarantees, and rollback instructions.
+
 ### From 2.2.x
 
-To upgrade from 2.2.x to 2.3.0, you need to patch the existing CRDs first to explicitly remove the conversion webhook.
-```sh
-kubectl patch crd emqxes.apps.emqx.io     --type=json -p='[{"op":"replace", "path":"/spec/conversion", "value":{"strategy":"None"}}]'
-kubectl patch crd rebalances.apps.emqx.io --type=json -p='[{"op":"replace", "path":"/spec/conversion", "value":{"strategy":"None"}}]'
-```
-
-After patching the CRDs, delete the existing controller manager deployment.
-```sh
-kubectl delete --ignore-not-found clusterrole emqx-operator-manager-role
-kubectl delete --ignore-not-found clusterrolebinding emqx-operator-manager-rolebinding
-kubectl delete --ignore-not-found mutatingwebhookconfiguration emqx-operator-mutating-webhook-configuration
-kubectl delete --ignore-not-found validatingwebhookconfiguration emqx-operator-validating-webhook-configuration
-kubectl delete --ignore-not-found namespace emqx-operator-system
-```
-
-Optionally, delete legacy CRDs.
-```sh
-kubectl delete --ignore-not-found crd emqxbrokers.apps.emqx.io emqxenterprises.apps.emqx.io emqxplugins.apps.emqx.io
-```
-
-After that, you can upgrade the operator by following usual installation steps.
+The same migration guide generally applies to Operator 2.2.x, but [upgrading to Operator 2.3.x](https://github.com/emqx/emqx-operator/blob/main-2.3/README.md#upgrading) first is recommended before migrating to 3.0.
 
 ## Troubleshooting
 
