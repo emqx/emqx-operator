@@ -6,13 +6,11 @@ EMQX Operator is a [Kubernetes](https://kubernetes.io/) operator for managing [E
 
 The operator conceptually consists of the following parts:
 - EMQX CRD: Definition for a resource that resembles the EMQX cluster in the Kubernetes API.
-- Rebalance CRD: Definition for a resource that orchestrates rebalancing of EMQX clusters.
 - Controller manager: Kubernetes controller that manages various Kubernetes resources according to EMQX CRs specifications.
 
 This operator supports:
 * Management of EMQX clusters in both regular and core-replicant deployment modes.
 * Management of [EMQX DS](https://docs.emqx.com/en/emqx/latest/durability/durability_introduction.html#sessions-and-durable-storage) replication, including automatic rebalancing.
-* Rebalancing of MQTT sessions and connections across EMQX cluster nodes.
 
 ## Compatibility
 
@@ -21,7 +19,7 @@ This operator is compatible with the following EMQX releases:
 - EMQX 5.10
 - EMQX 6.x
 
-Requires Kubernetes >= 1.27, with following features:
+Requires Kubernetes 1.27 or later, with following features:
 - Feature gate `StatefulSetAutoDeletePVC`.
   * Graduated to stable in Kubernetes 1.32 and is enabled by default.
   * On Kubernetes 1.27 through 1.31, the feature gate exists but may need to be explicitly enabled.
